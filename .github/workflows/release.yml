@@ -44,18 +44,12 @@ jobs:
         run: |
           cd public
           zip -r ../sr2e.zip . -x index.mjs.map
+      - name: Release notes (this version's CHANGELOG section, then how to install)
+        run: node scripts/release-notes.mjs > release-notes.md && cat release-notes.md
       - uses: softprops/action-gh-release@v2
         with:
           files: |
             public/system.json
             sr2e.zip
           generate_release_notes: false
-          body: |
-            **Test build:** not yet play-tested at a table; please report problems on the issue tracker.
-
-            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/CHANGELOG.md) for what changed.
-
-            Install in Foundry VTT v14: on the setup screen, Game Systems → Install System, paste this into the Manifest URL box and click Install:
-            `https://github.com/${{ github.repository }}/releases/latest/download/system.json`
-
-            Built with AI (Anthropic's Claude) under human direction; not yet play-tested at a table. You need your own copy of the Shadowrun Second Edition rulebook.
+          body_path: release-notes.md
