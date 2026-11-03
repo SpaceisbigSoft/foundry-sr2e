@@ -290,7 +290,7 @@ This is an **unofficial** fan system for Shadowrun, Second Edition. It is not af
 
 It contains **no rulebook text or art**: it automates the rules, and you need your own copy of the rulebook for them. The default pictures and tokens (people, critters, spirits, vehicles and drones, IC and the rest) are the system's own art, drawn by the AI for it (vector art written as code in `src/art/`), under the same licence; they show no book art, logos or trademarks. The cover picture (the runner team in the neon alley, also the background of new worlds on the setup screen) was painted with another AI, OpenAI's ChatGPT image generation, by the project's owner from a brief Claude wrote; Claude added the title. It is under the same licence and shows no book art, logos or trademarks either. The game numbers it needs (rule constants, starter item templates, a totem table) were written from memory; the GM can check them against the book and change them as house rules.
 
-The system is licensed under **CC BY-SA 4.0** (the `LICENSE.md` file in the system folder). It began from the build setup of SRA2, the community Shadowrun Anarchy 2 system, by the Anarchy development team. The fonts (Chakra Petch, JetBrains Mono, Inter) are under the SIL Open Font License.
+The system is licensed under **CC BY-SA 4.0** (the `LICENSE.md` file in the system folder). It started from the project setup of SRA2, the community Shadowrun Anarchy 2 system by the Anarchy development team: only the build configuration and folder layout came from SRA2; all of the game code, sheets, art and text were written for this system. The fonts (Chakra Petch, JetBrains Mono, Inter) are under the SIL Open Font License.
 
 # Rolling and chat cards
 

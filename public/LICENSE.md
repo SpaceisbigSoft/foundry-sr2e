@@ -12,7 +12,11 @@ The licence covers only the sr2e contributors' own work. It grants no rights in 
 
 ## Based on SRA2
 
-sr2e began from the build setup (the Vite and TypeScript configuration and the project layout) of **SRA2**, the community Shadowrun Anarchy 2 system for Foundry VTT, <https://github.com/VincentVk9373/sra2>, by the Anarchy development team: Half, Vincent VK, Los Brutos, Cefyl, Dirt, Romano, Carmody and Asimov. SRA2 © 2020–2021 the Anarchy development team, released under a Creative Commons licence (its README names CC BY-SA 4.0, its licence badge CC BY 4.0; both allow this reuse under CC BY-SA 4.0). Changes: everything apart from that build setup was written for sr2e (the rules engine, data models, sheets, templates, styles, icons and documentation); no SRA2 game content, art or text is included.
+sr2e started from the project setup of **SRA2**, the community Shadowrun Anarchy 2 system for Foundry VTT, <https://github.com/VincentVk9373/sra2>, by the Anarchy development team: Half, Vincent VK, Los Brutos, Cefyl, Dirt, Romano, Carmody and Asimov. SRA2 © 2020–2021 the Anarchy development team, released under a Creative Commons licence (its README names CC BY-SA 4.0, its licence badge CC BY 4.0; both allow this reuse under CC BY-SA 4.0).
+
+- **Re-used from SRA2:** only the project setup: the build configuration (the Vite and TypeScript settings that turn the source code into the file Foundry loads) and the folder layout.
+- **Made for sr2e:** everything else: all of the game code (the rules engine, data models, sheets and chat cards), the templates, styles, icons, token art, cover picture, language file and documentation.
+- **Not included:** no SRA2 game content, rules, art or text.
 
 ## Made with AI
 
