@@ -1,0 +1,53 @@
+{{!-- v0.91.1: make a new entry (applications/newentry.ts; the fields and the stat-line reader are rules/newentry.ts). --}}
+<form class="sr2e-new-entry-form" autocomplete="off">
+  <div class="sr2e-ne-body">
+    <p class="hint sr2e-ne-intro"><i class="fa-solid fa-book" aria-hidden="true"></i> {{sr2eT "SR2E.UI.newEntryIntro"}}</p>
+    {{#if review}}<p class="hint sr2e-approval-note"><i class="fa-solid fa-user-check" aria-hidden="true"></i> {{sr2eT "SR2E.UI.newEntryReviewNote"}}</p>{{/if}}
+    <div class="form-group">
+      <label for="{{uid}}-kind">{{sr2eT "SR2E.UI.newEntryKind"}}</label>
+      <select id="{{uid}}-kind" name="kind">{{#each kinds}}<option value="{{id}}"{{#if selected}} selected{{/if}}>{{label}}</option>{{/each}}</select>
+    </div>
+    <fieldset class="sr2e-ne-paste">
+      <legend data-heading="Paste the stat line">{{sr2eT "SR2E.UI.newEntryPaste"}}</legend>
+      <textarea name="statLine" rows="2" maxlength="{{statMax}}" aria-label="{{sr2eT "SR2E.UI.newEntryPaste"}}" placeholder="{{sr2eT "SR2E.UI.newEntryPastePlaceholder"}}">{{statLine}}</textarea>
+      <p class="hint">{{sr2eT "SR2E.UI.newEntryPasteHint"}}</p>
+      <button type="button" data-action="readLine"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> {{sr2eT "SR2E.UI.newEntryRead"}}</button>
+      {{#if readNote}}<p class="hint sr2e-ne-read">{{readNote}}</p>{{/if}}
+      {{#if skippedNote}}<p class="hint sr2e-ne-skipped">{{skippedNote}}</p>{{/if}}
+    </fieldset>
+    <div class="form-group">
+      <label for="{{uid}}-name">{{sr2eT "SR2E.UI.newEntryName"}}</label>
+      <input id="{{uid}}-name" type="text" name="name" value="{{name}}" maxlength="{{nameMax}}">
+    </div>
+    {{#each fields}}
+    <div class="form-group sr2e-ne-field" data-field="{{id}}">
+      <label for="{{@root.uid}}-f-{{@index}}" title="{{help}}">{{label}}</label>
+      <div class="form-fields">
+        {{#if isCheck}}<input id="{{@root.uid}}-f-{{@index}}" type="checkbox" name="field.{{id}}"{{#if checked}} checked{{/if}}>{{/if}}
+        {{#if isSelect}}<select id="{{@root.uid}}-f-{{@index}}" name="field.{{id}}">{{#each options}}<option value="{{value}}"{{#if selected}} selected{{/if}}>{{label}}</option>{{/each}}</select>{{/if}}
+        {{#if isText}}<input id="{{@root.uid}}-f-{{@index}}" type="text" inputmode="{{inputmode}}" name="field.{{id}}" value="{{value}}" maxlength="100">{{/if}}
+      </div>
+      <p class="hint">{{help}}</p>
+    </div>
+    {{/each}}
+    <div class="form-group stacked">
+      <label for="{{uid}}-desc">{{sr2eT "SR2E.UI.newEntryDescription"}}</label>
+      <textarea id="{{uid}}-desc" name="description" rows="3" maxlength="{{descMax}}" placeholder="{{sr2eT "SR2E.UI.newEntryDescriptionHint"}}">{{description}}</textarea>
+    </div>
+    <p class="sr2e-ne-preview" aria-live="polite"></p>
+    <p class="sr2e-ne-problems sr2e-warn" hidden></p>
+  </div>
+  <footer class="sr2e-ne-foot">
+    {{#if gm}}
+    <label><input type="checkbox" name="saveToCatalogue"{{#if saveToCatalogue}} checked{{/if}}> {{sr2eT "SR2E.UI.newEntrySaveCatalogue"}}</label>
+    <label title="{{sr2eT "SR2E.UI.shopMarkHint"}}"><input type="checkbox" name="inShop"{{#if inShop}} checked{{/if}}> {{sr2eT "SR2E.UI.newEntryInShop"}}</label>
+    {{#if giveTo}}<label><input type="checkbox" name="give"{{#if give}} checked{{/if}}> {{sr2eT "SR2E.UI.newEntryGive" name=giveTo}}</label>{{/if}}
+    <button type="button" data-action="saveEntry"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> {{#if review}}{{sr2eT "SR2E.UI.newEntrySaveApprove"}}{{else}}{{sr2eT "SR2E.UI.newEntrySave"}}{{/if}}</button>
+    {{else}}
+    {{#if noTarget}}<p class="hint sr2e-warn">{{sr2eT "SR2E.UI.newEntryNoCharacter"}}</p>{{else}}
+    <p class="hint">{{shopNote}} {{sr2eT "SR2E.UI.newEntryFiledOn" name=target}}</p>
+    <button type="button" data-action="sendEntry"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i> {{sr2eT "SR2E.UI.newEntrySend"}}</button>{{/if}}
+    {{/if}}
+    <button type="button" data-action="cancelEntry">{{sr2eT "SR2E.UI.newEntryCancel"}}</button>
+  </footer>
+</form>

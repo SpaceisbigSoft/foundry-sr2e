@@ -1,0 +1,16 @@
+{{#if occult.sustainingPowers.length}}
+<h3 data-heading="Sustaining powers">{{sr2eT "SR2E.UI.sustainingPowers"}}</h3>
+<ul>
+  {{#each occult.sustainingPowers}}<li><span>{{sr2eT "SR2E.UI.on3" name=name targetName=targetName changes=changes}}</span> <a data-action="dropPowerEffect" data-uuid="{{targetUuid}}" data-id="{{id}}" title="{{sr2eT "SR2E.UI.dropIt"}}"><i class="fa-solid fa-xmark"></i></a></li>{{/each}}
+</ul>
+{{/if}}
+{{#if occult.underPowers.length}}
+<h3 data-heading="Under spells and powers">{{sr2eT "SR2E.UI.underSpellsAndPowers"}}</h3>
+<ul>
+  {{#each occult.underPowers}}<li><span>{{sr2eT "SR2E.UI.from3" name=name fromName=fromName changes=changes}}{{#if permanent}} {{sr2eT "SR2E.UI.permanent2"}}{{/if}}</span>
+    {{#if canDrop}}<a data-action="dropPowerEffect" data-uuid="{{targetUuid}}" data-id="{{id}}" title="{{sr2eT "SR2E.UI.endIt"}}"><i class="fa-solid fa-xmark"></i></a>{{else if @root.isGM}}<a data-action="dropPowerEffect" data-uuid="{{targetUuid}}" data-id="{{id}}" title="{{sr2eT "SR2E.UI.removeItGmDispelledCuredOr"}}"><i class="fa-solid fa-xmark"></i></a>{{/if}}</li>{{/each}}
+</ul>
+{{/if}}
+{{#if occult.hunger}}
+<p class="{{#if occult.hunger.hungry}}sr2e-warning{{else}}hint{{/if}}">{{#if occult.hunger.fed}}{{sr2eT "SR2E.UI.fedDaySAgo" days=occult.hunger.days}}{{else}}{{sr2eT "SR2E.UI.noMealRecordedYet"}}{{/if}}{{#if occult.hunger.hungry}} · <strong>{{sr2eT "SR2E.UI.hungryTn" tn=occult.hunger.tn}}</strong>{{/if}} <button type="button" data-action="feed" title="{{sr2eT "SR2E.UI.aMealMetahumanFleshBloodThe"}}">{{sr2eT "SR2E.UI.feed"}}</button></p>
+{{/if}}

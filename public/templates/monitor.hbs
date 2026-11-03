@@ -1,0 +1,14 @@
+{{!-- v0.67.0: the condition monitor in wound groups (rules/look.ts monitorView): Physical and Stun in two boxes of the
+     same width, each with dividers and labels between its groups, and the Overflow row in its own box beside them
+     right after Physical, as in mock-up A (greyed until the Physical track is full; the last box is death). Context: cm. --}}
+<div class="sr2e-cm">
+  {{> "systems/sr2e/templates/monitor-track.hbs" t=cm.physical action="setMonitor" step=true}}
+  {{#if cm.overflow}}
+  <div class="sr2e-cm-track sr2e-cm-overflow{{#if cm.overflow.idle}} idle{{/if}}" title="{{cm.overflow.title}}" role="group" aria-label="{{sr2eT "SR2E.UI.overflowOfBoxesBody" filled=cm.overflow.filled body=cm.overflow.body}}">
+    <span class="sr2e-cm-label">{{sr2eT "SR2E.UI.overflow2"}}</span>
+    <span class="sr2e-cm-groups"><span class="sr2e-cm-group"><i aria-hidden="true">{{sr2eT "SR2E.UI.body2" body=cm.overflow.body}}</i><span>{{#each cm.overflow.boxes}}<a class="sr2e-box sr2e-of{{#if filled}} filled{{/if}}{{#if dead}} dead{{/if}}" tabindex="0" role="button" data-action="setMonitor" data-track="physical" data-value="{{value}}" title="{{#if dead}}{{sr2eT "SR2E.UI.overflowDead" value=value}}{{else}}{{sr2eT "SR2E.UI.overflow3" value=value}}{{/if}}" aria-label="{{sr2eT "SR2E.UI.overflowBox" value=value}}{{#if dead}} {{sr2eT "SR2E.UI.dead"}}{{/if}}"></a>{{/each}}</span></span></span>
+  </div>
+  {{/if}}
+  {{> "systems/sr2e/templates/monitor-track.hbs" t=cm.stun action="setMonitor" step=true}}
+  {{#if cm.extraStun}}<span class="sr2e-overflow" title="{{sr2eT "SR2E.UI.stunBoxesPast10"}}">+{{cm.extraStun}}</span>{{/if}}
+</div>

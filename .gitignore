@@ -1,0 +1,4 @@
+node_modules/
+dist/
+public/index.mjs
+public/index.mjs.map

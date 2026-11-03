@@ -1,0 +1,71 @@
+<div class="sr2e-sheet sr2e-npcgen-body">
+  <section class="sr2e-npcgen-options">
+    <div class="sr2e-row">
+      <label>{{sr2eT "SR2E.UI.generate"}} <select data-gen="kind">{{#each kinds}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>
+      {{#unless is.names}}<label title="{{sr2eT "SR2E.UI.0NoThreat5VeryVery"}}">{{sr2eT "SR2E.UI.threatLevel"}} <select data-gen="threat">{{#each threats}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>{{/unless}}
+    </div>
+
+    {{#if is.npc}}
+    <div class="sr2e-row">
+      <label>{{sr2eT "SR2E.UI.role"}} <select data-gen="archetype">{{#each archetypes}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>
+      <label>{{sr2eT "SR2E.UI.metatype"}} <select data-gen="metatype">{{#each metatypes}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>
+      <label>{{sr2eT "SR2E.UI.magic2"}} <select data-gen="magic">{{#each magics}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>
+    </div>
+    {{/if}}
+    {{#if is.group}}
+    <div class="sr2e-row">
+      <label>{{sr2eT "SR2E.UI.group2"}} <select data-gen="groupKind">{{#each groupKinds}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>
+      <label>{{sr2eT "SR2E.UI.metatype"}} <select data-gen="metatype">{{#each metatypes}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>
+      <label class="sr2e-check" title="{{sr2eT "SR2E.UI.theRankAndFileShareOne"}}"><input type="checkbox" data-gen="oneSheet" {{#if s.oneSheet}}checked{{/if}}> {{sr2eT "SR2E.UI.rankAndFileOnOneSheet"}}</label>
+    </div>
+    {{/if}}
+    {{#if is.org}}
+    <div class="sr2e-row">
+      <label>{{sr2eT "SR2E.UI.kind"}} <select data-gen="corporation">{{#each corps}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>
+      <label class="sr2e-check"><input type="checkbox" data-gen="makePeople" {{#if s.makePeople}}checked{{/if}}> {{sr2eT "SR2E.UI.alsoCreateItsThreePeople"}}</label>
+      <label class="sr2e-check"><input type="checkbox" data-gen="makeHost" {{#if s.makeHost}}checked{{/if}}> {{sr2eT "SR2E.UI.alsoCreateItsMatrixHost"}}</label>
+    </div>
+    {{/if}}
+    {{#if is.contact}}
+    <div class="sr2e-row">
+      <label>{{sr2eT "SR2E.UI.role"}} <select data-gen="contactRole">{{#each roles}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>
+      <label>{{sr2eT "SR2E.UI.contactOf"}} <select data-gen="contactFor">{{#each pcs}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>
+      <label class="sr2e-check"><input type="checkbox" data-gen="makeContactActor" {{#if s.makeContactActor}}checked{{/if}}> {{sr2eT "SR2E.UI.createTheirNpcActor"}}</label>
+    </div>
+    {{/if}}
+    {{#if is.spirit}}
+    <div class="sr2e-row"><label>{{sr2eT "SR2E.UI.kind"}} <select data-gen="spiritKind">{{#each spiritKinds}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label></div>
+    {{/if}}
+    {{#if is.critter}}
+    <div class="sr2e-row">
+      <label>{{sr2eT "SR2E.UI.animal"}} <select data-gen="critter">{{#each critters}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>
+      <label>{{sr2eT "SR2E.UI.howManyOneSheet"}} <input type="number" data-gen="critterCount" value="{{s.critterCount}}" min="1" max="20"></label>
+    </div>
+    {{/if}}
+    {{#if is.job}}
+    <div class="sr2e-row"><label class="sr2e-check"><input type="checkbox" data-gen="makePeople" {{#if s.makePeople}}checked{{/if}}> {{sr2eT "SR2E.UI.alsoCreateTheJohnsonAndThe"}}</label></div>
+    {{/if}}
+    {{#if is.names}}
+    <div class="sr2e-row"><label>{{sr2eT "SR2E.UI.howMany"}} <input type="number" data-gen="names" value="{{s.names}}" min="1" max="50"></label></div>
+    {{/if}}
+    {{#unless is.names}}{{#unless is.org}}{{#unless is.job}}{{#unless is.contact}}
+    <div class="sr2e-row">
+      <label class="sr2e-check"><input type="checkbox" data-gen="tokens" {{#if s.tokens}}checked{{/if}}> {{sr2eT "SR2E.UI.putTokensOnTheViewedScene"}}{{#if scene}} ({{scene}}){{/if}}</label>
+      <label class="sr2e-check" title="{{sr2eT "SR2E.UI.revealThemWhenThePlayersSee"}}"><input type="checkbox" data-gen="hidden" {{#if s.hidden}}checked{{/if}}> {{sr2eT "SR2E.UI.hiddenFromPlayers"}}</label>
+      {{#if is.group}}<label class="sr2e-check" title="{{sr2eT "SR2E.UI.oneMoraleTestForTheWhole"}}"><input type="checkbox" data-gen="moraleGroup" {{#if s.moraleGroup}}checked{{/if}}> {{sr2eT "SR2E.UI.groupTheTokensForMorale"}}</label>{{/if}}
+    </div>
+    {{/unless}}{{/unless}}{{/unless}}{{/unless}}
+  </section>
+
+  <section class="sr2e-npcgen-preview">
+    <h2 data-heading="Preview">{{sr2eT "SR2E.UI.preview"}}</h2>
+    {{{preview}}}
+  </section>
+
+  <footer class="sr2e-row sr2e-npcgen-actions">
+    <span class="hint">{{summary}}</span>
+    <button type="button" data-action="reroll" title="{{sr2eT "SR2E.UI.rollItAgain"}}"><i class="fa-solid fa-dice"></i> {{sr2eT "SR2E.UI.reRoll"}}</button>
+    <button type="button" data-action="postGm" title="{{sr2eT "SR2E.UI.whisperThePreviewToTheGms"}}"><i class="fa-solid fa-comment"></i> {{sr2eT "SR2E.UI.postToGm"}}</button>
+    <button type="button" data-action="create"><i class="fa-solid fa-check"></i> {{sr2eT "SR2E.UI.create"}}</button>
+  </footer>
+</div>

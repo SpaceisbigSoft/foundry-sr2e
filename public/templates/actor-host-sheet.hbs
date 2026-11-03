@@ -1,0 +1,81 @@
+<div class="sr2e-sheet sr2e-host">
+  <header class="sr2e-header">
+    <img src="{{actor.img}}" alt="" width="56" height="56" data-edit="img">
+    <div class="sr2e-header-main">
+      <input type="text" name="name" value="{{actor.name}}" placeholder="{{sr2eT "SR2E.UI.name"}}">
+    </div>
+  </header>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.node"}} <select name="system.gridKind">{{selectOptions gridKinds selected=system.gridKind valueAttr="key" labelAttr="label"}}</select></label>
+    <label>{{sr2eT "SR2E.UI.onGrid"}} <select name="system.parentUuid">{{selectOptions parents selected=system.parentUuid valueAttr="key" labelAttr="label"}}</select></label>
+    <label title="{{sr2eT "SR2E.UI.dialItToLogOnFrom"}}">{{sr2eT "SR2E.UI.ltgNumber"}} <input type="text" name="system.ltgNumber" value="{{system.ltgNumber}}" placeholder="e.g. 2206-1234"></label>
+    {{#if children.length}}<span>{{sr2eT "SR2E.UI.connectsTo"}} {{#each children}}<a data-action="openActor" data-uuid="{{uuid}}">{{name}}</a> ({{kind}}){{#unless @last}}, {{/unless}}{{/each}}</span>{{/if}}
+  </div>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.securityCode"}}
+      <select name="system.securityCode">{{selectOptions codes selected=system.securityCode valueAttr="key" labelAttr="label"}}</select>
+    </label>
+    <label>{{sr2eT "SR2E.UI.securityValue"}} <input type="number" name="system.securityValue" value="{{system.securityValue}}" min="0"></label>
+    {{#each subsystems}}
+    <label>{{label}} <input type="number" name="system.subsystems.{{key}}" value="{{value}}" min="0"></label>
+    {{/each}}
+  </div>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.securityTally"}} <input type="number" name="system.tally" value="{{system.tally}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.alert"}}
+      <select name="system.alert">{{selectOptions alerts selected=system.alert valueAttr="key" labelAttr="label"}}</select>
+    </label>
+    {{#if system.derived.nextStep}}<span>{{sr2eT "SR2E.UI.nextStepAt"}} <strong>{{system.derived.nextStep.step}}</strong>: {{system.derived.nextStep.event}}</span>{{else}}<span>{{sr2eT "SR2E.UI.noMoreSheafSteps"}}</span>{{/if}}
+    <button type="button" data-action="resetTally">{{sr2eT "SR2E.UI.resetTally"}}</button>
+  </div>
+  {{#if tallies.length}}<p class="hint" title="{{sr2eT "SR2E.UI.eachIntruderSOwnSecurityTally"}}">{{sr2eT "SR2E.UI.intrudersTallies"}} {{#each tallies}}<strong>{{name}}</strong> {{tally}}{{#unless @last}} · {{/unless}}{{/each}}</p>{{/if}}
+  {{#if shutdown}}<p class="sr2e-warn">{{shutdown}} <button type="button" data-action="shutdownNow" title="{{sr2eT "SR2E.UI.dumpEveryoneInsideNow"}}">{{sr2eT "SR2E.UI.dumpNow"}}</button> <a data-action="cancelShutdown" title="{{sr2eT "SR2E.UI.cancelTheShutdown"}}"><i class="fa-solid fa-xmark"></i></a></p>{{/if}}
+  {{#if validated.length}}<p class="hint">{{sr2eT "SR2E.UI.validPasscodes"}} {{#each validated}}{{name}} <a data-action="invalidate" data-uuid="{{uuid}}" title="{{sr2eT "SR2E.UI.invalidate"}}"><i class="fa-solid fa-xmark"></i></a>{{#unless @last}} · {{/unless}}{{/each}}</p>{{/if}}
+  <h2 data-heading="Subsystem data bombs">{{sr2eT "SR2E.UI.subsystemDataBombs"}} <button type="button" data-action="addBomb">{{sr2eT "SR2E.UI.add"}}</button></h2>
+  <ul class="sr2e-list">
+    {{#each bombs}}<li><strong>{{subsystem}}</strong> <span>{{sr2eT "SR2E.UI.rating4" rating=rating}}{{#if pavlov}} {{sr2eT "SR2E.UI.pavlov"}}{{/if}}{{#if found}} {{sr2eT "SR2E.UI.foundBy" found=found}}{{/if}}</span> <a data-action="deleteBomb" data-index="{{index}}" title="{{sr2eT "SR2E.UI.delete"}}"><i class="fa-solid fa-trash"></i></a></li>{{else}}<li><em>{{sr2eT "SR2E.UI.noneTheFirstSuccessfulOperationOn"}}</em></li>{{/each}}
+  </ul>
+  {{#if isLtg}}
+  <h2 data-heading="Comcalls">{{sr2eT "SR2E.UI.comcalls"}}</h2>
+  <ul class="sr2e-list">
+    {{#each calls}}<li>{{from}} → <strong>{{to}}</strong> <span>{{sr2eT "SR2E.UI.by" by=by}}{{#if rerouted}} {{sr2eT "SR2E.UI.reroutedTo" rerouted=rerouted}}{{/if}}{{#if tapped}} {{sr2eT "SR2E.UI.tappedBy" tapped=tapped}}{{/if}}</span> <a data-action="endCall" data-id="{{id}}" title="{{sr2eT "SR2E.UI.endTheCall"}}"><i class="fa-solid fa-phone-slash"></i></a></li>{{else}}<li><em>{{sr2eT "SR2E.UI.noCallsDeckersOnThisLtg"}}</em></li>{{/each}}
+  </ul>
+  {{/if}}
+  <h2 data-heading="Security sheaf">{{sr2eT "SR2E.UI.securitySheaf"}} <button type="button" data-action="addStep">{{sr2eT "SR2E.UI.addStep"}}</button> <button type="button" data-action="generateSheaf" title="{{sr2eT "SR2E.UI.rollASecuritySheafForThis"}}">{{sr2eT "SR2E.UI.generateSheaf"}}</button></h2>
+  <ul class="sr2e-list">
+    {{#each sheaf}}
+    <li class="{{#if reached}}sr2e-reached{{/if}}"><a data-action="editStep" data-index="{{index}}"><strong>{{step}}</strong>: {{#if event}}{{event}}{{else}}{{sr2eT "SR2E.UI.noEvent"}}{{/if}}</a>
+      <span>{{#if alert}}{{sr2eT "SR2E.UI.alert2" alert=alert}}{{/if}}{{#if icLabel}} {{sr2eT "SR2E.UI.launches" icLabel=icLabel}}{{#if launched}} {{sr2eT "SR2E.UI.launched"}}{{/if}}{{/if}}{{#if reached}} {{sr2eT "SR2E.UI.reached"}}{{/if}}</span>
+      <a data-action="deleteStep" data-index="{{index}}" title="{{sr2eT "SR2E.UI.delete"}}"><i class="fa-solid fa-trash"></i></a></li>
+    {{else}}<li><em>{{sr2eT "SR2E.UI.noStepsEachSystemTestS"}}</em></li>
+    {{/each}}
+  </ul>
+  <h2 data-heading="IC">{{sr2eT "SR2E.UI.ic"}} <button type="button" data-action="launchIc">{{sr2eT "SR2E.UI.launchIc"}}</button></h2>
+  <ul class="sr2e-list">
+    {{#each ic}}
+    <li><a data-action="openActor" data-uuid="{{uuid}}">{{name}}</a> <span>{{behavior}}{{#if construct}} + {{construct}}{{/if}} {{sr2eT "SR2E.UI.rating5" category=category rating=rating}}{{#if guards}} {{sr2eT "SR2E.UI.guards" guards=guards}}{{/if}}{{#if party}} {{sr2eT "SR2E.UI.party" party=party}}{{/if}} · {{status}}</span></li>
+    {{else}}<li><em>{{sr2eT "SR2E.UI.none"}}</em></li>
+    {{/each}}
+  </ul>
+  <h2 data-heading="Data stores">{{sr2eT "SR2E.UI.dataStores"}} <button type="button" data-action="addFile">{{sr2eT "SR2E.UI.addFile"}}</button> <button type="button" data-action="generatePaydata" title="{{sr2eT "SR2E.UI.rollPaydataFilesForThisSecurity"}}">{{sr2eT "SR2E.UI.generatePaydata"}}</button> <button type="button" data-action="resetFound" title="{{sr2eT "SR2E.UI.forgetWhichDeckersHaveLocatedEach"}}">{{sr2eT "SR2E.UI.resetFound"}}</button></h2>
+  <ul class="sr2e-list">
+    {{#each files}}
+    <li><a data-action="editFile" data-index="{{index}}"><strong>{{name}}</strong></a>
+      <span>{{sr2eT "SR2E.UI.mp" size=size}}{{#if paydata}} {{sr2eT "SR2E.UI.paydata" value=value}}{{/if}}{{#if defense}} · {{defense}}{{/if}}{{#if found}} {{sr2eT "SR2E.UI.foundBy" found=found}}{{/if}}{{#if uploadedBy}} {{sr2eT "SR2E.UI.uploadedBy" uploadedBy=uploadedBy}}{{/if}}{{#if edited}} · <span class="sr2e-warn">{{sr2eT "SR2E.UI.edited" edited=edited}}</span>{{/if}}{{#if bomb}} · <span class="sr2e-warn">{{sr2eT "SR2E.UI.dataBomb" bomb=bomb}}{{#if pavlov}} {{sr2eT "SR2E.UI.pavlov2"}}{{/if}}</span>{{/if}}</span>
+      <a data-action="deleteFile" data-index="{{index}}" title="{{sr2eT "SR2E.UI.delete"}}"><i class="fa-solid fa-trash"></i></a></li>
+    {{else}}<li><em>{{sr2eT "SR2E.UI.noFilesDeckersFindThemWith"}}</em></li>
+    {{/each}}
+  </ul>
+  {{#if smoke}}<p class="sr2e-warn">{{smoke}} <a data-action="clearSmoke" title="{{sr2eT "SR2E.UI.clearTheSmoke"}}"><i class="fa-solid fa-xmark"></i></a></p>{{/if}}
+  <h2 data-heading="Deckers here">{{sr2eT "SR2E.UI.deckersHere"}}</h2>
+  <ul class="sr2e-list">
+    {{#each deckers}}<li><a data-action="openActor" data-uuid="{{uuid}}">{{name}}</a>{{#if security}} <span>{{sr2eT "SR2E.UI.security"}}</span>{{/if}}{{#if spotted}} <span class="sr2e-warn">{{sr2eT "SR2E.UI.spotted"}}</span> <a data-action="unspot" data-uuid="{{uuid}}" title="{{sr2eT "SR2E.UI.forget"}}"><i class="fa-solid fa-xmark"></i></a>{{/if}}</li>{{else}}<li><em>{{sr2eT "SR2E.UI.none"}}</em></li>{{/each}}
+  </ul>
+  <h2 data-heading="Security deckers">{{sr2eT "SR2E.UI.securityDeckers"}} <button type="button" data-action="addSecurity">{{sr2eT "SR2E.UI.add"}}</button></h2>
+  <ul class="sr2e-list">
+    {{#each securityDeckers}}<li><a data-action="openActor" data-uuid="{{uuid}}">{{name}}</a> <span>{{#if here}}{{sr2eT "SR2E.UI.jackedInHere"}}{{else}}{{sr2eT "SR2E.UI.notHere"}}{{/if}}</span>
+      <a data-action="removeSecurity" data-index="{{index}}" title="{{sr2eT "SR2E.UI.remove"}}"><i class="fa-solid fa-trash"></i></a></li>{{else}}<li><em>{{sr2eT "SR2E.UI.noneASecurityDeckerHereRolls"}}</em></li>{{/each}}
+  </ul>
+  <label>{{sr2eT "SR2E.UI.notes"}}</label>
+  {{#if editable}}<prose-mirror class="sr2e-rich" name="system.notes" toggled value="{{richSource.notes}}">{{{enriched.notes}}}</prose-mirror>{{else}}<div class="sr2e-rich">{{{enriched.notes}}}</div>{{/if}}
+</div>

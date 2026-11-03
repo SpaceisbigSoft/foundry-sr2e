@@ -1,0 +1,11 @@
+{{!-- v0.67.0: a small read-only condition monitor (the sheet summary, the GM panel's party rows): segmented bars in the
+     same wound groups as the sheet (+1 / +2 / +3 / D or KO), and the Overflow bar greyed until Physical is full. Context: cm.
+     v0.86.0: each bar is one picture to a screen reader (role img), read out by its label. --}}
+<span class="sr2e-cm-mini" title="{{sr2eT "SR2E.UI.physicalStun" filled=cm.physical.filled boxes=cm.physical.boxes filled2=cm.stun.filled boxes2=cm.stun.boxes}}{{#if cm.overflow}} {{sr2eT "SR2E.UI.overflow" filled=cm.overflow.filled body=cm.overflow.body}}{{/if}}">
+  {{#each cm.tracks}}
+  <span class="sr2e-cm-bar sr2e-cm-{{track}}" role="img" aria-label="{{sr2eT "SR2E.UI.of" label=label filled=filled boxes=boxes}}"><b>{{short}}</b>{{#each groups}}{{#unless @first}}<span class="sr2e-cm-div"></span>{{/unless}}<span class="sr2e-cm-seg{{#if now}} now{{/if}}" style="flex: {{size}}" title="{{title}}"><i>{{label}}</i><span>{{#each boxes}}<s class="{{#if filled}}filled{{/if}}"></s>{{/each}}</span></span>{{/each}}</span>
+  {{/each}}
+  {{#if cm.overflow}}
+  <span class="sr2e-cm-bar sr2e-cm-overflow{{#if cm.overflow.idle}} idle{{/if}}" role="img" aria-label="{{sr2eT "SR2E.UI.overflowOf" filled=cm.overflow.filled body=cm.overflow.body}}"><b>{{sr2eT "SR2E.UI.of2"}}</b><span class="sr2e-cm-seg" style="flex: 1"><i>{{sr2eT "SR2E.UI.body2" body=cm.overflow.body}}</i><span>{{#each cm.overflow.boxes}}<s class="{{#if filled}}filled{{/if}}{{#if dead}} dead{{/if}}"></s>{{/each}}</span></span></span>
+  {{/if}}
+</span>

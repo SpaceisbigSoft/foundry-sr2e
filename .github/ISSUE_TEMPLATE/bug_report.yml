@@ -1,0 +1,35 @@
+name: Bug report
+description: Something in the system doesn't work as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! The quickest way: in Foundry, open the guide (Alt+H) or the SR2e tools window (Alt+T) and press **Report a bug**. It makes a text with your system and Foundry versions, active modules, changed house rules and recent errors. Press **Copy** and paste it below, then describe what happened.
+        Read it before posting: error messages can name things in your world. Please don't paste rulebook text.
+  - type: textarea
+    id: report
+    attributes:
+      label: The "Report a bug" text
+      description: Paste the whole text from the Report a bug window. If you can't open Foundry, describe your system and Foundry versions instead.
+      placeholder: "### What happened ..."
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to make it happen again
+      description: The steps, if they aren't in the text above. A screenshot helps too.
+      placeholder: |
+        1. Open a character sheet
+        2. Click ...
+        3. ...
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before posting
+      options:
+        - label: I checked that it still happens with every module except SR2e's own turned off (or I said which modules are on).
+          required: false
+        - label: I read the text and took out anything private.
+          required: true

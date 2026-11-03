@@ -1,0 +1,1449 @@
+.sr2e-sheet { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.5rem; }
+.sr2e-sheet h2 { margin: 0.5rem 0 0.25rem; border-bottom: 1px solid var(--color-border-light-tertiary, #888); font-size: 1.1rem; }
+.sr2e-header { display: flex; align-items: center; gap: 0.5rem; }
+.sr2e-header input[type="text"] { font-size: 1.4rem; flex: 1; }
+.sr2e-row { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
+.sr2e-row label { display: flex; flex-direction: column; gap: 0.15rem; font-size: 0.8rem; }
+.sr2e-attributes table { width: 100%; text-align: center; }
+.sr2e-attributes td:first-child, .sr2e-attributes th:first-child { text-align: left; }
+.sr2e-items ul { list-style: none; margin: 0; padding: 0; }
+.sr2e-items li { display: flex; gap: 0.5rem; align-items: center; justify-content: space-between; padding: 0.15rem 0; }
+.sr2e-status { font-size: 0.8rem; text-transform: uppercase; margin-left: 0.5rem; }
+.sr2e-roll h3 { margin: 0 0 0.25rem; }
+.sr2e-dice { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+.sr2e-die { padding: 0.1rem 0.4rem; border: 1px solid #888; border-radius: 4px; }
+.sr2e-die.hit { background: #2e7d3255; font-weight: bold; }
+.sr2e-die.miss { color: var(--sr2e-muted); }
+.sr2e-botch { color: #c62828; }
+.sr2e-items li button { flex: 0 0 auto; width: auto; padding: 0 0.6rem; line-height: 1.6; }
+.sr2e-roll + p button, .sr2e-roll ~ p button { width: auto; padding: 0 0.8rem; }
+
+/* Condition monitor boxes */
+.sr2e-track { display: flex; align-items: center; gap: 2px; }
+.sr2e-track-label { width: 4.5rem; font-size: 0.8rem; }
+.sr2e-box { display: inline-flex; align-items: center; justify-content: center; width: 1.6rem; height: 1.6rem;
+  border: 1px solid #888; border-radius: 3px; font-size: 0.65rem; color: #999; cursor: pointer; }
+.sr2e-box.filled { background: #b71c1c; border-color: #e57373; color: #fff; }
+.sr2e-overflow { margin-left: 0.4rem; font-size: 0.8rem; color: #e57373; }
+
+/* NPC sheet */
+.sr2e-npc .sr2e-header { gap: 0.5rem; }
+.sr2e-npc .sr2e-header button { width: auto; flex: 0 0 auto; }
+.sr2e-inline { display: flex; align-items: center; gap: 0.25rem; font-size: 0.8rem; }
+.sr2e-inline input { width: 3rem; }
+.sr2e-aug { display: block; font-size: 0.75rem; color: var(--sr2e-muted); }
+.sr2e-npc-derived { font-size: 0.85rem; }
+.sr2e-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; margin: 0.2rem 0; }
+.sr2e-chip { display: inline-flex; gap: 0.3rem; align-items: center; padding: 0.05rem 0.45rem; border: 1px solid var(--color-border-light-tertiary, #999); border-radius: 999px; font-size: 0.85rem; white-space: nowrap; }
+.sr2e-chip i { font-size: 0.7rem; color: var(--sr2e-muted); }
+.sr2e-details { margin-top: 0.4rem; }
+.sr2e-details summary { cursor: pointer; font-weight: bold; }
+.sr2e-details textarea { width: 100%; }
+.sr2e-situational { display: grid; grid-template-columns: 1fr 1fr; gap: 0.15rem 0.6rem; margin: 0.4rem 0; }
+.sr2e-check { display: flex; align-items: center; gap: 0.3rem; font-size: 0.85rem; }
+.sr2e-ammo { font-variant-numeric: tabular-nums; }
+.sr2e-karma button { width: auto; padding: 0 0.6rem; margin-right: 0.3rem; }
+
+/* Conjuring and spirits */
+.sr2e-conjuring h2 { display: flex; align-items: center; gap: 0.4rem; }
+.sr2e-conjuring h2 button { width: auto; font-size: 0.8rem; padding: 0 0.6rem; line-height: 1.5; flex: 0 0 auto; }
+.sr2e-conjuring ul { list-style: none; margin: 0; padding: 0; }
+.sr2e-conjuring li { display: flex; gap: 0.5rem; justify-content: space-between; padding: 0.15rem 0; }
+.sr2e-spirit-meta button { width: auto; flex: 0 0 auto; align-self: flex-end; padding: 0 0.6rem; }
+.sr2e-spirit-summoner { margin: 0; font-size: 0.85rem; }
+.sr2e-offsets { font-size: 0.8rem; gap: 0.4rem; }
+.sr2e-offsets label { align-items: center; }
+.sr2e-offsets input { width: 2.6rem; text-align: center; }
+.sr2e-offsets-label { font-weight: bold; }
+.sr2e-heading-actions { display: flex; align-items: center; gap: 0.4rem; }
+.sr2e-heading-actions button { width: auto; font-size: 0.8rem; padding: 0 0.6rem; line-height: 1.5; flex: 0 0 auto; }
+.sr2e-astral button { width: auto; flex: 0 0 auto; padding: 0 0.6rem; }
+.sr2e-astral select { width: auto; }
+.sr2e-power-summary { font-size: 0.8rem; color: var(--sr2e-muted); flex: 1; text-align: right; }
+.sr2e-wide { flex: 1; }
+.sr2e-magic ul { list-style: none; margin: 0; padding: 0; }
+.sr2e-magic li { display: flex; gap: 0.5rem; align-items: center; justify-content: space-between; padding: 0.1rem 0; }
+.sr2e-magic h3 { margin: 0.4rem 0 0.1rem; font-size: 0.95rem; }
+.sr2e-magic button { width: auto; flex: 0 0 auto; padding: 0 0.6rem; }
+.sr2e-totem input { width: 3rem; }
+.sr2e-totem label:first-child input { width: 7rem; }
+.sr2e-metamagic { display: flex; flex-wrap: wrap; gap: 0.2rem 0.7rem; }
+.sr2e-initiation input[type="number"] { width: 3.5rem; }
+.sr2e-magic li button { padding: 0 0.5rem; line-height: 1.5; }
+.sr2e-barrier button { width: auto; flex: 0 0 auto; padding: 0 0.6rem; }
+.sr2e-signatures { width: 100%; font-size: 0.85rem; }
+.sr2e-signatures th, .sr2e-signatures td { text-align: left; padding: 0.1rem 0.3rem; }
+.sr2e-magic h3 a { font-size: 0.8rem; margin-left: 0.3rem; }
+.sr2e-quest { display: inline-flex; gap: 0.4rem; align-items: center; }
+.sr2e-quest button { padding: 0 0.5rem; line-height: 1.5; }
+.sr2e-ritual { margin: 0.3rem 0; }
+.sr2e-ritual summary { cursor: pointer; font-weight: bold; }
+
+/* Matrix */
+.sr2e-matrix ul, .sr2e-list { list-style: none; margin: 0; padding: 0; }
+.sr2e-matrix li, .sr2e-list li { display: flex; gap: 0.5rem; align-items: center; justify-content: space-between; padding: 0.1rem 0; }
+.sr2e-matrix h3 { margin: 0.4rem 0 0.1rem; font-size: 0.95rem; }
+.sr2e-matrix button, .sr2e-host button, .sr2e-ic button { width: auto; flex: 0 0 auto; padding: 0 0.6rem; }
+.sr2e-matrix .sr2e-track { margin: 0.3rem 0; }
+.sr2e-host h2 { display: flex; align-items: center; gap: 0.4rem; }
+.sr2e-host h2 button { font-size: 0.8rem; line-height: 1.5; }
+.sr2e-host .sr2e-row label input[type="number"] { width: 4rem; }
+.sr2e-reached { color: var(--sr2e-muted); }
+.sr2e-warn { color: var(--sr2e-danger); }
+
+/* v0.19.0: measured distance in the Attack dialog */
+.sr2e-distance .sr2e-range-note:empty { display: none; }
+.sr2e-distance[data-status="out"] .sr2e-range-note { color: var(--sr2e-danger); font-weight: bold; }
+.sr2e-distance[data-status="unmeasured"] .sr2e-range-note { font-style: italic; }
+.sr2e-distance .sr2e-anyway[hidden] { display: none; }
+/* v0.20.0 */
+.sr2e-distance .sr2e-cover-note:empty { display: none; }
+.sr2e-distance .sr2e-cover-note { color: var(--color-level-warning, #b26b00); }
+ul.sr2e-blast { list-style: none; padding-left: 0; margin: 0.3rem 0; }
+ul.sr2e-blast li { display: flex; align-items: center; gap: 0.4rem; justify-content: space-between; }
+ul.sr2e-blast li button { flex: 0 0 auto; width: auto; }
+.sr2e-warning { color: var(--sr2e-danger); }
+/* v0.22.0 */
+ul.sr2e-warnings { margin: 0.2rem 0; padding-left: 1.1rem; color: var(--sr2e-danger); font-size: 0.85rem; }
+.sr2e-surprise { margin: 0.25rem; width: auto; flex: 0 0 auto; }
+/* v0.23.0: tabs, summary header, pools as pips, quick-action bar, house rules */
+.sr2e .sr2e-tabs { display: flex; flex-wrap: wrap; gap: 0.25rem; border-bottom: 1px solid var(--color-border-light-tertiary, #999); margin: 0.4rem 0; padding-bottom: 0.2rem; }
+.sr2e .sr2e-tabs .item { padding: 0.15rem 0.6rem; border-radius: 4px 4px 0 0; cursor: pointer; }
+.sr2e .sr2e-tabs .item.active { font-weight: bold; border-bottom: 2px solid var(--sr2e-accent); }
+.sr2e .sr2e-tab { display: none; }
+.sr2e .sr2e-tab.active { display: block; }
+.sr2e-summary { display: flex; flex-direction: column; gap: 0.3rem; margin: 0.3rem 0; padding: 0.35rem 0.4rem; border: 1px solid var(--color-border-light-tertiary, #999); border-radius: 6px; }
+.sr2e-summary-row { display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center; font-size: 0.85rem; }
+.sr2e-chip-soft { color: var(--sr2e-muted); font-style: italic; }
+.sr2e-pools { gap: 0.8rem; }
+.sr2e-pool { display: inline-flex; align-items: center; gap: 2px; }
+.sr2e-pool em { margin-left: 0.25rem; color: var(--sr2e-muted); font-style: normal; }
+.sr2e-pip { display: inline-block; width: 0.7rem; height: 0.7rem; border-radius: 50%; border: 1px solid currentColor; opacity: 0.55; cursor: pointer; }
+.sr2e-pip.filled { background: currentColor; opacity: 1; }
+.sr2e-quickbar { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+.sr2e-quickbar button { flex: 0 0 auto; width: auto; padding: 0.1rem 0.5rem; font-size: 0.85rem; line-height: 1.6; }
+.sr2e-bio textarea { width: 100%; }
+.sr2e-house-rules fieldset { margin-bottom: 0.6rem; }
+.sr2e-house-rules .sr2e-changed label { font-weight: bold; }
+/* v0.80.0: rows the Unified Rules Revamp changes */
+.sr2e-house-rules .sr2e-urr { border-left: 3px solid var(--sr2e-accent, currentColor); padding-left: 0.4rem; }
+.sr2e-house-rules .sr2e-hr-urr { color: var(--sr2e-accent, inherit); }
+.sr2e-house-rules .sr2e-hr-source strong { color: var(--sr2e-accent, inherit); }
+.sr2e-house-rules textarea { width: 100%; font-family: monospace; }
+/* Attack dialog: live preview, folded options, narrow layout */
+.sr2e-preview { margin: 0.4rem 0; padding: 0.35rem 0.5rem; border: 1px solid var(--color-border-light-tertiary, #999); border-radius: 6px; font-size: 0.9rem; }
+.sr2e-preview strong.sr2e-tn { font-size: 1.15rem; }
+.sr2e-preview ul { margin: 0.2rem 0 0; padding-left: 1rem; }
+.sr2e-preview li.auto::after { content: " (auto)"; color: var(--sr2e-muted); font-style: italic; }
+.sr2e-preview .sr2e-warn { color: var(--sr2e-danger); }
+details.sr2e-more > summary { cursor: pointer; font-weight: bold; margin: 0.3rem 0; }
+@media (max-width: 560px) { .application.dialog .form-group { flex-wrap: wrap; } .application.dialog .form-group > label { flex: 1 0 100%; } }
+
+/* Vehicles and rigging (v0.24.0) */
+.sr2e-vehicle button, .sr2e-rigging button { width: auto; flex: 0 0 auto; padding: 0 0.6rem; }
+.sr2e-vehicle h3 { margin: 0.4rem 0 0.1rem; font-size: 0.95rem; }
+.sr2e-vehicle-stats input[type="number"] { width: 3.4rem; }
+.sr2e-vehicle .sr2e-track { margin: 0.3rem 0; }
+.sr2e-rigging .sr2e-row { margin: 0.2rem 0; }
+.sr2e-vehicle .sr2e-list li span { display: flex; gap: 0.4rem; align-items: center; }
+.sr2e-rigging h3 { margin: 0.4rem 0 0.1rem; font-size: 0.95rem; }
+.sr2e-site button { width: auto; flex: 0 0 auto; padding: 0 0.6rem; }
+.sr2e-site h3 { margin: 0.5rem 0 0.15rem; font-size: 0.95rem; }
+.sr2e-devices { width: 100%; font-size: 0.85rem; }
+.sr2e-devices td { padding: 0.1rem 0.25rem; }
+.sr2e-device-actions { display: flex; gap: 0.3rem; align-items: center; justify-content: flex-end; }
+.sr2e-improve { color: var(--sr2e-muted); font-size: 0.8em; margin-left: 0.2em; }
+.sr2e-improve:hover { color: var(--sr2e-accent); }
+.sr2e-ledger li { font-size: 0.85rem; }
+.sr2e-award { margin: 0.3rem; width: calc(100% - 0.6rem); }
+/* v0.35.0: outcome banners, folded dice, GM tools, delay buttons */
+.sr2e-banner { font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; text-align: center; padding: 0.1rem 0.4rem; border-radius: 3px; margin-bottom: 0.25rem; font-size: 0.85rem; }
+.sr2e-banner-hit { background: #8e2b2b; color: #fff; }
+.sr2e-banner-miss { background: #555; color: #fff; }
+.sr2e-banner-counter { background: #6b3fa0; color: #fff; }
+.sr2e-banner-disaster { background: #000; color: #ffb000; }
+.sr2e-banner-ok { background: #2e6b3a; color: #fff; }
+.sr2e-banner-neutral { background: #2d4f73; color: #fff; }
+details.sr2e-fold > summary { cursor: pointer; }
+details.sr2e-fold .sr2e-breakdown { margin: 0.2rem 0; font-size: 0.85rem; }
+.sr2e-gm-tools { margin-top: 0.3rem; padding-top: 0.2rem; border-top: 1px dashed #888; font-size: 0.85rem; }
+.sr2e-gm-tools button { width: auto; padding: 0 0.5rem; line-height: 1.4rem; }
+button.sr2e-delay { width: auto; padding: 0 0.4rem; line-height: 1.3rem; font-size: 0.75rem; margin-right: 0.25rem; }
+.sr2e-gm-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem; }
+/* v0.36.0: target links, tracker pools, HUD */
+.sr2e-targets { margin-top: 0.25rem; font-size: 0.85rem; }
+.sr2e-targets a.sr2e-pan { margin-right: 0.4rem; cursor: pointer; }
+.sr2e-tracker-pools { font-size: 0.7rem; opacity: 0.8; line-height: 1.1; }
+.sr2e-pass { font-weight: normal; opacity: 0.8; }
+/* v0.68.0: Foundry's settings window: the system's settings under section headings (Foundry's colours). */
+h4.sr2e-settings-head { margin: 0.9rem 0 0.25rem; padding-bottom: 0.15rem; border-bottom: 1px solid var(--color-border, #7a7971); font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-secondary, inherit); }
+
+/* ==========================================================================
+   v0.68.0: the combat tracker (Foundry's window): the pass banner, the acting row, the delaying group and the
+   full-defense badge. Foundry's own variables (with fallbacks), never the --sr2e-* palette; it sits before
+   the look section, which is scoped to our windows only.
+   ========================================================================== */
+.sr2e-pass-banner { margin: 0.25rem 0.25rem 0.35rem; padding: 0.35rem 0.6rem; border: 1px solid var(--color-border, #444); border-left: 4px solid var(--color-warm-2, #c9593f); border-radius: 4px; background: var(--color-cool-4, rgba(0, 0, 0, 0.25)); color: var(--color-text-primary, #ddd); }
+.sr2e-pass-banner .sr2e-pass-title { font-size: 1.2rem; font-weight: 700; letter-spacing: 0.03em; line-height: 1.3; color: var(--color-text-emphatic, var(--color-text-primary, #fff)); }
+.sr2e-pass-banner .sr2e-pass-sub { display: flex; flex-wrap: wrap; gap: 0.15rem 0.7rem; font-size: 0.8rem; color: var(--color-text-secondary, #bbb); }
+.sr2e-pass-banner .sr2e-pass-acting { font-weight: 700; color: var(--color-text-primary, #ddd); }
+.sr2e-pass-banner .sr2e-pass-note { white-space: nowrap; }
+li[data-combatant-id].combatant.sr2e-acting { border-left: 5px solid var(--color-warm-2, #c9593f); background: color-mix(in srgb, var(--color-warm-2, #c9593f) 22%, transparent); }
+li[data-combatant-id].combatant.sr2e-acting .token-name, li[data-combatant-id].combatant.sr2e-acting .name { font-weight: 700; }
+li[data-combatant-id].combatant.sr2e-delayed { border-left: 3px dashed var(--color-cool-3, var(--color-border, #666)); }
+li.sr2e-tracker-group { display: block; margin: 0.35rem 0.25rem 0.1rem; padding: 0.1rem 0.4rem; list-style: none; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-text-secondary, #bbb); border-bottom: 1px solid var(--color-border, #444); }
+.sr2e-badge-fd { display: inline-flex; align-items: center; justify-content: center; margin-left: 0.3rem; padding: 0 0.25rem; font-size: 0.7rem; line-height: 1.1rem; color: var(--color-text-primary, #ddd); border: 1px solid var(--color-cool-3, var(--color-border, #666)); border-radius: 3px; background: var(--color-cool-4, rgba(0, 0, 0, 0.2)); vertical-align: middle; }
+/* (end of the v0.68.0 tracker part) */
+
+/* v0.37.0: ammo pips and firing-mode buttons */
+.sr2e-ammo { display: inline-flex; flex-wrap: wrap; gap: 1px; align-items: center; max-width: 9rem; vertical-align: middle; }
+.sr2e-ammo .sr2e-pip { display: inline-block; width: 4px; height: 8px; border-radius: 1px; background: #8885; border: 0; opacity: 1; cursor: default; }
+.sr2e-ammo .sr2e-pip.full { background: #d9a400; }
+button.sr2e-mode { width: auto; min-width: 0; padding: 0 0.3rem; line-height: 1.2rem; font-size: 0.7rem; margin: 0 1px; }
+/* v0.38.0: build check */
+table.sr2e-build { width: 100%; font-size: 0.85rem; margin: 0.4rem 0; }
+table.sr2e-build td, table.sr2e-build th { padding: 0.15rem 0.3rem; text-align: left; }
+
+/* v0.41.0: dice colours (client setting), group-roll table, GM panel, item templates and layouts */
+body.sr2e-dice-colourblind .sr2e-die.hit { background: #0072b2; color: #fff; border: 2px solid #003f63; font-weight: bold; }
+body.sr2e-dice-colourblind .sr2e-die.hit::after { content: " ✔"; font-size: 0.8em; }
+body.sr2e-dice-colourblind .sr2e-die.miss { background: none; border: 1px dashed #e69f00; color: var(--sr2e-muted); }
+body.sr2e-dice-colourblind .sr2e-botch { color: #d55e00; text-decoration: underline wavy; }
+body.sr2e-dice-colourblind .sr2e-banner-hit { background: #d55e00; color: #000; }
+body.sr2e-dice-colourblind .sr2e-banner-hit::before { content: "✖ "; }
+body.sr2e-dice-colourblind .sr2e-banner-ok { background: #0072b2; color: #fff; }
+body.sr2e-dice-colourblind .sr2e-banner-ok::before { content: "✔ "; }
+body.sr2e-dice-colourblind .sr2e-banner-miss { background: #6f6f6f; color: #fff; }
+body.sr2e-dice-colourblind .sr2e-banner-miss::before { content: "○ "; }
+body.sr2e-dice-colourblind .sr2e-banner-counter { background: #cc79a7; color: #000; }
+body.sr2e-dice-colourblind .sr2e-banner-neutral { background: #56b4e9; color: #000; }
+body.sr2e-dice-contrast .sr2e-die.hit { background: #000; color: #fff; border: 2px solid #000; font-weight: bold; }
+body.sr2e-dice-contrast .sr2e-die.hit::after { content: " ✔"; font-size: 0.8em; }
+body.sr2e-dice-contrast .sr2e-die.miss { background: #fff; color: #000; border: 1px dashed #000; opacity: 1; }
+body.sr2e-dice-contrast .sr2e-banner { background: #000 !important; color: #fff !important; border: 2px solid #fff; }
+body.sr2e-dice-contrast .sr2e-banner-miss, body.sr2e-dice-contrast .sr2e-banner-ok { background: #fff !important; color: #000 !important; border: 2px solid #000; }
+table.sr2e-group { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+table.sr2e-group th, table.sr2e-group td { border-bottom: 1px solid var(--sr2e-rule); padding: 0.1rem 0.25rem; text-align: left; }
+.sr2e-gm-panel .sr2e-gm section { margin-bottom: 0.6rem; }
+.sr2e-gm-panel .sr2e-gm h2 { font-size: 1.05rem; margin: 0.3rem 0; border-bottom: 1px solid var(--sr2e-rule-strong); }
+.sr2e-gm-panel .sr2e-gm textarea { width: 100%; }
+.sr2e-gm-panel .sr2e-gm .sr2e-wide { flex: 1 1 100%; }
+.sr2e-gm-panel .sr2e-gm .sr2e-wide input { width: 100%; }
+.sr2e-gm-panel .sr2e-gm li { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; }
+.sr2e-gm-panel .sr2e-gm li .hint { flex-basis: 100%; }
+.sr2e .sr2e-template, .sr2e .sr2e-layout { background: var(--sr2e-raised); border-radius: 4px; padding: 0.15rem 0.3rem; }
+
+/* v0.46.0 */
+.sr2e-construct { flex-wrap: wrap; gap: 0.2rem 0.6rem; }
+.sr2e-construct .sr2e-check { font-size: 0.8rem; }
+.sr2e-ic-act { cursor: pointer; margin-left: 0.25rem; }
+/* v0.50.0: found-by-themselves modifiers can be switched off in a dialog's preview. */
+.sr2e-preview li.off { text-decoration: line-through; color: var(--sr2e-muted); }
+.sr2e-preview label.sr2e-auto-mod { display: inline; font-weight: normal; cursor: pointer; }
+.sr2e-preview label.sr2e-auto-mod input { margin: 0 0.25rem 0 0; vertical-align: middle; width: auto; height: auto; }
+
+/* v0.51.0: GM panel tabs, undo bar, people rows, calculator, log */
+.sr2e-gm-panel .sr2e-gm-tabs a { padding: 0.15rem 0.5rem; border-radius: 4px 4px 0 0; cursor: pointer; white-space: nowrap; }
+.sr2e-gm-panel .sr2e-gm-tabs a.active { font-weight: bold; border-bottom: 2px solid var(--sr2e-accent); }
+.sr2e-gm-panel .sr2e-gm-undobar { align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; flex-wrap: nowrap; }
+.sr2e-gm-panel .sr2e-gm-undobar button { flex: 0 0 auto; width: auto; padding: 0 0.6rem; }
+.sr2e-gm-panel .sr2e-gm-undobar .hint { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sr2e-gm-panel .sr2e-gm-time button { flex: 0 0 auto; width: auto; padding: 0 0.5rem; }
+.sr2e-gm-panel .sr2e-gm-people > li { display: block; padding: 0.2rem 0.3rem; border-bottom: 1px solid var(--sr2e-rule); }
+.sr2e-gm-panel .sr2e-gm-people > li .hint { display: block; }
+.sr2e-gm-panel .sr2e-gm-people .sr2e-row { gap: 0.4rem; align-items: center; flex-wrap: wrap; }
+.sr2e-gm-panel .sr2e-gm-people .sr2e-gm-acts { margin-left: auto; display: inline-flex; gap: 0.45rem; }
+.sr2e-gm-panel .sr2e-gm-people .sr2e-init { min-width: 1.6rem; text-align: center; font-weight: bold; border: 1px solid var(--sr2e-rule-strong); border-radius: 3px; padding: 0 0.2rem; }
+.sr2e-gm-panel .sr2e-gm-people li.sr2e-current { background: rgba(201, 89, 63, 0.15); border-left: 3px solid var(--sr2e-accent); }
+.sr2e-gm-panel .sr2e-gm-people li.sr2e-defeated { color: var(--sr2e-muted); }
+.sr2e-gm-panel .sr2e-gm-money { width: 100%; font-size: 0.9rem; }
+.sr2e-gm-panel .sr2e-gm-calc { margin: 0.3rem 0; }
+.sr2e-gm-panel .sr2e-gm-calc table { width: 100%; text-align: center; }
+.sr2e-gm-panel .sr2e-gm-undo > li { display: flex; align-items: flex-start; }
+.sr2e-gm-panel .sr2e-gm-undo details { flex: 1 1 auto; }
+.sr2e-gm-panel .sr2e-gm-undo details ul { margin: 0.2rem 0 0.2rem 1rem; padding: 0; font-size: 0.85rem; }
+.sr2e-gm-panel .sr2e-gm-undo details li { display: list-item; }
+.sr2e-gm-panel .sr2e-gm-limits li { display: list-item; margin-left: 1rem; font-size: 0.85rem; }
+.sr2e-flash { outline: 2px solid var(--sr2e-accent); transition: outline 0.3s; }
+
+/* v0.52.0: NPC generator */
+.sr2e-npcgen .window-content { display: flex; flex-direction: column; }
+.sr2e-npcgen-body { display: flex; flex-direction: column; height: 100%; gap: 0.4rem; }
+.sr2e-npcgen-options .sr2e-row { flex-wrap: wrap; gap: 0.4rem 0.8rem; align-items: center; margin-bottom: 0.3rem; }
+.sr2e-npcgen-preview { flex: 1 1 auto; overflow-y: auto; border: 1px solid var(--sr2e-rule); border-radius: 4px; padding: 0.3rem 0.5rem; min-height: 200px; }
+.sr2e-npcgen-preview h2 { font-size: 1.05rem; margin: 0.2rem 0; }
+.sr2e-npcgen-actions { gap: 0.4rem; align-items: center; flex-wrap: wrap; }
+.sr2e-npcgen-actions .hint { flex: 1 1 100%; }
+.sr2e-npcgen-actions button { flex: 0 0 auto; width: auto; padding: 0 0.7rem; }
+pre.sr2e-statblock { white-space: pre-wrap; font-family: var(--font-mono, monospace); font-size: 0.85rem; background: var(--sr2e-raised); padding: 0.3rem 0.4rem; border-radius: 3px; margin: 0.3rem 0; }
+
+/* v0.53.0: safehouse sheet */
+.sr2e-safehouse .sr2e-row { gap: 0.6rem; align-items: center; flex-wrap: wrap; }
+.sr2e-safehouse .sr2e-grow { flex: 1 1 auto; display: flex; gap: 0.4rem; align-items: center; }
+.sr2e-safehouse .sr2e-grow input { flex: 1 1 auto; }
+.sr2e-safehouse h3 { margin: 0.6rem 0 0.2rem; font-size: 0.95rem; }
+.sr2e-sh-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.3rem; margin: 0.4rem 0; }
+.sr2e-sh-grid > div { border: 1px solid var(--sr2e-rule); border-radius: 4px; padding: 0.25rem 0.4rem; display: flex; flex-direction: column; }
+.sr2e-sh-grid > div > span { font-size: 0.75rem; color: var(--sr2e-muted); }
+.sr2e-sh-grid strong { font-size: 1.05rem; }
+.sr2e-sh-grid small { font-size: 0.72rem; color: var(--sr2e-muted); }
+.sr2e-sh-actions button { width: auto; flex: 0 0 auto; padding: 0 0.6rem; }
+.sr2e-sh-people { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+.sr2e-sh-cat { border: 1px solid var(--sr2e-rule); border-radius: 4px; padding: 0.2rem 0.4rem; margin-bottom: 0.3rem; }
+.sr2e-sh-cat summary { cursor: pointer; }
+.sr2e-sh-cat table { width: 100%; font-size: 0.82rem; margin: 0.25rem 0; }
+.sr2e-sh-cat td, .sr2e-sh-cat th { padding: 0.1rem 0.25rem; text-align: left; vertical-align: middle; }
+.sr2e-sh-cat input[type="number"] { width: 3.5rem; }
+.sr2e-sh-chosen { background: var(--sr2e-raised); }
+.sr2e-safehouse textarea { width: 100%; }
+
+/* v0.58.0: the Karma award breakdown table */
+.sr2e-award-table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+.sr2e-award-table th, .sr2e-award-table td { padding: 2px 4px; text-align: center; }
+.sr2e-award-table td:first-child { text-align: left; }
+.sr2e-legal { margin: 0.25em 0; font-size: 0.9em; }
+
+/* v0.59.0: rich text, the Effects view, item cards in chat, floating damage numbers */
+.sr2e .sr2e-rich { display: block; min-height: 4rem; border: 1px solid var(--color-border-light-tertiary, #9993); border-radius: 3px; padding: 0.25rem 0.4rem; margin-bottom: 0.4rem; }
+.sr2e prose-mirror.sr2e-rich.active { min-height: 10rem; }
+.sr2e .sr2e-rich .editor-content { min-height: 3rem; }
+.sr2e .sr2e-effects ul { list-style: none; padding: 0; margin: 0 0 0.5rem; }
+.sr2e .sr2e-effects li { display: flex; gap: 0.4rem; align-items: baseline; padding: 0.15rem 0; border-bottom: 1px dotted var(--sr2e-rule); }
+.sr2e .sr2e-effects li > span:first-child { flex: 1; }
+.sr2e-item-card header { display: flex; align-items: center; gap: 0.4rem; }
+.sr2e-item-card header h3 { margin: 0; }
+.sr2e-item-card .sr2e-item-desc { margin-top: 0.3rem; }
+
+/* v0.60.0: hover cards, inline tests, region environments, tracker shortcuts, draggable card items */
+.sr2e-hover-card { position: fixed; z-index: 1000; pointer-events: none; max-width: 22rem; padding: 0.3rem 0.5rem; border-radius: 0; background: var(--sr2e-window); color: var(--sr2e-ink); border: 1px solid var(--sr2e-edge); font-family: var(--sr2e-font-body); font-size: 0.78rem; line-height: 1.35; box-shadow: 0 2px 6px #0008; }
+.sr2e-hover-card strong { display: block; color: var(--sr2e-ink); font-family: var(--sr2e-font-head); letter-spacing: 0.04em; font-size: 0.85rem; }
+a.sr2e-inline-test { display: inline-flex; align-items: center; gap: 0.25em; padding: 0 0.3em; border: 1px solid var(--color-border-light-tertiary, var(--sr2e-rule-strong)); border-radius: 3px; background: var(--sr2e-accent-wash); cursor: pointer; white-space: nowrap; }
+a.sr2e-inline-test:hover { background: var(--sr2e-accent-tint); color: var(--sr2e-accent-ink); text-shadow: none; }
+.sr2e-inline-invalid { border-bottom: 1px dashed #c44; cursor: help; }
+fieldset.sr2e-region-env { margin-top: 0.6rem; }
+fieldset.sr2e-region-env .form-fields input[type="number"] { max-width: 5rem; }
+button.sr2e-fulldef { width: auto; padding: 0 0.35rem; line-height: 1.3rem; font-size: 0.75rem; margin-right: 0.25rem; }
+.sr2e-drag-row { margin: 0.25rem 0 0; }
+a.sr2e-drag-item { cursor: grab; }
+
+/* ==========================================================================
+   v0.62.0: the UI pass. Every sheet and window scrolls (the part's root is the
+   scroller, so `scrollable: [""]` keeps the place on re-render), the tabs stay
+   in view, fields keep a fixed compact size instead of growing with the window,
+   and lists, headings and buttons share one look. Colours come from Foundry's
+   theme variables, so light and dark themes both work.
+   ========================================================================== */
+.sr2e {
+  /* v0.67.0: these come from the player's palette (rules/look.ts, injected as #sr2e-palette). */
+  --sr2e-line: var(--sr2e-rule);
+  --sr2e-soft: var(--sr2e-raised);
+  --sr2e-hover: var(--sr2e-chip);
+  --sr2e-label: var(--sr2e-muted);
+  --sr2e-num: 3.6rem;
+  --sr2e-text: 11rem;
+}
+
+/* Warnings: --sr2e-danger is part of each palette (v0.67.0), checked for contrast on every theme. */
+
+/* Scrolling: the window's content holds one part; that part scrolls. */
+.sr2e.sheet > .window-content,
+.sr2e.sr2e-gm-panel > .window-content,
+.sr2e.sr2e-npcgen > .window-content { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
+.sr2e.sheet .window-content > .sr2e-sheet,
+.sr2e.sr2e-gm-panel .window-content > *,
+.sr2e.sr2e-npcgen .window-content > .sr2e-npcgen-body {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden;
+  padding: 0.5rem 0.85rem 1rem; scrollbar-gutter: stable;
+}
+.sr2e.sheet .sr2e-sheet { display: block; container-type: inline-size; }
+.sr2e.sheet .sr2e-sheet > * + * { margin-top: 0.5rem; }
+/* The generator: options and buttons scroll with the preview when the window is short. */
+.sr2e.sr2e-npcgen .sr2e-npcgen-body { display: flex; flex-direction: column; height: auto; }
+.sr2e.sr2e-npcgen .sr2e-npcgen-preview { flex: 1 0 auto; overflow-y: visible; min-height: 14rem; }
+/* Long dialogs (the Build check, attack options) never run off the screen. */
+.application.dialog > .window-content { max-height: calc(100vh - 5rem); overflow-y: auto; }
+
+/* Header: portrait, then the name over a row of its controls. */
+.sr2e.sheet .sr2e-header { display: flex; align-items: flex-start; gap: 0.75rem; }
+.sr2e.sheet .sr2e-header > img { flex: 0 0 auto; width: 64px; height: 64px; object-fit: cover; border: 1px solid var(--sr2e-line); border-radius: 6px; background: var(--sr2e-soft); }
+.sr2e.sheet.item .sr2e-header > img { width: 48px; height: 48px; }
+.sr2e.sheet .sr2e-header-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 0.35rem; }
+.sr2e.sheet .sr2e-header input[name="name"] { flex: 1 1 auto; width: 100%; font-size: 1.35rem; height: 2.3rem; font-weight: 600; background: transparent; border-color: transparent; border-bottom: 1px solid var(--sr2e-line); border-radius: 0; padding-left: 0.2rem; }
+.sr2e.sheet .sr2e-header input[name="name"]:hover, .sr2e.sheet .sr2e-header input[name="name"]:focus { border-color: var(--sr2e-line); border-radius: 4px; background: var(--sr2e-soft); }
+.sr2e.sheet .sr2e-header-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.8rem; font-size: 0.8rem; }
+.sr2e.sheet .sr2e-header-meta button { flex: 0 0 auto; width: auto; height: 1.7rem; line-height: 1; padding: 0 0.55rem; font-size: 0.8rem; }
+.sr2e.sheet .sr2e-header-meta select { width: auto; height: 1.7rem; }
+.sr2e.sheet .sr2e-header-meta input[type="number"] { width: 3rem; height: 1.7rem; text-align: center; }
+
+/* Tabs stay at the top while the sheet scrolls. */
+.sr2e.sheet .sr2e-tabs { position: sticky; top: -0.5rem; z-index: 5; margin: 0.5rem -0.85rem 0.25rem; padding: 0.3rem 0.85rem 0; gap: 0.1rem; border-bottom: 1px solid var(--sr2e-line); }
+.sr2e.sheet .sr2e-tabs .item { padding: 0.25rem 0.6rem 0.3rem; border-radius: 4px 4px 0 0; color: var(--sr2e-muted); text-shadow: none; border-bottom: 2px solid transparent; }
+.sr2e.sheet .sr2e-tabs .item:hover { color: var(--color-text-primary, inherit); background: var(--sr2e-hover); }
+.sr2e.sheet .sr2e-tabs .item.active { color: var(--color-text-emphatic, inherit); font-weight: 600; border-bottom-color: var(--sr2e-accent); }
+
+/* Section headings: small, spaced capitals with their action buttons beside them. */
+.sr2e.sheet h2:not(.sr2e-rich h2), .sr2e.sr2e-gm-panel h2 { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem; margin: 0.9rem 0 0.35rem; padding-bottom: 0.2rem; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--color-text-secondary, inherit); border-bottom: 1px solid var(--sr2e-line); }
+.sr2e.sheet h3:not(.sr2e-rich h3) { display: flex; align-items: center; flex-wrap: wrap; gap: 0.35rem; margin: 0.7rem 0 0.25rem; font-size: 0.88rem; font-weight: 600; border: 0; }
+.sr2e.sheet h2 button, .sr2e.sheet h3 button { text-transform: none; letter-spacing: 0; font-weight: normal; }
+.sr2e.sheet h2 .sr2e-status, .sr2e.sheet h3 .sr2e-status { margin-left: 0.2rem; }
+.sr2e.sheet h3.sr2e-subhead { margin: 0.8rem 0 0.3rem; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--sr2e-muted); border-bottom: 1px dashed var(--sr2e-line); padding-bottom: 0.15rem; }
+.sr2e.sheet .sr2e-sheet > section > h2:first-child, .sr2e.sheet .sr2e-tab > section:first-child > h2:first-child { margin-top: 0.4rem; }
+
+/* Field rows: labels above compact inputs that keep their size. */
+.sr2e.sheet .sr2e-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.4rem 0.75rem; margin: 0.3rem 0; }
+.sr2e.sheet .sr2e-row > span { align-self: center; }
+.sr2e.sheet .sr2e-row label, .sr2e.sr2e-gm-panel .sr2e-row label { display: flex; flex-direction: column; gap: 0.1rem; font-size: 0.75rem; color: var(--sr2e-label); }
+.sr2e.sheet label:has(> input[type="checkbox"]:only-child),
+.sr2e.sheet label:has(> input[type="checkbox"]):not(:has(input:not([type="checkbox"]), select, textarea)) { flex-direction: row; align-items: center; gap: 0.3rem; align-self: center; }
+.sr2e.sheet .sr2e-row label input, .sr2e.sheet .sr2e-row label select { color: var(--color-text-primary, inherit); font-size: 0.85rem; }
+.sr2e.sheet input[type="number"] { width: var(--sr2e-num); flex: 0 0 auto; text-align: center; }
+.sr2e.sheet .sr2e-row input[type="text"] { width: var(--sr2e-text); }
+.sr2e.sheet .sr2e-row input, .sr2e.sheet .sr2e-row select { height: 1.8rem; }
+.sr2e.sheet .sr2e-row select { width: auto; max-width: 100%; }
+.sr2e.sheet input[type="checkbox"] { width: 1rem; height: 1rem; margin: 0; flex: 0 0 auto; }
+.sr2e.sheet .sr2e-row .sr2e-wide, .sr2e.sheet .sr2e-row label.sr2e-wide { flex: 1 1 100%; }
+.sr2e.sheet .sr2e-row .sr2e-wide input[type="text"], .sr2e.sheet .sr2e-row .sr2e-wide textarea { width: 100%; }
+.sr2e.sheet .sr2e-row > button, .sr2e.sheet .sr2e-row > span > button { align-self: flex-end; }
+
+/* Buttons and icon links: one compact size everywhere on the sheets. */
+.sr2e.sheet :where(.window-content button:not(.sr2e-rich button)), .sr2e.sr2e-gm-panel :where(.window-content button) { width: auto; flex: 0 0 auto; height: 1.8rem; min-height: 0; line-height: 1; padding: 0 0.6rem; font-size: 0.8rem; white-space: nowrap; gap: 0.3rem; }
+.sr2e.sheet button.sr2e-mode { height: 1.35rem; padding: 0 0.3rem; font-size: 0.7rem; }
+.sr2e.sheet a[data-action]:has(> i.fa-solid:only-child), .sr2e.sheet a[data-action] > i.fa-solid:only-child { color: var(--sr2e-muted); }
+.sr2e.sheet a[data-action]:has(> i.fa-solid) { display: inline-flex; align-items: center; justify-content: center; min-width: 1.4rem; height: 1.4rem; border-radius: 4px; text-shadow: none; }
+.sr2e.sheet a[data-action]:has(> i.fa-solid):hover { background: var(--sr2e-hover); }
+.sr2e.sheet a[data-action]:has(> i.fa-solid):hover > i { color: var(--sr2e-accent); }
+.sr2e.sheet a[data-action="deleteItem"]:hover > i, .sr2e.sheet a[data-action^="delete"]:hover > i { color: var(--sr2e-danger); }
+
+/* Lists of items: name, details that take the room left, then the controls. */
+.sr2e.sheet ul:not(.sr2e-warnings, .sr2e-metamagic, .sr2e-rich ul) { list-style: none; margin: 0; padding: 0; }
+.sr2e.sheet ul:not(.sr2e-warnings, .sr2e-rich ul) > li { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 0.25rem 0.45rem; padding: 0.3rem 0.35rem; border-bottom: 1px solid var(--sr2e-line); border-radius: 0; }
+.sr2e.sheet ul:not(.sr2e-warnings, .sr2e-rich ul) > li:last-child { border-bottom: 0; }
+.sr2e.sheet ul:not(.sr2e-warnings, .sr2e-rich ul) > li:hover { background: var(--sr2e-soft); }
+.sr2e.sheet ul:not(.sr2e-warnings, .sr2e-rich ul) > li > a:not(:has(> i)):first-of-type, .sr2e.sheet ul:not(.sr2e-warnings, .sr2e-rich ul) > li > strong:first-child { font-weight: 600; }
+.sr2e.sheet ul:not(.sr2e-warnings, .sr2e-rich ul) > li > span:not(.sr2e-status):not(.sr2e-inline) { flex: 1 1 10rem; min-width: 0; font-size: 0.8rem; color: var(--sr2e-muted); }
+.sr2e.sheet ul:not(.sr2e-warnings, .sr2e-rich ul) > li > span strong, .sr2e.sheet ul:not(.sr2e-warnings, .sr2e-rich ul) > li > span .sr2e-warn, .sr2e.sheet ul:not(.sr2e-warnings, .sr2e-rich ul) > li > span .sr2e-warning { color: var(--color-text-primary, inherit); }
+.sr2e.sheet ul:not(.sr2e-warnings, .sr2e-rich ul) > li > span .sr2e-warn, .sr2e.sheet ul:not(.sr2e-warnings, .sr2e-rich ul) > li > span .sr2e-warning { color: var(--sr2e-danger); }
+.sr2e.sheet ul:not(.sr2e-warnings, .sr2e-rich ul) > li > em:only-child { color: var(--sr2e-muted); font-size: 0.85rem; }
+.sr2e.sheet ul:not(.sr2e-warnings, .sr2e-rich ul) > li button { height: 1.6rem; padding: 0 0.5rem; font-size: 0.78rem; }
+.sr2e.sheet ul.sr2e-ledger > li { font-size: 0.82rem; padding: 0.15rem 0.35rem; }
+
+/* Attributes (character): a compact fixed-width table. */
+.sr2e.sheet .sr2e-attributes table { width: auto; min-width: 22rem; max-width: 100%; border-collapse: collapse; margin: 0.2rem 0 0.4rem; background: none; border: 0; }
+.sr2e.sheet .sr2e-attributes thead th { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--sr2e-muted); background: none; padding: 0.15rem 0.5rem; text-align: center; }
+.sr2e.sheet .sr2e-attributes tbody tr { background: none; border-bottom: 1px solid var(--sr2e-line); }
+.sr2e.sheet .sr2e-attributes tbody tr:hover { background: var(--sr2e-soft); }
+.sr2e.sheet .sr2e-attributes td { padding: 0.15rem 0.5rem; text-align: center; height: auto; }
+.sr2e.sheet .sr2e-attributes td:first-child, .sr2e.sheet .sr2e-attributes th:first-child { text-align: left; min-width: 7.5rem; padding-left: 0.2rem; }
+.sr2e.sheet .sr2e-attributes td:first-child a[data-action="rollAttribute"] { font-weight: 600; }
+.sr2e.sheet .sr2e-attributes td input[type="number"] { width: 3.2rem; height: 1.7rem; }
+.sr2e.sheet .sr2e-attributes td:last-child { font-weight: 700; font-size: 1rem; min-width: 3rem; }
+
+/* Stat line (NPCs, spirits, IC): one compact cell per attribute; wraps when narrow. */
+.sr2e.sheet .sr2e-statgrid { display: flex; flex-wrap: wrap; gap: 0.3rem; margin: 0.4rem 0; }
+.sr2e.sheet .sr2e-stat { display: flex; flex-direction: column; align-items: center; gap: 0.1rem; width: 2.85rem; padding: 0.2rem 0.1rem 0.25rem; border: 1px solid var(--sr2e-line); border-radius: 5px; background: var(--sr2e-soft); }
+.sr2e.sheet .sr2e-stat.sr2e-stat-wide { width: auto; min-width: 3.6rem; padding: 0.2rem 0.45rem 0.25rem; }
+.sr2e.sheet .sr2e-stat-label { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--sr2e-muted); text-shadow: none; }
+.sr2e.sheet a.sr2e-stat-label { color: var(--color-text-secondary, inherit); cursor: pointer; }
+.sr2e.sheet a.sr2e-stat-label:hover { color: var(--sr2e-accent); }
+.sr2e.sheet .sr2e-stat input[type="number"] { width: 2.45rem; height: 1.6rem; padding: 0; font-weight: 600; }
+.sr2e.sheet .sr2e-stat > strong { line-height: 1.6rem; font-size: 1rem; }
+.sr2e.sheet .sr2e-stat .sr2e-aug { font-size: 0.7rem; line-height: 1; }
+
+/* Summary card at the top of the character, NPC and spirit sheets. */
+.sr2e.sheet .sr2e-summary { gap: 0.4rem; padding: 0.45rem 0.6rem; border: 1px solid var(--sr2e-line); border-radius: 6px; background: var(--sr2e-soft); }
+.sr2e.sheet .sr2e-summary-row { gap: 0.35rem; font-size: 0.8rem; }
+.sr2e.sheet .sr2e-chip { border-color: var(--sr2e-line); padding: 0.05rem 0.5rem; font-size: 0.78rem; }
+.sr2e.sheet .sr2e-pools { gap: 0.4rem 1rem; font-size: 0.75rem; color: var(--sr2e-muted); }
+.sr2e.sheet .sr2e-pool { gap: 3px; }
+.sr2e.sheet .sr2e-pool .sr2e-pip { width: 0.6rem; height: 0.6rem; border-radius: 50%; border: 1px solid var(--sr2e-accent); background: transparent; cursor: pointer; }
+.sr2e.sheet .sr2e-pool .sr2e-pip.filled { background: var(--sr2e-accent); opacity: 1; }
+.sr2e.sheet .sr2e-pool em { color: var(--color-text-primary, inherit); font-weight: 600; }
+.sr2e.sheet .sr2e-quickbar { gap: 0.25rem; }
+.sr2e.sheet .sr2e-quickbar button { height: 1.65rem; padding: 0 0.5rem; font-size: 0.78rem; }
+
+/* Condition monitor */
+.sr2e.sheet .sr2e-track { flex-wrap: wrap; gap: 3px; }
+.sr2e.sheet .sr2e-track-label { width: 4.5rem; font-size: 0.75rem; font-weight: 600; color: var(--sr2e-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.sr2e.sheet .sr2e-box { width: 1.5rem; height: 1.5rem; border-color: var(--sr2e-line); background: var(--sr2e-soft); color: var(--sr2e-muted); }
+.sr2e.sheet .sr2e-box:hover { border-color: var(--sr2e-accent); }
+.sr2e.sheet .sr2e-box.filled { background: #b71c1c; border-color: #e57373; color: #fff; }
+.sr2e.sheet .sr2e-monitor > button { margin: 0.35rem 0.25rem 0 0; }
+
+/* Hints, warnings, details */
+.sr2e.sheet .hint { font-size: 0.78rem; color: var(--sr2e-muted); margin: 0.25rem 0; }
+.sr2e.sheet .hint.sr2e-warn, .sr2e.sheet .sr2e-warn, .sr2e.sheet .sr2e-warning { color: var(--sr2e-danger); }
+.sr2e.sheet details > summary { cursor: pointer; font-weight: 600; padding: 0.15rem 0; }
+.sr2e.sheet details[open] > summary { margin-bottom: 0.25rem; }
+.sr2e.sheet table:not(.sr2e-attributes table) { font-size: 0.82rem; }
+.sr2e.sheet .sr2e-status { font-size: 0.7rem; letter-spacing: 0.05em; padding: 0.05rem 0.35rem; border: 1px solid var(--sr2e-line); border-radius: 3px; text-transform: uppercase; font-weight: 600; }
+.sr2e.sheet h2 > .sr2e-status { font-size: 0.65rem; }
+.sr2e.sheet .sr2e-chips { gap: 0.3rem; }
+.sr2e.sheet .sr2e-chips .sr2e-chip a { text-shadow: none; }
+
+/* Item sheet: fields in an even grid that reflows with the width. */
+.sr2e.sheet.item .sr2e-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); align-items: end; gap: 0.45rem 0.7rem; }
+.sr2e.sheet.item .sr2e-row label input[type="text"], .sr2e.sheet.item .sr2e-row label select { width: 100%; max-width: none; }
+.sr2e.sheet.item .sr2e-row label input[type="number"] { width: 4.2rem; }
+.sr2e.sheet.item .sr2e-row label:has(> input[type="checkbox"]) { align-self: end; padding: 0 0 0.4rem; }
+.sr2e.sheet.item .sr2e-row > .sr2e-wide, .sr2e.sheet.item .sr2e-row > .hint, .sr2e.sheet.item .sr2e-row > p, .sr2e.sheet.item .sr2e-row > ul, .sr2e.sheet.item .sr2e-row > details, .sr2e.sheet.item .sr2e-row > span:not(.sr2e-inline) { grid-column: 1 / -1; }
+.sr2e.sheet.item .sr2e-row > button, .sr2e.sheet.item .sr2e-row > a { justify-self: start; align-self: end; }
+.sr2e.sheet.item .sr2e-template, .sr2e.sheet.item .sr2e-layout { padding: 0.35rem 0.5rem; border: 1px solid var(--sr2e-line); border-radius: 6px; background: var(--sr2e-soft); }
+.sr2e.sheet.item .sr2e-layout > a { align-self: center; justify-self: start; font-size: 0.8rem; }
+.sr2e.sheet.item .sr2e-header > button { width: 2rem; padding: 0; justify-content: center; }
+
+/* Rich text */
+.sr2e.sheet .sr2e-rich { border-color: var(--sr2e-line); border-radius: 6px; background: var(--sr2e-soft); }
+
+/* Narrow windows: the header controls and long rows still fit. */
+@container (max-width: 32rem) {
+  .sr2e.sheet .sr2e-attributes table { min-width: 0; width: 100%; }
+  .sr2e.sheet .sr2e-attributes td, .sr2e.sheet .sr2e-attributes thead th { padding: 0.1rem 0.2rem; }
+  .sr2e.sheet .sr2e-attributes td:first-child, .sr2e.sheet .sr2e-attributes th:first-child { min-width: 0; }
+  .sr2e.sheet .sr2e-attributes td input[type="number"] { width: 2.6rem; }
+  .sr2e.sheet .sr2e-attributes thead th { font-size: 0.6rem; letter-spacing: 0; }
+}
+/* Wide catalogue tables scroll sideways inside their own box on a narrow sheet. */
+.sr2e.sheet .sr2e-sh-cat { overflow-x: auto; }
+@media (max-width: 640px) { .sr2e.sheet .sr2e-header > img { width: 48px; height: 48px; } }
+
+/* GM panel: tabs stay in view; rows keep compact inputs. */
+.sr2e.sr2e-gm-panel .sr2e-gm-tabs { position: sticky; top: -0.5rem; z-index: 5; margin: 0 -0.85rem 0.4rem; padding: 0.3rem 0.85rem 0; border-bottom: 1px solid var(--sr2e-line); }
+.sr2e.sr2e-gm-panel .sr2e-gm-tabs a { color: var(--sr2e-muted); text-shadow: none; border-bottom: 2px solid transparent; }
+.sr2e.sr2e-gm-panel .sr2e-gm-tabs a.active { color: var(--color-text-emphatic, inherit); border-bottom-color: var(--sr2e-accent); }
+.sr2e.sr2e-gm-panel input[type="number"] { width: var(--sr2e-num); text-align: center; }
+.sr2e.sr2e-gm-panel h2 { margin-top: 0.6rem; }
+.sr2e.sr2e-npcgen input[type="number"] { width: var(--sr2e-num); text-align: center; }
+.sr2e.sr2e-npcgen .sr2e-row label { display: flex; flex-direction: column; gap: 0.1rem; font-size: 0.75rem; color: var(--sr2e-label); }
+.sr2e.sr2e-npcgen .sr2e-row label:has(> input[type="checkbox"]) { flex-direction: row; align-items: center; gap: 0.3rem; }
+
+/* Buttons and icon links sit in the line of text (Foundry makes buttons block-level flex boxes). */
+.sr2e.sheet :where(.window-content button:not(.sr2e-rich button)) { display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; }
+.sr2e.sheet li > span button, .sr2e.sheet li > span a, .sr2e.sheet p button { vertical-align: middle; }
+.sr2e.sheet .sr2e-monitor > button { margin: 0.35rem 0.3rem 0 0; }
+/* A row whose first span is the name (Unarmed, cyberweapons, …): show it as the name. */
+.sr2e.sheet ul:not(.sr2e-warnings, .sr2e-rich ul) > li > span:first-child:has(+ span):not(.sr2e-status):not(.sr2e-inline) { flex: 0 1 auto; font-weight: 600; font-size: inherit; color: var(--color-text-primary, inherit); }
+/* The template and layout bars flow as one line, not a grid. */
+.sr2e.sheet.item .sr2e-row.sr2e-template, .sr2e.sheet.item .sr2e-row.sr2e-layout { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.4rem 0.6rem; }
+.sr2e.sheet.item .sr2e-template label select, .sr2e.sheet.item .sr2e-layout label select { width: auto; min-width: 10rem; }
+.sr2e.sheet.item .sr2e-template > a { align-self: center; }
+/* The window background is 90% opaque: stack it so the stuck tab bar hides the rows under it. */
+/* Light theme: --background is the parchment image itself (opaque). Dark theme: a 90% colour, stacked three times. */
+/* v0.67.0: the stuck tab bars take the palette's solid window colour (they used Foundry's parchment or a stacked 90% colour). */
+.sr2e.sheet .sr2e-tabs, .sr2e.sr2e-gm-panel .sr2e-gm-tabs { backdrop-filter: none; background: var(--sr2e-window); }
+/* Sheets without tabs (vehicle, site, safehouse, IC) use h3 for their sections: give them the section look. */
+.sr2e.sheet .sr2e-sheet > h3:not(.sr2e-subhead), .sr2e.sheet .sr2e-sheet > section > h3:first-child { margin: 0.9rem 0 0.35rem; padding-bottom: 0.2rem; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--color-text-secondary, inherit); border-bottom: 1px solid var(--sr2e-line); }
+.sr2e.sheet .sr2e-sheet > h3 button { text-transform: none; letter-spacing: 0; font-weight: normal; }
+/* Tables on the site and safehouse sheets: quiet headers, compact rows. */
+.sr2e.sheet table.sr2e-devices, .sr2e.sheet .sr2e-sh-cat table { border: 0; background: none; }
+.sr2e.sheet table.sr2e-devices thead th, .sr2e.sheet table.sr2e-devices tr:first-child th, .sr2e.sheet .sr2e-sh-cat th { background: none; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--sr2e-muted); font-weight: 600; }
+.sr2e.sheet table.sr2e-devices tr, .sr2e.sheet .sr2e-sh-cat tr { background: none; border-bottom: 1px solid var(--sr2e-line); }
+.sr2e.sheet table.sr2e-devices td, .sr2e.sheet .sr2e-sh-cat td { padding: 0.2rem 0.3rem; }
+/* Safehouse: the address takes the whole line. */
+.sr2e.sheet.safehouse .sr2e-row label.sr2e-grow { flex: 1 1 100%; flex-direction: column; align-items: stretch; }
+.sr2e.sheet.safehouse .sr2e-row label.sr2e-grow input[type="text"] { width: 100%; }
+
+/* Review fixes (v0.62.0) */
+/* Money and other long numbers get room for 7–8 digits. */
+.sr2e.sheet input[type="number"][name="system.nuyen"], .sr2e.sheet input[type="number"][name$="cost"], .sr2e.sheet input[type="number"][name$="Cost"],
+.sr2e.sheet input[type="number"][name$="nuyen"], .sr2e.sheet input[type="number"][name$="price"], .sr2e.sheet input[type="number"][name$="fee"] { width: 7.5rem; }
+/* A field reached by Tab or a link is never left under the stuck tab bar. */
+.sr2e.sheet .window-content > .sr2e-sheet, .sr2e.sr2e-gm-panel .window-content > * { scroll-padding-top: 3rem; }
+/* The site's device table scrolls sideways inside itself on a narrow sheet. */
+.sr2e.sheet table.sr2e-devices { display: block; overflow-x: auto; }
+/* A row with no details text still puts its controls on the right. */
+.sr2e.sheet ul:not(.sr2e-warnings, .sr2e-rich ul) > li > a:not(:has(> i)):first-of-type, .sr2e.sheet ul:not(.sr2e-warnings, .sr2e-rich ul) > li > strong:first-child { margin-right: auto; }
+/* Rich text grows with what it holds (the sheet scrolls, not a 4rem box inside it). */
+.sr2e.sheet prose-mirror.sr2e-rich:not(.active), .sr2e.sheet prose-mirror.sr2e-rich:not(.active) > .editor-content { height: auto; overflow: visible; }
+/* While editing, Foundry's editor is a flex box that needs a real height. */
+/* (v0.59.0's display:block made the open editor's flex area 0px tall: the text was there but clipped away.) */
+.sr2e prose-mirror.sr2e-rich.active { display: flex; flex-direction: column; height: 22rem; }
+.sr2e.sheet .sr2e-statgrid { gap: 0.25rem; }
+
+/* ==========================================================================
+   v0.63.0: adding things and sheet tidy-ups. The + on list headings, pins,
+   duplicate, row number edits, the sheet toolbar (search, Edit / Play),
+   folding sections, the setup banner, the pinned bar and the Add window.
+   ========================================================================== */
+.sr2e.sheet a.sr2e-add { color: var(--sr2e-accent); }
+.sr2e.sheet a.sr2e-add > i { color: var(--sr2e-accent) !important; }
+.sr2e.sheet h2 a.sr2e-add { margin-left: auto; text-transform: none; }
+.sr2e.sheet a.sr2e-pin > i { color: var(--sr2e-muted); transform: rotate(30deg); }
+.sr2e.sheet a.sr2e-pin.on > i { opacity: 1; transform: none; color: var(--sr2e-accent) !important; }
+.sr2e.sheet input.sr2e-rowedit { width: 2.6rem; height: 1.35rem; padding: 0 0.15rem; margin: 0 0.15rem; font-size: 0.8rem; vertical-align: baseline; }
+.sr2e.sheet li.sr2e-empty em { color: var(--sr2e-muted); }
+
+/* The toolbar under the tabs: search the whole sheet, switch Edit / Play. */
+.sr2e.sheet .sr2e-sheet-tools { display: flex; align-items: center; gap: 0.4rem; margin: 0.35rem 0 0.2rem; }
+.sr2e.sheet .sr2e-sheet-tools input[type="search"] { flex: 1 1 auto; min-width: 6rem; height: 1.7rem; font-size: 0.8rem; }
+.sr2e.sheet .sr2e-sheet-tools .sr2e-mode-btn { flex: 0 0 auto; }
+.sr2e.sheet .sr2e-tabs .sr2e-tab-hits { display: inline-block; min-width: 1.1rem; padding: 0 0.25rem; border-radius: 0.6rem; font-size: 0.65rem; line-height: 1.1rem; text-align: center; background: var(--sr2e-accent); color: #fff; font-weight: 700; }
+
+/* Play mode: the setup controls go away and the core fields are read-only. */
+.sr2e-sheet.sr2e-play :is(.sr2e-add, .sr2e-dup, a[data-action="deleteItem"], a[data-action="editItem"][data-sr2e-edit-pencil],
+  [data-action="addContact"], [data-action="deleteContact"], [data-action="addGeas"], [data-action="deleteGeas"], [data-action="addQuality"],
+  [data-action="deleteQuality"], [data-action="addMod"], [data-action="deleteMod"], [data-action="importStatBlock"]) { display: none !important; }
+.sr2e-sheet.sr2e-play :is(input, select)[data-sr2e-locked] { border-color: transparent; background: transparent; box-shadow: none; }
+.sr2e-sheet.sr2e-play input.sr2e-rowedit[data-sr2e-locked] { -moz-appearance: textfield; }
+.sr2e-sheet.sr2e-play input.sr2e-rowedit[data-sr2e-locked]::-webkit-inner-spin-button { display: none; }
+
+/* Folding sections: click a heading (not its buttons). */
+.sr2e.sheet .sr2e-foldable { cursor: pointer; user-select: none; }
+.sr2e.sheet .sr2e-caret { font-size: 0.65rem; width: 0.8rem; color: var(--sr2e-muted); transition: transform 0.12s; }
+.sr2e.sheet .sr2e-folded .sr2e-caret { transform: rotate(-90deg); }
+.sr2e-sheet:not(.sr2e-searching) .sr2e-fold-away { display: none !important; }
+.sr2e-sheet.sr2e-searching .sr2e-nomatch { display: none !important; }
+.sr2e.sheet .sr2e-flash { animation: sr2e-flash 1.5s ease-out; }
+@keyframes sr2e-flash { 0% { background: color-mix(in srgb, var(--sr2e-accent) 35%, transparent); } 100% { background: transparent; } }
+@media (prefers-reduced-motion: reduce) { .sr2e.sheet .sr2e-flash { animation: none; outline: 2px solid var(--sr2e-accent); } .sr2e.sheet .sr2e-caret { transition: none; } }
+
+/* Pinned actions and the setup banner, in the summary. */
+.sr2e-summary .sr2e-pinbar { display: flex; flex-wrap: wrap; gap: 0.3rem; margin: 0.3rem 0 0.1rem; }
+.sr2e-summary .sr2e-pinbar button { border-color: color-mix(in srgb, var(--sr2e-accent) 55%, transparent); }
+.sr2e-summary details.sr2e-setup { margin: 0.35rem 0 0; padding: 0.2rem 0.5rem; border: 1px solid color-mix(in srgb, var(--sr2e-danger) 45%, transparent); border-radius: 4px; font-size: 0.8rem; }
+.sr2e-summary details.sr2e-setup > summary { cursor: pointer; color: var(--sr2e-danger); font-weight: 600; }
+.sr2e-summary details.sr2e-setup ul { list-style: none; margin: 0.25rem 0 0.1rem; padding: 0; }
+.sr2e-summary details.sr2e-setup li { padding: 0.1rem 0; }
+.sr2e-summary details.sr2e-setup li.sr2e-setup-warn a::before { content: "● "; color: var(--sr2e-danger); }
+.sr2e-summary details.sr2e-setup li.sr2e-setup-note a::before { content: "○ "; color: var(--sr2e-muted); }
+
+/* The Add window. */
+.sr2e.sr2e-add > .window-content { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
+.sr2e.sr2e-add .window-content > .sr2e-add-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0.4rem 0.75rem 0.6rem; display: flex; flex-direction: column; gap: 0.45rem; }
+.sr2e-add .sr2e-add-tabs { display: flex; flex-wrap: wrap; gap: 0.15rem; border-bottom: 1px solid color-mix(in srgb, currentColor 16%, transparent); }
+.sr2e-add .sr2e-add-tab { padding: 0.2rem 0.5rem; border-radius: 4px 4px 0 0; font-size: 0.8rem; border-bottom: 2px solid transparent; text-shadow: none; }
+.sr2e-add .sr2e-add-tab.active { font-weight: 700; border-bottom-color: var(--sr2e-accent); }
+.sr2e-add .sr2e-add-top { display: flex; gap: 0.4rem; align-items: center; }
+.sr2e-add .sr2e-add-top input[type="search"] { flex: 1 1 auto; }
+.sr2e-add .sr2e-add-top button { flex: 0 0 auto; width: auto; white-space: nowrap; }
+.sr2e-add table.sr2e-add-list { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin: 0; }
+.sr2e-add table.sr2e-add-list th { text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--sr2e-muted); position: sticky; top: -0.45rem; background: var(--sr2e-window); z-index: 1; }
+body.theme-light .sr2e-add table.sr2e-add-list th, body.theme-light .sr2e-add .sr2e-add-foot,
+.sr2e-add.themed.theme-light table.sr2e-add-list th, .sr2e-add.themed.theme-light .sr2e-add-foot { background: var(--sr2e-window); }
+.sr2e-add.themed.theme-dark table.sr2e-add-list th, .sr2e-add.themed.theme-dark .sr2e-add-foot { background: var(--sr2e-window); }
+.sr2e-add table.sr2e-add-list td, .sr2e-add table.sr2e-add-list th { padding: 0.2rem 0.3rem; border-bottom: 1px solid color-mix(in srgb, currentColor 10%, transparent); vertical-align: middle; }
+.sr2e-add table.sr2e-add-list tr:hover td { background: color-mix(in srgb, currentColor 6%, transparent); }
+.sr2e-add .sr2e-add-name { cursor: pointer; font-weight: 600; }
+.sr2e-add .sr2e-add-what, .sr2e-add .sr2e-add-from { font-size: 0.75rem; }
+.sr2e-add input.sr2e-add-amount { width: 3rem; height: 1.5rem; text-align: center; }
+.sr2e-add .sr2e-add-foot { position: sticky; bottom: -0.6rem; display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.8rem; padding: 0.4rem 0; background: var(--sr2e-window); border-top: 1px solid color-mix(in srgb, currentColor 16%, transparent); font-size: 0.82rem; }
+.sr2e-add .sr2e-add-foot select { width: auto; }
+.sr2e-add .sr2e-add-foot label { display: inline-flex; align-items: center; gap: 0.3rem; }
+.sr2e-add .sr2e-add-total { margin-left: auto; font-weight: 600; }
+.sr2e-add .sr2e-add-total.sr2e-warn { color: var(--sr2e-danger); cursor: help; }
+.sr2e-add .sr2e-add-go { width: auto; flex: 0 0 auto; }
+.sr2e-add .sr2e-add-note { flex: 1 1 100%; font-size: 0.75rem; color: var(--sr2e-muted); }
+.sr2e-add input.sr2e-add-amount:disabled { color: var(--sr2e-muted); }
+.sr2e-add .sr2e-add-money { flex: 1 1 100%; font-size: 0.75rem; color: var(--sr2e-muted); }
+.sr2e-add .hint { font-size: 0.72rem; color: var(--sr2e-muted); margin: 0; }
+
+/* ==========================================================================
+   v0.64.0: creation and advancement. The creation wizard, the Spend Karma
+   window, the Current and Creation tabs, and the GM panel's Requests.
+   ========================================================================== */
+.sr2e.sr2e-wizard-window > .window-content, .sr2e.sr2e-spend-karma > .window-content { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
+.sr2e-wizard { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.sr2e-wizard .sr2e-wiz-steps { display: flex; flex-wrap: wrap; gap: 0.15rem; padding: 0.4rem 0.6rem 0; border-bottom: 1px solid color-mix(in srgb, currentColor 16%, transparent); }
+.sr2e-wizard .sr2e-wiz-step { padding: 0.2rem 0.45rem; border-radius: 4px 4px 0 0; font-size: 0.8rem; border-bottom: 2px solid transparent; text-shadow: none; white-space: nowrap; }
+.sr2e-wizard .sr2e-wiz-step.active { font-weight: 700; border-bottom-color: var(--sr2e-accent); }
+.sr2e-wizard .sr2e-wiz-n { display: inline-block; min-width: 1.1rem; height: 1.1rem; line-height: 1.1rem; border-radius: 50%; text-align: center; font-size: 0.7rem; background: color-mix(in srgb, currentColor 18%, transparent); }
+.sr2e-wizard .sr2e-wiz-ok .sr2e-wiz-n { background: var(--sr2e-health-tint); color: var(--sr2e-health-ink); }
+.sr2e-wizard .sr2e-wiz-bad .sr2e-wiz-n, .sr2e-wizard .sr2e-wiz-bad i { color: var(--sr2e-danger); }
+.sr2e-wizard .sr2e-wiz-bad .sr2e-wiz-n { color: inherit; background: color-mix(in srgb, var(--sr2e-danger) 45%, transparent); }
+.sr2e-wizard .sr2e-wiz-main { flex: 1 1 auto; min-height: 0; display: flex; gap: 0.6rem; }
+.sr2e-wizard .sr2e-wiz-body { flex: 1 1 auto; min-width: 0; overflow-y: auto; padding: 0.4rem 0.75rem 0.6rem; }
+.sr2e-wizard .sr2e-wiz-body h2 { margin: 0.2rem 0 0.1rem; }
+.sr2e-wizard .sr2e-wiz-body h3 { margin: 0.6rem 0 0.2rem; font-size: 0.95rem; display: flex; align-items: center; gap: 0.4rem; }
+.sr2e-wizard .sr2e-wiz-totals { flex: 0 0 13.5rem; overflow-y: auto; padding: 0.4rem 0.6rem; border-left: 1px solid color-mix(in srgb, currentColor 14%, transparent); font-size: 0.78rem; }
+.sr2e-wizard .sr2e-wiz-totals h3 { margin: 0 0 0.3rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.sr2e-wizard .sr2e-wiz-totals ul { list-style: none; margin: 0; padding: 0; }
+.sr2e-wizard .sr2e-wiz-totals li { padding: 0.15rem 0; display: flex; flex-wrap: wrap; gap: 0.25rem; justify-content: space-between; }
+.sr2e-wizard .sr2e-wiz-totals li.sr2e-here { font-weight: 700; }
+.sr2e-wizard .sr2e-wiz-totals li span { color: var(--sr2e-muted); }
+.sr2e-wizard .sr2e-warn, .sr2e-spend .sr2e-warn { color: var(--sr2e-danger); }
+.sr2e-wizard .sr2e-wiz-foot { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.4rem 0.75rem; border-top: 1px solid color-mix(in srgb, currentColor 14%, transparent); }
+.sr2e-wizard .sr2e-wiz-foot button { width: auto; flex: 0 0 auto; }
+.sr2e-wizard table.sr2e-wiz-priorities { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+.sr2e-wizard table.sr2e-wiz-priorities th, .sr2e-wizard table.sr2e-wiz-priorities td { padding: 0.2rem 0.25rem; border-bottom: 1px solid color-mix(in srgb, currentColor 10%, transparent); vertical-align: top; text-align: left; }
+.sr2e-wizard table.sr2e-wiz-priorities td label { display: flex; gap: 0.2rem; align-items: flex-start; cursor: pointer; }
+.sr2e-wizard table.sr2e-wiz-priorities td.sr2e-picked { background: color-mix(in srgb, var(--sr2e-accent) 18%, transparent); font-weight: 600; }
+.sr2e-wizard .sr2e-wiz-choices { list-style: none; padding: 0; margin: 0.2rem 0; }
+.sr2e-wizard .sr2e-wiz-choices li { padding: 0.15rem 0; }
+.sr2e-wizard .sr2e-dim, .sr2e-spend .sr2e-dim { color: var(--sr2e-muted); }
+.sr2e-wizard table.sr2e-wiz-table { border-collapse: collapse; }
+.sr2e-wizard table.sr2e-wiz-table td, .sr2e-wizard table.sr2e-wiz-table th { padding: 0.15rem 0.5rem; text-align: left; }
+.sr2e-wizard input.sr2e-num, .sr2e.sheet .sr2e-creation input.sr2e-num { width: 3.2rem; }
+.sr2e-wizard .sr2e-list { list-style: none; padding: 0; margin: 0.2rem 0; }
+.sr2e-wizard .sr2e-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; padding: 0.15rem 0; border-bottom: 1px solid color-mix(in srgb, currentColor 8%, transparent); }
+.sr2e-wizard .sr2e-list li input[type="text"] { width: auto; flex: 0 1 9rem; min-width: 5rem; }
+.sr2e-wizard .sr2e-wiz-shops { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.sr2e-wizard .sr2e-wiz-shops button, .sr2e-wizard .sr2e-wiz-body p > button { width: auto; flex: 0 0 auto; }
+.sr2e-wizard table.sr2e-build { width: 100%; font-size: 0.8rem; }
+@media (max-width: 640px) { .sr2e-wizard .sr2e-wiz-main { flex-direction: column; } .sr2e-wizard .sr2e-wiz-totals { flex: 0 0 auto; border-left: 0; border-top: 1px solid color-mix(in srgb, currentColor 14%, transparent); } }
+
+/* Spend Karma. */
+.sr2e-spend { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0.4rem 0.75rem 0.6rem; }
+.sr2e-spend .sr2e-spend-head { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.3rem; }
+.sr2e-spend h2 { display: flex; align-items: center; gap: 0.4rem; margin: 0.6rem 0 0.2rem; font-size: 1rem; }
+.sr2e-spend table.sr2e-spend-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.sr2e-spend table.sr2e-spend-table th { text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--sr2e-muted); }
+.sr2e-spend table.sr2e-spend-table td, .sr2e-spend table.sr2e-spend-table th { padding: 0.15rem 0.3rem; border-bottom: 1px solid color-mix(in srgb, currentColor 10%, transparent); }
+.sr2e-spend table.sr2e-spend-table td:last-child { text-align: right; white-space: nowrap; }
+.sr2e-spend table.sr2e-spend-table button, .sr2e-spend .sr2e-row button { width: auto; flex: 0 0 auto; padding: 0 0.45rem; line-height: 1.5rem; }
+.sr2e-spend tr.sr2e-spend-sub td:first-child { padding-left: 1rem; }
+.sr2e-spend .sr2e-list { list-style: none; padding: 0; margin: 0.2rem 0; }
+.sr2e-spend .sr2e-list li { display: flex; justify-content: space-between; gap: 0.4rem; padding: 0.15rem 0; }
+.sr2e-approval-note { padding: 0.25rem 0.5rem; border-left: 3px solid var(--sr2e-accent); background: color-mix(in srgb, var(--sr2e-accent) 10%, transparent); font-size: 0.8rem; }
+
+/* The Current and Creation tabs. */
+.sr2e.sheet .sr2e-current table.sr2e-current-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.sr2e.sheet .sr2e-current table.sr2e-current-table td, .sr2e.sheet .sr2e-current table.sr2e-current-table th { padding: 0.15rem 0.35rem; border-bottom: 1px solid color-mix(in srgb, currentColor 9%, transparent); text-align: left; }
+.sr2e.sheet .sr2e-current td.sr2e-current-total { cursor: help; }
+.sr2e.sheet .sr2e-current td.sr2e-augmented strong { color: var(--sr2e-accent); }
+.sr2e.sheet .sr2e-current td.sr2e-since, .sr2e.sheet .sr2e-current th:last-child { font-variant-numeric: tabular-nums; color: var(--sr2e-muted); }
+.sr2e.sheet .sr2e-current .sr2e-current-chips { flex-wrap: wrap; gap: 0.3rem; }
+.sr2e.sheet .sr2e-creation .sr2e-creation-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 0.6rem; }
+.sr2e.sheet .sr2e-creation .sr2e-list { list-style: none; padding: 0; margin: 0.2rem 0; }
+.sr2e.sheet .sr2e-creation .sr2e-inline-list { display: flex; flex-wrap: wrap; gap: 0.2rem 0.8rem; }
+.sr2e.sheet .sr2e-creation .sr2e-advlog li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.35rem; padding: 0.2rem 0; border-bottom: 1px solid color-mix(in srgb, currentColor 9%, transparent); }
+.sr2e.sheet .sr2e-creation .sr2e-adv-when { font-size: 0.75rem; color: var(--sr2e-muted); min-width: 5.5rem; font-variant-numeric: tabular-nums; }
+.sr2e.sheet .sr2e-creation .sr2e-adv-what { flex: 1 1 12rem; }
+.sr2e.sheet .sr2e-creation .sr2e-adv-award .sr2e-adv-cost { color: var(--sr2e-health-text); }
+.sr2e.sheet .sr2e-creation .sr2e-adv-note .sr2e-adv-what { font-style: italic; }
+.sr2e.sheet .sr2e-creation details.sr2e-creation-checks { margin: 0.4rem 0; font-size: 0.8rem; }
+
+/* The GM panel's Requests. */
+.sr2e-gm-panel .sr2e-badge { display: inline-block; min-width: 1.1rem; padding: 0 0.25rem; border-radius: 0.6rem; font-size: 0.65rem; line-height: 1.1rem; text-align: center; background: var(--sr2e-danger); color: #fff; font-weight: 700; }
+.sr2e-gm-panel .sr2e-requests li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.35rem; padding: 0.25rem 0; border-bottom: 1px solid color-mix(in srgb, currentColor 9%, transparent); }
+.sr2e-gm-panel .sr2e-requests li.sr2e-warn > span:first-child { color: var(--sr2e-danger); }
+.sr2e-gm-panel .sr2e-requests button { width: auto; flex: 0 0 auto; }
+
+/* ==========================================================================
+   v0.65.0: things under way (learning, building, repairs, orders, training).
+   ========================================================================== */
+.sr2e .sr2e-underway { list-style: none; padding: 0; margin: 0.2rem 0; }
+.sr2e .sr2e-underway li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.35rem; padding: 0.2rem 0; border-bottom: 1px solid color-mix(in srgb, currentColor 9%, transparent); }
+.sr2e .sr2e-underway li.sr2e-due > span:first-child { font-style: italic; }
+.sr2e .sr2e-underway .sr2e-underway-acts { display: inline-flex; align-items: center; gap: 0.4rem; }
+.sr2e .sr2e-underway .sr2e-underway-acts button { width: auto; flex: 0 0 auto; }
+
+/* ==========================================================================
+   v0.66.0: GM setup tools (the GM panel's Setup tab), kits, help and tours.
+   ========================================================================== */
+.sr2e-gm-panel .sr2e-checklist-parts { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.6rem; }
+.sr2e-gm-panel .sr2e-checklist li, .sr2e-gm-panel .sr2e-kits li { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.4rem; padding: 0.2rem 0; border-bottom: 1px solid color-mix(in srgb, currentColor 9%, transparent); }
+.sr2e-gm-panel .sr2e-checklist li.sr2e-done label { color: var(--sr2e-muted); text-decoration: line-through; }
+.sr2e-gm-panel .sr2e-checklist .sr2e-chip { cursor: pointer; white-space: nowrap; }
+.sr2e-gm-panel .sr2e-gm-acts { display: inline-flex; align-items: center; gap: 0.45rem; flex: 0 0 auto; }
+.sr2e-gm-panel .sr2e-kits li > span:first-child { flex: 1 1 auto; min-width: 0; }
+.sr2e-gm-panel .sr2e-kits li.sr2e-drop-hover { outline: 2px dashed var(--sr2e-accent); outline-offset: 2px; }
+.sr2e-gm-panel .sr2e-assign select { width: 100%; }
+.sr2e-gm-panel .sr2e-online { font-size: 0.5rem; color: var(--sr2e-health-text); vertical-align: middle; }
+.sr2e-gm-panel .sr2e-row button, .sr2e-gm-panel .sr2e-assign button { width: auto; flex: 0 0 auto; }
+.sr2e-pick-list { max-height: 18rem; overflow-y: auto; display: flex; flex-direction: column; gap: 0.1rem; }
+.sr2e-cat-preview { margin-top: 0.4rem; max-height: 14rem; overflow-y: auto; }
+.sr2e-cat-preview .sr2e-chip { display: inline-block; margin: 0.1rem; font-size: 0.75rem; }
+.sr2e-cat-preview .sr2e-warn, .sr2e-cat-preview ul.sr2e-warn { color: var(--sr2e-danger); }
+
+/* The "?" after a heading. */
+.sr2e a.sr2e-help { margin-left: 0.35rem; font-size: 0.8em; font-weight: normal; color: var(--sr2e-muted); cursor: help; text-decoration: none; }
+.sr2e a.sr2e-help:hover, .sr2e a.sr2e-help:focus-visible { color: var(--sr2e-accent); }
+.sr2e-play a.sr2e-help { display: inline; }
+
+/* The guide window. */
+.sr2e-help-window .window-content { padding: 0; }
+.sr2e-help-window .sr2e-help-layout { display: grid; grid-template-columns: minmax(11rem, 14rem) 1fr; height: 100%; min-height: 0; }
+.sr2e-help-window .sr2e-help-topics { overflow-y: auto; padding: 0.5rem; border-right: 1px solid color-mix(in srgb, currentColor 12%, transparent); }
+/* v0.82.0 (owner): the group headers stand apart from the topics: accent colour, a rule under them and room above;
+   the topics sit indented under a faint guide line. */
+.sr2e-help-window .sr2e-help-topics h4,
+.application.sr2e-look.sr2e-help-window .sr2e-help-topics section > h4 { margin: 1rem 0 0.3rem; padding: 0 0.1rem 0.2rem; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--sr2e-accent); border: none; border-bottom: 1px solid color-mix(in srgb, var(--sr2e-accent) 45%, transparent); }
+.sr2e-help-window .sr2e-help-topics section:first-of-type h4 { margin-top: 0.4rem; }
+.sr2e-help-window .sr2e-help-topics ul { list-style: none; margin: 0 0 0 0.35rem; padding: 0 0 0 0.45rem; border-left: 1px solid color-mix(in srgb, currentColor 15%, transparent); }
+.sr2e-help-window .sr2e-help-topics a { display: block; padding: 0.15rem 0.3rem; border-radius: 3px; font-size: 0.85rem; font-weight: 400; }
+.sr2e-help-window .sr2e-help-topics a.active { background: color-mix(in srgb, var(--sr2e-accent) 18%, transparent); font-weight: 600; }
+.sr2e-help-window .sr2e-help-search { width: 100%; margin-bottom: 0.3rem; }
+.sr2e-help-window .sr2e-help-body { overflow-y: auto; padding: 0.6rem 1rem 1rem; line-height: 1.45; }
+.sr2e-help-window .sr2e-help-body h2 { margin-top: 0; }
+.sr2e-help-window .sr2e-help-body kbd { padding: 0 0.25rem; border: 1px solid color-mix(in srgb, currentColor 30%, transparent); border-radius: 3px; font-size: 0.85em; }
+@container (max-width: 520px) { .sr2e-help-window .sr2e-help-layout { grid-template-columns: 1fr; } }
+.sr2e-gm-panel .sr2e-checklist h3 { font-size: 0.95rem; margin: 0.4rem 0 0.2rem; border: none; display: flex; align-items: center; gap: 0.4rem; }
+.sr2e-gm-panel .sr2e-checklist h3 a, .sr2e-gm-panel .sr2e-kits h2 a { font-size: 0.85rem; }
+.sr2e-gm-panel .sr2e-checklist ul.sr2e-list li, .sr2e-gm-panel .sr2e-kits ul.sr2e-list li { display: flex; flex-wrap: nowrap; align-items: center; }
+.sr2e-gm-panel .sr2e-checklist ul.sr2e-list li > label { flex: 1 1 auto; min-width: 0; margin: 0; }
+
+/* ==========================================================================
+   v0.67.0: the look. SR2e's own windows (class sr2e-look: our sheets and windows, the dialogs our code
+   opens, our settings windows) and our chat cards (sr2e-card) take the player's palette: gunmetal panels,
+   a thin glowing edge, an angled corner, Chakra Petch headings, JetBrains Mono numbers and Inter text.
+   Every colour is a variable from rules/look.ts (#sr2e-palette), keyed on the body classes
+   sr2e-theme-<street|corp|contrast> and sr2e-preset-<cyan|green|magenta|amber>; the contrast test checks
+   each pair. Foundry's sidebar, chat log and tracker keep Foundry's look.
+   ========================================================================== */
+
+/* Fonts (SIL Open Font License; the licences are in fonts/). */
+@font-face { font-family: "SR2e Chakra Petch"; font-style: normal; font-weight: 600; font-display: swap; src: url("../fonts/chakra-petch-latin-600-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: "SR2e Chakra Petch"; font-style: normal; font-weight: 600; font-display: swap; src: url("../fonts/chakra-petch-latin-ext-600-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+@font-face { font-family: "SR2e Chakra Petch"; font-style: normal; font-weight: 700; font-display: swap; src: url("../fonts/chakra-petch-latin-700-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: "SR2e Chakra Petch"; font-style: normal; font-weight: 700; font-display: swap; src: url("../fonts/chakra-petch-latin-ext-700-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+@font-face { font-family: "SR2e Mono"; font-style: normal; font-weight: 100 800; font-display: swap; src: url("../fonts/jetbrains-mono-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: "SR2e Mono"; font-style: normal; font-weight: 100 800; font-display: swap; src: url("../fonts/jetbrains-mono-latin-ext-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+@font-face { font-family: "SR2e Inter"; font-style: normal; font-weight: 100 900; font-display: swap; src: url("../fonts/inter-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: "SR2e Inter"; font-style: normal; font-weight: 100 900; font-display: swap; src: url("../fonts/inter-latin-ext-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+
+:root {
+  --sr2e-font-head: "SR2e Chakra Petch", "Rajdhani", "Segoe UI", sans-serif;
+  --sr2e-font-body: "SR2e Inter", "Segoe UI", Roboto, sans-serif;
+  --sr2e-font-num: "SR2e Mono", "Cascadia Mono", Consolas, monospace;
+  --sr2e-window-alpha: 1;
+  --sr2e-text-scale: 1;
+}
+
+/* --- The window: solid palette background (or see-through by the player's slider), edge, glow, angled corners. */
+.application.sr2e-look {
+  --sr2e-window-bg: color-mix(in srgb, var(--sr2e-window) calc(var(--sr2e-window-alpha) * 100%), transparent);
+  /* Foundry's own variables, so its inputs, buttons, labels and tables inside our windows use the palette. */
+  --background: var(--sr2e-window-bg);
+  --color-text-primary: var(--sr2e-ink); --color-text-secondary: var(--sr2e-ink); --color-text-emphatic: var(--sr2e-ink);
+  --color-text-subtle: var(--sr2e-muted); --color-text-hyperlink: var(--sr2e-accent); --color-text-accent: var(--sr2e-accent);
+  --color-text-selection: var(--sr2e-accent-ink); --color-text-selection-bg: var(--sr2e-accent-tint);
+  --color-form-label: var(--sr2e-muted); --color-form-label-hover: var(--sr2e-ink); --color-form-hint: var(--sr2e-muted); --color-form-hint-hover: var(--sr2e-ink);
+  --color-border: var(--sr2e-rule); --color-fieldset-border: var(--sr2e-rule); --color-tabs-border: var(--sr2e-rule);
+  --color-border-light-tertiary: var(--sr2e-rule); --color-border-dark-tertiary: var(--sr2e-rule);
+  --color-header-background: var(--sr2e-header); --color-select-option-bg: var(--sr2e-window);
+  --color-data-border: var(--sr2e-rule); --color-data-background: var(--sr2e-raised);
+  --table-background-color: transparent; --table-header-bg-color: var(--sr2e-raised); --table-header-border-color: var(--sr2e-rule);
+  --table-header-text-color: var(--sr2e-muted); --table-row-color-even: transparent; --table-row-color-odd: transparent;
+  --table-row-color-highlight: var(--sr2e-chip);
+  --color-scrollbar: var(--sr2e-rule-strong); --color-scrollbar-track: transparent;
+  background: var(--sr2e-window-bg);
+  color: var(--sr2e-ink);
+  font-family: var(--sr2e-font-body);
+  border: 1px solid var(--sr2e-edge);
+  border-radius: 0;
+  box-shadow: inset 0 0 0 1px var(--sr2e-edge-soft), inset 0 0 22px var(--sr2e-glow);
+  clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 14px);
+}
+/* The two cut corners carry the edge line across. */
+.application.sr2e-look::before, .application.sr2e-look::after { content: ""; position: absolute; pointer-events: none; z-index: 2; }
+.application.sr2e-look::before { top: 0; left: 0; width: 14px; height: 14px; background: linear-gradient(to bottom right, transparent calc(50% - 1px), var(--sr2e-edge) calc(50% - 1px), var(--sr2e-edge) calc(50% + 0.5px), transparent calc(50% + 0.5px)); }
+.application.sr2e-look::after { right: 0; bottom: 0; width: 10px; height: 10px; background: linear-gradient(to bottom right, transparent calc(50% - 1px), var(--sr2e-edge) calc(50% - 1px), var(--sr2e-edge) calc(50% + 0.5px), transparent calc(50% + 0.5px)); }
+.application.sr2e-look .window-resize-handle { right: 7px; bottom: 7px; }
+.application.sr2e-look > .window-content { background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; color: var(--sr2e-ink); zoom: var(--sr2e-text-scale); }
+/* ProseMirror places its menus from un-zoomed coordinates: while an editor is open, that window shows at 100%. */
+.application.sr2e-look:has(prose-mirror.active) > .window-content { zoom: 1; }
+body.sr2e-see-through .application.sr2e-look > .window-content { backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+/* The title bar: a darker strip, the title in the heading face, the accent line under it. */
+.application.sr2e-look > .window-header {
+  background: var(--sr2e-header); color: var(--sr2e-header-text); border-bottom: 1px solid var(--sr2e-header-accent);
+  padding-left: 1.1rem; font-family: var(--sr2e-font-head);
+}
+.application.sr2e-look > .window-header .window-title { font-family: var(--sr2e-font-head); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.95rem; color: var(--sr2e-header-text); }
+.application.sr2e-look > .window-header .window-icon { color: var(--sr2e-header-accent); }
+.application.sr2e-look > .window-header button.header-control { --button-text-color: var(--sr2e-header-text); --button-hover-text-color: var(--sr2e-header-accent); --button-background-color: transparent; --button-hover-background-color: transparent; --button-border-color: transparent; color: var(--sr2e-header-text); }
+.application.sr2e-look.minimized { clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px); }
+
+/* --- Headings, labels, numbers. */
+.application.sr2e-look :is(h1, h2, h3, h4, legend):not(.sr2e-rich *) { font-family: var(--sr2e-font-head); color: var(--sr2e-area-text, var(--sr2e-ink)); text-shadow: none; }
+.application.sr2e-look h2:not(.sr2e-rich h2) { font-size: 0.95rem; letter-spacing: 0.07em; text-transform: uppercase; font-weight: 700; border-bottom-color: var(--sr2e-rule); }
+.application.sr2e-look h3:not(.sr2e-rich h3, .sr2e-subhead) { font-size: 0.92rem; letter-spacing: 0.04em; font-weight: 700; }
+.application.sr2e-look legend { text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; font-size: 0.85rem; }
+.application.sr2e-look h3.sr2e-subhead, .application.sr2e-look .sr2e-stat-label, .application.sr2e-look .sr2e-track-label, .application.sr2e-look .sr2e-cm-label,
+.application.sr2e-look .sr2e-attributes thead th { font-family: var(--sr2e-font-head); letter-spacing: 0.08em; color: var(--sr2e-muted); }
+.application.sr2e-look :is(input[type="number"], .sr2e-stat > strong, .sr2e-attributes td:last-child, .sr2e-chip strong, .sr2e-pool em, .sr2e-init, .sr2e-ammo, .sr2e-npc-derived strong, .sr2e-sh-grid strong, td.sr2e-since, .sr2e-adv-when, .sr2e-add-total) { font-family: var(--sr2e-font-num); font-variant-numeric: tabular-nums; }
+.application.sr2e-look a:not([data-action]):not(.sr2e-help), .application.sr2e-look .sr2e-rich a { color: var(--sr2e-accent); }
+.application.sr2e-look .hint, .application.sr2e-look .sr2e-muted { color: var(--sr2e-muted); }
+.application.sr2e-look :is(.sr2e-warn, .sr2e-warning, ul.sr2e-warnings, .sr2e-botch) { color: var(--sr2e-danger); }
+.application.sr2e-look hr { border-color: var(--sr2e-rule); background: var(--sr2e-rule); }
+
+/* --- Area colours: the tabs and sheets of an area tint their headings. */
+.application.sr2e-look .sr2e-tab[data-tab="combat"] { --sr2e-area: var(--sr2e-combat); --sr2e-area-text: var(--sr2e-combat-text); }
+.application.sr2e-look .sr2e-tab[data-tab="magic"], .application.sr2e-look.spirit .sr2e-sheet, .application.sr2e-look.barrier .sr2e-sheet { --sr2e-area: var(--sr2e-magic); --sr2e-area-text: var(--sr2e-magic-text); }
+.application.sr2e-look .sr2e-tab[data-tab="matrix"], .application.sr2e-look.host .sr2e-sheet, .application.sr2e-look.ic .sr2e-sheet { --sr2e-area: var(--sr2e-matrix); --sr2e-area-text: var(--sr2e-matrix-text); }
+.application.sr2e-look .sr2e-tab[data-tab="rigging"], .application.sr2e-look.vehicle .sr2e-sheet { --sr2e-area: var(--sr2e-rigging); --sr2e-area-text: var(--sr2e-rigging-text); }
+.application.sr2e-look .sr2e-tab[data-tab="upkeep"], .application.sr2e-look.site .sr2e-sheet, .application.sr2e-look.safehouse .sr2e-sheet { --sr2e-area: var(--sr2e-street); --sr2e-area-text: var(--sr2e-street-text); }
+.application.sr2e-look .sr2e-tab[data-tab="effects"] { --sr2e-area: var(--sr2e-health); --sr2e-area-text: var(--sr2e-health-text); }
+.application.sr2e-look .sr2e-tab[data-tab] h2:not(.sr2e-rich h2), .application.sr2e-look .sr2e-sheet > h3:not(.sr2e-subhead) { border-bottom-color: color-mix(in srgb, var(--sr2e-area, var(--sr2e-rule)) 55%, var(--sr2e-rule)); }
+
+/* --- Tabs (sheets, GM panel, Add window, wizard, help). */
+.application.sr2e-look :is(.sr2e-tabs .item, .sr2e-gm-tabs a, .sr2e-add-tab, .sr2e-wiz-step) { font-family: var(--sr2e-font-head); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.8rem; color: var(--sr2e-muted); border-bottom: 2px solid transparent; text-shadow: none; }
+.application.sr2e-look :is(.sr2e-tabs .item, .sr2e-gm-tabs a, .sr2e-add-tab, .sr2e-wiz-step):hover { color: var(--sr2e-ink); background: var(--sr2e-chip); }
+.application.sr2e-look :is(.sr2e-tabs .item.active, .sr2e-gm-tabs a.active, .sr2e-add-tab.active, .sr2e-wiz-step.active) { color: var(--sr2e-ink); border-bottom-color: var(--sr2e-accent); font-weight: 700; }
+.application.sr2e-look :is(.sr2e-tabs, .sr2e-gm-tabs, .sr2e-add-tabs, .sr2e-wiz-steps) { border-bottom-color: var(--sr2e-rule); }
+.application.sr2e-look .sr2e-tabs .sr2e-tab-hits { background: var(--sr2e-accent-tint); color: var(--sr2e-accent-ink); border: 1px solid var(--sr2e-accent); }
+.application.sr2e-look .sr2e-badge { background: var(--sr2e-danger-tint); color: var(--sr2e-danger-ink); border: 1px solid var(--sr2e-danger); }
+
+/* --- Inputs: sunk fields, a rule border, the accent focus ring. */
+.application.sr2e-look :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"]), select, textarea, file-picker, string-tags, document-tags, color-picker) {
+  --input-background-color: var(--sr2e-sunk); --input-border-color: var(--sr2e-rule-strong); --input-text-color: var(--sr2e-ink);
+  --input-focus-outline-color: var(--sr2e-accent); --input-placeholder-color: var(--sr2e-muted); --input-focus-text-color: var(--sr2e-ink);
+}
+.application.sr2e-look :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"]), select, textarea) { background: var(--sr2e-sunk); color: var(--sr2e-ink); border: 1px solid var(--sr2e-rule-strong); border-radius: 2px; box-shadow: none; }
+.application.sr2e-look :is(input, select, textarea):focus-visible { outline: 2px solid var(--sr2e-accent); outline-offset: 0; box-shadow: none; }
+.application.sr2e-look :is(input, select, textarea):disabled, .application.sr2e-look input[readonly] { background: var(--sr2e-window); color: var(--sr2e-muted); border-style: dashed; }
+.application.sr2e-look select option { background: var(--sr2e-window); color: var(--sr2e-ink); }
+.application.sr2e-look input[type="checkbox"], .application.sr2e-look input[type="radio"] { --checkbox-checked-color: var(--sr2e-accent); --checkbox-background-color: var(--sr2e-sunk); --checkbox-disabled-color: var(--sr2e-rule); accent-color: var(--sr2e-accent); }
+.application.sr2e-look input[type="range"] { --range-track-color: var(--sr2e-sunk); --range-track-border-color: var(--sr2e-rule-strong); --range-thumb-border-color: var(--sr2e-accent); --range-thumb-background-color: var(--sr2e-window); accent-color: var(--sr2e-accent); }
+.sr2e-sheet.sr2e-play :is(input, select)[data-sr2e-locked] { background: transparent; border-color: transparent; }
+
+/* --- Buttons: ghost by default, the accent for the main button of a dialog. */
+.application.sr2e-look :is(button, a.button):not(.header-control, .sr2e-rich button, prose-mirror button, :disabled) {
+  --button-background-color: var(--sr2e-chip); --button-border-color: var(--sr2e-rule-strong); --button-text-color: var(--sr2e-ink);
+  --button-hover-background-color: var(--sr2e-accent-tint); --button-hover-border-color: var(--sr2e-accent); --button-hover-text-color: var(--sr2e-accent-ink);
+  --button-focus-outline-color: var(--sr2e-accent);
+  background: var(--button-background-color); color: var(--button-text-color); border: 1px solid var(--button-border-color); border-radius: 2px;
+  font-family: var(--sr2e-font-head); font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; text-shadow: none; box-shadow: none;
+}
+.application.sr2e-look :is(button, a.button):not(.header-control, .sr2e-rich button, prose-mirror button, :disabled):hover { background: var(--button-hover-background-color); color: var(--button-hover-text-color); border-color: var(--button-hover-border-color); }
+.application.sr2e-look :is(button, a.button):not(.header-control):focus-visible { outline: 2px solid var(--sr2e-accent); outline-offset: 1px; }
+.application.sr2e-look :is(button, a.button):not(.header-control):disabled { background: var(--sr2e-window); color: var(--sr2e-muted); border: 1px dashed var(--sr2e-rule-strong); border-radius: 2px; font-family: var(--sr2e-font-head); font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; text-shadow: none; box-shadow: none; cursor: not-allowed; }
+/* (The doubled class outranks the base button rule above.) */
+.application.sr2e-look.sr2e-look :is(.form-footer button, button[data-action="ok"], button.default, button[type="submit"]:not(.header-control), .sr2e-add-go) {
+  --button-background-color: var(--sr2e-accent-tint); --button-border-color: var(--sr2e-accent); --button-text-color: var(--sr2e-accent-ink);
+}
+.application.sr2e-look.sr2e-look.sr2e-look .form-footer button:not(.default, [data-action="ok"], [type="submit"]) { --button-background-color: var(--sr2e-chip); --button-border-color: var(--sr2e-rule-strong); --button-text-color: var(--sr2e-ink); }
+.application.sr2e-look a[data-action] > i.fa-solid:only-child, .application.sr2e-look a[data-action]:has(> i.fa-solid:only-child) { color: var(--sr2e-muted); }
+.application.sr2e-look a[data-action]:has(> i.fa-solid):hover > i { color: var(--sr2e-accent); }
+
+/* --- Panels: the summary, chips, stat cells, lists and tables. */
+.application.sr2e-look .sr2e-summary, .application.sr2e-look .sr2e-preview, .application.sr2e-look .sr2e-sh-cat, .application.sr2e-look .sr2e-sh-grid > div, .application.sr2e-look .sr2e-npcgen-preview { background: var(--sr2e-raised); border: 1px solid var(--sr2e-rule); border-radius: 0; }
+.application.sr2e-look .sr2e-chip { background: var(--sr2e-chip); border: 1px solid var(--sr2e-rule-strong); border-radius: 3px; color: var(--sr2e-ink); }
+.application.sr2e-look .sr2e-chip-soft { color: var(--sr2e-muted); }
+.application.sr2e-look .sr2e-stat { background: var(--sr2e-raised); border: 1px solid var(--sr2e-rule); border-radius: 0; }
+.application.sr2e-look .sr2e-stat > strong, .application.sr2e-look .sr2e-attributes td:last-child { color: var(--sr2e-ink); }
+.application.sr2e-look .sr2e-aug, .application.sr2e-look td.sr2e-augmented strong { color: var(--sr2e-accent); }
+.application.sr2e-look ul:not(.sr2e-warnings, .sr2e-rich ul) > li { border-bottom-color: var(--sr2e-rule); }
+.application.sr2e-look ul:not(.sr2e-warnings, .sr2e-rich ul) > li:hover, .application.sr2e-look .sr2e-attributes tbody tr:hover { background: var(--sr2e-raised); }
+.application.sr2e-look ul:not(.sr2e-warnings, .sr2e-rich ul) > li > span:not(.sr2e-status):not(.sr2e-inline) { color: var(--sr2e-muted); }
+.application.sr2e-look :is(table) { background: transparent; border-color: var(--sr2e-rule); color: var(--sr2e-ink); }
+.application.sr2e-look :is(th) { color: var(--sr2e-muted); background: transparent; }
+.application.sr2e-look :is(tr) { border-color: var(--sr2e-rule); }
+.application.sr2e-look .sr2e-status { border-color: var(--sr2e-rule-strong); color: var(--sr2e-muted); font-family: var(--sr2e-font-head); }
+.application.sr2e-look .sr2e-pool .sr2e-pip { border-color: var(--sr2e-accent); }
+.application.sr2e-look .sr2e-pool .sr2e-pip.filled { background: var(--sr2e-accent); }
+.application.sr2e-look .sr2e-ammo .sr2e-pip { background: var(--sr2e-rule-strong); }
+.application.sr2e-look .sr2e-ammo .sr2e-pip.full { background: var(--sr2e-accent); }
+.application.sr2e-look .sr2e-rich { background: var(--sr2e-raised); border-color: var(--sr2e-rule); border-radius: 0; color: var(--sr2e-ink); }
+.application.sr2e-look :is(.sr2e-template, .sr2e-layout) { background: var(--sr2e-raised); border-color: var(--sr2e-rule); border-radius: 0; }
+.application.sr2e-look .sr2e-sheet-tools input[type="search"] { background: var(--sr2e-sunk); }
+.application.sr2e-look fieldset { border-color: var(--sr2e-rule); }
+.application.sr2e-look .sr2e-header > img { border-radius: 0; border-color: var(--sr2e-rule-strong); background: var(--sr2e-raised); }
+.application.sr2e-look .sr2e-header input[name="name"] { font-family: var(--sr2e-font-head); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--sr2e-ink); background: transparent; border-color: transparent; border-bottom-color: var(--sr2e-rule); }
+.application.sr2e-look .sr2e-header input[name="name"]:is(:hover, :focus) { background: var(--sr2e-sunk); border-color: var(--sr2e-rule-strong); }
+.application.sr2e-look .sr2e-banner { font-family: var(--sr2e-font-head); }
+.application.sr2e-look .sr2e-add table.sr2e-add-list th, .application.sr2e-look .sr2e-add-foot, .sr2e-add.application.sr2e-look :is(table.sr2e-add-list th, .sr2e-add-foot) { background: var(--sr2e-window); }
+.application.sr2e-look .sr2e-wiz-totals, .application.sr2e-look .sr2e-help-topics { background: var(--sr2e-raised); border-color: var(--sr2e-rule); }
+.application.sr2e-look .sr2e-help-topics a.active, .application.sr2e-look table.sr2e-wiz-priorities td.sr2e-picked { background: var(--sr2e-accent-tint); color: var(--sr2e-accent-ink); }
+.application.sr2e-look .sr2e-approval-note { border-left-color: var(--sr2e-accent); background: var(--sr2e-accent-tint); color: var(--sr2e-accent-ink); }
+.application.sr2e-look .sr2e-gm-people li.sr2e-current { background: var(--sr2e-accent-tint); border-left-color: var(--sr2e-accent); }
+.application.sr2e-look .sr2e-gm-people li.sr2e-current, .application.sr2e-look .sr2e-gm-people li.sr2e-current * { color: var(--sr2e-accent-ink); }
+.application.sr2e-look .sr2e-wiz-ok .sr2e-wiz-n { background: var(--sr2e-health-tint); color: var(--sr2e-health-ink); }
+.application.sr2e-look .sr2e-adv-award .sr2e-adv-cost, .application.sr2e-look .sr2e-online { color: var(--sr2e-health-text); }
+.application.sr2e-look .sr2e-flash { outline-color: var(--sr2e-accent); }
+.application.sr2e-look .sr2e-cover-note { color: var(--sr2e-street-text); }
+
+/* --- The condition monitor: wound groups with dividers and labels, the Overflow row beside them. */
+div.sr2e-cm { display: flex; flex-wrap: wrap; align-items: stretch; gap: 0.5rem; margin: 0.3rem 0 0.4rem; }
+.sr2e-cm-track { display: inline-flex; align-items: flex-end; gap: 0.6rem; padding: 0.35rem 0.6rem 0.4rem; background: var(--sr2e-chip); border: 1px solid var(--sr2e-rule-strong); border-radius: 3px; }
+.sr2e-cm-track.sr2e-cm-physical, .sr2e-cm-track.sr2e-cm-stun { flex: 0 0 auto; width: 19.5rem; max-width: 100%; justify-content: space-between; box-sizing: border-box; }
+.sr2e-cm-label { min-width: 4rem; align-self: center; font-family: var(--sr2e-font-head); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--sr2e-muted); }
+.sr2e-cm-physical .sr2e-cm-label, .sr2e-cm-overflow .sr2e-cm-label { color: var(--sr2e-combat-text); }
+.sr2e-cm-stun .sr2e-cm-label { color: var(--sr2e-health-text); }
+.sr2e-cm-matrix .sr2e-cm-label { color: var(--sr2e-matrix-text); }
+.sr2e-cm-groups { display: inline-flex; align-items: flex-end; gap: 0.3rem; }
+/* Narrow windows or large text: the groups wrap inside the track's box instead of sticking out of it. */
+.sr2e-cm-track { flex-wrap: wrap; max-width: 100%; min-width: 0; box-sizing: border-box; }
+.sr2e-cm-groups { flex-wrap: wrap; row-gap: 0.35rem; min-width: 0; max-width: 100%; }
+.sr2e-cm-group { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; }
+.sr2e-cm-group > i { font-style: normal; font-family: var(--sr2e-font-num); font-size: 0.65rem; font-weight: 700; line-height: 1; color: var(--sr2e-muted); }
+.sr2e-cm-group.now > i { color: var(--sr2e-ink); text-decoration: underline; text-decoration-color: var(--sr2e-combat); text-decoration-thickness: 2px; text-underline-offset: 2px; }
+.sr2e-cm-stun .sr2e-cm-group.now > i { text-decoration-color: var(--sr2e-health); }
+.sr2e-cm-matrix .sr2e-cm-group.now > i { text-decoration-color: var(--sr2e-matrix); }
+.sr2e-cm-group > span { display: inline-flex; gap: 3px; }
+.sr2e-cm-div { width: 2px; height: 1.15rem; background: var(--sr2e-box-line); border-radius: 1px; align-self: flex-end; }
+.sr2e-cm .sr2e-cm-track .sr2e-box { width: 1.05rem; height: 1.05rem; padding: 0; border: 1px solid var(--sr2e-box-line); border-radius: 2px; background: var(--sr2e-sunk); color: transparent; font-size: 0; cursor: pointer; }
+.sr2e-cm .sr2e-cm-track .sr2e-box:hover { border-color: var(--sr2e-accent); }
+.sr2e-cm .sr2e-cm-physical .sr2e-box.filled, .sr2e-cm .sr2e-cm-overflow .sr2e-box.filled { background: var(--sr2e-combat); border-color: var(--sr2e-combat); }
+.sr2e-cm .sr2e-cm-stun .sr2e-box.filled { background: var(--sr2e-health); border-color: var(--sr2e-health); }
+.sr2e-cm .sr2e-cm-matrix .sr2e-box.filled { background: var(--sr2e-matrix); border-color: var(--sr2e-matrix); }
+.sr2e-cm-track.sr2e-cm-overflow { border-color: var(--sr2e-combat); }
+.sr2e-cm-overflow .sr2e-cm-group > i { color: var(--sr2e-combat-text); }
+.sr2e-cm .sr2e-box.sr2e-of { border-color: var(--sr2e-combat); }
+.sr2e-cm .sr2e-box.sr2e-of.dead { border-width: 2px; position: relative; }
+.sr2e-cm .sr2e-box.sr2e-of.dead::after { content: "✕"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; line-height: 1; color: var(--sr2e-combat-text); }
+.sr2e-cm .sr2e-box.sr2e-of.dead.filled::after { color: var(--sr2e-window); }
+/* Overflow is greyed (still visible) until the Physical track is full, then turns red. */
+.sr2e-cm-overflow.idle { filter: grayscale(1); opacity: 0.6; border-color: var(--sr2e-rule-strong); }
+.sr2e-cm-matrix-row { align-items: center; }
+.sr2e-cm-track.sr2e-cm-matrix { width: auto; }
+/* The vehicle's own damage track (no wound groups) takes the palette. */
+.application.sr2e-look .sr2e-track .sr2e-box { background: var(--sr2e-sunk); border-color: var(--sr2e-box-line); color: var(--sr2e-muted); border-radius: 2px; }
+.application.sr2e-look .sr2e-track .sr2e-box.filled { background: var(--sr2e-area, var(--sr2e-combat)); border-color: var(--sr2e-area, var(--sr2e-combat)); color: var(--sr2e-window); }
+.application.sr2e-look .sr2e-overflow { color: var(--sr2e-combat-text); }
+
+/* The small read-only monitor (summary chip, GM panel). */
+.sr2e-cm-mini { display: inline-flex; flex-wrap: wrap; align-items: flex-end; gap: 0.25rem 0.6rem; vertical-align: middle; }
+.sr2e-cm-bar { display: inline-flex; align-items: flex-end; gap: 3px; min-width: 7.5rem; }
+.sr2e-cm-bar > b { font-family: var(--sr2e-font-head); font-size: 0.65rem; letter-spacing: 0.05em; min-width: 1rem; align-self: center; color: var(--sr2e-muted); }
+.sr2e-cm-bar.sr2e-cm-physical > b, .sr2e-cm-bar.sr2e-cm-overflow > b { color: var(--sr2e-combat-text); }
+.sr2e-cm-bar.sr2e-cm-stun > b { color: var(--sr2e-health-text); }
+.sr2e-cm-seg { display: inline-flex; flex-direction: column; gap: 1px; min-width: 0; }
+.sr2e-cm-seg > i { font-style: normal; font-family: var(--sr2e-font-num); font-size: 0.55rem; font-weight: 700; line-height: 1; color: var(--sr2e-muted); }
+.sr2e-cm-seg.now > i { color: var(--sr2e-ink); }
+.sr2e-cm-seg > span { display: flex; gap: 2px; }
+.sr2e-cm-seg s { display: block; flex: 1 1 0; min-width: 4px; height: 6px; background: var(--sr2e-sunk); border: 1px solid var(--sr2e-box-line); text-decoration: none; }
+.sr2e-cm-physical .sr2e-cm-seg s.filled, .sr2e-cm-overflow .sr2e-cm-seg s.filled { background: var(--sr2e-combat); border-color: var(--sr2e-combat); }
+.sr2e-cm-stun .sr2e-cm-seg s.filled { background: var(--sr2e-health); border-color: var(--sr2e-health); }
+.sr2e-cm-overflow .sr2e-cm-seg s { border-color: var(--sr2e-combat); }
+.sr2e-cm-overflow .sr2e-cm-seg s.dead { border-width: 2px; }
+.sr2e-cm-bar.sr2e-cm-overflow { min-width: 3.5rem; }
+.sr2e-cm-bar.sr2e-cm-overflow.idle { filter: grayscale(1); opacity: 0.6; }
+.sr2e-cm-mini .sr2e-cm-div { height: 0.8rem; width: 2px; }
+.sr2e-chip.sr2e-cm-chip { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.2rem 0.5rem; border-radius: 3px; white-space: normal; }
+.sr2e-cm-chip .sr2e-cm-tn { font-family: var(--sr2e-font-num); color: var(--sr2e-combat-text); }
+.sr2e-gm-panel .sr2e-cm-mini { margin-right: 0.4rem; }
+
+/* --- Chat cards: the area colour as a header strip, the big success count, dice tiles, the TN line, the outcome bar. */
+.sr2e-card { --sr2e-area: var(--sr2e-accent); --sr2e-area-text: var(--sr2e-accent); --sr2e-area-tint: var(--sr2e-accent-tint); --sr2e-area-ink: var(--sr2e-accent-ink); }
+.sr2e-card.sr2e-area-combat { --sr2e-area: var(--sr2e-combat); --sr2e-area-text: var(--sr2e-combat-text); --sr2e-area-tint: var(--sr2e-combat-tint); --sr2e-area-ink: var(--sr2e-combat-ink); }
+.sr2e-card.sr2e-area-magic { --sr2e-area: var(--sr2e-magic); --sr2e-area-text: var(--sr2e-magic-text); --sr2e-area-tint: var(--sr2e-magic-tint); --sr2e-area-ink: var(--sr2e-magic-ink); }
+.sr2e-card.sr2e-area-matrix { --sr2e-area: var(--sr2e-matrix); --sr2e-area-text: var(--sr2e-matrix-text); --sr2e-area-tint: var(--sr2e-matrix-tint); --sr2e-area-ink: var(--sr2e-matrix-ink); }
+.sr2e-card.sr2e-area-rigging { --sr2e-area: var(--sr2e-rigging); --sr2e-area-text: var(--sr2e-rigging-text); --sr2e-area-tint: var(--sr2e-rigging-tint); --sr2e-area-ink: var(--sr2e-rigging-ink); }
+.sr2e-card.sr2e-area-street { --sr2e-area: var(--sr2e-street); --sr2e-area-text: var(--sr2e-street-text); --sr2e-area-tint: var(--sr2e-street-tint); --sr2e-area-ink: var(--sr2e-street-ink); }
+.sr2e-card.sr2e-area-health { --sr2e-area: var(--sr2e-health); --sr2e-area-text: var(--sr2e-health-text); --sr2e-area-tint: var(--sr2e-health-tint); --sr2e-area-ink: var(--sr2e-health-ink); }
+li.chat-message.sr2e-card {
+  --color-text-primary: var(--sr2e-ink); --color-text-secondary: var(--sr2e-muted); --color-text-subtle: var(--sr2e-muted);
+  background: var(--sr2e-window); color: var(--sr2e-ink); border: 1px solid var(--sr2e-rule); border-left: 3px solid var(--sr2e-area); border-radius: 0; box-shadow: none;
+  font-family: var(--sr2e-font-body);
+}
+li.chat-message.sr2e-card .message-header { color: var(--sr2e-muted); }
+/* Whispers and blind rolls stay recognisable: a dashed (whisper) or dotted (blind) edge in the accent. */
+li.chat-message.sr2e-card.whisper { border-style: dashed; border-color: var(--sr2e-accent); border-left-style: solid; border-left-color: var(--sr2e-area); }
+li.chat-message.sr2e-card.blind { border-style: dotted; border-color: var(--sr2e-accent); border-left-style: solid; border-left-color: var(--sr2e-area); }
+li.chat-message.sr2e-card :is(.whisper-to, .message-metadata .whisper-to) { color: var(--sr2e-accent); }
+li.chat-message.sr2e-card .message-header :is(.message-sender, h4) { font-family: var(--sr2e-font-head); color: var(--sr2e-ink); letter-spacing: 0.03em; }
+li.chat-message.sr2e-card .message-content { color: var(--sr2e-ink); zoom: var(--sr2e-text-scale); }
+/* Foundry's own text colours give way to the card's ink, but every rule of ours still wins (zero specificity). */
+:where(li.chat-message.sr2e-card .message-content) :where(p, li, td, th, summary) { color: inherit; }
+li.chat-message.sr2e-card .message-content a:not(.content-link):not(.inline-roll) { color: var(--sr2e-area-text); }
+li.chat-message.sr2e-card .sr2e-roll > h3 {
+  margin: 0.1rem -0.1rem 0.5rem; padding: 0.35rem 0.6rem; background: var(--sr2e-area-tint); color: var(--sr2e-area-ink); border: 0; border-bottom: 2px solid var(--sr2e-area);
+  font-family: var(--sr2e-font-head); font-size: 0.9rem; font-weight: 700; letter-spacing: 0.04em; line-height: 1.3; text-shadow: none;
+}
+li.chat-message.sr2e-card .sr2e-roll > h3[data-kind]::before { content: attr(data-kind); display: block; font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--sr2e-area-ink); }
+li.chat-message.sr2e-card .sr2e-count { display: flex; align-items: center; gap: 0.7rem; margin: 0.2rem 0 0.35rem; }
+li.chat-message.sr2e-card .sr2e-count > b { font-family: var(--sr2e-font-num); font-size: 3.2rem; font-weight: 700; line-height: 1; color: var(--sr2e-ink); }
+li.chat-message.sr2e-card .sr2e-count > span { display: flex; flex-direction: column; gap: 0.1rem; font-family: var(--sr2e-font-head); font-size: 1.05rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+li.chat-message.sr2e-card .sr2e-count > span > em { font-family: var(--sr2e-font-num); font-style: normal; font-weight: 400; font-size: 0.75rem; letter-spacing: 0; text-transform: none; color: var(--sr2e-muted); }
+li.chat-message.sr2e-card .sr2e-count-botch > b, li.chat-message.sr2e-card .sr2e-count-botch > span { color: var(--sr2e-danger); }
+li.chat-message.sr2e-card details.sr2e-fold > summary { font-size: 0.8rem; color: var(--sr2e-muted); }
+/* A card with the big count doesn't repeat the outcome in the fold line. */
+li.chat-message.sr2e-card .sr2e-count ~ details.sr2e-fold .sr2e-sum-out { display: none; }
+li.chat-message.sr2e-card details.sr2e-fold > summary strong { color: var(--sr2e-ink); }
+li.chat-message.sr2e-card .sr2e-breakdown, li.chat-message.sr2e-card .sr2e-breakdown em { font-family: var(--sr2e-font-num); font-style: normal; font-size: 0.75rem; color: var(--sr2e-muted); }
+li.chat-message.sr2e-card .sr2e-dice { gap: 0.3rem; margin: 0.35rem 0; }
+:where(li.chat-message.sr2e-card) .sr2e-die { display: inline-flex; align-items: center; justify-content: center; min-width: 1.75rem; height: 1.75rem; padding: 0 0.25rem; box-sizing: border-box;
+  border: 1px solid var(--sr2e-rule-strong); border-radius: 4px; background: var(--sr2e-chip); color: var(--sr2e-muted); font-family: var(--sr2e-font-num); font-weight: 600; font-size: 0.9rem; opacity: 1; }
+:where(li.chat-message.sr2e-card) .sr2e-die.hit { border-color: var(--sr2e-hit-line); background: var(--sr2e-hit-bg); color: var(--sr2e-hit-ink); box-shadow: 0 0 8px var(--sr2e-hit-glow); font-weight: 700; }
+:where(li.chat-message.sr2e-card) .sr2e-die.one { border-color: var(--sr2e-one-line); color: var(--sr2e-one-ink); }
+/* The outcome bar (Hit, Miss, Disaster…), moved under the dice. */
+:where(li.chat-message.sr2e-card) .sr2e-banner { display: flex; justify-content: space-between; text-align: left; margin: 0.35rem 0; padding: 0.35rem 0.6rem; border-radius: 0; border: 1px solid var(--sr2e-rule-strong); background: var(--sr2e-raised); color: var(--sr2e-ink); font-family: var(--sr2e-font-head); font-size: 0.9rem; letter-spacing: 0.06em; }
+:where(li.chat-message.sr2e-card) .sr2e-banner-hit { background: var(--sr2e-combat-tint); border-color: var(--sr2e-combat); color: var(--sr2e-combat-ink); }
+:where(li.chat-message.sr2e-card) .sr2e-banner-counter { background: var(--sr2e-magic-tint); border-color: var(--sr2e-magic); color: var(--sr2e-magic-ink); }
+:where(li.chat-message.sr2e-card) .sr2e-banner-disaster { background: var(--sr2e-danger-tint); border-color: var(--sr2e-danger); color: var(--sr2e-danger-ink); }
+:where(li.chat-message.sr2e-card) .sr2e-banner-ok { background: var(--sr2e-accent-tint); border-color: var(--sr2e-accent); color: var(--sr2e-accent-ink); }
+:where(li.chat-message.sr2e-card) .sr2e-banner-neutral { background: var(--sr2e-area-tint); border-color: var(--sr2e-area); color: var(--sr2e-area-ink); }
+:where(li.chat-message.sr2e-card) .sr2e-banner-miss { background: var(--sr2e-chip); border-color: var(--sr2e-rule-strong); color: var(--sr2e-muted); }
+/* Foundry declares its --button-* variables on each button, so ours go on the button too. */
+li.chat-message.sr2e-card .message-content button {
+  --button-background-color: var(--sr2e-area-tint); --button-border-color: var(--sr2e-area); --button-text-color: var(--sr2e-area-ink);
+  --button-hover-background-color: var(--sr2e-raised); --button-hover-border-color: var(--sr2e-area); --button-hover-text-color: var(--sr2e-ink);
+  background: var(--button-background-color); color: var(--button-text-color); border: 1px solid var(--button-border-color); border-radius: 2px;
+  font-family: var(--sr2e-font-head); font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; font-size: 0.78rem; min-height: 1.9rem; text-shadow: none; box-shadow: none;
+}
+li.chat-message.sr2e-card .message-content button:hover:not(:disabled) { background: var(--button-hover-background-color); color: var(--button-hover-text-color); border-color: var(--button-hover-border-color); }
+li.chat-message.sr2e-card .message-content button.sr2e-ghost { --button-background-color: var(--sr2e-chip); --button-border-color: var(--sr2e-rule-strong); --button-text-color: var(--sr2e-ink); --button-hover-background-color: var(--sr2e-accent-tint); --button-hover-border-color: var(--sr2e-accent); --button-hover-text-color: var(--sr2e-accent-ink); }
+li.chat-message.sr2e-card .message-content button:disabled { background: var(--sr2e-window); color: var(--sr2e-muted); border: 1px dashed var(--sr2e-rule-strong); }
+li.chat-message.sr2e-card :is(.sr2e-gm-tools) { border-top-color: var(--sr2e-rule-strong); }
+li.chat-message.sr2e-card :is(table) { background: transparent; color: var(--sr2e-ink); }
+li.chat-message.sr2e-card :is(th) { color: var(--sr2e-muted); background: transparent; }
+li.chat-message.sr2e-card .sr2e-warn, li.chat-message.sr2e-card .sr2e-warning, li.chat-message.sr2e-card .sr2e-botch { color: var(--sr2e-danger); }
+
+/* Dice colours on every theme: the colourblind set keeps its blue / orange and shapes, high contrast inverts the theme. */
+body.sr2e-dice-colourblind li.chat-message.sr2e-card .sr2e-die.one { color: var(--sr2e-ink); text-decoration: underline wavy #d55e00; }
+body.sr2e-dice-contrast li.chat-message.sr2e-card .sr2e-die.hit { background: var(--sr2e-ink); color: var(--sr2e-window); border: 2px solid var(--sr2e-ink); box-shadow: none; }
+body.sr2e-dice-contrast li.chat-message.sr2e-card .sr2e-die.miss { background: var(--sr2e-window); color: var(--sr2e-ink); border: 1px dashed var(--sr2e-ink); }
+body.sr2e-dice-contrast li.chat-message.sr2e-card .sr2e-die.one { text-decoration: underline; }
+
+/* v0.81.0: the token hover card and inline tests take the palette in their own rules (v0.60.0 section). */
+
+/* Reduced motion: no glows, fades or flashes (the player's setting, or the system's). */
+body.sr2e-reduced-motion .application.sr2e-look, body.sr2e-reduced-motion .application.sr2e-look * { transition: none !important; animation: none !important; }
+body.sr2e-reduced-motion .application.sr2e-look { box-shadow: inset 0 0 0 1px var(--sr2e-edge-soft); }
+body.sr2e-reduced-motion li.chat-message.sr2e-card .sr2e-die.hit { box-shadow: none; }
+body.sr2e-reduced-motion .sr2e-flash { animation: none !important; outline: 2px solid var(--sr2e-accent); }
+@media (prefers-reduced-motion: reduce) {
+  .application.sr2e-look, .application.sr2e-look * { transition: none !important; animation: none !important; }
+  li.chat-message.sr2e-card .sr2e-die.hit { box-shadow: none; }
+}
+/* High contrast: no glow, thicker edge. */
+body.sr2e-theme-contrast .application.sr2e-look { border-width: 2px; box-shadow: none; }
+body.sr2e-theme-contrast li.chat-message.sr2e-card { border-width: 2px; border-left-width: 4px; }
+
+/* ==========================================================================
+   v0.68.0: the second interface pass, GM side.
+   v0.68.0: the GM panel as a dashboard: party cards and compact mook stat cards (our window: palette only,
+   every selector under .sr2e.sr2e-gm-panel).
+   ========================================================================== */
+
+/* --- Party cards: a responsive grid (one column in a narrow panel). */
+.sr2e.sr2e-gm-panel .sr2e-party-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr)); gap: 0.5rem; margin: 0.3rem 0 0.5rem; min-width: 0; }
+.sr2e.sr2e-gm-panel .sr2e-party-card { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; padding: 0.45rem 0.5rem; background: var(--sr2e-raised); border: 1px solid var(--sr2e-rule); border-left: 3px solid var(--sr2e-rule-strong); box-sizing: border-box; overflow: hidden; }
+.sr2e.sr2e-gm-panel .sr2e-party-card.sr2e-hurt { border-left-color: var(--sr2e-danger); }
+.sr2e.sr2e-gm-panel .sr2e-party-card.sr2e-acting { border-left-color: var(--sr2e-accent); background: var(--sr2e-accent-tint); }
+.sr2e.sr2e-gm-panel .sr2e-pc-head { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+.sr2e.sr2e-gm-panel .sr2e-pc-portrait { flex: 0 0 auto; width: 2.6rem; height: 2.6rem; object-fit: cover; object-position: top; border: 1px solid var(--sr2e-rule-strong); border-radius: 0; background: var(--sr2e-chip); }
+.sr2e.sr2e-gm-panel .sr2e-pc-who { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
+.sr2e.sr2e-gm-panel .sr2e-pc-name { font-family: var(--sr2e-font-head); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--sr2e-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.sr2e.sr2e-gm-panel .sr2e-pc-name:hover { color: var(--sr2e-accent); }
+.sr2e.sr2e-gm-panel .sr2e-pc-player { font-size: 0.75rem; color: var(--sr2e-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sr2e.sr2e-gm-panel .sr2e-pc-init { flex: 0 0 auto; min-width: 2rem; padding: 0.1rem 0.3rem; text-align: center; font-family: var(--sr2e-font-num); font-variant-numeric: tabular-nums; font-size: 1.1rem; font-weight: 700; color: var(--sr2e-combat-text); border: 1px solid var(--sr2e-combat); background: var(--sr2e-chip); }
+.sr2e.sr2e-gm-panel .sr2e-party-card.sr2e-acting .sr2e-pc-init { color: var(--sr2e-accent-ink); border-color: var(--sr2e-accent); background: var(--sr2e-accent-tint); }
+.sr2e.sr2e-gm-panel .sr2e-pc-monitor { min-width: 0; }
+.sr2e.sr2e-gm-panel .sr2e-pc-monitor .sr2e-cm-mini { display: flex; margin-right: 0; }
+.sr2e.sr2e-gm-panel .sr2e-pc-monitor .sr2e-cm-bar { min-width: 0; flex: 1 1 6.5rem; }
+.sr2e.sr2e-gm-panel .sr2e-pc-boxes { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.6rem; font-size: 0.85rem; }
+.sr2e.sr2e-gm-panel .sr2e-pc-track { white-space: nowrap; color: var(--sr2e-muted); }
+.sr2e.sr2e-gm-panel .sr2e-pc-track b, .sr2e.sr2e-gm-panel .sr2e-pc-pool b, .sr2e.sr2e-gm-panel .sr2e-pc-money b { font-family: var(--sr2e-font-num); font-variant-numeric: tabular-nums; color: var(--sr2e-ink); }
+.sr2e.sr2e-gm-panel .sr2e-pc-track a { display: inline-block; min-width: 1rem; text-align: center; font-weight: 700; color: var(--sr2e-ink); border: 1px solid var(--sr2e-rule-strong); background: var(--sr2e-chip); line-height: 1.1rem; cursor: pointer; }
+.sr2e.sr2e-gm-panel .sr2e-pc-track a:hover { border-color: var(--sr2e-accent); color: var(--sr2e-accent-ink); background: var(--sr2e-accent-tint); }
+.sr2e.sr2e-gm-panel .sr2e-pc-wound { font-family: var(--sr2e-font-num); font-weight: 700; color: var(--sr2e-combat-text); }
+.sr2e.sr2e-gm-panel .sr2e-pc-pools, .sr2e.sr2e-gm-panel .sr2e-pc-state, .sr2e.sr2e-gm-panel .sr2e-pc-chips { display: flex; flex-wrap: wrap; gap: 0.2rem 0.25rem; }
+.sr2e.sr2e-gm-panel .sr2e-pc-pool, .sr2e.sr2e-gm-panel .sr2e-pc-chip { display: inline-flex; align-items: baseline; gap: 0.25rem; padding: 0 0.3rem; font-size: 0.75rem; line-height: 1.3rem; white-space: nowrap; color: var(--sr2e-muted); background: var(--sr2e-chip); border: 1px solid var(--sr2e-rule-strong); border-radius: 3px; }
+.sr2e.sr2e-gm-panel .sr2e-pc-pool.empty { border-style: dashed; }
+.sr2e.sr2e-gm-panel .sr2e-pc-pool.empty b { color: var(--sr2e-muted); }
+.sr2e.sr2e-gm-panel .sr2e-pc-state .sr2e-pc-chip { color: var(--sr2e-accent-ink); background: var(--sr2e-accent-tint); border-color: var(--sr2e-accent); }
+.sr2e.sr2e-gm-panel .sr2e-pc-money { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.2rem 0.6rem; font-size: 0.8rem; color: var(--sr2e-muted); }
+.sr2e.sr2e-gm-panel .sr2e-pc-acts { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: auto; padding-top: 0.25rem; border-top: 1px solid var(--sr2e-rule); }
+.sr2e.sr2e-gm-panel .sr2e-pc-acts a { cursor: pointer; }
+
+/* --- Compact mook stat cards (NPC tab "On this scene" and the Combat tab, when the heading's toggle is on). */
+.sr2e.sr2e-gm-panel .sr2e-mook-toggle { margin-left: auto; font-size: 0.85rem; cursor: pointer; }
+.sr2e.sr2e-gm-panel .sr2e-gm-people > li.sr2e-mook { margin: 0 0 0.3rem; padding: 0.3rem 0.4rem; background: var(--sr2e-raised); border: 1px solid var(--sr2e-rule); border-left: 3px solid var(--sr2e-rule-strong); }
+.sr2e.sr2e-gm-panel .sr2e-gm-people > li.sr2e-mook.sr2e-current { border-left-color: var(--sr2e-accent); background: var(--sr2e-accent-tint); }
+.sr2e.sr2e-gm-panel .sr2e-mook-stats { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.1rem 0.45rem; margin: 0.15rem 0; font-family: var(--sr2e-font-num); font-variant-numeric: tabular-nums; font-size: 0.78rem; line-height: 1.25rem; color: var(--sr2e-ink); min-width: 0; }
+.sr2e.sr2e-gm-panel .sr2e-mook-stats b { margin-right: 0.15rem; font-family: var(--sr2e-font-head); font-size: 0.68rem; letter-spacing: 0.05em; color: var(--sr2e-muted); }
+.sr2e.sr2e-gm-panel .sr2e-mook-sep, .sr2e.sr2e-gm-panel .sr2e-mook-weapon { padding-left: 0.45rem; border-left: 1px solid var(--sr2e-rule-strong); white-space: nowrap; }
+.sr2e.sr2e-gm-panel .sr2e-mook-weapon { max-width: 100%; overflow: hidden; text-overflow: ellipsis; color: var(--sr2e-combat-text); }
+.sr2e.sr2e-gm-panel .sr2e-mook-weapon b { text-transform: none; letter-spacing: 0; font-family: var(--sr2e-font-body); color: var(--sr2e-ink); }
+/* Narrow panel: no sideways scroll. */
+.sr2e.sr2e-gm-panel .sr2e-gm-people > li, .sr2e.sr2e-gm-panel .sr2e-gm-people .sr2e-row { min-width: 0; max-width: 100%; }
+
+/* ==========================================================================
+   v0.68.0: the second interface pass (our windows only). The always-visible status strip and the tabs
+   stuck together at the top; the "your turn" greying; layouts (Tabs, Combat column, Compact) arranged
+   by classes on one set of templates; roll dialogs in two columns with one big Roll button; − / +
+   steppers; the clickable monitor's preview; section icons; GM-only parts with a striped edge.
+   ========================================================================== */
+
+/* --- The stuck block: the strip and the tabs stay at the top together. */
+.application.sr2e-look .sr2e-sheet > .sr2e-stuck { position: sticky; top: -0.5rem; z-index: 6; margin: 0.4rem -0.85rem 0.25rem; padding: 0.35rem 0.85rem 0; background: var(--sr2e-window); border-bottom: 1px solid var(--sr2e-rule); }
+.application.sr2e-look .sr2e-sheet > .sr2e-stuck:not(:has(.sr2e-tabs)) { padding-bottom: 0.35rem; }
+.application.sr2e-look .sr2e-stuck > .sr2e-tabs { position: static; margin: 0.3rem 0 0; padding: 0; border-bottom: 0; background: transparent; }
+.application.sr2e-look .sr2e-tabs .item > i { margin-right: 0.2rem; font-size: 0.85em; }
+
+/* --- The status strip. */
+.application.sr2e-look .sr2e-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.75rem; padding: 0.3rem 0.5rem; background: var(--sr2e-raised); border: 1px solid var(--sr2e-rule); font-size: 0.8rem; line-height: 1.3; }
+.application.sr2e-look .sr2e-strip.sr2e-strip-myturn { border-color: var(--sr2e-accent); box-shadow: inset 3px 0 0 var(--sr2e-accent); }
+.application.sr2e-look .sr2e-strip small { font-family: var(--sr2e-font-head); font-size: 0.66rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--sr2e-muted); }
+.application.sr2e-look .sr2e-strip b { font-family: var(--sr2e-font-num); font-weight: 700; color: var(--sr2e-ink); }
+.application.sr2e-look .sr2e-strip-item { display: inline-flex; align-items: baseline; gap: 0.25rem; white-space: nowrap; }
+.application.sr2e-look .sr2e-strip-wound { font-family: var(--sr2e-font-num); font-weight: 700; color: var(--sr2e-combat-text); }
+.application.sr2e-look .sr2e-strip-wound small { margin-left: 0.1rem; color: var(--sr2e-combat-text); }
+.application.sr2e-look .sr2e-strip-danger { font-family: var(--sr2e-font-head); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--sr2e-danger); }
+.application.sr2e-look .sr2e-strip .sr2e-cm-mini { gap: 0.15rem 0.5rem; }
+.application.sr2e-look .sr2e-strip .sr2e-cm-bar { min-width: 6.5rem; }
+.application.sr2e-look .sr2e-strip-pool { display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; }
+.application.sr2e-look .sr2e-strip-pool > small { margin-right: 0.2rem; }
+.application.sr2e-look .sr2e-strip-pool .sr2e-pip { display: inline-block; width: 0.5rem; height: 0.5rem; border-radius: 50%; border: 1px solid var(--sr2e-accent); background: transparent; opacity: 1; cursor: pointer; }
+.application.sr2e-look .sr2e-strip-pool .sr2e-pip.filled { background: var(--sr2e-accent); }
+.application.sr2e-look .sr2e-strip-pool > b { margin-left: 0.3rem; }
+.application.sr2e-look .sr2e-strip-pool > i { font-style: normal; font-family: var(--sr2e-font-num); color: var(--sr2e-muted); }
+.application.sr2e-look .sr2e-strip-pool.empty > b { color: var(--sr2e-muted); }
+.application.sr2e-look .sr2e-strip-weapon { display: inline-flex; align-items: baseline; gap: 0.35rem; padding-left: 0.65rem; border-left: 1px solid var(--sr2e-rule-strong); white-space: nowrap; max-width: 100%; }
+.application.sr2e-look .sr2e-strip-weapon > a { color: var(--sr2e-ink); font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.application.sr2e-look .sr2e-strip-weapon > a > i { color: var(--sr2e-combat-text); }
+.application.sr2e-look .sr2e-strip-weapon > a:hover { color: var(--sr2e-accent); }
+.application.sr2e-look .sr2e-strip-weapon > b.low { color: var(--sr2e-street-text); }
+.application.sr2e-look .sr2e-strip-weapon.out > b { color: var(--sr2e-danger); }
+.application.sr2e-look .sr2e-strip-weapon > em { color: var(--sr2e-muted); }
+.application.sr2e-look .sr2e-strip-turn { margin-left: auto; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.1rem 0.55rem; background: var(--sr2e-accent-tint); border: 1px solid var(--sr2e-accent); color: var(--sr2e-accent-ink); white-space: nowrap; }
+.application.sr2e-look .sr2e-strip-turn > b { font-family: var(--sr2e-font-head); letter-spacing: 0.07em; text-transform: uppercase; color: var(--sr2e-accent-ink); }
+.application.sr2e-look .sr2e-strip-turn > small { font-family: var(--sr2e-font-body); font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--sr2e-accent-ink); }
+.application.sr2e-look .sr2e-act-pip { display: inline-block; width: 0.5rem; height: 0.5rem; border: 1px solid var(--sr2e-accent-ink); transform: rotate(45deg); }
+.application.sr2e-look .sr2e-act-pip.on { background: var(--sr2e-accent-ink); }
+
+/* --- Your turn: a button whose action no longer fits the phase is greyed (dashed, muted). */
+.application.sr2e-look.sr2e-look.sr2e-look :is(button, a).sr2e-cant {
+  --button-background-color: var(--sr2e-window); --button-border-color: var(--sr2e-rule-strong); --button-text-color: var(--sr2e-muted);
+  --button-hover-background-color: var(--sr2e-window); --button-hover-border-color: var(--sr2e-rule-strong); --button-hover-text-color: var(--sr2e-muted);
+  color: var(--sr2e-muted); border-style: dashed; cursor: help;
+}
+.application.sr2e-look a.sr2e-cant > i, .application.sr2e-look a.sr2e-cant:hover > i { color: var(--sr2e-muted); }
+
+/* --- Layout: Combat column (the tabs plus an always-open column on the right). The column floats right and
+   sticks; everything else keeps the column's width free. (Not a grid: a sticky grid item can't leave its own
+   row, so the strip and tabs would scroll away.) */
+.application.sr2e-look.sr2e-win-combat > .window-content { container: sr2esheet / inline-size; }
+.application.sr2e-look .sr2e-sheet.sr2e-layout-combat { --sr2e-col-w: 14.5rem; display: flow-root; }
+.application.sr2e-look .sr2e-sheet.sr2e-layout-combat > :not(.sr2e-combat-col) { margin-right: calc(var(--sr2e-col-w) + 0.8rem); min-width: 0; }
+.application.sr2e-look .sr2e-sheet.sr2e-layout-combat > .sr2e-stuck { margin-right: calc(var(--sr2e-col-w) + 0.8rem); }
+.application.sr2e-look .sr2e-sheet.sr2e-layout-combat > .sr2e-combat-col { float: right; clear: right; width: var(--sr2e-col-w); box-sizing: border-box; position: sticky; top: 0; margin: 0.4rem 0 0.5rem 0.8rem; }
+.application.sr2e-look .sr2e-combat-col { display: flex; flex-direction: column; gap: 0.55rem; padding: 0.45rem 0.55rem 0.55rem; background: var(--sr2e-raised); border: 1px solid var(--sr2e-rule); border-top: 2px solid var(--sr2e-combat); font-size: 0.8rem; }
+.application.sr2e-look .sr2e-combat-col .sr2e-col-head { margin: 0 0 0.3rem; padding-bottom: 0.15rem; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--sr2e-combat-text); border-bottom: 1px solid var(--sr2e-rule); }
+.application.sr2e-look .sr2e-combat-col .sr2e-col-head > i { margin-right: 0.3rem; }
+.application.sr2e-look .sr2e-combat-col .sr2e-col-buttons { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+.application.sr2e-look .sr2e-combat-col .sr2e-col-buttons > button { flex: 1 1 auto; width: auto; min-height: 1.7rem; padding: 0 0.45rem; font-size: 0.74rem; }
+.application.sr2e-look .sr2e-combat-col ul.sr2e-col-list { list-style: none; margin: 0; padding: 0; }
+.application.sr2e-look .sr2e-combat-col ul.sr2e-col-list > li { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name acts" "detail acts"; gap: 0 0.35rem; align-items: center; padding: 0.25rem 0; border-bottom: 1px solid var(--sr2e-rule); }
+.application.sr2e-look .sr2e-combat-col ul.sr2e-col-list > li > .sr2e-col-name { grid-area: name; font-weight: 600; color: var(--sr2e-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.application.sr2e-look .sr2e-combat-col ul.sr2e-col-list > li > .sr2e-col-detail { grid-area: detail; font-family: var(--sr2e-font-num); font-size: 0.72rem; color: var(--sr2e-muted); }
+.application.sr2e-look .sr2e-combat-col ul.sr2e-col-list > li > .sr2e-col-detail b { color: var(--sr2e-ink); }
+.application.sr2e-look .sr2e-combat-col ul.sr2e-col-list > li > .sr2e-col-acts { grid-area: acts; display: inline-flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 0.2rem; }
+.application.sr2e-look .sr2e-combat-col .sr2e-col-acts button { width: auto; min-height: 1.55rem; padding: 0 0.4rem; font-size: 0.7rem; }
+.application.sr2e-look .sr2e-combat-col li.sr2e-col-holstered > .sr2e-col-name { color: var(--sr2e-muted); }
+/* Too narrow for two columns: the combat column follows the strip. */
+@container sr2esheet (max-width: 38rem) {
+  .application.sr2e-look .sr2e-sheet.sr2e-layout-combat > :not(.sr2e-combat-col) { margin-right: 0; }
+  .application.sr2e-look .sr2e-sheet.sr2e-layout-combat > .sr2e-stuck { margin-right: -0.85rem; }
+  .application.sr2e-look .sr2e-sheet.sr2e-layout-combat > .sr2e-combat-col { float: none; width: auto; position: static; margin: 0.5rem 0; max-height: none; }
+}
+
+/* --- Layout: Compact (one folding column, no tab bar; every tab is a section). */
+.application.sr2e-look .sr2e-sheet.sr2e-layout-compact > .sr2e-stuck > .sr2e-tabs { display: none; }
+.application.sr2e-look .sr2e-sheet.sr2e-layout-compact > section.tab.sr2e-tab { display: block; }
+.application.sr2e-look .sr2e-sheet.sr2e-layout-compact .sr2e-tab-head { display: flex; align-items: center; gap: 0.4rem; margin: 0.55rem 0 0.35rem; padding: 0.3rem 0.55rem; background: var(--sr2e-header); color: var(--sr2e-header-text); border-left: 3px solid var(--sr2e-area, var(--sr2e-accent)); font-family: var(--sr2e-font-head); font-size: 0.8rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; cursor: pointer; user-select: none; }
+.application.sr2e-look .sr2e-sheet.sr2e-layout-compact .sr2e-tab-head:focus-visible { outline: 2px solid var(--sr2e-accent); outline-offset: 1px; }
+.application.sr2e-look .sr2e-sheet.sr2e-layout-compact .sr2e-tab-head > .sr2e-caret { color: var(--sr2e-header-text); transition: transform 0.12s; }
+.application.sr2e-look .sr2e-sheet.sr2e-layout-compact > section.sr2e-tab-folded > .sr2e-tab-head > .sr2e-caret { transform: rotate(-90deg); }
+.application.sr2e-look .sr2e-sheet.sr2e-layout-compact:not(.sr2e-searching) > section.sr2e-tab.sr2e-tab-folded > :not(.sr2e-tab-head) { display: none; }
+.application.sr2e-look .sr2e-sheet.sr2e-layout-compact .sr2e-summary .sr2e-quickbar button { padding: 0 0.4rem; }
+
+/* The Combat column holds the quick actions: the summary doesn't repeat them there (the narrow fallback shows the column, so still none lost). */
+.application.sr2e-look .sr2e-sheet.sr2e-layout-combat > .sr2e-summary > .sr2e-quickbar { display: none; }
+/* --- The layout picker in the sheet's bar; the bar wraps in a narrow window instead of squeezing the search box. */
+.application.sr2e-look .sr2e-sheet-tools { flex-wrap: wrap; }
+.application.sr2e-look .sr2e-sheet-tools input.sr2e-sheet-search { min-width: 8rem; }
+.application.sr2e-look .sr2e-sheet-tools select.sr2e-layout-pick { flex: 0 0 auto; width: auto; height: 1.7rem; font-size: 0.75rem; }
+
+/* --- Section icons (the same word, the same icon, on every sheet). */
+.application.sr2e-look .sr2e-sec-icon { margin-right: 0.4rem; font-size: 0.85em; color: var(--sr2e-area-text, var(--sr2e-muted)); }
+
+/* --- − / + steppers. */
+.application.sr2e-look .sr2e-stepper { display: inline-flex; align-items: stretch; vertical-align: middle; max-width: 100%; }
+.application.sr2e-look .sr2e-stepper > input[type="number"] { border-radius: 0; text-align: center; -moz-appearance: textfield; appearance: textfield; min-width: 2.2rem; }
+.application.sr2e-look .sr2e-stepper > input[type="number"]::-webkit-inner-spin-button, .application.sr2e-look .sr2e-stepper > input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.application.sr2e-look.sr2e-look .sr2e-stepper > button.sr2e-step { flex: 0 0 auto; width: 1.15rem; min-width: 0; height: auto; min-height: 0; padding: 0; margin: 0; font-family: var(--sr2e-font-num); font-size: 0.85rem; font-weight: 700; line-height: 1; letter-spacing: 0; text-transform: none; border-radius: 0; }
+.application.sr2e-look .sr2e-stepper:has(> input[readonly], > input:disabled) > button.sr2e-step { display: none; }
+.application.sr2e-look .sr2e-attributes .sr2e-stepper > input[type="number"] { width: 2.6rem; }
+
+/* --- The monitor: − / + per track, the keyboard focus, and what a click would fill or clear. */
+.sr2e-cm .sr2e-cm-track:has(.sr2e-cm-steps) { width: 22.5rem; }
+.sr2e-cm .sr2e-cm-steps { display: inline-flex; gap: 2px; align-self: center; }
+.sr2e-cm .sr2e-cm-steps > a { display: inline-flex; align-items: center; justify-content: center; width: 1.15rem; height: 1.15rem; border: 1px solid var(--sr2e-rule-strong); background: var(--sr2e-sunk); color: var(--sr2e-ink); font-family: var(--sr2e-font-num); font-weight: 700; cursor: pointer; }
+.sr2e-cm .sr2e-cm-steps > a:hover { border-color: var(--sr2e-accent); color: var(--sr2e-accent); }
+.sr2e-cm .sr2e-box:focus-visible { outline: 2px solid var(--sr2e-accent); outline-offset: 1px; }
+.sr2e-cm .sr2e-cm-track .sr2e-box.sr2e-would-fill { border-color: var(--sr2e-accent); background: var(--sr2e-accent-tint); }
+.sr2e-cm .sr2e-cm-track .sr2e-box.sr2e-would-clear { outline: 2px dashed var(--sr2e-accent); outline-offset: -1px; }
+
+/* --- Roll dialogs: the choices left, the TN breakdown right, one big Roll button. */
+.application.sr2e-look.sr2e-roll-dialog .dialog-content { container: sr2eroll / inline-size; }
+.application.sr2e-look .sr2e-roll-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(12rem, 15rem); gap: 0.8rem; align-items: start; }
+.application.sr2e-look .sr2e-roll-main { min-width: 0; display: flex; flex-direction: column; gap: 0.35rem; }
+.application.sr2e-look .sr2e-roll-side { position: sticky; top: 0; min-width: 0; }
+.application.sr2e-look .sr2e-roll-side > .sr2e-preview { margin: 0; padding: 0.5rem 0.65rem; border-top: 2px solid var(--sr2e-accent); }
+.application.sr2e-look .sr2e-roll-side > .sr2e-preview .sr2e-tn { display: block; margin-bottom: 0.3rem; font-family: var(--sr2e-font-num); font-size: 1.5rem; line-height: 1.1; color: var(--sr2e-ink); }
+.application.sr2e-look .sr2e-roll-side > .sr2e-preview ul { margin: 0.2rem 0 0; padding-left: 0; list-style: none; font-size: 0.78rem; }
+.application.sr2e-look .sr2e-roll-side > .sr2e-preview li { padding: 0.1rem 0; border-bottom: 1px solid var(--sr2e-rule); }
+.application.sr2e-look .form-group.sr2e-pool-field { padding: 0.25rem 0.45rem; background: var(--sr2e-raised); border-left: 3px solid var(--sr2e-accent); }
+.application.sr2e-look .form-group.sr2e-pool-field > label { color: var(--sr2e-ink); font-weight: 600; }
+.application.sr2e-look.sr2e-look.sr2e-roll-dialog footer button.sr2e-roll-go { flex: 1 1 100%; min-height: 2.6rem; font-size: 1.05rem; letter-spacing: 0.12em; }
+@container sr2eroll (max-width: 34rem) {
+  .application.sr2e-look .sr2e-roll-grid { grid-template-columns: minmax(0, 1fr); }
+  .application.sr2e-look .sr2e-roll-side { position: static; }
+}
+
+/* --- GM-only parts: a striped amber edge (a striped underline on small controls). */
+.application.sr2e-look .sr2e-gm-only:not(a, button, label) { padding-left: 0.45rem; border-left: 4px solid var(--sr2e-street); border-image: repeating-linear-gradient(135deg, var(--sr2e-street) 0 4px, transparent 4px 8px) 4; }
+.application.sr2e-look :is(a, button, label).sr2e-gm-only { background-image: repeating-linear-gradient(135deg, var(--sr2e-street) 0 3px, transparent 3px 6px); background-size: 100% 2px; background-position: bottom; background-repeat: no-repeat; padding-bottom: 2px; }
+li.chat-message.sr2e-card .sr2e-gm-tools { padding-left: 0.45rem; border-left: 4px solid var(--sr2e-street); border-image: repeating-linear-gradient(135deg, var(--sr2e-street) 0 4px, transparent 4px 8px) 4; }
+
+/* --- The house-rules window: a search box and section links. */
+.application.sr2e-look .sr2e-hr-tools { position: sticky; top: 0; z-index: 2; display: flex; flex-direction: column; gap: 0.3rem; padding: 0.35rem 0 0.4rem; background: var(--sr2e-window); border-bottom: 1px solid var(--sr2e-rule); }
+.application.sr2e-look .sr2e-hr-tools nav { display: flex; flex-wrap: wrap; gap: 0.2rem 0.5rem; font-size: 0.75rem; }
+.application.sr2e-look .sr2e-hr-tools nav a { color: var(--sr2e-accent); cursor: pointer; }
+.application.sr2e-look .sr2e-house-rules fieldset > legend { cursor: pointer; }
+.application.sr2e-look .sr2e-house-rules fieldset.sr2e-folded > :not(legend) { display: none; }
+.application.sr2e-look .sr2e-house-rules .sr2e-hr-hidden { display: none; }
+.application.sr2e-look .sr2e-house-rules .sr2e-hr-none { color: var(--sr2e-muted); }
+
+/* v0.74.0: outcomes that read at a glance, coloured by how the roll went for whoever rolled it: good (a success,
+   a dodge, damage resisted) or bad (a failure, a hit taken, damage taken). Solid banners (text on each fill checked
+   ≥ 4.5:1) with a symbol so colour isn't the only cue, the success count in the outcome colour, and the outcome on
+   the card's right edge (the left edge keeps the area colour). Colours come from the palette (rules/look.ts); the
+   colourblind dice setting swaps in its blue/orange set for all of it. */
+li.chat-message.sr2e-card .sr2e-banner { font-weight: 700; border-width: 2px; }
+li.chat-message.sr2e-card :is(.sr2e-banner-ok, .sr2e-banner-dodged) { background: var(--sr2e-good-fill); border-color: var(--sr2e-good-fill); color: var(--sr2e-on-fill); }
+li.chat-message.sr2e-card :is(.sr2e-banner-ok, .sr2e-banner-dodged)::before { content: "✔ "; }
+li.chat-message.sr2e-card :is(.sr2e-banner-miss, .sr2e-banner-hit, .sr2e-banner-taken) { background: var(--sr2e-bad-fill); border-color: var(--sr2e-bad-fill); color: var(--sr2e-on-fill); }
+li.chat-message.sr2e-card :is(.sr2e-banner-miss, .sr2e-banner-hit, .sr2e-banner-taken)::before { content: "✖ "; }
+li.chat-message.sr2e-card .sr2e-banner-disaster { background: var(--sr2e-disaster-bg); border-color: var(--sr2e-bad-fill); color: var(--sr2e-disaster-ink); }
+li.chat-message.sr2e-card .sr2e-banner-disaster::before { content: "⚠ "; }
+li.chat-message.sr2e-card .sr2e-banner-counter { background: var(--sr2e-counter-fill); border-color: var(--sr2e-counter-fill); color: var(--sr2e-on-fill); }
+li.chat-message.sr2e-card .sr2e-banner-counter::before { content: "⇄ "; }
+li.chat-message.sr2e-card :is(.sr2e-banner-neutral, .sr2e-contest-result) { background: transparent; border: 2px solid var(--sr2e-neutral-line); color: var(--sr2e-ink); }
+li.chat-message.sr2e-card .sr2e-contest-result { display: block; margin: 0.35rem 0; padding: 0.3rem 0.6rem; font-family: var(--sr2e-font-head); letter-spacing: 0.04em; }
+body.sr2e-dice-colourblind li.chat-message.sr2e-card :is(.sr2e-banner-ok, .sr2e-banner-dodged) { background: var(--sr2e-cb-good); border-color: var(--sr2e-cb-good); color: var(--sr2e-on-fill); }
+body.sr2e-dice-colourblind li.chat-message.sr2e-card :is(.sr2e-banner-miss, .sr2e-banner-hit, .sr2e-banner-taken) { background: var(--sr2e-cb-bad); border-color: var(--sr2e-cb-bad); color: var(--sr2e-disaster-bg); }
+/* The success count: green with successes, red at none; in a contest, the winner's count good, the loser's bad, a tie neutral. */
+li.chat-message.sr2e-card .sr2e-count.sr2e-count-good > :is(b, span) { color: var(--sr2e-good); }
+li.chat-message.sr2e-card .sr2e-count.sr2e-count-zero > :is(b, span) { color: var(--sr2e-bad); }
+li.chat-message.sr2e-card .sr2e-count.sr2e-count-tie > :is(b, span) { color: var(--sr2e-neutral-text); }
+body.sr2e-dice-colourblind li.chat-message.sr2e-card .sr2e-count.sr2e-count-good > :is(b, span) { color: var(--sr2e-cb-good-text); }
+body.sr2e-dice-colourblind li.chat-message.sr2e-card .sr2e-count.sr2e-count-zero > :is(b, span) { color: var(--sr2e-cb-bad-text); }
+/* The outcome on the card's right edge (width and colour only, so whisper and blind cards keep their edge style). */
+li.chat-message.sr2e-card[class*="sr2e-outcome-"] { border-right-width: 4px; }
+li.chat-message.sr2e-card.sr2e-outcome-good { border-right-color: var(--sr2e-good); }
+li.chat-message.sr2e-card.sr2e-outcome-bad, li.chat-message.sr2e-card.sr2e-outcome-disaster { border-right-color: var(--sr2e-bad); }
+li.chat-message.sr2e-card.sr2e-outcome-counter { border-right-color: var(--sr2e-counter-fill); }
+li.chat-message.sr2e-card.sr2e-outcome-neutral { border-right-color: var(--sr2e-neutral-line); }
+body.sr2e-dice-colourblind li.chat-message.sr2e-card.sr2e-outcome-good { border-right-color: var(--sr2e-cb-good); }
+body.sr2e-dice-colourblind li.chat-message.sr2e-card:is(.sr2e-outcome-bad, .sr2e-outcome-disaster) { border-right-color: var(--sr2e-cb-bad); }
+/* Plain notices (no dice): the same card, a little quieter. */
+li.chat-message.sr2e-card.sr2e-card-note .message-content { font-size: 0.92em; }
+
+/* v0.83.0: the default token art controls (Bio tab; NPC sheet "Picture and token"). */
+.sr2e-look .sr2e-art { align-items: center; }
+.sr2e-look .sr2e-art .sr2e-art-preview { flex: 0 0 auto; width: 64px; height: 64px; border: none; object-fit: contain; }
+
+/* --- v0.86.0 keyboard and screen readers (applications/a11y.ts): every control the keyboard reaches shows where the
+   focus is, with a ring that doesn't rely on colour alone (a 2px outline plus a dark gap), in every theme. Only our
+   windows and cards (the look's scoping rule); Foundry's own HUD and sidebar keep Foundry's focus style. */
+:is(.application.sr2e-look, .sr2e-gm-panel, .sr2e-card) :is([data-sr2e-kb], [data-sr2e-roving], button, a[href], summary, [role="button"], [tabindex="0"]):focus-visible {
+  outline: 2px solid var(--sr2e-accent, Highlight);
+  outline-offset: 2px;
+  border-radius: 2px;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--sr2e-window, Canvas) 70%, transparent);
+}
+:is(.application.sr2e-look, .sr2e-gm-panel, .sr2e-card) [data-sr2e-kb] { cursor: pointer; }
+/* Pool pips and monitor boxes are small: the ring sits close so it doesn't cover the next one. */
+.application.sr2e-look :is(.sr2e-pip, .sr2e-box)[data-sr2e-roving]:focus-visible { outline-offset: 1px; box-shadow: none; }
+/* A fold caret that is a button (a heading holding its own buttons). */
+.application.sr2e-look .sr2e-caret[data-sr2e-kb] { padding: 0 0.15em; }
+/* Windows high-contrast and other forced-colour modes: the system colours, so the ring and filled boxes still show. */
+@media (forced-colors: active) {
+  :is(.application.sr2e-look, .sr2e-gm-panel, .sr2e-card) :is([data-sr2e-kb], [data-sr2e-roving], button, a[href]):focus-visible { outline: 2px solid Highlight; box-shadow: none; }
+  .sr2e-cm .sr2e-box.filled, .application.sr2e-look .sr2e-pip.filled, .sr2e-cm-mini s.filled { background: CanvasText; forced-color-adjust: none; }
+}
+/* Text for screen readers only. */
+.application.sr2e-look .sr2e-sr-only, .sr2e-card .sr2e-sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
+
+/* --- v0.87.0: the Report a bug window and the guide's button (applications/bugreport.ts). */
+.application.sr2e-look.sr2e-bug-report .window-content { display: flex; flex-direction: column; }
+.application.sr2e-look .sr2e-bug-body { display: flex; flex-direction: column; gap: 0.5rem; height: 100%; }
+.application.sr2e-look .sr2e-bug-text { flex: 1; min-height: 18rem; width: 100%; font-family: var(--sr2e-font-num); font-size: 0.8rem; white-space: pre; resize: vertical; }
+.application.sr2e-look .sr2e-bug-body .form-footer { display: flex; gap: 0.5rem; justify-content: flex-end; }
+.application.sr2e-look .sr2e-help-topics .sr2e-help-bug { width: 100%; margin: 0.3rem 0 0.5rem; }
+
+/* v0.89.8: the SR2e tools window (applications/tools.ts). */
+.application.sr2e-look .sr2e-help-topics .sr2e-help-tools { width: 100%; margin: 0.3rem 0 0; }
+.application.sr2e-look.sr2e-tools-window .window-content { padding: 0.5rem 0.75rem 0.75rem; overflow-y: auto; }
+.application.sr2e-look .sr2e-tools .sr2e-tools-section h2 { margin: 0.5rem 0 0.35rem; }
+.application.sr2e-look .sr2e-tools .sr2e-tools-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.25rem; }
+/* Beats the look's generic button rule (its :not() list weighs more than three classes). */
+.application.sr2e-look.sr2e-tools-window .sr2e-tools button.sr2e-tools-tool { display: grid; grid-template-columns: 1.6rem 1fr auto; align-items: center; gap: 0.5rem; width: 100%; height: auto; min-height: 2.4rem; padding: 0.35rem 0.5rem; text-align: left; line-height: 1.25; white-space: normal; text-transform: none; letter-spacing: normal; font-weight: 400; }
+.application.sr2e-look .sr2e-tools .sr2e-tools-tool > i { justify-self: center; color: var(--sr2e-accent); }
+.application.sr2e-look .sr2e-tools .sr2e-tools-text { display: flex; flex-direction: column; min-width: 0; }
+.application.sr2e-look .sr2e-tools .sr2e-tools-name { font-weight: 600; }
+.application.sr2e-look .sr2e-tools .sr2e-tools-hint { font-size: 0.8em; color: var(--sr2e-muted); white-space: normal; }
+.application.sr2e-look .sr2e-tools .sr2e-tools-key { padding: 0 0.3rem; border: 1px solid color-mix(in srgb, currentColor 30%, transparent); border-radius: 3px; font-size: 0.8em; white-space: nowrap; }
+.application.sr2e-look .sr2e-tools .sr2e-tools-note { margin: 0.6rem 0 0; font-size: 0.8em; color: var(--sr2e-muted); }
+
+/* v0.91.1: the new-entry form (applications/newentry.ts). */
+.application.sr2e-look.sr2e-new-entry .window-content { padding: 0; }
+.application.sr2e-look.sr2e-new-entry .sr2e-new-entry-form { display: flex; flex-direction: column; height: 100%; }
+.application.sr2e-look.sr2e-new-entry .sr2e-ne-body { flex: 1; overflow-y: auto; padding: 0.5rem 0.7rem; }
+.application.sr2e-look.sr2e-new-entry .sr2e-ne-body .form-group { margin: 0.2rem 0; }
+.application.sr2e-look.sr2e-new-entry .sr2e-ne-body .form-group > .hint { flex: 0 0 100%; margin: 0 0 0.2rem; font-size: 0.75em; color: var(--sr2e-muted); }
+.application.sr2e-look.sr2e-new-entry .sr2e-ne-paste { margin: 0.4rem 0; padding: 0.3rem 0.5rem; }
+.application.sr2e-look.sr2e-new-entry .sr2e-ne-paste textarea { width: 100%; font-family: monospace; }
+.application.sr2e-look.sr2e-new-entry .sr2e-ne-paste .hint, .application.sr2e-look.sr2e-new-entry .sr2e-ne-intro { font-size: 0.8em; }
+.application.sr2e-look.sr2e-new-entry .sr2e-ne-skipped { font-style: italic; color: var(--sr2e-muted); }
+.application.sr2e-look.sr2e-new-entry textarea[name="description"] { width: 100%; }
+.application.sr2e-look.sr2e-new-entry .sr2e-ne-preview { margin: 0.4rem 0 0; font-weight: 600; }
+.application.sr2e-look.sr2e-new-entry .sr2e-ne-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.8rem; padding: 0.4rem 0.7rem; border-top: 1px solid color-mix(in srgb, currentColor 16%, transparent); font-size: 0.85rem; }
+.application.sr2e-look.sr2e-new-entry .sr2e-ne-foot button { flex: 0 0 auto; width: auto; }
+.application.sr2e-look.sr2e-new-entry .sr2e-ne-foot .hint { flex: 1 0 100%; margin: 0; }
+
+/* v0.91.2: the shop's category check boxes and a tidier list. */
+.application.sr2e-look.sr2e-add .sr2e-add-groups { display: flex; flex-wrap: wrap; gap: 0.25rem 0.4rem; margin: 0.3rem 0; padding: 0.2rem 0.3rem; border: none; }
+.application.sr2e-look.sr2e-add .sr2e-add-groups legend { flex: 0 0 100%; padding: 0; font-size: 0.72rem; color: var(--sr2e-muted); }
+.application.sr2e-look.sr2e-add .sr2e-add-groupchip { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.1rem 0.45rem; border: 1px solid color-mix(in srgb, currentColor 22%, transparent); border-radius: 999px; font-size: 0.75rem; cursor: pointer; white-space: nowrap; }
+.application.sr2e-look.sr2e-add .sr2e-add-groupchip:has(input:checked) { border-color: var(--sr2e-accent); background: color-mix(in srgb, var(--sr2e-accent) 18%, transparent); }
+.application.sr2e-look.sr2e-add .sr2e-add-groupchip input { margin: 0; }
+.application.sr2e-look.sr2e-add .sr2e-add-count { font-size: 0.68rem; color: var(--sr2e-muted); }
+.application.sr2e-look.sr2e-add .sr2e-add-from { max-width: 9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--sr2e-muted); }
+.application.sr2e-look.sr2e-add table.sr2e-add-list .sr2e-add-amount { width: 3.2rem; }
+
+/* v0.91.3: the Catalogue window (applications/codex.ts): tabs, a list on the left, a page on the right. */
+.application.sr2e-look.sr2e-codex .window-content { padding: 0; }
+.application.sr2e-look.sr2e-codex .sr2e-codex-body { display: flex; flex-direction: column; height: 100%; min-height: 0; container-type: inline-size; }
+.application.sr2e-look.sr2e-codex .sr2e-codex-tabs { display: flex; flex-wrap: wrap; gap: 0.2rem; padding: 0.35rem 0.5rem; border-bottom: 1px solid color-mix(in srgb, currentColor 18%, transparent); }
+.application.sr2e-look.sr2e-codex .sr2e-codex-tab { padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.82rem; cursor: pointer; white-space: nowrap; }
+.application.sr2e-look.sr2e-codex .sr2e-codex-tab.active { background: color-mix(in srgb, var(--sr2e-accent) 22%, transparent); color: var(--sr2e-accent); }
+.application.sr2e-look.sr2e-codex .sr2e-codex-main { flex: 1; display: grid; grid-template-columns: minmax(16rem, 40%) 1fr; min-height: 0; }
+.application.sr2e-look.sr2e-codex .sr2e-codex-browse { display: flex; flex-direction: column; min-height: 0; padding: 0.4rem 0.5rem; border-right: 1px solid color-mix(in srgb, currentColor 18%, transparent); }
+.application.sr2e-look.sr2e-codex .sr2e-codex-search { width: 100%; }
+.application.sr2e-look.sr2e-codex .sr2e-add-groups { display: flex; flex-wrap: wrap; gap: 0.25rem 0.4rem; margin: 0.3rem 0; padding: 0.2rem 0; border: none; }
+.application.sr2e-look.sr2e-codex .sr2e-add-groups legend { flex: 0 0 100%; padding: 0; font-size: 0.72rem; color: var(--sr2e-muted); }
+.application.sr2e-look.sr2e-codex .sr2e-add-groupchip { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.1rem 0.45rem; border: 1px solid color-mix(in srgb, currentColor 22%, transparent); border-radius: 999px; font-size: 0.75rem; cursor: pointer; white-space: nowrap; }
+.application.sr2e-look.sr2e-codex .sr2e-add-groupchip:has(input:checked) { border-color: var(--sr2e-accent); background: color-mix(in srgb, var(--sr2e-accent) 18%, transparent); }
+.application.sr2e-look.sr2e-codex .sr2e-add-groupchip input { margin: 0; }
+.application.sr2e-look.sr2e-codex .sr2e-add-count { font-size: 0.68rem; color: var(--sr2e-muted); }
+.application.sr2e-look.sr2e-codex .sr2e-codex-shown { margin: 0.15rem 0; font-size: 0.72rem; color: var(--sr2e-muted); }
+.application.sr2e-look.sr2e-codex .sr2e-codex-list { flex: 1; overflow-y: auto; margin: 0; padding: 0; list-style: none; }
+.application.sr2e-look.sr2e-codex .sr2e-codex-row { display: grid; grid-template-columns: 1fr auto; gap: 0 0.5rem; padding: 0.25rem 0.35rem; border-radius: 4px; cursor: pointer; }
+.application.sr2e-look.sr2e-codex .sr2e-codex-row:hover, .application.sr2e-look.sr2e-codex .sr2e-codex-row:focus-visible { background: color-mix(in srgb, currentColor 8%, transparent); }
+.application.sr2e-look.sr2e-codex .sr2e-codex-row.active { background: color-mix(in srgb, var(--sr2e-accent) 20%, transparent); }
+.application.sr2e-look.sr2e-codex .sr2e-codex-name { font-weight: 600; }
+.application.sr2e-look.sr2e-codex .sr2e-codex-price { font-size: 0.8rem; text-align: right; }
+.application.sr2e-look.sr2e-codex .sr2e-codex-what { grid-column: 1 / -1; font-size: 0.72rem; color: var(--sr2e-muted); }
+.application.sr2e-look.sr2e-codex .sr2e-codex-page { overflow-y: auto; min-height: 0; padding: 0.6rem 0.9rem; }
+.application.sr2e-look.sr2e-codex .sr2e-codex-head { display: flex; gap: 0.7rem; align-items: center; margin-bottom: 0.5rem; }
+.application.sr2e-look.sr2e-codex .sr2e-codex-head img { width: 64px; height: 64px; object-fit: contain; border: none; }
+.application.sr2e-look.sr2e-codex .sr2e-codex-icon { font-size: 2.4rem; width: 64px; text-align: center; color: var(--sr2e-accent); }
+.application.sr2e-look.sr2e-codex .sr2e-codex-head h2 { margin: 0; border: none; }
+.application.sr2e-look.sr2e-codex .sr2e-codex-head .hint { margin: 0.1rem 0 0; color: var(--sr2e-muted); }
+.application.sr2e-look.sr2e-codex .sr2e-codex-buying { display: flex; flex-wrap: wrap; gap: 0.3rem 1.2rem; margin: 0 0 0.6rem; }
+.application.sr2e-look.sr2e-codex .sr2e-codex-buying dt { font-size: 0.7rem; color: var(--sr2e-muted); }
+.application.sr2e-look.sr2e-codex .sr2e-codex-buying dd { margin: 0; font-weight: 600; }
+.application.sr2e-look.sr2e-codex .sr2e-codex-stats { width: auto; min-width: 60%; margin: 0 0 0.6rem; border-collapse: collapse; }
+.application.sr2e-look.sr2e-codex .sr2e-codex-stats th { text-align: left; font-weight: 400; color: var(--sr2e-muted); padding: 0.12rem 1rem 0.12rem 0; }
+.application.sr2e-look.sr2e-codex .sr2e-codex-stats td { padding: 0.12rem 0; }
+.application.sr2e-look.sr2e-codex .sr2e-codex-desc { margin: 0 0 0.6rem; line-height: 1.4; }
+.application.sr2e-look.sr2e-codex .sr2e-codex-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.application.sr2e-look.sr2e-codex .sr2e-codex-actions button { flex: 0 0 auto; width: auto; }
+.application.sr2e-look.sr2e-codex .sr2e-codex-pickhint, .application.sr2e-look.sr2e-codex .sr2e-codex-note { color: var(--sr2e-muted); }
+.application.sr2e-look.sr2e-add .sr2e-add-info { margin-left: 0.2rem; font-size: 0.75rem; color: var(--sr2e-muted); cursor: pointer; }
+.application.sr2e-look.sr2e-add .sr2e-add-info:hover, .application.sr2e-look.sr2e-add .sr2e-add-info:focus-visible { color: var(--sr2e-accent); }
+@container (max-width: 640px) { .application.sr2e-look.sr2e-codex .sr2e-codex-main { grid-template-columns: 1fr; grid-template-rows: 45% 1fr; } .application.sr2e-look.sr2e-codex .sr2e-codex-browse { overflow-y: auto; border-right: none; border-bottom: 1px solid color-mix(in srgb, currentColor 18%, transparent); } .application.sr2e-look.sr2e-codex .sr2e-codex-list { flex: none; overflow: visible; } }
+.application.sr2e-look.sr2e-codex .sr2e-codex-sub { margin: 0.4rem 0 0.2rem; font-size: 0.85rem; border: none; color: var(--sr2e-muted); }
+.application.sr2e-look.sr2e-codex .sr2e-codex-desc img { max-width: 100%; height: auto; }
+.application.sr2e-look.sr2e-codex .sr2e-codex-summary { margin: 0 0 0.5rem; }

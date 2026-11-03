@@ -1,0 +1,806 @@
+<div class="sr2e-sheet">
+  <header class="sr2e-header">
+    <img src="{{item.img}}" alt="" width="48" height="48" data-edit="img">
+    <input type="text" name="name" value="{{item.name}}" placeholder="{{sr2eT "SR2E.UI.name"}}">
+    <button type="button" data-action="postItem" title="{{sr2eT "SR2E.UI.postThisItemToChat"}}"><i class="fa-solid fa-comment"></i></button>
+  </header>
+  {{#if templates.length}}
+  <div class="sr2e-row sr2e-template">
+    <label title="{{sr2eT "SR2E.UI.fillInThisItemFromA"}}">{{sr2eT "SR2E.UI.template"}} <select data-template-select>
+      <option value="">{{sr2eT "SR2E.UI.pickOne"}}</option>
+      {{#each templates}}<option value="{{id}}">{{name}}{{#if world}} {{sr2eT "SR2E.UI.world"}}{{/if}}</option>{{/each}}
+    </select></label>
+    <button type="button" data-action="applyTemplate">{{sr2eT "SR2E.UI.fillIn"}}</button>
+    {{#if isGM}}<button type="button" class="sr2e-gm-only" data-action="saveTemplate" title="{{sr2eT "SR2E.UI.saveThisItemSSettingsAs"}}">{{sr2eT "SR2E.UI.saveAsTemplate"}}</button>
+    <a data-action="deleteTemplate" title="{{sr2eT "SR2E.UI.deleteThePickedWorldTemplate"}}"><i class="fa-solid fa-trash"></i></a>{{/if}}
+  </div>
+  {{else}}{{#if isGM}}<div class="sr2e-row sr2e-template sr2e-gm-only"><button type="button" data-action="saveTemplate" title="{{sr2eT "SR2E.UI.saveThisItemSSettingsAs"}}">{{sr2eT "SR2E.UI.saveAsTemplate"}}</button></div>{{/if}}{{/if}}
+  {{#if itemWarnings.length}}<ul class="sr2e-warnings">{{#each itemWarnings}}<li>{{this}}</li>{{/each}}</ul>{{/if}}
+
+  {{#if (eq type "skill")}}
+  <h3 class="sr2e-subhead" data-heading="Rating and kind">{{sr2eT "SR2E.UI.ratingAndKind"}}</h3>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.rating"}} <input type="number" name="system.rating" value="{{system.rating}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.linkedAttribute"}}
+      <select name="system.attribute">
+        {{selectOptions attributeChoices selected=system.attribute valueAttr="key" labelAttr="label"}}
+      </select>
+    </label>
+    <label>{{sr2eT "SR2E.UI.specialization3"}} <input type="text" name="system.specialization" value="{{system.specialization}}"></label>
+    <label>{{sr2eT "SR2E.UI.specRating0None"}} <input type="number" name="system.specializationRating" value="{{system.specializationRating}}" min="0"></label>
+    <label title="{{sr2eT "SR2E.UI.setsTheKarmaCostOfRaising"}}">{{sr2eT "SR2E.UI.kind"}} <select name="system.kind">{{selectOptions skillKinds selected=system.kind valueAttr="key" labelAttr="label"}}</select></label>
+    {{#if (eq system.kind "language")}}<label title="{{sr2eT "SR2E.UI.theCharacterSNativeTongueFree"}}">{{sr2eT "SR2E.UI.native2"}} <input type="checkbox" name="system.native" {{checked system.native}}></label>{{/if}}
+  </div>
+  <h3 class="sr2e-subhead" data-heading="Concentration">{{sr2eT "SR2E.UI.concentration"}}</h3>
+  <div class="sr2e-row">
+    <label title="{{sr2eT "SR2E.UI.betweenTheSkillAndItsSpecialization"}}">{{sr2eT "SR2E.UI.concentration"}} <input type="text" name="system.concentration" value="{{system.concentration}}"></label>
+    <label>{{sr2eT "SR2E.UI.concRating0None"}} <input type="number" name="system.concentrationRating" value="{{system.concentrationRating}}" min="0"></label>
+    <label title="{{sr2eT "SR2E.UI.replacesUnarmedCombatForUnarmedAttacks"}}">{{sr2eT "SR2E.UI.martialArtUnarmedStyle"}} <input type="checkbox" name="system.martial.enabled" {{checked system.martial.enabled}}></label>
+  </div>
+  {{#if system.martial.enabled}}
+  <h3 class="sr2e-subhead" data-heading="Martial art">{{sr2eT "SR2E.UI.martialArt2"}}</h3>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.power2"}} <input type="number" name="system.martial.power" value="{{system.martial.power}}"></label>
+    <label title="{{sr2eT "SR2E.UI.damageLevelsUp"}}">{{sr2eT "SR2E.UI.stageUp"}} <input type="number" name="system.martial.stage" value="{{system.martial.stage}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.reach2"}} <input type="number" name="system.martial.reach" value="{{system.martial.reach}}"></label>
+    <label title="{{sr2eT "SR2E.UI.extraDiceWhenDefendingUnarmed"}}">{{sr2eT "SR2E.UI.defenseDice"}} <input type="number" name="system.martial.defense" value="{{system.martial.defense}}" min="0"></label>
+  </div>
+  {{/if}}
+  {{/if}}
+
+  {{#if (eq type "weapon")}}
+  <div class="sr2e-row sr2e-layout">
+    <label>{{sr2eT "SR2E.UI.kind"}} <select data-weapon-layout>{{selectOptions layoutChoices selected=layout valueAttr="key" labelAttr="label"}}</select></label>
+    <a data-action="toggleAllFields">{{#if showAll}}{{sr2eT "SR2E.UI.showOnlyThisKindSFields"}}{{else}}{{sr2eT "SR2E.UI.showEveryField"}}{{/if}}</a>
+  </div>
+  <h3 class="sr2e-subhead" data-help="item-sheet" data-heading="Attack">{{sr2eT "SR2E.UI.attack__heading"}}</h3>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.attackSkill"}} <input type="text" name="system.skill" value="{{system.skill}}"></label>
+    <label>{{sr2eT "SR2E.UI.specialization3"}} <input type="text" name="system.specialization" value="{{system.specialization}}" placeholder="{{sr2eT "SR2E.UI.eGPistols"}}"></label>
+    {{#if sec.all}}<label>{{sr2eT "SR2E.UI.melee3"}} <input type="checkbox" name="system.melee" {{checked system.melee}}></label>{{/if}}
+    {{#if sec.melee}}<label>{{sr2eT "SR2E.UI.reach3"}} <input type="number" name="system.reach" value="{{system.reach}}" min="0"></label>{{/if}}
+  </div>
+  <h3 class="sr2e-subhead" data-help="item-sheet" data-heading="Damage">{{sr2eT "SR2E.UI.damage"}}</h3>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.power3"}} <input type="number" name="system.damagePower" value="{{system.damagePower}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.level2"}}
+      <select name="system.damageLevel">
+        {{selectOptions damageLevels selected=system.damageLevel valueAttr="key" labelAttr="label"}}
+      </select>
+    </label>
+    <label>{{sr2eT "SR2E.UI.type"}}
+      <select name="system.damageType">
+        {{selectOptions damageTypes selected=system.damageType valueAttr="key" labelAttr="label"}}
+      </select>
+    </label>
+    {{#if sec.strength}}<label title="{{sr2eT "SR2E.UI.powerStrengthThePowerAboveE"}}">{{sr2eT "SR2E.UI.powerFromStrength"}} <input type="checkbox" name="system.strengthPower" {{checked system.strengthPower}}></label>
+    <label title="{{sr2eT "SR2E.UI.bowsTheHighestStrengthTheWeapon"}}">{{sr2eT "SR2E.UI.strengthCap"}} <input type="number" name="system.strengthCap" value="{{system.strengthCap}}" min="0"></label>{{/if}}
+    <label title="{{sr2eT "SR2E.UI.taserOrStunBatonStunDamage"}}">{{sr2eT "SR2E.UI.stunWeapon"}} <input type="checkbox" name="system.stunWeapon" {{checked system.stunWeapon}}></label>
+    <label>{{sr2eT "SR2E.UI.magical"}} <input type="checkbox" name="system.magical" {{checked system.magical}}></label>
+    {{#if system.melee}}<label title="{{sr2eT "SR2E.UI.aMonofilamentWhipABadMiss"}}">{{sr2eT "SR2E.UI.canHitItsWielder"}} <input type="checkbox" name="system.selfHit" {{checked system.selfHit}}></label>{{/if}}
+    {{#if system.stunWeapon}}{{#if system.melee}}<label title="{{sr2eT "SR2E.UI.aStunBatonSCharges0"}}">{{sr2eT "SR2E.UI.charges"}} <input type="number" name="system.ammo" value="{{system.ammo}}" min="0"> / <input type="number" name="system.ammoMax" value="{{system.ammoMax}}" min="0"></label>{{/if}}{{/if}}
+    <label title="{{sr2eT "SR2E.UI.whatItIsMadeOfOr"}}">{{sr2eT "SR2E.UI.material"}} <input type="text" name="system.material" value="{{system.material}}" placeholder="{{sr2eT "SR2E.UI.eGSilver"}}"></label>
+  </div>
+  {{#if sec.gun}}
+  <h3 class="sr2e-subhead" data-heading="Firearm">{{sr2eT "SR2E.UI.firearm"}}</h3>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.firingModes"}} <input type="text" name="system.modes" value="{{system.modes}}" placeholder="{{sr2eT "SR2E.UI.saBfFa"}}"></label>
+    <label>{{sr2eT "SR2E.UI.recoilComp"}} <input type="number" name="system.recoilComp" value="{{system.recoilComp}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.heavyDoubleRecoil"}} <input type="checkbox" name="system.heavy" {{checked system.heavy}}></label>
+    <label title="{{sr2eT "SR2E.UI.gyroMountRatingCancelsRecoilThen"}}">{{sr2eT "SR2E.UI.gyro"}} <input type="number" name="system.gyro" value="{{system.gyro}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.smartgun"}} <input type="checkbox" name="system.smartgun" {{checked system.smartgun}}></label>
+    <label title="{{sr2eT "SR2E.UI.silencerSsSaOnlySuppressorAny"}}">{{sr2eT "SR2E.UI.muzzle"}} <select name="system.muzzle">{{selectOptions muzzleChoices selected=system.muzzle valueAttr="key" labelAttr="label"}}</select></label>
+  </div>
+  <h3 class="sr2e-subhead" data-heading="Accessories">{{sr2eT "SR2E.UI.accessories"}}</h3>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.laserSight"}} <input type="checkbox" name="system.laserSight" {{checked system.laserSight}}></label>
+    <label>{{sr2eT "SR2E.UI.imagingScopeMagnification"}} <input type="number" name="system.scope" value="{{system.scope}}" min="0" max="3"></label>
+    <label>{{sr2eT "SR2E.UI.scopeVision"}} <select name="system.scopeVision">{{selectOptions scopeVisionChoices selected=system.scopeVision valueAttr="key" labelAttr="label"}}</select></label>
+    <label>{{sr2eT "SR2E.UI.shockPad"}} <input type="checkbox" name="system.shockPad" {{checked system.shockPad}}></label>
+    <label>{{sr2eT "SR2E.UI.bipodTripod"}} <select name="system.support">{{selectOptions supportChoices selected=system.support valueAttr="key" labelAttr="label"}}</select></label>
+    {{#unless (eq system.support "none")}}<label>{{sr2eT "SR2E.UI.setUp3"}} <input type="checkbox" name="system.supportSetUp" {{checked system.supportSetUp}}></label>{{/unless}}
+  </div>
+  {{/if}}
+  {{#if sec.ammo}}
+  <h3 class="sr2e-subhead" data-heading="Ammunition">{{sr2eT "SR2E.UI.ammunition"}}</h3>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.ammunition"}}
+      <select name="system.ammoType">
+        {{selectOptions ammoChoices selected=system.ammoType valueAttr="key" labelAttr="label"}}
+      </select>
+    </label>
+    <label>{{sr2eT "SR2E.UI.ammo"}} <input type="number" name="system.ammo" value="{{system.ammo}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.capacity0Untracked"}} <input type="number" name="system.ammoMax" value="{{system.ammoMax}}" min="0"></label>
+  </div>
+  {{/if}}
+  {{#if sec.blast}}
+  <h3 class="sr2e-subhead" data-heading="Blast">{{sr2eT "SR2E.UI.blast"}}</h3>
+  <div class="sr2e-row">
+    {{#if sec.all}}<label>{{sr2eT "SR2E.UI.blastGrenade"}} <input type="checkbox" name="system.blast" {{checked system.blast}}></label>{{/if}}
+    <label>{{sr2eT "SR2E.UI.blastKind"}}
+      <select name="system.blastKind">{{selectOptions grenadeChoices selected=system.blastKind valueAttr="key" labelAttr="label"}}</select>
+    </label>
+    <label>{{sr2eT "SR2E.UI.powerLostPerMetre"}} <input type="number" name="system.blastPerMetre" value="{{system.blastPerMetre}}" min="0" step="0.5"></label>
+    <label>{{sr2eT "SR2E.UI.fuse"}} <select name="system.fuse">{{selectOptions fuseChoices selected=system.fuse valueAttr="key" labelAttr="label"}}</select></label>
+    <label>{{sr2eT "SR2E.UI.smartGrenade"}} <input type="checkbox" name="system.smartGrenade" {{checked system.smartGrenade}}></label>
+    <label title="{{sr2eT "SR2E.UI.grenadeLaunchersCloserThanThisIt"}}">{{sr2eT "SR2E.UI.minArmingRangeM"}} <input type="number" name="system.minRange" value="{{system.minRange}}" min="0"></label>
+    <label title="{{sr2eT "SR2E.UI.mortarsAndLobbingLaunchersFireAt"}}">{{sr2eT "SR2E.UI.indirectFire"}} <input type="checkbox" name="system.indirect" {{checked system.indirect}}></label>
+  </div>
+  {{/if}}
+  {{#if sec.shotgun}}
+  <h3 class="sr2e-subhead" data-heading="Shotgun">{{sr2eT "SR2E.UI.shotgun"}}</h3>
+  <div class="sr2e-row">
+    {{#if sec.all}}<label>{{sr2eT "SR2E.UI.shotgun"}} <input type="checkbox" name="system.shotgun" {{checked system.shotgun}}></label>{{/if}}
+    <label>{{sr2eT "SR2E.UI.choke"}} <input type="number" name="system.choke" value="{{system.choke}}" min="1"></label>
+  </div>
+  {{/if}}
+  {{#if sec.launcher}}
+  <h3 class="sr2e-subhead" data-heading="Missile">{{sr2eT "SR2E.UI.missile"}}</h3>
+  <div class="sr2e-row">
+    <label title="{{sr2eT "SR2E.UI.aMissileSIntelligenceRatingAdds"}}">{{sr2eT "SR2E.UI.missileIntelligence"}} <input type="number" name="system.guidance" value="{{system.guidance}}" min="0"></label>
+  </div>
+  {{/if}}
+  {{#if sec.flame}}
+  <h3 class="sr2e-subhead" data-heading="Flamethrower">{{sr2eT "SR2E.UI.flamethrower2"}}</h3>
+  <div class="sr2e-row">
+    <label title="{{sr2eT "SR2E.UI.aFlamethrowerHitsEveryoneInA"}}">{{sr2eT "SR2E.UI.area"}} <select name="system.areaKind">{{selectOptions areaChoices selected=system.areaKind valueAttr="key" labelAttr="label"}}</select></label>
+  </div>
+  {{/if}}
+  {{#if sec.ranges}}
+  <h3 class="sr2e-subhead" data-heading="Range">{{sr2eT "SR2E.UI.range"}}</h3>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.short"}} <input type="number" name="system.range.short" value="{{system.range.short}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.medium"}} <input type="number" name="system.range.medium" value="{{system.range.medium}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.long"}} <input type="number" name="system.range.long" value="{{system.range.long}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.extreme"}} <input type="number" name="system.range.extreme" value="{{system.range.extreme}}" min="0"></label>
+  </div>
+  {{/if}}
+  {{#if sec.strengthRange}}
+  <h3 class="sr2e-subhead" data-heading="Range from Strength">{{sr2eT "SR2E.UI.rangeFromStrength"}}</h3>
+  <div class="sr2e-row">
+    <label title="{{sr2eT "SR2E.UI.thrownWeaponsAndBowsRangeLimits"}}">{{sr2eT "SR2E.UI.rangeFromStrength"}} <input type="checkbox" name="system.strengthRange" {{checked system.strengthRange}}></label>
+    <label>{{sr2eT "SR2E.UI.short2"}} <input type="number" name="system.strengthRangeMultipliers.short" value="{{system.strengthRangeMultipliers.short}}" min="0" step="0.5"></label>
+    <label>{{sr2eT "SR2E.UI.medium2"}} <input type="number" name="system.strengthRangeMultipliers.medium" value="{{system.strengthRangeMultipliers.medium}}" min="0" step="0.5"></label>
+    <label>{{sr2eT "SR2E.UI.long2"}} <input type="number" name="system.strengthRangeMultipliers.long" value="{{system.strengthRangeMultipliers.long}}" min="0" step="0.5"></label>
+    <label>{{sr2eT "SR2E.UI.extreme2"}} <input type="number" name="system.strengthRangeMultipliers.extreme" value="{{system.strengthRangeMultipliers.extreme}}" min="0" step="0.5"></label>
+  </div>
+  {{/if}}
+  <h3 class="sr2e-subhead" data-heading="Handling">{{sr2eT "SR2E.UI.handling"}}</h3>
+  <div class="sr2e-row">
+    {{#unless system.melee}}<label title="{{sr2eT "SR2E.UI.howItIsLoadedAClip"}}">{{sr2eT "SR2E.UI.feed"}} <select name="system.feed">{{selectOptions feedChoices selected=system.feed valueAttr="key" labelAttr="label"}}</select></label>{{/unless}}
+    <label title="{{sr2eT "SR2E.UI.whichArmorStopsIt"}}">{{sr2eT "SR2E.UI.armor"}} <select name="system.armorKind">{{selectOptions armorKindChoices selected=system.armorKind valueAttr="key" labelAttr="label"}}</select></label>
+    <label title="{{sr2eT "SR2E.UI.drawnAndReadyToUseDrawing"}}">{{sr2eT "SR2E.UI.drawn"}} <input type="checkbox" name="system.ready" {{checked system.ready}}></label>
+    <label title="{{sr2eT "SR2E.UI.quickDrawHolsterDrawingIsFree"}}">{{sr2eT "SR2E.UI.quickDrawHolster"}} <input type="checkbox" name="system.quickDraw" {{checked system.quickDraw}}></label>
+  </div>
+  <h3 class="sr2e-subhead" data-heading="Toxin and cybergun">{{sr2eT "SR2E.UI.toxinAndCybergun"}}</h3>
+  <div class="sr2e-row">
+    <label title="{{sr2eT "SR2E.UI.aToxinItDeliversADart"}}">{{sr2eT "SR2E.UI.toxin"}} <select name="system.toxinId">{{selectOptions toxinChoices selected=system.toxinId valueAttr="key" labelAttr="label"}}</select></label>
+    <label title="{{sr2eT "SR2E.UI.onlyWhenTheHitDoesDamage"}}">{{sr2eT "SR2E.UI.onlyIfItWounds"}} <input type="checkbox" name="system.toxinNeedsWound" {{checked system.toxinNeedsWound}}></label>
+    <label title="{{sr2eT "SR2E.UI.aCybergunItOnlyWorksWhile"}}">{{sr2eT "SR2E.UI.builtInto"}} <select name="system.implantId">{{selectOptions implantChoices selected=system.implantId valueAttr="key" labelAttr="label"}}</select></label>
+  </div>
+  <h3 class="sr2e-subhead" data-heading="Weight and mount">{{sr2eT "SR2E.UI.weightAndMount"}}</h3>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.weightKg"}} <input type="number" name="system.weight" value="{{system.weight}}" min="0" step="0.1"></label>
+    <label>{{sr2eT "SR2E.UI.concealability"}} <input type="number" name="system.concealability" value="{{system.concealability}}" min="0"></label>
+    {{#if sec.vehicle}}<label title="{{sr2eT "SR2E.UI.onAVehicleFixedDriverOr"}}">{{sr2eT "SR2E.UI.mount"}}
+      <select name="system.mount">{{selectOptions mountChoices selected=system.mount valueAttr="key" labelAttr="label"}}</select>
+    </label>
+    {{#unless (eq system.mount "none")}}<label title="{{sr2eT "SR2E.UI.theMountPointItTakesOn"}}">{{sr2eT "SR2E.UI.point"}}
+      <select name="system.mountPoint">{{selectOptions mountPointChoices selected=system.mountPoint valueAttr="key" labelAttr="label"}}</select>
+    </label>{{/unless}}
+    {{#if (eq system.mount "fixed")}}<label title="{{sr2eT "SR2E.UI.theSideAFixedMountFaces"}}">{{sr2eT "SR2E.UI.arc"}}
+      <select name="system.arc">{{selectOptions arcChoices selected=system.arc valueAttr="key" labelAttr="label"}}</select>
+    </label>{{/if}}{{/if}}
+    <label title="{{sr2eT "SR2E.UI.antiVehicleFullPowerAndDamage"}}">{{sr2eT "SR2E.UI.antiVehicle"}} <input type="checkbox" name="system.antiVehicle" {{checked system.antiVehicle}}></label>
+    <label title="{{sr2eT "SR2E.UI.bulkInCargoFactorUnitsA"}}">{{sr2eT "SR2E.UI.cf3"}} <input type="number" name="system.cf" value="{{system.cf}}" min="0" step="0.5"></label>
+  </div>
+  {{#if sec.vehicle}}{{#if (eq system.mount "turret")}}
+  <h3 class="sr2e-subhead" data-heading="Turret">{{sr2eT "SR2E.UI.turret"}}</h3>
+  <div class="sr2e-row">
+    <label title="{{sr2eT "SR2E.UI.whereTheTurretPointsNowIn"}}">{{sr2eT "SR2E.UI.turretFacing"}} <input type="number" name="system.turret.facing" value="{{system.turret.facing}}" step="1"></label>
+    <label title="{{sr2eT "SR2E.UI.howFarItTurnsPerShot" traverse=turretDefaults.traverse}}">{{sr2eT "SR2E.UI.traverse"}} <input type="number" name="system.turret.traverse" value="{{system.turret.traverse}}" min="0"></label>
+    <label title="{{sr2eT "SR2E.UI.theArcItCanCoverCentred" limit=turretDefaults.limit}}">{{sr2eT "SR2E.UI.limit"}} <input type="number" name="system.turret.limit" value="{{system.turret.limit}}" min="0" max="360"></label>
+  </div>
+  {{/if}}{{/if}}
+  {{/if}}
+
+  {{#if (eq type "armor")}}
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.ballistic"}} <input type="number" name="system.ballistic" value="{{system.ballistic}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.impact"}} <input type="number" name="system.impact" value="{{system.impact}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.worn"}} <input type="checkbox" name="system.worn" {{checked system.worn}}></label>
+    <label title="{{sr2eT "SR2E.UI.helmetsFormFittingArmorShieldsAdd"}}">{{sr2eT "SR2E.UI.addsToOtherArmor"}} <input type="checkbox" name="system.adds" {{checked system.adds}}></label>
+    <label title="{{sr2eT "SR2E.UI.pointsLostToDamageArmorDegrading"}}">{{sr2eT "SR2E.UI.damaged2"}} <input type="number" name="system.degraded" value="{{system.degraded}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.weightKg"}} <input type="number" name="system.weight" value="{{system.weight}}" min="0" step="0.1"></label>
+    <label>{{sr2eT "SR2E.UI.concealability"}} <input type="number" name="system.concealability" value="{{system.concealability}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.shieldParry"}} <input type="number" name="system.parry" value="{{system.parry}}" min="0"></label>
+    <label title="{{sr2eT "SR2E.UI.bulkInCargoFactorUnitsA"}}">{{sr2eT "SR2E.UI.cf3"}} <input type="number" name="system.cf" value="{{system.cf}}" min="0" step="0.5"></label>
+  </div>
+  {{/if}}
+
+  {{#if (eq type "cyberware")}}
+  <h3 class="sr2e-subhead" data-help="item-sheet" data-heading="General">{{sr2eT "SR2E.UI.general"}}</h3>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.kind"}} <select name="system.kind">{{selectOptions cyberKinds selected=system.kind valueAttr="key" labelAttr="label"}}</select></label>
+    <label title="{{sr2eT "SR2E.UI.reflexSystemsWiredAndBoostedReflexes"}}">{{sr2eT "SR2E.UI.reflexes"}} <select name="system.reflexes">{{selectOptions reflexChoices selected=system.reflexes valueAttr="key" labelAttr="label"}}</select></label>
+    {{#if limbChoices.length}}<label title="{{sr2eT "SR2E.UI.builtIntoACyberlimbUsesIts"}}">{{sr2eT "SR2E.UI.housedIn"}} <select name="system.housedIn">{{selectOptions limbChoices selected=system.housedIn valueAttr="key" labelAttr="label"}}</select></label>{{/if}}
+    <label title="{{sr2eT "SR2E.UI.damagedCyberwareGivesNothingUntilRepaire"}}">{{sr2eT "SR2E.UI.damaged2"}} <input type="checkbox" name="system.damaged" {{checked system.damaged}}></label>
+    <label>{{sr2eT "SR2E.UI.costStandard"}} <input type="number" name="system.cost" value="{{system.cost}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.availability"}} <input type="text" name="system.availability" value="{{system.availability}}"></label>
+    <label>{{sr2eT "SR2E.UI.concealability"}} <input type="number" name="system.concealability" value="{{system.concealability}}" min="0"></label>
+    {{#if system.cost}}<span>{{sr2eT "SR2E.UI.at" grade=system.grade}} <strong>{{gradedCost}}¥</strong></span>{{/if}}
+    {{#if gradedAvailability}}<span title="{{sr2eT "SR2E.UI.availabilityWithTheGradeAndCulturing"}}">{{sr2eT "SR2E.UI.availabilityAs" grade=system.grade}} <strong>{{gradedAvailability}}</strong></span>{{/if}}
+  </div>
+  {{#if (eq system.kind "encephalon")}}<p class="hint">{{sr2eT "SR2E.UI.anEncephalonAddsItsRatingAs"}}</p>{{/if}}
+  {{#if (eq system.kind "memory")}}<p class="hint">{{sr2eT "SR2E.UI.headwareMemoryRatingMpKnowsoftsAnd" memoryPerRating=memoryPerRating}}</p>{{/if}}
+  {{#if (eq system.kind "cyberlimb")}}
+  <h3 class="sr2e-subhead" data-heading="Cyberlimb">{{sr2eT "SR2E.UI.cyberlimb"}}</h3>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.location"}} <select name="system.limb.location">{{selectOptions limbLocations selected=system.limb.location valueAttr="key" labelAttr="label"}}</select></label>
+    <label>{{sr2eT "SR2E.UI.limbStrength"}} <input type="number" name="system.limb.strength" value="{{system.limb.strength}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.limbQuickness"}} <input type="number" name="system.limb.quickness" value="{{system.limb.quickness}}" min="0"></label>
+    <label title="{{sr2eT "SR2E.UI.essenceWorthOfCyberwareItCan"}}">{{sr2eT "SR2E.UI.capacity"}} <input type="number" name="system.limb.capacity" value="{{system.limb.capacity}}" min="0" step="0.05"></label>
+  </div>
+  <p class="hint">{{sr2eT "SR2E.UI.attacksMadeWithThisLimbUse"}}</p>
+  {{/if}}
+  {{#if (eq system.kind "cyberweapon")}}
+  <h3 class="sr2e-subhead" data-heading="Cyberweapon">{{sr2eT "SR2E.UI.cyberweapon3"}}</h3>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.skill"}} <input type="text" name="system.weapon.skill" value="{{system.weapon.skill}}"></label>
+    <label>{{sr2eT "SR2E.UI.powerFromStrength"}} <input type="checkbox" name="system.weapon.strengthPower" {{checked system.weapon.strengthPower}}></label>
+    <label>{{sr2eT "SR2E.UI.power4"}} <input type="number" name="system.weapon.damagePower" value="{{system.weapon.damagePower}}"></label>
+    <label>{{sr2eT "SR2E.UI.damageLevel"}} <select name="system.weapon.damageLevel">{{selectOptions damageLevels selected=system.weapon.damageLevel valueAttr="key" labelAttr="label"}}</select></label>
+    <label>{{sr2eT "SR2E.UI.type"}} <select name="system.weapon.damageType">{{selectOptions damageTypes selected=system.weapon.damageType valueAttr="key" labelAttr="label"}}</select></label>
+    <label>{{sr2eT "SR2E.UI.reach3"}} <input type="number" name="system.weapon.reach" value="{{system.weapon.reach}}"></label>
+  </div>
+  <p class="hint">{{sr2eT "SR2E.UI.installedItAppearsInTheWearer"}}</p>
+  {{/if}}
+  <h3 class="sr2e-subhead" data-heading="Features">{{sr2eT "SR2E.UI.features"}}</h3>
+  <div class="sr2e-row">
+    {{#if (eq system.kind "skillwires")}}<label title="{{sr2eT "SR2E.UI.activesoftsAreCappedAtThisRating"}}">{{sr2eT "SR2E.UI.skillwireRating"}} <input type="number" name="system.rating" value="{{system.rating}}" min="0"></label>{{/if}}
+    {{#if (eq system.kind "iccm")}}<label title="{{sr2eT "SR2E.UI.blackIcThatWouldDoPhysical"}}">{{sr2eT "SR2E.UI.iccmRating"}} <input type="number" name="system.rating" value="{{system.rating}}" min="0"></label>{{/if}}
+    {{#if (eq system.kind "filtration")}}<label title="{{sr2eT "SR2E.UI.whichToxinsItFiltersAirInhaled"}}">{{sr2eT "SR2E.UI.filters"}} <select name="system.filterKind">{{selectOptions filterKinds selected=system.filterKind valueAttr="key" labelAttr="label"}}</select></label>
+    <label title="{{sr2eT "SR2E.UI.addsItsRatingInDiceTo"}}">{{sr2eT "SR2E.UI.filterRating"}} <input type="number" name="system.rating" value="{{system.rating}}" min="0"></label>{{/if}}
+    {{#if (eq system.kind "boneLacing")}}<label title="{{sr2eT "SR2E.UI.addsToBodyForDamageResistance"}}">{{sr2eT "SR2E.UI.lacing"}} <select name="system.lacing">{{selectOptions lacingKinds selected=system.lacing valueAttr="key" labelAttr="label"}}</select></label>{{/if}}
+    <label title="{{sr2eT "SR2E.UI.smartlinkLevelATickedSmartlinkBox"}}">{{sr2eT "SR2E.UI.smartlinkLevel"}} <input type="number" name="system.smartlinkLevel" value="{{system.smartlinkLevel}}" min="0" max="2"></label>
+    <label title="{{sr2eT "SR2E.UI.eachLevelMovesARangedAttack"}}">{{sr2eT "SR2E.UI.magnification"}} <input type="number" name="system.magnification" value="{{system.magnification}}" min="0" max="3"></label>
+    <label title="{{sr2eT "SR2E.UI.immuneToFlashGrenades"}}">{{sr2eT "SR2E.UI.flareCompensation"}} <input type="checkbox" name="system.flareComp" {{checked system.flareComp}}></label>
+    <label>{{sr2eT "SR2E.UI.ultrasound"}} <input type="checkbox" name="system.ultrasound" {{checked system.ultrasound}}></label>
+    <label title="{{sr2eT "SR2E.UI.addsItsRatingInDiceTo2"}}">{{sr2eT "SR2E.UI.tailoredPheromones"}} <input type="number" name="system.pheromones" value="{{system.pheromones}}" min="0"></label>
+  </div>
+  {{#if (eq system.kind "ears")}}
+  <h3 class="sr2e-subhead" data-heading="Cyberears">{{sr2eT "SR2E.UI.cyberears"}}</h3>
+  <div class="sr2e-row">
+    <label title="{{sr2eT "SR2E.UI.eachPointLowersTheTnOf"}}">{{sr2eT "SR2E.UI.hearingAmplification"}} <input type="number" name="system.hearingAmp" value="{{system.hearingAmp}}" min="0" max="3"></label>
+    <label title="{{sr2eT "SR2E.UI.canTBeDeafenedByLoud"}}">{{sr2eT "SR2E.UI.damper"}} <input type="checkbox" name="system.dampener" {{checked system.dampener}}></label>
+    <label title="{{sr2eT "SR2E.UI.hearsUltrasonicSound"}}">{{sr2eT "SR2E.UI.highFrequency"}} <input type="checkbox" name="system.highFrequency" {{checked system.highFrequency}}></label>
+    <label title="{{sr2eT "SR2E.UI.hearsInfrasonicSound"}}">{{sr2eT "SR2E.UI.lowFrequency"}} <input type="checkbox" name="system.lowFrequency" {{checked system.lowFrequency}}></label>
+    <label>{{sr2eT "SR2E.UI.recorder"}} <input type="checkbox" name="system.recorder" {{checked system.recorder}}></label>
+  </div>
+  {{/if}}
+  <h3 class="sr2e-subhead" data-heading="Skill bonuses">{{sr2eT "SR2E.UI.skillBonuses"}}</h3>
+  <div class="sr2e-row">
+    <label class="sr2e-wide" title="{{sr2eT "SR2E.UI.diceOrATnChangeFor"}}">{{sr2eT "SR2E.UI.helpsSkills"}} <input type="text" name="skillModsText" value="{{skillModsText}}" placeholder="{{sr2eT "SR2E.UI.eGAthletics2PerceptionTn"}}"></label>
+  </div>
+  <h3 class="sr2e-subhead" data-heading="Essence and grade">{{sr2eT "SR2E.UI.essenceAndGrade"}}</h3>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.essenceCost"}} <input type="number" name="system.essenceCost" value="{{system.essenceCost}}" min="0" step="0.01"></label>
+    <label>{{sr2eT "SR2E.UI.grade"}}
+      <select name="system.grade">
+        {{selectOptions gradeChoices selected=system.grade valueAttr="key" labelAttr="label"}}
+      </select>
+    </label>
+    <label>{{sr2eT "SR2E.UI.installed"}} <input type="checkbox" name="system.installed" {{checked system.installed}}></label>
+    <label title="{{sr2eT "SR2E.UI.biowareCostsBodyIndexInsteadOf"}}">{{sr2eT "SR2E.UI.bioware"}} <input type="checkbox" name="system.bioware" {{checked system.bioware}}></label>
+    <label>{{sr2eT "SR2E.UI.bodyIndex"}} <input type="number" name="system.bodyIndex" value="{{system.bodyIndex}}" min="0" step="0.05"></label>
+  </div>
+  {{#if system.bioware}}
+  <h3 class="sr2e-subhead" data-heading="Bioware">{{sr2eT "SR2E.UI.bioware"}}</h3>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.biowareKind"}} <select name="system.bioKind">{{selectOptions bioKinds selected=system.bioKind valueAttr="key" labelAttr="label"}}</select></label>
+    <label>{{sr2eT "SR2E.UI.rating"}} <input type="number" name="system.rating" value="{{system.rating}}" min="0"></label>
+    <label title="{{sr2eT "SR2E.UI.grownFromTheWearerSOwn"}}">{{sr2eT "SR2E.UI.cultured"}} <input type="checkbox" name="system.cultured" {{checked system.cultured}}></label>
+    {{#if (eq system.bioKind "adrenalPump")}}<label title="{{sr2eT "SR2E.UI.itsBonusesCountOnlyWhileActive"}}">{{sr2eT "SR2E.UI.active"}} <input type="checkbox" name="system.bioActive" {{checked system.bioActive}}></label>{{/if}}
+    {{#if system.cost}}<span>{{sr2eT "SR2E.UI.cost2"}} <strong>{{bioCostLabel}}¥</strong></span>{{/if}}
+  </div>
+  <p class="hint">{{bioHint}}</p>
+  {{/if}}
+  <h3 class="sr2e-subhead" data-help="item-sheet" data-heading="Armor and senses">{{sr2eT "SR2E.UI.armorAndSenses"}}</h3>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.armorBallistic"}} <input type="number" name="system.armorBallistic" value="{{system.armorBallistic}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.armorImpact"}} <input type="number" name="system.armorImpact" value="{{system.armorImpact}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.smartlink"}} <input type="checkbox" name="system.smartlink" {{checked system.smartlink}}></label>
+    <label>{{sr2eT "SR2E.UI.lowLightVision"}} <input type="checkbox" name="system.lowLight" {{checked system.lowLight}}></label>
+    <label>{{sr2eT "SR2E.UI.thermographicVision"}} <input type="checkbox" name="system.thermographic" {{checked system.thermographic}}></label>
+    <label title="{{sr2eT "SR2E.UI.vehicleControlRigLevel0Not"}}">{{sr2eT "SR2E.UI.controlRig"}} <input type="number" name="system.controlRig" value="{{system.controlRig}}" min="0" max="3"></label>
+  </div>
+  <h3 class="sr2e-subhead" data-heading="Attribute bonuses">{{sr2eT "SR2E.UI.attributeBonuses"}}</h3>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.body"}} <input type="number" name="system.attributes.body" value="{{system.attributes.body}}"></label>
+    <label>{{sr2eT "SR2E.UI.quickness2"}} <input type="number" name="system.attributes.quickness" value="{{system.attributes.quickness}}"></label>
+    <label>{{sr2eT "SR2E.UI.strength"}} <input type="number" name="system.attributes.strength" value="{{system.attributes.strength}}"></label>
+    <label>{{sr2eT "SR2E.UI.charisma"}} <input type="number" name="system.attributes.charisma" value="{{system.attributes.charisma}}"></label>
+    <label>{{sr2eT "SR2E.UI.intelligence"}} <input type="number" name="system.attributes.intelligence" value="{{system.attributes.intelligence}}"></label>
+    <label>{{sr2eT "SR2E.UI.willpower"}} <input type="number" name="system.attributes.willpower" value="{{system.attributes.willpower}}"></label>
+  </div>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.reactionBonus"}} <input type="number" name="system.reaction" value="{{system.reaction}}"></label>
+    <label>{{sr2eT "SR2E.UI.extraInitiativeDice"}} <input type="number" name="system.initiativeDice" value="{{system.initiativeDice}}" min="0"></label>
+  </div>
+  {{/if}}
+
+  {{#if (eq type "spell")}}
+  <h3 class="sr2e-subhead" data-help="item-sheet" data-heading="Casting">{{sr2eT "SR2E.UI.casting"}}</h3>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.category"}}
+      <select name="system.category">{{selectOptions spellCategories selected=system.category valueAttr="key" labelAttr="label"}}</select>
+    </label>
+    <label>{{sr2eT "SR2E.UI.type"}}
+      <select name="system.spellType">{{selectOptions spellTypes selected=system.spellType valueAttr="key" labelAttr="label"}}</select>
+    </label>
+    <label>{{sr2eT "SR2E.UI.learnedForce"}} <input type="number" name="system.learnedForce" value="{{system.learnedForce}}" min="1"></label>
+    <label>{{sr2eT "SR2E.UI.area"}} <input type="checkbox" name="system.area" {{checked system.area}}></label>
+    <label>{{sr2eT "SR2E.UI.exclusive"}} <input type="checkbox" name="system.exclusive" {{checked system.exclusive}}></label>
+    <label>{{sr2eT "SR2E.UI.fetishLimited"}} <input type="checkbox" name="system.fetish" {{checked system.fetish}}></label>
+    <label>{{sr2eT "SR2E.UI.elementalLikeFireball"}} <input type="checkbox" name="system.elemental" {{checked system.elemental}}></label>
+    <label>{{sr2eT "SR2E.UI.element"}}
+      <select name="system.element">{{selectOptions elementChoices selected=system.element valueAttr="key" labelAttr="label"}}</select>
+    </label>
+    <label>{{sr2eT "SR2E.UI.duration"}}
+      <select name="system.duration">{{selectOptions durations selected=system.duration valueAttr="key" labelAttr="label"}}</select>
+    </label>
+    <label title="{{sr2eT "SR2E.UI.touchSpellsNeedContactNotSight"}}">{{sr2eT "SR2E.UI.range"}}
+      <select name="system.range">{{selectOptions spellRanges selected=system.range valueAttr="key" labelAttr="label"}}</select>
+    </label>
+    {{#if (eq system.category "detection")}}
+    <label title="{{sr2eT "SR2E.UI.detectionSpellsReachMagicForceMetres"}}">{{sr2eT "SR2E.UI.extendedRange"}} <input type="checkbox" name="system.extendedRange" {{checked system.extendedRange}}></label>
+    {{/if}}
+  </div>
+  <h3 class="sr2e-subhead" data-help="item-sheet" data-heading="Damage and resistance">{{sr2eT "SR2E.UI.damageAndResistance"}}</h3>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.damageLevelCombat"}}
+      <select name="system.damageLevel">{{selectOptions damageLevels selected=system.damageLevel valueAttr="key" labelAttr="label"}}</select>
+    </label>
+    <label>{{sr2eT "SR2E.UI.damageType"}}
+      <select name="system.damageType">{{selectOptions damageTypes selected=system.damageType valueAttr="key" labelAttr="label"}}</select>
+    </label>
+    <label>{{sr2eT "SR2E.UI.tnNonCombat"}} <input type="number" name="system.targetNumber" value="{{system.targetNumber}}" min="2"></label>
+    <label>{{sr2eT "SR2E.UI.unwillingTargetResistsWithNonCombat"}}
+      <select name="system.resist">{{selectOptions spellResist selected=system.resist valueAttr="key" labelAttr="label"}}</select>
+    </label>
+  </div>
+  {{#if (eq system.category "health")}}
+  <h3 class="sr2e-subhead" data-help="item-sheet" data-heading="Healing">{{sr2eT "SR2E.UI.healing"}}</h3>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.healsDamage"}} <input type="checkbox" name="system.heals" {{checked system.heals}}></label>
+    <label>{{sr2eT "SR2E.UI.track__monitor"}}
+      <select name="system.healTrack">{{selectOptions damageTypes selected=system.healTrack valueAttr="key" labelAttr="label"}}</select>
+    </label>
+    <label title="{{sr2eT "SR2E.UI.healAndTreatDrainAtThe"}}">{{sr2eT "SR2E.UI.drainLevel"}}
+      <select name="system.healDrain">{{selectOptions healDrains selected=system.healDrain valueAttr="key" labelAttr="label"}}</select>
+    </label>
+    <label title="{{sr2eT "SR2E.UI.treatWorksOnlySoonAfterThe"}}">{{sr2eT "SR2E.UI.treatTimeLimit"}} <input type="checkbox" name="system.treat" {{checked system.treat}}></label>
+  </div>
+  {{/if}}
+  <div class="sr2e-row">
+    <label title="{{sr2eT "SR2E.UI.aCritterSInnateSpellCast"}}">{{sr2eT "SR2E.UI.innateCritter"}} <input type="checkbox" name="system.innate" {{checked system.innate}}></label>
+    {{#unless (eq system.duration "instant")}}
+    <label title="{{sr2eT "SR2E.UI.manaBarrierPhysicalBarrierRaisesA"}}">{{sr2eT "SR2E.UI.raisesABarrier"}}
+      <select name="system.barrier"><option value="" {{#unless system.barrier}}selected{{/unless}}>{{sr2eT "SR2E.UI.no"}}</option><option value="mana" {{#if (eq system.barrier "mana")}}selected{{/if}}>{{sr2eT "SR2E.UI.manaBarrier"}}</option><option value="physical" {{#if (eq system.barrier "physical")}}selected{{/if}}>{{sr2eT "SR2E.UI.physicalBarrier"}}</option></select>
+    </label>
+    {{/unless}}
+  </div>
+  {{#unless (eq system.duration "instant")}}
+  <details class="sr2e-fold"{{#if spellHasEffects}} open{{/if}}><summary data-help="item-sheet" data-heading="Effects while it lasts (Increase Reflexes, Increase [Attribute], Armor...)">{{sr2eT "SR2E.UI.effectsWhileItLastsIncreaseReflexes"}}</summary>
+  <div class="sr2e-row">
+    {{#each effectAttributeFields}}<label>{{label}} <input type="number" name="system.effects.attributes.{{key}}" value="{{value}}"></label>{{/each}}
+  </div>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.reaction"}} <input type="number" name="system.effects.reaction" value="{{system.effects.reaction}}"></label>
+    <label>{{sr2eT "SR2E.UI.initiativeDice"}} <input type="number" name="system.effects.initiativeDice" value="{{system.effects.initiativeDice}}"></label>
+    <label>{{sr2eT "SR2E.UI.ballisticArmor"}} <input type="number" name="system.effects.ballistic" value="{{system.effects.ballistic}}"></label>
+    <label>{{sr2eT "SR2E.UI.impactArmor"}} <input type="number" name="system.effects.impact" value="{{system.effects.impact}}"></label>
+  </div>
+  <div class="sr2e-row">
+    <label title="{{sr2eT "SR2E.UI.addedToEveryTestTheTarget"}}">{{sr2eT "SR2E.UI.tnOnItsTests"}} <input type="number" name="system.effects.testsTn" value="{{system.effects.testsTn}}"></label>
+    <label title="{{sr2eT "SR2E.UI.addedToTestsToNoticeThe"}}">{{sr2eT "SR2E.UI.tnToNoticeIt"}} <input type="number" name="system.effects.perceivedTn" value="{{system.effects.perceivedTn}}"></label>
+    <label title="{{sr2eT "SR2E.UI.addedToAttacksAndSpellsAgainst"}}">{{sr2eT "SR2E.UI.tnToAttackIt"}} <input type="number" name="system.effects.attackedTn" value="{{system.effects.attackedTn}}"></label>
+    <label title="{{sr2eT "SR2E.UI.1NoChange2Doubles0"}}">{{sr2eT "SR2E.UI.movement"}} <input type="number" name="system.effects.movementFactor" value="{{system.effects.movementFactor}}" min="0" step="0.25"></label>
+    <label title="{{sr2eT "SR2E.UI.eachSuccessOrStepOfSuccesses"}}">{{sr2eT "SR2E.UI.successes"}} <input type="checkbox" name="system.effectPerSuccess" {{checked system.effectPerSuccess}}></label>
+  </div>
+  <p class="hint">{{sr2eT "SR2E.UI.theseGoOnTheTargetThe"}}</p>
+  </details>
+  {{/unless}}
+  <h3 class="sr2e-subhead" data-help="item-sheet" data-heading="Drain">{{sr2eT "SR2E.UI.drain2"}}</h3>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.drainForce2"}} <input type="number" name="system.drainModifier" value="{{system.drainModifier}}"></label>
+    <label>{{sr2eT "SR2E.UI.drainLevel"}}
+      <select name="system.drainLevel">{{selectOptions damageLevels selected=system.drainLevel valueAttr="key" labelAttr="label"}}</select>
+    </label>
+  </div>
+  {{/if}}
+
+  {{#if (eq type "power")}}
+  <h3 class="sr2e-subhead" data-help="item-sheet" data-heading="Dice and TN">{{sr2eT "SR2E.UI.diceAndTn"}}</h3>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.activeRolled"}} <input type="checkbox" name="system.active" {{checked system.active}}></label>
+    <label>{{sr2eT "SR2E.UI.dice"}}
+      <select name="system.dice">{{selectOptions powerDice selected=system.dice valueAttr="key" labelAttr="label"}}</select>
+    </label>
+    <label>{{sr2eT "SR2E.UI.rating"}} <input type="number" name="system.rating" value="{{system.rating}}" min="0"></label>
+  </div>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.targetNumber"}}
+      <select name="system.tnSource">{{selectOptions powerTn selected=system.tnSource valueAttr="key" labelAttr="label"}}</select>
+    </label>
+    <label>{{sr2eT "SR2E.UI.fixedTn"}} <input type="number" name="system.targetNumber" value="{{system.targetNumber}}" min="2"></label>
+    <label>{{sr2eT "SR2E.UI.targetResistsWith"}}
+      <select name="system.resist">{{selectOptions powerResist selected=system.resist valueAttr="key" labelAttr="label"}}</select>
+    </label>
+  </div>
+  <h3 class="sr2e-subhead" data-help="item-sheet" data-heading="Effect">{{sr2eT "SR2E.UI.effect"}}</h3>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.effect"}}
+      <select name="system.effect">{{selectOptions powerEffects selected=system.effect valueAttr="key" labelAttr="label"}}</select>
+    </label>
+    <label>{{sr2eT "SR2E.UI.damageLevel"}}
+      <select name="system.damageLevel">{{selectOptions damageLevels selected=system.damageLevel valueAttr="key" labelAttr="label"}}</select>
+    </label>
+    <label>{{sr2eT "SR2E.UI.damageType"}}
+      <select name="system.damageType">{{selectOptions damageTypes selected=system.damageType valueAttr="key" labelAttr="label"}}</select>
+    </label>
+  </div>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.area"}} <input type="checkbox" name="system.area" {{checked system.area}}></label>
+    <label>{{sr2eT "SR2E.UI.repeatsEGEachTurn"}} <input type="checkbox" name="system.repeating" {{checked system.repeating}}></label>
+    <label class="sr2e-wide">{{sr2eT "SR2E.UI.rangeActionDuration"}} <input type="text" name="system.notes" value="{{system.notes}}" placeholder="{{sr2eT "SR2E.UI.eGTouchComplexActionSustained"}}"></label>
+  </div>
+  <h3 class="sr2e-subhead" data-help="item-sheet" data-heading="Special">{{sr2eT "SR2E.UI.special"}}</h3>
+  <div class="sr2e-row">
+    <label title="{{sr2eT "SR2E.UI.anEffectTheSystemAppliesV0"}}">{{sr2eT "SR2E.UI.special"}} <select name="system.special">{{selectOptions powerSpecials selected=system.special valueAttr="key" labelAttr="label"}}</select></label>
+    {{#if (or (eq system.special "allergy") (eq system.special "vulnerability"))}}
+    <label class="sr2e-wide">{{sr2eT "SR2E.UI.substance"}} <input type="text" name="system.substance" value="{{system.substance}}" placeholder="{{sr2eT "SR2E.UI.eGSilverSunlight"}}"></label>
+    {{/if}}
+    {{#if (eq system.special "immunity")}}
+    <label class="sr2e-wide" title="{{sr2eT "SR2E.UI.normalWeaponsFirePoisonsPathogensAge"}}">{{sr2eT "SR2E.UI.immuneTo"}} <input type="text" name="system.substance" value="{{system.substance}}" placeholder="{{sr2eT "SR2E.UI.normalWeaponsFire"}}"></label>
+    {{/if}}
+    {{#if (eq system.special "allergy")}}
+    <label>{{sr2eT "SR2E.UI.severity"}} <select name="system.severity">{{selectOptions allergySeverities selected=system.severity valueAttr="key" labelAttr="label"}}</select></label>
+    <label>{{sr2eT "SR2E.UI.exposedNow"}} <input type="checkbox" name="system.exposed" {{checked system.exposed}}></label>
+    {{/if}}
+    {{#if (eq system.special "infection")}}
+    <label>{{sr2eT "SR2E.UI.disease"}} <input type="text" name="system.substance" value="{{system.substance}}" placeholder="{{infectionDefault}}"></label>
+    {{/if}}
+  </div>
+  {{#if (eq system.special "infection")}}<p class="hint">{{sr2eT "SR2E.UI.itsMeleeBlowsPassTheDisease"}}</p>{{/if}}
+  {{#if (eq system.special "immunity")}}<p class="hint">{{sr2eT "SR2E.UI.immunityToNormalWeaponsArmorOf" immunityArmorPerEssence=immunityArmorPerEssence}}</p>{{/if}}
+  <div class="sr2e-row">
+    <span class="sr2e-offsets-label" title="{{sr2eT "SR2E.UI.v0560OnTheTarget"}}">{{sr2eT "SR2E.UI.putsOnItsTarget"}}</span>
+    <label title="{{sr2eT "SR2E.UI.addedToEveryTestTheTarget"}}">{{sr2eT "SR2E.UI.tnOnItsTests"}} <input type="number" name="system.mods.testsTn" value="{{system.mods.testsTn}}"></label>
+    <label title="{{sr2eT "SR2E.UI.addedToTestsToNoticeThe"}}">{{sr2eT "SR2E.UI.tnToNoticeIt"}} <input type="number" name="system.mods.perceivedTn" value="{{system.mods.perceivedTn}}"></label>
+    <label title="{{sr2eT "SR2E.UI.addedToAttacksAndSpellsAgainst"}}">{{sr2eT "SR2E.UI.tnToAttackIt"}} <input type="number" name="system.mods.attackedTn" value="{{system.mods.attackedTn}}"></label>
+    <label title="{{sr2eT "SR2E.UI.1NoChange2Doubles0"}}">{{sr2eT "SR2E.UI.movement"}} <input type="number" name="system.mods.movementFactor" value="{{system.mods.movementFactor}}" min="0" step="0.25"></label>
+  </div>
+  {{#if tnSpecial}}<p class="hint">{{sr2eT "SR2E.UI.leftAt0Or1These" powerModDefaults=powerModDefaults}}</p>{{/if}}
+  <h3 class="sr2e-subhead" data-help="item-sheet" data-heading="Sustained">{{sr2eT "SR2E.UI.sustained2"}}</h3>
+  <div class="sr2e-row">
+    <label title="{{sr2eT "SR2E.UI.aSustainedPowerItsEffectLasts"}}">{{sr2eT "SR2E.UI.sustained2"}} <input type="checkbox" name="system.sustained" {{checked system.sustained}}></label>
+    {{#if system.sustained}}
+    <label title="{{sr2eT "SR2E.UI.multiplyTheChangesByTheNet"}}">{{sr2eT "SR2E.UI.netSuccesses"}} <input type="checkbox" name="system.perSuccess" {{checked system.perSuccess}}></label>
+    {{/if}}
+  </div>
+  {{#if system.sustained}}
+  <div class="sr2e-row">
+    <span class="sr2e-offsets-label">{{sr2eT "SR2E.UI.changesTheTargetS"}}</span>
+    {{#each powerAttributeFields}}<label>{{label}} <input type="number" name="system.attributes.{{key}}" value="{{value}}"></label>{{/each}}
+  </div>
+  <p class="hint">{{sr2eT "SR2E.UI.withNetSuccessesOnlyAsIts"}}</p>
+  {{/if}}
+  <p class="hint">{{sr2eT "SR2E.UI.theDiceRolledAreAlsoThe"}}</p>
+  {{/if}}
+
+  {{#if (eq type "focus")}}
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.type"}}
+      <select name="system.focusType">{{selectOptions focusTypes selected=system.focusType valueAttr="key" labelAttr="label"}}</select>
+    </label>
+    <label>{{sr2eT "SR2E.UI.rating"}} <input type="number" name="system.rating" value="{{system.rating}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.active"}} <input type="checkbox" name="system.active" {{checked system.active}}></label>
+    <label>{{sr2eT "SR2E.UI.bonded"}} <input type="checkbox" name="system.bonded" {{checked system.bonded}}></label>
+  </div>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.spellCategorySpellSustaining"}}
+      <select name="system.category">{{selectOptions focusCategories selected=system.category valueAttr="key" labelAttr="label"}}</select>
+    </label>
+    <label class="sr2e-wide">{{sr2eT "SR2E.UI.tiedToSpellSpiritKindType"}} <input type="text" name="system.target" value="{{system.target}}" placeholder="{{sr2eT "SR2E.UI.emptyAny"}}"></label>
+    {{#if (eq system.focusType "weapon")}}
+    <label>{{sr2eT "SR2E.UI.weaponSizeBondingKarma"}}
+      <select name="system.size"><option value="small" {{#unless (eq system.size "large")}}selected{{/unless}}>{{sr2eT "SR2E.UI.smallNoReach"}}</option><option value="large" {{#if (eq system.size "large")}}selected{{/if}}>{{sr2eT "SR2E.UI.largeReach"}}</option></select>
+    </label>
+    {{/if}}
+  </div>
+  <p class="hint">{{sr2eT "SR2E.UI.spellFociAddDiceToSorcery"}}</p>
+  {{/if}}
+
+  {{#if (eq type "adeptpower")}}
+  <h3 class="sr2e-subhead" data-help="item-sheet" data-heading="Cost and level">{{sr2eT "SR2E.UI.costAndLevel"}}</h3>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.powerPointCost"}} <input type="number" name="system.cost" value="{{system.cost}}" min="0" step="0.25"></label>
+    <label>{{sr2eT "SR2E.UI.level2"}} <input type="number" name="system.level" value="{{system.level}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.active"}} <input type="checkbox" name="system.active" {{checked system.active}}></label>
+  </div>
+  <h3 class="sr2e-subhead" data-help="item-sheet" data-heading="Bonuses">{{sr2eT "SR2E.UI.bonuses"}}</h3>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.body"}} <input type="number" name="system.attributes.body" value="{{system.attributes.body}}"></label>
+    <label>{{sr2eT "SR2E.UI.quickness2"}} <input type="number" name="system.attributes.quickness" value="{{system.attributes.quickness}}"></label>
+    <label>{{sr2eT "SR2E.UI.strength"}} <input type="number" name="system.attributes.strength" value="{{system.attributes.strength}}"></label>
+    <label>{{sr2eT "SR2E.UI.charisma"}} <input type="number" name="system.attributes.charisma" value="{{system.attributes.charisma}}"></label>
+    <label>{{sr2eT "SR2E.UI.intelligence"}} <input type="number" name="system.attributes.intelligence" value="{{system.attributes.intelligence}}"></label>
+    <label>{{sr2eT "SR2E.UI.willpower"}} <input type="number" name="system.attributes.willpower" value="{{system.attributes.willpower}}"></label>
+  </div>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.reactionBonus"}} <input type="number" name="system.reaction" value="{{system.reaction}}"></label>
+    <label>{{sr2eT "SR2E.UI.extraInitiativeDice"}} <input type="number" name="system.initiativeDice" value="{{system.initiativeDice}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.skill"}} <input type="text" name="system.skill" value="{{system.skill}}" placeholder="{{sr2eT "SR2E.UI.eGUnarmedCombat"}}"></label>
+    <label>{{sr2eT "SR2E.UI.skillDice"}} <input type="number" name="system.skillDice" value="{{system.skillDice}}"></label>
+    <label>{{sr2eT "SR2E.UI.ballisticArmor"}} <input type="number" name="system.ballistic" value="{{system.ballistic}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.impactArmor"}} <input type="number" name="system.impact" value="{{system.impact}}" min="0"></label>
+  </div>
+  <h3 class="sr2e-subhead" data-help="item-sheet" data-heading="Special">{{sr2eT "SR2E.UI.special"}}</h3>
+  <div class="sr2e-row">
+    <label title="{{sr2eT "SR2E.UI.anEffectTheSystemAppliesScaled"}}">{{sr2eT "SR2E.UI.special"}} <select name="system.special">{{selectOptions adeptSpecials selected=system.special valueAttr="key" labelAttr="label"}}</select></label>
+    {{#if (eq system.special "improvedSenses")}}
+    <label>{{sr2eT "SR2E.UI.sense"}} <select name="system.sense">{{selectOptions adeptSenses selected=system.sense valueAttr="key" labelAttr="label"}}</select></label>
+    {{/if}}
+  </div>
+  <p class="hint">{{sr2eT "SR2E.UI.killingHandsUnarmedBlowsDoPhysical"}}</p>
+  {{/if}}
+
+  {{#if (eq type "cyberdeck")}}
+  <h3 class="sr2e-subhead" data-help="item-sheet" data-heading="Persona">{{sr2eT "SR2E.UI.persona"}}</h3>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.inUse"}} <input type="checkbox" name="system.active" {{checked system.active}}></label>
+    <label>{{sr2eT "SR2E.UI.mpcp"}} <input type="number" name="system.mpcp" value="{{system.mpcp}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.bod"}} <input type="number" name="system.bod" value="{{system.bod}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.evasion"}} <input type="number" name="system.evasion" value="{{system.evasion}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.masking"}} <input type="number" name="system.masking" value="{{system.masking}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.sensors"}} <input type="number" name="system.sensors" value="{{system.sensors}}" min="0"></label>
+  </div>
+  <h3 class="sr2e-subhead" data-help="item-sheet" data-heading="Memory and speed">{{sr2eT "SR2E.UI.memoryAndSpeed"}}</h3>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.hardening"}} <input type="number" name="system.hardening" value="{{system.hardening}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.responseIncrease"}} <input type="number" name="system.responseIncrease" value="{{system.responseIncrease}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.activeMemoryMp"}} <input type="number" name="system.activeMemory" value="{{system.activeMemory}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.storageMp"}} <input type="number" name="system.storageMemory" value="{{system.storageMemory}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.iOSpeed"}} <input type="number" name="system.ioSpeed" value="{{system.ioSpeed}}" min="0"></label>
+  </div>
+  <h3 class="sr2e-subhead" data-help="item-sheet" data-heading="Options">{{sr2eT "SR2E.UI.options"}}</h3>
+  <div class="sr2e-row">
+    <label title="{{sr2eT "SR2E.UI.aWirelessTransceiverHowFarA"}}">{{sr2eT "SR2E.UI.signal"}} <input type="number" name="system.signal" value="{{system.signal}}" min="0"></label>
+    <label title="{{sr2eT "SR2E.UI.aDeckWithoutAsistMeatSpeed"}}">{{sr2eT "SR2E.UI.tortoise"}} <input type="checkbox" name="system.tortoise" {{checked system.tortoise}}></label>
+    <label title="{{sr2eT "SR2E.UI.anOtakuSLivingPersonaThe" otakuState=otakuState}}">{{sr2eT "SR2E.UI.livingPersonaOtaku"}} <input type="checkbox" name="system.living" {{checked system.living}}></label>
+    <label title="{{sr2eT "SR2E.UI.whatItCostTheBuilderCounts"}}">{{sr2eT "SR2E.UI.cost3"}} <input type="number" name="system.cost" value="{{system.cost}}" min="0"></label>
+  </div>
+  <div class="sr2e-row">
+    <label title="{{sr2eT "SR2E.UI.mpLoadedPerCombatTurnWhen"}}">{{sr2eT "SR2E.UI.loadSpeed"}} <input type="number" name="system.loadSpeed" value="{{system.loadSpeed}}" min="0"></label>
+    <label title="{{sr2eT "SR2E.UI.onEnteringAHostMpcpVs"}}">{{sr2eT "SR2E.UI.realityFilter"}} <input type="checkbox" name="system.realityFilter" {{checked system.realityFilter}}></label>
+    <label title="{{sr2eT "SR2E.UI.jacksForPassengersWhoRideAlong"}}">{{sr2eT "SR2E.UI.hitcherJacks"}} <input type="number" name="system.hitchers" value="{{system.hitchers}}" min="0"></label>
+  </div>
+  <h3 class="sr2e-subhead" data-help="item-sheet" data-heading="Deck damage">{{sr2eT "SR2E.UI.deckDamage"}}</h3>
+  <div class="sr2e-row">
+    <span title="{{sr2eT "SR2E.UI.damageToTheDeckItselfBlaster"}}">{{sr2eT "SR2E.UI.damage3"}}</span>
+    <label>{{sr2eT "SR2E.UI.mpcp"}} <input type="number" name="system.damage.mpcp" value="{{system.damage.mpcp}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.bod"}} <input type="number" name="system.damage.bod" value="{{system.damage.bod}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.evasion"}} <input type="number" name="system.damage.evasion" value="{{system.damage.evasion}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.masking"}} <input type="number" name="system.damage.masking" value="{{system.damage.masking}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.sensors"}} <input type="number" name="system.damage.sensors" value="{{system.damage.sensors}}" min="0"></label>
+  </div>
+  {{#if system.files.length}}<p>{{sr2eT "SR2E.UI.storedDataMp" deckStorage=deckStorage storageMemory=system.storageMemory}}{{#each system.files}}{{sr2eT "SR2E.UI.mp2" name=name size=size}}{{#unless @last}}, {{/unless}}{{/each}})</p>{{/if}}
+  {{#each deckWarnings}}<p class="hint sr2e-warn">{{this}}</p>{{/each}}
+  {{/if}}
+
+  {{#if (eq type "program")}}
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.utility"}}
+      <select name="system.kind">{{selectOptions utilityKinds selected=system.kind valueAttr="key" labelAttr="label"}}</select>
+    </label>
+    <label>{{sr2eT "SR2E.UI.rating"}} <input type="number" name="system.rating" value="{{system.rating}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.sizeMp"}} <input type="number" name="system.size" value="{{system.size}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.loaded"}} <input type="checkbox" name="system.loaded" {{checked system.loaded}}></label>
+    <label title="{{sr2eT "SR2E.UI.erasedByATarPitUntick"}}">{{sr2eT "SR2E.UI.erased"}} <input type="checkbox" name="system.erased" {{checked system.erased}}></label>
+    {{#if isGM}}<label class="sr2e-gm-only" title="{{sr2eT "SR2E.UI.anOtakuSComplexFormUses"}}">{{sr2eT "SR2E.UI.complexForm"}} <input type="checkbox" name="system.complexForm" {{checked system.complexForm}}></label>{{else}}{{#if system.complexForm}}<span>{{sr2eT "SR2E.UI.complexForm"}}</span>{{/if}}{{/if}}
+    {{#if (eq system.kind "attack")}}<label>{{sr2eT "SR2E.UI.damageLevel"}}
+      <select name="system.damageLevel">{{selectOptions damageLevels selected=system.damageLevel valueAttr="key" labelAttr="label"}}</select>
+    </label>{{/if}}
+  </div>
+  {{#if programOptions}}<p class="hint">{{sr2eT "SR2E.UI.writtenWith" programOptions=programOptions}}</p>{{/if}}
+  <p class="hint">{{sr2eT "SR2E.UI.attackUtilitiesDealPowerRatingAt"}}{{#if programOptions}}{{sr2eT "SR2E.UI.withItsOptions"}}{{/if}}): <strong>{{sr2eT "SR2E.UI.mp3" bookSize=bookSize}}</strong>{{#unless system.size}}{{sr2eT "SR2E.UI.usedWhileSizeIs0"}}{{/unless}}.</p>
+  {{/if}}
+
+  {{#if (eq type "gear")}}
+  <h3 class="sr2e-subhead" data-help="item-sheet" data-heading="General">{{sr2eT "SR2E.UI.general"}}</h3>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.quantity"}} <input type="number" name="system.quantity" value="{{system.quantity}}" min="0"></label>
+    <label title="{{sr2eT "SR2E.UI.aRemoteControlDeckJumpInto" rcdPerRating=rcdPerRating}}">{{sr2eT "SR2E.UI.remoteControlDeckRating"}} <input type="number" name="system.rcdRating" value="{{system.rcdRating}}" min="0"></label>
+    {{#if system.rcdRating}}<label title="{{sr2eT "SR2E.UI.howFarItsSignalReaches0"}}">{{sr2eT "SR2E.UI.signal"}} <input type="number" name="system.signal" value="{{system.signal}}" min="0"></label>{{/if}}
+    <label title="{{sr2eT "SR2E.UI.aJammerJamsRemoteLinksIts"}}">{{sr2eT "SR2E.UI.jammerRating"}} <input type="number" name="system.jammer" value="{{system.jammer}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.enchantingMaterial"}}
+      <select name="system.material">{{selectOptions materialChoices selected=system.material valueAttr="key" labelAttr="label"}}</select>
+    </label>
+  </div>
+  <div class="sr2e-row">
+    <label title="{{sr2eT "SR2E.UI.anAmmunitionClipReloadOnA"}}">{{sr2eT "SR2E.UI.ammunitionClip"}}
+      <select name="system.ammoType">{{selectOptions clipChoices selected=system.ammoType valueAttr="key" labelAttr="label"}}</select>
+    </label>
+    <label>{{sr2eT "SR2E.UI.roundsPerClip0FillsThe"}} <input type="number" name="system.rounds" value="{{system.rounds}}" min="0"></label>
+    <label title="{{sr2eT "SR2E.UI.addsThisManyDiceToFirst"}}">{{sr2eT "SR2E.UI.medkitRating"}} <input type="number" name="system.medkitRating" value="{{system.medkitRating}}" min="0"></label>
+    <label title="{{sr2eT "SR2E.UI.aSlapPatchStimTranqTrauma"}}">{{sr2eT "SR2E.UI.patch"}} <select name="system.patch.kind">{{selectOptions patchChoices selected=system.patch.kind valueAttr="key" labelAttr="label"}}</select></label>
+    <label>{{sr2eT "SR2E.UI.patchRating"}} <input type="number" name="system.patch.rating" value="{{system.patch.rating}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.weightKgEach"}} <input type="number" name="system.weight" value="{{system.weight}}" min="0" step="0.1"></label>
+    <label>{{sr2eT "SR2E.UI.concealability"}} <input type="number" name="system.concealability" value="{{system.concealability}}" min="0"></label>
+    <label title="{{sr2eT "SR2E.UI.bulkInCargoFactorUnitsEach"}}">{{sr2eT "SR2E.UI.cf3"}} <input type="number" name="system.cf" value="{{system.cf}}" min="0" step="0.5"></label>
+    <label title="{{sr2eT "SR2E.UI.aProgrammingSuiteHelpsWritePrograms"}}">{{sr2eT "SR2E.UI.programmingSuite"}} <input type="number" name="system.suite" value="{{system.suite}}" min="0"></label>
+  </div>
+  <h3 class="sr2e-subhead" data-help="item-sheet" data-heading="Sensors and radio">{{sr2eT "SR2E.UI.sensorsAndRadio"}}</h3>
+  <div class="sr2e-row">
+    <label title="{{sr2eT "SR2E.UI.aChameleonSuitOrThermalMasking"}}">{{sr2eT "SR2E.UI.stealthSuit"}} <select name="system.stealth.kind">{{selectOptions stealthKinds selected=system.stealth.kind valueAttr="key" labelAttr="label"}}</select></label>
+    {{#if system.stealth.kind}}<label>{{sr2eT "SR2E.UI.suitRating"}} <input type="number" name="system.stealth.rating" value="{{system.stealth.rating}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.worn"}} <input type="checkbox" name="system.stealth.worn" {{checked system.stealth.worn}}></label>{{/if}}
+    <label>{{sr2eT "SR2E.UI.scanner"}} <select name="system.scanner.kind">{{selectOptions scannerKinds selected=system.scanner.kind valueAttr="key" labelAttr="label"}}</select></label>
+    {{#if system.scanner.kind}}<label>{{sr2eT "SR2E.UI.scannerRating"}} <input type="number" name="system.scanner.rating" value="{{system.scanner.rating}}" min="0"></label>{{/if}}
+  </div>
+  <div class="sr2e-row">
+    <label class="sr2e-wide" title="{{sr2eT "SR2E.UI.diceOrATnChangeFor2"}}">{{sr2eT "SR2E.UI.helpsSkills"}} <input type="text" name="skillModsText" value="{{skillModsText}}" placeholder="{{sr2eT "SR2E.UI.eGAthletics2PerceptionTn"}}"></label>
+    <label title="{{sr2eT "SR2E.UI.aRadioItsSignalRatingA"}}">{{sr2eT "SR2E.UI.radioRating"}} <input type="number" name="system.radio.rating" value="{{system.radio.rating}}" min="0"></label>
+    {{#if system.radio.rating}}<label title="{{sr2eT "SR2E.UI.listeningInNeedsThisBroken"}}">{{sr2eT "SR2E.UI.encryption"}} <input type="number" name="system.radio.encryption" value="{{system.radio.encryption}}" min="0"></label>{{/if}}
+  </div>
+  <h3 class="sr2e-subhead" data-heading="Identity">{{sr2eT "SR2E.UI.identity"}}</h3>
+  <div class="sr2e-row">
+    <label title="{{sr2eT "SR2E.UI.aSinOrALicencePermit"}}">{{sr2eT "SR2E.UI.id"}} <select name="system.identity.kind">{{selectOptions identityKinds selected=system.identity.kind valueAttr="key" labelAttr="label"}}</select></label>
+    {{#if system.identity.kind}}<label title="{{sr2eT "SR2E.UI.aFakeSRatingTheChecker"}}">{{sr2eT "SR2E.UI.rating"}} <input type="number" name="system.identity.rating" value="{{system.identity.rating}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.fake2"}} <input type="checkbox" name="system.identity.fake" {{checked system.identity.fake}}></label>
+    {{#if (eq system.identity.kind "licence")}}<label class="sr2e-wide" title="{{sr2eT "SR2E.UI.aLegalityCategoryPermitRestrictedOr"}}">{{sr2eT "SR2E.UI.covers"}} <input type="text" name="system.identity.covers" value="{{system.identity.covers}}" placeholder="{{sr2eT "SR2E.UI.permitOrEGPistolShotgun"}}"></label>{{/if}}{{/if}}
+  </div>
+  <h3 class="sr2e-subhead" data-heading="Magical site">{{sr2eT "SR2E.UI.magicalSite"}}</h3>
+  <div class="sr2e-row">
+    <label title="{{sr2eT "SR2E.UI.aHermeticLibraryCircleOrShamanic"}}">{{sr2eT "SR2E.UI.magicalSite"}} <select name="system.site.kind">{{selectOptions siteKinds selected=system.site.kind valueAttr="key" labelAttr="label"}}</select></label>
+    {{#if system.site.kind}}
+    <label>{{sr2eT "SR2E.UI.rating"}} <input type="number" name="system.site.rating" value="{{system.site.rating}}" min="0"></label>
+    <label title="{{sr2eT "SR2E.UI.libraryConjuringOrSorceryCircleIts"}}">{{sr2eT "SR2E.UI.topicElementTotem"}} <input type="text" name="system.site.tag" value="{{system.site.tag}}"></label>
+    <span class="hint">{{sr2eT "SR2E.UI.buildingOneDays" nuyen=siteCost.nuyen days=siteCost.days}}</span>
+    {{#if ownedByActor}}<button type="button" data-action="raiseSite" title="{{sr2eT "SR2E.UI.payToBuildItOrRaise"}}">{{sr2eT "SR2E.UI.raise"}}</button>{{/if}}
+    {{/if}}
+  </div>
+  <h3 class="sr2e-subhead" data-heading="Explosives and toxins">{{sr2eT "SR2E.UI.explosivesAndToxins"}}</h3>
+  <div class="sr2e-row">
+    <label title="{{sr2eT "SR2E.UI.anExplosiveChargeItsPower0"}}">{{sr2eT "SR2E.UI.explosivePower"}} <input type="number" name="system.explosive.power" value="{{system.explosive.power}}" min="0"></label>
+    {{#if system.explosive.power}}
+    <label>{{sr2eT "SR2E.UI.powerLostPerMetre"}} <input type="number" name="system.explosive.perMetre" value="{{system.explosive.perMetre}}" min="0" step="0.5"></label>
+    <label title="{{sr2eT "SR2E.UI.againstABarrierItIsSet"}}">{{sr2eT "SR2E.UI.shaped"}} <input type="checkbox" name="system.explosive.shaped" {{checked system.explosive.shaped}}></label>
+    {{/if}}
+  </div>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.toxinDrugOrDisease"}} <select name="system.toxin.kind">{{selectOptions toxinKinds selected=system.toxin.kind valueAttr="key" labelAttr="label"}}</select></label>
+    {{#if system.toxin.kind}}
+    <label>{{sr2eT "SR2E.UI.vector"}} <select name="system.toxin.vector">{{selectOptions toxinVectors selected=system.toxin.vector valueAttr="key" labelAttr="label"}}</select></label>
+    <label>{{sr2eT "SR2E.UI.power3"}} <input type="number" name="system.toxin.power" value="{{system.toxin.power}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.level2"}} <select name="system.toxin.level">{{selectOptions damageLevels selected=system.toxin.level valueAttr="key" labelAttr="label"}}</select></label>
+    <label>{{sr2eT "SR2E.UI.type"}} <select name="system.toxin.damageType">{{selectOptions damageTypes selected=system.toxin.damageType valueAttr="key" labelAttr="label"}}</select></label>
+    <label>{{sr2eT "SR2E.UI.speed"}} <select name="system.toxin.speed">{{selectOptions toxinSpeeds selected=system.toxin.speed valueAttr="key" labelAttr="label"}}</select></label>
+    <label class="sr2e-wide">{{sr2eT "SR2E.UI.otherEffect"}} <input type="text" name="system.toxin.effect" value="{{system.toxin.effect}}" placeholder="{{sr2eT "SR2E.UI.eGNausea2Tn"}}"></label>
+    {{/if}}
+  </div>
+  {{#if (eq system.toxin.kind "drug")}}
+  <div class="sr2e-row">
+    <span>{{sr2eT "SR2E.UI.aDoseGives"}}</span>
+    <label>{{sr2eT "SR2E.UI.body"}} <input type="number" name="system.toxin.attributes.body" value="{{system.toxin.attributes.body}}"></label>
+    <label>{{sr2eT "SR2E.UI.quickness2"}} <input type="number" name="system.toxin.attributes.quickness" value="{{system.toxin.attributes.quickness}}"></label>
+    <label>{{sr2eT "SR2E.UI.strength"}} <input type="number" name="system.toxin.attributes.strength" value="{{system.toxin.attributes.strength}}"></label>
+    <label>{{sr2eT "SR2E.UI.charisma"}} <input type="number" name="system.toxin.attributes.charisma" value="{{system.toxin.attributes.charisma}}"></label>
+    <label>{{sr2eT "SR2E.UI.intelligence"}} <input type="number" name="system.toxin.attributes.intelligence" value="{{system.toxin.attributes.intelligence}}"></label>
+    <label>{{sr2eT "SR2E.UI.willpower"}} <input type="number" name="system.toxin.attributes.willpower" value="{{system.toxin.attributes.willpower}}"></label>
+    <label>{{sr2eT "SR2E.UI.reaction"}} <input type="number" name="system.toxin.reaction" value="{{system.toxin.reaction}}"></label>
+    <label>{{sr2eT "SR2E.UI.initiativeDice"}} <input type="number" name="system.toxin.initiativeDice" value="{{system.toxin.initiativeDice}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.lastsMinutes"}} <input type="number" name="system.toxin.durationMinutes" value="{{system.toxin.durationMinutes}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.crashPower2"}} <input type="number" name="system.toxin.crashPower" value="{{system.toxin.crashPower}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.crashLevel"}} <select name="system.toxin.crashLevel">{{selectOptions crashLevels selected=system.toxin.crashLevel valueAttr="key" labelAttr="label"}}</select></label>
+    <label>{{sr2eT "SR2E.UI.addiction"}} <input type="number" name="system.toxin.addiction" value="{{system.toxin.addiction}}" min="0"></label>
+    {{#if system.toxin.addiction}}<label>{{sr2eT "SR2E.UI.addictionType"}} <select name="system.toxin.addictionType">{{selectOptions addictionTypes selected=system.toxin.addictionType valueAttr="key" labelAttr="label"}}</select></label>{{/if}}
+  </div>
+  <div class="sr2e-row">
+    <span>{{sr2eT "SR2E.UI.andWhileItLasts"}}</span>
+    <label title="{{sr2eT "SR2E.UI.ballisticArmor"}}">{{sr2eT "SR2E.UI.ballistic"}} <input type="number" name="system.toxin.extra.ballistic" value="{{system.toxin.extra.ballistic}}"></label>
+    <label title="{{sr2eT "SR2E.UI.impactArmor"}}">{{sr2eT "SR2E.UI.impact"}} <input type="number" name="system.toxin.extra.impact" value="{{system.toxin.extra.impact}}"></label>
+    <label title="{{sr2eT "SR2E.UI.tnChangeOnAllTheUser"}}">{{sr2eT "SR2E.UI.ownTestsTn"}} <input type="number" name="system.toxin.extra.testsTn" value="{{system.toxin.extra.testsTn}}"></label>
+    <label title="{{sr2eT "SR2E.UI.tnChangeToNoticeTheUser"}}">{{sr2eT "SR2E.UI.noticedTn"}} <input type="number" name="system.toxin.extra.perceivedTn" value="{{system.toxin.extra.perceivedTn}}"></label>
+    <label title="{{sr2eT "SR2E.UI.tnChangeToAttackTheUser"}}">{{sr2eT "SR2E.UI.attackedTn"}} <input type="number" name="system.toxin.extra.attackedTn" value="{{system.toxin.extra.attackedTn}}"></label>
+    <label title="{{sr2eT "SR2E.UI.movementThis1Normal"}}">{{sr2eT "SR2E.UI.movement"}} <input type="number" name="system.toxin.extra.movementFactor" value="{{system.toxin.extra.movementFactor}}" min="0" step="0.25"></label>
+    <label title="{{sr2eT "SR2E.UI.likeAPainEditorWoundModifiers"}}">{{sr2eT "SR2E.UI.ignoresWounds"}} <input type="checkbox" name="system.toxin.extra.ignoreWounds" {{checked system.toxin.extra.ignoreWounds}}></label>
+    <label title="{{sr2eT "SR2E.UI.thisManyStunBoxesDonT"}}">{{sr2eT "SR2E.UI.ignoresStunBoxes"}} <input type="number" name="system.toxin.extra.stunIgnoreBoxes" value="{{system.toxin.extra.stunIgnoreBoxes}}" min="0"></label>
+  </div>
+  <p class="hint">{{sr2eT "SR2E.UI.takeUsesADoseTheBonuses"}}</p>
+  {{/if}}
+  {{#if (eq system.toxin.kind "disease")}}
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.incubationHours"}} <input type="number" name="system.toxin.incubationHours" value="{{system.toxin.incubationHours}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.testsEveryHours"}} <input type="number" name="system.toxin.intervalHours" value="{{system.toxin.intervalHours}}" min="1"></label>
+    <label>{{sr2eT "SR2E.UI.cleanTestsToRecover"}} <input type="number" name="system.toxin.recoveries" value="{{system.toxin.recoveries}}" min="0" placeholder="{{sr2eT "SR2E.UI.0Default"}}"></label>
+    <label title="{{sr2eT "SR2E.UI.howItSpreadsFromACarrier"}}">{{sr2eT "SR2E.UI.contagious"}} <select name="system.toxin.contagious">{{selectOptions contagionVectors selected=system.toxin.contagious valueAttr="key" labelAttr="label"}}</select></label>
+  </div>
+  <p class="hint">{{sr2eT "SR2E.UI.exposeTheVictimResistsWithBody"}}</p>
+  {{/if}}
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.protection"}} <select name="system.protection.kind">{{selectOptions protectionKinds selected=system.protection.kind valueAttr="key" labelAttr="label"}}</select></label>
+    {{#if system.protection.kind}}
+    <label>{{sr2eT "SR2E.UI.rating"}} <input type="number" name="system.protection.rating" value="{{system.protection.rating}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.worn"}} <input type="checkbox" name="system.protection.worn" {{checked system.protection.worn}}></label>
+    {{/if}}
+  </div>
+  <h3 class="sr2e-subhead" data-heading="Chips">{{sr2eT "SR2E.UI.chips"}}</h3>
+  <div class="sr2e-row">
+    <label title="{{sr2eT "SR2E.UI.aSkillsoftChipActivesoftsNeedSkillwires"}}">{{sr2eT "SR2E.UI.skillsoft2"}} <select name="system.chip.kind">{{selectOptions chipKinds selected=system.chip.kind valueAttr="key" labelAttr="label"}}</select></label>
+    {{#if system.chip.kind}}
+    <label>{{sr2eT "SR2E.UI.skill"}} <input type="text" name="system.chip.skill" value="{{system.chip.skill}}" placeholder="{{sr2eT "SR2E.UI.eGFirearms"}}"></label>
+    <label>{{sr2eT "SR2E.UI.rating"}} <input type="number" name="system.chip.rating" value="{{system.chip.rating}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.slotted"}} <input type="checkbox" name="system.chip.slotted" {{checked system.chip.slotted}}></label>
+    {{/if}}
+  </div>
+  <div class="sr2e-row">
+    <label title="{{sr2eT "SR2E.UI.aBtlOrSimsenseChipPlay"}}">{{sr2eT "SR2E.UI.simChip"}} <select name="system.simchip.kind">{{selectOptions simchipKinds selected=system.simchip.kind valueAttr="key" labelAttr="label"}}</select></label>
+    {{#if system.simchip.kind}}
+    <label title="{{sr2eT "SR2E.UI.addictiveChipsTheAddictionRating"}}">{{sr2eT "SR2E.UI.rating"}} <input type="number" name="system.simchip.rating" value="{{system.simchip.rating}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.minutes"}} <input type="number" name="system.simchip.minutes" value="{{system.simchip.minutes}}" min="0"></label>
+    {{/if}}
+    <label title="{{sr2eT "SR2E.UI.aSimrigPlaysSimChipsWithout"}}">{{sr2eT "SR2E.UI.simrig"}} <input type="checkbox" name="system.simrig" {{checked system.simrig}}></label>
+  </div>
+  <h3 class="sr2e-subhead" data-heading="Tools">{{sr2eT "SR2E.UI.tools"}}</h3>
+  <div class="sr2e-row">
+    <label title="{{sr2eT "SR2E.UI.aToolForBypassingMaglocksSequencer"}}">{{sr2eT "SR2E.UI.bypassTool"}} <select name="system.bypassTool.kind">{{selectOptions bypassToolKinds selected=system.bypassTool.kind valueAttr="key" labelAttr="label"}}</select></label>
+    {{#if system.bypassTool.kind}}<label>{{sr2eT "SR2E.UI.toolRating"}} <input type="number" name="system.bypassTool.rating" value="{{system.bypassTool.rating}}" min="0"></label>{{/if}}
+  </div>
+  <div class="sr2e-row">
+    <label title="{{sr2eT "SR2E.UI.buildRepairToolsAKitShop"}}">{{sr2eT "SR2E.UI.tools"}} <select name="system.tools.level">{{selectOptions toolLevels selected=system.tools.level valueAttr="key" labelAttr="label"}}</select></label>
+    {{#if (ne system.tools.level "none")}}<label title="{{sr2eT "SR2E.UI.eGElectronicsBRBlank"}}">{{sr2eT "SR2E.UI.for"}} <input type="text" name="system.tools.skill" value="{{system.tools.skill}}" placeholder="{{sr2eT "SR2E.UI.anyBRSkill"}}"></label>{{/if}}
+  </div>
+  <h3 class="sr2e-subhead" data-heading="Vision and surveillance">{{sr2eT "SR2E.UI.visionAndSurveillance"}}</h3>
+  <div class="sr2e-row">
+    <label title="{{sr2eT "SR2E.UI.gogglesGlassesBinocularsOrAVisor"}}">{{sr2eT "SR2E.UI.visionGearWorn"}} <input type="checkbox" name="system.optics.worn" {{checked system.optics.worn}}></label>
+    <label>{{sr2eT "SR2E.UI.lowLight"}} <input type="checkbox" name="system.optics.lowLight" {{checked system.optics.lowLight}}></label>
+    <label>{{sr2eT "SR2E.UI.thermographic"}} <input type="checkbox" name="system.optics.thermographic" {{checked system.optics.thermographic}}></label>
+    <label title="{{sr2eT "SR2E.UI.immuneToFlashGrenades"}}">{{sr2eT "SR2E.UI.flareComp"}} <input type="checkbox" name="system.optics.flareComp" {{checked system.optics.flareComp}}></label>
+    <label title="{{sr2eT "SR2E.UI.eachLevelMovesARangedAttack"}}">{{sr2eT "SR2E.UI.magnification"}} <input type="number" name="system.optics.magnification" value="{{system.optics.magnification}}" min="0" max="3"></label>
+  </div>
+  <div class="sr2e-row">
+    <label title="{{sr2eT "SR2E.UI.bugsAndTapsPlantedOnSomeone"}}">{{sr2eT "SR2E.UI.surveillance"}} <select name="system.surveillance.kind">{{selectOptions surveillanceKinds selected=system.surveillance.kind valueAttr="key" labelAttr="label"}}</select></label>
+    {{#if system.surveillance.kind}}<label>{{sr2eT "SR2E.UI.rating"}} <input type="number" name="system.surveillance.rating" value="{{system.surveillance.rating}}" min="0"></label>
+    <label title="{{sr2eT "SR2E.UI.switchedOnWhiteNoiseAndJammers"}}">{{sr2eT "SR2E.UI.on2"}} <input type="checkbox" name="system.surveillance.active" {{checked system.surveillance.active}}></label>
+    {{#if system.surveillance.plantedName}}<span>{{sr2eT "SR2E.UI.plantedOn"}} <strong>{{system.surveillance.plantedName}}</strong></span>{{/if}}{{/if}}
+  </div>
+  {{/if}}
+
+  {{#if buyable}}
+  <h3 class="sr2e-subhead" data-heading="Cost and legality">{{sr2eT "SR2E.UI.costAndLegality"}}</h3>
+  <div class="sr2e-row">
+    {{#unless (eq type "cyberware")}}
+    {{#unless (eq type "cyberdeck")}}<label>{{sr2eT "SR2E.UI.cost3"}} <input type="number" name="system.cost" value="{{system.cost}}" min="0"></label>{{/unless}}
+    <label title="{{sr2eT "SR2E.UI.eG614Days4"}}">{{sr2eT "SR2E.UI.availability"}} <input type="text" name="system.availability" value="{{system.availability}}" placeholder="{{sr2eT "SR2E.UI.eG614Days"}}"></label>
+    {{/unless}}
+    <label>{{sr2eT "SR2E.UI.streetIndex"}} <input type="number" name="system.streetIndex" value="{{system.streetIndex}}" min="0" step="0.05"></label>
+    {{#if heatOn}}{{#if isGM}}<label class="sr2e-gm-only" data-sr2e-gm title="{{sr2eT "SR2E.UI.stolenGoodsAFencePaysLess"}}">{{sr2eT "SR2E.UI.heat"}} <input type="number" name="system.heat" value="{{system.heat}}" min="0"></label>{{else}}{{#if system.heat}}<span title="{{sr2eT "SR2E.UI.stolenGoodsAFencePaysLess2"}}">{{sr2eT "SR2E.UI.heat2" heat=system.heat}}</span>{{/if}}{{/if}}{{#if heatNow}}<span>{{heatNow}}</span>{{/if}}{{/if}}
+    <label title="{{sr2eT "SR2E.UI.whatTheLawSaysAboutCarrying"}}">{{sr2eT "SR2E.UI.legality"}} <select name="system.legality">{{selectOptions legalityChoices selected=system.legality valueAttr="key" labelAttr="label"}}</select></label>
+    {{#if permit.show}}<label title="{{#if permit.tickable}}{{sr2eT "SR2E.UI.theOwnerHoldsAPermitFor"}}{{else}}{{sr2eT "SR2E.UI.permitGmTicks"}}{{/if}}">{{sr2eT "SR2E.UI.permit"}} <input type="checkbox" name="system.permit" {{checked system.permit}}{{#unless permit.tickable}} disabled{{/unless}}></label>
+    {{#if permit.button}}<button type="button" data-action="getPermit" title="{{permit.buttonTitle}}">{{sr2eT "SR2E.UI.getPermit"}}</button>{{/if}}
+    {{#if permit.underWay}}<span class="hint">{{sr2eT "SR2E.UI.permitUnderWay"}}</span>{{/if}}{{#if permit.requested}}<span class="hint">{{sr2eT "SR2E.UI.permitRequested"}}</span>{{/if}}{{#if permit.licence}}<span class="hint">{{permit.licence}}</span>{{/if}}{{/if}}
+    {{#if permit.warning}}<span class="sr2e-warn" data-sr2e-legal-warning>{{permit.warning}}</span>{{/if}}
+    {{#if canBreak}}<label title="{{sr2eT "SR2E.UI.brokenItCanTBeUsed"}}">{{sr2eT "SR2E.UI.broken2"}} <input type="checkbox" name="system.damaged" {{checked system.damaged}}></label>{{/if}}
+    {{#if system.cost}}<span>{{sr2eT "SR2E.UI.price"}} <strong>¥{{priceLabel}}</strong></span>{{/if}}
+    {{#if ownedByActor}}{{#if system.cost}}
+    <button type="button" data-action="findItem" title="{{sr2eT "SR2E.UI.anAvailabilityTestTheCardHas"}}">{{sr2eT "SR2E.UI.find"}}</button>
+    <button type="button" data-action="buyItem" title="{{sr2eT "SR2E.UI.payForItNow"}}">{{sr2eT "SR2E.UI.buy"}}</button>
+    <button type="button" data-action="fenceItem" title="{{sr2eT "SR2E.UI.sellItToAFenceA"}}">{{sr2eT "SR2E.UI.fence"}}</button>
+    {{/if}}{{/if}}
+  </div>
+  {{/if}}
+  <label>{{sr2eT "SR2E.UI.description"}}</label>
+  {{#if editable}}<prose-mirror class="sr2e-rich" name="system.description" toggled value="{{richSource.description}}">{{{enriched.description}}}</prose-mirror>{{else}}<div class="sr2e-rich">{{{enriched.description}}}</div>{{/if}}
+</div>

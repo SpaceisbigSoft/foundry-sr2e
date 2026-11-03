@@ -1,0 +1,28 @@
+{{!-- v0.68.0: the always-visible status strip (rules/interface.ts statusStrip): the condition monitor in wound groups, the
+     wound modifier, initiative, pools left (click a pip to set), the readied weapon and its ammo, and "your turn" with the
+     actions left this phase. It stays at the top of the sheet with the tabs. Context: strip, cm.
+     v0.86.0: a group, not a live region (it re-renders with every change and would talk over everything); each pool's
+     pips are one Tab stop moved with the arrow keys (applications/a11y.ts). --}}
+<div class="sr2e-strip{{#if strip.turn}} sr2e-strip-myturn{{/if}}" role="group" aria-label="{{sr2eT "SR2E.UI.status"}}">
+  {{#if cm}}<span class="sr2e-strip-cm">{{> "systems/sr2e/templates/monitor-mini.hbs"}}</span>{{/if}}
+  {{#if strip.wound}}<span class="sr2e-strip-item sr2e-strip-wound" title="{{sr2eT "SR2E.UI.woundModifierAddedToTheTarget"}}">{{strip.wound}}<small>{{sr2eT "SR2E.UI.tn"}}</small></span>{{/if}}
+  {{#if strip.status}}<span class="sr2e-strip-item{{#if strip.danger}} sr2e-strip-danger{{/if}}">{{strip.status}}</span>{{/if}}
+  <span class="sr2e-strip-item" title="{{#if strip.initNow}}{{sr2eT "SR2E.UI.initiativeThisPass"}}{{else}}{{sr2eT "SR2E.UI.initiativeReactionDice"}}{{/if}}"><small>{{sr2eT "SR2E.UI.init"}}</small> <b>{{strip.init}}</b></span>
+  {{#each strip.pools}}
+  <span class="sr2e-strip-pool{{#if empty}} empty{{/if}}" role="group" aria-label="{{sr2eT "SR2E.UI.poolOfLeft" label=label left=left total=total}}" title="{{sr2eT "SR2E.UI.poolOfLeftClickAPip" label=label left=left total=total}}"><small>{{short}}</small>{{#each pips}}<a class="sr2e-pip{{#if filled}} filled{{/if}}" data-action="setPool" data-pool="{{../key}}" data-value="{{value}}" aria-label="{{sr2eT "SR2E.UI.pool" label=../label value=value}}"></a>{{/each}}<b>{{left}}</b><i>/{{total}}</i></span>
+  {{/each}}
+  {{#if strip.weapon}}
+  <span class="sr2e-strip-weapon{{#if strip.weapon.out}} out{{/if}}" title="{{sr2eT "SR2E.UI.readiedWeaponClickToAttackWith"}}">
+    <a data-action="attackWeapon" data-item-id="{{strip.weapon.id}}" aria-label="{{sr2eT "SR2E.UI.attackWith" name=strip.weapon.name}}"><i class="fa-solid fa-crosshairs"></i> {{strip.weapon.name}}</a>
+    {{#if strip.weapon.mode}}<small>{{strip.weapon.mode}}</small>{{/if}}
+    {{#if strip.weapon.ammo}}<b class="{{#if strip.weapon.low}}low{{/if}}" title="{{sr2eT "SR2E.UI.roundsLeft"}}">{{strip.weapon.ammo}}</b>{{/if}}
+    {{#if strip.weapon.jammed}}<strong class="sr2e-warn">{{sr2eT "SR2E.UI.jammed"}}</strong>{{/if}}
+    {{#if strip.weapon.holstered}}<em>{{sr2eT "SR2E.UI.holstered"}}</em>{{/if}}
+  </span>
+  {{/if}}
+  {{#if strip.turn}}
+  <span class="sr2e-strip-turn" title="{{sr2eT "SR2E.UI.itSSActionPhaseLeft" name=actor.name label=strip.turn.label}}">
+    <b>{{sr2eT "SR2E.UI.yourTurn"}}</b><span class="sr2e-sr-only">{{sr2eT "SR2E.UI.left3" label=strip.turn.label}}</span>{{#each strip.turn.pips}}<i class="sr2e-act-pip{{#if on}} on{{/if}}"></i>{{/each}}<small>{{strip.turn.label}}</small>
+  </span>
+  {{/if}}
+</div>

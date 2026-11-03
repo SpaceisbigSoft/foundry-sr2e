@@ -1,0 +1,10 @@
+{{!-- v0.67.0: one condition-monitor track in wound groups (rules/look.ts trackView). Context: t (the track), action (the box click),
+     v0.68.0: step (− / + buttons that take a box off or add one). Boxes take the keyboard (Enter or Space).
+     v0.86.0: a track is one Tab stop; the arrow keys move along its boxes and each says whether it is filled (applications/a11y.ts). --}}
+<div class="sr2e-cm-track sr2e-cm-{{t.track}}" role="group" aria-label="{{sr2eT "SR2E.UI.ofBoxes" label=t.label filled=t.filled boxes=t.boxes}}{{#if t.reached}}, {{t.reached}}{{/if}}">
+  <span class="sr2e-cm-label">{{t.label}}</span>
+  <span class="sr2e-cm-groups">
+    {{#each t.groups}}{{#unless @first}}<span class="sr2e-cm-div" aria-hidden="true"></span>{{/unless}}<span class="sr2e-cm-group{{#if now}} now{{/if}}" title="{{title}}"><i aria-hidden="true">{{label}}</i><span>{{#each boxes}}<a class="sr2e-box{{#if filled}} filled{{/if}}" tabindex="0" role="button" data-action="{{../../action}}" data-track="{{../../t.track}}" data-value="{{value}}" title="{{../../t.label}} {{value}}" aria-label="{{sr2eT "SR2E.UI.box" label=../../t.label value=value}}"></a>{{/each}}</span></span>{{/each}}
+  </span>
+  {{#if step}}<span class="sr2e-cm-steps"><a data-action="stepMonitor" data-track="{{t.track}}" data-delta="-1" title="{{sr2eT "SR2E.UI.oneBoxLess" label=t.label}}" aria-label="{{sr2eT "SR2E.UI.minusOne" label=t.label}}">−</a><a data-action="stepMonitor" data-track="{{t.track}}" data-delta="1" title="{{sr2eT "SR2E.UI.oneBoxMore" label=t.label}}" aria-label="{{sr2eT "SR2E.UI.plusOne" label=t.label}}">+</a></span>{{/if}}
+</div>

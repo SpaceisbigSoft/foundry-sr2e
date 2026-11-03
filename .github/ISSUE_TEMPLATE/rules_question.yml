@@ -1,0 +1,42 @@
+name: Rules question
+description: The system plays a rule differently from your book, or you're not sure how a rule is meant to work.
+labels: [rules]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Many of the system's rules numbers were written from memory and are listed for checking in `docs/VERIFY.md`. Corrections are very welcome. Please give the book and page, and describe the rule in your own words: don't copy rulebook text.
+  - type: input
+    id: rule
+    attributes:
+      label: The rule
+      placeholder: "e.g. recoil for a second burst in the same phase"
+    validations:
+      required: true
+  - type: textarea
+    id: system
+    attributes:
+      label: What the system does
+      description: What happened in Foundry (a screenshot of the chat card helps).
+    validations:
+      required: true
+  - type: textarea
+    id: book
+    attributes:
+      label: What you think the rule is
+      description: In your own words, with the book and page (for example "SR2 core, p. 99").
+    validations:
+      required: true
+  - type: dropdown
+    id: source
+    attributes:
+      label: Rules source in Configure Settings
+      options:
+        - SR2E Book Rules (the default)
+        - SR2E Unified Rules Revamp
+        - I'm not sure
+  - type: input
+    id: houserule
+    attributes:
+      label: House rules you changed (if any)
+      description: The "Report a bug" text lists them too.

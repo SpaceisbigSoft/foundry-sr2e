@@ -1,0 +1,664 @@
+<div class="sr2e-sheet sr2e-layout-{{layout}}">
+  <header class="sr2e-header">
+    <img src="{{actor.img}}" alt="" width="72" height="72" data-edit="img">
+    <div class="sr2e-header-main">
+      <input type="text" name="name" value="{{actor.name}}" placeholder="{{sr2eT "SR2E.UI.name"}}">
+      <div class="sr2e-header-meta">
+      <label class="sr2e-inline">{{sr2eT "SR2E.UI.metatype"}}
+        <select name="system.metatype">{{selectOptions metatypeChoices selected=system.metatype valueAttr="key" labelAttr="label"}}</select>
+      </label>
+      <label class="sr2e-inline" title="{{sr2eT "SR2E.UI.untickIfTheBaseRatingsAlready"}}">{{sr2eT "SR2E.UI.addRacialModifiers"}} <input type="checkbox" name="system.racialModifiers" {{checked system.racialModifiers}}></label>
+      </div>
+    </div>
+  </header>
+  {{> "systems/sr2e/templates/sheet-summary.hbs"}}
+  <div class="sr2e-stuck">
+    {{> "systems/sr2e/templates/status-strip.hbs"}}
+    <nav class="sheet-tabs tabs sr2e-tabs" data-group="primary">
+      {{#each sheetTabs}}<a class="item{{#if active}} active{{/if}}" data-action="tab" data-group="primary" data-tab="{{id}}"><i class="{{icon}}" aria-hidden="true"></i> {{label}}</a>{{/each}}
+    </nav>
+  </div>
+  {{#if (eq layout "combat")}}{{> "systems/sr2e/templates/combat-column.hbs"}}{{/if}}
+  <section class="tab sr2e-tab{{#if (eq activeTab "main")}} active{{/if}}" data-group="primary" data-tab="main">
+    <section class="sr2e-attributes">
+      <h2 data-heading="Attributes">{{sr2eT "SR2E.UI.attributes"}}</h2>
+      <table>
+        <thead><tr><th></th><th>{{sr2eT "SR2E.UI.base"}}</th><th>{{sr2eT "SR2E.UI.racial"}}</th><th>{{sr2eT "SR2E.UI.mod"}}</th><th>{{sr2eT "SR2E.UI.gear"}}</th><th>{{sr2eT "SR2E.UI.total"}}</th></tr></thead>
+        <tbody>
+          {{#each attributes}}
+          <tr>
+            <td><a data-action="rollAttribute" data-attribute="{{key}}" title="{{sr2eT "SR2E.UI.roll"}}">{{label}}</a>{{#if improve.ok}} <a class="sr2e-improve" data-action="improve" data-attribute="{{key}}" title="{{sr2eT "SR2E.UI.raiseToKarma" to=improve.to cost=improve.cost}}"><i class="fa-solid fa-circle-plus"></i></a>{{/if}}</td>
+            <td><input type="number" name="system.attributes.{{key}}.base" value="{{base}}" min="0" aria-label="{{sr2eT "SR2E.UI.base2" label=label}}"></td>
+            <td>{{#if racial}}{{racial}}{{else}}&ndash;{{/if}}</td>
+            <td><input type="number" class="sr2e-play-ok" name="system.attributes.{{key}}.mod" value="{{mod}}" title="{{sr2eT "SR2E.UI.temporaryModifierStaysEditableInPlay"}}" aria-label="{{sr2eT "SR2E.UI.temporaryModifier" label=label}}"></td>
+            <td>{{#if gear}}+{{gear}}{{else}}&ndash;{{/if}}</td>
+            <td>{{total}}</td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+      {{#if system.derived.attributeWarnings.length}}<ul class="sr2e-warnings">{{#each system.derived.attributeWarnings}}<li>{{this}}</li>{{/each}}</ul>{{/if}}
+      <div class="sr2e-row">
+        <label>{{sr2eT "SR2E.UI.baseEssence"}} <input type="number" name="system.essence" value="{{system.essence}}" step="0.01" min="0"></label>
+        {{#if system.essenceShift}}<label title="{{sr2eT "SR2E.UI.essenceDrainedNegativeOrGainedPositive"}}">{{sr2eT "SR2E.UI.drainedGained"}} <input type="number" name="system.essenceShift" value="{{system.essenceShift}}" step="0.1"></label>{{/if}}
+        {{#if essenceHoles}}<label title="{{sr2eT "SR2E.UI.essenceLostToCyberwareThatCame"}}">{{sr2eT "SR2E.UI.essenceHole"}} <input type="number" name="system.essenceHole" value="{{system.essenceHole}}" step="0.01" min="0"></label>{{/if}}
+        <label>{{sr2eT "SR2E.UI.magicNatural"}} <input type="number" name="system.magic" value="{{system.magic}}" min="0"></label>
+        <label>{{sr2eT "SR2E.UI.lowLight"}} <input type="checkbox" name="system.vision.lowLight" {{checked system.vision.lowLight}}></label>
+        <label>{{sr2eT "SR2E.UI.thermographic"}} <input type="checkbox" name="system.vision.thermographic" {{checked system.vision.thermographic}}></label>
+        <label>{{sr2eT "SR2E.UI.reactionBonus"}} <input type="number" name="system.reactionBonus" value="{{system.reactionBonus}}"></label>
+        <label>{{sr2eT "SR2E.UI.extraInitiativeDice"}} <input type="number" name="system.initiativeDiceBonus" value="{{system.initiativeDiceBonus}}" min="0"></label>
+      </div>
+    </section>
+    <section class="sr2e-derived">
+      <h2 data-heading="Derived">{{sr2eT "SR2E.UI.derived"}}</h2>
+      <div class="sr2e-row">
+        <span>{{sr2eT "SR2E.UI.essence"}} <strong>{{system.derived.essence}}</strong>{{#if system.derived.essenceLoss}} (−{{system.derived.essenceLoss}}){{/if}}{{#if system.derived.essenceHole}} <span title="{{sr2eT "SR2E.UI.essenceLostToCyberwareThatCame2"}}">{{sr2eT "SR2E.UI.hole" essenceHole=system.derived.essenceHole}}</span>{{/if}}</span>
+        {{#if system.derived.bodyIndex.used}}<span class="{{#if system.derived.bodyIndex.over}}sr2e-warning{{/if}}">{{sr2eT "SR2E.UI.bodyIndex"}} <strong>{{system.derived.bodyIndex.used}} / {{system.derived.bodyIndex.max}}</strong>{{#if system.derived.bodyIndex.magicLoss}} {{sr2eT "SR2E.UI.magic" magicLoss=system.derived.bodyIndex.magicLoss}}{{/if}}</span>{{/if}}
+        <span>{{sr2eT "SR2E.UI.magic2"}} <strong>{{system.derived.magic}}</strong></span>
+        <span>{{sr2eT "SR2E.UI.reaction"}} <strong>{{system.derived.reaction}}</strong></span>
+        <span>{{sr2eT "SR2E.UI.initiative"}} <strong>{{system.derived.reaction}} + {{system.derived.initiativeDice}}d6</strong></span>
+        <span>{{sr2eT "SR2E.UI.combatPool"}} <strong>{{system.derived.combatPoolLeft}} / {{system.derived.combatPool}}</strong></span>
+        <span>{{sr2eT "SR2E.UI.spellPool"}} <strong>{{system.derived.spellPoolLeft}} / {{system.derived.spellPool}}</strong></span>
+        {{#if street.movement}}<span title="{{sr2eT "SR2E.UI.metresPerCombatTurn"}}">{{sr2eT "SR2E.UI.walk"}} <strong>{{street.movement.walk}} m</strong> {{sr2eT "SR2E.UI.run"}} <strong>{{street.movement.run}} m</strong></span>{{/if}}
+      </div>
+      <div class="sr2e-row">
+        <label>{{sr2eT "SR2E.UI.combatPoolSpent"}} <input type="number" name="system.poolSpent.combat" value="{{system.poolSpent.combat}}" min="0"></label>
+        <label>{{sr2eT "SR2E.UI.karmaPool"}} <input type="number" name="system.karma.pool" value="{{system.karma.pool}}" min="0"></label>
+        <span>{{sr2eT "SR2E.UI.karmaPoolLeft"}} <strong>{{system.derived.karmaPoolLeft}} / {{system.karma.pool}}</strong>
+          <a data-action="refreshKarma" title="{{sr2eT "SR2E.UI.refreshKarmaPool"}}"><i class="fa-solid fa-rotate"></i></a></span>
+        <label>{{sr2eT "SR2E.UI.goodKarma"}} <input type="number" name="system.karma.good" value="{{system.karma.good}}" min="0"></label>
+      </div>
+      {{#if system.derived.magic}}
+      <div class="sr2e-row sr2e-astral">
+        <label>{{sr2eT "SR2E.UI.astral"}}
+          <select name="system.astral">{{selectOptions astralModes selected=system.astral valueAttr="key" labelAttr="label"}}</select>
+        </label>
+        {{#if (eq system.derived.astralMode "projecting")}}<span>{{sr2eT "SR2E.UI.astralBodyQuicknessInit" body=system.derived.astral.body quickness=system.derived.astral.quickness}} <strong>{{system.derived.astral.initiativeBase}} + {{system.derived.astral.initiativeDice}}d6</strong></span>{{/if}}
+        {{#if (eq system.derived.astralMode "perceiving")}}<span>{{sr2eT "SR2E.UI.dualNaturedPhysicalAttacksTn" astralPerceivingMod=astralPerceivingMod}}</span>{{/if}}
+        {{#if isAstral}}<button type="button" data-action="astralAttack">{{sr2eT "SR2E.UI.astralAttack"}}</button>{{/if}}
+        {{#if canManifest}}<button type="button" data-action="manifest" title="{{sr2eT "SR2E.UI.beSeenAndHeardInThe"}}">{{#if manifesting}}{{sr2eT "SR2E.UI.stopManifesting"}}{{else}}{{sr2eT "SR2E.UI.manifest"}}{{/if}}</button>{{/if}}
+        {{#if manifesting}}<span class="sr2e-status">{{sr2eT "SR2E.UI.manifesting"}}</span>{{/if}}
+      </div>
+      {{/if}}
+      {{#if occult.possessedBy}}<p class="sr2e-warning">{{sr2eT "SR2E.UI.possessedBy"}} <strong>{{occult.possessedBy}}</strong>{{sr2eT "SR2E.UI.theBodyUsesTheirCharismaIntelligence"}} <button type="button" data-action="endPossession">{{sr2eT "SR2E.UI.free"}}</button></p>{{/if}}
+      {{> "systems/sr2e/templates/power-effects.hbs"}}
+    </section>
+    <section class="sr2e-monitor">
+      <h2 data-heading="Condition Monitor">{{sr2eT "SR2E.UI.conditionMonitor"}} <span class="sr2e-status">{{system.derived.status}}</span></h2>
+      {{> "systems/sr2e/templates/monitor.hbs"}}
+      <div class="sr2e-row">
+        <label>{{sr2eT "SR2E.UI.physicalDamageBoxes"}} <input type="number" name="system.monitor.physical" value="{{system.monitor.physical}}" min="0"></label>
+        <label>{{sr2eT "SR2E.UI.stunDamageBoxes"}} <input type="number" name="system.monitor.stun" value="{{system.monitor.stun}}" min="0"></label>
+        <span>{{sr2eT "SR2E.UI.woundTnModifier"}} <strong>+{{system.derived.woundModifier}}</strong></span>
+        <button type="button" data-action="resistDamage">{{sr2eT "SR2E.UI.resistDamage"}}</button>
+        <button type="button" data-action="hazard" title="{{sr2eT "SR2E.UI.fallingFireDrowningColdFatigue"}}">{{sr2eT "SR2E.UI.hazard"}}</button>
+        <button type="button" data-action="firstAid" title="{{sr2eT "SR2E.UI.firstAidOnThisCharacterOr"}}">{{sr2eT "SR2E.UI.firstAid"}}</button>
+        <button type="button" data-action="naturalHeal" title="{{sr2eT "SR2E.UI.naturalHealingAfterRest"}}">{{sr2eT "SR2E.UI.restAndHeal"}}</button>
+      </div>
+      {{#if (eq system.derived.status "dying")}}<p class="sr2e-warning">{{sr2eT "SR2E.UI.dying"}}{{#if system.care.stabilised}} {{sr2eT "SR2E.UI.stabilised"}}{{else}}{{sr2eT "SR2E.UI.loses1MorePhysicalBoxUntil" bleedEvery=system.derived.bleedEvery}}{{/if}}.</p>{{/if}}
+    </section>
+    <section class="sr2e-items">
+    {{#each skillGroups}}
+    <h2 data-heading="{{heading}}">{{label}} <a class="sr2e-add" data-action="addSkill" data-kind="{{kind}}" title="{{sr2eT "SR2E.UI.addASkill"}}"><i class="fa-solid fa-plus"></i></a></h2>
+    <ul>
+      {{#each skills}}
+      <li>
+        <a data-action="rollSkill" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.roll"}}">{{name}}</a>
+        <span><input type="number" class="sr2e-rowedit" data-item-id="{{id}}" data-field="system.rating" value="{{system.rating}}" min="0" title="{{sr2eT "SR2E.UI.rating"}}" aria-label="{{sr2eT "SR2E.UI.rating2" name=name}}">{{#if system.concentrationRating}} / {{system.concentration}} {{system.concentrationRating}}{{/if}}{{#if system.specializationRating}} / {{system.specialization}} {{system.specializationRating}}{{/if}} ({{system.attribute}}){{#if system.martial.enabled}} · <em>{{sr2eT "SR2E.UI.martialArt"}}</em>{{/if}} · <em>{{diceLabel}}</em></span>
+        {{#if improve.ok}}<a class="sr2e-improve" data-action="improve" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.raiseToKarma" to=improve.to cost=improve.cost}}"><i class="fa-solid fa-circle-plus"></i></a>{{/if}}
+        {{#if improveConc.ok}}<a class="sr2e-improve" data-action="improve" data-item-id="{{id}}" data-conc="1" title="{{sr2eT "SR2E.UI.raiseTheConcentrationToKarma" concentration=system.concentration to=improveConc.to cost=improveConc.cost}}"><i class="fa-solid fa-square-caret-up"></i></a>{{/if}}
+        {{#if system.specialization}}{{#if improve}}<a class="sr2e-improve" data-action="improve" data-item-id="{{id}}" data-spec="1" title="{{sr2eT "SR2E.UI.raiseTheSpecialization" specialization=system.specialization}}"><i class="fa-solid fa-square-plus"></i></a>{{/if}}{{/if}}
+        <a class="sr2e-pin{{#if (lookup @root.tools.pinSet id)}} on{{/if}}" data-action="pinItem" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.pinItToTheTopOf"}}"><i class="fa-solid fa-thumbtack"></i></a>
+        <a data-action="editItem" data-item-id="{{id}}" data-sr2e-edit-pencil title="{{sr2eT "SR2E.UI.edit"}}"><i class="fa-solid fa-pen"></i></a>
+        <a data-action="deleteItem" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.delete"}}"><i class="fa-solid fa-trash"></i></a>
+      </li>
+      {{else}}<li class="sr2e-empty"><em>{{sr2eT "SR2E.UI.noSkillsYetPress"}} <i class="fa-solid fa-plus"></i> {{sr2eT "SR2E.UI.toAddOne"}}</em></li>
+      {{/each}}
+      {{#if @first}}
+      {{#each @root.softSkills}}
+      <li class="sr2e-soft">
+        <a data-action="rollSkill" data-item-id="{{id}}" data-skill-name="{{name}}" title="{{sr2eT "SR2E.UI.roll"}}">{{name}}</a>
+        <span>{{system.rating}} ({{system.attribute}}) · <em>{{sr2eT "SR2E.UI.skillsoft" chipName=chipName}}</em></span>
+      </li>
+      {{/each}}
+      {{/if}}
+    </ul>
+    {{/each}}
+    </section>
+  </section>
+  {{#if current}}
+  <section class="tab sr2e-tab{{#if (eq activeTab "current")}} active{{/if}}" data-group="primary" data-tab="current">
+    <section class="sr2e-current">
+      <p class="hint">{{sr2eT "SR2E.UI.whereStandsNowReadOnlyMain" name=actor.name}}{{#if current.hasRecord}} {{sr2eT "SR2E.UI.sinceComparesWithTheCreationRecord"}}{{/if}}</p>
+      <h2 data-heading="Attributes">{{sr2eT "SR2E.UI.attributes"}}</h2>
+      <table class="sr2e-current-table">
+        <thead><tr><th></th><th>{{sr2eT "SR2E.UI.base"}}</th><th>{{sr2eT "SR2E.UI.natural"}}</th><th>{{sr2eT "SR2E.UI.now"}}</th>{{#if current.hasRecord}}<th>{{sr2eT "SR2E.UI.since"}}</th>{{/if}}</tr></thead>
+        <tbody>
+          {{#each current.attributes}}
+          <tr><td>{{label}}</td><td>{{base}}</td><td>{{natural}}</td><td class="sr2e-current-total{{#if augmented}} sr2e-augmented{{/if}}" title="{{sources}}"><strong>{{total}}</strong></td>{{#if ../current.hasRecord}}<td class="sr2e-since">{{since}}</td>{{/if}}</tr>
+          {{/each}}
+          <tr><td>{{sr2eT "SR2E.UI.reaction"}}</td><td colspan="2"></td><td title="{{current.reaction.title}}"><strong>{{current.reaction.value}}</strong></td>{{#if current.hasRecord}}<td></td>{{/if}}</tr>
+          <tr><td>{{sr2eT "SR2E.UI.essence"}}</td><td>{{current.essence.base}}</td><td></td><td title="{{sr2eT "SR2E.UI.baseWare" base=current.essence.base loss=current.essence.loss}}{{#if current.essence.hole}}{{sr2eT "SR2E.UI.hole2" hole=current.essence.hole}}{{/if}}"><strong>{{current.essence.value}}</strong></td>{{#if current.hasRecord}}<td class="sr2e-since">{{current.essence.since}}</td>{{/if}}</tr>
+          {{#if current.magic}}<tr><td>{{sr2eT "SR2E.UI.magic2"}}</td><td>{{current.magic.base}}</td><td></td><td title="{{current.magic.tradition}}{{#if current.magic.grade}}{{sr2eT "SR2E.UI.initiateGrade" grade=current.magic.grade}}{{/if}}{{sr2eT "SR2E.UI.essenceLossAndGeasaLowerIt"}}"><strong>{{current.magic.value}}</strong></td>{{#if current.hasRecord}}<td class="sr2e-since">{{current.magic.since}}</td>{{/if}}</tr>{{/if}}
+        </tbody>
+      </table>
+      <h2 data-heading="Initiative and pools">{{sr2eT "SR2E.UI.initiativeAndPools"}}</h2>
+      <div class="sr2e-row sr2e-current-chips">
+        <span class="sr2e-chip">{{sr2eT "SR2E.UI.initiative"}} <strong>{{current.initiative}}</strong></span>
+        {{#if current.matrixInit}}<span class="sr2e-chip">{{sr2eT "SR2E.UI.matrix"}} <strong>{{current.matrixInit}}</strong></span>{{/if}}
+        {{#if current.riggedInit}}<span class="sr2e-chip">{{sr2eT "SR2E.UI.rigged"}} <strong>{{current.riggedInit}}</strong></span>{{/if}}
+        {{#each current.pools}}<span class="sr2e-chip">{{label}} <strong>{{left}}</strong>/{{total}}</span>{{/each}}
+      </div>
+      <h2 data-heading="Body">{{sr2eT "SR2E.UI.body"}}</h2>
+      <div class="sr2e-row sr2e-current-chips">
+        <span class="sr2e-chip">{{sr2eT "SR2E.UI.armor"}} <strong>{{current.armor.ballistic}}</strong>B / <strong>{{current.armor.impact}}</strong>I</span>
+        <span class="sr2e-chip">{{sr2eT "SR2E.UI.physical"}} <strong>{{current.condition.physical}}</strong>/{{current.condition.boxes}}</span>
+        <span class="sr2e-chip">{{sr2eT "SR2E.UI.stun"}} <strong>{{current.condition.stun}}</strong>/{{current.condition.boxes}}</span>
+        {{#if current.condition.wound}}<span class="sr2e-chip">{{sr2eT "SR2E.UI.wounds"}} <strong>+{{current.condition.wound}}</strong> {{sr2eT "SR2E.UI.tn"}}</span>{{/if}}
+        <span class="sr2e-chip sr2e-chip-soft">{{current.condition.status}}</span>
+        <span class="sr2e-chip sr2e-chip-soft">{{current.metatype}}</span>
+      </div>
+      <h2 data-heading="Karma and money">{{sr2eT "SR2E.UI.karmaAndMoney"}} <a data-action="spendKarma" title="{{sr2eT "SR2E.UI.spendKarma"}}"><i class="fa-solid fa-star"></i></a></h2>
+      <table class="sr2e-current-table">
+        <tbody>
+          <tr><td>{{sr2eT "SR2E.UI.goodKarmaUnspent"}}</td><td><strong>{{current.karma.good}}</strong></td>{{#if current.hasRecord}}<td class="sr2e-since">{{current.karma.goodSince}}</td>{{/if}}</tr>
+          <tr><td>{{sr2eT "SR2E.UI.karmaEarnedInAll"}}</td><td><strong>{{current.karma.career}}</strong></td>{{#if current.hasRecord}}<td class="sr2e-since">{{#if current.karma.earnedSince}}+{{current.karma.earnedSince}}{{/if}}</td>{{/if}}</tr>
+          <tr><td>{{sr2eT "SR2E.UI.karmaPool"}}</td><td><strong>{{current.karma.pool}}</strong></td>{{#if current.hasRecord}}<td></td>{{/if}}</tr>
+          <tr><td>{{sr2eT "SR2E.UI.nuyen"}}</td><td><strong>¥{{current.nuyen.value}}</strong></td>{{#if current.hasRecord}}<td class="sr2e-since">{{current.nuyen.since}}</td>{{/if}}</tr>
+          {{#if current.lifestyle}}<tr><td>{{sr2eT "SR2E.UI.lifestyle"}}</td><td colspan="2">{{current.lifestyle}}</td></tr>{{/if}}
+        </tbody>
+      </table>
+      <h2 data-heading="Skills">{{sr2eT "SR2E.UI.skills"}}</h2>
+      <table class="sr2e-current-table">
+        <thead><tr><th></th><th>{{sr2eT "SR2E.UI.rating"}}</th><th></th>{{#if current.hasRecord}}<th>{{sr2eT "SR2E.UI.since"}}</th>{{/if}}</tr></thead>
+        <tbody>
+          {{#each current.skills}}<tr><td>{{name}} <span class="hint">{{kind}}</span></td><td><strong>{{rating}}</strong></td><td class="hint">{{extra}}</td>{{#if ../current.hasRecord}}<td class="sr2e-since">{{since}}</td>{{/if}}</tr>
+          {{else}}<tr><td colspan="4"><em>{{sr2eT "SR2E.UI.noSkills"}}</em></td></tr>{{/each}}
+        </tbody>
+      </table>
+      {{#if underway.length}}
+      <h2 data-heading="Under way">{{sr2eT "SR2E.UI.underWay"}}</h2>
+      <ul class="sr2e-list">{{#each underway}}<li><strong>{{label}}</strong> · {{left}}</li>{{/each}}</ul>
+      {{/if}}
+      <h2 data-heading="In effect">{{sr2eT "SR2E.UI.inEffect"}}</h2>
+      <ul class="sr2e-list">
+        {{#each current.effects}}<li><span class="hint">{{group}}:</span> <strong>{{name}}</strong>{{#if detail}} · {{detail}}{{/if}}{{#if until}} <span class="hint">({{until}})</span>{{/if}}</li>
+        {{else}}<li><em>{{sr2eT "SR2E.UI.nothingIsActingOnRightNow" name=actor.name}}</em></li>{{/each}}
+      </ul>
+    </section>
+  </section>
+  {{/if}}
+  <section class="tab sr2e-tab{{#if (eq activeTab "combat")}} active{{/if}}" data-group="primary" data-tab="combat">
+    <section class="sr2e-items">
+    <h2 data-heading="Weapons">{{sr2eT "SR2E.UI.weapons"}} <a class="sr2e-add" data-action="addItem" data-type="weapon" title="{{sr2eT "SR2E.UI.addWeapons"}}"><i class="fa-solid fa-plus"></i></a></h2>
+    <ul>
+      {{#each weapons}}
+      <li>
+        <a data-action="editItem" data-item-id="{{id}}">{{name}}</a>
+        <span>{{damageLabel}} {{system.damageType}}{{#if system.melee}} {{sr2eT "SR2E.UI.melee"}}{{#if system.reach}}{{sr2eT "SR2E.UI.reach" reach=system.reach}}{{/if}}){{/if}}{{#unless system.melee}}{{#if modeButtons.length}} {{#each modeButtons}}<button type="button" class="sr2e-mode" data-action="attackWeapon" data-item-id="{{../id}}" data-mode="{{this}}" title="{{sr2eT "SR2E.UI.attackInMode" value=this}}">{{this}}</button>{{/each}}{{/if}}{{#if rangeLabel}} · {{rangeLabel}}{{/if}}{{#if system.ammoMax}} · <span class="sr2e-ammo" title="{{sr2eT "SR2E.UI.rounds" ammo=system.ammo ammoMax=system.ammoMax}}">{{#if pips}}{{#each pips}}<i class="sr2e-pip{{#if this}} full{{/if}}"></i>{{/each}}{{else}}{{system.ammo}}/{{system.ammoMax}}{{/if}}{{#if ammoLabel}} {{ammoLabel}}{{/if}}</span> <a data-action="reloadWeapon" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.reload"}}"><i class="fa-solid fa-rotate"></i></a>{{/if}} <a data-action="takeAim" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.takeAimAtTheTargetedToken"}}"><i class="fa-solid fa-bullseye"></i></a>{{#if system.blast}} <a data-action="placeArea" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.placeTheBlastAreaOnThe"}}"><i class="fa-solid fa-circle-dot"></i></a>{{/if}}{{#if system.ammoMax}} <a data-action="suppressFire" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.suppressiveFireAtTheTargetedTokens"}}"><i class="fa-solid fa-person-rifle"></i></a>{{/if}}{{#unless system.ready}} <a data-action="drawWeapon" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.holsteredDrawIt"}}">{{sr2eT "SR2E.UI.holstered"}}</a>{{/unless}}{{#if system.jammed}} <strong class="sr2e-warning" title="{{sr2eT "SR2E.UI.jammedClearItSimpleActionOr"}}">{{sr2eT "SR2E.UI.jammed"}}</strong>{{/if}}{{#if system.damaged}} <strong class="sr2e-warning" title="{{sr2eT "SR2E.UI.brokenRepairItWithItsBuild"}}">{{sr2eT "SR2E.UI.broken"}}</strong> <button type="button" data-action="repairGear" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.buildRepairTestToolsAsNeeded"}}">{{sr2eT "SR2E.UI.repair"}}</button>{{/if}}{{#if system.muzzle}} · {{system.muzzle}}{{/if}}{{#if (eq system.areaKind "flame")}} {{sr2eT "SR2E.UI.flamethrower"}}{{/if}}{{#if accessoryLabel}} · {{accessoryLabel}}{{/if}}{{#if support}} · <a data-action="setUpWeapon" data-item-id="{{id}}" title="{{#if system.supportSetUp}}{{sr2eT "SR2E.UI.foldThe" support=support}}{{else}}{{sr2eT "SR2E.UI.setUpTheAnActionRecoil" support=support}}{{/if}}">{{#if system.supportSetUp}}{{sr2eT "SR2E.UI.setUp" support=support}}{{else}}{{sr2eT "SR2E.UI.setUp2" support=support}}{{/if}}</a>{{/if}}{{/unless}}</span>
+        <button type="button" data-action="attackWeapon" data-item-id="{{id}}">{{sr2eT "SR2E.UI.attack"}}</button>
+        <a class="sr2e-pin{{#if (lookup @root.tools.pinSet id)}} on{{/if}}" data-action="pinItem" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.pinItToTheTopOf"}}"><i class="fa-solid fa-thumbtack"></i></a>
+        <a class="sr2e-dup" data-action="duplicateItem" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.duplicate"}}"><i class="fa-solid fa-clone"></i></a>
+        <a data-action="deleteItem" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.delete"}}"><i class="fa-solid fa-trash"></i></a>
+      </li>
+      {{/each}}
+      {{#each cyberWeapons}}
+      <li>
+        <span>{{name}}</span>
+        <span>{{sr2eT "SR2E.UI.cyberweapon" damageLabel=damageLabel damageType=system.damageType}}{{#if system.reach}}{{sr2eT "SR2E.UI.reach" reach=system.reach}}{{/if}})</span>
+        <button type="button" data-action="attackWeapon" data-item-id="{{id}}">{{sr2eT "SR2E.UI.attack"}}</button>
+      </li>
+      {{/each}}
+      <li>
+        <span>{{sr2eT "SR2E.UI.unarmed"}}</span>
+        <span>{{sr2eT "SR2E.UI.melee2" damageLabel=unarmed.damageLabel damageType=unarmed.damageType}}</span>
+        <button type="button" data-action="attackWeapon" data-item-id="unarmed">{{sr2eT "SR2E.UI.attack"}}</button>
+      </li>
+    </ul>
+    <h2 data-heading="Armor">{{sr2eT "SR2E.UI.armor"}} <a class="sr2e-add" data-action="addItem" data-type="armor" title="{{sr2eT "SR2E.UI.addArmor"}}"><i class="fa-solid fa-plus"></i></a></h2>
+    <ul>
+      {{#each armor}}
+      <li>
+        <a data-action="editItem" data-item-id="{{id}}">{{name}}</a>
+        <span>B{{system.ballistic}} / I{{system.impact}}{{#if system.adds}} {{sr2eT "SR2E.UI.adds"}}{{/if}}{{#if system.parry}} {{sr2eT "SR2E.UI.parry" parry=system.parry}}{{/if}}{{#if system.concealability}} {{sr2eT "SR2E.UI.conceal" concealability=system.concealability}}{{/if}}{{#if system.degraded}} <strong class="sr2e-warning" title="{{sr2eT "SR2E.UI.damagedToBothRatings" degraded=system.degraded}}">−{{system.degraded}}</strong> <a data-action="repairArmor" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.repair2"}}"><i class="fa-solid fa-screwdriver-wrench"></i></a>{{/if}}{{#unless system.worn}} {{sr2eT "SR2E.UI.notWorn"}}{{/unless}}</span>
+        <a class="sr2e-dup" data-action="duplicateItem" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.duplicate"}}"><i class="fa-solid fa-clone"></i></a>
+        <a data-action="deleteItem" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.delete"}}"><i class="fa-solid fa-trash"></i></a>
+      </li>
+      {{else}}<li class="sr2e-empty"><em>{{sr2eT "SR2E.UI.noArmorPress"}} <i class="fa-solid fa-plus"></i> {{sr2eT "SR2E.UI.toAddSome"}}</em></li>
+      {{/each}}
+    </ul>
+    <p class="hint">{{sr2eT "SR2E.UI.countsAgainstAttacksBallisticImpact" ballistic=armorRating.ballistic impact=armorRating.impact armorLayeringNote=armorLayeringNote}}</p>
+    </section>
+  </section>
+  <section class="tab sr2e-tab{{#if (eq activeTab "effects")}} active{{/if}}" data-group="primary" data-tab="effects">
+    {{> "systems/sr2e/templates/effects-section.hbs"}}
+  </section>
+  {{#if showMagicTab}}
+  <section class="tab sr2e-tab{{#if (eq activeTab "magic")}} active{{/if}}" data-group="primary" data-tab="magic">
+    {{#if system.derived.magic}}
+    <section class="sr2e-magic">
+      <h2 data-heading="Magic">{{sr2eT "SR2E.UI.magic2"}}</h2>
+      <div class="sr2e-row">
+        <label>{{sr2eT "SR2E.UI.tradition"}}
+          <select name="system.tradition">{{selectOptions traditions selected=system.tradition valueAttr="key" labelAttr="label"}}</select>
+        </label>
+        {{#unless isAdept}}<label>{{sr2eT "SR2E.UI.spellDefenseFromSpellPool"}} <input type="number" name="system.spellDefense" value="{{system.spellDefense}}" min="0"></label>
+          <button type="button" data-action="coverSpellDefense" title="{{sr2eT "SR2E.UI.coverTheCharactersOfYourTargeted"}}">{{sr2eT "SR2E.UI.coverTargets"}}</button>{{/unless}}
+        {{#if isAdept}}<span>{{sr2eT "SR2E.UI.powerPoints"}} <strong>{{system.derived.adeptPoints.spent}} / {{system.derived.adeptPoints.available}}</strong></span>{{/if}}
+        {{#if isAstral}}<button type="button" data-action="assense">{{sr2eT "SR2E.UI.assense"}}</button>
+          <button type="button" data-action="breachBarrier">{{sr2eT "SR2E.UI.forceBarrier"}}</button>{{/if}}
+        {{#if knowsDispelling}}<button type="button" data-action="dispel">{{sr2eT "SR2E.UI.dispel"}}</button>{{/if}}
+        <button type="button" data-action="showSignatures" title="{{sr2eT "SR2E.UI.astralSignaturesLingeringInThisScene"}}">{{sr2eT "SR2E.UI.signatures"}}</button>
+        {{#if isAstral}}<button type="button" data-action="trackTrail">{{sr2eT "SR2E.UI.track"}}</button>{{/if}}
+        {{#if canEnchant}}<button type="button" data-action="enchant">{{sr2eT "SR2E.UI.enchant"}}</button>{{/if}}
+        {{#unless isAdept}}<button type="button" data-action="startQuest" title="{{sr2eT "SR2E.UI.beginAnAstralQuest"}}">{{sr2eT "SR2E.UI.quest"}}</button>{{/unless}}
+        <button type="button" data-action="advanceInitiation" title="{{sr2eT "SR2E.UI.initiateToTheNextGradeFor"}}">{{sr2eT "SR2E.UI.initiate"}}</button>
+        {{#unless isAdept}}<button type="button" data-action="raiseWard" title="{{sr2eT "SR2E.UI.raiseAWardByRitual"}}">{{sr2eT "SR2E.UI.ward"}}</button>{{/unless}}
+      </div>
+      <div class="sr2e-row">
+        {{#if projection}}<span class="{{#if projection.over}}sr2e-warn{{/if}}">{{sr2eT "SR2E.UI.projecting"}} <strong>{{projection.hours}} h</strong> {{sr2eT "SR2E.UI.ofH" limit=projection.limit}}{{#if projection.over}} {{sr2eT "SR2E.UI.hOver" over=projection.over}}{{/if}}</span>{{/if}}
+        <span>{{sr2eT "SR2E.UI.sceneEnvironment"}} <strong>{{#if sceneEnvironment}}{{sceneEnvironment}}{{else}}{{sr2eT "SR2E.UI.notSet"}}{{/if}}</strong>{{#if isGM}} <a data-action="setEnvironment" data-sr2e-gm title="{{sr2eT "SR2E.UI.setForThisSceneGm"}}"><i class="fa-solid fa-pen"></i></a>{{/if}}</span>
+        <span>{{sr2eT "SR2E.UI.backgroundCountHere"}} <strong>{{#if backgroundMine.penalty}}+{{backgroundMine.penalty}}{{else}}0{{/if}}</strong>{{#if backgroundMine.toxic}} <span class="sr2e-status sr2e-warn">{{sr2eT "SR2E.UI.toxic"}}</span>{{/if}}{{#if backgroundMine.note}} ({{backgroundMine.note}}){{/if}}{{#if backgroundSources.length}} {{sr2eT "SR2E.UI.sourceS" length=backgroundSources.length}}{{/if}}{{#if isGM}} <a data-action="setBackground" data-sr2e-gm title="{{sr2eT "SR2E.UI.setForThisSceneGm"}}"><i class="fa-solid fa-pen"></i></a>{{/if}}</span>
+        {{#if questInfo}}<span class="sr2e-quest">{{sr2eT "SR2E.UI.quest"}} <strong>{{questInfo.name}}</strong>{{sr2eT "SR2E.UI.tn2" passed=questInfo.passed stages=questInfo.stages targetNumber=questInfo.targetNumber status=questInfo.status}}
+          {{#if (eq questInfo.status "underway")}}<button type="button" data-action="questStage">{{sr2eT "SR2E.UI.nextStage"}}</button>{{/if}}
+          <a data-action="endQuest" title="{{sr2eT "SR2E.UI.endTheQuest"}}"><i class="fa-solid fa-xmark"></i></a></span>{{/if}}
+      </div>
+      <div class="sr2e-row sr2e-initiation">
+        <label>{{sr2eT "SR2E.UI.initiateGrade2"}} <input type="number" name="system.initiateGrade" value="{{system.initiateGrade}}" min="0"></label>
+        <span class="sr2e-metamagic">{{#each metamagicList}}<label class="sr2e-check"><input type="checkbox" name="system.metamagic.{{key}}" {{checked known}}> {{label}}</label>{{/each}}</span>
+      </div>
+      {{#if knowsCentering}}
+      <div class="sr2e-row">
+        <label title="{{sr2eT "SR2E.UI.theSkillACenteringTestRolls"}}">{{sr2eT "SR2E.UI.centeringSkill"}} <input type="text" name="system.centeringSkill" value="{{system.centeringSkill}}" placeholder="{{sr2eT "SR2E.UI.eGSinging"}}"></label>
+        {{#if centeringTests}}<button type="button" data-action="centeringTest" title="{{sr2eT "SR2E.UI.rollItBeforeAMagicalTest"}}">{{sr2eT "SR2E.UI.center"}}</button>{{#if centeredNow}} <span class="sr2e-status">{{sr2eT "SR2E.UI.centered" centeredNow=centeredNow}}</span>{{/if}}{{/if}}
+      </div>
+      {{/if}}
+      {{> "systems/sr2e/templates/occult-section.hbs"}}
+      {{#if isElementalist}}
+      <div class="sr2e-row">
+        <label>{{sr2eT "SR2E.UI.element"}}
+          <select name="system.aspectElement">{{selectOptions elementChoices selected=system.aspectElement valueAttr="key" labelAttr="label"}}</select>
+        </label>
+      </div>
+      {{/if}}
+      {{#if isShaman}}
+      <div class="sr2e-row sr2e-totem">
+        <label>{{sr2eT "SR2E.UI.totem"}} <input type="text" name="system.totem.name" value="{{system.totem.name}}"></label>
+        {{#each totemFields}}<label>{{label}} <input type="number" name="system.totem.{{key}}" value="{{value}}"></label>{{/each}}
+        <label>{{sr2eT "SR2E.UI.environment"}} <input type="text" name="system.totem.environment" value="{{system.totem.environment}}" placeholder="{{sr2eT "SR2E.UI.eGForestWilderness"}}"></label>
+        <label>{{sr2eT "SR2E.UI.diceInIt"}} <input type="number" name="system.totem.inEnvironment" value="{{system.totem.inEnvironment}}"></label>
+        <label>{{sr2eT "SR2E.UI.diceAway"}} <input type="number" name="system.totem.outEnvironment" value="{{system.totem.outEnvironment}}"></label>
+        <label title="{{sr2eT "SR2E.UI.berserkWhenWoundedOrWhenA"}}">{{sr2eT "SR2E.UI.berserk"}} <select name="system.totem.berserk">{{selectOptions totemBerserk selected=system.totem.berserk valueAttr="key" labelAttr="label"}}</select></label>
+        <label title="{{sr2eT "SR2E.UI.tnPenaltyByDaylight1From"}}">{{sr2eT "SR2E.UI.daylightTn"}} <input type="number" name="system.totem.daylightTn" value="{{system.totem.daylightTn}}" min="-1"></label>
+        <label title="{{sr2eT "SR2E.UI.theSpiritTypesOrDomainsIts"}}">{{sr2eT "SR2E.UI.conjuringHelps"}} <input type="text" name="system.totem.spirits" value="{{system.totem.spirits}}" placeholder="{{sr2eT "SR2E.UI.eGForestMountainSpirits"}}"></label>
+      </div>
+      {{/if}}
+      {{#unless isAdept}}
+      <h3 data-heading="Geasa">{{sr2eT "SR2E.UI.geasa"}}{{#if system.derived.geasaPenalty}} <span class="sr2e-status">{{sr2eT "SR2E.UI.magic3" geasaPenalty=system.derived.geasaPenalty}}</span>{{/if}}
+        <a data-action="addGeas" title="{{sr2eT "SR2E.UI.addAGeas"}}"><i class="fa-solid fa-plus"></i></a></h3>
+      <ul>
+        {{#each geasaList}}
+        <li><input type="checkbox" data-action="toggleGeas" data-index="{{index}}" {{checked met}} title="{{sr2eT "SR2E.UI.met"}}">
+          <a data-action="editGeas" data-index="{{index}}">{{#if text}}{{text}}{{else}}{{sr2eT "SR2E.UI.unnamed"}}{{/if}}</a>
+          <span>{{sr2eT "SR2E.UI.protectsMagic" magic=magic}}{{#unless met}} · <strong>{{sr2eT "SR2E.UI.notMet"}}</strong>{{/unless}}</span>
+          <a data-action="deleteGeas" data-index="{{index}}" title="{{sr2eT "SR2E.UI.delete"}}"><i class="fa-solid fa-trash"></i></a></li>
+        {{else}}<li class="sr2e-empty"><em>{{sr2eT "SR2E.UI.noGeasaPress"}} <i class="fa-solid fa-plus"></i> {{sr2eT "SR2E.UI.toAddOne"}}</em></li>
+        {{/each}}
+      </ul>
+      {{/unless}}
+      {{#if sustainedList.length}}
+      <h3 data-heading="Sustaining">{{sr2eT "SR2E.UI.sustaining"}}{{#if sustainPenalty}} <span class="sr2e-status">{{sr2eT "SR2E.UI.tn3" sustainPenalty=sustainPenalty}}</span>{{/if}}</h3>
+      <ul>
+        {{#each sustainedList}}
+        <li><span>{{sr2eT "SR2E.UI.forceSucc" spellName=spellName force=force successes=successes}}{{#if focusName}} {{sr2eT "SR2E.UI.heldBy" focusName=focusName}}{{/if}}{{#if spiritName}} {{sr2eT "SR2E.UI.sustainedBy" spiritName=spiritName}}{{#if untilLabel}} ({{untilLabel}}){{/if}}{{/if}}{{#if quickened}} {{sr2eT "SR2E.UI.quickened"}}{{/if}}{{#if permanentLabel}} · {{permanentLabel}}{{/if}}{{#if effectLabel}} · <em>{{effectLabel}}</em>{{/if}}</span>
+          {{#if canQuicken}}<button type="button" data-action="quicken" data-index="{{index}}" title="{{sr2eT "SR2E.UI.quickenForGoodKarmaForce"}}">{{sr2eT "SR2E.UI.quicken"}}</button>{{/if}}
+          {{#if canHandToElemental}}<button type="button" data-action="sustainElemental" data-index="{{index}}" title="{{sr2eT "SR2E.UI.letAnElementalSustainItCosts"}}">{{sr2eT "SR2E.UI.elemental"}}</button>{{/if}}
+          <a data-action="dropSustained" data-index="{{index}}" title="{{sr2eT "SR2E.UI.dropTheSpell"}}"><i class="fa-solid fa-xmark"></i></a></li>
+        {{/each}}
+      </ul>
+      {{/if}}
+      {{#if anchoredList.length}}
+      <h3 data-heading="Anchored">{{sr2eT "SR2E.UI.anchored"}}</h3>
+      <ul>
+        {{#each anchoredList}}
+        <li><span>{{sr2eT "SR2E.UI.force" spellName=spellName force=force}}{{#if trigger}} {{sr2eT "SR2E.UI.when" trigger=trigger}}{{/if}}</span>
+          <button type="button" data-action="releaseAnchored" data-index="{{index}}">{{sr2eT "SR2E.UI.release"}}</button>
+          <a data-action="dropAnchored" data-index="{{index}}" title="{{sr2eT "SR2E.UI.discard"}}"><i class="fa-solid fa-xmark"></i></a></li>
+        {{/each}}
+      </ul>
+      {{/if}}
+      <h3 data-heading="Foci">{{sr2eT "SR2E.UI.foci"}}{{#if system.derived.focusAddiction.risk}} <span class="sr2e-status sr2e-warn">{{sr2eT "SR2E.UI.addictionRiskMagic" total=system.derived.focusAddiction.total}}</span> <button type="button" data-action="focusAddictionTest" title="{{sr2eT "SR2E.UI.rollTheFocusAddictionTest"}}">{{sr2eT "SR2E.UI.addictionTest"}}</button>{{/if}}{{#if focusAddict}} <span class="sr2e-status sr2e-warn">{{sr2eT "SR2E.UI.addicted"}}</span>{{#if isGM}} <a data-action="clearFocusAddiction" data-sr2e-gm title="{{sr2eT "SR2E.UI.clearGm"}}"><i class="fa-solid fa-xmark"></i></a>{{/if}}{{/if}} <a class="sr2e-add" data-action="addItem" data-type="focus" title="{{sr2eT "SR2E.UI.addFoci"}}"><i class="fa-solid fa-plus"></i></a></h3>
+      <ul>
+        {{#each foci}}
+        <li><input type="checkbox" data-action="toggleActive" data-item-id="{{id}}" {{checked system.active}} title="{{sr2eT "SR2E.UI.active"}}">
+          <a data-action="editItem" data-item-id="{{id}}">{{name}}</a>
+          <span>{{system.focusType}} <input type="number" class="sr2e-rowedit" data-item-id="{{id}}" data-field="system.rating" value="{{system.rating}}" min="1" title="{{sr2eT "SR2E.UI.rating"}}" aria-label="{{sr2eT "SR2E.UI.rating2" name=name}}">{{#if system.category}} · {{system.category}}{{/if}}{{#if system.target}} · {{system.target}}{{/if}}{{#unless system.bonded}} · <strong>{{sr2eT "SR2E.UI.notBonded"}}</strong>{{/unless}}</span>
+          {{#unless system.bonded}}<button type="button" data-action="bondFocus" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.bondForGoodKarma"}}">{{sr2eT "SR2E.UI.bond"}}</button>{{/unless}}
+          <a class="sr2e-dup" data-action="duplicateItem" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.duplicate"}}"><i class="fa-solid fa-clone"></i></a>
+          <a data-action="deleteItem" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.delete"}}"><i class="fa-solid fa-trash"></i></a></li>
+        {{else}}<li class="sr2e-empty"><em>{{sr2eT "SR2E.UI.noFociPress"}} <i class="fa-solid fa-plus"></i> {{sr2eT "SR2E.UI.toAddOne"}}</em></li>
+        {{/each}}
+      </ul>
+      {{#if showAdeptList}}
+      <h3 data-heading="Adept powers">{{sr2eT "SR2E.UI.adeptPowers"}} <a class="sr2e-add" data-action="addItem" data-type="adeptpower" title="{{sr2eT "SR2E.UI.addAdeptPowers"}}"><i class="fa-solid fa-plus"></i></a></h3>
+      {{#if adeptOverNote}}<p class="sr2e-warning">{{adeptOverNote}}</p>{{/if}}
+      <ul>
+        {{#each adeptPowers}}
+        <li><input type="checkbox" data-action="toggleActive" data-item-id="{{id}}" {{checked system.active}} title="{{sr2eT "SR2E.UI.active"}}">
+          <a data-action="editItem" data-item-id="{{id}}">{{name}}</a>
+          <span>{{sr2eT "SR2E.UI.level"}} <input type="number" class="sr2e-rowedit" data-item-id="{{id}}" data-field="system.level" value="{{system.level}}" min="0" title="{{sr2eT "SR2E.UI.level2"}}" aria-label="{{sr2eT "SR2E.UI.level3" name=name}}"> {{sr2eT "SR2E.UI.pts" cost=system.cost}}{{#if over}} · <strong class="sr2e-warn">{{sr2eT "SR2E.UI.overBudget"}}</strong>{{/if}}</span>
+          <a data-action="deleteItem" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.delete"}}"><i class="fa-solid fa-trash"></i></a></li>
+        {{else}}<li class="sr2e-empty"><em>{{sr2eT "SR2E.UI.noAdeptPowersPress"}} <i class="fa-solid fa-plus"></i> {{sr2eT "SR2E.UI.toAddSome"}}</em></li>
+        {{/each}}
+      </ul>
+      {{/if}}
+    </section>
+    {{/if}}
+    {{#if conjuring}}
+    <section class="sr2e-conjuring">
+      <h2 data-help="conjuring">{{sr2eT "SR2E.UI.conjuring" rating=conjuring.rating}}
+        <button type="button" data-action="summonSpirit">{{sr2eT "SR2E.UI.summon"}}</button>
+        <button type="button" data-action="banishSpirit">{{sr2eT "SR2E.UI.banish"}}</button>
+        <button type="button" data-action="bindTrueName" title="{{sr2eT "SR2E.UI.bindAFreeSpiritWhoseTrue"}}">{{sr2eT "SR2E.UI.trueName"}}</button></h2>
+      <ul>
+        {{#each conjuring.spirits}}
+        <li><a data-action="openActor" data-uuid="{{uuid}}">{{name}}</a> <span>{{#if force}}{{sr2eT "SR2E.UI.forceService" force=force services=services}}{{#unless (eq services 1)}}s{{/unless}} {{sr2eT "SR2E.UI.left" kind=kind}}{{else}}{{sr2eT "SR2E.UI.banished"}}{{/if}}</span></li>
+        {{else}}<li><em>{{sr2eT "SR2E.UI.noSpiritsSummoned"}}</em></li>
+        {{/each}}
+      </ul>
+      {{#if conjuring.maxElementals}}<p class="hint">{{sr2eT "SR2E.UI.boundElementals" elementals=conjuring.elementals maxElementals=conjuring.maxElementals}}</p>{{/if}}
+    </section>
+    {{/if}}
+    <section class="sr2e-items">
+    <h2 data-heading="Spells">{{sr2eT "SR2E.UI.spells"}} <a class="sr2e-add" data-action="addItem" data-type="spell" title="{{sr2eT "SR2E.UI.addSpells"}}"><i class="fa-solid fa-plus"></i></a></h2>
+    <ul>
+      {{#each spells}}
+      <li>
+        <a data-action="editItem" data-item-id="{{id}}">{{name}}</a>
+        <span>{{system.category}} ({{system.spellType}}{{#if (eq system.duration "sustained")}}{{sr2eT "SR2E.UI.sustained"}}{{/if}}{{#if (eq system.duration "permanent")}}{{sr2eT "SR2E.UI.permanent"}}{{/if}}{{#if (eq system.range "touch")}}{{sr2eT "SR2E.UI.touch"}}{{/if}}), F<input type="number" class="sr2e-rowedit" data-item-id="{{id}}" data-field="system.learnedForce" value="{{system.learnedForce}}" min="1" title="{{sr2eT "SR2E.UI.forceLearnedRaisingItInPlay"}}" aria-label="{{sr2eT "SR2E.UI.force2" name=name}}">{{#if (eq system.category "combat")}}, {{system.damageLevel}}{{#if (eq system.damageType "stun")}} {{sr2eT "SR2E.UI.stun2"}}{{/if}}{{/if}}{{sr2eT "SR2E.UI.drain" drainLevel=system.drainLevel}}</span>
+        <button type="button" data-action="castSpell" data-item-id="{{id}}">{{sr2eT "SR2E.UI.cast"}}</button>
+        <a class="sr2e-pin{{#if (lookup @root.tools.pinSet id)}} on{{/if}}" data-action="pinItem" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.pinItToTheTopOf"}}"><i class="fa-solid fa-thumbtack"></i></a>
+        {{#if system.area}}<a data-action="placeArea" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.placeTheAreaOnTheMap"}}"><i class="fa-solid fa-circle-dot"></i></a>{{/if}}
+        {{#if (eq system.spellType "physical")}}<a data-action="castAtObject" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.castAtAnObjectOrWall"}}"><i class="fa-solid fa-cube"></i></a>{{/if}}
+        <a data-action="raiseSpell" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.learnAtAHigherForceFor"}}"><i class="fa-solid fa-arrow-up"></i></a>
+        {{#if @root.occult.inGroup}}<a data-action="addGrimoire" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.offerItToYourMagicalGroup"}}"><i class="fa-solid fa-book"></i></a>{{/if}}
+        <a data-action="deleteItem" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.delete"}}"><i class="fa-solid fa-trash"></i></a>
+      </li>
+      {{else}}<li class="sr2e-empty"><em>{{sr2eT "SR2E.UI.noSpellsPress"}} <i class="fa-solid fa-plus"></i> {{sr2eT "SR2E.UI.toAddSome"}}</em></li>
+      {{/each}}
+    </ul>
+    {{#if powers.length}}
+    <h2 data-heading="Powers">{{sr2eT "SR2E.UI.powers"}} <a class="sr2e-add" data-action="addItem" data-type="power" title="{{sr2eT "SR2E.UI.addPowers"}}"><i class="fa-solid fa-plus"></i></a></h2>
+    <ul>
+      {{#each powers}}
+      <li>
+        <a data-action="editItem" data-item-id="{{id}}">{{name}}</a>
+        <span class="sr2e-power-summary">{{summary}}</span>
+        {{#if canUse}}<button type="button" data-action="usePower" data-item-id="{{id}}">{{sr2eT "SR2E.UI.use"}}</button>{{/if}}{{#if isAllergy}}<label class="sr2e-inline" title="{{sr2eT "SR2E.UI.exposedToItNowTnPenalty"}}"><input type="checkbox" data-action="toggleExposed" data-item-id="{{id}}" {{checked system.exposed}}> {{sr2eT "SR2E.UI.exposed"}}</label>{{#if hasContact}}<button type="button" data-action="allergenContact" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.aTouchOfItDamageUnresisted"}}">{{sr2eT "SR2E.UI.contact"}}</button>{{/if}}{{/if}}
+        {{#if canUse}}<a class="sr2e-pin{{#if (lookup @root.tools.pinSet id)}} on{{/if}}" data-action="pinItem" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.pinItToTheTopOf"}}"><i class="fa-solid fa-thumbtack"></i></a>{{/if}}
+        <a data-action="deleteItem" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.delete"}}"><i class="fa-solid fa-trash"></i></a>
+      </li>
+      {{/each}}
+    </ul>
+    {{/if}}
+    </section>
+  </section>
+  {{/if}}
+  {{#if matrix}}
+  <section class="tab sr2e-tab{{#if (eq activeTab "matrix")}} active{{/if}}" data-group="primary" data-tab="matrix">
+    {{> "systems/sr2e/templates/matrix-section.hbs"}}
+  </section>
+  {{/if}}
+  {{#if rigging}}
+  <section class="tab sr2e-tab{{#if (eq activeTab "rigging")}} active{{/if}}" data-group="primary" data-tab="rigging">
+    {{> "systems/sr2e/templates/rigging-section.hbs"}}
+  </section>
+  {{/if}}
+  <section class="tab sr2e-tab{{#if (eq activeTab "gear")}} active{{/if}}" data-group="primary" data-tab="gear">
+    <section class="sr2e-items">
+    <h2 data-heading="Cyberware">{{sr2eT "SR2E.UI.cyberware"}} <a class="sr2e-add" data-action="addItem" data-type="cyberware" title="{{sr2eT "SR2E.UI.addCyberwareOrBioware"}}"><i class="fa-solid fa-plus"></i></a></h2>
+    <ul>
+      {{#each cyberware}}
+      <li>
+        <input type="checkbox" data-action="toggleInstalled" data-item-id="{{id}}" {{checked system.installed}} title="{{sr2eT "SR2E.UI.installed"}}">
+        <a data-action="editItem" data-item-id="{{id}}">{{name}}</a>
+        <span>{{summary}}</span>
+        {{#if system.damaged}}<button type="button" data-action="repairCyber" data-item-id="{{id}}">{{sr2eT "SR2E.UI.repair2"}}</button>{{/if}}
+        {{#unless system.installed}}<button type="button" data-action="surgery" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.surgeryToInstallIt"}}">{{sr2eT "SR2E.UI.surgery"}}</button>{{/unless}}
+        {{#if (eq system.bioKind "adrenalPump")}}{{#if system.installed}}<button type="button" data-action="toggleAdrenal" data-item-id="{{id}}">{{#if system.bioActive}}{{sr2eT "SR2E.UI.switchOff"}}{{else}}{{sr2eT "SR2E.UI.activate"}}{{/if}}</button>{{/if}}{{/if}}
+        <a data-action="toggleDamaged" data-item-id="{{id}}" title="{{#if system.damaged}}{{sr2eT "SR2E.UI.markRepaired"}}{{else}}{{sr2eT "SR2E.UI.markDamaged"}}{{/if}}"><i class="fa-solid fa-{{#if system.damaged}}wrench{{else}}burst{{/if}}"></i></a>
+        <a class="sr2e-dup" data-action="duplicateItem" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.duplicate"}}"><i class="fa-solid fa-clone"></i></a>
+        <a data-action="deleteItem" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.delete"}}"><i class="fa-solid fa-trash"></i></a>
+      </li>
+      {{else}}<li class="sr2e-empty"><em>{{sr2eT "SR2E.UI.nonePress"}} <i class="fa-solid fa-plus"></i> {{sr2eT "SR2E.UI.toAddSome"}}</em></li>
+      {{/each}}
+    </ul>
+    {{#each system.derived.cyberWarnings}}<p class="hint sr2e-warn">{{this}}</p>{{/each}}
+    {{#if system.derived.bodyIndex.used}}<p class="hint">{{sr2eT "SR2E.UI.bodyIndex2" used=system.derived.bodyIndex.used max=system.derived.bodyIndex.max}}{{#if system.derived.toxinDice}} {{sr2eT "SR2E.UI.diceAgainstToxinsDwarfExtractorsBody" toxinDice=system.derived.toxinDice}}{{/if}}{{#if system.derived.bio.ignoreBoxes}} {{sr2eT "SR2E.UI.damageCompensator" ignoreBoxes=system.derived.bio.ignoreBoxes}}{{/if}}{{#if system.derived.bio.boxesOff}} {{sr2eT "SR2E.UI.plateletFactory" boxesOff=system.derived.bio.boxesOff}}{{/if}}{{#if system.derived.bio.stunBoxesOff}} {{sr2eT "SR2E.UI.traumaDamperStun" stunBoxesOff=system.derived.bio.stunBoxesOff}}{{/if}}{{#if system.derived.bio.physicalSkillDice}} {{sr2eT "SR2E.UI.articulationDice" physicalSkillDice=system.derived.bio.physicalSkillDice}}{{/if}}{{#if system.derived.bio.ignoreStunWounds}} {{sr2eT "SR2E.UI.painEditor"}}{{/if}}{{#if occult.rejectionDue}} · <strong>{{sr2eT "SR2E.UI.overTheLimit"}}</strong> <button type="button" data-action="rejectionTest" title="{{sr2eT "SR2E.UI.bodyTestAgainstRejection"}}">{{sr2eT "SR2E.UI.rejectionTest"}}</button>{{/if}}</p>{{/if}}
+    {{#if system.derived.cyber.encephalon}}<p class="hint">{{sr2eT "SR2E.UI.encephalonDiceOnIntelligenceAndKnowledge" encephalon=system.derived.cyber.encephalon}}</p>{{/if}}
+    {{#if occult.recovering.length}}<p class="hint">{{sr2eT "SR2E.UI.recoveringFromSurgeryTnTheNew" recoveryTn=recoveryTn}} {{#each occult.recovering}}{{sr2eT "SR2E.UI.dayS" name=name days=days}}{{#if careLabel}} ({{careLabel}}){{/if}} <a data-action="recoveryCare" data-item-id="{{itemId}}" title="{{sr2eT "SR2E.UI.changeTheCareTheDaysLeft"}}"><i class="fa-solid fa-bed-pulse"></i></a>{{#if @root.isGM}} <a data-action="clearRecovery" data-item-id="{{itemId}}" data-sr2e-gm title="{{sr2eT "SR2E.UI.endNowGm"}}"><i class="fa-solid fa-xmark"></i></a>{{/if}}{{#unless @last}}, {{/unless}}{{/each}}</p>{{/if}}
+    {{#if drugsActive.length}}
+    <h2 data-heading="In effect">{{sr2eT "SR2E.UI.inEffect"}}</h2>
+    <ul>
+      {{#each drugsActive}}<li>{{name}} <span>{{until}}{{#if crashLevel}} {{sr2eT "SR2E.UI.crash" crashPower=crashPower crashLevel=crashLevel}}{{/if}}</span> <button type="button" data-action="endDrug" data-index="{{index}}">{{sr2eT "SR2E.UI.wearOff"}}</button></li>{{/each}}
+    </ul>
+    {{/if}}
+    {{#if addictions.length}}
+    <h2 data-heading="Addictions">{{sr2eT "SR2E.UI.addictions"}}</h2>
+    <ul>
+      {{#each addictions}}<li><strong>{{drug}}</strong> <span>{{sr2eT "SR2E.UI.rating3" rating=rating type=type}}{{#if addicted}} · <strong class="sr2e-warn">{{sr2eT "SR2E.UI.addicted"}}</strong>{{#if withdrawal}} {{sr2eT "SR2E.UI.inWithdrawal"}}{{/if}} {{sr2eT "SR2E.UI.daySClean" daysClean=daysClean}}{{else}} {{sr2eT "SR2E.UI.recentDoseS" recentCount=recentCount}}{{/if}}</span>
+        {{#if canKick}}<button type="button" data-action="kickHabit" data-index="{{index}}">{{sr2eT "SR2E.UI.kickTheHabit"}}</button>{{/if}}
+        {{#if @root.isGM}}<a data-action="clearAddiction" data-index="{{index}}" data-sr2e-gm title="{{sr2eT "SR2E.UI.clearGm"}}"><i class="fa-solid fa-xmark"></i></a>{{/if}}</li>{{/each}}
+    </ul>
+    {{/if}}
+    {{#if radiation}}<p class="hint">{{sr2eT "SR2E.UI.radiationDose"}} <strong>{{radiation.dose}}</strong>{{#if radiation.stage}} · {{radiation.stage}}{{/if}}{{#if radiation.next}} · {{radiation.next}}{{/if}}{{#if isGM}} <a data-action="clearRadiation" data-sr2e-gm title="{{sr2eT "SR2E.UI.clearTheDoseGm"}}"><i class="fa-solid fa-xmark"></i></a>{{/if}}</p>{{/if}}
+    {{#if diseases.length}}
+    <h2 data-heading="Diseases">{{sr2eT "SR2E.UI.diseases"}}</h2>
+    <ul>
+      {{#each diseases}}<li><strong>{{name}}</strong> <span>{{sr2eT "SR2E.UI.towardRecovery" power=power level=level damageType=damageType recovered=recovered needed=needed due=due}}{{#if contagiousLabel}} · {{contagiousLabel}}{{/if}}{{#if from}} {{sr2eT "SR2E.UI.caughtFrom" from=from}}{{/if}}</span>
+        <label title="{{sr2eT "SR2E.UI.medicalTreatmentAddsDice"}}">{{sr2eT "SR2E.UI.treated"}} <input type="checkbox" data-action="toggleTreated" data-index="{{index}}" {{checked treated}}></label>
+        {{#if pending}}<button type="button" data-action="diseaseTick" data-index="{{index}}">{{sr2eT "SR2E.UI.resist"}}</button>{{/if}}
+        {{#if canSpread}}<button type="button" data-action="spreadDisease" data-index="{{index}}" title="{{sr2eT "SR2E.UI.passItOnAirborneToEveryone"}}">{{sr2eT "SR2E.UI.spread"}}</button>{{/if}}
+        {{#if @root.isGM}}<a data-action="clearDisease" data-index="{{index}}" data-sr2e-gm title="{{sr2eT "SR2E.UI.clearGm"}}"><i class="fa-solid fa-xmark"></i></a>{{/if}}</li>{{/each}}
+    </ul>
+    {{/if}}
+    <h2 data-heading="Gear">{{sr2eT "SR2E.UI.gear"}} <a class="sr2e-add" data-action="addItem" data-type="gear" title="{{sr2eT "SR2E.UI.addGear"}}"><i class="fa-solid fa-plus"></i></a></h2>
+    <ul>
+      {{#each gear}}
+      <li>
+        {{#if system.chip.kind}}<input type="checkbox" data-action="toggleSlotted" data-item-id="{{id}}" {{checked system.chip.slotted}} title="{{sr2eT "SR2E.UI.slotted"}}">{{/if}}
+        <a data-action="editItem" data-item-id="{{id}}">{{name}}</a> <span>×<input type="number" class="sr2e-rowedit sr2e-play-ok" data-item-id="{{id}}" data-field="system.quantity" value="{{system.quantity}}" min="0" title="{{sr2eT "SR2E.UI.quantity"}}" aria-label="{{sr2eT "SR2E.UI.quantity2" name=name}}">{{#if chipNote}} · {{chipNote}}{{/if}}{{#if toxinNote}} · {{toxinNote}}{{/if}}{{#if gearNote}} · {{gearNote}}{{/if}}</span>
+        {{#if system.damaged}}<strong class="sr2e-warning">{{sr2eT "SR2E.UI.broken"}}</strong> <button type="button" data-action="repairGear" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.buildRepairTestToolsAsNeeded"}}">{{sr2eT "SR2E.UI.repair"}}</button>{{/if}}
+        {{#if canPlant}}<button type="button" data-action="plantBug" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.plantItOnTheTargetedToken"}}">{{sr2eT "SR2E.UI.plant"}}</button>{{/if}}
+        {{#if canListen}}<button type="button" data-action="listenIn" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.listenInItsRatingVsTn" listenTn=@root.listenTn}}">{{sr2eT "SR2E.UI.listen"}}</button>{{/if}}
+        {{#if canSweep}}<button type="button" data-action="sweepBugs" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.sweepSomeoneOrYourselfForBugs"}}">{{sr2eT "SR2E.UI.sweep"}}</button>{{/if}}
+        {{#if canRadio}}<button type="button" data-action="radioCheck" title="{{sr2eT "SR2E.UI.doesItGetThroughTheJammers"}}">{{sr2eT "SR2E.UI.radioCheck"}}</button>
+        <button type="button" data-action="interceptComms" title="{{sr2eT "SR2E.UI.listenInOnTheTargetedToken"}}">{{sr2eT "SR2E.UI.listenIn"}}</button>{{/if}}
+        {{#if isId}}<button type="button" data-action="checkId" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.showItToACheckerThe"}}">{{sr2eT "SR2E.UI.check"}}</button>{{/if}}
+        {{#if (eq toxinKind "drug")}}<button type="button" data-action="takeDrug" data-item-id="{{id}}">{{sr2eT "SR2E.UI.take"}}</button>{{/if}}
+        {{#if system.simchip.kind}}<button type="button" data-action="playChip" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.playItAChipjackDatajackOr"}}">{{sr2eT "SR2E.UI.play"}}</button>{{/if}}
+        {{#if toxinKind}}<button type="button" data-action="expose" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.exposePeopleToIt"}}">{{sr2eT "SR2E.UI.expose"}}</button>{{/if}}
+        {{#if system.patch.kind}}<button type="button" data-action="applyPatch" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.putItOnYourselfOrOn"}}">{{sr2eT "SR2E.UI.applyPatch"}}</button>{{/if}}
+        {{#if system.cost}}<a data-action="findItem" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.findAndBuyMoreAvailability" availability=system.availability}}"><i class="fa-solid fa-cart-shopping"></i></a>{{/if}}
+        {{#if system.explosive.power}}<button type="button" data-action="setCharge" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.demolitionsTestSetAChargePower" power=system.explosive.power}}">{{sr2eT "SR2E.UI.setCharge"}}</button>{{/if}}
+        <a class="sr2e-dup" data-action="duplicateItem" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.duplicate"}}"><i class="fa-solid fa-clone"></i></a>
+        <a data-action="deleteItem" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.delete"}}"><i class="fa-solid fa-trash"></i></a>
+      </li>
+      {{else}}<li class="sr2e-empty"><em>{{sr2eT "SR2E.UI.noGearPress"}} <i class="fa-solid fa-plus"></i> {{sr2eT "SR2E.UI.toAddSome"}}</em></li>
+      {{/each}}
+    </ul>
+    {{#if legal.problems.length}}<p class="hint sr2e-warn" title="{{sr2eT "SR2E.UI.gearTheLawCaresAboutWithout"}}">{{sr2eT "SR2E.UI.unlicensed"}} {{#each legal.problems}}{{name}} ({{label}}{{#if fine}}, ¥{{fine}}{{/if}}){{#unless @last}}, {{/unless}}{{/each}}.{{#if legal.totalFine}} {{sr2eT "SR2E.UI.finesIfCaught" totalFine=legal.totalFine}}{{/if}}</p>{{/if}}
+    {{#if legal.covered.length}}<p class="hint" title="{{sr2eT "SR2E.UI.gearALicenceCoversAFake"}}">{{sr2eT "SR2E.UI.licensed"}} {{#each legal.covered}}{{name}} ({{by}}{{#if fake}}{{sr2eT "SR2E.UI.fake"}}{{/if}}){{#unless @last}}, {{/unless}}{{/each}}.</p>{{/if}}
+    {{#if system.derived.load.kg}}<p class="hint {{#if system.derived.load.penalty}}sr2e-warn{{/if}}">{{sr2eT "SR2E.UI.carryingKgOfKg" kg=system.derived.load.kg limit=system.derived.load.limit}}{{#if system.derived.load.penalty}}{{sr2eT "SR2E.UI.quickness" penalty=system.derived.load.penalty}}{{/if}}.</p>{{/if}}
+    </section>
+  </section>
+  {{#if upkeep}}
+  <section class="tab sr2e-tab{{#if (eq activeTab "upkeep")}} active{{/if}}" data-group="primary" data-tab="upkeep">
+    <section class="sr2e-items sr2e-upkeep">
+      <h2 data-heading="Money and lifestyle">{{sr2eT "SR2E.UI.moneyAndLifestyle"}}</h2>
+      <div class="sr2e-row">
+        <label>{{sr2eT "SR2E.UI.nuyen"}} <input type="number" name="system.nuyen" value="{{system.nuyen}}" min="0"></label>
+        <button type="button" data-action="nuyen" title="{{sr2eT "SR2E.UI.earnOrSpendNuyenWithA"}}">{{sr2eT "SR2E.UI.earnSpend"}}</button>
+      </div>
+      <div class="sr2e-row">
+        <label>{{sr2eT "SR2E.UI.lifestyle"}} <select name="system.lifestyle.level">{{selectOptions upkeep.lifestyles selected=system.lifestyle.level valueAttr="key" labelAttr="label"}}</select></label>
+        <span class="{{#if upkeep.overdue}}sr2e-warning{{/if}}">{{upkeep.status}}</span>
+        <button type="button" data-action="payLifestyle">{{sr2eT "SR2E.UI.pay"}}</button>
+      </div>
+      {{#if upkeep.effects}}<p class="hint">{{sr2eT "SR2E.UI.lifestyle2" effects=upkeep.effects}}</p>{{/if}}
+      {{#if upkeep.docwagonOn}}
+      <div class="sr2e-row">
+        <label title="{{sr2eT "SR2E.UI.aDocwagonContractABiomonitorCalls"}}">{{sr2eT "SR2E.UI.docwagon"}} <select name="system.docwagon.tier">{{selectOptions upkeep.docwagonTiers selected=system.docwagon.tier valueAttr="key" labelAttr="label"}}</select></label>
+        {{#if system.docwagon.tier}}<span class="{{#if upkeep.docwagonLapsed}}sr2e-warning{{/if}}">{{upkeep.docwagonStatus}}</span>
+        <button type="button" data-action="payDocwagon">{{sr2eT "SR2E.UI.pay"}}</button>
+        <button type="button" data-action="callDocwagon" title="{{sr2eT "SR2E.UI.callATeamNowTheBiomonitor"}}">{{sr2eT "SR2E.UI.call"}}</button>{{/if}}
+      </div>
+      {{/if}}
+      <h2 data-heading="Karma">{{sr2eT "SR2E.UI.karma"}}</h2>
+      <div class="sr2e-row">
+        <span title="{{sr2eT "SR2E.UI.editItOnTheMainTab"}}">{{sr2eT "SR2E.UI.goodKarma"}} <strong>{{system.karma.good}}</strong></span>
+        <label title="{{sr2eT "SR2E.UI.karmaEarnedOverTheCareer" karmaPoolText=system.derived.karmaPoolText}}">{{sr2eT "SR2E.UI.earnedInAll"}} <input type="number" name="system.karma.career" value="{{system.karma.career}}" min="0"></label>
+        <span>{{sr2eT "SR2E.UI.karmaPool"}} <strong>{{system.karma.pool}}</strong></span>
+      </div>
+      <p><button type="button" data-action="spendKarma"><i class="fa-solid fa-star"></i> {{sr2eT "SR2E.UI.spendKarma"}}</button></p>
+      <p class="hint">{{sr2eT "SR2E.UI.raiseAttributesAndSkillsWithSpend"}} <i class="fa-solid fa-circle-plus"></i> {{sr2eT "SR2E.UI.buttonsOnTheMainTab"}}{{#if trainingTimed}} {{sr2eT "SR2E.UI.withTrainingTimeOnTheKarma"}}{{/if}} {{sr2eT "SR2E.UI.theGmAwardsKarmaAndNuyen"}}</p>
+      {{#if underway.length}}
+      <h2 data-heading="Under way">{{sr2eT "SR2E.UI.underWay"}}</h2>
+      <ul class="sr2e-underway">
+        {{#each underway}}<li class="{{#if due}}sr2e-due{{/if}}"><span><strong>{{label}}</strong> · {{left}}{{#if paid}} <span class="hint">{{sr2eT "SR2E.UI.paid" paid=paid}}</span>{{/if}}</span>
+          <span class="sr2e-underway-acts">{{#if training}}<button type="button" data-action="trainWith" data-training-id="{{id}}" title="{{sr2eT "SR2E.UI.anInstructorSInstructionTestDivides"}}">{{sr2eT "SR2E.UI.instructor"}}</button>{{/if}}
+          {{#if @root.isGM}}<a data-action="projectTime" data-project-id="{{id}}" data-training="{{#if training}}1{{/if}}" data-sr2e-gm title="{{sr2eT "SR2E.UI.changeTheTimeLeftGm"}}"><i class="fa-solid fa-hourglass-half"></i></a>
+          <a data-action="projectFinish" data-project-id="{{id}}" data-training="{{#if training}}1{{/if}}" data-sr2e-gm title="{{sr2eT "SR2E.UI.finishItNowGm"}}"><i class="fa-solid fa-forward-fast"></i></a>{{/if}}
+          <a data-action="projectCancel" data-project-id="{{id}}" data-training="{{#if training}}1{{/if}}" title="{{sr2eT "SR2E.UI.giveItUpWhatWasPaid"}}"><i class="fa-solid fa-xmark"></i></a></span></li>{{/each}}
+      </ul>
+      <p class="hint">{{sr2eT "SR2E.UI.thingsThatTakeTimeArriveWhen"}}</p>
+      {{/if}}
+      <h2 data-heading="Contacts">{{sr2eT "SR2E.UI.contacts"}} <a data-action="addContact" title="{{sr2eT "SR2E.UI.addAContact"}}"><i class="fa-solid fa-plus"></i></a></h2>
+      <ul>
+        {{#each upkeep.contacts}}
+        <li>
+          <a data-action="editContact" data-contact-id="{{id}}" title="{{sr2eT "SR2E.UI.edit"}}">{{name}}</a>
+          <span>{{sr2eT "SR2E.UI.loyalty" levelLabel=levelLabel loyalty=loyalty}}{{#if role}} · {{role}}{{/if}}{{#if skills}} {{sr2eT "SR2E.UI.knows" skills=skills}}{{/if}}{{#if dice}} {{sr2eT "SR2E.UI.digsWithDice" dice=dice}}{{/if}}{{#if fee}} {{sr2eT "SR2E.UI.fee" fee=fee}}{{/if}}{{#if fixer}} · <strong>{{sr2eT "SR2E.UI.fixer"}}</strong>{{/if}}{{#if favourLabel}} · <strong>{{favourLabel}}</strong>{{/if}}{{#if notes}} · <em>{{notes}}</em>{{/if}}</span>
+          <a data-action="favour" data-contact-id="{{id}}" data-delta="1" title="{{sr2eT "SR2E.UI.theyOweYouOneMoreFavour"}}"><i class="fa-solid fa-handshake"></i>+</a>
+          <a data-action="favour" data-contact-id="{{id}}" data-delta="-1" title="{{sr2eT "SR2E.UI.theyOweYouOneFewerOr"}}"><i class="fa-solid fa-handshake"></i>−</a>
+          <button type="button" data-action="legwork" data-contact-id="{{id}}" title="{{sr2eT "SR2E.UI.askAroundThroughThisContact"}}">{{sr2eT "SR2E.UI.legwork"}}</button>
+          <a data-action="deleteContact" data-contact-id="{{id}}" title="{{sr2eT "SR2E.UI.delete"}}"><i class="fa-solid fa-trash"></i></a>
+        </li>
+        {{else}}<li class="sr2e-empty"><em>{{sr2eT "SR2E.UI.noContactsYetPress"}} <i class="fa-solid fa-plus"></i> {{sr2eT "SR2E.UI.toAddOne"}}</em></li>
+        {{/each}}
+      </ul>
+      <h2 data-heading="Ledger">{{sr2eT "SR2E.UI.ledger"}}</h2>
+      <ul class="sr2e-ledger">
+        {{#each upkeep.ledger}}<li><span class="{{#if negative}}sr2e-warn{{/if}}">{{amountLabel}}</span> {{reason}} <em>({{when}})</em></li>{{else}}<li><em>{{sr2eT "SR2E.UI.nothingRecordedYet"}}</em></li>{{/each}}
+      </ul>
+    </section>
+  </section>
+  {{/if}}
+  {{#if creation}}
+  <section class="tab sr2e-tab{{#if (eq activeTab "creation")}} active{{/if}}" data-group="primary" data-tab="creation">
+    <section class="sr2e-creation">
+      {{#if creation.pending.length}}
+      <h2 data-heading="Waiting for the GM">{{sr2eT "SR2E.UI.waitingForTheGm"}}</h2>
+      <ul class="sr2e-list">
+        {{#each creation.pending}}<li><span><strong>{{label}}</strong> · {{cost}} · <span class="hint">{{who}}</span></span> <a data-action="cancelRequest" data-id="{{id}}" title="{{sr2eT "SR2E.UI.cancelTheRequest"}}"><i class="fa-solid fa-xmark"></i></a></li>{{/each}}
+      </ul>
+      {{#if creation.isGM}}<p class="hint sr2e-gm-only">{{sr2eT "SR2E.UI.approveOrDeclineThemInThe"}}</p>{{/if}}
+      {{/if}}
+      {{#if creation.record}}
+      <h2 data-heading="Creation record">{{sr2eT "SR2E.UI.creationRecord"}}</h2>
+      <p class="hint">{{sr2eT "SR2E.UI.finishedByIn" when=creation.record.when by=creation.record.by how=creation.record.how}}{{#if creation.record.failed}} <strong class="sr2e-warn">{{sr2eT "SR2E.UI.buildCheckSWereNotMet" failed=creation.record.failed}}</strong>{{/if}}</p>
+      <div class="sr2e-row">
+        {{#if creation.canEdit}}<button type="button" data-action="spendKarma"><i class="fa-solid fa-star"></i> {{sr2eT "SR2E.UI.spendKarma"}}</button>{{/if}}
+        {{#if creation.isGM}}<button type="button" class="sr2e-gm-only" data-action="advNote" title="{{sr2eT "SR2E.UI.writeALineIntoTheAdvancement"}}"><i class="fa-solid fa-pen"></i> {{sr2eT "SR2E.UI.logNote"}}</button>
+        <button type="button" data-action="reopenCreation" title="{{sr2eT "SR2E.UI.throwTheRecordAwayAndOpen"}}"><i class="fa-solid fa-rotate-left"></i> {{sr2eT "SR2E.UI.reopenCreation"}}</button>{{/if}}
+      </div>
+      <div class="sr2e-creation-grid">
+        <div><h3 data-help="creation-record" data-heading="Build">{{sr2eT "SR2E.UI.build"}}</h3>
+          <ul class="sr2e-list">
+            <li>{{creation.record.metatype}} · {{creation.record.magic}}</li>
+            {{#each creation.record.priorities}}<li>{{label}} <strong>{{letter}}</strong>{{#if what}} <span class="hint">{{what}}</span>{{/if}}</li>{{/each}}
+            <li>{{sr2eT "SR2E.UI.essence2" essence=creation.record.essence}}</li>
+            <li>{{sr2eT "SR2E.UI.goodKarmaKarmaPool" nuyen=creation.record.nuyen good=creation.record.karma.good pool=creation.record.karma.pool}}</li>
+            <li>{{sr2eT "SR2E.UI.lifestyle3" lifestyle=creation.record.lifestyle}}</li>
+          </ul>
+        </div>
+        <div><h3 data-help="creation-record" data-heading="Attributes">{{sr2eT "SR2E.UI.attributes"}}</h3>
+          <ul class="sr2e-list">{{#each creation.record.attributes}}<li>{{label}} <strong>{{natural}}</strong>{{#unless (eq base natural)}} <span class="hint">{{sr2eT "SR2E.UI.base3" base=base}}</span>{{/unless}}</li>{{/each}}</ul>
+        </div>
+      </div>
+      <h3 data-help="creation-record" data-heading="Skills">{{sr2eT "SR2E.UI.skills"}}</h3>
+      <ul class="sr2e-list sr2e-inline-list">{{#each creation.record.skills}}<li>{{name}} <strong>{{rating}}</strong>{{#if extra}} ({{extra}}){{/if}}</li>{{else}}<li><em>{{sr2eT "SR2E.UI.none"}}</em></li>{{/each}}</ul>
+      {{#if creation.record.spells.length}}<h3 data-help="creation-record" data-heading="Spells">{{sr2eT "SR2E.UI.spells"}}</h3><ul class="sr2e-list sr2e-inline-list">{{#each creation.record.spells}}<li>{{name}} F{{force}}</li>{{/each}}</ul>{{/if}}
+      {{#if creation.record.adeptPowers.length}}<h3 data-help="creation-record" data-heading="Adept powers">{{sr2eT "SR2E.UI.adeptPowers"}}</h3><ul class="sr2e-list sr2e-inline-list">{{#each creation.record.adeptPowers}}<li>{{name}} {{level}}</li>{{/each}}</ul>{{/if}}
+      {{#if creation.record.cyberware.length}}<h3 data-help="creation-record" data-heading="Cyberware and bioware">{{sr2eT "SR2E.UI.cyberwareAndBioware"}}</h3><ul class="sr2e-list sr2e-inline-list">{{#each creation.record.cyberware}}<li>{{name}}{{#if rating}} {{rating}}{{/if}} <span class="hint">{{grade}}{{#unless bioware}}{{sr2eT "SR2E.UI.essence3" essence=essence}}{{/unless}}</span></li>{{/each}}</ul>{{/if}}
+      {{#if creation.record.gear.length}}<h3 data-help="creation-record" data-heading="Gear">{{sr2eT "SR2E.UI.gear"}}</h3><ul class="sr2e-list sr2e-inline-list">{{#each creation.record.gear}}<li>{{name}}{{#if rating}} ({{rating}}){{/if}}{{#if (gt quantity 1)}} ×{{quantity}}{{/if}}</li>{{/each}}</ul>{{/if}}
+      {{#if creation.record.contacts.length}}<h3 data-help="creation-record" data-heading="Contacts">{{sr2eT "SR2E.UI.contacts"}}</h3><ul class="sr2e-list sr2e-inline-list">{{#each creation.record.contacts}}<li>{{name}} <span class="hint">{{sr2eT "SR2E.UI.level4" level=level}}{{#if role}}, {{role}}{{/if}}</span></li>{{/each}}</ul>{{/if}}
+      {{#if creation.record.qualities.length}}<h3 data-help="creation-record" data-heading="Edges and flaws">{{sr2eT "SR2E.UI.edgesAndFlaws"}}</h3><ul class="sr2e-list sr2e-inline-list">{{#each creation.record.qualities}}<li>{{name}} <span class="hint">{{kind}} {{points}}</span></li>{{/each}}</ul>{{/if}}
+      {{#if creation.record.checks.length}}
+      <details class="sr2e-creation-checks"><summary data-heading="Build checks at the finish">{{sr2eT "SR2E.UI.buildChecksAtTheFinish"}}</summary>
+        <table class="sr2e-build"><tbody>{{#each creation.record.checks}}<tr class="{{#unless ok}}sr2e-warning{{/unless}}"><td>{{#if ok}}✓{{else}}✗{{/if}} {{label}}</td><td>{{used}}</td><td>{{allowed}}</td><td>{{note}}</td></tr>{{/each}}</tbody></table>
+      </details>
+      {{/if}}
+
+      <h2 data-heading="Advancement log">{{sr2eT "SR2E.UI.advancementLog"}}</h2>
+      {{#if creation.totals.lines}}<p class="hint">{{sr2eT "SR2E.UI.lineSKarmaInSpent" lines=creation.totals.lines karmaIn=creation.totals.karmaIn karmaSpent=creation.totals.karmaSpent}}{{#if creation.totals.nuyenSpent}}{{sr2eT "SR2E.UI.onPurchases" nuyenSpent=creation.totals.nuyenSpent}}{{/if}}.</p>{{/if}}
+      <ul class="sr2e-list sr2e-advlog">
+        {{#each creation.log}}<li class="sr2e-adv-{{cls}}"><span class="sr2e-adv-when" title="{{at}}">{{when}}</span> <span class="sr2e-adv-what">{{what}}</span>{{#if cost}} <strong class="sr2e-adv-cost">{{cost}}</strong>{{/if}} <span class="hint">{{#if by}}{{by}}{{/if}}{{#if approvedBy}} {{sr2eT "SR2E.UI.approvedBy" approvedBy=approvedBy}}{{/if}}</span>{{#if ../creation.isGM}} <a data-action="advDelete" data-id="{{id}}" title="{{sr2eT "SR2E.UI.deleteTheLineOnlyTheLog"}}"><i class="fa-solid fa-trash"></i></a>{{/if}}</li>
+        {{else}}<li><em>{{sr2eT "SR2E.UI.nothingGainedSinceCreationYet"}}</em></li>{{/each}}
+      </ul>
+      {{else}}
+      <h2 data-heading="Character creation">{{sr2eT "SR2E.UI.characterCreation"}}</h2>
+      {{#if creation.inCreation}}<p>{{sr2eT "SR2E.UI.isBeingBuiltInTheCreation" name=actor.name}}</p>{{else}}<p>{{sr2eT "SR2E.UI.hasNoCreationRecordYet" name=actor.name}}</p>{{/if}}
+      <div class="sr2e-row">
+        {{#if creation.canEdit}}<button type="button" data-action="openWizard"><i class="fa-solid fa-wand-magic-sparkles"></i> {{#if creation.inCreation}}{{sr2eT "SR2E.UI.continueCreation"}}{{else}}{{sr2eT "SR2E.UI.createCharacter"}}{{/if}}</button>
+        <button type="button" data-action="recordAsIs" title="{{sr2eT "SR2E.UI.forACharacterMadeBeforeThe"}}"><i class="fa-solid fa-lock"></i> {{sr2eT "SR2E.UI.recordAsItStands"}}</button>{{/if}}
+      </div>
+      <p class="hint">{{sr2eT "SR2E.UI.theWizardWalksThroughThePriorities"}}</p>
+      {{/if}}
+    </section>
+  </section>
+  {{/if}}
+  <section class="tab sr2e-tab{{#if (eq activeTab "bio")}} active{{/if}}" data-group="primary" data-tab="bio">
+    <section class="sr2e-bio">
+      {{#if creation}}{{#unless creation.record}}<p><button type="button" data-action="openWizard" title="{{sr2eT "SR2E.UI.buildTheCharacterStepByStep"}}"><i class="fa-solid fa-wand-magic-sparkles"></i> {{#if creation.inCreation}}{{sr2eT "SR2E.UI.continueCreation"}}{{else}}{{sr2eT "SR2E.UI.createCharacter"}}{{/if}}</button>
+        <button type="button" data-action="buildCheck" title="{{sr2eT "SR2E.UI.theOldQuickBuilderCheckAgainst"}}"><i class="fa-solid fa-list-check"></i> {{sr2eT "SR2E.UI.quickBuild"}}</button>
+        <button type="button" data-action="importCharacter" title="{{sr2eT "SR2E.UI.fillTheSheetFromAPasted"}}"><i class="fa-solid fa-file-import"></i> {{sr2eT "SR2E.UI.importAStatBlock"}}</button></p>{{/unless}}{{/if}}
+      {{#if street.qualitiesOn}}
+      <h2 data-heading="Edges and flaws">{{sr2eT "SR2E.UI.edgesAndFlaws"}} <a data-action="addQuality" title="{{sr2eT "SR2E.UI.addAnEdgeOrFlawBy"}}"><i class="fa-solid fa-plus"></i></a>{{#if (eq actor.type "character")}} <a data-action="gainEdge" title="{{sr2eT "SR2E.UI.gainAnEdgeInPlayGood" edgeRate=street.edgeRate}}"><i class="fa-solid fa-star"></i></a>{{/if}}</h2>
+      <ul>
+        {{#each street.qualities}}
+        <li><a data-action="editQuality" data-quality-id="{{id}}">{{name}}</a> <span>{{kind}} {{points}}{{#if tnLabel}} · {{tnLabel}}{{/if}}{{#if notes}} · <em>{{notes}}</em>{{/if}}</span>
+          {{#if buyOff}}<a data-action="buyOffFlaw" data-quality-id="{{id}}" title="{{sr2eT "SR2E.UI.buyItOffForGoodKarma" buyOff=buyOff}}"><i class="fa-solid fa-coins"></i> {{buyOff}}</a>{{/if}}
+          <a data-action="deleteQuality" data-quality-id="{{id}}" title="{{sr2eT "SR2E.UI.delete"}}"><i class="fa-solid fa-trash"></i></a></li>
+        {{else}}<li class="sr2e-empty"><em>{{sr2eT "SR2E.UI.noEdgesOrFlawsPress"}} <i class="fa-solid fa-plus"></i> {{sr2eT "SR2E.UI.toAddOne"}}</em></li>
+        {{/each}}
+      </ul>
+      <p class="hint">{{sr2eT "SR2E.UI.edgesFlawsTheBuildCheckCounts" edges=street.qualityTotals.edges flaws=street.qualityTotals.flaws}}</p>
+      {{/if}}
+      {{#if street.reputationOn}}
+      <h2 data-heading="Reputation">{{sr2eT "SR2E.UI.reputation"}}</h2>
+      <div class="sr2e-row">
+        {{#if street.autoCred}}<span title="{{sr2eT "SR2E.UI.careerKarmaTheHouseRuleRate"}}">{{sr2eT "SR2E.UI.streetCred"}} <strong>{{street.streetCred}}</strong></span>{{else}}<label>{{sr2eT "SR2E.UI.streetCred"}} <input type="number" name="system.reputation.streetCred" value="{{system.reputation.streetCred}}" min="0"></label>{{/if}}
+        <label>{{sr2eT "SR2E.UI.notoriety"}} <input type="number" name="system.reputation.notoriety" value="{{system.reputation.notoriety}}" min="0"></label>
+        <label>{{sr2eT "SR2E.UI.publicAwareness"}} <input type="number" name="system.reputation.publicAwareness" value="{{system.reputation.publicAwareness}}" min="0"></label>
+        {{#if street.notorietyOff}}<span title="{{sr2eT "SR2E.UI.streetCredAfterNotorietyHouseRule"}}">{{sr2eT "SR2E.UI.reputation"}} <strong>{{system.derived.streetCred}}</strong></span>{{/if}}
+        {{#if isGM}}<button type="button" class="sr2e-gm-only" data-action="recognition" title="{{sr2eT "SR2E.UI.doesAnyoneRecogniseThemEachTargeted" recognitionTn=street.recognitionTn}}">{{sr2eT "SR2E.UI.recognised"}}</button>{{/if}}
+      </div>
+      {{/if}}
+      {{#if art}}
+      <h2 data-heading="Picture and token">{{sr2eT "SR2E.UI.pictureAndToken"}}</h2>
+      <div class="sr2e-row sr2e-art">
+        <img class="sr2e-art-preview" src="{{art.src}}" width="64" height="64" alt="" title="{{sr2eT "SR2E.UI.theDefaultArtThis"}} {{#if (eq actor.type "npc")}}{{sr2eT "SR2E.UI.npc"}}{{else}}{{sr2eT "SR2E.UI.character"}}{{/if}} {{sr2eT "SR2E.UI.gets"}}">
+        <label>{{sr2eT "SR2E.UI.figure"}} <select name="system.art.figure">{{#each art.figures}}<option value="{{id}}"{{#if selected}} selected{{/if}}>{{label}}</option>{{/each}}</select></label>
+        <label>{{sr2eT "SR2E.UI.archetype"}} <select name="system.art.archetype">{{#each art.archetypes}}<option value="{{id}}"{{#if selected}} selected{{/if}}>{{label}}</option>{{/each}}</select></label>
+        {{#if editable}}<button type="button" data-action="useDefaultArt" title="{{sr2eT "SR2E.UI.useThisDefaultArtForThe"}}"><i class="fa-solid fa-image-portrait"></i> {{sr2eT "SR2E.UI.useTheDefaultArt"}}</button>{{/if}}
+      </div>
+      <p class="hint">{{#if art.isDefault}}{{sr2eT "SR2E.UI.thePictureAndTokenFollowThese"}}{{else}}{{#if art.standIn}}{{sr2eT "SR2E.UI.thisActorStillHasFoundryS"}}{{else}}{{sr2eT "SR2E.UI.thisActorHasAPictureOf"}}{{/if}}{{/if}} {{sr2eT "SR2E.UI.theBadgeShowsTheArchetypeAutomatic"}}</p>
+      {{/if}}
+      <h2 data-heading="Biography">{{sr2eT "SR2E.UI.biography"}}</h2>
+      {{#if editable}}<prose-mirror class="sr2e-rich" name="system.biography" toggled value="{{richSource.biography}}">{{{enriched.biography}}}</prose-mirror>{{else}}<div class="sr2e-rich">{{{enriched.biography}}}</div>{{/if}}
+      <h2 data-heading="Notes">{{sr2eT "SR2E.UI.notes"}}</h2>
+      {{#if editable}}<prose-mirror class="sr2e-rich" name="system.notes" toggled value="{{richSource.notes}}">{{{enriched.notes}}}</prose-mirror>{{else}}<div class="sr2e-rich">{{{enriched.notes}}}</div>{{/if}}
+    </section>
+  </section>
+</div>

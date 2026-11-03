@@ -1,0 +1,59 @@
+<div class="sr2e-add-body">
+  <nav class="sr2e-add-tabs">
+    {{#each tabs}}<a class="sr2e-add-tab{{#if active}} active{{/if}}" data-action="addTab" data-type="{{type}}">{{label}}</a>{{/each}}
+  </nav>
+  {{#if isSkill}}
+  <div class="sr2e-add-skill">
+    <p>{{sr2eT "SR2E.UI.skillsAreAddedOneAtA"}}</p>
+    <p><button type="button" data-action="openSkillPicker"><i class="fa-solid fa-graduation-cap"></i> {{sr2eT "SR2E.UI.openTheSkillPicker"}}</button></p>
+  </div>
+  {{else}}
+  <div class="sr2e-add-top">
+    <input type="search" class="sr2e-add-search" placeholder="{{sr2eT "SR2E.UI.search" plural=plural}}" value="{{query}}" aria-label="{{sr2eT "SR2E.UI.search2"}}">
+    <button type="button" data-action="codexOpen" data-key="" title="{{sr2eT "SR2E.UI.codexButtonHint"}}"><i class="fa-solid fa-book-atlas" aria-hidden="true"></i> {{sr2eT "SR2E.UI.codexButton"}}</button>
+    <button type="button" data-action="newEntry" title="{{sr2eT "SR2E.UI.newEntryButtonHint"}}"><i class="fa-solid fa-file-circle-plus"></i> {{sr2eT "SR2E.UI.newEntryButton"}}</button>
+    {{#unless isVehicle}}<button type="button" data-action="blankNew" title="{{sr2eT "SR2E.UI.aNewEmptyOnItsSheet" one=one actorName=actorName}}"><i class="fa-regular fa-file"></i> {{sr2eT "SR2E.UI.blank" one=one}}</button>{{/unless}}
+  </div>
+  {{#if groups.length}}
+  <fieldset class="sr2e-add-groups">
+    <legend class="hint" data-help="adding" data-heading="Show only (none ticked: everything)">{{sr2eT "SR2E.UI.shopCategories"}}</legend>
+    {{#each groups}}<label class="sr2e-add-groupchip"><input type="checkbox" class="sr2e-add-group" value="{{id}}" {{checked checked}}> {{label}} <span class="sr2e-add-count">{{count}}</span></label>{{/each}}
+  </fieldset>
+  {{/if}}
+  <table class="sr2e-add-list">
+    <thead><tr><th></th><th>{{sr2eT "SR2E.UI.name"}}</th><th>{{sr2eT "SR2E.UI.what"}}</th><th title="{{amountLabel}}">{{amountLabel}}</th><th>{{sr2eT "SR2E.UI.price"}}</th><th>{{sr2eT "SR2E.UI.avail"}}</th>{{#if shopTab}}{{#if hasLegal}}<th>{{sr2eT "SR2E.UI.shopLegal"}}</th>{{/if}}{{/if}}<th>{{sr2eT "SR2E.UI.from"}}</th>{{#if isGM}}{{#if shopTab}}<th title="{{sr2eT "SR2E.UI.shopMarkHint"}}">{{sr2eT "SR2E.UI.shopMark"}}</th>{{/if}}{{/if}}</tr></thead>
+    <tbody>
+      {{#each entries}}
+      <tr data-key="{{key}}" data-group="{{group}}" data-search="{{search}}"{{#if hidden}} hidden{{/if}}>
+        <td><input type="checkbox" class="sr2e-add-tick" {{checked ticked}} aria-label="{{sr2eT "SR2E.UI.add2" name=name}}"></td>
+        <td class="sr2e-add-name">{{name}}{{#if codex}} <a class="sr2e-add-info" data-action="codexOpen" data-key="{{key}}" role="button" data-tooltip="{{sr2eT "SR2E.UI.codexOpenHint"}}" aria-label="{{sr2eT "SR2E.UI.codexOpenFor" name=name}}"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></a>{{/if}}</td>
+        <td class="sr2e-add-what">{{summary}}</td>
+        <td><input type="number" class="sr2e-add-amount" value="{{amount}}" min="1" max="{{max}}" aria-label="{{@root.amountLabel}}"{{#if locked}} disabled title="{{sr2eT "SR2E.UI.boughtAtItsListedRatingChange"}}"{{/if}}></td>
+        <td{{#if priceTitle}} title="{{priceTitle}}"{{/if}}>{{price}}</td>
+        <td>{{avail}}{{#if retry}} <span class="hint sr2e-warn sr2e-add-retry">{{retry}}</span>{{/if}}</td>
+        {{#if @root.shopTab}}{{#if @root.hasLegal}}<td class="sr2e-add-legal{{#if forbidden}} sr2e-warn{{/if}}"{{#if legalTitle}} title="{{legalTitle}}"{{/if}}>{{legal}}</td>{{/if}}{{/if}}
+        <td class="sr2e-add-from" title="{{source}}">{{source}}</td>
+        {{#if @root.isGM}}{{#if @root.shopTab}}<td>{{#if markable}}<a data-action="shopMark" data-key="{{key}}" role="button" aria-pressed="{{#if marked}}true{{else}}false{{/if}}" title="{{sr2eT "SR2E.UI.shopMarkHint"}}" aria-label="{{sr2eT "SR2E.UI.shopMarkFor" name=name}}"><i class="fa-{{#if marked}}solid{{else}}regular{{/if}} fa-square{{#if marked}}-check{{/if}}"></i></a>{{/if}}</td>{{/if}}{{/if}}
+      </tr>
+      {{else}}
+      <tr><td colspan="9"><em>{{sr2eT "SR2E.UI.noYetUseBlankOrThe" plural=plural one=one}}</em></td></tr>
+      {{/each}}
+    </tbody>
+  </table>
+  {{/if}}
+  <footer class="sr2e-add-foot">
+    {{#unless isSkill}}
+    <label>{{sr2eT "SR2E.UI.pay2"}} <select class="sr2e-add-payment">{{#each payments}}<option value="{{id}}"{{#if selected}} selected{{/if}}>{{label}}</option>{{/each}}</select></label>
+    {{#unless finding}}{{#if readyNote}}<label title="{{sr2eT "SR2E.UI.untickedItArrivesAsADrop" readyNote=readyNote}}"><input type="checkbox" class="sr2e-add-ready" {{checked ready}}> {{sr2eT "SR2E.UI.arrives" readyNote=readyNote}}</label>{{/if}}{{/unless}}
+    <span class="sr2e-add-total"></span>
+    {{#if findNote}}<span class="sr2e-add-note"><i class="fa-solid fa-magnifying-glass"></i> {{findNote}}</span>{{/if}}
+    {{#if karmaNote}}<span class="sr2e-add-note">{{karmaNote}}</span>{{/if}}
+    {{#if approvalNote}}<span class="sr2e-add-note sr2e-approval-note"><i class="fa-solid fa-user-check"></i> {{approvalNote}}</span>{{/if}}
+    {{#if creationNote}}<span class="sr2e-add-note"><i class="fa-solid fa-wand-magic-sparkles"></i> {{creationNote}}</span>{{/if}}
+    <button type="button" class="sr2e-add-go" data-action="addSelected"><i class="fa-solid {{#if finding}}fa-magnifying-glass{{else}}fa-plus{{/if}}"></i> {{#if finding}}{{sr2eT "SR2E.UI.findTicked"}}{{else}}{{sr2eT "SR2E.UI.addTicked"}}{{/if}}</button>
+    {{/unless}}
+    {{#if money}}<span class="sr2e-add-money" data-money>{{sr2eT "SR2E.UI.goodKarma2" nuyen=money.nuyen karma=money.karma}}</span>{{/if}}
+  </footer>
+  {{#if shopNote}}<p class="hint sr2e-add-shopnote"><i class="fa-solid fa-store"></i> {{shopNote}}</p>{{/if}}
+  <p class="hint">{{sr2eT "SR2E.UI.templatesAndItemsAreTheGm"}}</p>
+</div>

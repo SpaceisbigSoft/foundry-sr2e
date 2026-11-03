@@ -1,0 +1,61 @@
+# v0.90.0: builds the release. Push a tag named after the version in public/system.json (for example v0.92.0):
+#   git tag v0.92.0 && git push origin v0.92.0
+# The workflow runs the tests, builds the system, writes the manifest and download addresses for this repository into
+# system.json, and publishes a GitHub release with system.json and sr2e.zip (what Foundry installs).
+name: Release
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: The tag matches the version
+        run: |
+          v=$(node -p "require('./public/system.json').version")
+          test "v$v" = "${GITHUB_REF_NAME}" || { echo "Tag ${GITHUB_REF_NAME} does not match system.json version $v"; exit 1; }
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - name: Release addresses in system.json
+        run: |
+          node -e "
+            const fs = require('fs');
+            const p = 'public/system.json';
+            const s = JSON.parse(fs.readFileSync(p, 'utf8'));
+            const repo = 'https://github.com/' + process.env.GITHUB_REPOSITORY;
+            s.url = repo;
+            s.bugs = repo + '/issues';
+            s.changelog = repo + '/blob/' + process.env.GITHUB_REF_NAME + '/CHANGELOG.md';
+            s.readme = repo + '/blob/' + process.env.GITHUB_REF_NAME + '/README.md';
+            s.manifest = repo + '/releases/latest/download/system.json';
+            s.download = repo + '/releases/download/' + process.env.GITHUB_REF_NAME + '/sr2e.zip';
+            fs.writeFileSync(p, JSON.stringify(s, null, 2) + '\n');
+          "
+      - name: Zip the system
+        run: |
+          cd public
+          zip -r ../sr2e.zip . -x index.mjs.map
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            public/system.json
+            sr2e.zip
+          generate_release_notes: false
+          body: |
+            **Test build:** not yet play-tested at a table; please report problems on the issue tracker.
+
+            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/CHANGELOG.md) for what changed.
+
+            Install in Foundry VTT v14: on the setup screen, Game Systems → Install System, paste this into the Manifest URL box and click Install:
+            `https://github.com/${{ github.repository }}/releases/latest/download/system.json`
+
+            Built with AI (Anthropic's Claude) under human direction; not yet play-tested at a table. You need your own copy of the Shadowrun Second Edition rulebook.

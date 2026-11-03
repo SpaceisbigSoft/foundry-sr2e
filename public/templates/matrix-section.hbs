@@ -1,0 +1,105 @@
+{{#if matrix}}
+<section class="sr2e-matrix">
+  <h2 data-heading="Matrix">{{sr2eT "SR2E.UI.matrix"}}{{#if matrix.jackedIn}} <span class="sr2e-status">{{sr2eT "SR2E.UI.jackedIn"}}{{#if matrix.host}} · {{matrix.host.name}}{{#if matrix.host.known}} ({{matrix.host.code}}-{{matrix.host.value}}){{/if}}{{else}} {{sr2eT "SR2E.UI.grid"}}{{/if}}</span>{{/if}}</h2>
+  {{#if matrix.m}}
+  <div class="sr2e-row">
+    <span>{{sr2eT "SR2E.UI.mpcp2" deckName=matrix.m.deckName}} <strong>{{matrix.m.mpcp}}</strong></span>
+    <span>{{sr2eT "SR2E.UI.bodEvasionMaskingSensors" bod=matrix.m.bod evasion=matrix.m.evasion masking=matrix.m.masking sensors=matrix.m.sensors}}{{#if matrix.m.hardening}} {{sr2eT "SR2E.UI.hardening2" hardening=matrix.m.hardening}}{{/if}}</span>
+  </div>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.sim"}} <select name="system.matrix.sim">{{selectOptions matrix.simChoices selected=system.matrix.sim valueAttr="key" labelAttr="label"}}</select></label>
+    <label>{{sr2eT "SR2E.UI.connection"}} <select name="system.matrix.connection">{{selectOptions matrix.connectionChoices selected=system.matrix.connection valueAttr="key" labelAttr="label"}}</select></label>
+    {{#if matrix.wireless}}<label class="sr2e-inline" title="{{sr2eT "SR2E.UI.distanceToTheRelayOrCell"}}">{{sr2eT "SR2E.UI.relay"}} <input type="number" name="system.matrix.relayKm" value="{{system.matrix.relayKm}}" min="0" step="0.1"> {{sr2eT "SR2E.UI.km"}}</label>{{/if}}
+    {{#if matrix.path}}<span>{{sr2eT "SR2E.UI.route" path=matrix.path}}</span>{{/if}}
+  </div>
+  {{#if matrix.link}}<p class="{{#if matrix.link.bad}}sr2e-warn{{else}}hint{{/if}}">{{sr2eT "SR2E.UI.signal2" note=matrix.link.note}}</p>{{/if}}
+  {{#if matrix.kindNote}}<p class="hint">{{matrix.kindNote}}</p>{{/if}}
+  {{#if matrix.jammed}}<p class="sr2e-warn">{{sr2eT "SR2E.UI.noMatrixUseOverIt" jammed=matrix.jammed}} <a data-action="unjamLink" data-sr2e-gm title="{{sr2eT "SR2E.UI.theJamClearsGmOrThe"}}"><i class="fa-solid fa-tower-broadcast"></i> {{sr2eT "SR2E.UI.clear"}}</a></p>{{/if}}
+  {{#if matrix.channels}}<div class="sr2e-row"><span title="{{sr2eT "SR2E.UI.anOtakuSChannelsEachWorks" otakuCap=matrix.otakuCap}}">{{sr2eT "SR2E.UI.channels"}}</span>{{#each matrix.channels}} <span>{{label}} <strong>{{value}}</strong> <a data-action="raiseChannel" data-channel="{{key}}" title="{{sr2eT "SR2E.UI.raiseTo1ForKarma" raw=raw cost=cost}}"><i class="fa-solid fa-circle-plus"></i></a></span>{{/each}}</div>{{/if}}
+  {{#if matrix.numbers.length}}<p class="hint">{{sr2eT "SR2E.UI.ltgNumbersYouKnow"}} {{#each matrix.numbers}}<strong>{{number}}</strong>{{#if name}} ({{name}}){{/if}} <a data-action="forgetNumber" data-index="{{index}}" title="{{sr2eT "SR2E.UI.forget"}}"><i class="fa-solid fa-xmark"></i></a>{{#unless @last}} · {{/unless}}{{/each}}</p>{{/if}}
+  <div class="sr2e-row">
+    <span>{{sr2eT "SR2E.UI.hackingPool"}} <strong>{{system.derived.hackingPoolLeft}} / {{system.derived.hackingPool}}</strong></span>
+    <label class="sr2e-inline">{{sr2eT "SR2E.UI.spent"}} <input type="number" name="system.poolSpent.hacking" value="{{system.poolSpent.hacking}}" min="0"></label>
+    <span>{{sr2eT "SR2E.UI.matrixInit"}} <strong>{{matrix.m.reaction}} + {{matrix.m.initiativeDice}}d6</strong></span>
+    <span>{{sr2eT "SR2E.UI.detectionFactor"}} <strong>{{matrix.m.detectionFactor}}</strong></span>
+    <span{{#if matrix.m.memory.over}} class="sr2e-warn"{{/if}}>{{sr2eT "SR2E.UI.memoryMp" used=matrix.m.memory.used activeMemory=matrix.m.activeMemory}}</span>
+  </div>
+  {{#if matrix.defenses}}<p class="hint">{{sr2eT "SR2E.UI.defensesLoaded" defenses=matrix.defenses}}</p>{{/if}}
+  {{#each matrix.m.warnings}}<p class="hint sr2e-warn">{{this}}</p>{{/each}}
+  {{#if matrix.transit}}<p class="sr2e-warn">{{matrix.transit}}</p>{{/if}}
+  {{#if matrix.smoke}}<p class="sr2e-warn">{{matrix.smoke}}</p>{{/if}}
+  {{#each matrix.psyche}}<p class="{{#if active}}sr2e-warn{{else}}hint{{/if}}"><strong>{{label}}</strong> ({{icName}}){{#if active}}: {{when}}{{else}}{{sr2eT "SR2E.UI.wornOff"}}{{/if}} <a data-action="clearPsyche" data-index="{{index}}" title="{{sr2eT "SR2E.UI.gmClear"}}"><i class="fa-solid fa-xmark"></i></a></p>{{/each}}
+  {{#if matrix.m.damaged}}<p class="hint sr2e-warn">{{sr2eT "SR2E.UI.workingPersonaMpcpBodEvasionMasking" mpcp=matrix.m.mpcp mpcp2=matrix.m.base.mpcp bod=matrix.m.bod bod2=matrix.m.base.bod evasion=matrix.m.evasion evasion2=matrix.m.base.evasion masking=matrix.m.masking masking2=matrix.m.base.masking sensors=matrix.m.sensors sensors2=matrix.m.base.sensors}}</p>{{/if}}
+  {{#if matrix.crippled}}<p class="sr2e-warn">{{sr2eT "SR2E.UI.crippledUntilYouJackOut" crippled=matrix.crippled}} {{#if matrix.isGM}}<a data-action="clearCrippled" title="{{sr2eT "SR2E.UI.gmClear"}}"><i class="fa-solid fa-eraser"></i></a>{{/if}}</p>{{/if}}
+  {{#each matrix.damagedDecks}}<p class="sr2e-warn">{{sr2eT "SR2E.UI.damaged3" name=name text=text}} <button type="button" data-action="repairDeck" data-item-id="{{id}}">{{sr2eT "SR2E.UI.repair2"}}</button></p>{{/each}}
+  {{#if matrix.trace}}<p class="sr2e-warn"><strong>{{sr2eT "SR2E.UI.traced"}}</strong> {{sr2eT "SR2E.UI.byThen" icName=matrix.trace.icName mode=matrix.trace.mode}}{{#if matrix.trace.when}}: {{matrix.trace.when}}{{/if}}{{sr2eT "SR2E.UI.jackOutDerezItOrRedirect"}} {{#if matrix.isGM}}<a data-action="dropTrace" title="{{sr2eT "SR2E.UI.gmDropTheTrace"}}"><i class="fa-solid fa-xmark"></i></a>{{/if}}</p>{{/if}}
+  {{#if matrix.passed}}<p class="hint">{{sr2eT "SR2E.UI.decryptedPast" passed=matrix.passed}}</p>{{/if}}
+  {{#if matrix.held}}<p class="sr2e-warn"><strong>{{sr2eT "SR2E.UI.held"}}</strong> {{sr2eT "SR2E.UI.byJackingOutTakesATest" held=matrix.held}}</p>{{/if}}
+  {{#if matrix.maneuvers}}<p class="hint">{{sr2eT "SR2E.UI.maneuversInForce" maneuvers=matrix.maneuvers}}</p>{{/if}}
+  {{#if matrix.filter}}<p class="hint">{{matrix.filter}}</p>{{/if}}
+  {{#if matrix.riders}}<p class="hint">{{sr2eT "SR2E.UI.ridingYourHitcherJacks" riders=matrix.riders hitcherRoom=matrix.hitcherRoom}}</p>{{/if}}
+  <div class="sr2e-cm sr2e-cm-matrix-row">
+    {{> "systems/sr2e/templates/monitor-track.hbs" t=matrix.track action="setMatrixMonitor"}}
+    {{#if matrix.m.crashed}}<span class="sr2e-overflow">{{sr2eT "SR2E.UI.crashed"}}</span>{{/if}}
+  </div>
+  <div class="sr2e-row sr2e-matrix-actions">
+    {{#if matrix.canMove}}<button type="button" data-action="jackIn"{{#if matrix.jackedIn}} title="{{sr2eT "SR2E.UI.gmGoStraightToAHost"}}"{{/if}}>{{#if matrix.jackedIn}}{{sr2eT "SR2E.UI.move"}}{{else}}{{sr2eT "SR2E.UI.jackIn"}}{{/if}}</button>{{/if}}
+    {{#if matrix.jackedIn}}
+      <button type="button" data-action="systemTest">{{#if matrix.host}}{{sr2eT "SR2E.UI.operation"}}{{else}}{{sr2eT "SR2E.UI.logOn"}}{{/if}}</button>
+      <button type="button" data-action="matrixAttack">{{sr2eT "SR2E.UI.attack"}}</button>
+      <button type="button" data-action="matrixPerceive" title="{{sr2eT "SR2E.UI.locateDeckerLocateIcAnalyzeIcon"}}">{{sr2eT "SR2E.UI.perceive"}}</button>
+      <button type="button" data-action="matrixManeuver" title="{{sr2eT "SR2E.UI.positionParryOrEvadeOpposedEvasion"}}">{{sr2eT "SR2E.UI.maneuver"}}</button>
+      {{#if matrix.hasMedic}}<button type="button" data-action="runMedic">{{sr2eT "SR2E.UI.medic"}}</button>{{/if}}
+      {{#if matrix.security}}<button type="button" data-action="securityAction" title="{{sr2eT "SR2E.UI.youAreASecurityDeckerOf"}}">{{sr2eT "SR2E.UI.security2"}}</button>{{/if}}
+      <button type="button" data-action="jackOut">{{sr2eT "SR2E.UI.jackOut"}}</button>
+    {{/if}}
+  </div>
+  {{else}}
+  <p class="hint">{{sr2eT "SR2E.UI.noCyberdeckInUseTickIn"}}</p>
+  {{/if}}
+  <h3 data-heading="Cyberdecks">{{sr2eT "SR2E.UI.cyberdecks"}} <a class="sr2e-add" data-action="addItem" data-type="cyberdeck" title="{{sr2eT "SR2E.UI.addACyberdeck"}}"><i class="fa-solid fa-plus"></i></a> <button type="button" data-action="buildDeck" title="{{sr2eT "SR2E.UI.buildANewDeckOrUpgrade"}}">{{sr2eT "SR2E.UI.build2"}}</button></h3>
+  <ul>
+    {{#each matrix.decks}}
+    <li><input type="checkbox" data-action="toggleActive" data-item-id="{{id}}" {{checked system.active}} title="{{sr2eT "SR2E.UI.inUse"}}">
+      <a data-action="editItem" data-item-id="{{id}}">{{name}}</a>
+      <span>{{sr2eT "SR2E.UI.mpcpMp" mpcp=system.mpcp activeMemory=system.activeMemory}}{{#if system.responseIncrease}} {{sr2eT "SR2E.UI.response2" responseIncrease=system.responseIncrease}}{{/if}}</span>
+      <a data-action="deleteItem" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.delete"}}"><i class="fa-solid fa-trash"></i></a></li>
+    {{else}}<li class="sr2e-empty"><em>{{sr2eT "SR2E.UI.noCyberdeckPress"}} <i class="fa-solid fa-plus"></i> {{sr2eT "SR2E.UI.toAddOne"}}</em></li>
+    {{/each}}
+  </ul>
+  <h3 data-heading="Programs">{{sr2eT "SR2E.UI.programs"}} <a class="sr2e-add" data-action="addItem" data-type="program" title="{{sr2eT "SR2E.UI.addPrograms"}}"><i class="fa-solid fa-plus"></i></a> <button type="button" data-action="writeProgram" title="{{sr2eT "SR2E.UI.writeAProgramAComputerTest"}}{{#if matrix.suite}}{{sr2eT "SR2E.UI.programmingSuite2" suite=matrix.suite}}{{/if}}">{{sr2eT "SR2E.UI.write"}}</button>{{#if matrix.channels}} <button type="button" data-action="learnComplexForm" title="{{sr2eT "SR2E.UI.anOtakuSOwnProgramLearned"}}">{{sr2eT "SR2E.UI.complexForm2"}}</button>{{/if}}</h3>
+  <ul>
+    {{#each matrix.programs}}
+    <li><input type="checkbox" data-action="toggleLoaded" data-item-id="{{id}}" {{checked system.loaded}} title="{{sr2eT "SR2E.UI.loadedJackedInSwapMemoryIt"}}">
+      <a data-action="editItem" data-item-id="{{id}}">{{name}}</a>
+      <span>{{summary}}{{#if loading}} · <span class="sr2e-warn">{{loading}}</span>{{/if}}</span>
+      {{#if isRunnable}}<button type="button" data-action="useUtility" data-item-id="{{id}}">{{sr2eT "SR2E.UI.run2"}}</button>{{/if}}
+      {{#if isFrame}}{{#if canLaunch}}<button type="button" data-action="launchFrame" data-item-id="{{id}}">{{sr2eT "SR2E.UI.launch"}}</button>{{/if}}{{/if}}
+      {{#if isSmoke}}<button type="button" data-action="releaseSmoke" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.releaseItInThisHostA"}}">{{sr2eT "SR2E.UI.release"}}</button>{{/if}}
+      <a data-action="deleteItem" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.delete"}}"><i class="fa-solid fa-trash"></i></a></li>
+    {{else}}<li class="sr2e-empty"><em>{{sr2eT "SR2E.UI.noProgramsPress"}} <i class="fa-solid fa-plus"></i> {{sr2eT "SR2E.UI.toAddSome"}}</em></li>
+    {{/each}}
+  </ul>
+  {{#if matrix.frames.length}}
+  <h3 data-heading="Frames and agents">{{sr2eT "SR2E.UI.framesAndAgents"}}</h3>
+  <ul>
+    {{#each matrix.frames}}
+    <li><a data-action="openActor" data-uuid="{{uuid}}">{{name}}</a> <span>{{#if agent}}{{sr2eT "SR2E.UI.agent"}} {{else}}{{#if smart}}{{sr2eT "SR2E.UI.smart"}} {{/if}}{{/if}}{{sr2eT "SR2E.UI.ratingIn10" rating=rating host=host monitor=monitor}}{{#if crashed}} {{sr2eT "SR2E.UI.crashed2"}}{{/if}}{{#if carried}} {{sr2eT "SR2E.UI.carries2" carried=carried}}{{/if}}</span>
+      {{#if canAct}}{{#if hasHost}}<button type="button" data-action="systemTest" data-frame-uuid="{{uuid}}">{{sr2eT "SR2E.UI.operation"}}</button>{{/if}}{{/if}}
+      {{#if canAttack}}<button type="button" data-action="frameAttack" data-frame-uuid="{{uuid}}">{{sr2eT "SR2E.UI.attack"}}</button>{{/if}}
+      {{#if agent}}{{#if canAct}}<button type="button" data-action="agentSearch" data-frame-uuid="{{uuid}}" title="{{sr2eT "SR2E.UI.sendItToSearchSeveralHosts"}}">{{sr2eT "SR2E.UI.searchHosts"}}</button>{{/if}}{{/if}}
+      <a data-action="recallFrame" data-frame-uuid="{{uuid}}" title="{{sr2eT "SR2E.UI.recallDelete"}}"><i class="fa-solid fa-trash"></i></a></li>
+    {{/each}}
+  </ul>
+  {{/if}}
+  {{#if matrix.deckFiles.length}}
+  <h3 data-heading="Downloaded data">{{sr2eT "SR2E.UI.downloadedData"}}</h3>
+  <ul>
+    {{#each matrix.deckFiles}}
+    <li>{{name}} <span>{{sr2eT "SR2E.UI.mp" size=size}}{{#if paydata}} {{sr2eT "SR2E.UI.paydata" value=value}}{{/if}}{{#if source}} {{sr2eT "SR2E.UI.from2" source=source}}{{/if}} ({{deckName}})</span>
+      <a data-action="deleteDeckFile" data-item-id="{{deckId}}" data-index="{{index}}" title="{{sr2eT "SR2E.UI.delete"}}"><i class="fa-solid fa-trash"></i></a></li>
+    {{/each}}
+  </ul>
+  {{/if}}
+</section>
+{{/if}}

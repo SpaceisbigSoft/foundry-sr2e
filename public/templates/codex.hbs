@@ -1,0 +1,67 @@
+{{!-- v0.91.3: the Catalogue (applications/codex.ts): browse what you can get, with a page per entry. --}}
+<div class="sr2e-codex-body">
+  <nav class="sr2e-codex-tabs" aria-label="{{sr2eT "SR2E.UI.codexTabs"}}">
+    {{#each tabs}}<a class="sr2e-codex-tab{{#if active}} active{{/if}}" data-action="codexTab" data-type="{{type}}" role="button" aria-pressed="{{#if active}}true{{else}}false{{/if}}"><i class="{{icon}}" aria-hidden="true"></i> {{label}}</a>{{/each}}
+  </nav>
+  <div class="sr2e-codex-main">
+    <section class="sr2e-codex-browse">
+      <input type="search" class="sr2e-codex-search" placeholder="{{sr2eT "SR2E.UI.search" plural=plural}}" value="{{query}}" aria-label="{{sr2eT "SR2E.UI.search2"}}">
+      {{#if groups.length}}
+      <fieldset class="sr2e-add-groups">
+        <legend class="hint" data-help="catalogue" data-heading="Show only (none ticked: everything)">{{sr2eT "SR2E.UI.shopCategories"}}</legend>
+        {{#each groups}}<label class="sr2e-add-groupchip"><input type="checkbox" class="sr2e-add-group" value="{{id}}" {{checked checked}}> {{label}} <span class="sr2e-add-count">{{count}}</span></label>{{/each}}
+      </fieldset>
+      {{/if}}
+      <p class="hint sr2e-codex-shown"></p>
+      <ul class="sr2e-codex-list">
+        {{#each rows}}
+        <li data-codex-row data-key="{{key}}" data-group="{{group}}" data-search="{{search}}"{{#if hidden}} hidden{{/if}}>
+          <a class="sr2e-codex-row{{#if selected}} active{{/if}}" data-action="codexPick" data-key="{{key}}" role="button" aria-pressed="{{#if selected}}true{{else}}false{{/if}}">
+            <span class="sr2e-codex-name">{{name}}</span>
+            <span class="sr2e-codex-price">{{price}}</span>
+            <span class="sr2e-codex-what">{{summary}}</span>
+          </a>
+        </li>
+        {{else}}
+        <li class="hint">{{sr2eT "SR2E.UI.codexEmpty" plural=plural}}</li>
+        {{/each}}
+      </ul>
+    </section>
+    <article class="sr2e-codex-page">
+      {{#if page}}
+      <header class="sr2e-codex-head">
+        {{#if page.img}}<img src="{{page.img}}" alt="" width="64" height="64">{{else}}<i class="{{page.icon}} sr2e-codex-icon" aria-hidden="true"></i>{{/if}}
+        <div>
+          <h2 data-help="catalogue">{{page.name}}</h2>
+          <p class="hint">{{page.kind}}{{#if page.category}} · {{page.category}}{{/if}} · {{page.source}}</p>
+        </div>
+      </header>
+      {{#if page.summary}}<p class="sr2e-codex-summary">{{page.summary}}</p>{{/if}}
+      {{#if page.hasBuying}}
+      <dl class="sr2e-codex-buying">
+        {{#if page.price}}<div><dt>{{sr2eT "SR2E.UI.price"}}</dt><dd{{#if page.priceTitle}} title="{{page.priceTitle}}"{{/if}}>{{page.price}}</dd></div>{{/if}}
+        {{#if page.avail}}<div><dt>{{sr2eT "SR2E.UI.avail"}}</dt><dd>{{page.avail}}</dd></div>{{/if}}
+        {{#if page.streetIndex}}<div><dt>{{sr2eT "SR2E.UI.codexStreetIndex"}}</dt><dd>{{page.streetIndex}}</dd></div>{{/if}}
+        {{#if page.legal}}<div><dt>{{sr2eT "SR2E.UI.shopLegal"}}</dt><dd class="{{#if page.forbidden}}sr2e-warn{{/if}}">{{page.legal}}{{#if page.legalNote}} <span class="hint">{{page.legalNote}}</span>{{/if}}</dd></div>{{/if}}
+      </dl>
+      {{/if}}
+      {{#if page.stats.length}}
+      <h3 class="sr2e-codex-sub" data-heading="Stats and details">{{sr2eT "SR2E.UI.codexStats"}}</h3>
+      <table class="sr2e-codex-stats">
+        <tbody>{{#each page.stats}}<tr><th scope="row">{{label}}</th><td>{{value}}</td></tr>{{/each}}</tbody>
+      </table>
+      {{/if}}
+      {{#if page.description}}<div class="sr2e-codex-desc">{{{page.description}}}</div>{{else}}<p class="hint">{{sr2eT "SR2E.UI.codexNoDescription"}}</p>{{/if}}
+      <footer class="sr2e-codex-actions">
+        {{#if page.buyable}}<button type="button" data-action="codexBuy"><i class="fa-solid fa-store" aria-hidden="true"></i> {{sr2eT "SR2E.UI.codexBuy"}}</button>{{/if}}
+        {{#if page.learnable}}<button type="button" data-action="codexBuy" data-learn="true"><i class="fa-solid fa-plus" aria-hidden="true"></i> {{sr2eT "SR2E.UI.codexLearn"}}</button>{{/if}}
+        {{#if page.uuid}}<button type="button" data-action="codexOpenItem"><i class="fa-solid fa-up-right-from-square" aria-hidden="true"></i> {{sr2eT "SR2E.UI.codexOpenItem"}}</button>{{/if}}
+        {{#if page.markable}}<button type="button" data-action="codexMark" aria-pressed="{{#if page.marked}}true{{else}}false{{/if}}" title="{{sr2eT "SR2E.UI.shopMarkHint"}}"><i class="fa-{{#if page.marked}}solid{{else}}regular{{/if}} fa-square{{#if page.marked}}-check{{/if}}" aria-hidden="true"></i> {{sr2eT "SR2E.UI.codexInShop"}}</button>{{/if}}
+      </footer>
+      {{else}}
+      {{#if missing}}<p class="hint">{{sr2eT "SR2E.UI.codexMissing"}}</p>{{else}}<p class="hint sr2e-codex-pickhint"><i class="fa-solid fa-book-atlas" aria-hidden="true"></i> {{sr2eT "SR2E.UI.codexPick"}}</p>{{/if}}
+      {{/if}}
+      {{#if shopNote}}<p class="hint sr2e-codex-note"><i class="fa-solid fa-store" aria-hidden="true"></i> {{shopNote}}</p>{{/if}}
+    </article>
+  </div>
+</div>

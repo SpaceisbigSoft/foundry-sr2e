@@ -1,0 +1,25 @@
+<div class="sr2e-summary">
+  {{!-- v0.68.0: the condition, wounds, initiative, actions and pools moved to the always-visible status strip (status-strip.hbs). --}}
+  {{#if summary.chips.length}}
+  <div class="sr2e-summary-row">
+    {{#each summary.chips}}<span class="sr2e-chip sr2e-chip-soft">{{this}}</span>{{/each}}
+  </div>
+  {{/if}}
+  {{#if tools.pins.length}}
+  <div class="sr2e-pinbar" aria-label="{{sr2eT "SR2E.UI.pinned"}}">
+    {{#each tools.pins}}<button type="button" data-action="{{action}}" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.unpinItWithItsRowS" verb=verb name=name}}"><i class="{{icon}}"></i> {{name}}</button>{{/each}}
+  </div>
+  {{/if}}
+  <div class="sr2e-quickbar">
+    {{#each quickActions}}<button type="button" data-action="{{action}}" title="{{title}}"{{#if itemId}} data-item-id="{{itemId}}"{{/if}}><i class="{{icon}}"></i> {{label}}</button>{{/each}}
+  </div>
+  {{#if tools.warnings.length}}
+  <details class="sr2e-setup">
+    <summary data-help="summary-bar"><i class="fa-solid fa-triangle-exclamation"></i> {{sr2eT "SR2E.UI.setup"}} {{#if tools.warnCount}}{{sr2eT "SR2E.UI.toFix" warnCount=tools.warnCount}}{{/if}}{{#if tools.warnCount}}{{#if tools.noteCount}}, {{/if}}{{/if}}{{#if tools.noteCount}}{{sr2eT "SR2E.UI.toCheck" noteCount=tools.noteCount}}{{/if}}</summary>
+    <ul>
+      {{#each tools.warnings}}<li class="sr2e-setup-{{level}}"><a data-action="jumpTo" data-tab="{{tab}}" data-find="{{find}}" title="{{sr2eT "SR2E.UI.goThere"}}">{{text}}</a></li>{{/each}}
+      {{#if tools.warnMore}}<li class="sr2e-setup-note">{{sr2eT "SR2E.UI.andMore" warnMore=tools.warnMore}}</li>{{/if}}
+    </ul>
+  </details>
+  {{/if}}
+</div>

@@ -1,0 +1,152 @@
+<div class="sr2e-sheet sr2e-npc sr2e-spirit sr2e-layout-{{layout}}">
+  <header class="sr2e-header">
+    <img src="{{actor.img}}" alt="" width="56" height="56" data-edit="img">
+    <div class="sr2e-header-main">
+      <input type="text" name="name" value="{{actor.name}}" placeholder="{{sr2eT "SR2E.UI.name"}}">
+      <div class="sr2e-header-meta">
+      <label class="sr2e-inline">{{sr2eT "SR2E.UI.force4"}} <input type="number" name="system.force" value="{{system.force}}" min="0"></label>
+      <button type="button" data-action="dismissSpirit" title="{{sr2eT "SR2E.UI.dismissThisSpiritDeletesTheActor"}}"><i class="fa-solid fa-person-walking-arrow-right"></i> {{sr2eT "SR2E.UI.dismiss"}}</button>
+      </div>
+    </div>
+  </header>
+  <div class="sr2e-stuck">
+    {{> "systems/sr2e/templates/status-strip.hbs"}}
+  </div>
+  {{#if (eq layout "combat")}}{{> "systems/sr2e/templates/combat-column.hbs"}}{{/if}}
+
+  <div class="sr2e-row sr2e-spirit-meta">
+    <label>{{sr2eT "SR2E.UI.kind"}}
+      <select name="system.spiritKind">{{selectOptions spiritKinds selected=system.spiritKind valueAttr="key" labelAttr="label"}}</select>
+    </label>
+    <label>{{sr2eT "SR2E.UI.spiritType"}} <input type="text" name="system.spiritType" value="{{system.spiritType}}" placeholder="{{sr2eT "SR2E.UI.eGForestSpirit"}}"></label>
+    {{#if (eq system.spiritKind "elemental")}}<label>{{sr2eT "SR2E.UI.element"}} <select name="system.element">{{selectOptions elementChoices selected=system.element valueAttr="key" labelAttr="label"}}</select></label>{{/if}}
+    {{#if (eq system.spiritKind "nature")}}<label>{{sr2eT "SR2E.UI.domain"}} <input type="text" name="system.domain" value="{{system.domain}}" placeholder="{{sr2eT "SR2E.UI.eGForest"}}"></label>{{/if}}
+    {{#if critter.outOfDomain}}<span class="sr2e-status sr2e-warn" title="{{sr2eT "SR2E.UI.theSceneSEnvironmentTagsDon"}}">{{sr2eT "SR2E.UI.outsideItsDomain"}}</span>{{/if}}
+    <label title="{{sr2eT "SR2E.UI.invokedIntoAGreatFormTo" attributes=greatForm.attributes powers=greatForm.powers}}">{{sr2eT "SR2E.UI.greatForm"}} <input type="checkbox" name="system.greatForm" {{checked system.greatForm}}></label>
+    <label>{{sr2eT "SR2E.UI.services"}} <input type="number" name="system.services" value="{{system.services}}" min="0"></label>
+    <button type="button" data-action="useService" {{#unless system.services}}disabled{{/unless}}>{{sr2eT "SR2E.UI.useAService"}}</button>
+    {{#if departsLabel}}<span class="sr2e-status" title="{{sr2eT "SR2E.UI.natureSpiritsStayUntilTheNext"}}">{{departsLabel}}</span>{{/if}}
+  </div>
+  {{#if isFreeOrAlly}}
+  <div class="sr2e-row">
+    {{#if (eq system.spiritKind "free")}}<label>{{sr2eT "SR2E.UI.spiritEnergy"}} <input type="number" name="system.spiritEnergy" value="{{system.spiritEnergy}}" min="0"></label>{{/if}}
+    <label>{{sr2eT "SR2E.UI.trueName2"}} <input type="text" name="system.trueName" value="{{system.trueName}}"></label>
+  </div>
+  {{/if}}
+  <p class="sr2e-spirit-summoner">
+    {{#if summoner}}{{sr2eT "SR2E.UI.summonedBy"}} <a data-action="openActor" data-uuid="{{summoner.uuid}}">{{summoner.name}}</a>{{else}}<em>{{sr2eT "SR2E.UI.noSummonerThisIsATemplate"}}</em>{{/if}}
+    {{#if (eq system.derived.status "banished")}}<span class="sr2e-status">{{sr2eT "SR2E.UI.banished"}}</span>{{/if}}
+  </p>
+
+  <div class="sr2e-statgrid">
+    {{#each attributes}}<div class="sr2e-stat"><a class="sr2e-stat-label" data-action="rollAttribute" data-attribute="{{key}}" title="{{sr2eT "SR2E.UI.roll2" label=label}}">{{abbr}}</a><strong>{{total}}</strong></div>{{/each}}
+    <div class="sr2e-stat" title="{{sr2eT "SR2E.UI.force4"}}"><span class="sr2e-stat-label">F</span><strong>{{system.force}}</strong></div>
+    <div class="sr2e-stat" title="{{sr2eT "SR2E.UI.reaction"}}"><span class="sr2e-stat-label">R</span><strong>{{system.derived.reaction}}</strong></div>
+    <div class="sr2e-stat sr2e-stat-wide" title="{{sr2eT "SR2E.UI.armorBallisticImpact"}}"><span class="sr2e-stat-label">{{sr2eT "SR2E.UI.armor"}}</span><strong>{{armorRating.ballistic}}/{{armorRating.impact}}</strong></div>
+  </div>
+
+  <div class="sr2e-row sr2e-offsets">
+    <span class="sr2e-offsets-label">{{sr2eT "SR2E.UI.force5"}}</span>
+    {{#each offsetRows}}<label>{{label}} <input type="number" name="system.offsets.{{key}}" value="{{value}}"></label>{{/each}}
+  </div>
+  <label class="sr2e-check"><input type="checkbox" name="system.materialized" {{checked system.materialized}}>
+    {{sr2eT "SR2E.UI.materializedPhysicalAttacksCanReachIt"}}</label>
+  {{#if canManifestSpirit}}<button type="button" data-action="manifest" title="{{sr2eT "SR2E.UI.seenAndHeardInThePhysical"}}">{{#if manifesting}}{{sr2eT "SR2E.UI.stopManifesting"}}{{else}}{{sr2eT "SR2E.UI.manifest"}}{{/if}}</button>{{/if}}
+  <label class="sr2e-check"><input type="checkbox" name="system.immuneNormalWeapons" {{checked system.immuneNormalWeapons}}>
+    {{sr2eT "SR2E.UI.immunityToNormalWeapons"}}{{#if immunityArmor}} {{sr2eT "SR2E.UI.armor2" immunityArmor=immunityArmor}}{{/if}}</label>
+
+  <div class="sr2e-row sr2e-npc-derived">
+    <span>{{sr2eT "SR2E.UI.init"}} <strong>{{system.derived.spiritInitiative}}</strong></span>
+    <span>{{sr2eT "SR2E.UI.combatPool"}} <strong>{{system.derived.combatPoolLeft}}/{{system.derived.combatPool}}</strong></span>
+    <span>{{sr2eT "SR2E.UI.wounds"}} <strong>+{{system.derived.woundModifier}}</strong></span>
+    <span class="sr2e-status">{{system.derived.status}}</span>
+  </div>
+
+  <section class="sr2e-monitor">
+    {{> "systems/sr2e/templates/monitor.hbs"}}
+    <button type="button" data-action="resistDamage">{{sr2eT "SR2E.UI.resistDamage"}}</button>
+  </section>
+
+  <section class="sr2e-items">
+    {{!-- v0.68.0: the same order as the character and NPC sheets: skills, attacks, powers. --}}
+    <h2 data-heading="Skills">{{sr2eT "SR2E.UI.skills"}} <a class="sr2e-add" data-action="addSkill" data-kind="active" title="{{sr2eT "SR2E.UI.addASkill"}}"><i class="fa-solid fa-plus"></i></a></h2>
+    <p class="sr2e-chips">
+      {{#each skills}}<span class="sr2e-chip"><a data-action="rollSkill" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.roll"}}">{{name}} {{system.rating}}</a><a data-action="editItem" data-item-id="{{id}}" data-sr2e-edit-pencil title="{{sr2eT "SR2E.UI.edit"}}"><i class="fa-solid fa-pen"></i></a></span>{{else}}<em>{{sr2eT "SR2E.UI.noneSpiritsUseTheirForceFor"}}</em>{{/each}}
+    </p>
+    <h2 class="sr2e-heading-actions" data-heading="Attacks">{{sr2eT "SR2E.UI.attacks"}} <a class="sr2e-add" data-action="addItem" data-type="weapon" title="{{sr2eT "SR2E.UI.addAttacksWeaponItems"}}"><i class="fa-solid fa-plus"></i></a> <button type="button" data-action="astralAttack">{{sr2eT "SR2E.UI.astralAttack"}}</button> <button type="button" data-action="breachBarrier">{{sr2eT "SR2E.UI.forceBarrier"}}</button></h2>
+    <ul>
+      {{#each weapons}}
+      <li>
+        <a data-action="editItem" data-item-id="{{id}}">{{name}}</a>
+        <span>{{damageLabel}}{{#if (eq system.damageType "stun")}} {{sr2eT "SR2E.UI.stun2"}}{{/if}}{{#if system.melee}} {{sr2eT "SR2E.UI.melee"}}{{#if system.reach}}{{sr2eT "SR2E.UI.reach" reach=system.reach}}{{/if}}){{/if}}</span>
+        <button type="button" data-action="attackWeapon" data-item-id="{{id}}">{{sr2eT "SR2E.UI.attack"}}</button>
+        <a data-action="deleteItem" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.delete"}}"><i class="fa-solid fa-trash"></i></a>
+      </li>
+      {{else}}<li class="sr2e-empty"><em>{{sr2eT "SR2E.UI.noAttacksPress"}} <i class="fa-solid fa-plus"></i> {{sr2eT "SR2E.UI.orDragAWeaponItemHere"}}</em></li>
+      {{/each}}
+    </ul>
+    {{#if true}}
+    <h2 data-heading="Powers">{{sr2eT "SR2E.UI.powers"}} <a class="sr2e-add" data-action="addItem" data-type="power" title="{{sr2eT "SR2E.UI.addPowers"}}"><i class="fa-solid fa-plus"></i></a></h2>
+    <ul>
+      {{#each powers}}
+      <li>
+        <a data-action="editItem" data-item-id="{{id}}">{{name}}</a>
+        <span class="sr2e-power-summary">{{summary}}</span>
+        {{#if canUse}}<button type="button" data-action="usePower" data-item-id="{{id}}">{{sr2eT "SR2E.UI.use"}}</button>{{/if}}{{#if isAllergy}}<label class="sr2e-inline" title="{{sr2eT "SR2E.UI.exposedToItNowTnPenalty"}}"><input type="checkbox" data-action="toggleExposed" data-item-id="{{id}}" {{checked system.exposed}}> {{sr2eT "SR2E.UI.exposed"}}</label>{{#if hasContact}}<button type="button" data-action="allergenContact" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.aTouchOfItDamageUnresisted"}}">{{sr2eT "SR2E.UI.contact"}}</button>{{/if}}{{/if}}
+        <a data-action="deleteItem" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.delete"}}"><i class="fa-solid fa-trash"></i></a>
+      </li>
+      {{else}}<li class="sr2e-empty"><em>{{sr2eT "SR2E.UI.noPowersPress"}} <i class="fa-solid fa-plus"></i> {{sr2eT "SR2E.UI.orDragPowerItemsHere"}}</em></li>
+      {{/each}}
+    </ul>
+    {{/if}}
+    {{> "systems/sr2e/templates/power-effects.hbs"}}
+    {{#if allyPanel}}
+    {{!-- v0.72.0 (O21): an ally's extras, bought by its master with Good Karma (house rule MAGIC_V72.ally). --}}
+    <h2 data-heading="Ally">{{sr2eT "SR2E.UI.ally"}}</h2>
+    <ul class="sr2e-ally-abilities">
+      {{#each allyPanel.abilities}}
+      <li>{{label}} {{#if has}}<em>{{sr2eT "SR2E.UI.hasIt"}}</em>{{else}}<button type="button" data-action="buyAllyAbility" data-ability="{{id}}">{{sr2eT "SR2E.UI.buyGoodKarma" karma=karma}}</button>{{/if}}</li>
+      {{/each}}
+    </ul>
+    <p><button type="button" data-action="teachAlly">{{sr2eT "SR2E.UI.teachASpellGoodKarmaPer" spellKarmaPerForce=allyPanel.spellKarmaPerForce}}</button>
+      {{#if allyPanel.canLink}}<button type="button" data-action="senseLink">{{#if allyPanel.senseLinkOn}}{{sr2eT "SR2E.UI.endTheSenseLink"}}{{else}}{{sr2eT "SR2E.UI.masterUsesMySenses"}}{{/if}}</button>{{/if}}</p>
+    {{/if}}
+    {{!-- v0.72.0 (O18): spirits cast their spells with their Force (house rule MAGIC_V72.innateSpells). --}}
+    <h2 data-heading="Spells">{{sr2eT "SR2E.UI.spells"}} <a class="sr2e-add" data-action="addItem" data-type="spell" title="{{sr2eT "SR2E.UI.addSpells"}}"><i class="fa-solid fa-plus"></i></a></h2>
+    <ul>
+      {{#each spells}}
+      <li>
+        <a data-action="editItem" data-item-id="{{id}}">{{name}}</a>
+        <span>{{system.category}} ({{system.spellType}}{{#if (eq system.duration "sustained")}}{{sr2eT "SR2E.UI.sustained"}}{{/if}}), F{{system.learnedForce}}{{#if (eq system.category "combat")}}, {{system.damageLevel}}{{#if (eq system.damageType "stun")}} {{sr2eT "SR2E.UI.stun2"}}{{/if}}{{/if}}{{sr2eT "SR2E.UI.drain" drainLevel=system.drainLevel}}</span>
+        <button type="button" data-action="castSpell" data-item-id="{{id}}">{{sr2eT "SR2E.UI.cast"}}</button>
+        <a data-action="deleteItem" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.delete"}}"><i class="fa-solid fa-trash"></i></a>
+      </li>
+      {{else}}<li class="sr2e-empty"><em>{{sr2eT "SR2E.UI.noSpellsPress"}} <i class="fa-solid fa-plus"></i> {{sr2eT "SR2E.UI.toAddSomeASpiritCasts"}}</em></li>
+      {{/each}}
+    </ul>
+  </section>
+
+  <details class="sr2e-details" {{#unless effects.empty}}open{{/unless}}>
+    <summary data-heading="Effects">{{sr2eT "SR2E.UI.effects"}}</summary>
+    {{> "systems/sr2e/templates/effects-section.hbs"}}
+  </details>
+
+  <details class="sr2e-details" open>
+    <summary data-help="conjuring" data-heading="Powers, weaknesses and notes">{{sr2eT "SR2E.UI.powersWeaknessesAndNotes"}}</summary>
+    <label>{{sr2eT "SR2E.UI.powers"}}</label>
+    {{#if editable}}<prose-mirror class="sr2e-rich" name="system.powers" toggled value="{{richSource.powers}}">{{{enriched.powers}}}</prose-mirror>{{else}}<div class="sr2e-rich">{{{enriched.powers}}}</div>{{/if}}
+    <label>{{sr2eT "SR2E.UI.weaknesses"}}</label>
+    {{#if editable}}<prose-mirror class="sr2e-rich" name="system.weaknesses" toggled value="{{richSource.weaknesses}}">{{{enriched.weaknesses}}}</prose-mirror>{{else}}<div class="sr2e-rich">{{{enriched.weaknesses}}}</div>{{/if}}
+    <label>{{sr2eT "SR2E.UI.notes"}}</label>
+    {{#if editable}}<prose-mirror class="sr2e-rich" name="system.notes" toggled value="{{richSource.notes}}">{{{enriched.notes}}}</prose-mirror>{{else}}<div class="sr2e-rich">{{{enriched.notes}}}</div>{{/if}}
+  </details>
+
+  <details class="sr2e-details">
+    <summary data-help="conjuring" data-heading="Adjustments">{{sr2eT "SR2E.UI.adjustments"}}</summary>
+    <div class="sr2e-row">
+      <label>{{sr2eT "SR2E.UI.reactionBonus"}} <input type="number" name="system.reactionBonus" value="{{system.reactionBonus}}"></label>
+      <label>{{sr2eT "SR2E.UI.extraInitDice"}} <input type="number" name="system.initiativeDiceBonus" value="{{system.initiativeDiceBonus}}" min="0"></label>
+      <label>{{sr2eT "SR2E.UI.combatPoolSpent"}} <input type="number" name="system.poolSpent.combat" value="{{system.poolSpent.combat}}" min="0"></label>
+    </div>
+  </details>
+</div>

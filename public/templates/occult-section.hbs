@@ -1,0 +1,22 @@
+{{#if (or occult.any occult.canDesign occult.possessing occult.possessedBy occult.canAlly occult.familiar occult.pendingDeed)}}
+<div class="sr2e-row sr2e-occult">
+  {{#if occult.knows.cleansing}}<button type="button" data-action="cleanse" title="{{sr2eT "SR2E.UI.lowerTheBackgroundCountHerePerceiving"}}">{{sr2eT "SR2E.UI.cleanse"}}</button>{{/if}}
+  {{#if occult.knows.divining}}<button type="button" data-action="divine" title="{{sr2eT "SR2E.UI.askAQuestionOfTheFuture"}}">{{sr2eT "SR2E.UI.divine"}}</button>{{/if}}
+  {{#if occult.knows.invoking}}<button type="button" data-action="invoke" title="{{sr2eT "SR2E.UI.makeOneOfYourSpiritsA"}}">{{sr2eT "SR2E.UI.invoke"}}</button>{{/if}}
+  {{#if occult.canPossess}}<button type="button" data-action="possess" title="{{sr2eT "SR2E.UI.takeOverABodyWhileProjecting"}}">{{sr2eT "SR2E.UI.possess"}}</button>{{/if}}
+  {{#if occult.canDesign}}<button type="button" data-action="designSpell" title="{{sr2eT "SR2E.UI.designANewSpellGrimoireFormula"}}">{{sr2eT "SR2E.UI.designSpell"}}</button>{{/if}}
+  {{#if occult.canAlly}}<button type="button" data-action="createAlly" title="{{sr2eT "SR2E.UI.createAnAllySpiritByRitual"}}">{{sr2eT "SR2E.UI.createAlly"}}</button>{{/if}}
+  {{#if occult.familiar}}<span class="sr2e-status" title="{{sr2eT "SR2E.UI.theFamiliarOrdeal"}}">{{sr2eT "SR2E.UI.ally2" name=occult.familiar.name}}{{#if occult.familiar.ready}} {{sr2eT "SR2E.UI.familiarOrdealReady"}}{{/if}}</span>{{/if}}
+  {{#if occult.pendingDeed}}<span class="sr2e-status" title="{{sr2eT "SR2E.UI.waitingForTheGmToConfirm"}}">{{sr2eT "SR2E.UI.deedForGradePending" pendingDeed=occult.pendingDeed}}</span> <a data-action="cancelDeed" title="{{sr2eT "SR2E.UI.giveUpTheDeedNoKarma"}}"><i class="fa-solid fa-xmark"></i></a>{{/if}}
+  {{#if occult.possessing}}<span class="sr2e-status">{{sr2eT "SR2E.UI.possessing" name=occult.possessing.name}}</span> <button type="button" data-action="endPossession">{{sr2eT "SR2E.UI.leaveTheBody"}}</button>{{/if}}
+  {{#if occult.possessedBy}}<span class="sr2e-status sr2e-warn" title="{{#if occult.possessedSkills}}{{sr2eT "SR2E.UI.skillsHouseRule" possessedSkills=occult.possessedSkills}}{{/if}}">{{sr2eT "SR2E.UI.possessedBy2" possessedBy=occult.possessedBy}}</span> <button type="button" data-action="endPossession" title="{{sr2eT "SR2E.UI.endThePossession"}}">{{sr2eT "SR2E.UI.free"}}</button>{{/if}}
+</div>
+{{/if}}
+{{#each occult.groups}}
+<div class="sr2e-group">
+  <h3 data-help="magic">{{sr2eT "SR2E.UI.group3" name=name}}{{#if breach}} <span class="sr2e-status sr2e-warn" title="{{sr2eT "SR2E.UI.aStrictureIsBrokenNoShared"}}">{{sr2eT "SR2E.UI.strictureBroken"}}</span>{{/if}}</h3>
+  {{#if strictures}}<p class="hint">{{sr2eT "SR2E.UI.strictures" strictures=strictures}}</p>{{/if}}
+  {{#if sites}}<p class="hint">{{sr2eT "SR2E.UI.shared" sites=sites}}</p>{{/if}}
+  {{#if grimoire.length}}<ul>{{#each grimoire}}<li><span>{{sr2eT "SR2E.UI.force6" name=name force=force}}</span>{{#if known}} <em>{{sr2eT "SR2E.UI.known"}}</em>{{else}} <button type="button" data-action="learnGrimoire" data-group="{{groupId}}" data-name="{{name}}" title="{{sr2eT "SR2E.UI.learnItForGoodKarmaForce"}}">{{sr2eT "SR2E.UI.learn"}}</button>{{/if}}</li>{{/each}}</ul>{{/if}}
+</div>
+{{/each}}

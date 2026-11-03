@@ -1,0 +1,21 @@
+<div class="sr2e-help-layout">
+  <nav class="sr2e-help-topics">
+    <input type="search" class="sr2e-help-search" value="{{query}}" placeholder="{{sr2eT "SR2E.UI.searchTheGuide"}}" aria-label="{{sr2eT "SR2E.UI.searchTheGuide"}}">
+    {{!-- v0.87.0: the text for a GitHub issue (applications/bugreport.ts). --}}
+    {{!-- v0.89.8: every tool in one place (applications/tools.ts). --}}
+    <button type="button" class="sr2e-help-bug sr2e-help-tools" data-action="openTools"><i class="fa-solid fa-toolbox" aria-hidden="true"></i> {{sr2eT "SR2E.UI.sr2eTools"}}</button>
+    <button type="button" class="sr2e-help-bug" data-action="bugReport"><i class="fa-solid fa-bug" aria-hidden="true"></i> {{sr2eT "SR2E.UI.reportABug"}}</button>
+    {{#each groups}}
+    <section data-help-group {{#if hidden}}hidden{{/if}}>
+    <h4>{{label}}</h4>
+    <ul>
+      {{#each topics}}<li data-topic-text="{{search}}" {{#if hidden}}hidden{{/if}}><a data-action="helpTopic" data-topic="{{id}}" class="{{#if active}}active{{/if}}">{{title}}</a></li>{{/each}}
+    </ul>
+    </section>
+    {{/each}}
+  </nav>
+  <article class="sr2e-help-body">
+    <h2>{{title}}</h2>
+    {{{body}}}
+  </article>
+</div>

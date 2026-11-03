@@ -1,0 +1,108 @@
+<div class="sr2e-sheet sr2e-safehouse">
+  <header class="sr2e-header">
+    <img src="{{actor.img}}" alt="" width="56" height="56" data-edit="img">
+    <div class="sr2e-header-main">
+      <input type="text" name="name" value="{{actor.name}}" placeholder="{{sr2eT "SR2E.UI.safehouseName"}}">
+    </div>
+  </header>
+
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.location"}} <select name="system.location">{{selectOptions locations selected=system.location valueAttr="key" labelAttr="label"}}</select></label>
+    <label>{{sr2eT "SR2E.UI.size"}} <select name="system.size">{{selectOptions sizes selected=system.size valueAttr="key" labelAttr="label"}}</select></label>
+  </div>
+  <div class="sr2e-row">
+    <label class="sr2e-grow">{{sr2eT "SR2E.UI.addressWhere"}} <input type="text" name="system.address" value="{{system.address}}" placeholder="{{sr2eT "SR2E.UI.eGAboveTheNoodleBar"}}"></label>
+  </div>
+
+  <section class="sr2e-safehouse-summary">
+    <div class="sr2e-sh-grid">
+      <div><span>{{sr2eT "SR2E.UI.buildCost"}}</span><strong>{{money.build}}</strong><small>{{sr2eT "SR2E.UI.paid2" paid=money.paid}}{{#if money.owed}} · <span class="sr2e-warn">{{sr2eT "SR2E.UI.owed" owed=money.owed}}</span>{{/if}}</small></div>
+      <div><span>{{sr2eT "SR2E.UI.upkeep"}}</span><strong>{{sr2eT "SR2E.UI.month" upkeep=money.upkeep}}</strong><small class="{{#if money.late}}sr2e-warn{{/if}}">{{money.status}}</small></div>
+      <div><span>{{sr2eT "SR2E.UI.space"}}</span><strong class="{{#if (gt d.spaceUsed d.space)}}sr2e-warn{{/if}}">{{d.spaceUsed}} / {{d.space}}</strong><small>{{sr2eT "SR2E.UI.forPeople" residents=d.residents}}</small></div>
+      <div><span>{{sr2eT "SR2E.UI.comfort"}}</span><strong>{{comfort}}</strong><small>{{#if comfortNow}}<span class="sr2e-warn">{{sr2eT "SR2E.UI.nowUpkeepLapsed" comfortNow=comfortNow}}</span>{{else}}{{sr2eT "SR2E.UI.homeCareLifestyle"}}{{/if}}</small></div>
+      <div><span>{{sr2eT "SR2E.UI.security2"}}</span><strong>{{d.security}}</strong><small>{{sr2eT "SR2E.UI.police" response=response}}</small></div>
+      <div><span>{{sr2eT "SR2E.UI.concealment"}}</span><strong>{{d.concealment}}</strong><small>{{sr2eT "SR2E.UI.searchTn" searchTn=searchTn}}</small></div>
+      <div><span>{{sr2eT "SR2E.UI.barrierRating"}}</span><strong>{{d.barrier}}</strong><small>{{sr2eT "SR2E.UI.wallsAndDoors"}}</small></div>
+      <div><span>{{sr2eT "SR2E.UI.ward2"}}</span><strong>{{#if d.ward}}{{sr2eT "SR2E.UI.force3" ward=d.ward}}{{else}}{{sr2eT "SR2E.UI.none3"}}{{/if}}</strong><small>{{#if ward}}<a data-action="openActor" data-uuid="{{ward.uuid}}">{{ward.name}}</a>{{else}}&nbsp;{{/if}}</small></div>
+      <div><span>{{sr2eT "SR2E.UI.medical"}}</span><strong>{{#if d.medical}}{{sr2eT "SR2E.UI.tn4" medical=d.medical}}{{else}}—{{/if}}</strong><small>{{sr2eT "SR2E.UI.naturalHealingAtHome"}}</small></div>
+      <div><span>{{sr2eT "SR2E.UI.workshop"}}</span><strong>{{#if d.workshop}}{{sr2eT "SR2E.UI.tn5" workshop=d.workshop}}{{else}}—{{/if}}</strong><small>{{sr2eT "SR2E.UI.buildRepairByHand"}}</small></div>
+      <div><span>{{sr2eT "SR2E.UI.garage"}}</span><strong>{{d.garage}}</strong><small>{{sr2eT "SR2E.UI.vehicleBayS"}}</small></div>
+      <div><span>{{sr2eT "SR2E.UI.supplies"}}</span><strong>{{d.supplies}}</strong><small>{{sr2eT "SR2E.UI.weekSOfFood"}}</small></div>
+    </div>
+    {{#if d.warnings.length}}<ul class="sr2e-warnings">{{#each d.warnings}}<li>{{this}}</li>{{/each}}</ul>{{/if}}
+    <div class="sr2e-row sr2e-sh-actions">
+      {{#if editable}}
+      {{#if money.owed}}<button type="button" data-action="payBuild"><i class="fa-solid fa-hammer"></i> {{sr2eT "SR2E.UI.payToBuild"}}</button>{{/if}}
+      <button type="button" data-action="payUpkeep"><i class="fa-solid fa-coins"></i> {{sr2eT "SR2E.UI.payUpkeep"}}</button>
+      {{#if canCreate}}
+      <button type="button" data-action="makeSite" title="{{sr2eT "SR2E.UI.makeOrRefreshASecuritySite"}}"><i class="fa-solid fa-video"></i> {{#if site}}{{sr2eT "SR2E.UI.refresh"}}{{else}}{{sr2eT "SR2E.UI.make"}}{{/if}} {{sr2eT "SR2E.UI.securitySite"}}</button>
+      {{#if d.ward}}<button type="button" data-action="makeWard" title="{{sr2eT "SR2E.UI.makeOrUpdateAWardBarrier"}}"><i class="fa-solid fa-shield-halved"></i> {{#if ward}}{{sr2eT "SR2E.UI.update"}}{{else}}{{sr2eT "SR2E.UI.make"}}{{/if}} {{sr2eT "SR2E.UI.ward3"}}</button>{{/if}}
+      {{#if d.host}}<button type="button" data-action="makeHost" title="{{sr2eT "SR2E.UI.makeTheHomeHostActor"}}"><i class="fa-solid fa-server"></i> {{#if host}}{{sr2eT "SR2E.UI.open"}}{{else}}{{sr2eT "SR2E.UI.make"}}{{/if}} {{sr2eT "SR2E.UI.homeHost"}}</button>{{/if}}
+      {{/if}}
+      {{#each magicSites}}<button type="button" data-action="giveMagicSite" data-kind="{{kind}}" title="{{sr2eT "SR2E.UI.giveAMagicianTheAsA" label=label}}"><i class="fa-solid fa-book-skull"></i> {{sr2eT "SR2E.UI.to" kindLabel=kindLabel rating=rating}}</button>{{/each}}
+      {{/if}}
+      {{#if isGM}}<button type="button" class="sr2e-gm-only" data-action="searchTest" title="{{sr2eT "SR2E.UI.rollForSomeoneLookingForIt"}}"><i class="fa-solid fa-magnifying-glass"></i> {{sr2eT "SR2E.UI.searchForIt"}}</button>{{/if}}
+      <button type="button" data-action="postSummary"><i class="fa-solid fa-comment"></i> {{sr2eT "SR2E.UI.post"}}</button>
+    </div>
+    {{#if (or site host)}}<p class="hint">{{sr2eT "SR2E.UI.linked"}} {{#if site}}<a data-action="openActor" data-uuid="{{site.uuid}}">{{site.name}}</a>{{/if}}{{#if host}} · <a data-action="openActor" data-uuid="{{host.uuid}}">{{host.name}}</a>{{/if}}</p>{{/if}}
+  </section>
+
+  <section>
+    <h3 data-heading="People">{{sr2eT "SR2E.UI.people"}} {{#if crowded}}<span class="sr2e-warn">{{sr2eT "SR2E.UI.moreThanItSleeps"}}</span>{{/if}}</h3>
+    <div class="sr2e-sh-people">
+      <div><strong>{{sr2eT "SR2E.UI.owners"}}</strong> {{#if @root.editable}}<a data-action="addPerson" data-role="owners" title="{{sr2eT "SR2E.UI.addAnOwner"}}"><i class="fa-solid fa-plus"></i></a>{{/if}}
+        <ul class="sr2e-list">{{#each owners}}<li><a data-action="openActor" data-uuid="{{uuid}}">{{name}}</a>{{#if nuyen}} <span>({{nuyen}})</span>{{/if}} {{#if @root.editable}}<a data-action="removePerson" data-role="owners" data-uuid="{{uuid}}" title="{{sr2eT "SR2E.UI.remove"}}"><i class="fa-solid fa-xmark"></i></a>{{/if}}</li>{{else}}<li><em>{{sr2eT "SR2E.UI.none4"}}</em></li>{{/each}}</ul>
+      </div>
+      <div><strong>{{sr2eT "SR2E.UI.residents"}}</strong> {{#if @root.editable}}<a data-action="addPerson" data-role="residents" title="{{sr2eT "SR2E.UI.addAResident"}}"><i class="fa-solid fa-plus"></i></a>{{/if}}
+        <ul class="sr2e-list">{{#each residents}}<li><a data-action="openActor" data-uuid="{{uuid}}">{{name}}</a> {{#if @root.editable}}<a data-action="removePerson" data-role="residents" data-uuid="{{uuid}}" title="{{sr2eT "SR2E.UI.remove"}}"><i class="fa-solid fa-xmark"></i></a>{{/if}}</li>{{else}}<li><em>{{sr2eT "SR2E.UI.none4"}}</em></li>{{/each}}</ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h3 data-heading="Build it">{{sr2eT "SR2E.UI.buildIt"}}</h3>
+    <p class="hint">{{sr2eT "SR2E.UI.openACategoryToSeeEvery"}} <i class="fa-solid fa-plus"></i> {{sr2eT "SR2E.UI.addsItAllCostsAndEffects"}}</p>
+    {{#each categories}}
+    <details data-cat="{{id}}" {{#if open}}open{{/if}} class="sr2e-sh-cat">
+      <summary data-help="none"><strong>{{label}}</strong>{{#if chosen.length}} <span class="sr2e-status">{{sr2eT "SR2E.UI.chosen" length=chosen.length}}</span>{{/if}}</summary>
+      {{#if chosen.length}}
+      <table class="sr2e-sh-chosen">
+        <thead><tr><th>{{sr2eT "SR2E.UI.chosen2"}}</th><th>{{sr2eT "SR2E.UI.rating"}}</th><th>{{sr2eT "SR2E.UI.cost"}}</th><th>{{sr2eT "SR2E.UI.upkeep"}}</th><th>{{sr2eT "SR2E.UI.space"}}</th><th>{{sr2eT "SR2E.UI.notes"}}</th><th></th></tr></thead>
+        <tbody>
+          {{#each chosen}}
+          <tr data-index="{{index}}">
+            <td>{{label}}{{#if problems}} <span class="sr2e-warn" title="{{problems}}"><i class="fa-solid fa-triangle-exclamation"></i></span>{{/if}}</td>
+            <td>{{#if rated}}<input type="number" data-opt-field="rating" aria-label="{{sr2eT "SR2E.UI.rating6" label=label}}" value="{{rating}}" min="{{min}}" max="{{max}}" {{#unless @root.editable}}disabled{{/unless}}>{{else}}—{{/if}}</td>
+            <td>{{cost}}</td><td>{{upkeep}}</td><td>{{space}}</td>
+            <td><input type="text" data-opt-field="notes" value="{{notes}}" placeholder="{{note}}" {{#unless @root.editable}}disabled{{/unless}}></td>
+            <td>{{#if @root.editable}}<a data-action="removeOption" title="{{sr2eT "SR2E.UI.remove"}}"><i class="fa-solid fa-trash"></i></a>{{/if}}</td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+      {{/if}}
+      <table class="sr2e-sh-catalog">
+        <thead><tr><th>{{sr2eT "SR2E.UI.option"}}</th><th>{{sr2eT "SR2E.UI.rating"}}</th><th>{{sr2eT "SR2E.UI.cost"}}</th><th>{{sr2eT "SR2E.UI.upkeep"}}</th><th>{{sr2eT "SR2E.UI.space"}}</th><th>{{sr2eT "SR2E.UI.does"}}</th><th></th></tr></thead>
+        <tbody>
+          {{#each catalog}}
+          <tr>
+            <td title="{{note}}">{{label}}{{#if have}} <span class="sr2e-status">×{{have}}</span>{{/if}}</td>
+            <td>{{range}}</td>
+            <td>{{cost}}{{per}}</td><td>{{upkeep}}{{#if upkeep}}{{per}}{{/if}}</td><td>{{space}}</td>
+            <td class="hint">{{effects}}{{#if note}}{{#if effects}} · {{/if}}{{note}}{{/if}}</td>
+            <td>{{#if (and canAdd @root.editable)}}<a data-action="addOption" data-key="{{key}}" title="{{sr2eT "SR2E.UI.add"}}"><i class="fa-solid fa-plus"></i></a>{{/if}}</td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </details>
+    {{/each}}
+    {{#if unknown.length}}<ul class="sr2e-warnings">{{#each unknown}}<li data-index="{{index}}">{{label}} <a data-action="removeOption" title="{{sr2eT "SR2E.UI.remove"}}"><i class="fa-solid fa-trash"></i></a></li>{{/each}}</ul>{{/if}}
+  </section>
+
+  <section>
+    <h3 data-help="gm-world" data-heading="Notes">{{sr2eT "SR2E.UI.notes"}}</h3>
+    {{#if editable}}<prose-mirror class="sr2e-rich" name="system.notes" toggled value="{{richSource.notes}}">{{{enriched.notes}}}</prose-mirror>{{else}}<div class="sr2e-rich">{{{enriched.notes}}}</div>{{/if}}
+    {{#if isGM}}<div class="sr2e-row sr2e-gm-only"><label>{{sr2eT "SR2E.UI.paidTowardsBuilding"}} <input type="number" name="system.buildPaid" value="{{system.buildPaid}}" min="0"></label></div>{{/if}}
+  </section>
+</div>

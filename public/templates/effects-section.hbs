@@ -1,0 +1,9 @@
+<section class="sr2e-effects">
+  {{#if effects.empty}}<p class="hint">{{sr2eT "SR2E.UI.nothingIsActingOnRightNow" name=actor.name}}</p>{{/if}}
+  {{#each effects.groups}}
+  <h2 data-help="effects" data-heading="{{heading}}">{{name}}</h2>
+  <ul>
+    {{#each rows}}<li><span><strong>{{name}}</strong>{{#if detail}} · {{detail}}{{/if}}</span>{{#if until}} <span class="hint" title="{{sr2eT "SR2E.UI.timeLeft"}}">{{until}}</span>{{/if}}{{#if statusId}} <a data-action="removeStatus" data-status-id="{{statusId}}" title="{{sr2eT "SR2E.UI.takeItOff"}}"><i class="fa-solid fa-xmark"></i></a>{{/if}}</li>{{/each}}
+  </ul>
+  {{/each}}
+</section>

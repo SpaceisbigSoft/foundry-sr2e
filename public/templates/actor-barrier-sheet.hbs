@@ -1,0 +1,20 @@
+<div class="sr2e-sheet sr2e-barrier">
+  <header class="sr2e-header">
+    <img src="{{actor.img}}" alt="" width="56" height="56" data-edit="img">
+    <div class="sr2e-header-main">
+      <input type="text" name="name" value="{{actor.name}}" placeholder="{{sr2eT "SR2E.UI.name"}}">
+    </div>
+  </header>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.kind"}}
+      <select name="system.barrierKind">{{selectOptions kinds selected=system.barrierKind valueAttr="key" labelAttr="label"}}</select>
+    </label>
+    <label>{{sr2eT "SR2E.UI.ratingCurrent"}} <input type="number" name="system.rating" value="{{system.rating}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.fullRating"}} <input type="number" name="system.baseRating" value="{{system.baseRating}}" min="0"></label>
+    <span class="sr2e-status">{{system.derived.status}}</span>
+    <button type="button" data-action="restoreBarrier">{{sr2eT "SR2E.UI.restore"}}</button>
+  </div>
+  <p class="hint">{{sr2eT "SR2E.UI.magiciansAndSpiritsOnTheAstral"}}</p>
+  <label>{{sr2eT "SR2E.UI.notes"}}</label>
+  {{#if editable}}<prose-mirror class="sr2e-rich" name="system.notes" toggled value="{{richSource.notes}}">{{{enriched.notes}}}</prose-mirror>{{else}}<div class="sr2e-rich">{{{enriched.notes}}}</div>{{/if}}
+</div>

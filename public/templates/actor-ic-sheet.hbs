@@ -1,0 +1,72 @@
+<div class="sr2e-sheet sr2e-ic">
+  <header class="sr2e-header">
+    <img src="{{actor.img}}" alt="" width="56" height="56" data-edit="img">
+    <div class="sr2e-header-main">
+      <input type="text" name="name" value="{{actor.name}}" placeholder="{{sr2eT "SR2E.UI.name"}}">
+    </div>
+  </header>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.ic"}} <input type="text" name="system.icType" value="{{system.icType}}" placeholder="{{sr2eT "SR2E.UI.eGKiller"}}"></label>
+    <label>{{sr2eT "SR2E.UI.category"}}
+      <select name="system.category">{{selectOptions categories selected=system.category valueAttr="key" labelAttr="label"}}</select>
+    </label>
+    <label>{{sr2eT "SR2E.UI.rating"}} <input type="number" name="system.rating" value="{{system.rating}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.damageLevel"}}
+      <select name="system.damageLevel">{{selectOptions damageLevels selected=system.damageLevel valueAttr="key" labelAttr="label"}}</select>
+    </label>
+    {{#if isBlack}}<label>{{sr2eT "SR2E.UI.damagesDeckerS"}}
+      <select name="system.damageType">{{selectOptions damageTypes selected=system.damageType valueAttr="key" labelAttr="label"}}</select>
+    </label>{{/if}}
+  </div>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.kind"}} <select name="system.kind">{{selectOptions kinds selected=system.kind valueAttr="key" labelAttr="label"}}</select></label>
+    {{#if isFrame}}{{#unless isAgent}}<label>{{sr2eT "SR2E.UI.smartFrame"}} <input type="checkbox" name="system.smart" {{checked system.smart}}></label>{{/unless}}<span>{{sr2eT "SR2E.UI.owner"}} <strong>{{ownerName}}</strong> {{sr2eT "SR2E.UI.runsOperationsFromTheOwnerS"}}</span>{{/if}}
+  </div>
+  {{#if isFrame}}<div class="sr2e-row"><span>{{sr2eT "SR2E.UI.carries"}} {{#if carried}}{{carried}}{{else}}<em>{{sr2eT "SR2E.UI.nothing"}}{{#if ownerUtilities}} {{sr2eT "SR2E.UI.usesItsOwnerSUtilities"}}{{/if}}</em>{{/if}}</span></div>{{/if}}
+  {{#unless isFrame}}<div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.behavior"}}
+      <select name="system.behavior">{{selectOptions behaviors selected=system.behavior valueAttr="key" labelAttr="label"}}</select>
+    </label>
+    {{#if (eq system.behavior "barrier")}}<label>{{sr2eT "SR2E.UI.guards2"}}
+      <select name="system.guards">{{selectOptions guardChoices selected=system.guards valueAttr="key" labelAttr="label"}}</select>
+    </label>{{/if}}
+    {{#if (eq system.behavior "trace")}}<label>{{sr2eT "SR2E.UI.then"}}
+      <select name="system.traceMode">{{selectOptions traceModes selected=system.traceMode valueAttr="key" labelAttr="label"}}</select>
+    </label>{{/if}}
+    {{#if (eq system.behavior "psychotropic")}}<label>{{sr2eT "SR2E.UI.payload"}}
+      <select name="system.payload">{{selectOptions payloads selected=system.payload valueAttr="key" labelAttr="label"}}</select>
+    </label>{{/if}}
+    {{#if (eq actionKind "attribute")}}<label>{{sr2eT "SR2E.UI.goesAfter"}}
+      <select name="system.attribute">{{selectOptions personaAttributes selected=system.attribute valueAttr="key" labelAttr="label"}}</select>
+    </label>{{/if}}
+  </div>
+  <div class="sr2e-row">
+    <label title="{{sr2eT "SR2E.UI.icLaunchedTogetherWithTheSame"}}">{{sr2eT "SR2E.UI.party2"}} <input type="text" name="system.party" value="{{system.party}}" placeholder="{{sr2eT "SR2E.UI.none2"}}"></label>
+    {{#if partyMembers}}<span>{{sr2eT "SR2E.UI.with" partyMembers=partyMembers}}</span>{{/if}}
+  </div>
+  <div class="sr2e-row sr2e-construct" title="{{sr2eT "SR2E.UI.aConstructIcCanAlsoAct"}}">
+    <span>{{sr2eT "SR2E.UI.constructAlsoActsAs"}}</span>
+    {{#each constructChoices}}<label class="sr2e-check"><input type="checkbox" data-action="toggleConstruct" data-behavior="{{key}}" {{checked on}}> {{label}}</label>{{/each}}
+  </div>{{/unless}}
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.host"}}
+      <select name="system.hostUuid">{{selectOptions hosts selected=system.hostUuid valueAttr="key" labelAttr="label"}}</select>
+    </label>
+    <label>{{sr2eT "SR2E.UI.initiativeDice0ByCode"}}{{#if hostCode}}: {{hostCode}}{{/if}}) <input type="number" name="system.initiativeDice" value="{{system.initiativeDice}}" min="0"></label>
+    <span>{{sr2eT "SR2E.UI.initiative"}} <strong>{{#if initNote}}{{initNote}}{{else}}{{system.rating}} + {{initDice}}d6{{/if}}</strong></span>
+  </div>
+  <div class="sr2e-cm sr2e-cm-matrix-row">
+    {{> "systems/sr2e/templates/monitor-track.hbs" t=track action="setMatrixMonitor"}}
+    <span class="sr2e-status">{{system.derived.status}}</span>
+  </div>
+  <div class="sr2e-row">
+    {{#if isFrame}}<button type="button" data-action="frameAttack">{{sr2eT "SR2E.UI.attack"}}</button>{{else}}
+    {{#if canAct}}<button type="button" data-action="icAttack">{{#if (eq actionKind "damage")}}{{sr2eT "SR2E.UI.attack"}}{{else}}{{sr2eT "SR2E.UI.act"}}{{/if}}</button>{{/if}}
+    {{#if system.party}}<button type="button" data-action="partyAttack" title="{{sr2eT "SR2E.UI.everyLiveMemberOfTheParty"}}">{{sr2eT "SR2E.UI.partyAttack"}}</button>{{/if}}{{/if}}
+    {{#unless isFrame}}<button type="button" data-action="icLocate" title="{{sr2eT "SR2E.UI.findADeckerWhoBrokeContact"}}">{{sr2eT "SR2E.UI.locate"}}</button>{{/unless}}
+    <button type="button" data-action="restoreIc">{{sr2eT "SR2E.UI.restore"}}</button>
+  </div>
+  <p class="hint">{{behaviorHint}}</p>
+  <label>{{sr2eT "SR2E.UI.notes"}}</label>
+  {{#if editable}}<prose-mirror class="sr2e-rich" name="system.notes" toggled value="{{richSource.notes}}">{{{enriched.notes}}}</prose-mirror>{{else}}<div class="sr2e-rich">{{{enriched.notes}}}</div>{{/if}}
+</div>

@@ -1,0 +1,70 @@
+<div class="sr2e-sheet sr2e-spend">
+  <div class="sr2e-spend-head">
+    <span class="sr2e-chip">{{sr2eT "SR2E.UI.goodKarma"}} <strong>{{good}}</strong></span>
+    <span class="sr2e-chip sr2e-chip-soft" title="{{sr2eT "SR2E.UI.karmaEarnedOverTheCareer2"}}">{{sr2eT "SR2E.UI.earnedInAll2" career=career}}</span>
+    <span class="sr2e-chip sr2e-chip-soft">{{sr2eT "SR2E.UI.karmaPool2" pool=pool}}</span>
+  </div>
+  {{#if approval}}<p class="sr2e-approval-note"><i class="fa-solid fa-user-check"></i> {{sr2eT "SR2E.UI.theApprovalQueueIsOnEach"}}</p>{{/if}}
+  {{#if timed}}<p class="hint">{{sr2eT "SR2E.UI.trainingTimeIsOnHouseRule"}}</p>{{/if}}
+
+  {{#if pending.length}}
+  <h2 data-heading="Waiting for the GM">{{sr2eT "SR2E.UI.waitingForTheGm"}}</h2>
+  <ul class="sr2e-list">
+    {{#each pending}}<li><span><strong>{{label}}</strong> · {{cost}}{{#if @root.queueOn}}{{else}} · <em>{{sr2eT "SR2E.UI.theQueueIsOffNowCancel"}}</em>{{/if}}</span> <a data-action="cancelRequest" data-id="{{id}}" title="{{sr2eT "SR2E.UI.cancelTheRequest"}}"><i class="fa-solid fa-xmark"></i></a></li>{{/each}}
+  </ul>
+  {{/if}}
+
+  <h2 data-help="spend-karma" data-heading="Attributes">{{sr2eT "SR2E.UI.attributes"}}</h2>
+  <table class="sr2e-spend-table">
+    <thead><tr><th></th><th>{{sr2eT "SR2E.UI.now"}}</th><th>{{sr2eT "SR2E.UI.to2"}}</th><th>{{sr2eT "SR2E.UI.karma"}}</th><th></th></tr></thead>
+    <tbody>
+      {{#each attributes}}
+      <tr class="{{#unless afford}}sr2e-dim{{/unless}}"><td>{{label}}</td><td>{{from}}</td><td>{{#if ok}}{{to}}{{else}}–{{/if}}</td><td>{{#if ok}}{{cost}}{{/if}}</td>
+        <td>{{#if afford}}<button type="button" data-action="spendRaise" data-attribute="{{key}}" title="{{sr2eT "SR2E.UI.raiseToForKarma" label=label to=to cost=cost}}"><i class="fa-solid fa-circle-plus"></i> {{sr2eT "SR2E.UI.raise2"}}</button>{{else}}<span class="hint">{{why}}</span>{{/if}}</td></tr>
+      {{/each}}
+    </tbody>
+  </table>
+
+  <h2 data-help="spend-karma" data-heading="Skills">{{sr2eT "SR2E.UI.skills"}} <a class="sr2e-add" data-action="spendNewSkill" title="{{sr2eT "SR2E.UI.learnANewSkillWithKarma"}}"><i class="fa-solid fa-plus"></i></a></h2>
+  <table class="sr2e-spend-table">
+    <thead><tr><th></th><th>{{sr2eT "SR2E.UI.now"}}</th><th>{{sr2eT "SR2E.UI.to2"}}</th><th>{{sr2eT "SR2E.UI.karma"}}</th><th></th></tr></thead>
+    <tbody>
+      {{#each skills}}
+      <tr class="{{#unless raise.afford}}sr2e-dim{{/unless}}"><td>{{name}} <span class="hint">{{kind}}</span></td><td>{{rating}}</td><td>{{#if raise.ok}}{{raise.to}}{{/if}}</td><td>{{#if raise.ok}}{{raise.cost}}{{/if}}</td>
+        <td>{{#if raise.afford}}<button type="button" data-action="spendRaise" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.raiseToForKarma2" name=name to=raise.to cost=raise.cost}}"><i class="fa-solid fa-circle-plus"></i> {{sr2eT "SR2E.UI.raise2"}}</button>{{else}}<span class="hint">{{raise.why}}</span>{{/if}}</td></tr>
+      {{#if spec}}<tr class="sr2e-spend-sub {{#unless spec.afford}}sr2e-dim{{/unless}}"><td>{{sr2eT "SR2E.UI.specialization4" name=spec.name}}</td><td>{{spec.from}}</td><td>{{#if spec.ok}}{{spec.to}}{{/if}}</td><td>{{#if spec.ok}}{{spec.cost}}{{/if}}</td>
+        <td>{{#if spec.afford}}<button type="button" data-action="spendRaise" data-item-id="{{id}}" data-part="spec"><i class="fa-solid fa-square-plus"></i> {{sr2eT "SR2E.UI.raise2"}}</button>{{else}}<span class="hint">{{spec.why}}</span>{{/if}}</td></tr>{{/if}}
+      {{#if conc}}<tr class="sr2e-spend-sub {{#unless conc.afford}}sr2e-dim{{/unless}}"><td>{{sr2eT "SR2E.UI.concentration2" name=conc.name}}</td><td>{{conc.from}}</td><td>{{#if conc.ok}}{{conc.to}}{{/if}}</td><td>{{#if conc.ok}}{{conc.cost}}{{/if}}</td>
+        <td>{{#if conc.afford}}<button type="button" data-action="spendRaise" data-item-id="{{id}}" data-part="conc"><i class="fa-solid fa-square-caret-up"></i> {{sr2eT "SR2E.UI.raise2"}}</button>{{else}}<span class="hint">{{conc.why}}</span>{{/if}}</td></tr>{{/if}}
+      {{else}}<tr><td colspan="5"><em>{{sr2eT "SR2E.UI.noSkillsYetTheLearnsOne"}}</em></td></tr>
+      {{/each}}
+    </tbody>
+  </table>
+
+  {{#if magician}}
+  <h2 data-help="spend-karma" data-heading="Spells">{{sr2eT "SR2E.UI.spells"}} <a class="sr2e-add" data-action="spendNewSpell" title="{{sr2eT "SR2E.UI.learnANewSpellWithKarma"}}"><i class="fa-solid fa-plus"></i></a></h2>
+  {{#if learning}}<p class="hint">{{sr2eT "SR2E.UI.learningTestsAreOnEachRolls"}}</p>{{/if}}
+  <table class="sr2e-spend-table">
+    <thead><tr><th></th><th>{{sr2eT "SR2E.UI.force4"}}</th><th>{{sr2eT "SR2E.UI.to2"}}</th><th>{{sr2eT "SR2E.UI.karma"}}</th><th></th></tr></thead>
+    <tbody>
+      {{#each spells}}
+      <tr class="{{#unless afford}}sr2e-dim{{/unless}}"><td>{{name}}</td><td>{{force}}</td><td>{{to}}</td><td>{{cost}}</td>
+        <td>{{#if afford}}<button type="button" data-action="spendSpell" data-item-id="{{id}}"><i class="fa-solid fa-circle-plus"></i> {{sr2eT "SR2E.UI.raise2"}}</button>{{else}}<span class="hint">{{why}}</span>{{/if}}</td></tr>
+      {{else}}<tr><td colspan="5"><em>{{sr2eT "SR2E.UI.noSpellsYetTheLearnsOne"}}</em></td></tr>
+      {{/each}}
+    </tbody>
+  </table>
+  {{/if}}
+
+  <h2 data-heading="More">{{sr2eT "SR2E.UI.more"}}</h2>
+  <div class="sr2e-row">
+    {{#if canInitiate}}<button type="button" data-action="spendInitiate"><i class="fa-solid fa-eye"></i> {{sr2eT "SR2E.UI.initiate2"}}</button>{{/if}}
+    {{#if edgesOn}}<button type="button" data-action="spendEdge"><i class="fa-solid fa-star"></i> {{sr2eT "SR2E.UI.gainAnEdge"}}</button>{{/if}}
+    {{#each flaws}}<button type="button" data-action="spendBuyOff" data-quality-id="{{id}}" title="{{sr2eT "SR2E.UI.buyOffPointsForKarma" name=name points=points cost=cost}}"><i class="fa-solid fa-coins"></i> {{sr2eT "SR2E.UI.buyOff" name=name cost=cost}}</button>{{/each}}
+  </div>
+
+  {{#if recent.length}}
+  <h2 data-heading="Recent Karma">{{sr2eT "SR2E.UI.recentKarma"}}</h2>
+  <ul class="sr2e-list">{{#each recent}}<li>{{text}}</li>{{/each}}</ul>
+  {{/if}}
+</div>

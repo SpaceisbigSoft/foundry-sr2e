@@ -1,0 +1,20 @@
+{{!-- v0.89.8: every SR2e tool in one place (applications/tools.ts; the list is rules/tools.ts). --}}
+<div class="sr2e-tools">
+  {{#each sections}}
+  <section class="sr2e-tools-section" data-tools-section="{{id}}">
+    <h2 data-help="tools">{{label}}</h2>
+    <ul class="sr2e-tools-list">
+      {{#each tools}}
+      <li>
+        <button type="button" class="sr2e-tools-tool" data-action="runTool" data-tool="{{id}}">
+          <i class="{{icon}}" aria-hidden="true"></i>
+          <span class="sr2e-tools-text"><span class="sr2e-tools-name">{{label}}</span><span class="sr2e-tools-hint">{{hint}}</span></span>
+          {{#if hotkey}}<kbd class="sr2e-tools-key">{{hotkey}}</kbd>{{/if}}
+        </button>
+      </li>
+      {{/each}}
+    </ul>
+  </section>
+  {{/each}}
+  <p class="sr2e-tools-note">{{sr2eT "SR2E.UI.toolsWhereElse"}}</p>
+</div>

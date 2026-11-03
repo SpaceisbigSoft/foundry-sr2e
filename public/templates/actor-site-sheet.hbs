@@ -1,0 +1,91 @@
+<div class="sr2e-sheet sr2e-site">
+  <header class="sr2e-header">
+    <img src="{{actor.img}}" alt="" width="56" height="56" data-edit="img">
+    <div class="sr2e-header-main">
+      <input type="text" name="name" value="{{actor.name}}" placeholder="{{sr2eT "SR2E.UI.siteName"}}">
+    </div>
+  </header>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.alert"}}
+      <select name="system.alert">{{selectOptions alerts selected=system.alert valueAttr="key" labelAttr="label"}}</select>
+    </label>
+    <label>{{sr2eT "SR2E.UI.securityTally"}} <input type="number" name="system.tally" value="{{system.tally}}" min="0"></label>
+    <span>{{sr2eT "SR2E.UI.nextStep"}} {{#if system.derived.nextStep}}<strong>{{system.derived.nextStep.step}}</strong> {{system.derived.nextStep.event}}{{else}}{{sr2eT "SR2E.UI.none3"}}{{/if}}</span>
+    <button type="button" data-action="resetSite">{{sr2eT "SR2E.UI.reset"}}</button>
+  </div>
+  <div class="sr2e-row">
+    <span>{{sr2eT "SR2E.UI.response"}} <strong>{{responseLabel}}</strong></span>
+    <label>{{sr2eT "SR2E.UI.whoResponds"}} <input type="text" name="system.response.force" value="{{system.response.force}}" placeholder="{{sr2eT "SR2E.UI.eG6CorporateSecurityGuards"}}"></label>
+    <label title="{{sr2eT "SR2E.UI.howManyCombatTurnsAfterAn"}}">{{sr2eT "SR2E.UI.responseCombatTurns"}} <input type="number" name="system.response.turns" value="{{system.response.turns}}" min="0" step="1" placeholder="0"></label>
+    <label title="{{sr2eT "SR2E.UI.howManyMinutesAfterAnActive"}}">{{sr2eT "SR2E.UI.responseMinutes"}} <input type="number" name="system.response.minutes" value="{{system.response.minutes}}" min="0" step="1" placeholder="0"></label>
+  </div>
+
+  <h3 data-heading="Devices">{{sr2eT "SR2E.UI.devices"}} <span class="sr2e-status">{{sr2eT "SR2E.UI.working" working=system.derived.working}}</span></h3>
+  <table class="sr2e-devices">
+    <thead><tr><th>{{sr2eT "SR2E.UI.device"}}</th><th>{{sr2eT "SR2E.UI.kind"}}</th><th>{{sr2eT "SR2E.UI.rating"}}</th><th>{{sr2eT "SR2E.UI.linked2"}}</th><th>{{sr2eT "SR2E.UI.state"}}</th><th></th></tr></thead>
+    <tbody>
+      {{#each devices}}
+      <tr data-index="{{@index}}" data-id="{{id}}">
+        <td><a data-action="editDevice">{{name}}</a></td>
+        <td>{{kind}}{{#if scanKind}} ({{scanKind}}){{/if}}{{#if sense}} · {{senseLabel}}{{/if}}</td>
+        <td>{{rating}}{{#if tamper}} <span title="{{sr2eT "SR2E.UI.tamperAlarm"}}">{{sr2eT "SR2E.UI.tamper" tamper=tamper}}</span>{{/if}}{{#if identifies}} <i class="fa-solid fa-id-card" title="{{sr2eT "SR2E.UI.identifiesPeople"}}"></i>{{/if}}{{#if lockLabel}} <span title="{{sr2eT "SR2E.UI.maglockType"}}">· {{lockLabel}}</span>{{/if}}{{#if casing}} <span title="{{sr2eT "SR2E.UI.casingOpenedFirst"}}">{{sr2eT "SR2E.UI.casing" casing=casing}}{{#if casingOpen}} {{sr2eT "SR2E.UI.open2"}}{{/if}}</span>{{/if}}</td>
+        <td>{{#if tokenName}}<i class="fa-solid fa-location-dot" title="{{sr2eT "SR2E.UI.seesFrom" tokenName=tokenName}}"></i>{{/if}}{{#if hasDoor}} <i class="fa-solid fa-door-closed" title="{{sr2eT "SR2E.UI.locksADoor"}}"></i>{{/if}}
+          <a data-action="linkToken" title="{{sr2eT "SR2E.UI.linkTheSelectedToken"}}"><i class="fa-solid fa-crosshairs"></i></a>
+          {{#if isLock}}<a data-action="linkDoor" title="{{sr2eT "SR2E.UI.linkTheSelectedDoorWall"}}"><i class="fa-solid fa-door-open"></i></a>{{/if}}</td>
+        <td><a data-action="toggleDevice" title="{{sr2eT "SR2E.UI.switchOnOrOff"}}">{{status}}</a></td>
+        <td class="sr2e-device-actions">
+          {{#if isScanner}}<button type="button" data-action="scanDevice">{{sr2eT "SR2E.UI.scan"}}</button>{{else}}{{#unless isLock}}<button type="button" data-action="detect">{{sr2eT "SR2E.UI.detect"}}</button>{{/unless}}{{/if}}
+          {{#if isLock}}<button type="button" data-action="bypass">{{sr2eT "SR2E.UI.bypass"}}</button>{{/if}}
+          <a data-action="toggleBypassed" title="{{sr2eT "SR2E.UI.markBypassedRestore"}}"><i class="fa-solid fa-unlock"></i></a>
+          <a data-action="forceDevice" title="{{sr2eT "SR2E.UI.smashOrCutItOutA"}}"><i class="fa-solid fa-hammer"></i></a>
+          <a data-action="deleteDevice" title="{{sr2eT "SR2E.UI.delete"}}"><i class="fa-solid fa-trash"></i></a>
+        </td>
+      </tr>
+      {{else}}<tr><td colspan="6"><em>{{sr2eT "SR2E.UI.noDevicesYet"}}</em></td></tr>{{/each}}
+    </tbody>
+  </table>
+  <button type="button" data-action="addDevice">{{sr2eT "SR2E.UI.addDevice"}}</button>
+
+  <h3 data-heading="Guards">{{sr2eT "SR2E.UI.guards2"}} <a data-action="addGuards" title="{{sr2eT "SR2E.UI.addTheSelectedOrTargetedTokens"}}"><i class="fa-solid fa-plus"></i></a></h3>
+  <ul class="sr2e-list">
+    {{#each guards}}<li><span><a data-action="openActor" data-uuid="{{uuid}}">{{name}}</a>{{#if down}} · <em>{{status}}</em>{{/if}}</span> <a data-action="removeGuard" data-uuid="{{uuid}}" title="{{sr2eT "SR2E.UI.remove"}}"><i class="fa-solid fa-xmark"></i></a></li>{{else}}<li><em>{{sr2eT "SR2E.UI.noGuardsSelectTheirTokensAnd"}}</em></li>{{/each}}
+  </ul>
+  {{#if guards.length}}<button type="button" data-action="guardsWatch" title="{{sr2eT "SR2E.UI.eachIntruderSStealthAgainstAll" guardTally=guardTally}}">{{sr2eT "SR2E.UI.guardsLook"}}</button>{{/if}}
+
+  <h3 data-heading="Security steps">{{sr2eT "SR2E.UI.securitySteps"}}</h3>
+  <ul class="sr2e-list">
+    {{#each steps}}<li data-index="{{index}}"><span>{{#if reached}}<i class="fa-solid fa-check"></i>{{/if}} <strong>{{step}}</strong>: {{event}}{{#if alert}} ({{alert}}){{/if}}</span>
+      <span><a data-action="editStep" title="{{sr2eT "SR2E.UI.edit"}}"><i class="fa-solid fa-pen"></i></a> <a data-action="deleteStep" title="{{sr2eT "SR2E.UI.delete"}}"><i class="fa-solid fa-trash"></i></a></span></li>
+    {{else}}<li><em>{{sr2eT "SR2E.UI.noStepsDetectionAndFailedBypasses"}}</em></li>{{/each}}
+  </ul>
+  <button type="button" data-action="addStep">{{sr2eT "SR2E.UI.addStep"}}</button>
+
+  <h3 data-heading="Security rigger">{{sr2eT "SR2E.UI.securityRigger"}}</h3>
+  <div class="sr2e-row">
+    {{#if rigger}}<span><a data-action="openActor" data-uuid="{{rigger.uuid}}"><strong>{{rigger.name}}</strong></a> {{sr2eT "SR2E.UI.isJumpedInControlPool" pool=rigger.pool}}</span>
+    <button type="button" data-action="dropRigger">{{sr2eT "SR2E.UI.jumpOut"}}</button>
+    {{else}}<span>{{sr2eT "SR2E.UI.nobodyIsJumpedIn"}}</span>{{/if}}
+    <button type="button" data-action="setRigger">{{sr2eT "SR2E.UI.securityRigger2"}}</button>
+  </div>
+
+  <h3 data-heading="Turrets and drones">{{sr2eT "SR2E.UI.turretsAndDrones"}}</h3>
+  <ul class="sr2e-list">
+    {{#each slaved}}<li><span><a data-action="openActor" data-uuid="{{uuid}}">{{name}}</a> · {{status}}</span>
+      <span>{{#each weapons}}<button type="button" data-action="fireSlaved" data-uuid="{{../uuid}}" data-item-id="{{id}}">{{sr2eT "SR2E.UI.fire" name=name label=label}}</button>{{/each}}
+      <a data-action="removeSlaved" data-uuid="{{uuid}}" title="{{sr2eT "SR2E.UI.remove"}}"><i class="fa-solid fa-xmark"></i></a></span></li>
+    {{else}}<li><em>{{sr2eT "SR2E.UI.noneMakeEachTurretOrDrone"}}</em></li>{{/each}}
+  </ul>
+  <button type="button" data-action="addSlaved">{{sr2eT "SR2E.UI.addTurretOrDrone"}}</button>
+
+  <h3 data-help="gm-world" data-heading="Matrix">{{sr2eT "SR2E.UI.matrix"}}</h3>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.linkedHost"}}
+      <select name="system.hostUuid">{{selectOptions hosts selected=system.hostUuid valueAttr="key" labelAttr="label"}}</select>
+    </label>
+    {{#if deckers.length}}<span>{{sr2eT "SR2E.UI.deckersInTheHost"}} {{#each deckers}}<a data-action="openActor" data-uuid="{{uuid}}">{{name}}</a> {{/each}}</span>{{/if}}
+  </div>
+  <p class="hint">{{sr2eT "SR2E.UI.theSiteAndItsHostRaise"}}</p>
+
+  <label>{{sr2eT "SR2E.UI.notes"}}</label>
+  {{#if editable}}<prose-mirror class="sr2e-rich" name="system.notes" toggled value="{{richSource.notes}}">{{{enriched.notes}}}</prose-mirror>{{else}}<div class="sr2e-rich">{{{enriched.notes}}}</div>{{/if}}
+</div>

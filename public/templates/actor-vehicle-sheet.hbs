@@ -1,0 +1,152 @@
+<div class="sr2e-sheet sr2e-vehicle">
+  <header class="sr2e-header">
+    <img src="{{actor.img}}" alt="" width="56" height="56" data-edit="img">
+    <div class="sr2e-header-main">
+      <input type="text" name="name" value="{{actor.name}}" placeholder="{{sr2eT "SR2E.UI.name"}}">
+    </div>
+  </header>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.category"}}
+      <select name="system.category">{{selectOptions categories selected=system.category valueAttr="key" labelAttr="label"}}</select>
+    </label>
+    <label title="{{sr2eT "SR2E.UI.theSkillUsedToDriveIt"}}">{{sr2eT "SR2E.UI.skill"}} <input type="text" name="system.skill" value="{{system.skill}}" placeholder="{{categorySkill}}"></label>
+    <label>{{sr2eT "SR2E.UI.drone"}} <input type="checkbox" name="system.drone" {{checked system.drone}}></label>
+  </div>
+  <div class="sr2e-row sr2e-vehicle-stats">
+    <label>{{sr2eT "SR2E.UI.handling"}} <input type="number" name="system.handling" value="{{system.handling}}" min="0"></label>
+    <label title="{{sr2eT "SR2E.UI.offRoadHandling0TheSame"}}">{{sr2eT "SR2E.UI.offRoad"}} <input type="number" name="system.handlingOffroad" value="{{system.handlingOffroad}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.speed"}} <input type="number" name="system.speed" value="{{system.speed}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.accel"}} <input type="number" name="system.accel" value="{{system.accel}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.body"}} <input type="number" name="system.body" value="{{system.body}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.armor"}} <input type="number" name="system.armor" value="{{system.armor}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.signature"}} <input type="number" name="system.signature" value="{{system.signature}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.autonav"}} <input type="number" name="system.autonav" value="{{system.autonav}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.pilot"}} <input type="number" name="system.pilot" value="{{system.pilot}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.sensor"}} <input type="number" name="system.sensor" value="{{system.sensor}}" min="0"></label>
+    <label title="{{sr2eT "SR2E.UI.electronicCountermeasuresRaiseSensorTnsA"}}">{{sr2eT "SR2E.UI.ecm"}} <input type="number" name="system.ecm" value="{{system.ecm}}" min="0"></label>
+    <label title="{{sr2eT "SR2E.UI.electronicCounterCountermeasuresCancelTh"}}">{{sr2eT "SR2E.UI.eccm"}} <input type="number" name="system.eccm" value="{{system.eccm}}" min="0"></label>
+    {{#if linkEnabled}}<label title="{{sr2eT "SR2E.UI.encryptionOnItsRemoteLinkAgainst"}}">{{sr2eT "SR2E.UI.linkEncryption"}} <input type="number" name="system.link.encryption" value="{{system.link.encryption}}" min="0"></label>{{/if}}
+    <label title="{{sr2eT "SR2E.UI.electronicCounterDetectionNoticesSensorS"}}">{{sr2eT "SR2E.UI.ecd"}} <input type="number" name="system.ecd" value="{{system.ecd}}" min="0"></label>
+    <label title="{{sr2eT "SR2E.UI.objectResistanceASpellSTn"}}">{{sr2eT "SR2E.UI.objectResistance"}} <input type="number" name="system.objectResistance" value="{{system.objectResistance}}" min="0"></label>
+    {{#if mountsTracked}}<label title="{{sr2eT "SR2E.UI.firmpointsLightWeaponMounts0And"}}">{{sr2eT "SR2E.UI.firmpoints"}} <input type="number" name="system.firmpoints" value="{{system.firmpoints}}" min="0"></label>
+    <label title="{{sr2eT "SR2E.UI.hardpointsHeavyWeaponMountsAntiVehicle"}}">{{sr2eT "SR2E.UI.hardpoints"}} <input type="number" name="system.hardpoints" value="{{system.hardpoints}}" min="0"></label>{{/if}}
+    <button type="button" data-action="designVehicle" title="{{sr2eT "SR2E.UI.buildItFromAChassisA"}}"><i class="fa-solid fa-compass-drafting"></i> {{sr2eT "SR2E.UI.design"}}</button>
+  </div>
+  <div class="sr2e-row" title="{{sr2eT "SR2E.UI.systemsShotOutByCalledShots"}}">
+    <span>{{sr2eT "SR2E.UI.damagedSystems"}}</span>
+    <label><input type="checkbox" name="system.systems.tires" {{checked system.systems.tires}}> {{sr2eT "SR2E.UI.tires"}}</label>
+    <label><input type="checkbox" name="system.systems.sensors" {{checked system.systems.sensors}}> {{sr2eT "SR2E.UI.sensors"}}</label>
+    <label><input type="checkbox" name="system.systems.engine" {{checked system.systems.engine}}> {{sr2eT "SR2E.UI.engine"}}</label>
+    {{#each systemsNotes}}<span class="sr2e-warn">{{this}}</span>{{/each}}
+  </div>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.seating"}} <input type="text" name="system.seating" value="{{system.seating}}" placeholder="e.g. 1+3"></label>
+    <label>{{sr2eT "SR2E.UI.cargoNotes"}} <input type="text" name="system.cargo" value="{{system.cargo}}"></label>
+    <label title="{{sr2eT "SR2E.UI.loadInKg0NotTracked" personKg=personKg}}">{{sr2eT "SR2E.UI.loadKg"}} <input type="number" name="system.load" value="{{system.load}}" min="0"></label>
+    <label title="{{sr2eT "SR2E.UI.cargoFactorRoomByVolume0" personCf=personCf}}">{{sr2eT "SR2E.UI.cargoFactor"}} <input type="number" name="system.cargoFactor" value="{{system.cargoFactor}}" min="0" step="0.5"></label>
+    {{#if cargo.tracked}}<span class="{{#if cargo.over}}sr2e-warn{{/if}}">{{sr2eT "SR2E.UI.carrying"}} {{#if cargo.load}}<strong>{{cargo.kg}}</strong> {{sr2eT "SR2E.UI.kg" load=cargo.load}}{{/if}}{{#if cargo.cargoFactor}}{{#if cargo.load}} · {{/if}}<strong>{{cargo.cf}}</strong> {{sr2eT "SR2E.UI.cf" cargoFactor=cargo.cargoFactor}}{{/if}}{{#if cargo.over}}{{sr2eT "SR2E.UI.overloaded"}}{{#if cargo.overCf}} {{sr2eT "SR2E.UI.noRoom"}}{{/if}} {{sr2eT "SR2E.UI.tnDriving" overloadTn=overloadTn}}{{/if}}</span>{{/if}}
+  </div>
+  <h3 class="sr2e-subhead" data-heading="Cost and legality">{{sr2eT "SR2E.UI.costAndLegality"}}</h3>
+  <div class="sr2e-row">
+    <label title="{{sr2eT "SR2E.UI.vehicleCostHint"}}">{{sr2eT "SR2E.UI.cost3"}} <input type="number" name="system.cost" value="{{system.cost}}" min="0"></label>
+    <label title="{{sr2eT "SR2E.UI.eG614Days4"}}">{{sr2eT "SR2E.UI.availability"}} <input type="text" name="system.availability" value="{{system.availability}}" placeholder="{{sr2eT "SR2E.UI.eG614Days"}}"></label>
+    <label>{{sr2eT "SR2E.UI.streetIndex"}} <input type="number" name="system.streetIndex" value="{{system.streetIndex}}" min="0" step="0.05"></label>
+    <label title="{{sr2eT "SR2E.UI.whatTheLawSaysAboutCarrying"}}">{{sr2eT "SR2E.UI.legality"}} <select name="system.legality">{{selectOptions legalityChoices selected=system.legality valueAttr="key" labelAttr="label"}}</select></label>
+    {{#if permit.show}}<label title="{{#if permit.tickable}}{{sr2eT "SR2E.UI.theOwnerHoldsAPermitFor"}}{{else}}{{sr2eT "SR2E.UI.permitGmTicks"}}{{/if}}">{{sr2eT "SR2E.UI.permit"}} <input type="checkbox" name="system.permit" {{checked system.permit}}{{#unless permit.tickable}} disabled{{/unless}}></label>
+    {{#if permit.button}}<button type="button" data-action="getPermit" title="{{permit.buttonTitle}}">{{sr2eT "SR2E.UI.getPermit"}}</button>{{/if}}
+    {{#if permit.underWay}}<span class="hint">{{sr2eT "SR2E.UI.permitUnderWay"}}</span>{{/if}}{{#if permit.requested}}<span class="hint">{{sr2eT "SR2E.UI.permitRequested"}}</span>{{/if}}{{#if permit.licence}}<span class="hint">{{permit.licence}}</span>{{/if}}{{/if}}
+    {{#if permit.warning}}<span class="sr2e-warn" data-sr2e-legal-warning>{{permit.warning}}</span>{{/if}}
+    {{#if priceLabel}}<span>{{sr2eT "SR2E.UI.price"}} <strong>¥{{priceLabel}}</strong></span>{{else}}<span class="hint">{{sr2eT "SR2E.UI.vehicleNoPrice"}}</span>{{/if}}
+  </div>
+  <div class="sr2e-row" title="{{sr2eT "SR2E.UI.autosoftsHelpTheVehicleSOwn"}}{{#if capAtPilot}}{{sr2eT "SR2E.UI.eachUpToItsPilotAutonav"}}{{/if}}">
+    <span>{{sr2eT "SR2E.UI.autosofts"}}</span>
+    {{#each autosofts}}<label>{{label}} <input type="number" name="system.autosofts.{{key}}" value="{{value}}" min="0"></label>{{/each}}
+  </div>
+  <div class="sr2e-track">
+    <span class="sr2e-track-label">{{sr2eT "SR2E.UI.damage"}}</span>
+    {{#each boxes}}<a class="sr2e-box{{#if filled}} filled{{/if}}" data-action="setCondition" data-value="{{value}}" title="{{sr2eT "SR2E.UI.damage2" value=value}}"></a>{{/each}}
+    <span class="sr2e-status">{{system.derived.status}}{{#if system.derived.damageModifier}} {{sr2eT "SR2E.UI.tn6" damageModifier=system.derived.damageModifier}}{{/if}}</span>
+  </div>
+
+  <h3 data-heading="Control">{{sr2eT "SR2E.UI.control"}}</h3>
+  <div class="sr2e-row">
+    <span>{{#if controller}}<a data-action="openActor" data-uuid="{{controller.uuid}}"><strong>{{controller.name}}</strong></a> ({{modeLabel}}){{else}}{{sr2eT "SR2E.UI.nobodyAutopilot" autopilotLabel=autopilotLabel}}{{/if}}</span>
+    <button type="button" data-action="setDriver">{{sr2eT "SR2E.UI.driver"}}</button>
+    {{#if controller}}<button type="button" data-action="autopilot">{{sr2eT "SR2E.UI.autopilot"}}</button>{{/if}}
+    <span title="{{sr2eT "SR2E.UI.initiative"}}">{{sr2eT "SR2E.UI.init"}} <strong>{{initiative}}</strong></span>
+  </div>
+  <div class="sr2e-row">
+    <label>{{sr2eT "SR2E.UI.currentSpeed"}} <input type="number" name="system.currentSpeed" value="{{system.currentSpeed}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.offRoad"}} <input type="checkbox" name="system.offroad" {{checked system.offroad}}></label>
+    <span>{{sr2eT "SR2E.UI.handlingNow"}} <strong>{{handlingNow}}</strong> {{sr2eT "SR2E.UI.crashPower"}} <strong>{{crashPower}}</strong></span>
+    {{#if speedWindow.limited}}<span title="{{sr2eT "SR2E.UI.accelerationTheSpeedCanChangeOnly"}}">{{sr2eT "SR2E.UI.thisCombatTurn"}} <strong>{{speedWindow.min}}–{{speedWindow.max}}</strong>{{#if speedWindow.extra}} {{sr2eT "SR2E.UI.pushed" extra=speedWindow.extra}}{{/if}}</span>
+    <button type="button" data-action="pushSpeed" title="{{sr2eT "SR2E.UI.aDrivingTestAtToChange" pushTn=pushTn}}">{{sr2eT "SR2E.UI.push"}}</button>{{/if}}
+  </div>
+  <div class="sr2e-row">
+    <button type="button" data-action="driveVehicle"><i class="fa-solid fa-car"></i> {{sr2eT "SR2E.UI.drivingTest"}}</button>
+    <button type="button" data-action="crashTest" title="{{sr2eT "SR2E.UI.aCrashTestDrivingTestFailing"}}"><i class="fa-solid fa-triangle-exclamation"></i> {{sr2eT "SR2E.UI.crashTest"}}</button>
+    <button type="button" data-action="crashVehicle"><i class="fa-solid fa-car-burst"></i> {{sr2eT "SR2E.UI.crash2"}}</button>
+    <button type="button" data-action="repairTest" title="{{sr2eT "SR2E.UI.aBuildRepairTest"}}"><i class="fa-solid fa-screwdriver-wrench"></i> {{sr2eT "SR2E.UI.repairTest"}}</button> <button type="button" data-action="repairVehicle" data-sr2e-gm title="{{sr2eT "SR2E.UI.clearAllDamageGm"}}"><i class="fa-solid fa-wrench"></i> {{sr2eT "SR2E.UI.reset"}}</button>
+  </div>
+
+  <h3 data-help="vehicles" data-heading="Weapons">{{sr2eT "SR2E.UI.weapons"}} <a class="sr2e-add" data-action="addItem" data-type="weapon" title="{{sr2eT "SR2E.UI.addMountedWeapons"}}"><i class="fa-solid fa-plus"></i></a></h3>
+  {{#if mountUsage.tracked}}<p class="{{#if mountUsage.over}}sr2e-warn{{else}}hint{{/if}}">{{mountUsage.label}}</p>{{/if}}
+  <ul class="sr2e-list">
+    {{#each weapons}}<li><a data-action="editItem" data-item-id="{{id}}">{{name}}</a> <span>{{damageLabel}}{{#if av}} {{sr2eT "SR2E.UI.av"}}{{/if}} · {{mountLabel}}{{#if point}} ({{point}}){{/if}}{{#if ammo}} · {{ammo}}{{/if}}</span>
+      <span><button type="button" data-action="fireMounted" data-item-id="{{id}}"><i class="fa-solid fa-crosshairs"></i> {{sr2eT "SR2E.UI.fire2"}}</button>
+      <a data-action="deleteItem" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.delete"}}"><i class="fa-solid fa-trash"></i></a></span></li>
+    {{else}}<li class="sr2e-empty"><em>{{sr2eT "SR2E.UI.noWeaponsPress"}} <i class="fa-solid fa-plus"></i> {{sr2eT "SR2E.UI.orDropAWeaponItemHere"}}</em></li>{{/each}}
+  </ul>
+  <div class="sr2e-row"><button type="button" data-action="ramVehicle"><i class="fa-solid fa-car-side"></i> {{sr2eT "SR2E.UI.ram" ramLabel=ramLabel}}</button></div>
+
+  <h3 data-heading="Sensors">{{sr2eT "SR2E.UI.sensors"}}</h3>
+  <div class="sr2e-row">
+    <label title="{{sr2eT "SR2E.UI.passiveTnButEcdCanT" passiveTn=passiveTn}}">{{sr2eT "SR2E.UI.mode"}} <select name="system.sensorMode">{{selectOptions sensorModes selected=system.sensorMode valueAttr="key" labelAttr="label"}}</select></label>
+    <label title="{{sr2eT "SR2E.UI.whatTheSensorsSeeWithA"}}"><input type="checkbox" name="system.sensorVision.lowLight" {{checked system.sensorVision.lowLight}}> {{sr2eT "SR2E.UI.lowLight"}}</label>
+    <label title="{{sr2eT "SR2E.UI.whatTheSensorsSeeWithA"}}"><input type="checkbox" name="system.sensorVision.thermographic" {{checked system.sensorVision.thermographic}}> {{sr2eT "SR2E.UI.thermographic"}}</label>
+    <button type="button" data-action="sensorTest"><i class="fa-solid fa-satellite-dish"></i> {{sr2eT "SR2E.UI.sensorTest"}}</button>
+    {{#if system.ecm}}<button type="button" data-action="jamLink" title="{{sr2eT "SR2E.UI.jamADroneSRemoteLink" ecm=system.ecm}}"><i class="fa-solid fa-tower-broadcast"></i> {{sr2eT "SR2E.UI.jam"}}</button>{{/if}}
+    {{#each locks}}<span class="sr2e-chip">{{sr2eT "SR2E.UI.lock" targetName=targetName successes=successes}} <a data-action="clearLock" data-uuid="{{targetUuid}}" title="{{sr2eT "SR2E.UI.dropTheLock"}}"><i class="fa-solid fa-xmark"></i></a></span>{{/each}}
+  </div>
+
+  {{#if system.jammed.active}}<p class="sr2e-warn"><strong>{{sr2eT "SR2E.UI.linkJammed"}}</strong>{{#if system.jammed.by}} {{sr2eT "SR2E.UI.by" by=system.jammed.by}}{{/if}}{{sr2eT "SR2E.UI.noRemoteControlOrGroupCommands"}} <a data-action="unjam" title="{{sr2eT "SR2E.UI.clearTheJamming"}}"><i class="fa-solid fa-xmark"></i></a></p>{{/if}}
+  {{#if droneLink.spoofed}}<p class="sr2e-warn"><strong>{{sr2eT "SR2E.UI.linkSpoofed"}}</strong> {{sr2eT "SR2E.UI.byItFollowsTheSpooferNot" spoofed=droneLink.spoofed}} <a data-action="clearDroneLink" data-sr2e-gm title="{{sr2eT "SR2E.UI.theRiggerHasItBackGm"}}"><i class="fa-solid fa-xmark"></i></a></p>
+  {{else if droneLink.intercepted}}<p class="hint">{{sr2eT "SR2E.UI.linkInterceptedBy" intercepted=droneLink.intercepted}} <a data-action="clearDroneLink" data-sr2e-gm title="{{sr2eT "SR2E.UI.newCodesClearItGm"}}"><i class="fa-solid fa-xmark"></i></a></p>{{/if}}
+  {{#if remoteLink}}<p class="{{#if remoteLink.bad}}sr2e-warn{{else}}hint{{/if}}">{{sr2eT "SR2E.UI.remoteLink" rigger=remoteLink.rigger note=remoteLink.note}}</p>{{/if}}
+
+  <h3 data-heading="Modifications">{{sr2eT "SR2E.UI.modifications"}} <button type="button" data-action="addMod">{{sr2eT "SR2E.UI.add"}}</button></h3>
+  <ul class="sr2e-list">
+    {{#each mods}}<li><a data-action="editMod" data-index="{{index}}"><strong>{{name}}</strong></a> <span>{{label}} {{rating}}{{#if effect}} · {{effect}}{{/if}} · {{costLabel}}¥{{#if installed}} {{sr2eT "SR2E.UI.installed2"}}{{/if}}</span>
+      <span>{{#if installed}}<button type="button" data-action="removeMod" data-index="{{index}}">{{sr2eT "SR2E.UI.takeOut"}}</button>{{else}}<button type="button" data-action="installMod" data-index="{{index}}">{{sr2eT "SR2E.UI.install"}}</button>{{/if}}
+      <a data-action="deleteMod" data-index="{{index}}" title="{{sr2eT "SR2E.UI.delete"}}"><i class="fa-solid fa-trash"></i></a></span></li>
+    {{else}}<li class="sr2e-empty"><em>{{sr2eT "SR2E.UI.noModificationsPressAddInstallingOne"}}</em></li>{{/each}}
+  </ul>
+
+  <h3 data-heading="Cargo">{{sr2eT "SR2E.UI.cargo"}} <a class="sr2e-add" data-action="addItem" data-type="gear" title="{{sr2eT "SR2E.UI.loadGear"}}"><i class="fa-solid fa-plus"></i></a></h3>
+  <ul class="sr2e-list">
+    {{#each cargoItems}}<li><a data-action="editItem" data-item-id="{{id}}">{{name}}</a> <span>{{#if quantity}}×{{quantity}} · {{/if}}{{sr2eT "SR2E.UI.kg2" weight=weight}}{{#if cf}} {{sr2eT "SR2E.UI.cf2" cf=cf}}{{/if}}</span> <a data-action="deleteItem" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.delete"}}"><i class="fa-solid fa-trash"></i></a></li>{{else}}<li class="sr2e-empty"><em>{{sr2eT "SR2E.UI.nothingLoadedPress"}} <i class="fa-solid fa-plus"></i> {{sr2eT "SR2E.UI.orDropGearHere"}}</em></li>{{/each}}
+  </ul>
+
+  <h3 data-heading="Chase">{{sr2eT "SR2E.UI.chase"}}</h3>
+  <div class="sr2e-row">
+    {{#if chase}}
+    <span>{{sr2eT "SR2E.UI.chasing"}} <a data-action="openActor" data-uuid="{{chase.quarryUuid}}"><strong>{{chase.quarryName}}</strong></a></span>
+    <label class="sr2e-inline">{{sr2eT "SR2E.UI.gap"}} <input type="number" name="system.chase.metres" value="{{chase.metres}}" min="0"> m</label>
+    <button type="button" data-action="chaseTurn">{{sr2eT "SR2E.UI.chaseTurn"}}</button>
+    <button type="button" data-action="endChase">{{sr2eT "SR2E.UI.endChase"}}</button>
+    {{else}}
+    <button type="button" data-action="startChase">{{sr2eT "SR2E.UI.giveChase"}}</button>
+    {{/if}}
+    {{#each pursuers}}<span>{{sr2eT "SR2E.UI.chasedBy"}} <a data-action="openActor" data-uuid="{{uuid}}">{{name}}</a> ({{metres}} m)</span>{{/each}}
+  </div>
+  {{#if position}}<p class="hint">{{position}}</p>{{/if}}
+
+  <h3 data-heading="Aboard">{{sr2eT "SR2E.UI.aboard"}}</h3>
+  <ul class="sr2e-list">
+    {{#each occupants}}<li><a data-action="openActor" data-uuid="{{uuid}}">{{name}}</a> <a data-action="removeOccupant" data-index="{{index}}" title="{{sr2eT "SR2E.UI.remove"}}"><i class="fa-solid fa-xmark"></i></a></li>{{else}}<li class="sr2e-empty"><em>{{sr2eT "SR2E.UI.nobodyAboardPressPutSomeoneAboard"}}</em></li>{{/each}}
+  </ul>
+  <button type="button" data-action="addOccupant">{{sr2eT "SR2E.UI.putSomeoneAboard"}}</button>
+  <p class="hint">{{sr2eT "SR2E.UI.drivingTestTheDriverS"}} {{#if system.skill}}{{system.skill}}{{else}}{{categorySkill}}{{/if}} {{sr2eT "SR2E.UI.skillControlPoolWhenJumpedIn" autopilotLabel=autopilotLabel}}</p>
+  <label>{{sr2eT "SR2E.UI.notes"}}</label>
+  {{#if editable}}<prose-mirror class="sr2e-rich" name="system.notes" toggled value="{{richSource.notes}}">{{{enriched.notes}}}</prose-mirror>{{else}}<div class="sr2e-rich">{{{enriched.notes}}}</div>{{/if}}
+</div>

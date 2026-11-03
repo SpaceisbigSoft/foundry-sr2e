@@ -1,0 +1,54 @@
+{{#if rigging}}
+<section class="sr2e-rigging">
+  <h2 data-heading="Rigging">{{sr2eT "SR2E.UI.rigging"}}{{#if rigging.vehicle}} <span class="sr2e-status">{{rigging.vehicle.modeLabel}} · {{rigging.vehicle.name}}</span>{{/if}}</h2>
+  <div class="sr2e-row">
+    {{#if rigging.vcr}}
+    <span>{{sr2eT "SR2E.UI.controlRig"}} <strong>{{rigging.vcr}}</strong></span>
+    <span title="{{sr2eT "SR2E.UI.initiativeWhileJumpedIn"}}">{{sr2eT "SR2E.UI.riggedInit"}} <strong>{{rigging.reaction}} + {{rigging.initiativeDice}}d6</strong></span>
+    <span>{{sr2eT "SR2E.UI.controlPool"}} <strong>{{rigging.poolLeft}} / {{rigging.pool}}</strong>{{#unless rigging.jumpedIn}} <em>{{sr2eT "SR2E.UI.onlyWhenJumpedIn"}}</em>{{/unless}}</span>
+    <label class="sr2e-inline">{{sr2eT "SR2E.UI.spent"}} <input type="number" name="system.poolSpent.control" value="{{system.poolSpent.control}}" min="0"></label>
+    {{else}}
+    <span>{{sr2eT "SR2E.UI.noControlRigDrivingByHand"}}</span>
+    {{/if}}
+  </div>
+  {{#if rigging.owned.length}}
+  <div class="sr2e-row sr2e-owned-vehicles"><span>{{sr2eT "SR2E.UI.yourVehicles"}}</span>
+    {{#each rigging.owned}}<a data-action="openActor" data-uuid="{{uuid}}"><i class="fa-solid {{#if drone}}fa-helicopter{{else}}fa-car{{/if}}" aria-hidden="true"></i> {{name}}</a>{{/each}}
+  </div>
+  {{/if}}
+  {{#if rigging.site}}
+  <div class="sr2e-row">
+    <span>{{sr2eT "SR2E.UI.securitySystem"}} <a data-action="openActor" data-uuid="{{rigging.site.uuid}}"><strong>{{rigging.site.name}}</strong></a> {{sr2eT "SR2E.UI.devicesAlertTally" devices=rigging.site.devices alert=rigging.site.alert tally=rigging.site.tally}}</span>
+    <button type="button" data-action="releaseVehicle">{{sr2eT "SR2E.UI.jumpOut"}}</button>
+  </div>
+  {{else if rigging.vehicle}}
+  <div class="sr2e-row">
+    <a data-action="openActor" data-uuid="{{rigging.vehicle.uuid}}"><strong>{{rigging.vehicle.name}}</strong></a>
+    {{#if rigging.vehicle.remote}}<span class="sr2e-chip">{{sr2eT "SR2E.UI.remote"}}</span>{{/if}}
+    <span>{{sr2eT "SR2E.UI.handling2" handling=rigging.vehicle.handling}}{{#if rigging.vehicle.handlingOffroad}}/{{rigging.vehicle.handlingOffroad}}{{/if}} {{sr2eT "SR2E.UI.speedNowBodyArmor" speed=rigging.vehicle.speed currentSpeed=rigging.vehicle.currentSpeed body=rigging.vehicle.body armor=rigging.vehicle.armor}}</span>
+    <span>{{sr2eT "SR2E.UI.damage4" condition=rigging.vehicle.condition max=rigging.vehicle.max}}{{#if rigging.vehicle.damageMod}} {{sr2eT "SR2E.UI.tn8" damageMod=rigging.vehicle.damageMod}}{{/if}}</span>
+    {{#if rigging.vehicle.skill}}<span>{{sr2eT "SR2E.UI.skill2" skill=rigging.vehicle.skill}}</span>{{/if}}
+  </div>
+  <div class="sr2e-row">
+    <button type="button" data-action="driveVehicle"><i class="fa-solid fa-car"></i> {{sr2eT "SR2E.UI.drivingTest"}}</button>
+    {{#if rigging.canJump}}<button type="button" data-action="toggleJump">{{#if rigging.jumpedIn}}{{sr2eT "SR2E.UI.jumpOutKeepDriving"}}{{else}}{{sr2eT "SR2E.UI.jumpIn"}}{{/if}}</button>{{/if}}
+    <button type="button" data-action="releaseVehicle">{{sr2eT "SR2E.UI.letGo"}}</button>
+  </div>
+  {{else}}
+  <div class="sr2e-row"><button type="button" data-action="takeControl"><i class="fa-solid fa-car"></i> {{sr2eT "SR2E.UI.takeTheControls"}}</button></div>
+  {{/if}}
+  {{#if rigging.rcd}}
+  <h3 data-help="rigging">{{sr2eT "SR2E.UI.remoteControlDeck" rcd=rigging.rcd}} <span class="sr2e-status">{{sr2eT "SR2E.UI.dronesSignalKm" length=rigging.drones.length rcdCapacity=rigging.rcdCapacity signal=rigging.signal rangeKm=rigging.rangeKm}}</span></h3>
+  <ul class="sr2e-list">
+    {{#each rigging.drones}}<li><a data-action="openActor" data-uuid="{{uuid}}">{{name}}</a> <span>{{sr2eT "SR2E.UI.pilot2" pilot=pilot status=status}}{{#if ctl}} · {{ctl}}{{/if}}{{#if link}} · <span class="{{#if linkBad}}sr2e-warn{{/if}}">{{link}}</span>{{/if}}</span>
+      <a data-action="unsubscribeDrone" data-uuid="{{uuid}}" title="{{sr2eT "SR2E.UI.unsubscribe"}}"><i class="fa-solid fa-xmark"></i></a></li>
+    {{else}}<li><em>{{sr2eT "SR2E.UI.noDronesSubscribed"}}</em></li>{{/each}}
+  </ul>
+  <div class="sr2e-row">
+    <button type="button" data-action="subscribeDrone">{{sr2eT "SR2E.UI.subscribeADrone"}}</button>
+    {{#if rigging.drones.length}}<button type="button" data-action="groupDrive">{{sr2eT "SR2E.UI.groupDrivingTest"}}</button>
+    <button type="button" data-action="groupAttack">{{sr2eT "SR2E.UI.groupAttack"}}</button>{{/if}}
+  </div>
+  {{/if}}
+</section>
+{{/if}}

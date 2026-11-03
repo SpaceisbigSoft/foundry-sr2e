@@ -1,0 +1,47 @@
+{{!-- v0.68.0: the "Combat column" layout's always-open right column (the player's layout setting): defense, weapons with
+     their Attack and firing-mode buttons, spells with Cast, and the quick actions. One set of templates: this column is
+     rendered only in that layout; the tabs beside it are the same as in the Tabs layout. Context: the sheet's. --}}
+<aside class="sr2e-combat-col" aria-label="{{sr2eT "SR2E.UI.combat"}}">
+  <div class="sr2e-col-block">
+    <h3 class="sr2e-col-head" data-heading="Defense"><i class="fa-solid fa-shield-halved"></i> {{sr2eT "SR2E.UI.defense"}}</h3>
+    <div class="sr2e-col-buttons">
+      <button type="button" data-action="resistDamage" title="{{sr2eT "SR2E.UI.resistDamageBodyArmorCombatPool"}}">{{sr2eT "SR2E.UI.resist"}}</button>
+      {{#if inCombat}}<button type="button" data-action="fullDefense" title="{{sr2eT "SR2E.UI.fullDefenseUntilYourNextAction"}}">{{#if fullDefense}}{{sr2eT "SR2E.UI.onFullDefense"}}{{else}}{{sr2eT "SR2E.UI.fullDefense"}}{{/if}}</button>{{/if}}
+      <button type="button" data-action="firstAid" title="{{sr2eT "SR2E.UI.firstAidOnYourselfOrA"}}">{{sr2eT "SR2E.UI.firstAid"}}</button>
+    </div>
+  </div>
+  <div class="sr2e-col-block">
+    <h3 class="sr2e-col-head" data-heading="Weapons"><i class="fa-solid fa-gun"></i> {{sr2eT "SR2E.UI.weapons"}}</h3>
+    <ul class="sr2e-col-list">
+      {{#each weapons}}
+      <li class="{{#unless system.ready}}sr2e-col-holstered{{/unless}}">
+        <span class="sr2e-col-name" title="{{name}}">{{name}}</span>
+        <span class="sr2e-col-detail">{{damageLabel}}{{#if system.ammoMax}} · <b>{{system.ammo}}/{{system.ammoMax}}</b>{{/if}}{{#if system.jammed}} · <strong class="sr2e-warn">{{sr2eT "SR2E.UI.jammed"}}</strong>{{/if}}</span>
+        <span class="sr2e-col-acts">
+          {{#if modeButtons.length}}{{#each modeButtons}}<button type="button" class="sr2e-mode" data-action="attackWeapon" data-item-id="{{../id}}" data-mode="{{this}}" title="{{sr2eT "SR2E.UI.attackInMode" value=this}}">{{this}}</button>{{/each}}
+          {{else}}<button type="button" data-action="attackWeapon" data-item-id="{{id}}">{{sr2eT "SR2E.UI.attack"}}</button>{{/if}}
+          {{#if system.ammoMax}}<a data-action="reloadWeapon" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.reload"}}"><i class="fa-solid fa-rotate"></i></a>{{/if}}
+          {{#unless system.ready}}<a data-action="drawWeapon" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.holsteredDrawIt"}}"><i class="fa-solid fa-hand"></i></a>{{/unless}}
+        </span>
+      </li>
+      {{/each}}
+      <li><span class="sr2e-col-name">{{sr2eT "SR2E.UI.unarmed"}}</span><span class="sr2e-col-detail">{{unarmed.damageLabel}} {{unarmed.damageType}}</span><span class="sr2e-col-acts"><button type="button" data-action="attackWeapon" data-item-id="unarmed">{{sr2eT "SR2E.UI.attack"}}</button></span></li>
+    </ul>
+  </div>
+  {{#if spells.length}}
+  <div class="sr2e-col-block">
+    <h3 class="sr2e-col-head" data-heading="Spells"><i class="fa-solid fa-wand-sparkles"></i> {{sr2eT "SR2E.UI.spells"}}</h3>
+    <ul class="sr2e-col-list">
+      {{#each spells}}<li><span class="sr2e-col-name" title="{{name}}">{{name}}</span><span class="sr2e-col-detail">F{{system.learnedForce}}</span><span class="sr2e-col-acts"><button type="button" data-action="castSpell" data-item-id="{{id}}">{{sr2eT "SR2E.UI.cast"}}</button></span></li>{{/each}}
+    </ul>
+  </div>
+  {{/if}}
+  {{#if quickActions.length}}
+  <div class="sr2e-col-block">
+    <h3 class="sr2e-col-head" data-heading="Actions"><i class="fa-solid fa-bolt"></i> {{sr2eT "SR2E.UI.actions"}}</h3>
+    <div class="sr2e-col-buttons">
+      {{#each quickActions}}<button type="button" data-action="{{action}}" title="{{title}}"{{#if itemId}} data-item-id="{{itemId}}"{{/if}}><i class="{{icon}}"></i> {{label}}</button>{{/each}}
+    </div>
+  </div>
+  {{/if}}
+</aside>
