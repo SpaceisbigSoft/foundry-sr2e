@@ -471,6 +471,7 @@ describe('O8 drug doses and overdoses', () => {
 describe('O9 Shadowtech bioware: symbiotes, nephritic screen, extended-volume lungs', () => {
   test('natural healing: + symbiotes dice', async (t) => {
     t.after(oldWay({"BOOK_V78.symbiotes.mode": "dice"})); // v0.78.0: the old rule (a house rule)
+    t.after(oldWay({ 'HEALTH_V923.stunRecovery': 'old' })); // v0.92.3: Body, not the higher of Body and Willpower
     const a = who({ name: 'Patient', monitor: { physical: 0, stun: 3 } }, [bio('sy', 'Symbiotes 2', 'symbiotes', 2, 0.7)]);
     assert.equal(a.system.derived.bio.vitals.healingDice, 2);
     faces.push(1, 1, 1, 1, 1, 1);                                        // Body 4 + 2
@@ -499,7 +500,8 @@ describe('O9 Shadowtech bioware: symbiotes, nephritic screen, extended-volume lu
     assert.match(chat.at(-1).content, /4 dice vs TN/);
   });
 
-  test('resistHazard drowning: extended-volume lungs hold the breath; past them the remaining turns count', async () => {
+  test('resistHazard drowning: extended-volume lungs hold the breath; past them the remaining turns count', async (t) => {
+    t.after(oldWay({ 'HEALTH_V923.drowning': 'test', 'HEALTH_V923.breathHold': 'none' })); // v0.92.3: the old drowning test
     const a = who({ name: 'Diver' }, [bio('ev', 'Extended volume 1', 'extendedVolume', 1, 0.2)]);
     await a.resistHazard('drowning', 6);
     assert.match(chat.at(-1).content, /still holds their breath \(extended-volume lungs, 15 Combat Turns\)/); // v0.77.0: 45 s per level
@@ -581,7 +583,9 @@ describe('O11 Companion health edges and flaws', () => {
     });
   });
 
-  test('Sensitive System: cyberware Essence doubled; bioware within the Body Index still calls for a rejection test', async () => {
+  test('Sensitive System: cyberware Essence doubled; bioware within the Body Index still calls for a rejection test', async (t) => {
+    // v0.92.3: the old rejection rule (the Companion has none for Sensitive System).
+    t.after(oldWay({ 'HEALTH_V72.qualities.sensitiveSystem.rejectionAlways': true }));
     const items = [
       { id: 'cy', type: 'cyberware', name: 'Datajack', system: { installed: true, essenceCost: 0.5, grade: 'standard', attributes: {}, reaction: 0, initiativeDice: 0 } },
       bio('bw', 'Enhanced articulation', 'other', 1, 0.3),

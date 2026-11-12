@@ -9,6 +9,7 @@ import type { TargetNumberModifier } from './dice.ts';
 import { own } from './util.ts';
 import { aimFloor } from './combat923.ts';
 import { t as tx } from '../helpers/i18n.ts';
+import { surgeryBandLevel } from './health923.ts';
 
 const C = () => RULES.COMBAT;
 
@@ -116,10 +117,16 @@ export function antidoteEffect(rating: number): { dice: number; hours: number } 
 
 // ---------------------------------------------------------------- Surgical trauma
 
-/** The wound a surgery leaves by its size (Essence or Body Index points), when the house rule is on. */
-export function surgicalTrauma(points: number): { level: DamageLevel; type: 'physical' | 'stun' } | null {
+/**
+ * The wound a surgery leaves by its size (Essence or Body Index points), when the house rule is on.
+ * v0.92.3 (RULES.HEALTH_V923.surgeryBands 'book'): the book's bands, cyberware by Essence (Core p. 114), bioware by
+ * Body Index (Shadowtech bionetics); 'table' uses `levels`.
+ */
+export function surgicalTrauma(points: number, bioware = false): { level: DamageLevel; type: 'physical' | 'stun' } | null {
   const t = RULES.BIOWARE.surgery.trauma;
   if (!t.enabled || !(points > 0)) return null;
+  const band = surgeryBandLevel(points, bioware);
+  if (band) return { level: band, type: t.type };
   const row = t.levels.find((l) => points <= l.upTo) ?? t.levels[t.levels.length - 1];
   return row ? { level: row.level, type: t.type } : null;
 }

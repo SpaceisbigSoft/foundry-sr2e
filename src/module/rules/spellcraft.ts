@@ -1,13 +1,17 @@
 import { urrMagLossHit } from './urr80-magic.ts';
 import { RULES } from './config.ts';
+import { healingSpellBase, magicLossAtOrBelow } from './health923.ts';
 import type { TargetNumberModifier } from './dice.ts';
 import { own } from './util.ts';
 import { t as tx } from '../helpers/i18n.ts';
 
-/** Healing TN: 10 - the patient's Essence (min 2), or a fixed TN. VERIFY */
-export function healingTargetNumber(patientEssence: number, fixed: number): number {
+/**
+ * Healing TN: 10 - the patient's Essence (min 2), or a fixed TN.
+ * v0.92.3 (RULES.HEALTH_V923.treatTn 'book', Core p. 155): Treat is 8 − Essence, Heal 10 − Essence.
+ */
+export function healingTargetNumber(patientEssence: number, fixed: number, treat = false): number {
   const h = RULES.SPELLCRAFT.healing;
-  const tn = h.tn === 'essence' ? h.base - Math.floor(patientEssence) : fixed;
+  const tn = h.tn === 'essence' ? healingSpellBase(treat) - Math.floor(patientEssence) : fixed;
   return Math.max(RULES.MIN_TARGET_NUMBER, tn);
 }
 
@@ -45,12 +49,14 @@ export function reachedDeadly(physicalBoxes: number, boxes = RULES.MONITOR_BOXES
   return physicalBoxes >= boxes;
 }
 
-/** Magic loss test outcome: lose Magic if the dice total is below Magic (or a fixed number). VERIFY */
+/** Magic loss test outcome: lose Magic if the dice total is at or below Magic (Core p. 115; or a fixed number). */
 export function magicLossOutcome(total: number, magic: number): { lost: number; threshold: number } {
   const m = RULES.MAGIC_LOSS;
   const threshold = m.compareTo === 'magic' ? magic : m.fixed;
   // v0.80.0 (RULES.URR_V80.magLossLe, URR): under the Revamp a total equal to the threshold loses too.
-  return { lost: urrMagLossHit(total, threshold) ? m.loss : 0, threshold };
+  // v0.92.3 (RULES.HEALTH_V923.magicLoss 'atOrBelow', Core p. 115): so does the book ("less than or equal to").
+  const hit = magicLossAtOrBelow() ? total <= threshold : urrMagLossHit(total, threshold);
+  return { lost: hit ? m.loss : 0, threshold };
 }
 
 /** Days an enchanting task takes; null if it failed. */

@@ -7,6 +7,7 @@ import { RULES, type DamageLevel } from './config.ts';
 import type { TargetNumberModifier } from './dice.ts';
 import { woundModifier, stageUp, type Monitor } from './damage.ts';
 import { t as tx, tCount } from '../helpers/i18n.ts';
+import { deathPastBody, bleedMinutes, selfStabiliseTnNow, traumaPatchTnNow, stunRecoveryBaseTn, firstAidByLevelOn, firstAidMinutesTable, firstAidRetryOn, magicLossUntreatedOn, breathSecondsPerBody } from './health923.ts';
 
 const U = () => RULES.URR_V80;
 const NEXT_DOWN: Record<DamageLevel, DamageLevel | null> = { D: 'S', S: 'M', M: 'L', L: null };
@@ -23,14 +24,18 @@ function levelOf(boxes: number): DamageLevel | null {
 
 // ---------------------------------------------------------------- Death and bleeding
 
-/** Boxes past a full Overflow row before death: 1 under the Revamp (dead only beyond 10 + Body), 0 under the book. */
+/**
+ * Boxes past a full Overflow row before death: 1 under the Revamp (dead only beyond 10 + Body), 0 under the old way.
+ * v0.92.3: also 1 by the book (RULES.HEALTH_V923.death 'natural', Core p. 111; rules/health923.ts).
+ */
 export function deathBoxExtra(): number {
-  return U().hsDeathPastOverflow ? 1 : 0;
+  return deathPastBody() ? 1 : 0;
 }
 
 /** Combat Turns per box while dying: the Revamp's minutes of game time, else the book's (Body) turns. */
 export function bleedTurnsPerBox(body: number): number {
-  const min = Number(U().hsBleedMinutes) || 0;
+  // v0.92.3 (RULES.HEALTH_V923.bleed 'tenMinutes', Core p. 111): the book's 10 minutes under the Book Rules too.
+  const min = bleedMinutes();
   if (min > 0) return Math.max(1, Math.round((min * 60) / Math.max(1, Number(RULES.COMBAT_TURN_SECONDS) || 3)));
   const per = RULES.CONDITIONS.dying.turnsPerBox;
   return per === 'body' ? Math.max(1, Math.floor(Number(body) || 0)) : Math.max(1, Number(per));
@@ -39,7 +44,7 @@ export function bleedTurnsPerBox(body: number): number {
 /** v0.82.0: how often a dying character loses another box, for the sheet and the Effects tab ("every 4 Combat Turns",
  * "every 10 minutes of game time"), following the book's rule, its house rule and the Revamp alike. */
 export function bleedEveryText(body: number): string {
-  const min = Number(U().hsBleedMinutes) || 0;
+  const min = bleedMinutes();
   if (min > 0) return tCount(min, 'SR2E.Text.Urr80HealthSocial.everyMinutesOfGameTime');
   const per = bleedTurnsPerBox(body);
   return tCount(per, 'SR2E.Text.Urr80HealthSocial.everyCombatTurns');
@@ -47,14 +52,16 @@ export function bleedEveryText(body: number): string {
 
 /** The "is dying" card's line under the Revamp; '' under the book (the caller keeps its own text). */
 export function bleedRateText(): string {
-  const min = Number(U().hsBleedMinutes) || 0;
+  const min = bleedMinutes();
   return min > 0 ? tx('SR2E.Text.Urr80HealthSocial.loses1MorePhysicalBox', { min }) : '';
 }
 
 /** Self-stabilisation after failed first aid: natural Body vs 10, no modifiers. Null under the book (no test). */
 export function selfStabiliseTest(naturalBody: number): { dice: number; tn: number } | null {
-  if (!U().hsSelfStabilise) return null;
-  return { dice: Math.max(0, Math.floor(Number(naturalBody) || 0)), tn: Math.max(2, Math.floor(Number(U().hsSelfStabiliseTn) || 10)) };
+  // v0.92.3 (RULES.HEALTH_V923.selfStabilise 'test', Core p. 115): the book's test under the Book Rules too.
+  const tn = selfStabiliseTnNow();
+  if (tn === null) return null;
+  return { dice: Math.max(0, Math.floor(Number(naturalBody) || 0)), tn };
 }
 
 type ItemLike = { type?: string; name?: string; system?: Record<string, any> };
@@ -73,8 +80,10 @@ export function traumaPatchInhibitors(items: Iterable<ItemLike> | null | undefin
 
 /** A trauma patch's self-stabilisation test (natural Body vs 4 + dermal armor / blood filter). Null under the book (it just stabilises). */
 export function traumaPatchTest(naturalBody: number, items: Iterable<ItemLike> | null | undefined): { dice: number; tn: number; modifiers: TargetNumberModifier[] } | null {
-  if (U().hsTraumaPatch !== 'bodyTest') return null;
-  return { dice: Math.max(0, Math.floor(Number(naturalBody) || 0)), tn: Math.max(2, Math.floor(Number(U().hsTraumaPatchTn) || 4)), modifiers: traumaPatchInhibitors(items) };
+  // v0.92.3 (RULES.HEALTH_V923.traumaPatch 'bodyTest', Core p. 115): the book's test under the Book Rules too.
+  const tn = traumaPatchTnNow();
+  if (tn === null) return null;
+  return { dice: Math.max(0, Math.floor(Number(naturalBody) || 0)), tn, modifiers: traumaPatchInhibitors(items) };
 }
 
 // ---------------------------------------------------------------- Stun recovery
@@ -84,17 +93,20 @@ export function traumaPatchTest(naturalBody: number, items: Iterable<ItemLike> |
  * no care rows. Null under the book (Body vs the wound's TN, no wound modifiers).
  */
 export function stunRecoveryTest(o: { body: number; willpower: number; monitor: Monitor }): { attribute: 'body' | 'willpower'; tn: number; modifiers: TargetNumberModifier[] } | null {
-  if (U().hsStunRecovery !== 'urr') return null;
+  // v0.92.3 (RULES.HEALTH_V923.stunRecovery 'book', Core p. 112): the book's test under the Book Rules too.
+  const tn = stunRecoveryBaseTn();
+  if (tn === null) return null;
   const attribute = Number(o.willpower) > Number(o.body) ? 'willpower' : 'body';
   const w = woundModifier({ physical: Number(o.monitor?.physical) || 0, stun: Number(o.monitor?.stun) || 0 });
-  return { attribute, tn: Math.max(2, Math.floor(Number(U().hsStunRecoveryTn) || 2)), modifiers: w ? [{ id: 'wounds', label: tx('SR2E.Card.Mod.wounds'), value: w }] : [] };
+  return { attribute, tn, modifiers: w ? [{ id: 'wounds', label: tx('SR2E.Card.Mod.wounds'), value: w }] : [] };
 }
 
 // ---------------------------------------------------------------- First aid
 
 /** Whether first aid lowers the wound one level (the Revamp) rather than healing boxes (the book). */
 export function firstAidByLevel(): boolean {
-  return U().hsFirstAid === 'level';
+  // v0.92.3 (RULES.HEALTH_V923.firstAid 'level', Core p. 115): the book's way under the Book Rules too.
+  return firstAidByLevelOn();
 }
 
 /** A Deadly Physical wound that first aid can only stabilise (Revamp); false under the book. */
@@ -118,22 +130,26 @@ export function firstAidLevelBoxes(boxes: number, track: 'physical' | 'stun' | s
 
 /** The treatment time in minutes (base by level ÷ successes, round up); null under the book, for Deadly, or no successes. */
 export function firstAidMinutes(boxes: number, successes: number): number | null {
-  if (!U().hsFirstAidTime || !(successes > 0)) return null;
+  // v0.92.3 (RULES.HEALTH_V923.firstAidTime 'shown', Core p. 115): the First Aid Table's times under the Book Rules too.
+  const table = firstAidMinutesTable();
+  if (!table || !(successes > 0)) return null;
   const level = levelOf(Math.floor(Number(boxes) || 0));
   if (!level || level === 'D') return null;
-  const base = Number(U().hsFirstAidMinutes[level]) || 0;
+  const base = Number(table[level]) || 0;
   return base > 0 ? Math.ceil(base / successes) : null;
 }
 
 /** Whether a healer may try first aid again on a wound already treated: a higher Biotech than the best before (Revamp). */
 export function firstAidRetryAllowed(previousBest: number | null | undefined, mine: number): boolean {
-  if (!U().hsFirstAidRetry || typeof previousBest !== 'number') return false;
+  // v0.92.3 (RULES.HEALTH_V923.firstAidRetry 'better', Core p. 115): professional help under the Book Rules too.
+  if (!firstAidRetryOn() || typeof previousBest !== 'number') return false;
   return Math.floor(Number(mine) || 0) > previousBest;
 }
 
 /** Whether first aid on a magician without the +2 "patient is a magician" modifier calls for a Magic loss test (Revamp). */
 export function magicLossOnTreatment(o: { magician: boolean; applyMagician?: boolean }): boolean {
-  return Boolean(U().hsMagicLossUntreated) && Boolean(o.magician) && o.applyMagician === false;
+  // v0.92.3 (RULES.HEALTH_V923.magicLossUntreated 'test', Core p. 115): the book's test under the Book Rules too.
+  return magicLossUntreatedOn() && Boolean(o.magician) && o.applyMagician === false;
 }
 
 /** A Deadly wound's healing stage outside intensive care (Revamp): the reason it can't be rolled; null when it can. */
@@ -160,8 +176,10 @@ export function overdoseStats(basePower: number, level: DamageLevel, dosesBefore
 
 /** Combat Turns a character holds their breath before drowning or suffocation tests count (Revamp); 0 under the book. */
 export function breathHoldTurns(body: number): number {
-  if (!U().hsBreathHold) return 0;
-  const secs = Math.max(0, Math.floor(Number(body) || 0)) * Math.max(0, Number(U().hsBreathSecondsPerBody) || 0);
+  // v0.92.3 (RULES.HEALTH_V923.breathHold 'body', Fields of Fire p. 76): the book's 30 s per Body under the Book Rules too.
+  const per = breathSecondsPerBody();
+  if (!(per > 0)) return 0;
+  const secs = Math.max(0, Math.floor(Number(body) || 0)) * per;
   return Math.floor(secs / Math.max(1, Number(RULES.COMBAT_TURN_SECONDS) || 3));
 }
 

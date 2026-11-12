@@ -12,13 +12,21 @@ import {
   socialExtraRows,
 } from '../urr80-health-social.ts';
 import { urrMode } from './urrmode.ts';
+import { oldWay } from './oldway.ts';
 
 const plating = { type: 'cyberware', name: 'Dermal plating', system: { installed: true, kind: 'other', armorBallistic: 2 } };
 const filter = { type: 'cyberware', name: 'Blood filter', system: { installed: true, kind: 'filtration', filterKind: 'blood', rating: 3 } };
 const limb = { type: 'cyberware', name: 'Arm', system: { installed: true, kind: 'cyberlimb', armorBallistic: 2 } };
 
+// v0.92.3: the Book Rules now follow the book where these Revamp switches give the book's rule (RULES.HEALTH_V923);
+// with those switches set back to the v0.92.2 way, every Revamp switch is off as before.
+const OLD923 = { 'HEALTH_V923.death': 'total', 'HEALTH_V923.bleed': 'bodyTurns', 'HEALTH_V923.stunRecovery': 'old', 'HEALTH_V923.firstAid': 'boxes',
+  'HEALTH_V923.firstAidTime': 'hidden', 'HEALTH_V923.selfStabilise': 'none', 'HEALTH_V923.firstAidRetry': 'once', 'HEALTH_V923.traumaPatch': 'stabilise',
+  'HEALTH_V923.magicLossUntreated': 'none', 'HEALTH_V923.breathHold': 'none', 'HEALTH_V923.falling': 'old' };
+
 describe('v0.80.0 health-social: shipped values are the book', () => {
-  test('every switch is off', () => {
+  test('every switch is off', (t) => {
+    t.after(oldWay(OLD923));
     assert.equal(deathBoxExtra(), 0);
     assert.equal(bleedTurnsPerBox(4), 4);
     assert.equal(bleedRateText(), '');
@@ -39,13 +47,15 @@ describe('v0.80.0 health-social: shipped values are the book', () => {
     assert.deepEqual(socialExtraRows(), []);
   });
   test('the book patch targets keep their book values', () => {
-    assert.equal(RULES.STUN_OVERFLOW_PER_PHYSICAL_BOX, 2);
+    // v0.92.3: 1, box for box, is the book's too (Core p. 111); the patch still sets it.
+    assert.equal(RULES.STUN_OVERFLOW_PER_PHYSICAL_BOX, 1);
     assert.equal(RULES.METATYPES.types['troll']!.run, 3);
     assert.equal(RULES.STREET.haggle.percentPerNet, 5);
     assert.equal(RULES.SOCIAL.skills['Negotiation'], 'willpower');
     assert.deepEqual(RULES.STREET.athletics.climb.map((c) => c.tn), [2, 4, 6, 8]);
   });
   test('a numeric turnsPerBox still counts', (t) => {
+    t.after(oldWay({ 'HEALTH_V923.bleed': 'bodyTurns' }));
     const keep = RULES.CONDITIONS.dying.turnsPerBox;
     (RULES.CONDITIONS.dying as any).turnsPerBox = 5;
     t.after(() => { (RULES.CONDITIONS.dying as any).turnsPerBox = keep; });

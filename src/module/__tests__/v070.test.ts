@@ -484,7 +484,8 @@ describe('B15 dying on world time', () => {
     return a;
   };
 
-  test('a box every Body × 3 seconds; the flag counts boxes, so the same time never adds twice', async () => {
+  test('a box every Body × 3 seconds; the flag counts boxes, so the same time never adds twice', async (t) => {
+    t.after(oldWay({ 'HEALTH_V923.bleed': 'bodyTurns' })); // v0.92.3: the old rate (the book's 10 minutes: v0923-health tests)
     const a = dying();
     assert.equal(a.system.derived.status, 'dying');
     a.flags.sr2e = { dyingAt: { t: 0, boxes: 0 } };
@@ -537,20 +538,25 @@ describe('B15 dying on world time', () => {
 });
 
 describe('B16 Stun past a full track carries its odd box', () => {
-  test('addStun: 10 + 1 shows 11; the next Light Stun makes a Physical box', () => {
+  test('addStun: 10 + 1 shows 11; the next Light Stun makes a Physical box', (t) => {
+    // v0.92.3: by the book (Core p. 111) every box past the track is a Physical box; the carry is for the old 2:1.
+    assert.deepEqual(addStun({ physical: 0, stun: 10 }, 1), { physical: 1, stun: 10 });
+    t.after(oldWay({ STUN_OVERFLOW_PER_PHYSICAL_BOX: 2 }));
     assert.deepEqual(addStun({ physical: 0, stun: 10 }, 1), { physical: 0, stun: 11 });
     assert.deepEqual(addStun({ physical: 0, stun: 11 }, 1), { physical: 1, stun: 10 });
     assert.deepEqual(addStun({ physical: 2, stun: 9 }, 4), { physical: 3, stun: 11 });
     assert.deepEqual(addStun({ physical: 0, stun: 3 }, 2), { physical: 0, stun: 5 });
   });
 
-  test('two Light Stun hits on a full track give one Physical box (applyDamageToMonitor)', () => {
+  test('two Light Stun hits on a full track give one Physical box (applyDamageToMonitor)', (t) => {
+    t.after(oldWay({ STUN_OVERFLOW_PER_PHYSICAL_BOX: 2 }));
     const one = applyDamageToMonitor({ physical: 0, stun: 10 }, 'stun', 'L', 4).monitor;
     const two = applyDamageToMonitor(one, 'stun', 'L', 4).monitor;
     assert.deepEqual(two, { physical: 1, stun: 10 });
   });
 
-  test('switched off: the old floor (the odd box is lost)', () => {
+  test('switched off: the old floor (the odd box is lost)', (t) => {
+    t.after(oldWay({ STUN_OVERFLOW_PER_PHYSICAL_BOX: 2 }));
     RULES.FIXES_V70.stunOverflowCarry = false;
     try {
       assert.deepEqual(addStun({ physical: 0, stun: 10 }, 1), { physical: 0, stun: 10 });
@@ -690,6 +696,7 @@ describe('B20 slap patches on someone the player doesn\'t own', () => {
 
   test('patchEffect: tranq Stun spills past the track through addStun', async (tc) => {
     tc.after(oldWay({"BOOK_V78.patches.tranq": "body"})); // v0.78.0: the old rule (a house rule)
+    tc.after(oldWay({ STUN_OVERFLOW_PER_PHYSICAL_BOX: 2 })); // v0.92.3: the old 2:1 (the book: box for box)
     const t = who({ name: 'Guard', monitor: { physical: 0, stun: 9 } });
     faces.push(1, 1, 1, 1);                                                // Body 4 vs 6: no successes, 6 boxes
     const text = await SR2Actor.patchEffect(t, { kind: 'tranq', rating: 6, name: 'Tranq patch' });

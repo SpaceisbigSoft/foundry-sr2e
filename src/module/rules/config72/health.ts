@@ -83,7 +83,9 @@ export const HEALTH_V72 = {
     highPainTolerance: { match: ['high pain tolerance', 'pain tolerance'] as readonly string[], pointsPerLevel: 1, maxLevels: 3, boxesPerLevel: 1 },
     lowPainTolerance: { match: ['low pain tolerance'] as readonly string[], extraBoxes: 1 },
     toughness: { match: ['toughness'] as readonly string[], dice: 1, onStun: true, onToxins: false },
-    sensitiveSystem: { match: ['sensitive system'] as readonly string[], essenceMultiplier: 2, bodyIndexMultiplier: 1, rejectionAlways: true, rejectionTnBonus: 0 },
+    sensitiveSystem: { match: ['sensitive system'] as readonly string[], essenceMultiplier: 2,
+      // v0.92.3 book check (Companion, Sensitive System): twice the Body Index (was 1), and no rejection rule (was true).
+      bodyIndexMultiplier: 2, rejectionAlways: false, rejectionTnBonus: 0 },
   },
   hazards: {
     heat: {

@@ -1,5 +1,6 @@
 import { RULES, type DamageLevel } from './config.ts';
 import { DAMAGE_LEVELS as LEVELS } from './util.ts';
+import { deathPastBody } from './health923.ts';
 
 export type DamageType = 'physical' | 'stun';
 
@@ -57,13 +58,14 @@ export type Status = 'ok' | 'unconscious' | 'dying' | 'dead';
 
 /**
  * The condition a monitor puts a character in: dead once Physical overflow (boxes past a full track) reaches
- * Body (passes it with RULES.URR_V80.hsDeathPastOverflow); dying with a full Physical track; unconscious with a
+ * Body (passes it with RULES.URR_V80.hsDeathPastOverflow, or by the book with RULES.HEALTH_V923.death); dying with a full Physical track; unconscious with a
  * full Stun track; else ok.
  */
 export function monitorStatus(m: Monitor, body: number): Status {
   const overflow = m.physical - RULES.MONITOR_BOXES;
   // v0.80.0 (RULES.URR_V80.hsDeathPastOverflow, the URR): dead only with MORE damage than 10 + Body.
-  if (overflow >= body + (RULES.URR_V80.hsDeathPastOverflow ? 1 : 0) && m.physical > RULES.MONITOR_BOXES) return 'dead';
+  // v0.92.3 (RULES.HEALTH_V923.death 'natural', Core p. 111): the book's way under the Book Rules too.
+  if (overflow >= body + (deathPastBody() ? 1 : 0) && m.physical > RULES.MONITOR_BOXES) return 'dead';
   if (m.physical >= RULES.MONITOR_BOXES) return 'dying';
   if (m.stun >= RULES.MONITOR_BOXES) return 'unconscious';
   return 'ok';
