@@ -5,6 +5,9 @@
  *   and cyberware grade as the Add window prices it), gear quantities, and which items aren't loot.
  * - Health Estimate: a token's health from the worse of its Physical and Stun tracks (vehicles: the
  *   condition track; IC: the Matrix monitor); hosts, sites, safehouses and barriers are left out.
+ * - v0.91.7 (the owner, 11 Nov 2026: one theme per window): Monk's Enhanced Journal shows its own light parts next to
+ *   Foundry's dark theme. When Foundry is dark, each user's Monk's backgrounds are set once to its own dark choices
+ *   (world setting `moduleSupportLook`), only where they are still Monk's default; a user's own choice is kept.
  */
 import { SYSTEM } from '../config/system.ts';
 import { RULES, entryPrice, healthFraction, itemPilesConfig, NO_HEALTH_TYPES } from '../rules/index.ts';
@@ -52,7 +55,59 @@ function registerItemPiles(): void {
 }
 
 /** Hooks for the module integrations (call at init). */
+/** Monk's Enhanced Journal's own dark, consistent look (its per-user settings and the choice for each). */
+export const MEJ_ID = 'monks-enhanced-journal';
+export const MEJ_DARK: Readonly<Record<string, string>> = { 'background-colour': 'black', 'background-image': 'solidBlack', 'sidebar-image': 'solidBlack' };
+
+/**
+ * Pure: which of Monk's settings to set: each still at its default ('none') whose dark choice Monk's still offers
+ * (`choices` null = the setting isn't there, e.g. a later version renamed it).
+ */
+export function mejDarkChanges(current: Record<string, unknown>, choices: Record<string, string[] | null>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [key, want] of Object.entries(MEJ_DARK)) {
+    const list = choices[key];
+    if (!list || !list.includes(want)) continue;
+    if (String(current[key] ?? 'none') === 'none') out[key] = want;
+  }
+  return out;
+}
+
+/** Whether Foundry shows its windows dark (its colour scheme, or the browser's when it follows that). */
+function foundryDark(): boolean {
+  let scheme = '';
+  try { scheme = String((game as any).settings.get('core', 'uiConfig')?.colorScheme?.applications ?? ''); } catch { /* older Foundry */ }
+  if (scheme) return scheme === 'dark';
+  // Following the browser: Foundry marks the page with the scheme it resolved.
+  return Boolean(globalThis.document?.body?.classList?.contains('theme-dark'));
+}
+
+/** Once per user (while Foundry is dark): Monk's Enhanced Journal's own dark backgrounds, where still at its default. */
+export async function matchModuleLook(): Promise<Record<string, string>> {
+  const g: any = game;
+  let on = true;
+  try { on = Boolean(g.settings.get(SYSTEM.id, 'moduleSupportLook')); } catch { /* not registered */ }
+  if (!on || !g.modules?.get?.(MEJ_ID)?.active || !foundryDark()) return {};
+  let done: any = {};
+  try { done = g.settings.get(SYSTEM.id, 'moduleLookDone') ?? {}; } catch { /* not registered */ }
+  if (done?.[MEJ_ID]) return {};
+  const current: Record<string, unknown> = {};
+  const choices: Record<string, string[] | null> = {};
+  for (const key of Object.keys(MEJ_DARK)) {
+    const def: any = g.settings.settings?.get?.(`${MEJ_ID}.${key}`);
+    choices[key] = def?.choices ? Object.keys(def.choices) : null;
+    try { current[key] = g.settings.get(MEJ_ID, key); } catch { choices[key] = null; }
+  }
+  const changes = mejDarkChanges(current, choices);
+  for (const [key, value] of Object.entries(changes)) {
+    try { await g.settings.set(MEJ_ID, key, value); } catch (err) { console.warn('sr2e | module look', key, err); }
+  }
+  try { await g.settings.set(SYSTEM.id, 'moduleLookDone', { ...(done ?? {}), [MEJ_ID]: true }); } catch { /* not registered */ }
+  return changes;
+}
+
 export function registerModuleSupport(): void {
+  Hooks.once('ready', () => { void matchModuleLook(); });
   Hooks.once('item-piles-ready', () => { if (supportOn()) registerItemPiles(); });
   Hooks.once('ready', () => {
     if (!supportOn()) return;

@@ -400,3 +400,26 @@ describe('v0.91.7 live-run fixes', () => {
     assert.match(read('src', 'module', 'applications', 'scenebuilder.ts'), /actorLink: true, hidden: false, disposition: 1/);
   });
 });
+
+describe('v0.91.7 one look for module windows (Monk\'s Enhanced Journal)', async () => {
+  const { mejDarkChanges, MEJ_DARK } = await import('../applications/modules.ts');
+  const all = { 'background-colour': ['none', 'black', 'red'], 'background-image': ['none', 'solidBlack', 'parchment'], 'sidebar-image': ['none', 'solidBlack'] };
+  test('settings still at Monk\'s default get its dark choices', () => {
+    assert.deepEqual(mejDarkChanges({ 'background-colour': 'none', 'background-image': 'none', 'sidebar-image': 'none' }, all), { ...MEJ_DARK });
+  });
+  test('a user\'s own choice is kept', () => {
+    assert.deepEqual(mejDarkChanges({ 'background-colour': 'red', 'background-image': 'parchment', 'sidebar-image': 'none' }, all), { 'sidebar-image': 'solidBlack' });
+  });
+  test('a setting Monk\'s no longer has, or a choice it no longer offers, is left alone', () => {
+    assert.deepEqual(mejDarkChanges({}, { 'background-colour': null, 'background-image': ['none', 'parchment'], 'sidebar-image': ['none', 'solidBlack'] }), { 'sidebar-image': 'solidBlack' });
+  });
+  test('once per user, only when Foundry is dark and Monk\'s is active, with a GM switch', () => {
+    const src = read('src', 'module', 'applications', 'modules.ts');
+    assert.match(src, /if \(!on \|\| !g\.modules\?\.get\?\.\(MEJ_ID\)\?\.active \|\| !foundryDark\(\)\) return \{\};/);
+    assert.match(src, /if \(done\?\.\[MEJ_ID\]\) return \{\};/);
+    const set = read('src', 'module', 'settings.ts');
+    assert.match(set, /"moduleSupportLook", \{[\s\S]{0,200}scope: "world", config: true, type: Boolean, default: true/);
+    assert.match(set, /"moduleLookDone", \{ scope: "client", config: false/);
+    assert.equal(typeof key('SR2E.Settings.moduleSupportLook.Name'), 'string');
+  });
+});

@@ -8,6 +8,7 @@ This is the history of the unofficial Shadowrun 2nd Edition system for Foundry V
 - **Time of day** sets the darkness (and, if you like, moves world time to that hour); weather, terrain, background count, environment tags and a ward are set in the same place.
 - **Who's there:** player characters in one start area and everyone else in another; NPCs from your actors (pick or drag them in) or made on the spot by the NPC generator, each row hidden or not, hostile, neutral or friendly, and a morale group. A new security site puts maglocks on the map's secure doors, with cameras and an alarm, and its host; a Matrix scene places the host's token.
 - **Finish:** a GM journal with your notes and links to everything made, music, the combat tracker (and the NPCs' initiative), then view the scene or show it to the players. **Save as a template** keeps every choice for next time; **Change this scene…** opens it on an existing scene (it only adds, never deletes); **Remove this scene** deletes exactly what the builder made.
+- **One look for module windows:** with Foundry's dark colour scheme, Monk's Enhanced Journal no longer shows light bars next to dark pages: each user's Monk's backgrounds are set once to its own dark choices, only where they are still Monk's default (a GM switch in the settings, *One look for module windows*).
 - Rules values are unchanged.
 
 ## v0.91.6 — Contacts and fixers (2 Nov 2026)

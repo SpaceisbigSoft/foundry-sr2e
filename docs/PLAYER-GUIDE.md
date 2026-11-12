@@ -960,7 +960,7 @@ The rules changes made since v0.70.0 (dying out of combat, fresh pools at the st
 
 Configure Settings itself is in sections:
 
-- *GM and world*: **Edit house rules**, **Edit the Skill Web** (defaulting links between skills), *Players' purchases and Karma wait for the GM* ([the approval queue](#the-approval-queue), off by default) and *Support for Item Piles and Health Estimate* (on; it needs a reload).
+- *GM and world*: **Edit house rules**, **Edit the Skill Web** (defaulting links between skills), *Players' purchases and Karma wait for the GM* ([the approval queue](#the-approval-queue), off by default) and *Support for Item Piles and Health Estimate* (on; it needs a reload) and *One look for module windows* (on: with Foundry's dark colour scheme, each user's Monk's Enhanced Journal gets its own dark backgrounds once, where they are still at Monk's default).
 - *Tokens and the map*: *Ward regions stop astral forms* and *Camera and sensor regions* (see [The GM panel](#the-gm-panel)), and each player's own *Floating damage numbers*, *Turn pings* and *Pools on token hover*.
 - *Rolls, dice and chat*: *NPCs resist damage by themselves* (see [Chat cards for the GM](#chat-cards-for-the-gm)), and each player's own roll privacy, dice colours and sound cues (off by default, with a volume and a sound file for each cue; the security alert cue is the GM's).
 - *Other*: *Rules source* (see [the Unified Rules Revamp](#the-unified-rules-revamp-alternate-rules)), *Apply players' GM-only changes by themselves* and each player's *Dice So Nice: SR2e colours*.

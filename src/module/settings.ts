@@ -1591,6 +1591,13 @@ export function registerSettings(): void {
     hint: "SR2E.Settings.moduleSupport.Hint",
     scope: "world", config: true, type: Boolean, default: true, requiresReload: true,
   });
+  // v0.91.7: other modules' windows in one theme (Monk's Enhanced Journal's own dark backgrounds when Foundry is dark).
+  game.settings.register(SYSTEM.id, "moduleSupportLook", {
+    name: "SR2E.Settings.moduleSupportLook.Name",
+    hint: "SR2E.Settings.moduleSupportLook.Hint",
+    scope: "world", config: true, type: Boolean, default: true,
+  });
+  game.settings.register(SYSTEM.id, "moduleLookDone", { scope: "client", config: false, type: Object, default: {} });
   // v0.45.0: magical groups (members, strictures, shared sites, grimoire, breaches).
   game.settings.register(SYSTEM.id, "magicGroups", { scope: "world", config: false, type: Array, default: [] });
   // v0.51.0: GM panel scene presets and per-scene encounter notes.

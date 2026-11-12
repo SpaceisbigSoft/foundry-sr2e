@@ -2195,6 +2195,10 @@
         "Name": "Support for Item Piles and Health Estimate",
         "Hint": "When those modules are active, SR2e tells them where nuyen, prices, quantities and the condition monitor are. Turn off to set them up by hand."
       },
+      "moduleSupportLook": {
+        "Name": "One look for module windows",
+        "Hint": "With Foundry's dark colour scheme, each user's Monk's Enhanced Journal gets its own dark backgrounds once, so the window isn't half light and half dark. Only settings still at Monk's default are changed, and a user's own choice is kept."
+      },
       "diceColours": {
         "Name": "Dice colours on chat cards",
         "Hint": "Colourblind-safe uses blue and orange with shapes as well as colour; high contrast uses black and white.",
@@ -17332,7 +17336,7 @@
           "b4": "The rules changes made since v0.70.0 (dying out of combat, fresh pools at the start of a combat, holds, Take Aim, firing twice, Karma on contest cards, owned lifestyles, drone links, firmpoints and hardpoints, missiles, NPC ratings and many more) each have a switch here, a row or a value under Advanced, that puts the old way back. Search for the subject; many rows name the old choice <em>(old)</em>.",
           "b5": "Configure Settings itself is in sections:",
           "b6": {
-            "i1": "<em>GM and world</em>: <strong>Edit house rules</strong>, <strong>Edit the Skill Web</strong> (defaulting links between skills), <em>Players' purchases and Karma wait for the GM</em> (<a href=\"#approval\">the approval queue</a>, off by default) and <em>Support for Item Piles and Health Estimate</em> (on; it needs a reload).",
+            "i1": "<em>GM and world</em>: <strong>Edit house rules</strong>, <strong>Edit the Skill Web</strong> (defaulting links between skills), <em>Players' purchases and Karma wait for the GM</em> (<a href=\"#approval\">the approval queue</a>, off by default) and <em>Support for Item Piles and Health Estimate</em> (on; it needs a reload) and <em>One look for module windows</em> (on: with Foundry's dark colour scheme, each user's Monk's Enhanced Journal gets its own dark backgrounds once, where they are still at Monk's default).",
             "i2": "<em>Tokens and the map</em>: <em>Ward regions stop astral forms</em> and <em>Camera and sensor regions</em> (see <a href=\"#gm-panel\">The GM panel</a>), and each player's own <em>Floating damage numbers</em>, <em>Turn pings</em> and <em>Pools on token hover</em>.",
             "i3": "<em>Rolls, dice and chat</em>: <em>NPCs resist damage by themselves</em> (see <a href=\"#gm-cards\">Chat cards for the GM</a>), and each player's own roll privacy, dice colours and sound cues (off by default, with a volume and a sound file for each cue; the security alert cue is the GM's).",
             "i4": "<em>Other</em>: <em>Rules source</em> (see <a href=\"#rules-urr\">the Unified Rules Revamp</a>), <em>Apply players' GM-only changes by themselves</em> and each player's <em>Dice So Nice: SR2e colours</em>.",
