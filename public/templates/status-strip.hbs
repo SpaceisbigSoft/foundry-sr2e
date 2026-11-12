@@ -9,7 +9,7 @@
   {{#if strip.status}}<span class="sr2e-strip-item{{#if strip.danger}} sr2e-strip-danger{{/if}}">{{strip.status}}</span>{{/if}}
   <span class="sr2e-strip-item" title="{{#if strip.initNow}}{{sr2eT "SR2E.UI.initiativeThisPass"}}{{else}}{{sr2eT "SR2E.UI.initiativeReactionDice"}}{{/if}}"><small>{{sr2eT "SR2E.UI.init"}}</small> <b>{{strip.init}}</b></span>
   {{#each strip.pools}}
-  <span class="sr2e-strip-pool{{#if empty}} empty{{/if}}" role="group" aria-label="{{sr2eT "SR2E.UI.poolOfLeft" label=label left=left total=total}}" title="{{sr2eT "SR2E.UI.poolOfLeftClickAPip" label=label left=left total=total}}"><small>{{short}}</small>{{#each pips}}<a class="sr2e-pip{{#if filled}} filled{{/if}}" data-action="setPool" data-pool="{{../key}}" data-value="{{value}}" aria-label="{{sr2eT "SR2E.UI.pool" label=../label value=value}}"></a>{{/each}}<b>{{left}}</b><i>/{{total}}</i></span>
+  <span class="sr2e-strip-pool{{#if empty}} empty{{/if}}" role="group" aria-label="{{sr2eT "SR2E.UI.poolOfLeft" label=label left=left total=total}}" title="{{sr2eT "SR2E.UI.poolOfLeftClickAPip" label=label left=left total=total}}"><small>{{short}}</small>{{#each pips}}<a class="sr2e-pip{{#if filled}} filled{{/if}}" data-action="setPool" data-pool="{{../key}}" data-value="{{value}}" aria-label="{{sr2eT "SR2E.UI.pool" label=../label value=value}}"></a>{{/each}}<b>{{left}}</b><i>/{{total}}</i>{{#if narrow}} <em class="sr2e-strip-narrow" title="{{narrowTitle}}">{{narrow}}</em>{{{narrowMark}}}{{/if}}</span>
   {{/each}}
   {{#if strip.weapon}}
   <span class="sr2e-strip-weapon{{#if strip.weapon.out}} out{{/if}}" title="{{sr2eT "SR2E.UI.readiedWeaponClickToAttackWith"}}">

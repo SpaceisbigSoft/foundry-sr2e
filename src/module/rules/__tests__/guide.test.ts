@@ -90,13 +90,13 @@ describe('v0.66.0 player guide topics', () => {
     const anchors = GUIDE_TOPICS.map((t) => markdownAnchor(t.title));
     assert.equal(new Set(anchors).size, anchors.length);
     assert.ok(!anchors.includes('contents') && !anchors.includes('for-the-gm') && !anchors.includes('sr2e-player-guide'));
-    assert.ok(GUIDE_TOPICS.length >= 25 && GUIDE_TOPICS.length <= 60)  // v0.79.0: 51 topics (was <= 50);
+    assert.ok(GUIDE_TOPICS.length >= 25 && GUIDE_TOPICS.length <= 70)  // v0.79.0: 51 topics (was <= 50);
     assert.equal(GUIDE_TOPICS[0]!.id, 'getting-started');
   });
 
   test('every topic has headings or is one of the general topics', () => {
     // v0.87.0: 'printing' (no sheet heading of its own). v0.89.8: 'tools' (the tools window's headings name it with data-help). v0.91.7: 'scene-builder' (likewise).
-    const general = new Set(['getting-started', 'sheet-tools', 'summary-bar', 'rolling', 'targeting', 'chat-cards', 'karma-pool', 'shortcuts', 'inline-tests', 'skill-picker', 'adding', 'gm-cards', 'house-rules', 'look', 'credits', 'rules-v079', 'rules-urr', 'printing', 'tools', 'scene-builder', 'spell-formulas']);
+    const general = new Set(['getting-started', 'sheet-tools', 'summary-bar', 'rolling', 'targeting', 'chat-cards', 'karma-pool', 'shortcuts', 'inline-tests', 'skill-picker', 'adding', 'gm-cards', 'house-rules', 'look', 'credits', 'rules-v079', 'rules-urr', 'printing', 'tools', 'scene-builder', 'spell-formulas', 'interpretations']);
     for (const t of GUIDE_TOPICS) {
       if (general.has(t.id)) assert.equal(t.headings.length, 0, t.id);
       else assert.ok(t.headings.length > 0, `${t.id} has no headings`);

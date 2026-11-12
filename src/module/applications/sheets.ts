@@ -2,6 +2,7 @@ import { importIntoCharacter } from './catalogue.ts';
 import { askFindThrough } from './through.ts';
 import { learnFromFormulaDialog, learnFromTeacherDialog } from './formulas.ts';
 import { teachersOn } from '../rules/formulas.ts';
+import { interpMark } from '../rules/interpretations.ts';
 import { castingPoolMax } from '../rules/docs79-drones-magic.ts';
 import { metamagicAllowed } from "../rules/sorcery.ts";
 import { ATTRIBUTE_KEYS, type AttributeKey } from "../models/index.ts";
@@ -2744,7 +2745,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       });
     }
     if (!options.length) return ui.notifications.warn(tx('SR2E.Notify.Sheet.nobodyIsSustainingASpell'));
-    const spellLeft = Math.max(0, Number(actor.system.derived?.spellPoolLeft ?? 0));
+    const spellLeft = Math.max(0, Number(actor.spellPoolFor?.(actor.sorceryUseFor?.("dispel")) ?? actor.system.derived?.spellPoolLeft ?? 0));
     const choice: any = await foundry.applications.api.DialogV2.prompt({
       window: { title: tx('SR2E.Dialog.Sheet.dispel2', { actorName: actor.name }) },
       content: `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.spell')}</label><select name="spell">${options.join("")}</select></div>
@@ -3935,7 +3936,11 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     // Spells that need a target: combat spells, spells an unwilling target resists, and healing.
     // v0.50.0: elemental manipulations (they hit like ranged attacks) need targets too.
     const targeted = combat || heals || Boolean(sp.elemental) || (sp.resist && sp.resist !== "none");
-    const left = actor.system.derived.spellPoolLeft as number;
+    // v0.92.0: the Spell Pool's narrow layers this spell falls inside count too (RULES.MAGIC_V920).
+    const castUse = actor.sorceryUseFor?.("cast", { category: sp.category, spellName: spell.name });
+    const left = Number(actor.spellPoolFor?.(castUse) ?? actor.system.derived.spellPoolLeft);
+    // v0.92.0 review (R5): Drain may take the narrow dice only with RULES.MAGIC_V920.drainNarrow.
+    const drainLeft = Math.min(left, Number(actor.drainPoolFor?.(castUse) ?? left));
 
     const targetToken: any = game.user.targets?.first?.() ?? null;
     // Vehicles too (v0.43.0), for physical spells (mana spells only affect the living).
@@ -4010,7 +4015,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
           <input name="force" type="number" value="${escHtml(sp.learnedForce)}" min="1" max="${escHtml(sp.learnedForce)}" autofocus></div>
         ${targetRow}
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.spellPoolDiceToCastLeft', { left, part: castingPoolMax(left, actor.system.derived.magic) < left ? tx('SR2E.Dialog.Sheet.atMostMagic', { castingPoolMax: castingPoolMax(left, actor.system.derived.magic) }) : "" })}</label><input name="pool" type="number" value="0" min="0" max="${castingPoolMax(left, actor.system.derived.magic)}"></div>
-        <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.spellPoolDiceForDrain')}</label><input name="drainPool" type="number" value="0" min="0" max="${left}"></div>
+        <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.spellPoolDiceForDrain')}</label><input name="drainPool" type="number" value="0" min="0" max="${drainLeft}"></div>
         ${sustainRow}
         ${fetishRow}
         ${aidRow}
@@ -4035,7 +4040,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
             targetUuid: (el.target?.value as string) || null,
             targetUuids: checkedTargets(button.form),
             pool: Math.min(pool, left),
-            drainPool: Math.min(drainPool, Math.max(0, left - Math.min(pool, left))),
+            drainPool: Math.min(drainPool, drainLeft, Math.max(0, left - Math.min(pool, left))),
             useFocus: Boolean(el.useFocus?.checked),
             fetish: el.fetish ? Boolean(el.fetish.checked) : true,
             ritual: el.ritual?.checked
@@ -4095,7 +4100,10 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const spell = actor.items.get(target.dataset["itemId"]);
     if (!spell) return;
     const sp = spell.system;
-    const left = actor.system.derived.spellPoolLeft as number;
+    const castUse = actor.sorceryUseFor?.("cast", { category: sp.category, spellName: spell.name });
+    const left = Number(actor.spellPoolFor?.(castUse) ?? actor.system.derived.spellPoolLeft);
+    // v0.92.0 review (R5): Drain may take the narrow dice only with RULES.MAGIC_V920.drainNarrow.
+    const drainLeft = Math.min(left, Number(actor.drainPoolFor?.(castUse) ?? left));
     const t = RULES.GEAR.spellsVsObjects.tns as Record<string, number>;
     const kinds: Record<string, string> = { natural: tx('SR2E.App.Sheets.naturalTreesEarth'), lowTech: tx('SR2E.App.Sheets.lowTechWoodBrick'), highTech: tx('SR2E.App.Sheets.highTechPlasticsAlloys'), processed: tx('SR2E.App.Sheets.highlyProcessedElectronics') };
     const from: any = tokenOf(actor);
@@ -4111,7 +4119,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.object')}</label><select name="kind">${Object.entries(kinds).map(([k, l]) => `<option value="${escHtml(k)}" ${k === RULES.GEAR.spellsVsObjects.wallKind ? "selected" : ""}>${tx('SR2E.Dialog.Sheet.tn8', { l: escHtml(l), t: t[k] })}</option>`).join("")}</select></div>
         ${wallRows}
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.spellPoolDiceToCastLeft', { left, part: castingPoolMax(left, actor.system.derived.magic) < left ? tx('SR2E.Dialog.Sheet.atMostMagic', { castingPoolMax: castingPoolMax(left, actor.system.derived.magic) }) : "" })}</label><input name="pool" type="number" value="0" min="0" max="${castingPoolMax(left, actor.system.derived.magic)}"></div>
-        <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.spellPoolDiceForDrain')}</label><input name="drainPool" type="number" value="0" min="0" max="${left}"></div>
+        <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.spellPoolDiceForDrain')}</label><input name="drainPool" type="number" value="0" min="0" max="${drainLeft}"></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.otherTnModifier')}</label><input name="mod" type="number" value="0"></div>
         <p class="hint">${tx('SR2E.Dialog.Sheet.drainAsUsual', { part: sp.category === "combat" ? tx('SR2E.Dialog.Sheet.aWallTakesPowerForcePer', { spellsVsObjectsPowerPerSuccess: RULES.GEAR.spellsVsObjects.powerPerSuccess }) : tx('SR2E.Dialog.Sheet.theObjectResistsWithItsTn') })}</p>`,
       ok: { label: tx('SR2E.Dialog.Sheet.cast'), callback: (_e: Event, b: any) => { const el = b.form.elements; return { force: Number(el.force.value) || sp.learnedForce, kind: String(el.kind.value), wall: String(el.wall?.value ?? ""), pool: Math.max(0, Number(el.pool.value) || 0), drainPool: Math.max(0, Number(el.drainPool.value) || 0), mod: Number(el.mod.value) || 0 }; } },
@@ -4119,7 +4127,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     });
     if (!r) return;
     const wall = r.wall ? walls.find((d: any) => d.id === r.wall) ?? null : null;
-    await actor.castAtObject(spell, { spendAction: true, fetishInHand: !sp.fetish || (actor.materialStock?.().fetish ?? 0) > 0, force: r.force, objectKind: r.kind, wall, poolDice: Math.min(r.pool, left), drainPoolDice: Math.min(r.drainPool, Math.max(0, left - Math.min(r.pool, left))), modifiers: r.mod ? [{ id: 'other', label: tx('SR2E.Card.Mod.other'), value: r.mod }] : [] });
+    await actor.castAtObject(spell, { spendAction: true, fetishInHand: !sp.fetish || (actor.materialStock?.().fetish ?? 0) > 0, force: r.force, objectKind: r.kind, wall, poolDice: Math.min(r.pool, left), drainPoolDice: Math.min(r.drainPool, drainLeft, Math.max(0, left - Math.min(r.pool, left))), modifiers: r.mod ? [{ id: 'other', label: tx('SR2E.Card.Mod.other'), value: r.mod }] : [] });
   }
 
   static async #onSetBackground(this: SR2CharacterSheet) {
@@ -5907,7 +5915,15 @@ function poolsOf(actor: any): any[] {
   // millions of elements on the GM's view of the sheet. The numbers beside them stay exact.
   const pips = (left: number, total: number) => Array.from({ length: Math.min(MAX_POOL_PIPS, Math.max(0, Math.floor(Number(total) || 0))) }, (_, i) => ({ value: i + 1, filled: i < left }));
   const pools: any[] = [{ key: "combat", label: tx('SR2E.App.Sheets.combat'), left: d.combatPoolLeft ?? 0, total: d.combatPool ?? 0 }];
-  if ((d.spellPool ?? 0) > 0) pools.push({ key: "spell", label: tx('SR2E.App.Sheets.spell'), left: d.spellPoolLeft ?? 0, total: d.spellPool });
+  if ((d.spellPool ?? 0) > 0) {
+    // v0.92.0 (RULES.MAGIC_V920.poolLayers): the narrow layers' dice left, beside the general pool.
+    const l = d.spellLayers ?? {};
+    const parts: string[] = [];
+    if (Number(l.conc ?? 0) > 0) parts.push(tx('SR2E.App.MagicPool.layer', { name: String(l.concName ?? ''), left: Number(l.concLeft ?? 0), total: Number(l.conc ?? 0) }));
+    if (Number(l.spec ?? 0) > 0) parts.push(tx('SR2E.App.MagicPool.layer', { name: String(l.specName ?? ''), left: Number(l.specLeft ?? 0), total: Number(l.spec ?? 0) }));
+    pools.push({ key: "spell", label: tx('SR2E.App.Sheets.spell'), left: d.spellPoolLeft ?? 0, total: d.spellPool,
+      ...(parts.length ? { narrow: `+${Number(l.concLeft ?? 0) + Number(l.specLeft ?? 0)}`, narrowMark: interpMark('magicPoolLayers'), narrowTitle: tx('SR2E.App.MagicPool.layersTitle', { layers: parts.join('; ') }) } : {}) });
+  }
   if ((d.hackingPool ?? 0) > 0) pools.push({ key: "hacking", label: tx('SR2E.App.Sheets.hacking'), left: d.hackingPoolLeft ?? 0, total: d.hackingPool });
   if (d.rigging?.jumpedIn && (d.controlPool ?? 0) > 0) pools.push({ key: "control", label: tx('SR2E.App.Sheets.control'), left: d.controlPoolLeft ?? 0, total: d.controlPool });
   if ((sys.karma?.pool ?? 0) > 0) pools.push({ key: "karma", label: tx('SR2E.App.Sheets.karma'), left: d.karmaPoolLeft ?? 0, total: sys.karma.pool });

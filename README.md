@@ -48,9 +48,9 @@ That has two consequences you should know about:
 - **The rules numbers came from the AI's memory of the books**, not from a human typing them out of a rulebook, so some will be wrong. Many have since been checked; every one is listed in `docs/VERIFY.md` for checking against your book.
 - **No human has play-tested it at a table yet.** Expect bugs, and please report them.
 
-## Status: v0.91.8 (pre-release)
+## Status: v0.92.0 (pre-release)
 
-The system is feature-complete for SR2 core play and much of the sourcebook material, and is public for testing ahead of its first full release. It is tested by 3,551 automated tests and by live runs in Foundry v14 as a GM and a player, and v0.81 had a full code and security review. It has not yet been play-tested at a real table, so expect rough edges. Many rules numbers were written from memory: `docs/VERIFY.md` lists every one for checking against your book, least certain first, and every rules change since v0.70.0 has a house-rule switch that puts the earlier behaviour back.
+The system is feature-complete for SR2 core play and much of the sourcebook material, and is public for testing ahead of its first full release. It is tested by 3,569 automated tests and by live runs in Foundry v14 as a GM and a player, and v0.81 had a full code and security review. It has not yet been play-tested at a real table, so expect rough edges. Many rules numbers were written from memory: `docs/VERIFY.md` lists every one for checking against your book, least certain first, and every rules change since v0.70.0 has a house-rule switch that puts the earlier behaviour back.
 
 What changed in each version: `CHANGELOG.md`.
 
@@ -64,6 +64,8 @@ What changed in each version: `CHANGELOG.md`.
 - **Characters:** a step-by-step creation wizard, Karma advancement with an optional GM approval queue, contacts, lifestyle and upkeep, things that take time (training, orders, repairs).
 - **The shop:** the Add window is where characters buy things: prices with the Street Index, Availability and legality on every row; out of creation a character finds an item first (the Availability test), then buys or haggles on the card, and it arrives after the time it took. The GM chooses what players see (everything, their own catalogue, or what they mark "in the shop"), and sees the open orders. A **Shop** button (the tools window, the left toolbar, the character sheet's title bar) opens it; **New entry…** adds something the catalogue lacks, typed from your own book (a player's goes to the GM to check). Check boxes sort each tab by category (pistols, SMGs, rifles…).
 - **Vehicles and drones in the shop:** found and bought like gear; each arrives as a vehicle of your own, listed on the Rigging tab.
+- **Rules interpretations (†):** where the rules as written leave something unclear, a small † marks the creator's reading; click it for what is unclear, how it is resolved, the sources and the house rule that changes it (all listed in one window).
+- **The layered Magic Pool:** Sorcery's concentration and specialization add Spell Pool dice usable only inside them, and a spell inside them rolls their rating.
 - **Spell formulas and teachers:** out of creation a new spell is learned from a formula (found and bought like gear, for one tradition), a teacher who knows it (their Instruction test adds dice to the learning test), the group's grimoire or the magician's own design.
 - **The Catalogue:** a book of everything you can get, with a page per entry (price, stats, description), linked from every shop row; players see what their shop shows.
 - **For the GM:** a GM panel (scene, combat, party, NPCs, world, tools, log, requests, setup), an NPC generator, an undo log for the system's changes, house rules in a searchable window, starter kits and an item catalogue you fill from your own data (pasted spreadsheet rows, or one catalogue file with items, vehicles, NPCs, critters and spirits that also fills in the missing numbers of matching items already in the world).

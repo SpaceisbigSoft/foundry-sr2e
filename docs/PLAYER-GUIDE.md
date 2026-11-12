@@ -18,6 +18,7 @@ How to use the unofficial Shadowrun 2nd Edition system for Foundry VTT: what the
 - [Your look: theme, colours and text size](#your-look-theme-colours-and-text-size)
 - [Shortcuts, hotkeys and token actions](#shortcuts-hotkeys-and-token-actions)
 - [Printing a sheet and reporting a bug](#printing-a-sheet-and-reporting-a-bug)
+- [Rules interpretations (†)](#rules-interpretations-)
 - [Credits and licence](#credits-and-licence)
 
 **Rolling and chat cards**
@@ -283,6 +284,16 @@ If you own the character, a third box, *Include the notes' secret sections*, put
 The printout is black on white with thin lines, so it uses little ink: the name, attributes, derived values and pools, the condition monitor (filled boxes are grey with a slash), then skills, weapons, armor, cyberware and bioware, spells, powers, foci, Matrix gear, gear, contacts, edges and flaws, and the notes. Empty lists are left out. You can print any sheet you can see.
 
 **Report a bug.** The **Report a bug** button at the top of this guide's topic list (also in Configure Settings, under the system's settings) opens a text ready to paste into a new issue on the project's GitHub page. It holds the system and Foundry versions, your browser, your active modules, the rules source, the house rules your GM changed and the system's recent errors in this browser. Press **Copy**, paste it into the issue and describe what happened. **Nothing is sent anywhere by itself.** Read it before posting: error messages can name things in your world. (Configure Settings: *Keep recent errors for bug reports* turns the error log off in your browser.)
+
+## Rules interpretations (†)
+
+Where the rules as written leave something unclear, the system uses the creator's reading and marks it with a small **†**: beside a value (the narrow Spell Pool dice on the strip) or as a line at the foot of a chat card. Hover a † for a one-line summary; click it to open **Rules interpretations** at that entry.
+
+- Each entry says what the rules leave unclear, how the system resolves it, and the sources.
+- Each names the house rule that changes it; the GM can open the house rules from there.
+- The whole list opens from the SR2e tools window (Rules interpretations).
+
+They are interpretations, not rulings: the GM's call always wins.
 
 ## Credits and licence
 

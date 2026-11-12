@@ -36,6 +36,8 @@ export const TOOLS: readonly ToolDef[] = [
   { id: 'bugReport', icon: 'fa-solid fa-bug', who: 'player', toolbar: true },
   // v0.91.1: make a new entry (a player's goes to the GM).
   { id: 'newEntry', icon: 'fa-solid fa-file-circle-plus', who: 'player', toolbar: false },
+  // v0.92.0: the rules interpretations (every † in one list).
+  { id: 'interpretations', icon: 'fa-solid fa-scale-unbalanced', who: 'player', toolbar: false },
   // GM
   { id: 'gmPanel', icon: 'fa-solid fa-sliders', who: 'gm', toolbar: true, hotkey: 'gmPanel' },
   { id: 'sceneBuilder', icon: 'fa-solid fa-map-location-dot', who: 'gm', toolbar: true },
