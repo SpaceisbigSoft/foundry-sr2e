@@ -627,6 +627,8 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
         focusId: new fields.StringField({ required: true, initial: '' }),
         successes: new fields.NumberField({ required: true, integer: true, min: 0, initial: 1 }),
         quickened: new fields.BooleanField({ required: true, initial: false }),
+        /** v0.92.3 review fix: the Good Karma quickening took (0 = not recorded: Force × the per-Force cost). */
+        quickenKarma: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
         /** An elemental sustaining it for the magician. */
         spiritUuid: new fields.StringField({ required: true, initial: '' }),
         /** World time when the elemental lets it drop (v0.39.0; -1 = no limit). */

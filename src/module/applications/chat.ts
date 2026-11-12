@@ -2171,6 +2171,20 @@ async function onAdrenalCrash(message: any, button: HTMLButtonElement): Promise<
   await markCardDone(message, actor, 'adrenalRolled');
 }
 
+/** v0.92.3 review fix: a holder who lost a spirit's control contest resists Drain as if they had summoned it (Core p. 143). */
+async function onConjuringDrain923(message: any, button: HTMLButtonElement): Promise<void> {
+  const c = message.getFlag(SYSTEM_ID, 'conjuringDrain923') as { actorUuid: string; force: number } | undefined;
+  const actor: any = c ? await fromUuid(c.actorUuid) : null;
+  if (!c || !actor) return ui.notifications.warn(tx('SR2E.Notify.Chat.thatCharacterNoLongerExists'));
+  if (!actor.isOwner) return ui.notifications.warn(tx('SR2E.Notify.Chat.onlySOwnerOrTheGm4', { actorName: escHtml(actor.name) }));
+  const force = safeInt(c.force, 1, 30, 1);
+  if (!(await playerMay(message, actor, origin(message), tx('SR2E.Card.Chat.resistsConjuringDrain923', { actorName: actor.name, force })))) return;
+  if (cardDone(message, actor, 'conjuringDrainRolled')) return ui.notifications.warn(tx('SR2E.Notify.Chat.drainAlreadyRolled923'));
+  button.disabled = true;
+  await actor.resistConjuringDrain(force);
+  await markCardDone(message, actor, 'conjuringDrainRolled');
+}
+
 /** Simsense overload (hot sim): the decker resists. */
 async function onOverload(message: any, button: HTMLButtonElement): Promise<void> {
   const o = message.getFlag(SYSTEM_ID, 'overload') as { deckerUuid: string; tn: number } | undefined;
@@ -3321,6 +3335,7 @@ function dispatch(message: any, button: HTMLButtonElement, action: string): Prom
   else if (action === 'diseaseTick') return onDiseaseTick(message, button);
   else if (action === 'overload') return onOverload(message, button);
   else if (action === 'adrenalCrash') return onAdrenalCrash(message, button);
+  else if (action === 'conjuringDrain923') return onConjuringDrain923(message, button);
   else if (action === 'resistToxin') return onResistToxin(message, button);
   else if (action === 'reexposeToxin923') return onReexposeToxin923(message);
   else if (action === 'morale') return onMorale(message, button);

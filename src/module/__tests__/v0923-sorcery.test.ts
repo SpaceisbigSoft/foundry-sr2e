@@ -254,6 +254,30 @@ describe('v0.92.3 metamagic, geasa, foci', () => {
     await init.dispel(caster, 0);
     assert.deepEqual(caster.system.sustaining.map((s: any) => [s.spellName, s.force]), [['Barrier', 2]]);
   });
+  test('review fix: a quickened spell keeps the Karma it took as its dispelling TN after its Force drops', async () => {
+    const caster = who({ name: 'Caster', magic: 6, tradition: 'hermetic', sustaining: [{ spellName: 'Barrier', force: 2, category: 'manipulation', focusId: '', successes: 2, quickened: true, quickenKarma: 6 }] });
+    const init = mage({ initiateGrade: 4, metamagic: { dispelling: true } });
+    faces.push(1, 1, 1, 1, 1);
+    faces.push(5, 5, 5, 5, 5);
+    const r = await init.dispel(caster, 0);
+    assert.equal(r.targetNumber, 6);
+  });
+  test('review fix: the GM\'s Apply of a player\'s Force dispel checks the dispeller still knows dispelling', async () => {
+    const caster = who({ name: 'Caster', magic: 6, tradition: 'hermetic', sustaining: [{ spellName: 'Barrier', force: 3, category: 'manipulation', focusId: '', successes: 2 }] });
+    const init = mage({ initiateGrade: 4, metamagic: { dispelling: true } });
+    const P1 = { id: 'p1', name: 'P1', isGM: false };
+    const snap = { kind: 'dispel', actorUuid: init.uuid, successes: 2, dispel: { targetUuid: caster.uuid, spellName: 'Barrier', force: 3, mode: 'force' } };
+    g.game.messages = { contents: [{ author: P1, flags: { sr2e: { test: snap } }, getFlag: (_s: string, k: string) => (k === 'test' ? snap : undefined) }] };
+    init.ownership = { default: 0, p1: 3 };
+    const ch = { uuid: caster.uuid, by: init.uuid, dispel: { spellName: 'Barrier', force: 3, from: 3, to: 2, mode: 'force' } };
+    init.system.metamagic = {};
+    init.system.prepareDerivedData();
+    assert.equal(await SR2Actor.applyActorUpdate(ch, { author: P1 }), false);
+    init.system.metamagic = { dispelling: true };
+    init.system.prepareDerivedData();
+    assert.equal(await SR2Actor.applyActorUpdate(ch, { author: P1 }), true);
+    assert.deepEqual(caster.system.sustaining.map((x: any) => x.force), [2]);
+  });
   test('geasa: a broken geas adds +2 TN to casting and keeps the Magic', async () => {
     const m = mage({ geasa: [{ text: 'Gesture', magic: 1, met: false, checkOnCast: false }] });
     assert.equal(m.system.derived.magic, 6);
@@ -271,6 +295,23 @@ describe('v0.92.3 metamagic, geasa, foci', () => {
     assert.equal(m.system.magic, 5);
     assert.equal(m.getFlag('sr2e', 'focusMagicLost'), 1);
   });
+  test('review fix: a Karma re-roll that passes the focus addiction test gives the Magic back; the 2D6 isn\'t rolled again', async () => {
+    const focus = (id: string) => ({ id, type: 'focus', name: id, system: { focusType: 'spell', rating: 4, category: 'combat', active: true, bonded: true } });
+    const m = mage({ karma: { pool: 3, poolSpent: 0, good: 30, career: 30 } }, [focus('f1'), focus('f2')]);
+    faces.push(1, 2, 3, 4, 5, 1);                                     // Magic 6 vs 8: no success
+    faces.push(3, 3);                                                 // 2D6 = 6: a point lost
+    await m.focusAddictionTest();
+    assert.equal(m.system.magic, 5);
+    const card = chat.find((c: any) => c.flags?.sr2e?.test?.kind === 'focusLoss');
+    assert.ok(card);
+    assert.equal(card.flags.sr2e.test.focusLoss.applied.lost, 1);
+    faces.push(6, 1, 1, 1, 1, 1, 2);                                  // the re-roll: 6, then its 2 = 8, one success
+    await m.karmaReroll(card.flags.sr2e.test);
+    assert.equal(faces.length, 0, 'no new 2D6');
+    assert.equal(m.system.magic, 6);
+    assert.equal(m.getFlag('sr2e', 'focusMagicLost'), 0);
+    assert.match(chat.at(-1).content, /given back/);
+  });
   test('a spell focus adds its dice to the Drain test', async () => {
     const m = mage({}, [{ id: 'f1', type: 'focus', name: 'Detect focus', system: { focusType: 'spell', rating: 2, target: 'Detect Life', active: true, bonded: true } }]);
     faces.push(5, 5, 1, 1, 1, 1, 1);                                  // Sorcery 5 + focus 2
@@ -278,6 +319,24 @@ describe('v0.92.3 metamagic, geasa, foci', () => {
     await m.castSpell(spell(), { force: 3 });
     assert.equal(faces.length, 0);
     assert.equal(drainCard().flags.sr2e.test.totalDice, 7);
+  });
+});
+
+describe('v0.92.3 review fix: the detection range test', () => {
+  test('casting the same detection spell again at once keeps the range rolled (no free re-roll)', async () => {
+    const m = mage({}, [spell()]);
+    const t = who({ name: 'Mark' });
+    const rangeCards = () => chat.filter((c: any) => /range \(Force 3 vs 4\)/.test(String(c.content))).length;
+    faces.push(...Array(40).fill(5));
+    await m.castSpell(m.items.get('sp1'), { force: 3, targetUuid: t.uuid });
+    assert.equal(rangeCards(), 1);
+    await m.castSpell(m.items.get('sp1'), { force: 3, targetUuid: t.uuid });
+    assert.equal(rangeCards(), 1, 'the second cast reuses it');
+    g.game.time = { worldTime: 60 };
+    await m.castSpell(m.items.get('sp1'), { force: 3, targetUuid: t.uuid });
+    assert.equal(rangeCards(), 2, 'later: a new range test');
+    g.game.time = { worldTime: 0 };
+    faces.length = 0;
   });
 });
 
@@ -291,6 +350,18 @@ describe('v0.92.3 wards and learning', () => {
     const d = drainCard();
     assert.equal(d.flags.sr2e.test.targetNumber, 6);
     assert.match(d.content, /Ward drain L/);
+  });
+  test('review fix: a ward team\'s Magic Pool dice join the test and are spent', async () => {
+    const m = mage();
+    const helper = mage({ name: 'Helper' });
+    const left = helper.system.derived.spellPoolLeft;
+    assert.ok(left > 0);
+    faces.push(...Array(5 + left).fill(1));                           // Sorcery 5 + the helper's pool
+    faces.push(...Array(20).fill(5));                                 // drains
+    const r = await m.raiseWardRitual({ force: 3, payMaterials: false, teamUuids: [helper.uuid] });
+    assert.equal(r.totalDice, 5 + left);
+    assert.equal(helper.system.derived.spellPoolLeft, 0);
+    faces.length = 0;
   });
   test('learning: Sorcery + Magical Theory vs 2 × Force; a formula with no teacher +2', async (t) => {
     t.after(oldWay({ 'MAGIC_V56.learning.enabled': true, 'MAGIC_V56.learning.site': 'off' }));

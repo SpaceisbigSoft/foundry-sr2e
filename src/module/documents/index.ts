@@ -1078,7 +1078,7 @@ export interface TestSnapshot {
   kind: 'plain' | 'attack' | 'spell' | 'defend' | 'soak' | 'conjure' | 'banish' | 'dispel' | 'barrier' | 'track' | 'heal' | 'enchant' | 'quest' | 'system' | 'drive' | 'sensor' | 'bypass' | 'medic' | 'repair' | 'cyberRepair' | 'surgery' | 'psyche' | 'addiction' | 'disease'
     | 'cleanse' | 'divine' | 'invoke' | 'design' | 'notice' | 'rejection' | 'code' | 'install'
     | 'learn' | 'ward' | 'bindName' | 'centering' | 'assense'
-    | 'jackOut' | 'mperceive' | 'maneuver' | 'mutility';
+    | 'jackOut' | 'mperceive' | 'maneuver' | 'mutility' | 'focusLoss';
   baseTargetNumber: number;
   targetNumber: number;
   targetNumberClamped: boolean;
@@ -1200,6 +1200,12 @@ export interface TestSnapshot {
   ram?: { vehicleUuid: string; power: number; level: DamageLevel | null; bodyPerSuccess?: number };
   /** addiction: a drug's addiction test on a dose, or kicking the habit (v0.42.0). */
   addiction?: { drug: string; mode: 'dose' | 'kick' | 'tolerance'; applied?: boolean };
+  /**
+   * v0.92.3 review fix (RULES.SORCERY_V923.focusAddiction 'book'): the focus addiction Magic test: the Magic it was
+   * rolled against, the Magic lost this way before, and once failed, the 2D6 and what it took (a re-roll that passes
+   * gives it back; one that still fails keeps the first 2D6).
+   */
+  focusLoss?: { magic: number; lostBefore: number; applied?: { roll: number; lost: number; geas: boolean } };
   /** disease: resisting infection, or a disease's progress test (v0.42.0); once applied. */
   disease?: { name: string; mode: 'infect' | 'tick'; level: DamageLevel; damageType: DamageType; power: number; intervalHours: number; incubationHours: number; needed: number; index?: number; applied?: boolean; before?: Monitor;
     /** v0.48.0: how it spreads on (RULES.HEALTH.contagion), and who it was caught from. */
@@ -2934,8 +2940,8 @@ export class SR2Actor extends Actor {
         // their own TN; (shielding 'book', Grimoire p. 45) the dice go with the spell so shielding can raise the TN.
         const rolled = (snap.dice ?? []).map((d) => Number(d.total ?? 0));
         const spells: SpellState[] = list.map((x) => ({ ...x, casterSuccesses: typeof x.areaBase === 'number'
-          ? S923.areaTargetSuccesses({ dice: snap.dice ?? [], cardTn: snap.targetNumber, cardBase: snap.baseTargetNumber, ownBase: x.areaBase, bought: snap.bought, botch: snap.botch }) : s,
-          ...(S923.s923('shielding') && !snap.botch ? { casterDice: rolled, casterTn: snap.targetNumber + (typeof x.areaBase === 'number' ? x.areaBase - snap.baseTargetNumber : 0), casterBought: Number(snap.bought ?? 0) } : {}) }));
+          ? S923.areaTargetSuccesses({ dice: snap.dice ?? [], cardTn: snap.targetNumber, cardBase: snap.baseTargetNumber, ownBase: x.areaBase, bought: snap.bought, botch: snap.botch, modifiers: snap.modifiers ?? [] }) : s,
+          ...(S923.s923('shielding') && !snap.botch ? { casterDice: rolled, casterTn: typeof x.areaBase === 'number' ? Math.max(RULES.MIN_TARGET_NUMBER, x.areaBase + (snap.modifiers ?? []).reduce((n, m) => n + (Number(m.value) || 0), 0)) : snap.targetNumber, casterBought: Number(snap.bought ?? 0) } : {}) }));
         const buttons = spells.map((sp, i) =>
           `<button type="button" data-sr2e-action="resistSpell" data-index="${i}">${tx('SR2E.Card.Actor.resist3', { noun, name: escText(fromUuidSync(sp.targetUuid)?.name ?? tx('SR2E.Card.Actor.target')) })}</button>`).join(' ');
         // Vehicles (v0.43.0): the successes stage the damage; each resists with Body.
@@ -2959,6 +2965,8 @@ export class SR2Actor extends Actor {
         return this.#resolveBindName(snap);
       case 'centering':
         return this.#resolveCentering(snap);
+      case 'focusLoss':
+        return this.#resolveFocusLoss(snap);
       case 'assense':
         return this.#resolveAssense(snap);
       case 'heal':
@@ -9909,11 +9917,13 @@ export class SR2Actor extends Actor {
     const tough = opts.astral ? 0 : toughnessDice(this.sys.derived?.vitals ?? { toughnessDice: 0, toughnessOnStun: false, toughnessOnToxins: false }, type);
     // v0.92.3 (RULES.SPIRITS_V923.conjuringDefense 'on', Core p. 143): against a spirit's attack a magician resists with
     // Conjuring in place of the attribute, when that is better.
-    const bodyDice = opts.astral ? Number(this.sys.derived.astral.body) : Number(this.sys.attributes.body.total);
-    const conjDice = opts.spiritAttacker ? SP923.conjuringDefenseDice({ attackerType: 'spirit', conjuring: Number(this.findSkill?.('Conjuring')?.system?.rating ?? 0), attribute: bodyDice, magic: Number(this.sys.derived?.magic ?? 0) }) : 0;
     // v0.92.3 (RULES.CORE_V923.trollDermal 'body', Core p. 45): a troll's dermal armor is +1 Body here; (threat 'book',
     // Core p. 187) an NPC's Threat Rating dice.
-    const dermal = conjDice ? 0 : CO923.dermalSoakDice(Number(this.sys.derived?.racialDermal ?? 0), Boolean(opts.astral));
+    const dermalAll = CO923.dermalSoakDice(Number(this.sys.derived?.racialDermal ?? 0), Boolean(opts.astral));
+    // Review fix: Conjuring is taken only when it beats everything it replaces (Body with lacing, Toughness, dermal armor).
+    const bodyDice = opts.astral ? Number(this.sys.derived.astral.body) : Number(this.sys.attributes.body.total) + lacing + tough + dermalAll;
+    const conjDice = opts.spiritAttacker ? SP923.conjuringDefenseDice({ attackerType: 'spirit', conjuring: Number(this.findSkill?.('Conjuring')?.system?.rating ?? 0), attribute: bodyDice, magic: Number(this.sys.derived?.magic ?? 0) }) : 0;
+    const dermal = conjDice ? 0 : dermalAll;
     const threat = this.#threatDice();
     const result = await successTest({
       // v0.58.0: bone lacing adds to Body for damage resistance only.
@@ -9987,6 +9997,14 @@ export class SR2Actor extends Actor {
   immunities(): { normalWeapons: boolean; fire: boolean; poisons: boolean; pathogens: boolean; age: boolean } {
     if (this.type === 'vehicle' || this.type === 'host' || this.type === 'site' || this.type === 'safehouse' || this.type === 'barrier') return { normalWeapons: false, fire: false, poisons: false, pathogens: false, age: false };
     return critterImmunities(this.critterTraits());
+  }
+
+  /** v0.92.3 review fix: ritual team members' Spell Pool dice (all that is left) go into the leader's test. */
+  static async #spendTeamPools(members: readonly any[]): Promise<void> {
+    for (const m of members) {
+      const left = Math.max(0, Math.floor(Number(m?.system?.derived?.spellPoolLeft ?? 0)));
+      if (left > 0 && m instanceof SR2Actor && canWriteNow(m)) { try { await m.#spendPool('spell', left); } catch (err) { console.warn('sr2e | ritual pool', err); } }
+    }
   }
 
   async #spendPool(pool: PoolKind, dice: number): Promise<void> {
@@ -10179,10 +10197,20 @@ export class SR2Actor extends Actor {
       // successes × Magic metres (× the extended-range factor).
       let bookRange: number | null = null;
       if (S923.s923('detectionRange') && targets.length) {
-        const rr: any[] = [];
-        const rt = await successTest({ dice: force, targetNumber: 4, modifiers: this.woundModifiers(), roll: foundryRoller(rr) });
-        bookRange = S923.detectionRangeFromTest(rt.successes, Number(this.sys.derived.magic ?? 0)) * Number(dr.factor ?? 1) * (sp.extendedRange ? Number(dr.extendedFactor ?? 1) : 1);
-        await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), rolls: rr, content: `${describeResult(tx('SR2E.Card.Actor.detectionRangeTest', { spellName: spell.name, force }), rt)}<p>${tx('SR2E.Card.Actor.detectionRangeIs', { metres: bookRange })}</p>` });
+        // Review fix: a refused cast (out of range) tried again at once keeps the range it rolled (same spell and Force,
+        // same Combat Turn or the same moment out of combat), so the range test isn't re-rolled for free.
+        const now = SR2Actor.matrixNow();
+        const kept: any = this.getFlag?.(SYSTEM_ID, 'detectRange923');
+        const same = kept && kept.spellId === spell.id && Number(kept.force) === force
+          && (now.round !== null ? kept.combatId === now.combatId && Number(kept.round) === now.round : Number(kept.worldTime) === now.worldTime);
+        if (same) bookRange = Math.max(0, Number(kept.range) || 0);
+        else {
+          const rr: any[] = [];
+          const rt = await successTest({ dice: force, targetNumber: 4, modifiers: this.woundModifiers(), roll: foundryRoller(rr) });
+          bookRange = S923.detectionRangeFromTest(rt.successes, Number(this.sys.derived.magic ?? 0)) * Number(dr.factor ?? 1) * (sp.extendedRange ? Number(dr.extendedFactor ?? 1) : 1);
+          try { await this.setFlag(SYSTEM_ID, 'detectRange923', { spellId: spell.id, force, range: bookRange, round: now.round, combatId: now.combatId, worldTime: now.worldTime }); } catch { /* not saved */ }
+          await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), rolls: rr, content: `${describeResult(tx('SR2E.Card.Actor.detectionRangeTest', { spellName: spell.name, force }), rt)}<p>${tx('SR2E.Card.Actor.detectionRangeIs', { metres: bookRange })}</p>` });
+        }
       }
       for (const t of targets) {
         const to = SR2Actor.tokenFor(t);
@@ -10377,7 +10405,10 @@ export class SR2Actor extends Actor {
     // v0.92.3 (RULES.SORCERY_V923.ritualPool 'book', Core p. 135): the other members' Magic Pools join the leader's
     // (the astral spotter's doesn't).
     const poolMembers = team.filter((m) => m !== spotter);
-    const teamDice = team.length ? S923.ritualPoolDice(poolMembers.map((m) => Number(m.system?.derived?.spellPoolLeft ?? 0))) ?? ritualTeamDice(team.map((m) => m.findSkill?.('Sorcery')?.system.rating ?? 0)) : 0;
+    const bookTeam = team.length ? S923.ritualPoolDice(poolMembers.map((m) => Number(m.system?.derived?.spellPoolLeft ?? 0))) : null;
+    const teamDice = team.length ? bookTeam ?? ritualTeamDice(team.map((m) => m.findSkill?.('Sorcery')?.system.rating ?? 0)) : 0;
+    // Review fix: the members' Magic Pool dice that join the test are spent (on the clients that can write them).
+    if (bookTeam) await SR2Actor.#spendTeamPools(poolMembers);
     const ritualNote = team.length || opts.ritual
       ? tx('SR2E.Card.Actor.ritualMembersH', { value: team.length + 1, part: teamDice ? tx('SR2E.Card.Actor.team', { teamDice }) : '', part2: spotter ? tx('SR2E.Card.Actor.spotter', { spotterName: spotter.name }) : '', ritualHours: ritualHours(force) }) : '';
     const barrierNote = barrierDice ? tx('SR2E.Card.Actor.through', { barrierName: barrier.name, barrierDice }) : barrierTn ? tx('SR2E.Card.Actor.acrossTn', { barrierName: barrier.name, barrierTn }) : '';
@@ -10575,8 +10606,10 @@ export class SR2Actor extends Actor {
     let baseLabel = tx('SR2E.Text.Actor.spellTn');
     if (heals) { const p = people[0] ?? this; base = healingTargetNumber(p.system.derived?.essence ?? 6, sp.targetNumber, Boolean(sp.treat)); baseLabel = tx('SR2E.Text.Actor.sEssence', { name: p.name }); }
     else if (resist && people.length) {
-      base = areaTargetNumber(people.map((t) => t.system.attributes[resist]?.total ?? 0));
-      baseLabel = people.length === 1 ? tx('SR2E.Text.Actor.sAttribute', { name: people[0].name, attribute: cap(resist) }) : `${RULES.MAGIC.areaTn} ${cap(resist)}`;
+      // Review fix: the book's area spell rolls at the lowest attribute (castSpell, RULES.SORCERY_V923.areaTargets).
+      const book = people.length > 1 && S923.s923('areaTargets');
+      base = book ? Math.min(...people.map((t) => Number(t.system.attributes[resist]?.total ?? 0))) : areaTargetNumber(people.map((t) => t.system.attributes[resist]?.total ?? 0));
+      baseLabel = people.length === 1 ? tx('SR2E.Text.Actor.sAttribute', { name: people[0].name, attribute: cap(resist) }) : book ? tx('SR2E.Card.Actor.areaEachOwnTn', { attrName: cap(resist), count: people.length }) : `${RULES.MAGIC.areaTn} ${cap(resist)}`;
     }
     if (vehicles.length && !elemental) {
       const vtn = Math.max(...vehicles.map((v) => spellVsVehicle({ spellType: sp.spellType, objectResistance: v.system?.objectResistance }).tn ?? 0));
@@ -10882,7 +10915,10 @@ export class SR2Actor extends Actor {
     const plan = wardPlan(force, 0);
     if (plan.nuyen > 0 && o.payMaterials !== false && !(await this.adjustNuyen(-plan.nuyen, tx('SR2E.Text.Actor.wardMaterialsForce', { force })))) return null;
     // v0.92.3 (RULES.SORCERY_V923.ritualPool 'book', Core p. 135): a team wards by ritual: the members' Magic Pools join.
-    const teamDice = team.length ? S923.ritualPoolDice(team.map((m) => Number(m.system?.derived?.spellPoolLeft ?? 0))) ?? ritualTeamDice(team.map((m) => m.findSkill?.(wardSkill)?.system?.rating ?? 0)) : 0;
+    const bookTeam = team.length ? S923.ritualPoolDice(team.map((m) => Number(m.system?.derived?.spellPoolLeft ?? 0))) : null;
+    const teamDice = team.length ? bookTeam ?? ritualTeamDice(team.map((m) => m.findSkill?.(wardSkill)?.system?.rating ?? 0)) : 0;
+    // Review fix: the members' Magic Pool dice that join the test are spent.
+    if (bookTeam) await SR2Actor.#spendTeamPools(team);
     const name = (o.name ?? '').trim() || `Ward (Force ${force})`;
     const result = await this.#runTest(tx('SR2E.Card.Actor.raiseTnSuccesses', { name, skillName: skill.name, planTn: plan.tn, part: teamDice ? tx('SR2E.Card.Actor.teamOf', { value: team.length + 1, teamDice }) : '', plural: plural(plan.baseHours, 'hour'), part2: plan.nuyen && o.payMaterials !== false ? tx('SR2E.Card.Actor.materials', { planNuyen: plan.nuyen }) : '' }),
       Math.max(0, Number(skill.system.rating) + teamDice),
@@ -11086,10 +11122,11 @@ export class SR2Actor extends Actor {
       const weeks = ordealWeeks(ordeal.effect, grade);
       const { 'system.karma.good': k, 'system.ledger': _l, ...rest } = up;
       await this.update({ 'system.karma.good': k, 'system.ledger': this.#ledgerWith({ kind: 'karma', amount: -cost, reason: tx('SR2E.Text.Actor.initiationToGradeOrdealUnderWay', { grade }) }) });
-      if (grade === 0) await this.setFlag(SYSTEM_ID, 'initiated', true);
       if (this.getFlag(SYSTEM_ID, 'pendingInitiation')) { try { await clearFlag(this, 'pendingInitiation'); } catch { /* none */ } }
+      // Review fix: the first initiation's `initiated` mark comes with the grade when the ordeal is done (a cancelled
+      // ordeal leaves the character uninitiated).
       await this.startProject({ kind: 'initiation', area: 'magic', label: technique ? tx('SR2E.Text.Actor.initiationToGradeOrdealLearning', { grade, ordeal: ordeal.label.replace(/ \(.*\)$/, ''), technique }) : tx('SR2E.Text.Actor.initiationToGradeOrdeal', { grade, ordeal: ordeal.label.replace(/ \(.*\)$/, '') }), hours: weeks * 168, paid: { karma: cost },
-        effect: { actor: Object.entries(rest) }, done: tx('SR2E.Text.Actor.isNowAnInitiateOfGrade', { name: this.name, grade }) });
+        effect: { actor: [...Object.entries(rest), ...(grade === 0 ? [[`flags.${SYSTEM_ID}.initiated`, true] as [string, unknown]] : [])] }, done: tx('SR2E.Text.Actor.isNowAnInitiateOfGrade', { name: this.name, grade }) });
       return true;
     }
     await this.update(up);
@@ -11210,12 +11247,20 @@ export class SR2Actor extends Actor {
       if (typeof start !== 'number') return;
       const hours = Math.max(0, (now - start) / 3600);
       const o = projectionOverstay(hours, this.sys.derived.essence);
-      if (o.essenceLoss > 0) {
+      // v0.92.3 review fix (RULES.SPIRITS_V923.projection 'book', Core p. 147): the body's loss is temporary: the Essence
+      // comes back at 1 point a minute once the magician is home, so nothing is written; only a loss past the body's
+      // Essence (below 0) kills, and the card says so for the GM.
+      const temporary = SP923.projectionLossTemporary();
+      if (o.essenceLoss > 0 && !temporary) {
         await this.update({ 'system.essence': Math.max(0, Math.round(((this.sys.essence as number) - o.essenceLoss) * 100) / 100) });
       }
+      const died = temporary && o.essenceLoss > 0 && Number(this.sys.derived?.essence ?? this.sys.essence ?? 0) - o.essenceLoss < 0;
+      const part = o.essenceLoss <= 0 ? '' : temporary
+        ? ` <strong>${died ? tx('SR2E.Card.Actor.projectionBodyDied923', { essenceLoss: o.essenceLoss }) : tx('SR2E.Card.Actor.projectionEssenceBack923', { essenceLoss: o.essenceLoss })}</strong>`
+        : ` <strong>${tx('SR2E.Card.Actor.overstayedHLosesEssence', { over: o.over, essenceLoss: o.essenceLoss })}</strong>`;
       await ChatMessage.create({
         speaker: ChatMessage.getSpeaker({ actor: this }),
-        content: `<p><strong>${escText(this.name)}</strong> ${tx('SR2E.Card.Actor.returnsToTheirBodyAfterH', { value: Math.round(hours * 10) / 10, limit: o.limit, part: o.essenceLoss > 0 ? ` <strong>${tx('SR2E.Card.Actor.overstayedHLosesEssence', { over: o.over, essenceLoss: o.essenceLoss })}</strong>` : '' })}</p>`,
+        content: `<p><strong>${escText(this.name)}</strong> ${tx('SR2E.Card.Actor.returnsToTheirBodyAfterH', { value: Math.round(hours * 10) / 10, limit: o.limit, part })}</p>`,
       });
     }
   }
@@ -12230,7 +12275,14 @@ export class SR2Actor extends Actor {
     let holderDrained = b.holderDrained;
     if (bk && b.held && !b.holderDrained && b.summonerBefore) {
       const holder: any = fromUuidSync(b.summonerBefore);
-      if (holder && typeof holder.resistConjuringDrain === 'function') { await holder.resistConjuringDrain(b.forceBefore); holderDrained = true; }
+      // Review fix: only a client that can write the holder rolls it; otherwise the holder's owner (or the GM) gets a card.
+      if (holder && typeof holder.resistConjuringDrain === 'function') {
+        if (canWriteNow(holder)) await holder.resistConjuringDrain(b.forceBefore);
+        else await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: holder }),
+          content: `<p><strong>${escText(holder.name)}</strong> ${tx('SR2E.Card.Actor.holderDrain923', { spiritName: escText(b.spiritName), force: safeInt(b.forceBefore, 1, 30, 1) })} <button type="button" data-sr2e-action="conjuringDrain923">${tx('SR2E.Card.Actor.resistDrain923')}</button></p>`,
+          flags: { [SYSTEM_ID]: { conjuringDrain923: { actorUuid: holder.uuid, force: safeInt(b.forceBefore, 1, 30, 1) } } } });
+        holderDrained = true;
+      }
     }
     if (b.taken && spirit.system.summonerUuid !== this.uuid) note = ` <em>${tx('SR2E.Card.Actor.changedHandsSinceThisWasRolled', { spiritName: escText(spirit.name) })}</em>`;
     else if (!b.taken || spirit.system.services !== services) {
@@ -12822,7 +12874,7 @@ export class SR2Actor extends Actor {
     if (gp) { ui.notifications?.warn?.(`${escHtml(this.name)}: ${escHtml(gp)}`); return null; }
     const bookDispel = S923.s923('dispelling');
     // The TN is the higher of the Force and the Karma that quickened it.
-    const dispelTn = S923.dispelTn(entry.force, entry.quickened ? entry.force * RULES.MAGIC.quickenKarmaPerForce : 0);
+    const dispelTn = S923.dispelTn(entry.force, entry.quickened ? Number(entry.quickenKarma ?? 0) || entry.force * RULES.MAGIC.quickenKarmaPerForce : 0);
     // Drain as the spell's own drain code (the caster's spell item), else the old dispelling drain.
     const ownSpell: any = bookDispel ? [...(target.items ?? [])].find((i: any) => i.type === 'spell' && i.name === entry.spellName) : null;
     // Review (R7): the dispelled spell's category and name count for a Dispelling specialization.
@@ -12959,7 +13011,8 @@ export class SR2Actor extends Actor {
     }
     // v0.70.0: through the approval queue, with a ledger line (it had neither).
     if (approvalNeeded(this)) { await fileRequest(this, { kind: 'improve', label: tx('SR2E.Text.Actor.quickenForce', { name: entry.spellName, force: entry.force }), karma: cost, data: { method: 'quicken', args: [index, entry.spellName] } }); return false; }
-    list[index] = { ...entry, quickened: true };
+    // Review fix: the Karma it took is kept, so dispelling's TN stays the higher of it and the Force after the Force drops.
+    list[index] = { ...entry, quickened: true, quickenKarma: cost };
     await this.update({ 'system.sustaining': list, 'system.karma.good': good - cost, 'system.ledger': this.#ledgerWith({ kind: 'karma', amount: -cost, reason: tx('SR2E.Text.Actor.quickenedForce', { name: entry.spellName, force: entry.force }) }) });
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor: this }),
@@ -13346,6 +13399,8 @@ export class SR2Actor extends Actor {
       const max = 6;
       if ((second['system.essence'] as number) > max + 0.001) extra.warnings.push(tx('SR2E.Text.Actor.theBlockShowsEssenceButIts', { essence: p.essence, loss: Math.round(d.essenceLoss * 100) / 100, base: second['system.essence'], max }));
     }
+    // v0.92.3 review fix (RULES.SORCERY_V923.magicFromEssence 'book'): the block shows Magic after its Essence loss.
+    if (p.magic !== undefined && p.magic > 0) second['system.magic'] = S923.importedBaseMagic(p.magic, Number(d.essenceLoss ?? 0));
     if (p.reaction) {
       const shown = p.reaction.augmented ?? p.reaction.base;
       second['system.reactionBonus'] = shown - (d.reaction - this.sys.reactionBonus);
@@ -18575,18 +18630,10 @@ export class SR2Actor extends Actor {
     // v0.92.3 (RULES.SORCERY_V923.focusAddiction 'book', Awakenings p. 103): a Magic test; failed, 2D6 ≤ Magic loses a
     // point, and the second point lost this way brings the focus geas (+2 TN on magic done without a focus).
     if (S923.s923('focusAddiction')) {
-      const r = await this.#runTest(tx('SR2E.Card.Actor.focusAddictionMagic', { tn, faTotal: fa.total, magic }), magic, { targetNumber: tn, noPenalties: true });
-      if (r.successes <= 0) {
-        const roll = await new Roll('2d6').evaluate();
-        const lostBefore = Number(this.getFlag?.(SYSTEM_ID, 'focusMagicLost') ?? 0) || 0;
-        const out = S923.focusAddictionLoss({ roll: Number(roll.total ?? 0), magic, lostBefore });
-        const natural = Number(this.sys.magic ?? 0);
-        if (out.lost) { await this.update({ 'system.magic': Math.max(0, natural - out.lost) }); try { await this.setFlag(SYSTEM_ID, 'focusMagicLost', lostBefore + out.lost); } catch { /* not saved */ } }
-        if (out.geas) { try { await this.setFlag(SYSTEM_ID, 'focusAddict', true); } catch { /* not saved */ } }
-        await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), rolls: [roll],
-          content: `<p>2D6 = <strong>${Number(roll.total ?? 0)}</strong> ${tx('SR2E.Card.Actor.vs3', { outcomeThreshold: magic })}: ${out.lost ? `<strong>${tx('SR2E.Card.Actor.losesMagic', { name: escText(this.name), outcomeLost: out.lost })}</strong>` : tx('SR2E.Card.Actor.noMagicIsLost')}${out.geas ? ` <strong>${tx('SR2E.Card.Actor.focusGeasDue', { name: escText(this.name), addictionWithdrawalTn: RULES.MAGIC_V39.addiction.withdrawalTn })}</strong>` : ''}</p>` });
-      }
-      return r;
+      // Review fix: the loss is worked out by the test's resolver (#resolveFocusLoss), so a Karma re-roll that passes
+      // gives it back and one that still fails keeps the first 2D6.
+      const lostBefore = Number(this.getFlag?.(SYSTEM_ID, 'focusMagicLost') ?? 0) || 0;
+      return this.#runTest(tx('SR2E.Card.Actor.focusAddictionMagic', { tn, faTotal: fa.total, magic }), magic, { targetNumber: tn, noPenalties: true }, { kind: 'focusLoss', focusLoss: { magic, lostBefore } });
     }
     const a = RULES.MAGIC_V39.addiction.attribute;
     const r = await this.#runTest(tx('SR2E.Card.Actor.focusAddictionTestVsFociMagic', { a: cap(a), tn, faTotal: fa.total, magic }), (this.sys.attributes?.[a]?.total as number | undefined) ?? 0,
@@ -18597,6 +18644,39 @@ export class SR2Actor extends Actor {
         content: `<p><strong>${tx('SR2E.Card.Actor.isAddictedToFoci', { name: escText(this.name) })}</strong> ${tx('SR2E.Card.Actor.withoutAnActiveFocusMagicTakes', { addictionWithdrawalTn: RULES.MAGIC_V39.addiction.withdrawalTn })}</p>` });
     }
     return r;
+  }
+
+  /** v0.92.3 review fix: the focus addiction Magic test's outcome (Awakenings p. 103), applied once, undone by a pass. */
+  async #resolveFocusLoss(snap: TestSnapshot): Promise<Resolved> {
+    const f = snap.focusLoss!;
+    const magic = safeInt(f.magic, 0, 30, 0);
+    const applied = f.applied ? { roll: safeInt(f.applied.roll, 2, 12, 2), lost: safeInt(f.applied.lost, 0, 1, 0), geas: Boolean(f.applied.geas) } : null;
+    if (snap.successes > 0) {
+      let back = '';
+      if (applied && (applied.lost || applied.geas)) {
+        if (applied.lost) {
+          await this.update({ 'system.magic': Number(this.sys.magic ?? 0) + applied.lost });
+          try { await this.setFlag(SYSTEM_ID, 'focusMagicLost', Math.max(0, (Number(this.getFlag?.(SYSTEM_ID, 'focusMagicLost') ?? 0) || 0) - applied.lost)); } catch { /* not saved */ }
+        }
+        if (applied.geas) { try { await clearFlag(this, 'focusAddict'); } catch { /* not set */ } }
+        back = ` ${tx('SR2E.Card.Actor.focusLossUndone923')}`;
+      }
+      return { html: `<p>${tx('SR2E.Card.Actor.noMagicIsLost')}${back}</p>`, flags: {}, snap: { ...snap, focusLoss: { magic, lostBefore: safeInt(f.lostBefore, 0, 30, 0) } } };
+    }
+    let out = applied;
+    if (!out) {
+      const roll = await new Roll('2d6').evaluate();
+      const total = Number(roll.total ?? 0);
+      const o = S923.focusAddictionLoss({ roll: total, magic, lostBefore: safeInt(f.lostBefore, 0, 30, 0) });
+      if (o.lost) {
+        await this.update({ 'system.magic': Math.max(0, Number(this.sys.magic ?? 0) - o.lost) });
+        try { await this.setFlag(SYSTEM_ID, 'focusMagicLost', (Number(this.getFlag?.(SYSTEM_ID, 'focusMagicLost') ?? 0) || 0) + o.lost); } catch { /* not saved */ }
+      }
+      if (o.geas) { try { await this.setFlag(SYSTEM_ID, 'focusAddict', true); } catch { /* not saved */ } }
+      out = { roll: total, lost: o.lost, geas: o.geas };
+    }
+    const html = `<p>2D6 = <strong>${out.roll}</strong> ${tx('SR2E.Card.Actor.vs3', { outcomeThreshold: magic })}: ${out.lost ? `<strong>${tx('SR2E.Card.Actor.losesMagic', { name: escText(this.name), outcomeLost: out.lost })}</strong>` : tx('SR2E.Card.Actor.noMagicIsLost')}${out.geas ? ` <strong>${tx('SR2E.Card.Actor.focusGeasDue', { name: escText(this.name), addictionWithdrawalTn: RULES.MAGIC_V39.addiction.withdrawalTn })}</strong>` : ''}</p>`;
+    return { html, flags: {}, snap: { ...snap, focusLoss: { magic, lostBefore: safeInt(f.lostBefore, 0, 30, 0), applied: out } } };
   }
 
   /** Clear focus addiction (the GM decides when it is beaten). */
@@ -19707,6 +19787,11 @@ export class SR2Actor extends Actor {
       }
       if (ch.dispel && snap.kind === 'dispel' && snap.dispel?.targetUuid === targetUuid) {
         const d = snap.dispel;
+        // v0.92.3 review fix: the dispeller still knows dispelling and (the book's way) the spell's Force is within
+        // their grade, as dispel() checked when the test was rolled.
+        const dispeller: any = fromUuidSync(String(snap.actorUuid ?? ''));
+        if (!dispeller?.initiate?.techniques?.includes?.('dispelling')) return false;
+        if (S923.dispelGradeProblem(Number(d.force ?? 0), Number(dispeller.initiate.grade ?? 0))) return false;
         // v0.92.3: a dispel that wears the Force down (RULES.SORCERY_V923.dispelling 'book').
         if (ch.dispel.mode === 'force' || d.mode === 'force') return ch.dispel.mode === 'force' && d.mode === 'force' && d.spellName === ch.dispel.spellName
           && (d.forceAfter ?? d.force) === ch.dispel.from && S923.dispelForce(d.force, successes).remaining === ch.dispel.to;

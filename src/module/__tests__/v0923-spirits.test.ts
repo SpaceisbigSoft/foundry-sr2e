@@ -264,6 +264,21 @@ describe('v0.92.3 banishing (Core p. 143)', () => {
     assert.equal(s.system.summonerUuid, m.uuid);
     assert.equal(s.system.services, 2);
   });
+  test('review fix: a holder this client can\'t write gets a Resist Drain card instead of a failed update', async () => {
+    const holder = conjurer({ name: 'Holder' });
+    holder.isOwner = false;
+    const m = conjurer({ name: 'Challenger' });
+    const s = spirit({ system: { force: 3, summonerUuid: holder.uuid, services: 2, spiritKind: 'elemental' } });
+    faces.push(1, 1, 1, 1, 1);
+    faces.push(5, 5, 1, 1, 1);
+    faces.push(1, 1, 1, 1);                           // the challenger's drain only
+    await m.banish(s, { control: true });
+    const card = chat.find((c: any) => c.flags?.sr2e?.conjuringDrain923);
+    assert.ok(card);
+    assert.deepEqual(card.flags.sr2e.conjuringDrain923, { actorUuid: holder.uuid, force: 3 });
+    assert.match(card.content, /data-sr2e-action="conjuringDrain923"/);
+    assert.equal(holder.system.monitor.stun, 0);
+  });
 });
 
 describe('v0.92.3 spirits and normal weapons (Core pp. 142–143)', () => {
@@ -301,9 +316,42 @@ describe('v0.92.3 spirits and normal weapons (Core pp. 142–143)', () => {
     await m.resistFromState({ targetUuid: m.uuid, melee: true, damageType: 'physical', power: 5, level: 'M', spiritAttacker: true }, 0);
     assert.match(chat.at(-1).content, /4 dice vs TN/);
   });
+  test('review fix: Conjuring only when it beats all it replaces (Body with bone lacing dice)', async (t) => {
+    t.after(oldWay({ 'GEAR_V923.boneLacing': 'dice' }));
+    const lace = { id: 'bl', type: 'cyberware', name: 'Bone lacing (titanium)', system: { kind: 'boneLacing', lacing: 'titanium', essenceCost: 2.25, grade: 'standard', installed: true, bioware: false, attributes: {} } };
+    const m = mage({}, [skill('cj', 'Conjuring', 5, 'charisma'), lace]);
+    const lacing = Number(m.system.derived.cyber.lacing.soakDice);
+    assert.ok(4 + lacing > 5, `lacing ${lacing}`);
+    faces.push(...Array(20).fill(1));
+    await m.resistFromState({ targetUuid: m.uuid, melee: true, damageType: 'physical', power: 5, level: 'M', spiritAttacker: true }, 0);
+    assert.doesNotMatch(chat.at(-1).content, /Conjuring 5 against a spirit/);
+    assert.match(chat.at(-1).content, new RegExp(`${4 + lacing} dice vs TN`));
+  });
 });
 
 describe('v0.92.3 the astral plane (Core p. 147; Grimoire p. 91)', () => {
+  test('review fix: projecting costs the body Essence only while away; nothing is written; below 0 the card says the body died', async (t) => {
+    const m = mage({ essence: 6 });
+    g.game.time = { worldTime: 0 };
+    await m.onAstralModeChange('physical', 'projecting');
+    g.game.time = { worldTime: 3 * 3600 };
+    await m.onAstralModeChange('projecting', 'physical');
+    assert.equal(m.system.essence, 6);
+    assert.match(chat.at(-1).content, /lost 3 Essence.*1 point a minute/);
+    g.game.time = { worldTime: 0 };
+    await m.onAstralModeChange('physical', 'projecting');
+    g.game.time = { worldTime: 7 * 3600 };
+    await m.onAstralModeChange('projecting', 'physical');
+    assert.equal(m.system.essence, 6);
+    assert.match(chat.at(-1).content, /the magician died/);
+    t.after(oldWay({ 'SPIRITS_V923.projection': 'v922' }));
+    g.game.time = { worldTime: 0 };
+    await m.onAstralModeChange('physical', 'projecting');
+    g.game.time = { worldTime: 15 * 3600 };
+    await m.onAstralModeChange('projecting', 'physical');
+    assert.equal(m.system.essence, 3, 'the old way: 2 × Essence free hours, then lost for good');
+    g.game.time = { worldTime: 0 };
+  });
   test('book: a projecting magician has the Astral Combat Pool and strikes for Charisma L', async (t) => {
     const m = mage({ astral: 'projecting', initiateGrade: 1 });
     assert.equal(m.system.derived.combatPool, 8);     // (5 + 5 + 4) ÷ 2 + grade 1

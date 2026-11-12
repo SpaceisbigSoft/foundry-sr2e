@@ -208,6 +208,17 @@ describe('design 2 (SEC1-3, A-1, D1-8, D3-8, RB2-1): the routine rule trusts onl
     assert.deepEqual(calls, [[2, 9]]);
   });
 
+  test('v0.92.3 review fix: a lost control contest\'s Resist Drain card rolls the holder\'s Drain once', async () => {
+    await setup();
+    const calls: number[] = [];
+    actor('holderD', ['p1'], { resistConjuringDrain: async (f: number) => { calls.push(f); } });
+    resetUser();
+    const m = message(GM, { conjuringDrain923: { actorUuid: 'Actor.holderD', force: 99 } });
+    press(m, 'conjuringDrain923'); await tick();
+    press(m, 'conjuringDrain923'); await tick();
+    assert.deepEqual(calls, [30], 'bounded, and once');
+  });
+
   test('a Defend from P1\'s attack card (its attacker is P1\'s) still goes ahead on P2\'s client with no confirm', async () => {
     await setup();
     actor('atkD', ['p1']);

@@ -20,10 +20,10 @@ Switches in `RULES.SPIRITS_V923` (`rules/config923/spirits.ts`, house-rules wind
 | Binding by a true name | opposed, net = services, Force × Karma | Conjuring vs Force + Spirit Energy, 1 success binds, no Karma | Grimoire pp. 78–79 | `SPIRITS_V923.trueName` |
 | Spirit attributes | Force + typed offsets | the Spirit Table's offsets and Reaction for a spirit with no template | Core p. 144 | `SPIRITS_V923.spiritTable` |
 | Elemental sustaining a spell | Force hours | Force Combat Turns | Core p. 142 | `SPIRITS_V923.elementalSustain` |
-| Projection | 2 × Essence hours free, then 1 Essence per hour or part | 1 Essence every full hour from the start | Core pp. 146–147 | `SPIRITS_V923.projection` |
+| Projection | 2 × Essence hours free, then 1 Essence per hour or part | 1 Essence every full hour from the start, a temporary loss (back at 1 a minute after the return; below 0 the magician dies; nothing is written to the character) | Core pp. 146–147 | `SPIRITS_V923.projection` |
 | Projecting initiative | astral Reaction + 20 | astral Reaction + 15 | Core p. 147 | `ASTRAL.initiativeBonus` 20 → 15 |
 | Initiates in astral space | nothing | + grade to astral Reaction and to the Astral Combat Pool | Grimoire pp. 38, 91 | `SPIRITS_V923.astralGrade` |
-| Astral dice pool | Spell Pool | Astral Combat Pool (I + W + C) ÷ 2 (the Combat Pool's dice while projecting) | Core p. 147 | `SPIRITS_V923.astralPool` |
+| Astral dice pool | Spell Pool | Astral Combat Pool (I + W + C) ÷ 2 (the Combat Pool's dice while projecting; a magician who only perceives fights astrally with the physical Combat Pool, as before) | Core p. 147 | `SPIRITS_V923.astralPool` |
 | A magician's astral damage | (Cha)M, a focus adds dice | unarmed (Cha)L; weapon focus (Cha + rating ÷ 2)M | Core p. 147 | `SPIRITS_V923.astralDamage` |
 | A barrier that wins | nothing | (rating)L, +1 level per 2 net successes, astral Body | Core p. 148 | `SPIRITS_V923.barrierBacklash` |
 | Reading an aura | 1: health, mood, foci; 2: compare; 3: exact Essence and Magic | basics at a glance; 2: emotions; 4: cyberware; never exact numbers | Core p. 145; Grimoire p. 90 | `SPIRITS_V923.assensing` |

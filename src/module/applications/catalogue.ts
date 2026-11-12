@@ -15,6 +15,7 @@ import {
   parseCharacterSheet, characterImportPlan,
   type ItemTemplate, type StarterKit, type CatalogueActor,
 } from '../rules/index.ts';
+import { importedBaseMagic } from '../rules/sorcery923.ts';
 import { kits, changeKits, refreshSetup, once } from './setup.ts';
 import { recordCreation } from './advancement.ts';
 import { creationRecordOf, approvalNeeded } from './approvals.ts';
@@ -542,6 +543,9 @@ export async function importCharacter(actor: any, text: string): Promise<{ lines
   const second: Record<string, unknown> = {};
   const d = actor.system?.derived ?? {};
   if (typeof after.essenceShown === 'number') second['system.essence'] = Math.round((after.essenceShown + Number(d.essenceLoss ?? 0)) * 100) / 100;
+  // v0.92.3 review fix (RULES.SORCERY_V923.magicFromEssence 'book'): the write-up shows Magic after its Essence loss.
+  const shownMagic = Number(plan.actorUpdate?.['system.magic']);
+  if (Number.isFinite(shownMagic) && shownMagic > 0) second['system.magic'] = importedBaseMagic(shownMagic, Number(d.essenceLoss ?? 0));
   if (typeof after.reactionShown === 'number') second['system.reactionBonus'] = after.reactionShown - (Number(d.reaction ?? 0) - Number(actor.system?.reactionBonus ?? 0));
   if (typeof after.initiativeDice === 'number') second['system.initiativeDiceBonus'] = Math.max(0, after.initiativeDice - (Number(d.initiativeDice ?? 1) - Number(actor.system?.initiativeDiceBonus ?? 0)));
   if (typeof after.lifestyleSeconds === 'number' && after.lifestyleSeconds > 0) second['system.lifestyle.paidUntil'] = sysNow() + after.lifestyleSeconds;

@@ -50,6 +50,8 @@ export interface SustainedSpell {
   successes?: number;
   /** Quickened (metamagic): permanent, no TN penalty. */
   quickened?: boolean;
+  /** v0.92.3 review fix: the Good Karma quickening took (dispelling's TN, Grimoire p. 45). */
+  quickenKarma?: number;
   /** An elemental sustaining it for the magician: no TN penalty. */
   spiritUuid?: string;
 }

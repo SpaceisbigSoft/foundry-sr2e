@@ -94,6 +94,12 @@ describe('v0.92.3 casting (Core pp. 128–133)', () => {
     assert.equal(S.spellForceBonus({ exclusive: true, fetish: true }), 3);
     assert.deepEqual(spellOptionDrainMods({ exclusive: true, fetish: true }).map((m) => m.value), [0, 0]);
   });
+  test('review fix: under the Revamp an expendable fetish is still its +1, even with the book\'s switch at book', (t) => {
+    t.after(urrMode());
+    assert.equal(RULES.SORCERY_V923.restrictedSpells, 'book');
+    assert.equal(S.spellForceBonus({ fetish: true, expendable: true }), 1);
+    assert.equal(S.spellForceBonus({ exclusive: true, fetish: true, expendable: true }), 3);
+  });
   test('sustained spells: at most the Sorcery rating; foci, quickened and spirit-held ones do not count', (t) => {
     const two = [{ focusId: '' }, { focusId: '' }];
     assert.match(S.sustainCapProblem(two, 2) ?? '', /at most 2/);
@@ -119,6 +125,9 @@ describe('v0.92.3 casting (Core pp. 128–133)', () => {
     assert.equal(S.areaTargetSuccesses({ dice, cardTn: 4, cardBase: 3, ownBase: 3, bought: 1 }), 5);
     assert.equal(S.areaTargetSuccesses({ dice, cardTn: 4, cardBase: 3, ownBase: 3, botch: true }), 0);
     assert.equal(S.successesAt([1, 1, 1], 2), 0);
+    // Review fix: the card clamped at 2 (base 3 − 3): a Willpower 5 target is at 5 − 3 = 2, not 2 + 2 = 4.
+    assert.equal(S.areaTargetSuccesses({ dice, cardTn: 2, cardBase: 3, ownBase: 5, modifiers: [{ value: -3 }] }), 6);
+    assert.equal(S.areaTargetSuccesses({ dice, cardTn: 4, cardBase: 3, ownBase: 5, modifiers: [{ value: 1 }] }), 2);
   });
   test('the elemental TN is 4; v922 the spell\'s own', (t) => {
     assert.equal(S.elementalBaseTn(), 4);
@@ -366,5 +375,16 @@ describe('v0.92.3 the Revamp behaves as before', () => {
     undo();
     t.after(urrMode(SORCERY_V922));
     assert.equal(JSON.stringify(probe()), atBook);
+  });
+});
+
+describe('v0.92.3 review fix: importing a cybered magician (SORCERY_V923.magicFromEssence)', () => {
+  test('the book: the shown Magic gets its Essence loss back; the old cap: as shown', async (t) => {
+    const { importedBaseMagic } = await import('../sorcery923.ts');
+    assert.equal(importedBaseMagic(4, 1.2), 6);
+    assert.equal(effectiveMagic(importedBaseMagic(4, 1.2), 4.8, 6), 4);
+    assert.equal(importedBaseMagic(0, 2), 0);
+    t.after(oldWay(SORCERY_V922));
+    assert.equal(importedBaseMagic(4, 1.2), 4);
   });
 });

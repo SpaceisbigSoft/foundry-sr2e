@@ -236,3 +236,12 @@ export function assensingBookTable(): ReadonlyArray<{ successes: number; reveals
     { successes: 4, reveals: ['cyberware', 'cyberwareList', 'signature'] },
   ];
 }
+
+/**
+ * v0.92.3 review fix (RULES.SPIRITS_V923.projection 'book', Core p. 147): the body's Essence loss while projecting is
+ * temporary (it comes back at 1 point a minute after the return); only a loss below 0 kills. False under the old way and
+ * the Revamp's own reading (URR_V80.magProjFullHours), which keep the permanent loss.
+ */
+export function projectionLossTemporary(): boolean {
+  return RULES.SPIRITS_V923.projection === 'book' && !RULES.URR_V80.magProjFullHours;
+}

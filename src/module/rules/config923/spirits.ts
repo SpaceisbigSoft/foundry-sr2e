@@ -33,7 +33,11 @@ export const SPIRITS_V923 = {
   spiritTable: 'book' as 'book' | 'v922',
   /** An elemental sustaining a spell holds it Force Combat Turns (Core p. 142) / Force hours (MAGIC_V39.sustainLimit). */
   elementalSustain: 'book' as 'book' | 'v922',
-  /** Astral projection (Core pp. 146–147): the body loses 1 Essence every full hour from the start / MAGIC_EXTRA.projection's free 2 × Essence hours, then 1 per hour or part. */
+  /**
+   * Astral projection (Core pp. 146–147): the body loses 1 Essence every full hour from the start, for the time away
+   * only (it comes back at 1 point a minute after the return; a loss below 0 kills) / MAGIC_EXTRA.projection's free
+   * 2 × Essence hours, then 1 per hour or part, lost for good (v0.92.2).
+   */
   projection: 'book' as 'book' | 'v922',
   /** The Astral Combat Pool (Intelligence + Willpower + Charisma) ÷ 2 for magicians in astral combat (Core p. 147) / the Spell Pool (ASTRAL.attackPool). */
   astralPool: 'book' as 'book' | 'v922',

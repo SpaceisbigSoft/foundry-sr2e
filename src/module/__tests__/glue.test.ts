@@ -728,6 +728,18 @@ Gear: Heavy pistol [9M], Stun baton [6S Stun]`;
     assert.equal(a.system.derived.essence, 5.2);       // base stored as 6.2, minus 1
   });
 
+  test("v0.92.3 review fix: a cybered magician's shown Magic is stored with its Essence loss back (not taken off twice)", async (t) => {
+    t.after(oldWay({ "SORCERY_V923.magicFromEssence": "book" })); // this file runs the v0.92.2 sorcery rules; this is the book's
+    const a = fresh([{ id: "c1", type: "cyberware", name: "Reflexes", system: {
+      essenceCost: 1.2, grade: "standard", installed: true, reaction: 0, initiativeDice: 0,
+      attributes: { body: 0, quickness: 0, strength: 0, charisma: 0, intelligence: 0, willpower: 0 } } }]);
+    a.system.tradition = "hermetic";
+    await a.applyStatBlock(parseStatBlock(BLOCK.replace("4 5 4 2 3 3 5.2 - 5 (7) 5/3", "4 5 4 2 3 3 4.8 4 5 (7) 5/3")));
+    assert.equal(a.system.derived.essence, 4.8);
+    assert.equal(a.system.magic, 6);                   // 4 shown + 2 (1.2 Essence lost: two points or part)
+    assert.equal(a.system.derived.magic, 4);
+  });
+
   test("re-importing updates instead of duplicating", async () => {
     const a = fresh();
     await a.applyStatBlock(parseStatBlock(BLOCK));

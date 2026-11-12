@@ -28,6 +28,18 @@ export function bookMagicFromEssence(baseMagic: number, essence: number, baseEss
   return Math.max(0, whole(baseMagic) - Math.ceil(lost - 1e-9));
 }
 
+/**
+ * v0.92.3 review fix: the base Magic to store for a write-up or stat block that shows Magic after its Essence loss.
+ * The book's way (bookMagicFromEssence) takes a point per point or part of Essence lost from the stored base, so the
+ * shown rating gets that back (else it would come off twice); the old cap is the same either way.
+ */
+export function importedBaseMagic(shown: number, essenceLost: number): number {
+  const m = Math.max(0, whole(shown));
+  if (m <= 0 || !RULES.MAGIC_CAPPED_BY_ESSENCE || RULES.URR_V80.coreEssenceFloor || !book('magicFromEssence')) return m;
+  const lost = Math.max(0, Math.round(Number(essenceLost) * 100) / 100 || 0);
+  return m + Math.ceil(lost - 1e-9);
+}
+
 // ---------------------------------------------------------------- The Revamp's switches that are also the book's rule
 // Each wrapper gives the Revamp's result when its switch is on (so the Revamp behaves as before), else the book's
 // (the same rule) while the SORCERY_V923 switch is 'book', else the old way.
@@ -49,8 +61,13 @@ export function sustainCapProblem(sustained: ReadonlyArray<{ focusId?: string; q
   return own >= cap ? tCount(cap, 'SR2E.Text.Urr80Magic.canSustainAtMost') : null;
 }
 
-/** Extra Force an exclusive or fetish spell takes effect at: the book's (Core p. 133), else the Revamp's. */
+/**
+ * Extra Force an exclusive or fetish spell takes effect at: the Revamp's while its own switches are on (review fix: the
+ * Revamp keeps its rule, as for the other wrappers here), else the book's (Core p. 133), else none.
+ */
 export function spellForceBonus(o: { exclusive?: boolean; fetish?: boolean; expendable?: boolean }): number {
+  const U = RULES.URR_V80;
+  if (Math.max(0, whole(U.magExclusiveForce)) > 0 || Math.max(0, whole(U.magFetishForce)) > 0) return urrMagSpellForceBonus(o);
   return restrictedForceBonus(o) ?? urrMagSpellForceBonus(o);
 }
 
@@ -142,8 +159,12 @@ export function successesAt(dice: ReadonlyArray<Pick<DieResult, 'total'> | numbe
  * An area spell target's own successes (Core p. 130): the roll counted against the TN the card rolled, moved by the
  * difference between this target's resisting attribute and the attribute the card's TN started from.
  */
-export function areaTargetSuccesses(o: { dice: ReadonlyArray<Pick<DieResult, 'total'>>; cardTn: number; cardBase: number; ownBase: number; bought?: number; botch?: boolean }): number {
-  return successesAt(o.dice, whole(o.cardTn) + whole(o.ownBase) - whole(o.cardBase), { bought: o.bought, botch: o.botch });
+export function areaTargetSuccesses(o: { dice: ReadonlyArray<Pick<DieResult, 'total'>>; cardTn: number; cardBase: number; ownBase: number; bought?: number; botch?: boolean; modifiers?: ReadonlyArray<{ value: number }> }): number {
+  // Review fix: with the card's modifiers, the target's own base plus them (then the minimum), so a card TN clamped at 2
+  // doesn't move this target's TN by the clamp.
+  const tn = Array.isArray(o.modifiers) ? whole(o.ownBase) + o.modifiers.reduce((n, m) => n + (Number.isFinite(Number(m?.value)) ? Math.trunc(Number(m.value)) : 0), 0)
+    : whole(o.cardTn) + whole(o.ownBase) - whole(o.cardBase);
+  return successesAt(o.dice, tn, { bought: o.bought, botch: o.botch });
 }
 
 /** Why a sustained spell can't be cast while projecting (Core p. 128), or null. */
