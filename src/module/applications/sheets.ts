@@ -8,7 +8,7 @@ import { metamagicAllowed } from "../rules/sorcery.ts";
 import { ATTRIBUTE_KEYS, type AttributeKey } from "../models/index.ts";
 import { dropItemOnActor } from "./drops.ts";
 import { allActors, actorLabel } from "../helpers/actors.ts";
-import { clearFlag, replaceFlag } from "../helpers/flags.ts";
+import { clearFlag, replaceFlag, replaceFlagUpdate } from "../helpers/flags.ts";
 import { effectsContext } from "./effects.ts";
 import { postItemToChat } from "./richtext.ts";
 import { SYSTEM } from "../config/system.ts";
@@ -43,6 +43,9 @@ import {
 import { legworkDifficulties, legworkLevelDice, encephalonFits } from "../rules/index.ts";
 import { doctoringCareOptions } from "../rules/index.ts";
 import { buysByFinding } from "../rules/index.ts";
+import { REFERENCE_DRAG_TYPE } from "../rules/index.ts";
+import { dropReferenceEntry } from "./reference.ts";
+import { isCarried, tweakKeyChoices, normalizeTweaks, tweakText, TWEAK_TARGETS, TWEAK_TARGET_KEYS, ACCESSORY_FIELD_KEYS, TWEAK_KEYS, TWEAK_VALUE_MAX, TWEAK_MAX, essenceLoss as wareEssenceLoss, type TweakTarget } from "../rules/index.ts";
 import { toolsModifier, gearRepairPlan, surveillanceKind, recognitionTn, readWriteRating, streetCred } from "../rules/index.ts";
 import { bioKindsV72, bioVitals, smokeCounts, ammoChoices, findAmmo, isKnownAmmo, canFireIndirect, metamagicChoices, BARRIER_KINDS, allySpellKarma, barrierBlocks, hostChoices, droneLinkOf, mountPointFor, skillRollMemoryFields, negotiationAttribute, outrightPurchase, lifestyleStatusText, metatypeOptions } from "../rules/index.ts";
 import { sheafFor } from "../rules/sheafgen.ts";
@@ -120,6 +123,15 @@ export function registerGuideButton(): void {
 /** Full character sheet (also selectable for NPCs). */
 export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   /** v0.59.0: dropped items arrive uninstalled / unbonded / unloaded, move between actors, and only fitting types (applications/drops.ts). */
+  /** v0.92.1: a Catalogue entry dragged from the reference pane opens the shop with it ticked (applications/reference.ts). */
+  async _onDrop(event: any): Promise<any> {
+    const TE: any = (foundry as any).applications?.ux?.TextEditor?.implementation;
+    let data: any = null;
+    try { data = TE?.getDragEventData?.(event) ?? null; } catch { data = null; }
+    if (data?.type === REFERENCE_DRAG_TYPE) return dropReferenceEntry(this.document, data);
+    return (super._onDrop as any)(event);
+  }
+
   async _onDropItem(event: any, item: any): Promise<any> {
     return dropItemOnActor(this, event, item, () => (super._onDropItem as any)(event, item));
   }
@@ -288,6 +300,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       takeAim: SR2CharacterSheet.#onTakeAim,
       suppressFire: SR2CharacterSheet.#onSuppressFire,
       drawWeapon: SR2CharacterSheet.#onDrawWeapon,
+      // v0.92.1 (RULES.SHEET_V921.carried): carry it, or leave it behind.
+      toggleCarried: SR2CharacterSheet.#onToggleCarried,
       applyPatch: SR2CharacterSheet.#onApplyPatch,
       putOutFire: SR2CharacterSheet.#onPutOutFire,
       holdTarget: SR2CharacterSheet.#onHoldTarget,
@@ -482,11 +496,15 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       metatypeChoices: metatypeOptions(actor.system.metatype),
       // v0.83.0: the default token art (figure, archetype badge, the Use the default art button).
       art: artSheetContext(actor),
-      armor: items.filter((i) => i.type === "armor"),
+      // v0.92.1: rows carry whether they are left behind (RULES.SHEET_V921.carried), and the Carried toggle shows when it counts.
+      armor: items.filter((i) => i.type === "armor").map((i) => ({ id: i.id, name: i.name, type: i.type, system: i.system, leftBehind: !isCarried(i) })),
+      carriedOn: RULES.SHEET_V921.carried === "on",
+      // v0.92.1: the ware that makes up the Essence line (its tooltip).
+      essenceWare: essenceWareLine(items),
       gear: items.filter((i) => i.type === "gear").map((i) => {
         const c = (actor.system.derived?.cyber?.softs ?? []).find((x: any) => x.gearId === i.id);
         const tox = i.system.toxin?.kind ? i.system.toxin : null;
-        return { id: i.id, name: i.name, type: i.type, system: i.system, toxinKind: tox?.kind ?? "",
+        return { id: i.id, name: i.name, type: i.type, system: i.system, leftBehind: !isCarried(i), toxinKind: tox?.kind ?? "",
           toxinNote: tox ? `${tox.kind} ${tox.power}${tox.level} ${tox.damageType}, ${tox.vector}` : "",
           chipNote: c ? (c.slotted ? (c.effective ? tx('SR2E.App.Sheets.chipGives', { kind: c.kind, skill: c.skill, rating: c.rating, effective: c.effective }) : `${c.kind} ${c.skill} ${c.rating} (${c.reason})`) : tx('SR2E.App.Sheets.chipNotSlotted', { kind: c.kind, skill: c.skill, rating: c.rating })) : "",
           // v0.58.0: tools, vision gear, surveillance gear, legality.
@@ -1561,7 +1579,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
   /** Search someone (v0.43.0): look them over, frisk them, or sweep them with a scanner. */
   static async #onSearchPerson(this: SR2CharacterSheet) {
     const actor: any = this.document;
-    const scanners = [...actor.items].filter((i: any) => i.type === "gear" && i.system.scanner?.kind && i.system.scanner.rating > 0);
+    const scanners = [...actor.items].filter((i: any) => i.type === "gear" && i.system.scanner?.kind && i.system.scanner.rating > 0 && isCarried(i));
     const labels: Record<string, string> = { weapon: tx('SR2E.App.Sheets.weapons'), cyber: tx('SR2E.App.Sheets.cyberware'), explosive: tx('SR2E.App.Sheets.explosives') };
     const group: string[] = [...(game.user.targets ?? [])].map((t: any) => t.actor?.uuid).filter((u: any) => u && u !== actor.uuid);
     const r = await SR2CharacterSheet.#pickPerson(actor, tx('SR2E.Dialog.Sheet.search', { actorName: actor.name }), `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.how')}</label><select name="method">
@@ -1835,6 +1853,14 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
   }
 
   /** Draw (or holster) a weapon: drawing is a Simple Action (RULES.COMBAT.ready), free with a quick-draw holster. */
+  /** v0.92.1 (RULES.SHEET_V921.carried): carry a weapon, armor or gear, or leave it behind (armor comes off, a weapon is holstered). */
+  static async #onToggleCarried(this: SR2CharacterSheet, _event: Event, target: HTMLElement) {
+    const actor: any = this.document;
+    const item = actor.items.get(target.dataset["itemId"]);
+    if (!item || !["weapon", "armor", "gear"].includes(item.type) || !actor.isOwner) return;
+    await item.update({ "system.carried": item.system.carried === false });
+  }
+
   static async #onDrawWeapon(this: SR2CharacterSheet, _event: Event, target: HTMLElement) {
     const actor: any = this.document;
     const w = actor.items.get(target.dataset["itemId"]);
@@ -3746,7 +3772,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const others: any[] = [];
     try { for (const t of canvas?.tokens?.placeables ?? []) if (t.actor && t.actor !== actor && ["character", "npc"].includes(t.actor.type) && !others.includes(t.actor)) others.push(t.actor); } catch { /* no canvas */ }
     const patients = [actor, ...(targeted && !others.includes(targeted) && targeted !== actor ? [targeted] : []), ...others];
-    const kits = [...actor.items].filter((i: any) => i.type === "gear" && (i.system.medkitRating ?? 0) > 0);
+    const kits = [...actor.items].filter((i: any) => i.type === "gear" && (i.system.medkitRating ?? 0) > 0 && isCarried(i));
     const row = (p: any) => {
       const m = p.system.monitor;
       return `<option value="${escHtml(p.uuid)}" ${p === (targeted ?? actor) ? "selected" : ""}>${tx('SR2E.Dialog.Sheet.physicalStun', { part: p === actor ? tx('SR2E.Dialog.Sheet.self', { name: escHtml(p.name) }) : escHtml(p.name), physical: escHtml(m.physical), stun: escHtml(m.stun), part2: p.system.derived?.status !== "ok" ? `, ${escHtml(p.system.derived.status)}` : "" })}</option>`;
@@ -3897,7 +3923,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       const left = weapon.system.ammoMax - weapon.system.ammo;
       return ui.notifications?.info?.(tx('SR2E.Notify.Sheet.roundLoaded', { weaponName: escHtml(weapon.name), n: tCount(n, 'SR2E.Count.round'), feed: escHtml(feed), part: left > 0 ? tx('SR2E.Notify.Sheet.moreToGo', { left }) : "" }));
     }
-    const clips = [...actor.items].filter((i: any) => i.type === "gear" && i.system.ammoType && (i.system.quantity ?? 0) > 0);
+    const clips = [...actor.items].filter((i: any) => i.type === "gear" && i.system.ammoType && (i.system.quantity ?? 0) > 0 && isCarried(i));
     if (!clips.length) {
       if (!(await spend())) return;
       await weapon.update({ "system.ammo": weapon.system.ammoMax });
@@ -5354,8 +5380,54 @@ export class SR2ItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
       getPermit: SR2ItemSheet.#onGetPermit,
       // v0.91.8: learn the spell of this formula.
       learnFormulaItem: SR2ItemSheet.#onLearnFormulaItem,
+      // v0.92.1: custom tweaks and the accessories read from the description.
+      addTweak: SR2ItemSheet.#onAddTweak,
+      deleteTweak: SR2ItemSheet.#onDeleteTweak,
+      undoDescription: SR2ItemSheet.#onUndoDescription,
     },
   };
+
+  /** v0.92.1: a new custom tweak row (a note until its kind is picked). */
+  static async #onAddTweak(this: SR2ItemSheet) {
+    const item: any = this.document;
+    if (!item.isOwner) return;
+    const list = normalizeTweaks(item.system.tweaks);
+    if (list.length >= TWEAK_MAX) return ui.notifications.warn(tx('SR2E.Notify.Sheet.tweaksFull', { max: TWEAK_MAX }));
+    await item.update({ "system.tweaks": [...list, { id: foundry.utils.randomID(), label: "", target: "note", key: "", value: 0, on: true }] });
+  }
+
+  /** v0.92.1: remove a custom tweak row. */
+  static async #onDeleteTweak(this: SR2ItemSheet, _e: Event, t: HTMLElement) {
+    const item: any = this.document;
+    if (!item.isOwner) return;
+    const list = normalizeTweaks(item.system.tweaks);
+    if (!spliceRow(list, t)) return;
+    await item.update({ "system.tweaks": list });
+  }
+
+  /**
+   * v0.92.1: undo what the description filled in: each field still holding the value it got goes back to what it was,
+   * the notes it added go, and those accessories aren't read again from this description.
+   */
+  static async #onUndoDescription(this: SR2ItemSheet) {
+    const item: any = this.document;
+    const rec = item.flags?.sr2e?.fromDescription;
+    if (!item.isOwner || !rec) return;
+    const up: Record<string, unknown> = {};
+    const dismissed = new Set<string>(Array.isArray(rec.dismissed) ? rec.dismissed.map(String) : []);
+    for (const [k, f] of Object.entries((rec.fields ?? {}) as Record<string, any>)) {
+      if (f?.id) dismissed.add(String(f.id));
+      if (f && item.system[k] === f.value) up[`system.${k}`] = f.before;
+    }
+    const noted: string[] = Array.isArray(rec.noted) ? rec.noted.map(String) : [];
+    for (const n of noted) dismissed.add(n);
+    const ids = new Set(noted.map((n) => `acc${n}`));
+    const tweaks = normalizeTweaks(item.system.tweaks);
+    if (tweaks.some((t) => ids.has(t.id))) up["system.tweaks"] = tweaks.filter((t) => !ids.has(t.id));
+    Object.assign(up, replaceFlagUpdate(item, "fromDescription", { fields: {}, dismissed: [...dismissed], noted }));
+    // The undo is not itself a new description to read.
+    await item.update(up);
+  }
 
   /** v0.91.8 (RULES.FORMULA_V918): learn this formula's spell (the Force asked first). */
   static async #onLearnFormulaItem(this: SR2ItemSheet) {
@@ -5384,6 +5456,11 @@ export class SR2ItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
     if (data && Object.prototype.hasOwnProperty.call(data, "skillModsText")) {
       data.system = { ...(data.system ?? {}), skillMods: parseSkillMods(data.skillModsText) };
       delete data.skillModsText;
+    }
+    // v0.92.1: the custom tweak rows become the item's tweaks (every row is in the form, so the list is rebuilt whole).
+    if (data && Object.prototype.hasOwnProperty.call(data, "tweak")) {
+      data.system = { ...(data.system ?? {}), tweaks: tweaksFromForm(data.tweak, (this.document as any).system?.tweaks) };
+      delete data.tweak;
     }
     // v0.70.0: loading or unloading a program on an actor goes through Swap Memory (its time and action), as the Matrix tab does.
     const doc: any = this.document;
@@ -5685,9 +5762,68 @@ export class SR2ItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
       programOptions: item.type === "program" ? (item.system.options ?? []).map((id: string) => RULES.MATRIX.programming.options.find((o) => o.id === id)?.label ?? id).join(", ") : "",
       turretDefaults: { traverse: RULES.VEHICLES.turrets.traverse, limit: RULES.VEHICLES.turrets.limit },
       ownedByActor: Boolean(item.parent),
+      // v0.92.1 (RULES.SHEET_V921): custom tweaks, Carried, a ware's Essence at its grade, what the description filled in.
+      ...itemSheetV921(item),
       priceLabel: ["weapon", "armor", "gear", "cyberware", "focus", "program", "cyberdeck"].includes(item.type) ? itemPrice({ cost: item.type === "cyberware" ? wareCost(item.system) : (item.system.cost ?? 0), streetIndex: item.system.streetIndex ?? 1, quantity: 1 }).toLocaleString() : "",
     };
   }
+}
+
+/**
+ * v0.92.1 (RULES.SHEET_V921): the item sheet's flexible-record parts: the custom tweak rows (rules/tweaks.ts), the
+ * Carried box, a ware's Essence and price at its grade, and the "From the description" line (rules/accessories.ts).
+ */
+function itemSheetV921(item: any): Record<string, unknown> {
+  const sys = item?.system ?? {};
+  const type = String(item?.type ?? "");
+  const rows = normalizeTweaks(sys.tweaks).map((t, index) => {
+    const keys = TWEAK_KEYS[t.target];
+    return { ...t, index, keyChoices: tweakKeyChoices(t.target, type), keyText: keys === "text", isNote: t.target === "note", text: tweakText(t, type) };
+  });
+  const live = item?.parent ? tweakLiveNote(item) : "";
+  const rec = item?.flags?.sr2e?.fromDescription;
+  const filled = rec && typeof rec.fields === "object" ? Object.entries(rec.fields as Record<string, any>).filter(([k, f]) => f && sys[k] === f.value) : [];
+  const ware = type === "cyberware" && !sys.bioware && sys.grade && sys.grade !== "standard";
+  return {
+    tweakRows: rows,
+    tweakTargets: TWEAK_TARGETS.map((k) => ({ key: k, label: tKey(TWEAK_TARGET_KEYS[k]) })),
+    tweakValueMax: TWEAK_VALUE_MAX,
+    tweakFull: rows.length >= TWEAK_MAX,
+    tweaksOff: RULES.SHEET_V921.tweaks !== "on",
+    tweakLive: live,
+    carriedOn: RULES.SHEET_V921.carried === "on" && ["weapon", "armor", "gear"].includes(type),
+    leftBehind: !isCarried(item),
+    gradeEssence: ware ? { essence: wareEssenceLoss({ essenceCost: Number(sys.essenceCost ?? 0), grade: sys.grade } as any), price: cyberCost(sys.cost ?? 0, sys.grade).toLocaleString() } : null,
+    fromDescription: filled.length ? tx('SR2E.App.Sheets.fromDescription', { list: filled.map(([k, f]) => `${f.text} → ${tKey(ACCESSORY_FIELD_KEYS[k] ?? '')} ${typeof f.value === "boolean" ? "" : String(f.value)}`.trim()).join(", ") }) : "",
+  };
+}
+
+/** v0.92.1: when an item's tweaks count (shown under its tweak rows), or that they don't right now. */
+function tweakLiveNote(item: any): string {
+  const s = item?.system ?? {};
+  switch (String(item?.type ?? "")) {
+    case "cyberware": return s.installed && !s.damaged ? "" : tx('SR2E.App.Sheets.tweaksWhenInstalled');
+    case "armor": return s.worn && isCarried(item) ? "" : tx('SR2E.App.Sheets.tweaksWhenWorn');
+    case "weapon": case "gear": return isCarried(item) && !s.damaged ? "" : tx('SR2E.App.Sheets.tweaksWhenCarried');
+    case "focus": return s.bonded && s.active !== false ? "" : tx('SR2E.App.Sheets.tweaksWhenBonded');
+    case "adeptpower": case "power": return s.active !== false ? "" : tx('SR2E.App.Sheets.tweaksWhenActive');
+    case "program": return s.loaded ? "" : tx('SR2E.App.Sheets.tweaksWhenLoaded');
+    case "cyberdeck": return s.active ? "" : tx('SR2E.App.Sheets.tweaksWhenInUse');
+    default: return "";
+  }
+}
+
+/** v0.92.1: the item sheet's tweak rows (form fields `tweak.<n>.<field>`) back into the item's tweaks. */
+export function tweaksFromForm(rows: unknown, previous: unknown = []): unknown[] {
+  if (!rows || typeof rows !== "object") return [];
+  const list = Array.isArray(rows) ? rows : Object.keys(rows as Record<string, unknown>).sort((a, b) => Number(a) - Number(b)).map((k) => (rows as any)[k]);
+  // Review (B2): a row whose kind changed starts with an empty key (not the old kind's key read as a skill's name).
+  const before = new Map(normalizeTweaks(previous).map((t) => [t.id, t.target]));
+  return normalizeTweaks(list.map((r: any) => {
+    const target = String(r?.target ?? "") as TweakTarget;
+    const was = before.get(String(r?.id ?? ""));
+    return { ...r, target, ...(was && was !== target ? { key: "" } : {}) };
+  }));
 }
 
 /* ---- v0.23.0: sheet layout, summary and quick actions ---- */
@@ -5884,7 +6020,7 @@ function sheetLayout(actor: any, current?: string): { sheetTabs: Array<{ id: str
   const hasRigging = Boolean(actor.system.derived?.rigging) || (actor.type === "character" && ownedVehicles(actor).length > 0);
   const tabs = [
     // v0.64.0: Current (a read-only reference) sits beside Main; Creation (the record and the log) after Upkeep.
-    { id: "main", label: tx('SR2E.App.Sheets.main') }, ...(actor.type === "character" ? [{ id: "current", label: tx('SR2E.App.Sheets.current') }] : []), { id: "combat", label: tx('SR2E.App.Sheets.combat') }, { id: "effects", label: tx('SR2E.App.Sheets.effects') },
+    { id: "main", label: tx('SR2E.App.Sheets.main') }, ...(actor.type === "character" ? [{ id: "current", label: tx('SR2E.App.Sheets.current') }] : []), { id: "combat", label: tx('SR2E.App.Sheets.armory') }, { id: "effects", label: tx('SR2E.App.Sheets.effects') },
     ...(showMagicTab ? [{ id: "magic", label: tx('SR2E.App.Sheets.magic') }] : []),
     ...(hasMatrix ? [{ id: "matrix", label: tx('SR2E.App.Sheets.matrix') }] : []),
     ...(hasRigging ? [{ id: "rigging", label: tx('SR2E.App.Sheets.rigging') }] : []),
@@ -6101,6 +6237,23 @@ export function cyberRow(actor: any, i: any): any {
   return { id: i.id, name: i.name, system: sy, summary: parts.join(" · ") };
 }
 
+/**
+ * v0.92.1 (the owner's feedback): the Essence line's tooltip: the installed ware that takes Essence, each at its grade
+ * ("Wired reflexes 2 (alpha): 2.4"), biggest first. Bioware (Body Index) and ware housed in a limb take none.
+ */
+/** v0.92.1 review (N11): a ware grade's name, translated. */
+function wareGradeLabel(g: string): string {
+  return g === "alpha" ? tx('SR2E.App.Sheets.alphaware') : g === "beta" ? tx('SR2E.App.Sheets.betaware') : g === "delta" ? tx('SR2E.App.Sheets.deltaware') : g === "standard" ? tx('SR2E.App.Sheets.standard') : g;
+}
+
+export function essenceWareLine(items: any[]): string {
+  const rows = items.filter((i: any) => i.type === "cyberware" && i.system?.installed && !i.system?.bioware && !i.system?.housedIn)
+    .map((i: any) => ({ name: String(i.name), grade: String(i.system.grade ?? "standard"), e: wareEssenceLoss({ essenceCost: Number(i.system.essenceCost ?? 0), grade: i.system.grade ?? "standard" } as any) }))
+    .filter((r) => r.e > 0).sort((a, b) => b.e - a.e);
+  if (!rows.length) return "";
+  return rows.map((r) => (r.grade === "standard" ? tx('SR2E.App.Sheets.essenceWareRow', { name: r.name, essence: r.e }) : tx('SR2E.App.Sheets.essenceWareRowGrade', { name: r.name, grade: wareGradeLabel(r.grade), essence: r.e }))).join("\n");
+}
+
 /** A weapon row: damage, ranges in metres for this wielder, ammunition. */
 export function weaponRow(actor: any, i: any): any {
   const w = i.system;
@@ -6109,6 +6262,8 @@ export function weaponRow(actor: any, i: any): any {
   const ammo = isKnownAmmo(w.ammoType ?? "standard") ? findAmmo(w.ammoType ?? "standard") : { id: String(w.ammoType), label: tx('SR2E.App.Sheets.notInTheAmmunitionList', { ammo: w.ammoType }) };
   return {
     id: i.id, name: i.name, system: w, damageLabel: damageLabel(w),
+    // v0.92.1 (RULES.SHEET_V921.carried): left behind (shown dimmed; not in the combat column).
+    leftBehind: !isCarried(i),
     rangeLabel: r ? `${r.short}/${r.medium}/${r.long}/${r.extreme} m` : "",
     ammoLabel: !w.melee && w.ammoMax > 0 && ammo && ammo.id !== "standard" ? ammo.label : "",
     // v0.37.0: ammo as pips (up to 40 rounds), and a button per firing mode.

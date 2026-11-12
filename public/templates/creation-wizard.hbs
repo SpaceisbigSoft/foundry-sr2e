@@ -27,7 +27,7 @@
       {{#if is.metatype}}
       <ul class="sr2e-wiz-choices">
         {{#each metatypes}}
-        <li class="{{#unless allowed}}sr2e-dim{{/unless}}"><label><input type="radio" name="wiz-metatype" value="{{key}}" data-wiz="metatype" {{checked selected}} {{#unless allowed}}{{#unless selected}}disabled{{/unless}}{{/unless}}> <strong>{{label}}</strong> <span class="hint">{{sr2eT "SR2E.UI.needsRaceOrBetter" need=need mods=mods}}</span></label></li>
+        <li class="{{#unless allowed}}sr2e-dim{{/unless}}"><label><input type="radio" name="wiz-metatype" value="{{key}}" data-wiz="metatype" {{checked selected}} {{#if @root.blocks}}{{#unless allowed}}{{#unless selected}}disabled{{/unless}}{{/unless}}{{/if}}> <strong>{{label}}</strong> <span class="hint">{{sr2eT "SR2E.UI.needsRaceOrBetter" need=need mods=mods}}</span></label></li>
         {{/each}}
       </ul>
       {{/if}}
@@ -38,7 +38,7 @@
         <thead><tr><th></th><th>{{sr2eT "SR2E.UI.base"}}</th><th>{{sr2eT "SR2E.UI.racial"}}</th><th>{{sr2eT "SR2E.UI.natural"}}</th></tr></thead>
         <tbody>
           {{#each attributes}}
-          <tr><td>{{label}}</td><td><input type="number" class="sr2e-num" data-wiz="attribute" data-key="{{key}}" value="{{base}}" min="1" max="{{@root.attributeMax}}" aria-label="{{sr2eT "SR2E.UI.base5" label=label}}"></td><td>{{#if racial}}{{racial}}{{else}}–{{/if}}</td><td>{{natural}}</td></tr>
+          <tr><td>{{label}}</td><td><input type="number" class="sr2e-num" data-wiz="attribute" data-key="{{key}}" value="{{base}}" min="1"{{#if @root.blocks}} max="{{@root.attributeMax}}"{{/if}} aria-label="{{sr2eT "SR2E.UI.base5" label=label}}">{{#if over}} <span class="sr2e-warn" title="{{sr2eT "SR2E.UI.aboveCreationMax" max=@root.attributeMax}}">!</span>{{/if}}</td><td>{{#if racial}}{{racial}}{{else}}–{{/if}}</td><td>{{natural}}</td></tr>
           {{/each}}
         </tbody>
       </table>
@@ -46,7 +46,7 @@
 
       {{#if is.magic}}
       <ul class="sr2e-wiz-choices">
-        {{#each magicKinds}}<li class="{{#unless allowed}}sr2e-dim{{/unless}}"><label><input type="radio" name="wiz-magic" value="{{key}}" data-wiz="magicKind" {{checked selected}} {{#unless allowed}}{{#unless selected}}disabled{{/unless}}{{/unless}}> {{label}}</label></li>{{/each}}
+        {{#each magicKinds}}<li class="{{#unless allowed}}sr2e-dim{{/unless}}"><label><input type="radio" name="wiz-magic" value="{{key}}" data-wiz="magicKind" {{checked selected}} {{#if @root.blocks}}{{#unless allowed}}{{#unless selected}}disabled{{/unless}}{{/unless}}{{/if}}> {{label}}</label></li>{{/each}}
       </ul>
       {{#if showTraditions}}<div class="sr2e-row"><label>{{sr2eT "SR2E.UI.tradition"}} <select data-wiz="tradition">{{#each traditions}}<option value="{{key}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>
         {{#if isShaman}}<label>{{sr2eT "SR2E.UI.totem"}} <input type="text" data-wiz="totem" value="{{totem}}" placeholder="{{sr2eT "SR2E.UI.eGBear"}}"></label>{{/if}}</div>{{/if}}

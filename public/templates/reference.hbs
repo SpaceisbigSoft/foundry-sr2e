@@ -1,0 +1,25 @@
+{{!-- v0.92.1: the reference pane beside the sheet (applications/reference.ts): one search over the Catalogue, the guide and the rules interpretations. --}}
+<div class="sr2e-ref-body">
+  <input type="search" class="sr2e-ref-search" placeholder="{{sr2eT "SR2E.UI.referenceSearch"}}" value="{{query}}" aria-label="{{sr2eT "SR2E.UI.referenceSearch"}}" autofocus>
+  <div class="sr2e-ref-kinds" role="group" aria-label="{{sr2eT "SR2E.UI.referenceKinds"}}">
+    {{#each kinds}}<a class="sr2e-ref-kind{{#if on}} active{{/if}}" data-action="refKind" data-kind="{{id}}" role="button" aria-pressed="{{#if on}}true{{else}}false{{/if}}">{{label}} <span class="sr2e-add-count">{{count}}</span></a>{{/each}}
+    <a class="sr2e-ref-reload" data-action="refReload" role="button" title="{{sr2eT "SR2E.UI.referenceReload"}}" aria-label="{{sr2eT "SR2E.UI.referenceReload"}}"><i class="fa-solid fa-rotate"></i></a>
+  </div>
+  {{#if empty}}
+  <p class="hint">{{sr2eT "SR2E.UI.referenceHint"}}</p>
+  {{else}}
+  <p class="hint">{{#if more}}{{sr2eT "SR2E.UI.referenceMore" shown=shown total=total}}{{else}}{{sr2eT "SR2E.UI.referenceShown" shown=shown}}{{/if}}</p>
+  <ul class="sr2e-ref-list">
+    {{#each results}}
+    <li class="sr2e-ref-row"{{#if draggable}} draggable="true" data-ref-drag data-id="{{id}}" data-type="{{type}}" data-name="{{name}}" title="{{sr2eT "SR2E.UI.referenceDragHint"}}"{{/if}}>
+      <a data-action="refOpen" data-kind="{{kind}}" data-id="{{id}}" data-type="{{type}}" role="button">
+        <i class="{{icon}}" aria-hidden="true"></i> <span class="sr2e-ref-name">{{name}}</span>
+        <span class="sr2e-ref-detail">{{detail}}</span>
+      </a>
+    </li>
+    {{else}}
+    <li class="hint">{{sr2eT "SR2E.UI.referenceNothing"}}</li>
+    {{/each}}
+  </ul>
+  {{/if}}
+</div>

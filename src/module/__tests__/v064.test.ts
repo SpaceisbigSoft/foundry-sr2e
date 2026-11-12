@@ -2,10 +2,11 @@
  * v0.64.0: creation, advancement and the approval queue. Glue checks with small stubs (the wizard, the
  * tabs and the windows themselves are checked in the live run), plus template and stylesheet checks.
  */
-import { test, describe, before, beforeEach } from 'node:test';
+import { test, describe, before, beforeEach, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { RULES } from '../rules/index.ts';
 
 const g = globalThis as any;
 let ap: typeof import('../applications/approvals.ts');
@@ -199,6 +200,10 @@ describe('v0.64.0 the advancement log (glue)', () => {
 });
 
 describe('v0.64.0 rating edits after creation (glue)', () => {
+  // v0.92.1: the old lock is RULES.SHEET_V921.ratingLock 'always' (the default 'queue' locks only with the queue on).
+  const lockWas = RULES.SHEET_V921.ratingLock;
+  before(() => { (RULES.SHEET_V921 as any).ratingLock = 'always'; });
+  after(() => { (RULES.SHEET_V921 as any).ratingLock = lockWas; });
   test('a player\'s typed raise is dropped; a GM\'s stays; money only with the queue on', () => {
     const a = character();
     a.flags.sr2e = { creation: { v: 1, finishedAt: 'x', attributes: {} } };

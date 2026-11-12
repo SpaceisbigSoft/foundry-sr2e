@@ -629,6 +629,12 @@ export const HOUSE_RULES: HouseRuleDef[] = [
   { section: "magicAndCritters", path: "MAGIC_V920.poolLayers", type: "select", choices: ["layered", "flat"] },
   { section: "magicAndCritters", path: "MAGIC_V920.castNarrow", type: "select", choices: ["on", "off"] },
   { section: "magicAndCritters", path: "MAGIC_V920.drainNarrow", type: "select", choices: ["on", "off"] },
+  // v0.92.1: the flexible record sheet (RULES.SHEET_V921); the first choice is the new way, the other the old one.
+  { section: "characters", path: "SHEET_V921.tweaks", type: "select", choices: ["on", "off"] },
+  { section: "characters", path: "SHEET_V921.carried", type: "select", choices: ["on", "off"] },
+  { section: "characters", path: "SHEET_V921.accessories", type: "select", choices: ["auto", "off"] },
+  { section: "characters", path: "SHEET_V921.wizard", type: "select", choices: ["advise", "block"] },
+  { section: "characters", path: "SHEET_V921.ratingLock", type: "select", choices: ["queue", "always"] },
   { section: "timeToGetThings", path: "WAITING.areas.magic", type: "boolean" },
   { section: "timeToGetThings", path: "WAITING.areas.gear", type: "boolean" },
   { section: "timeToGetThings", path: "WAITING.areas.repairs", type: "boolean" },

@@ -73,7 +73,7 @@ export const GUIDE_TOPICS: GuideTopic[] = [
   topic('tools', 'both', [], ['p', 'p', 'p']),
   topic('rules-v079', 'both', [], ['p', 11]),
   topic('rules-urr', 'both', [], ['p', 'p', 7, 'p']),
-  topic('sheet-tools', 'both', [], ['p', 2, 'p', 'p', 'p', 'p', 'p', 'p']),
+  topic('sheet-tools', 'both', [], ['p', 2, 'p', 'p', 'p', 'p', 'p', 'p', 'p']),
   topic('summary-bar', 'both', [], ['p', 3, 'p', 5, 'p']),
   topic('layouts', 'both', ['Defense', 'Actions'], ['p', 3, 'p', 4, 'p', 'p', 'p']),
   // ---------------------------------------------------------------- rolling
@@ -93,8 +93,8 @@ export const GUIDE_TOPICS: GuideTopic[] = [
   // ---------------------------------------------------------------- Current tab
   topic('current-tab', 'both', ['Body', 'Karma and money'], ['p', 5]),
   // ---------------------------------------------------------------- Combat tab
-  topic('weapons', 'both', ['Weapons', 'Armor'], ['p', 'p', 'p', 'p', 'p', 'p', 'p']),
-  topic('effects', 'both', ['In effect', 'Effects'], ['p', 'p']),
+  topic('weapons', 'both', ['Weapons', 'Armor'], ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p']),
+  topic('effects', 'both', ['In effect', 'Effects'], ['p', 'p', 'p']),
   // ---------------------------------------------------------------- Magic tab
   topic('magic', 'both', ['Magic', 'Geasa', 'Sustaining', 'Anchored', 'Foci', 'Adept powers', 'Sustaining powers', 'Under spells and powers'], ['p', 11, 'p', 3, 'p', 'p', 'p']),
   topic('conjuring', 'both', ['Attacks', 'Ally'], ['p', 'p', 'p', 6, 'p']),
@@ -108,13 +108,13 @@ export const GUIDE_TOPICS: GuideTopic[] = [
   topic('matrix', 'both', ['Matrix', 'Cyberdecks', 'Programs', 'Frames and agents', 'Downloaded data'], ['p', 10, 'p', 'p']),
   topic('rigging', 'both', ['Rigging'], ['p', 4, 'p', 'p', 'p', 'p']),
   // ---------------------------------------------------------------- Gear tab
-  topic('cyberware', 'both', ['Cyberware'], ['p', 'p']),
+  topic('cyberware', 'both', ['Cyberware'], ['p', 'p', 'p']),
   topic('gear', 'both', ['Gear', 'Other gear'], ['p', 'p', 'p', 'p']),
-  topic('item-sheet', 'both', ['Rating and kind', 'Concentration', 'Martial art', 'Firearm', 'Accessories', 'Ammunition', 'Blast', 'Shotgun', 'Missile', 'Flamethrower', 'Range', 'Range from Strength', 'Handling', 'Toxin and cybergun', 'Weight and mount', 'Turret', 'Cyberlimb', 'Cyberweapon', 'Features', 'Cyberears', 'Skill bonuses', 'Essence and grade', 'Bioware', 'Attribute bonuses', 'Identity', 'Magical site', 'Explosives and toxins', 'Chips', 'Tools', 'Vision and surveillance', 'Cost and legality'], ['p', 5, 'p']),
+  topic('item-sheet', 'both', ['Rating and kind', 'Concentration', 'Martial art', 'Firearm', 'Accessories', 'Ammunition', 'Blast', 'Shotgun', 'Missile', 'Flamethrower', 'Range', 'Range from Strength', 'Handling', 'Toxin and cybergun', 'Weight and mount', 'Turret', 'Cyberlimb', 'Cyberweapon', 'Features', 'Cyberears', 'Skill bonuses', 'Essence and grade', 'Bioware', 'Attribute bonuses', 'Identity', 'Magical site', 'Explosives and toxins', 'Chips', 'Tools', 'Vision and surveillance', 'Cost and legality'], ['p', 5, 'p', 'p', 'p']),
   topic('health', 'both', ['Addictions', 'Diseases'], ['p', 2, 'p']),
   // ---------------------------------------------------------------- Upkeep tab
   topic('money', 'both', ['Money and lifestyle', 'Ledger'], ['p', 3, 'p']),
-  topic('spend-karma', 'both', ['Karma', 'More', 'Recent Karma'], ['p', 'p', 4, 'p', 'p']),
+  topic('spend-karma', 'both', ['Karma', 'More', 'Recent Karma'], ['p', 'p', 4, 'p', 'p', 'p']),
   topic('under-way', 'both', ['Under way'], ['p', 'p', 3, 'p']),
   topic('contacts', 'both', ['Contacts'], ['p', 'p', 'p', 'p']),
   // ---------------------------------------------------------------- adding things
@@ -123,7 +123,7 @@ export const GUIDE_TOPICS: GuideTopic[] = [
   // v0.91.3: the Catalogue window.
   topic('catalogue', 'both', ['Stats and details'], ['p', 4, 'p']),
   // ---------------------------------------------------------------- creation
-  topic('creation-wizard', 'both', ['Character creation', 'Totals', 'Shopping'], ['p', 8, 'p', 'p', 'p']),
+  topic('creation-wizard', 'both', ['Character creation', 'Totals', 'Shopping'], ['p', 8, 'p', 'p', 'p', 'p']),
   topic('creation-record', 'both', ['Creation record', 'Advancement log', 'Build checks at the finish'], ['p', 'p', 'p', 'p']),
   topic('approval', 'both', ['Waiting for the GM', 'Requests from players'], ['p', 'p', 'p', 'p', 3, 'p']),
   // ---------------------------------------------------------------- Bio tab

@@ -16,6 +16,11 @@
   </div>
   {{else}}{{#if isGM}}<div class="sr2e-row sr2e-template sr2e-gm-only"><button type="button" data-action="saveTemplate" title="{{sr2eT "SR2E.UI.saveThisItemSSettingsAs"}}">{{sr2eT "SR2E.UI.saveAsTemplate"}}</button></div>{{/if}}{{/if}}
   {{#if itemWarnings.length}}<ul class="sr2e-warnings">{{#each itemWarnings}}<li>{{this}}</li>{{/each}}</ul>{{/if}}
+  {{#if carriedOn}}<div class="sr2e-row sr2e-carried-row">
+    <label title="{{sr2eT "SR2E.UI.carriedHint"}}">{{sr2eT "SR2E.UI.carried"}} <input type="checkbox" name="system.carried" {{checked system.carried}}></label>
+    {{#if leftBehind}}<span class="sr2e-warn">{{sr2eT "SR2E.UI.leftBehindHint"}}</span>{{/if}}
+  </div>{{/if}}
+  {{#if fromDescription}}<div class="sr2e-row sr2e-from-description"><span class="hint">{{fromDescription}}</span> <button type="button" data-action="undoDescription" title="{{sr2eT "SR2E.UI.undoDescriptionHint"}}"><i class="fa-solid fa-rotate-left"></i> {{sr2eT "SR2E.UI.undo"}}</button></div>{{/if}}
 
   {{#if (eq type "skill")}}
   <h3 class="sr2e-subhead" data-heading="Rating and kind">{{sr2eT "SR2E.UI.ratingAndKind"}}</h3>
@@ -293,6 +298,7 @@
     <label>{{sr2eT "SR2E.UI.installed"}} <input type="checkbox" name="system.installed" {{checked system.installed}}></label>
     <label title="{{sr2eT "SR2E.UI.biowareCostsBodyIndexInsteadOf"}}">{{sr2eT "SR2E.UI.bioware"}} <input type="checkbox" name="system.bioware" {{checked system.bioware}}></label>
     <label>{{sr2eT "SR2E.UI.bodyIndex"}} <input type="number" name="system.bodyIndex" value="{{system.bodyIndex}}" min="0" step="0.05"></label>
+    {{#if gradeEssence}}<span class="sr2e-grade-essence" title="{{sr2eT "SR2E.UI.atThisGradeHint"}}">{{sr2eT "SR2E.UI.atThisGrade" essence=gradeEssence.essence price=gradeEssence.price}}</span>{{/if}}
   </div>
   {{#if system.bioware}}
   <h3 class="sr2e-subhead" data-heading="Bioware">{{sr2eT "SR2E.UI.bioware"}}</h3>
@@ -788,6 +794,25 @@
     {{#if system.surveillance.plantedName}}<span>{{sr2eT "SR2E.UI.plantedOn"}} <strong>{{system.surveillance.plantedName}}</strong></span>{{/if}}{{/if}}
   </div>
   {{/if}}
+
+  <h3 class="sr2e-subhead" data-help="item-sheet" data-heading="Custom tweaks">{{sr2eT "SR2E.UI.customTweaks"}}{{#if editable}}{{#unless tweakFull}} <a class="sr2e-add" data-action="addTweak" title="{{sr2eT "SR2E.UI.addATweak"}}" aria-label="{{sr2eT "SR2E.UI.addATweak"}}"><i class="fa-solid fa-plus"></i></a>{{/unless}}{{/if}}</h3>
+  {{#if tweakRows.length}}
+  <ul class="sr2e-tweaks">
+    {{#each tweakRows}}
+    <li class="sr2e-row sr2e-tweak{{#unless on}} sr2e-dim{{/unless}}">
+      <input type="hidden" name="tweak.{{index}}.id" value="{{id}}">
+      <input type="text" class="sr2e-tweak-label" name="tweak.{{index}}.label" value="{{label}}" placeholder="{{sr2eT "SR2E.UI.tweakLabelPlaceholder"}}" aria-label="{{sr2eT "SR2E.UI.tweakLabel"}}">
+      <select name="tweak.{{index}}.target" aria-label="{{sr2eT "SR2E.UI.tweakKind"}}">{{selectOptions @root.tweakTargets selected=target valueAttr="key" labelAttr="label"}}</select>
+      {{#if keyChoices}}<select name="tweak.{{index}}.key" aria-label="{{sr2eT "SR2E.UI.tweakWhich"}}">{{selectOptions keyChoices selected=key valueAttr="key" labelAttr="label"}}</select>{{/if}}
+      {{#if keyText}}<input type="text" name="tweak.{{index}}.key" value="{{key}}" placeholder="{{sr2eT "SR2E.UI.tweakSkillPlaceholder"}}" aria-label="{{sr2eT "SR2E.UI.tweakSkill"}}">{{/if}}
+      {{#unless isNote}}<input type="number" class="sr2e-num" name="tweak.{{index}}.value" value="{{value}}" min="-{{@root.tweakValueMax}}" max="{{@root.tweakValueMax}}" aria-label="{{sr2eT "SR2E.UI.tweakValue"}}">{{/unless}}
+      <label title="{{sr2eT "SR2E.UI.tweakOnHint"}}"><input type="checkbox" name="tweak.{{index}}.on" {{checked on}}> {{sr2eT "SR2E.UI.tweakOn"}}</label>
+      <a data-action="deleteTweak" data-index="{{index}}" title="{{sr2eT "SR2E.UI.delete"}}" aria-label="{{sr2eT "SR2E.UI.delete"}}"><i class="fa-solid fa-trash"></i></a>
+    </li>
+    {{/each}}
+  </ul>
+  {{else}}<p class="hint">{{sr2eT "SR2E.UI.noTweaksHint"}}</p>{{/if}}
+  {{#if tweaksOff}}<p class="hint sr2e-warn">{{sr2eT "SR2E.UI.tweaksOffHint"}}</p>{{else}}{{#if tweakLive}}{{#if tweakRows.length}}<p class="hint">{{tweakLive}}</p>{{/if}}{{/if}}{{/if}}
 
   {{#if buyable}}
   <h3 class="sr2e-subhead" data-heading="Cost and legality">{{sr2eT "SR2E.UI.costAndLegality"}}</h3>

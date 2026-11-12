@@ -37,6 +37,7 @@ import { urrMagAstralModeFor, urrMagAdeptFoci } from '../rules/urr80-magic.ts';
 import { bleedEveryText } from '../rules/urr80-health-social.ts';
 import { magicPoolBase, sorceryRating } from '../rules/docs79-drones-magic.ts';
 import { poolLayers, narrowLeft, sorcerySkillOf } from '../rules/magicpool.ts';
+import { TWEAK_TARGETS, sumTweaks, isCarried } from '../rules/tweaks.ts';
 import * as U80C from '../rules/urr80-combat.ts';
 import { armorTotal } from '../rules/gear.ts';
 import { FEEDS } from '../rules/tactics.ts';
@@ -101,6 +102,27 @@ function skillModsField() {
     dice: new fields.NumberField({ required: true, integer: true, initial: 0 }),
     tn: new fields.NumberField({ required: true, integer: true, initial: 0 }),
   }));
+}
+
+/**
+ * v0.92.1: custom tweaks (rules/tweaks.ts): free-form, labelled modifiers on any item (an attribute, Reaction, initiative
+ * dice, a pool, a skill's dice or TN, damage Power, armor, or a note). Cleaned by normalizeTweaks wherever they are read.
+ */
+function tweaksField() {
+  const fields = f();
+  return new fields.ArrayField(new fields.SchemaField({
+    id: new fields.StringField({ required: true, initial: '' }),
+    label: new fields.StringField({ required: true, initial: '' }),
+    target: new fields.StringField({ required: true, initial: 'note', choices: [...TWEAK_TARGETS] }),
+    key: new fields.StringField({ required: true, initial: '' }),
+    value: new fields.NumberField({ required: true, integer: true, initial: 0 }),
+    on: new fields.BooleanField({ required: true, initial: true }),
+  }));
+}
+
+/** v0.92.1 (RULES.SHEET_V921.carried): carried on the person; what isn't has no weight, isn't searched and can't be used. */
+function carriedField() {
+  return new (f()).BooleanField({ required: true, initial: true });
 }
 
 /** v0.61.0: a drug's effects beyond attributes (armor, TNs, movement, ignoring wounds, ignoring Stun boxes). */
@@ -218,7 +240,7 @@ function cyberDerived(actor: any, ware: any[]) {
       ballistic: i.system.armorBallistic ?? 0, impact: i.system.armorImpact ?? 0 };
   });
   const wiring = { skillwires, chipjack, datajack };
-  const chipItems = [...(actor?.items ?? [])].filter((i: any) => i.type === 'gear' && i.system.chip?.kind);
+  const chipItems = [...(actor?.items ?? [])].filter((i: any) => i.type === 'gear' && i.system.chip?.kind && isCarried(i));
   const running = chipsRunning(chipItems.map((i: any) => ({ kind: i.system.chip.kind, rating: i.system.chip.rating ?? 0, slotted: Boolean(i.system.chip.slotted) })), chipSlots({ chipjacks, datajack, memoryMp }));
   const softs = chipItems.map((i: any, n: number) => {
     const chip = { name: i.name, kind: i.system.chip.kind, skill: i.system.chip.skill, rating: i.system.chip.rating, slotted: Boolean(i.system.chip.slotted) };
@@ -230,7 +252,7 @@ function cyberDerived(actor: any, ware: any[]) {
     return { gearId: i.id, ...chip, effective: blocked && enforce === 'block' ? 0 : r.rating, reason: blocked ? run.reason : r.reason, via: run.via };
   });
   // v0.58.0: worn vision gear (goggles, glasses, binoculars, visors) adds to the eyes.
-  const gearOptics = opticsOf([...(actor?.items ?? [])].filter((i: any) => i.type === 'gear').map((i: any) => ({ ...(i.system.optics ?? {}), damaged: Boolean(i.system.damaged) })));
+  const gearOptics = opticsOf([...(actor?.items ?? [])].filter((i: any) => i.type === 'gear' && isCarried(i)).map((i: any) => ({ ...(i.system.optics ?? {}), damaged: Boolean(i.system.damaged) })));
   const eyes = mergeVision({ magnification: max((i) => i.system.magnification), flareComp: live.some((i: any) => i.system.flareComp) }, gearOptics);
   return {
     smartlinkLevel: max((i) => Math.max(i.system.smartlinkLevel ?? 0, i.system.smartlink || /smart\s*-?link/i.test(i.name ?? '') ? 1 : 0)),
@@ -255,7 +277,7 @@ function cyberDerived(actor: any, ware: any[]) {
     /** v0.61.0: dice and TN for named skills from working ware and carried, undamaged gear. */
     skillMods: [
       ...live.filter((i: any) => (i.system.skillMods ?? []).length).map((i: any) => ({ name: i.name, mods: i.system.skillMods })),
-      ...[...(actor?.items ?? [])].filter((i: any) => i.type === 'gear' && !i.system.damaged && Number(i.system.quantity ?? 1) > 0 && (i.system.skillMods ?? []).length).map((i: any) => ({ name: i.name, mods: i.system.skillMods })),
+      ...[...(actor?.items ?? [])].filter((i: any) => i.type === 'gear' && isCarried(i) && !i.system.damaged && Number(i.system.quantity ?? 1) > 0 && (i.system.skillMods ?? []).length).map((i: any) => ({ name: i.name, mods: i.system.skillMods })),
     ],
   };
 }
@@ -744,9 +766,13 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
     // Damaged cyberware gives nothing until repaired.
     // Items still recovering from surgery (computed once; v0.81.0 RB-11).
     const healing = new Set(recoveringItemIds(sys.recovering ?? [], worldNow()));
+    // v0.92.1 (RULES.SHEET_V921.tweaks): the custom tweaks on the items that count now (rules/tweaks.ts).
+    const tw = sumTweaks([...((this as any).parent?.items ?? [])].map((i: any) => ({ id: i.id, name: i.name, type: i.type, system: i.system })), { recovering: healing, adeptOver: overIds });
     const installed = ware.filter((i: any) => i.system.installed && !i.system.damaged && !healing.has(i.id));
     const cyber = cyberDerived((this as any).parent, ware);
-    const initDice = capInitiativeDice(RULES.BASE_INITIATIVE_DICE + sys.initiativeDiceBonus + bonus.initiativeDice);
+    // v0.92.1: skill tweaks count as the gear skill bonuses do (one source per tweak).
+    if (tw.skillMods.length) cyber.skillMods = [...cyber.skillMods, ...tw.skillMods];
+    const initDice = capInitiativeDice(Math.max(1, RULES.BASE_INITIATIVE_DICE + sys.initiativeDiceBonus + bonus.initiativeDice + tw.initiativeDice));
     const limbOver = cyber.limbs.filter((l: any) => l.capacity.over).map((l: any) => tx('SR2E.App.Models.capacityOfUsed', { name: l.name, used: l.capacity.used, capacity: l.capacity.capacity }));
     // Cyber armor (not bioware) for orthoskin's conflict with dermal plating.
     const cyberOnly = installed.filter((i: any) => !i.system.bioware);
@@ -761,7 +787,7 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
     const applyRace = sys.racialModifiers !== false && this.usesMetatype();
     for (const k of ATTRIBUTE_KEYS) {
       const a = sys.attributes[k];
-      a.gear = bonus.attributes[k];
+      a.gear = bonus.attributes[k] + (tw.attributes[k] ?? 0);
       a.racial = applyRace ? racialModifier(sys.metatype, k) : 0;
       // v0.73.0 (O34): racial modifiers can't take an attribute below RULES.CHARACTERS_V73.racialFloor.min.
       a.rawNatural = this.attributeBase(k) + a.racial;
@@ -785,7 +811,7 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
       for (const k of ATTRIBUTE_KEYS) if (p[k] !== totals[k]) { sys.attributes[k].total = p[k]; totals[k] = p[k]; }
     }
     // Armor encumbrance: worn armor heavier than Quickness slows the wearer.
-    const worn = [...((this as any).parent?.items ?? [])].filter((i: any) => i.type === 'armor' && i.system.worn);
+    const worn = [...((this as any).parent?.items ?? [])].filter((i: any) => i.type === 'armor' && i.system.worn && isCarried(i));
     const encumbrance = U80C.cbtEncumbrance(encumbrancePenalty(
       worn.reduce((n: number, i: any) => n + (i.system.ballistic ?? 0), 0),
       worn.reduce((n: number, i: any) => n + (i.system.impact ?? 0), 0),
@@ -799,7 +825,8 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
       totals.quickness = sys.attributes.quickness.total;
     }
     // Carried weight (v0.37.0): over Strength × 10 kg slows the carrier (worn armor counts too).
-    const carried0 = [...((this as any).parent?.items ?? [])].reduce((n: number, i: any) => n + Math.max(0, Number(i.system?.weight ?? 0)) * Math.max(0, Number(i.system?.quantity ?? 1)), 0);
+    // v0.92.1 (RULES.SHEET_V921.carried): what is left behind weighs nothing.
+    const carried0 = [...((this as any).parent?.items ?? [])].filter((i: any) => isCarried(i)).reduce((n: number, i: any) => n + Math.max(0, Number(i.system?.weight ?? 0)) * Math.max(0, Number(i.system?.quantity ?? 1)), 0);
     // v0.58.0: bone lacing is carried too.
     const carried = carried0 + Number(cyber.lacing.weight ?? 0);
     const load = carriedLoad(carried, totals.strength);
@@ -811,7 +838,9 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
     const senses = improvedSenses(adept as any);
     // v0.54.0: physical adepts get no Spell Pool (RULES.ADEPT.spellPool).
     const poolMagic = sys.tradition === 'adept' && !RULES.ADEPT.spellPool ? 0 : magic;
-    const d0 = deriveStats(totals, { magic: poolMagic, reactionBonus: sys.reactionBonus + bonus.reaction });
+    const d0 = deriveStats(totals, { magic: poolMagic, reactionBonus: sys.reactionBonus + bonus.reaction + tw.reaction });
+    // v0.92.1 review (B3): a negative tweak never takes Reaction below 0.
+    if (tw.reaction < 0) d0.reaction = Math.max(0, d0.reaction);
     // v0.79.0 (RULES.DOCS_V79.magicPool.size 'sorcery', SR2 p85): the Spell (Magic) Pool is the Sorcery rating (a power
     // focus still adds below, as v0.78.0); 'attributes': (Int + Wil + Magic) / 3 as before.
     // An adept's Spell Pool exists only as a house rule (RULES.ADEPT.spellPool); adepts rarely have Sorcery, so that
@@ -826,8 +855,9 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
     // v0.78.0 (RULES.BOOK_V78.powerFocus 'magic'): a power focus adds its rating to the Spell Pool and to the Magic for drain.
     const powerFocus = poolMagic > 0 ? powerFocusRating(foci) : 0;
     // v0.78.0 (RULES.BOOK_V78.combatSense 'pool', Core Rules): an adept's Combat Sense adds its level to the Combat Pool.
-    const combatPool = Math.max(0, d.combatPool - armorPool80) + threat + (RULES.BOOK_V78.combatSense === 'pool' ? adeptSpecialLevel(adept as any, 'combatSense') * RULES.ADEPT.combatSense.dicePerLevel : 0);
-    const spellPool = d.spellPool + powerFocus;
+    const combatPool = Math.max(0, Math.max(0, d.combatPool - armorPool80) + threat + (RULES.BOOK_V78.combatSense === 'pool' ? adeptSpecialLevel(adept as any, 'combatSense') * RULES.ADEPT.combatSense.dicePerLevel : 0) + (tw.pools.combat ?? 0));
+    // v0.92.1 review (N10): a Spell Pool tweak only for someone with a Spell Pool.
+    const spellPool = Math.max(0, d.spellPool + powerFocus + (poolMagic > 0 ? (tw.pools.spell ?? 0) : 0));
     sys.derived = {
       // v0.72.0: health edges and flaws, and Shadowtech bioware vitals (rules/vitals.ts).
       vitals: { ...qv, overflowBody: overflowBody(totals.body, qv) },
@@ -838,8 +868,8 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
       drainMagic: magic + powerFocus,
       combatPoolLeft: Math.max(0, combatPool - sys.poolSpent.combat),
       // v0.78.0: an encephalon's Task Pool (Shadowtech; RULES.BOOK_V78.encephalon) for the skills it helps.
-      taskPool: encephalonTaskPool(Number(cyber.encephalon ?? 0)),
-      taskPoolLeft: Math.max(0, encephalonTaskPool(Number(cyber.encephalon ?? 0)) - Number(sys.poolSpent.task ?? 0)),
+      taskPool: Math.max(0, encephalonTaskPool(Number(cyber.encephalon ?? 0)) + (tw.pools.task ?? 0)),
+      taskPoolLeft: Math.max(0, encephalonTaskPool(Number(cyber.encephalon ?? 0)) + (tw.pools.task ?? 0) - Number(sys.poolSpent.task ?? 0)),
       // v0.44.0: walking and running rates, and Street Cred.
       // v0.56.0: a Movement power (or spell) multiplies or divides it.
       movement: movementWithFactor(movementRates(totals.quickness, this.usesMetatype() ? race.run : RULES.COMBAT.movement.run), fxSum.movementFactor),
@@ -917,27 +947,30 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
       smartlink: cyber.smartlinkLevel > 0,
       cyber,
       cyberWarnings,
+      // v0.92.1: the custom tweaks (the sheet's list; attack Power per weapon and for every melee or ranged attack).
+      tweaks: { list: tw.list, damage: tw.damage, weaponSelf: tw.weaponSelf },
       // Cyberware armor, plus a troll's natural dermal armor.
       cyberArmor: {
         // Cyberlimbs' own armor is added per hit (armorRating, v0.43.0).
-        ballistic: installed.filter((i: any) => i.system.kind !== 'cyberlimb').reduce((n: number, i: any) => n + (i.system.armorBallistic ?? 0), 0) + (this.usesMetatype() ? race.dermal : 0) + bw.ballistic,
-        impact: installed.filter((i: any) => i.system.kind !== 'cyberlimb').reduce((n: number, i: any) => n + (i.system.armorImpact ?? 0), 0) + (this.usesMetatype() ? race.dermal : 0) + bw.impact,
+        ballistic: installed.filter((i: any) => i.system.kind !== 'cyberlimb').reduce((n: number, i: any) => n + (i.system.armorBallistic ?? 0), 0) + (this.usesMetatype() ? race.dermal : 0) + bw.ballistic + tw.armor.ballistic,
+        impact: installed.filter((i: any) => i.system.kind !== 'cyberlimb').reduce((n: number, i: any) => n + (i.system.armorImpact ?? 0), 0) + (this.usesMetatype() ? race.dermal : 0) + bw.impact + tw.armor.impact,
       },
     };
-    Object.assign(sys.derived, deckerDerived((this as any).parent, sys, totals.intelligence, totals as unknown as Record<string, number>));
-    Object.assign(sys.derived, riggerDerived(sys, installed, d.reaction, bonus, [...((this as any).parent?.items ?? [])]));
+    Object.assign(sys.derived, deckerDerived((this as any).parent, sys, totals.intelligence, totals as unknown as Record<string, number>, tw.pools.hacking ?? 0));
+    Object.assign(sys.derived, riggerDerived(sys, installed, d.reaction, bonus, [...((this as any).parent?.items ?? [])], tw.pools.control ?? 0));
   }
 }
 
 /** Rigger values: control rig, rigged Reaction and initiative, Control Pool, the vehicle driven. */
-function riggerDerived(sys: any, installed: any[], reaction: number, bonus: { reaction: number; initiativeDice: number }, items: any[] = []) {
+function riggerDerived(sys: any, installed: any[], reaction: number, bonus: { reaction: number; initiativeDice: number }, items: any[] = [], tweakPool = 0) {
   const vcr = controlRigRating(installed.map((i: any) => i.system));
-  const rcd = items.filter((i: any) => i.type === 'gear').reduce((n: number, i: any) => Math.max(n, Math.floor(i.system?.rcdRating ?? 0)), 0);
+  const rcd = items.filter((i: any) => i.type === 'gear' && isCarried(i)).reduce((n: number, i: any) => Math.max(n, Math.floor(i.system?.rcdRating ?? 0)), 0);
   const subscribed: string[] = [...(sys.rigging?.subscribed ?? [])];
   const rigged = riggedStats({ reaction, cyberReaction: bonus.reaction, cyberDice: bonus.initiativeDice + (sys.initiativeDiceBonus ?? 0), vcr });
   const vehicleUuid = String(sys.rigging?.vehicleUuid ?? '');
   const jumpedIn = Boolean(sys.rigging?.jumpedIn) && vehicleUuid !== '';
-  const pool = controlPool({ reaction, riggedReaction: rigged.reaction, vcr });
+  // v0.92.1: a Control Pool tweak.
+  const pool = Math.max(0, controlPool({ reaction, riggedReaction: rigged.reaction, vcr }) + tweakPool);
   const usable = !RULES.RIGGING.controlPool.onlyJumpedIn || jumpedIn;
   return {
     controlPool: pool,
@@ -955,7 +988,7 @@ export function activeDeckOf(actor: any): any | null {
 }
 
 /** Decker values: Hacking Pool, Matrix Reaction/initiative, persona and Detection Factor (none without a deck). */
-function deckerDerived(actor: any, sys: any, intelligence: number, totals: Record<string, number> = {}) {
+function deckerDerived(actor: any, sys: any, intelligence: number, totals: Record<string, number> = {}, tweakPool = 0) {
   const item = activeDeckOf(actor);
   const spent = sys.poolSpent?.hacking ?? 0;
   if (!item) return { hackingPool: 0, hackingPoolLeft: 0, matrix: null };
@@ -974,7 +1007,8 @@ function deckerDerived(actor: any, sys: any, intelligence: number, totals: Recor
   const inFilterHost = Boolean(item.system.realityFilter) && Boolean(fl?.hostUuid) && fl.hostUuid === (sys.matrix?.hostUuid ?? '');
   const filter = realityFilterEffect(inFilterHost && Number(fl.ok) >= 0 ? Number(fl.ok) === 1 : null);
   const fullPool = hackingPool(intelligence, d.mpcp) + filter.pool;
-  const pool = tortoise ? tortoisePool(fullPool) : fullPool;
+  // v0.92.1: a Hacking Pool tweak counts while a deck is in use.
+  const pool = Math.max(0, (tortoise ? tortoisePool(fullPool) : fullPool) + tweakPool);
   const sim = tortoise && RULES.MATRIX.tortoise.coldOnly ? 'cold' : (sys.matrix?.sim ?? 'cold');
   const files = [...(base.files ?? [])];
   const storageUsed = files.reduce((s: number, f: any) => s + Math.max(0, f.size ?? 0), 0);
@@ -1151,6 +1185,8 @@ export class SkillDataModel extends foundry.abstract.TypeDataModel {
         defense: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
       }),
       description: new fields.HTMLField({ required: true, initial: '' }),
+      /** v0.92.1: custom tweaks (rules/tweaks.ts). */
+      tweaks: tweaksField(),
     };
   }
 }
@@ -1279,6 +1315,10 @@ export class WeaponDataModel extends foundry.abstract.TypeDataModel {
       streetIndex: new fields.NumberField({ required: true, min: 0, initial: 1 }),
       ...legalFields(),
       description: new fields.HTMLField({ required: true, initial: '' }),
+      /** v0.92.1: custom tweaks (rules/tweaks.ts). */
+      tweaks: tweaksField(),
+      /** v0.92.1: carried on the person (RULES.SHEET_V921.carried). */
+      carried: carriedField(),
     };
   }
 }
@@ -1310,6 +1350,10 @@ export class ArmorDataModel extends foundry.abstract.TypeDataModel {
       streetIndex: new fields.NumberField({ required: true, min: 0, initial: 1 }),
       ...legalFields(),
       description: new fields.HTMLField({ required: true, initial: '' }),
+      /** v0.92.1: custom tweaks (rules/tweaks.ts). */
+      tweaks: tweaksField(),
+      /** v0.92.1: carried on the person (RULES.SHEET_V921.carried). */
+      carried: carriedField(),
     };
   }
 }
@@ -1470,6 +1514,10 @@ export class GearDataModel extends foundry.abstract.TypeDataModel {
         data: new fields.ObjectField({ required: true, initial: {} }),
       }),
       description: new fields.HTMLField({ required: true, initial: '' }),
+      /** v0.92.1: custom tweaks (rules/tweaks.ts). */
+      tweaks: tweaksField(),
+      /** v0.92.1: carried on the person (RULES.SHEET_V921.carried). */
+      carried: carriedField(),
     };
   }
 }
@@ -1560,6 +1608,8 @@ export class CyberwareDataModel extends foundry.abstract.TypeDataModel {
       streetIndex: new fields.NumberField({ required: true, min: 0, initial: 1 }),
       ...legalFields(),
       description: new fields.HTMLField({ required: true, initial: '' }),
+      /** v0.92.1: custom tweaks (rules/tweaks.ts). */
+      tweaks: tweaksField(),
     };
   }
 }
@@ -1612,6 +1662,8 @@ export class SpellDataModel extends foundry.abstract.TypeDataModel {
       effects: effectsField(),
       effectPerSuccess: new fields.BooleanField({ required: true, initial: false }),
       description: new fields.HTMLField({ required: true, initial: '' }),
+      /** v0.92.1: custom tweaks (rules/tweaks.ts). */
+      tweaks: tweaksField(),
     };
   }
 }
@@ -1667,6 +1719,8 @@ export class PowerDataModel extends foundry.abstract.TypeDataModel {
       /** Range or area, action type, duration: free text shown on the sheet. */
       notes: new fields.StringField({ required: true, initial: '' }),
       description: new fields.HTMLField({ required: true, initial: '' }),
+      /** v0.92.1: custom tweaks (rules/tweaks.ts). */
+      tweaks: tweaksField(),
     };
   }
 }
@@ -1694,6 +1748,8 @@ export class FocusDataModel extends foundry.abstract.TypeDataModel {
       streetIndex: new fields.NumberField({ required: true, min: 0, initial: 1 }),
       ...legalFields(),
       description: new fields.HTMLField({ required: true, initial: '' }),
+      /** v0.92.1: custom tweaks (rules/tweaks.ts). */
+      tweaks: tweaksField(),
     };
   }
 }
@@ -1719,6 +1775,8 @@ export class AdeptPowerDataModel extends foundry.abstract.TypeDataModel {
       /** v0.56.0: improved senses: the sense it gives. */
       sense: new fields.StringField({ required: true, blank: true, initial: '', choices: [...ADEPT_SENSES] }),
       description: new fields.HTMLField({ required: true, initial: '' }),
+      /** v0.92.1: custom tweaks (rules/tweaks.ts). */
+      tweaks: tweaksField(),
     };
   }
 }
@@ -1787,6 +1845,8 @@ export class CyberdeckDataModel extends foundry.abstract.TypeDataModel {
       streetIndex: new fields.NumberField({ required: true, min: 0, initial: 1 }),
       ...legalFields(),
       description: new fields.HTMLField({ required: true, initial: '' }),
+      /** v0.92.1: custom tweaks (rules/tweaks.ts). */
+      tweaks: tweaksField(),
     };
   }
 }
@@ -1823,6 +1883,8 @@ export class ProgramDataModel extends foundry.abstract.TypeDataModel {
       streetIndex: new fields.NumberField({ required: true, min: 0, initial: 1 }),
       ...legalFields(),
       description: new fields.HTMLField({ required: true, initial: '' }),
+      /** v0.92.1: custom tweaks (rules/tweaks.ts). */
+      tweaks: tweaksField(),
     };
   }
 }

@@ -526,6 +526,13 @@ export class SR2AddWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     const actor = this.actor;
     if (!actor || this.#busy || !this.ticked.size) return;
     const first = this.#plan();
+    // v0.92.1 (RULES.SHEET_V921.wizard 'advise'): in creation, gear over the budget is added anyway (the cash follows the
+    // Resources priority, and the build check shows the overspend); only a shortfall of nuyen is let through.
+    let payment = this.payment;
+    if (first.problems.length && this.payment === 'buy' && RULES.SHEET_V921.wizard === 'advise' && inCreation(actor)) {
+      const rest = basketPlan(this.#basket(), { payment: 'buy', actorType: actor.type ?? 'npc', nuyen: Number.MAX_SAFE_INTEGER, karma: Number(actor.system?.karma?.good ?? 0) });
+      if (!rest.problems.length) { ui.notifications?.info?.(tx('SR2E.Notify.Adding.overBudgetInCreation')); payment = 'free'; first.problems.length = 0; }
+    }
     if (first.problems.length) { for (const p of first.problems) ui.notifications?.warn?.(escHtml(p)); return; }
     if (this.payment === 'find') return this.#find();
     this.#busy = true;
@@ -550,7 +557,7 @@ export class SR2AddWindow extends HandlebarsApplicationMixin(ApplicationV2) {
           data: { payment: this.payment, ready, lines: lines.map(({ key: k, ...l }) => (l.type === 'vehicle' ? { ...l, key: k } : l)) } })) { this.ticked.clear(); await this.render(); }
         return;
       }
-      const made = await addLines(actor, lines.map(({ kitData: _k, ...l }: any) => l), this.payment, ready);
+      const made = await addLines(actor, lines.map(({ kitData: _k, ...l }: any) => l), payment as AddPayment, ready);
       // A kit's lines are keyed "kit:<id>#<n>": any made unticks the kit.
       for (const k of made) this.ticked.delete(String(k).split('#')[0]!);
       await this.render();

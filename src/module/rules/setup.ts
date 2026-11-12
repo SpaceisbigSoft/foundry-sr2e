@@ -331,7 +331,7 @@ export function itemPilesConfig(o: { version: string; nuyenImg: string }): Recor
     // the old copy named a missing `system.explosive.rating`). A rating 3 medkit isn't a rating 6 one.
     // v0.81.1 (RC2-2): the list is every gear field now; the one array field (skillMods) is left out, since a value
     // compare of two arrays is never equal.
-    ITEM_SIMILARITIES: ['name', 'type', ...GEAR_STACK_FIELDS.filter((f) => f !== 'skillMods').map((f) => `system.${f}`)],
+    ITEM_SIMILARITIES: ['name', 'type', ...GEAR_STACK_FIELDS.filter((f) => f !== 'skillMods' && f !== 'tweaks').map((f) => `system.${f}`)],
     // Only gear stacks: every other physical item is one thing per item (its quantity is always 1).
     UNSTACKABLE_ITEM_TYPES: ['weapon', 'armor', 'cyberware', 'focus', 'cyberdeck', 'program'],
     CURRENCIES: [{ type: 'attribute', name: 'Nuyen', img: o.nuyenImg, abbreviation: '¥{#}', data: { path: 'system.nuyen' }, primary: true, exchangeRate: 1 }],

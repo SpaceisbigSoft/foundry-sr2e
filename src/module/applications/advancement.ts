@@ -11,9 +11,10 @@
 import { SYSTEM } from '../config/system.ts';
 import {
   creationRecordFrom, composeAdvancementV73, appendAdvancement, ledgerAdded, itemRaises, actorRaises, LOGGED_ITEM_TYPES, RULES_ADVANCEMENT,
-  ratingLockApplies, lockedRaises, type AdvanceEvent, type AdvanceLine, type CreationRecord, type BuildRow,
+  ratingLockApplies, lockedRaises, normalizeTweaks, type AdvanceEvent, type AdvanceLine, type CreationRecord, type BuildRow,
 } from '../rules/index.ts';
 import { creationRecordOf, approvalContext, queueOn, inCreation, RECORD_FLAG, DRAFT_FLAG } from './approvals.ts';
+import { RULES } from '../rules/config.ts';
 import { urrCoreStartPool } from '../rules/urr80-core.ts';
 import { madeHere } from './leader.ts';
 import { t as tx, tCount } from '../helpers/i18n.ts';
@@ -175,9 +176,24 @@ export function registerAdvancementHooks(): void {
 
 /** Does the lock apply to this user on this actor? */
 export function ratingLocked(actor: any): boolean {
+  // v0.92.1 (RULES.SHEET_V921.ratingLock 'queue', the owner's choice: "everything stays editable after creation"): the
+  // lock holds only while the GM's approval queue is on; 'always' is the old lock.
+  if (RULES.SHEET_V921.ratingLock === 'queue' && !queueOn()) return false;
   // A character made before the wizard (no record, not in the wizard) counts as finished while the approval queue is on.
   const finished = Boolean(creationRecordOf(actor)) || (queueOn() && !inCreation(actor));
   return ratingLockApplies({ isGM: Boolean(game.user?.isGM), actorType: String(actor?.type ?? ''), finished });
+}
+
+/**
+ * v0.92.1: a player's raise typed in after creation, with the lock off ('queue' and no approval queue): kept, with a
+ * notice that it skipped Spend Karma (the advancement log records the change as it does every change).
+ */
+export function noteUnlockedRaises(doc: any, kind: 'actor' | 'item', changes: Record<string, unknown>): number {
+  const actor = kind === 'item' ? doc?.parent : doc;
+  if (game.user?.isGM || actor?.type !== 'character' || !creationRecordOf(actor) || ratingLocked(actor)) return 0;
+  const hit = lockedRaises(kind, String(doc?.type ?? ''), (k) => foundry.utils.getProperty(doc, k), changes).filter((h) => h.key !== 'system.essence');
+  if (hit.length) ui.notifications?.info?.(tx('SR2E.Notify.Advancement.raisedWithoutKarma'));
+  return hit.length;
 }
 
 /**
@@ -186,15 +202,26 @@ export function ratingLocked(actor: any): boolean {
  */
 export function refuseLockedRaises(doc: any, kind: 'actor' | 'item', changes: Record<string, unknown>): string[] {
   const actor = kind === 'item' ? doc?.parent : doc;
-  if (!ratingLocked(actor)) return [];
+  if (!ratingLocked(actor)) { noteUnlockedRaises(doc, kind, changes); return []; }
   const hit = lockedRaises(kind, String(doc?.type ?? ''), (k) => foundry.utils.getProperty(doc, k), changes);
+  // v0.92.1 review (R7): while the lock holds, a player's new or changed custom tweak (other than a note, or one switched
+  // off or removed) is refused too: a tweak would otherwise raise what the lock protects.
+  const tweakHit = kind === 'item' && Object.prototype.hasOwnProperty.call(changes, 'system.tweaks') && tweaksRaise(doc?.system?.tweaks, changes['system.tweaks']);
+  if (tweakHit) { delete changes['system.tweaks']; ui.notifications?.warn?.(tx('SR2E.Notify.Advancement.tweaksLocked')); }
   // With the approval queue on, typing more nuyen or Karma is refused too (the GM awards them).
   const money = kind === 'actor' && queueOn() ? MONEY_FIELDS.filter((k) => Object.prototype.hasOwnProperty.call(changes, k) && Number(changes[k]) > Number(foundry.utils.getProperty(doc, k) ?? 0)) : [];
   for (const h of hit) delete changes[h.key];
   for (const k of money) delete changes[k];
   if (hit.length) ui.notifications?.warn?.(tx('SR2E.Notify.Advancement.creationIsFinishedRaiseWithSpend', { part: hit.length === 1 ? tx('SR2E.Notify.Advancement.thatRating') : tx('SR2E.Notify.Advancement.thoseRatings') }));
   if (money.length) ui.notifications?.warn?.(tx('SR2E.Notify.Advancement.theApprovalQueueIsOnThe'));
-  return [...hit.map((h) => h.key), ...money];
+  return [...hit.map((h) => h.key), ...money, ...(tweakHit ? ['system.tweaks'] : [])];
+}
+
+/** v0.92.1 review (R7): whether a tweak list adds or strengthens a counting tweak (a note, one switched off or removed is fine). */
+export function tweaksRaise(before: unknown, after: unknown): boolean {
+  const key = (t: any) => `${t.target}|${t.key}|${t.value}`;
+  const had = new Set(normalizeTweaks(before).filter((t) => t.on && t.target !== 'note').map(key));
+  return normalizeTweaks(after).some((t) => t.on && t.target !== 'note' && t.value !== 0 && !had.has(key(t)));
 }
 
 const MONEY_FIELDS = ['system.nuyen', 'system.karma.good', 'system.karma.career', 'system.karma.pool'];

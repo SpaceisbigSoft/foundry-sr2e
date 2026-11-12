@@ -7,6 +7,7 @@ import { registerSceneBuilder, openSceneBuilder, buildScene, applyToScene, remov
 import { registerInterpretations, SR2Interpretations } from "./applications/interpretations.ts";
 import { SR2NewEntry } from "./applications/newentry.ts";
 import { registerShopButton, openShop } from "./applications/adding.ts";
+import { registerReference, openReference } from "./applications/reference.ts";
 import { SR2Codex } from "./applications/codex.ts";
 import {
   CharacterDataModel, SpiritDataModel, BarrierDataModel, SkillDataModel, WeaponDataModel, ArmorDataModel, GearDataModel, CyberwareDataModel, SpellDataModel, PowerDataModel, FocusDataModel, AdeptPowerDataModel,
@@ -95,6 +96,8 @@ export class SR2System {
           openShop: (actor?: any) => openShop(actor),
           // v0.91.3: the Catalogue ({ type, key }: a tab and an entry's page).
           openCatalogue: (o: { type?: string; key?: string } = {}) => SR2Codex.open(o),
+          // v0.92.1: the reference pane beside an actor's sheet.
+          reference: (actor: any) => openReference(actor),
           // v0.89.8: every tool in one place.
           openTools, runTool,
           // v0.90.2: sort the "Catalogue (SR2e)" actor folder into subfolders (also runs after every catalogue load).
@@ -149,6 +152,8 @@ export class SR2System {
     // v0.87.0: the Print button on character, NPC and spirit sheets; Report a bug (Configure Settings and the guide).
     registerPrint();
     registerShopButton();
+    // v0.92.1: the reference pane's book button on character and NPC sheets.
+    registerReference();
     registerTours();
     // v0.67.0: the look (themes, presets, fonts, chat cards) and portraits found by name.
     registerLookSettings();

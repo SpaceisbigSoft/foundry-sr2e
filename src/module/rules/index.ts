@@ -106,3 +106,6 @@ export * from './urr80-magic.ts';
 export * from './html.ts';
 export * from './backdrops.ts';
 export * from './scenebuilder.ts';
+export * from './tweaks.ts';
+export * from './accessories.ts';
+export * from './reference.ts';
