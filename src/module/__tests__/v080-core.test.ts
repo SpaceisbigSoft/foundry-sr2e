@@ -12,7 +12,6 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { RULES, attributeMaximums, attributeMaximumsWith, effectiveMagic, nativeLanguageRating, karmaAward, skillCost, parseSkillWeb, webDistance, relatedDefaultTn } from '../rules/index.ts';
 import { urrMode } from '../rules/__tests__/urrmode.ts';
-import { oldWay } from '../rules/__tests__/oldway.ts';
 
 const g = globalThis as any;
 const faces: number[] = [];

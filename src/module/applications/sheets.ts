@@ -54,7 +54,7 @@ import { bioKindsV72, bioVitals, smokeCounts, ammoChoices, findAmmo, isKnownAmmo
 import { sheafFor } from "../rules/sheafgen.ts";
 import * as U80C from "../rules/urr80-combat.ts";
 import * as C923 from "../rules/combat923.ts";
-import { urrCoreTnPresetRow, urrCoreKarmaDiceRow, urrCoreInstructorRule } from "../rules/urr80-core.ts";
+import { urrCoreTnPresetRow, urrCoreInstructorRule } from "../rules/urr80-core.ts";
 // v0.92.3 book alignment, core mechanics and characters (RULES.CORE_V923).
 import * as CO923 from "../rules/core923.ts";
 import { sensorTableRows, sensorTableModifiers, segRows, segConditionModifiers } from "../rules/docs79-vehicles.ts";

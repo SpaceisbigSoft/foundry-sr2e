@@ -8,7 +8,6 @@ import { oldWay } from '../rules/__tests__/oldway.ts';
 import { SPIRITS_V922_WAY } from '../rules/__tests__/spirits922.ts';
 import assert from 'node:assert/strict';
 import { RULES } from '../rules/index.ts';
-import { oldWay } from '../rules/__tests__/oldway.ts';
 // v0.92.3: this file pins the v0.92.2 conjuring, astral and initiation rules (the book way: v0923-spirits.test.ts).
 let spirits922: () => void = () => {};
 before(() => { spirits922 = oldWay(SPIRITS_V922_WAY); });
