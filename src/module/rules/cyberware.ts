@@ -1,8 +1,9 @@
 import { RULES, type CyberGrade } from './config.ts';
 import type { Attributes } from './stats.ts';
 import { urrCoreEssenceRound } from './urr80-core.ts';
-import { round2, own } from './util.ts';
+import { round2 } from './util.ts';
 import { t as tx } from '../helpers/i18n.ts';
+import { gradedEssence, gradeCostFactor } from './gear923.ts';
 
 export type AttributeBonuses = Partial<Record<keyof Attributes, number>>;
 
@@ -25,7 +26,8 @@ export interface Augmentation {
 
 /** Essence actually lost to one item after its grade multiplier. */
 export function essenceLoss(item: Pick<Augmentation, 'essenceCost' | 'grade'>): number {
-  return round2(Math.max(0, item.essenceCost) * RULES.GRADE_ESSENCE_MULTIPLIER[item.grade]);
+  // v0.92.3 (RULES.GEAR_V923.grades 'book', SSC; Cybertechnology p. 44): beta × .6, rounded up, never below .05.
+  return gradedEssence(item.essenceCost, item.grade);
 }
 
 export function totalEssenceLoss(items: readonly Augmentation[]): number {
@@ -161,7 +163,8 @@ export function limbCapacity(capacity: number, housed: ReadonlyArray<Pick<Augmen
 
 /** Nuyen cost after the grade multiplier. */
 export function cyberCost(cost: number, grade: string): number {
-  return Math.round(Math.max(0, cost) * (own(CW().gradeCost, grade) ?? 1));
+  // v0.92.3 (RULES.GEAR_V923.grades 'book'): × 3 / 7 / 10 (SSC; Cybertechnology p. 44); 'old': CYBERWARE.gradeCost.
+  return Math.round(Math.max(0, cost) * gradeCostFactor(grade));
 }
 
 /** A skillsoft (chip) as the wearer can use it. */

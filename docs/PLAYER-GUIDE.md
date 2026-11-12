@@ -571,7 +571,7 @@ Each weapon, armor and gear row has a suitcase: click it to leave the thing behi
 
 Cyberware and bioware, each with an *Installed* tick box. Ticking it by hand skips the surgery: use it for ware fitted before play. Ware that isn't installed has a **Surgery** button: pick who operates, the care while recovering, and whether to pay for a hospital. Recovery shows under the list with the days left; the bed icon changes the care (the GM's × ends it). Damaged ware has **Repair**; the burst or wrench icon marks it damaged or repaired. An adrenal pump has **Activate** and **Switch off**.
 
-Lines under the list show the Body Index and other notes, and a **Rejection test** button when over the limit.
+Lines under the list show the Body Index and other notes. Over the limit the character is in system shock (+1 TN per point over on Body tests); under the old house rule a **Rejection test** button shows instead.
 
 A grade changes the Essence and the price. The item's Essence field keeps the standard cost; its sheet shows **At this grade** with the Essence and price the grade gives. Hover over the Essence line on the Main tab to see which ware makes up the loss.
 

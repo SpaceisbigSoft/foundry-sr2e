@@ -4424,7 +4424,8 @@ function occultContext(actor: any) {
     familiar: (() => { const f = actor.getFlag?.("sr2e", "familiar"); return f?.allyUuid ? { name: f.allyName ?? tx('SR2E.App.Sheets.anAlly'), ready: familiarReady(f) } : null; })(),
     possessedSkills: actor.getFlag?.("sr2e", "possessedBy")?.skills ? RULES.OCCULT.metamagic.possessing.skills : "",
     pendingDeed: actor.getFlag?.("sr2e", "pendingInitiation")?.grade ?? 0,
-    rejectionDue: Boolean(bi?.over) && RULES.BIOWARE.rejection.enabled,
+    // v0.92.3 (RULES.GEAR_V923.overBodyIndex 'shock'): system shock instead of the rejection test.
+    rejectionDue: Boolean(bi?.over) && RULES.BIOWARE.rejection.enabled && !(RULES.GEAR_V923.overBodyIndex === 'shock' && !RULES.URR_V80.active),
   };
 }
 
@@ -6116,6 +6117,9 @@ function summaryContext(actor: any): any {
   const sustained = (sys.sustaining ?? []).filter((x: any) => !x.focusId && !x.quickened && !x.spiritUuid).length;
   if (sustained) chips.push(tx('SR2E.App.Sheets.sustaining', { count: sustained }));
   if (d.encumbrance) chips.push(tx('SR2E.App.Sheets.encumbered', { value: d.encumbrance }));
+  // v0.92.3 (RULES.GEAR_V923.load 'book', Core p. 185): the load's fatigue, or passing out.
+  if (d.load?.passOut) chips.push(tx('SR2E.App.Sheets.loadPassOut'));
+  else if (d.load?.level) chips.push(tx('SR2E.App.Sheets.loadFatigue', { level: d.load.level }));
   if (actor.fullDefenseUp?.()) chips.push(tx('SR2E.App.Sheets.fullDefense2'));
   if (actor.isDelaying?.()) chips.push(tx('SR2E.App.Sheets.delaying'));
   if (actor.actingNow?.()) chips.push(tx('SR2E.App.Sheets.actingDelayed'));

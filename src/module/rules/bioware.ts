@@ -3,6 +3,7 @@ import { cyberCost } from './cyberware.ts';
 import type { Monitor } from './damage.ts';
 import { bioEffectSpecV72 } from './vitals.ts';
 import { own } from './util.ts';
+import { bioBookEffect, culturedPriceApplies, gearBook, surgeryTnBook } from './gear923.ts';
 import { t as tx } from '../helpers/i18n.ts';
 
 /** Bioware depth (v0.30.0). Pure rules, no Foundry dependency. Values in RULES.BIOWARE. */
@@ -38,6 +39,10 @@ export interface BioEffect {
   perceptionTn: number;
   /** v0.78.0 (RULES.BOOK_V78.toxinBioware 'power'): Power taken off toxins, by vector (toxin extractor, tracheal filter). */
   powerOff: Record<string, number>;
+  /** v0.92.3 (RULES.GEAR_V923.bioware 'book'): dice on every Active Skill, Task Pool dice, and Quickness that doesn't raise Reaction. */
+  allActiveDice?: number;
+  taskPool?: number;
+  quicknessNoReaction?: number;
 }
 
 /** What one bioware item does at its rating (nothing when uninstalled, damaged, or an inactive adrenal pump). */
@@ -76,17 +81,33 @@ export function bioEffect(item: BioItem): BioEffect {
   out.ignoreStunWounds = Boolean(e.ignoreStunWounds);
   // The Perception TN never scales.
   out.perceptionTn = Math.floor(e.perceptionTn ?? 0);
+  // v0.92.3 (RULES.GEAR_V923.bioware 'book', Shadowtech): the book's effects where they differ.
+  const bk = bioBookEffect(item.bioKind, r);
+  if (bk) {
+    if (bk.attributes) out.attributes = { ...bk.attributes };
+    if (bk.reaction !== undefined) out.reaction = bk.reaction;
+    if (bk.impact !== undefined) out.impact = bk.impact;
+    if (bk.ballistic !== undefined) out.ballistic = bk.ballistic;
+    if (bk.physicalSkillDice !== undefined) out.physicalSkillDice = bk.physicalSkillDice;
+    if (bk.allActiveDice !== undefined) out.allActiveDice = bk.allActiveDice;
+    if (bk.perceptionTn !== undefined) out.perceptionTn = bk.perceptionTn;
+    if (bk.taskPool !== undefined) out.taskPool = bk.taskPool;
+    if (bk.reactionFromQuickness === false) out.quicknessNoReaction = Number(bk.attributes?.['quickness'] ?? 0);
+  }
   return out;
 }
 
 /** Bioware that should be cultured but isn't. */
 export function culturedWarnings(items: readonly BioItem[]): string[] {
+  // v0.92.3 (RULES.GEAR_V923.cultured 'book'): neural bioware is always cultured (its price and Body Cost count it), so no warning.
+  if (gearBook('cultured')) return [];
   return items.filter((i) => i.installed && B().cultured.required.includes(i.bioKind) && !i.cultured).map((i) => tx('SR2E.Text.Bioware.shouldBeCulturedBioware', { name: i.name }));
 }
 
 /** Bioware cost: cultured costs more. */
-export function bioCost(cost: number, cultured: boolean): number {
-  return Math.round(Math.max(0, cost) * (cultured ? B().cultured.costMultiplier : 1));
+export function bioCost(cost: number, cultured: boolean, kind = '', name = ''): number {
+  // v0.92.3 (RULES.GEAR_V923.cultured 'book', Shadowtech p. 6): neural bioware's listed price already counts culturing.
+  return Math.round(Math.max(0, cost) * (culturedPriceApplies(cultured, kind, name) ? B().cultured.costMultiplier : 1));
 }
 
 /** Conflicts with cyberware: warnings, and whether bio armor only counts above the cyber armor. */
@@ -139,7 +160,9 @@ export function adrenalCrash(rating: number): { attribute: string; tn: number; l
 }
 
 /** Surgery: the TN for the grade. */
-export function surgeryTarget(grade: string): number {
+export function surgeryTarget(grade: string, essenceAfter?: number | null): number {
+  // v0.92.3 (RULES.GEAR_V923.surgery 'book', Cybertechnology p. 53): 10 − the Essence left (cyberware only).
+  if (gearBook('surgery') && essenceAfter != null && Number.isFinite(essenceAfter)) return surgeryTnBook(essenceAfter);
   const s = B().surgery;
   return s.tn + (own(s.gradeTn, grade) ?? 0);
 }
@@ -153,7 +176,7 @@ export function recoveryDays(points: number, successes: number): number | null {
  * v0.54.0: one price for cyberware and bioware everywhere (sheet, Find, fence, build check):
  * cyberware by its grade, bioware by cultured or not (bioware has no grade).
  */
-export function wareCost(sys: { cost?: number; grade?: string; bioware?: boolean; cultured?: boolean }): number {
+export function wareCost(sys: { cost?: number; grade?: string; bioware?: boolean; cultured?: boolean; bioKind?: string }, name = ''): number {
   const c = Math.max(0, Number(sys.cost ?? 0) || 0);
-  return sys.bioware ? bioCost(c, Boolean(sys.cultured)) : cyberCost(c, String(sys.grade ?? 'standard'));
+  return sys.bioware ? bioCost(c, Boolean(sys.cultured), String(sys.bioKind ?? ''), name) : cyberCost(c, String(sys.grade ?? 'standard'));
 }

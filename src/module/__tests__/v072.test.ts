@@ -308,7 +308,8 @@ describe('O4 a called shot at a gap bypasses worn armor only', () => {
     { id: 'dp', type: 'cyberware', name: 'Dermal plating 2', system: { installed: true, essenceCost: 1, grade: 'standard', attributes: {}, reaction: 0, initiativeDice: 0, armorBallistic: 2, armorImpact: 2 } },
   ]);
 
-  test('noWorn keeps the dermal plating; without noWorn the total is unchanged', async () => {
+  test('noWorn keeps the dermal plating; without noWorn the total is unchanged', async (t) => {
+    t.after(oldWay({ 'GEAR_V923.dermal': 'armor' })); // v0.92.3: dermal plating as armor (the old way); the book's adds to Body
     const a = sam();
     assert.equal(a.armorRating('ballistic'), 7);
     assert.equal(a.armorRating('impact'), 5);
@@ -319,7 +320,8 @@ describe('O4 a called shot at a gap bypasses worn armor only', () => {
     assert.equal(plain.armorRating('ballistic', { noWorn: true }), 0);
   });
 
-  test('the old bypass list (worn, adept, cyber, limb) is a house rule away', async () => {
+  test('the old bypass list (worn, adept, cyber, limb) is a house rule away', async (t) => {
+    t.after(oldWay({ 'GEAR_V923.dermal': 'armor' })); // v0.92.3: dermal plating as armor (the old way); the book's adds to Body
     const a = sam();
     await withRule(RULES.COMBAT_V72.calledShotGap, 'bypasses', ['worn', 'adept', 'cyber', 'limb'], () => {
       assert.equal(a.armorRating('ballistic', { noWorn: true }), 0);

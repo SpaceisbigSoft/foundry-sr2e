@@ -544,7 +544,7 @@ export function npcActorData(p: NpcPlan): { actor: { name: string; type: string;
     // v0.81.0 (RC-13): cost and weight per rating point from the RCD template (book: Rating × 50,000¥, weight Rating × 2).
     const sys = structuredClone(rcdTpl.system) as Record<string, unknown>;
     const base = Math.max(1, Number(sys['rcdRating']) || 1);
-    items.push({ name: rcdTpl.name, type: rcdTpl.type, system: { ...sys, rcdRating: r, cost: Math.round((Number(sys['cost']) || 0) / base * r), weight: ((Number(sys['weight']) || 0) / base) * r } });
+    items.push({ name: rcdTpl.name, type: rcdTpl.type, system: { ...sys, rcdRating: r, cost: Math.round((Number(sys['cost']) || 0) / base * r), weight: Number(sys['weight']) || 0 } }); // v0.92.3: Rigger 2 p. 97, 3 kg at any rating
   }
   // Cyberware, spells and powers in the importer's words.
   const block = ['B Q S C I W', '1 1 1 1 1 1',

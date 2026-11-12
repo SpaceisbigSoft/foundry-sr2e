@@ -1468,7 +1468,7 @@
       "general": "General",
       "reflexSystemsWiredAndBoostedReflexes": "Reflex systems: wired and boosted reflexes don't stack (blank: guessed from the name)",
       "reflexes": "Reflexes",
-      "builtIntoACyberlimbUsesIts": "Built into a cyberlimb: uses its capacity instead of Essence",
+      "builtIntoACyberlimbUsesIts": "Built into a cyberlimb: uses its capacity. By the book only spurs, razors, fingertip compartments, smartlinks, orientation systems and tactical computers cost less Essence there (house rules: cyberlimbs)",
       "housedIn": "Housed in",
       "damagedCyberwareGivesNothingUntilRepaire": "Damaged cyberware gives nothing until repaired",
       "costStandard": "Cost (¥, standard)",
@@ -5599,7 +5599,7 @@
         "theConditionMonitorChangedSinceThis": "The condition monitor changed since this was rolled, so it was not adjusted. It should be {monitorPhysical} physical / {monitorStun} stun relative to before.",
         "isDamaged": "{bestName} is damaged (−{dgPoints}).",
         "knockdownTestBodyVs": "Knockdown test (Body vs {knockdownTn})",
-        "n1d6PerPieceOfCyberwareLow": "1d6 per piece of cyberware: low rolls damage it",
+        "n1d6PerPieceOfCyberwareLow": "Rolls which cyberware the wound damages",
         "cyberwareDamageCheck": "Cyberware damage check",
         "resistInfection": "Resist infection ({infectionName})",
         "resist5": "Resist {toxinHitName}",
@@ -7594,7 +7594,18 @@
           "one": "· {name}'s {name2} (rating {idnRating}) against a rating {checkerRating} checker ({dice} dice vs TN {tn}): {count} success against the fake's {forgerSuccesses}.",
           "other": "· {name}'s {name2} (rating {idnRating}) against a rating {checkerRating} checker ({dice} dice vs TN {tn}): {count} successes against the fake's {forgerSuccesses}."
         },
-        "tweakPower": "custom tweak Power {value}"
+        "tweakPower": "custom tweak Power {value}",
+        "surgeryEssenceCost": "{name}'s Essence cost is {cost} (was {base}).",
+        "adrenalTurns": "It runs for {turns} turns.",
+        "systemRepeat": "{name} again: no further hit",
+        "systemResist": "(graded: 5 dice vs {tn}, {successes} successes)",
+        "systemDestroyed": "destroyed",
+        "systemLevel": "{level} damage",
+        "systemNone": "no damage",
+        "systemDamageTitle": "System damage ({level} wound: {n} systems)",
+        "filterStops": "{filter} stops {name} ({mine} against {theirs} successes).",
+        "filterFails": "; {filter} fails ({mine} against {theirs}): full effect",
+        "filterStopsSmoke": "{filter} keeps the smoke out ({mine} against {theirs} successes)."
       },
       "Adding": {
         "buysFor": "buys {list} for ¥{planNuyen}.",
@@ -7912,6 +7923,7 @@
         "legalityFixer": "{label} (through a fixer)",
         "legalityContact": "{label} (through a contact)",
         "contactLevel": "Closer contact",
+        "systemShock": "System shock (over the Body Index)",
         "meleeHalf": "{label}, halved in melee",
         "foesInMelee": "Opponent's friends in melee (+{n})"
       },
@@ -9101,6 +9113,25 @@
         "SHEET_V921__ratingLock": "After creation, players may type higher ratings unless the approval queue is on (queue) or never may (always, the old way)",
         "CLOCK_V922__bigJump": "A big jump of world time outside combat (a calendar setting the date): the GM is asked whether it counts as time passed or only changes the date (ask) or it always counts (count, the old way)",
         "CLOCK_V922__bigJumpDays": "A big jump of world time: at least this many days, forward or back",
+        "GEAR_V923__grades": "Cyberware grades: beta ×0.6 Essence rounded up, never below .05, nuyen ×3/×7/×10 (book) or beta ×0.7, nuyen ×2/×4/×8 (old)",
+        "GEAR_V923__essenceZero": "Only Essence below 0 kills, 0 is survivable (survive) or Essence 0 is death (dead, the old way)",
+        "GEAR_V923__dermal": "Dermal plating adds its rating to Body and stops flechette's extra level (body) or counts as ballistic and impact armor (armor, the old way)",
+        "GEAR_V923__limbPairs": "Each pair of full cyberarms or cyberlegs adds +1 Body as dermal armor (body) or nothing (off)",
+        "GEAR_V923__limbHoused": "Ware housed in a cyberlimb costs its full Essence except the book's short list (book) or none, using the limb's capacity (capacity, the old way)",
+        "GEAR_V923__boneLacing": "Bone lacing adds to Body (+1/+1/+2) and aluminum/titanium add armor, less with many cyber replacements (book) or adds +1/+2/+3 damage resistance dice (dice, the old way)",
+        "GEAR_V923__bioware": "Bioware effects by Shadowtech: muscle augmentation +Quickness, adrenal pump +2 Reaction, cerebral booster Task Pool, orthoskin table, enhanced articulation on all Active Skills (book) or the old effects (old)",
+        "GEAR_V923__wareTables": "The stat-block importer guesses Essence and Body Cost from the books' tables (book) or the old guesses (old)",
+        "GEAR_V923__awakenedBioware": "Magicians and adepts pay Essence equal to bioware's Body Cost (essence) or lose Magic by half the Body Index (magic, the old way)",
+        "GEAR_V923__overBodyIndex": "Over the Body Index: system shock, +1 TN per point over on Body tests (shock) or the rejection test (rejection, the old way)",
+        "GEAR_V923__bioHealing": "Body Index raises magical healing TNs only (magical) or first aid and natural healing TNs (all, the old way)",
+        "GEAR_V923__cultured": "Cultured bioware costs Body Cost ×0.75 and neural bioware is already cultured (book) or no Body Cost change and ×4 on neural ware too (old)",
+        "GEAR_V923__adrenalCrash": "An adrenal pump runs 1D6 turns per level, then Deadly Stun at half the turns (book) or Body vs 6, Moderate/Serious Stun (old)",
+        "GEAR_V923__load": "Carrying: Strength × 5 kg free, then Light/Moderate/Serious fatigue and slower movement, passing out over × 20 (book) or Strength × 10 kg free, then −1 Quickness per step (old)",
+        "GEAR_V923__armorEncumbrance": "Only heavy armor over Quickness costs Combat Pool dice (book) or any armor over Quickness lowers Quickness (old)",
+        "GEAR_V923__surgery": "Cybersurgery: Biotech vs 10 − Essence left, the successes change the Essence cost (book) or Biotech vs 4 + grade, no successes is complications (old)",
+        "GEAR_V923__surgeryTrauma": "The optional surgery wound: Core table for cyberware, Shadowtech table for bioware (book) or one table for both (old)",
+        "GEAR_V923__cyberDamage": "Serious and Deadly wounds hit 1D6−4 / 1D6−2 systems, graded ware resists (book) or the cyberware damage roll above (old)",
+        "GEAR_V923__filtration": "A toxin or gas opposes a filtration system's rating and a winning filter stops it (opposed) or the rating adds resistance dice (dice, the old way)",
         "COMBAT_V923__rangedDefense": "Ranged defense: no dodge, the Combat Pool goes into the resistance test, attack vs resistance successes, a clean miss on the pool's successes alone (book), or a pool dodge, then the soak on its own (dodge, v0.92.2)",
         "COMBAT_V923__fullDefense": "Full defense: no extra dice and no pool on the melee test, the pool to the resistance test for a clean miss, no initiative cost (book), or + attribute dice and the initiative cost (dice, v0.92.2)",
         "COMBAT_V923__poolRefresh": "Combat Pool refreshes at the start of each of the character's actions, leftovers lasting until the first action of the next Combat Turn (action, book), or at each new Combat Turn (turn, v0.92.2)",
@@ -9136,12 +9167,6 @@
         "attackerRunning": {
           "label": "Attacker running"
         },
-        "attackerWalkingRough": {
-          "label": "Attacker walking (difficult ground)"
-        },
-        "attackerRunningRough": {
-          "label": "Attacker running (difficult ground)"
-        },
         "calledShot": {
           "label": "Called shot"
         },
@@ -9150,6 +9175,21 @@
         },
         "fullCover": {
           "label": "Target in full cover (blind fire through the barrier)"
+        },
+        "smartlink": {
+          "label": "Smartlink (smartgun + implant)"
+        },
+        "laserSight": {
+          "label": "Laser sight"
+        },
+        "secondWeapon": {
+          "label": "Second weapon (off-hand)"
+        },
+        "attackerWalkingRough": {
+          "label": "Attacker walking (difficult ground)"
+        },
+        "attackerRunningRough": {
+          "label": "Attacker running (difficult ground)"
         },
         "targetRunning": {
           "label": "Target running"
@@ -9163,17 +9203,8 @@
         "attackerInMelee2": {
           "label": "Attacker in melee (two opponents)"
         },
-        "smartlink": {
-          "label": "Smartlink (smartgun + implant)"
-        },
         "smartGoggles": {
           "label": "Smart goggles (smartgun)"
-        },
-        "laserSight": {
-          "label": "Laser sight"
-        },
-        "secondWeapon": {
-          "label": "Second weapon (off-hand)"
         }
       },
       "VISIBILITY": {
@@ -13453,13 +13484,13 @@
         "system__kind": "What kind of implant: limbs, weapons, jacks, eyes, ears and reflexes each have their own rules.",
         "system__reaction": "Reaction it adds.",
         "system__initiativeDice": "Initiative dice it adds (capped in all).",
-        "system__armorBallistic": "Ballistic armor it adds (dermal plating and the like).",
+        "system__armorBallistic": "Ballistic armor it adds. Dermal plating adds its rating to Body instead by the book (house rules: dermal plating).",
         "system__armorImpact": "Impact armor it adds.",
         "system__bioware": "Bioware: costs Body Index instead of Essence.",
         "system__bodyIndex": "Body Index cost; the total is limited by natural Body.",
         "system__controlRig": "Vehicle control rig rating (needed to jump in).",
         "system__damaged": "Damaged: gives nothing until repaired.",
-        "system__cultured": "Cultured bioware: costs more; some kinds must be cultured.",
+        "system__cultured": "Cultured bioware: costs ×4 and, by the book, Body Cost × .75; neural bioware is always cultured (its listed cost counts it).",
         "system__rating": "Rating where the item has one: skillwires (activesoft cap), encephalon (dice), headware memory (Mp), ICCM filter (dice), bioware (effect)."
       },
       "spell": {
@@ -14900,7 +14931,9 @@
         "tweaksWhenLoaded": "These count while it is loaded.",
         "tweaksWhenInUse": "These count while the deck is in use.",
         "essenceWareRow": "{name}: {essence}",
-        "essenceWareRowGrade": "{name} ({grade}): {essence}"
+        "essenceWareRowGrade": "{name} ({grade}): {essence}",
+        "loadPassOut": "load: passes out",
+        "loadFatigue": "load: {level} fatigue"
       },
       "Shop": {
         "streetIndexTitle": "The price with its Street Index (×{si})",
@@ -17353,7 +17386,7 @@
         "cyberware": {
           "title": "Cyberware and bioware",
           "b1": "Cyberware and bioware, each with an <em>Installed</em> tick box. Ticking it by hand skips the surgery: use it for ware fitted before play. Ware that isn't installed has a <strong>Surgery</strong> button: pick who operates, the care while recovering, and whether to pay for a hospital. Recovery shows under the list with the days left; the bed icon changes the care (the GM's × ends it). Damaged ware has <strong>Repair</strong>; the burst or wrench icon marks it damaged or repaired. An adrenal pump has <strong>Activate</strong> and <strong>Switch off</strong>.",
-          "b2": "Lines under the list show the Body Index and other notes, and a <strong>Rejection test</strong> button when over the limit.",
+          "b2": "Lines under the list show the Body Index and other notes. Over the limit the character is in system shock (+1 TN per point over on Body tests); under the old house rule a <strong>Rejection test</strong> button shows instead.",
           "b3": "A grade changes the Essence and the price. The item's Essence field keeps the standard cost; its sheet shows <strong>At this grade</strong> with the Essence and price the grade gives. Hover over the Essence line on the Main tab to see which ware makes up the loss."
         },
         "gear": {

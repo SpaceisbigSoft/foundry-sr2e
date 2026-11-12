@@ -1051,7 +1051,8 @@ describe('round 2: I (V-REST)', () => {
       assert.equal(cw.cyberCost(1000, k), 1000, k);
       assert.equal(sec.hostAlertFor(k), 'none', k);
     }
-    for (const f of ['arcana', 'cyberware', 'matrix', 'security', 'situation', 'spellcraft', 'statblock', 'bioware', 'critters', 'docs79-health', 'everyday', 'fieldsfire', 'npcgen']) {
+    // v0.92.3: cyberware's grade tables are read in gear923.ts now (RULES.GEAR_V923.grades).
+    for (const f of ['arcana', 'gear923', 'matrix', 'security', 'situation', 'spellcraft', 'statblock', 'bioware', 'critters', 'docs79-health', 'everyday', 'fieldsfire', 'npcgen']) {
       assert.match(SRC(`rules/${f}.ts`), /\bown\(/, f);
     }
   });

@@ -6,6 +6,7 @@ import { SPELL_DURATIONS } from './arcana.ts';
 import { bioEffect } from './bioware.ts';
 import { bioIndexV72 } from './vitals.ts';
 import { sensoryEssence } from './cyberware.ts';
+import { gearBook, gradeEssenceFactor } from './gear923.ts';
 import { own } from './util.ts';
 import { t as tx } from '../helpers/i18n.ts';
 
@@ -507,6 +508,8 @@ const norm = (s: string) => s.toLowerCase().replace(/[’`]/g, "'").replace(/\s+
 const round2 = (n: number) => Math.round(n * 100) / 100;
 /** Value for a rating from a 1-based table (clamped to its ends). */
 const byRating = (table: readonly number[], r: number): number => table[Math.min(table.length, Math.max(1, r)) - 1] ?? 0;
+/** v0.92.3 (RULES.GEAR_V923.wareTables): the book's number, or the old guess. */
+const bk = <T,>(book: T, old: T): T => (gearBook('wareTables') ? book : old);
 
 // ---------------------------------------------------------------- Cyberware and bioware tables (VERIFY)
 
@@ -543,7 +546,8 @@ const CYBER_RULES: CyberRule[] = [
   { re: /wired\s*reflex/i, kind: 'reflexes', needsRating: true, essence: (c) => byRating([2, 3, 5], c.r),
     effects: (c) => ({ reaction: 2 * Math.min(3, c.r), initiativeDice: Math.min(3, c.r), reflexes: 'wired' }) },
   { re: /boosted\s*reflex/i, kind: 'reflexes', needsRating: true, essence: (c) => byRating([0.5, 1.25, 2.8], c.r),
-    effects: (c) => ({ reaction: Math.min(3, c.r), initiativeDice: byRating([1, 1, 2], c.r), reflexes: 'boosted' }) },
+    // v0.92.3: Reaction —/+1/+2 (SSC p. 87; was +1/+2/+3).
+    effects: (c) => ({ reaction: bk(byRating([0, 1, 2], c.r), Math.min(3, c.r)), initiativeDice: byRating([1, 1, 2], c.r), reflexes: 'boosted' }) },
   { re: /reaction\s*enhanc/i, kind: 'reflexes', needsRating: true, essence: (c) => round2(0.3 * c.r),
     effects: (c) => ({ reaction: c.r, reflexes: 'enhancer' }) },
   { re: /control\s*rig|\bvcr\b/i, kind: 'other', needsRating: true, essence: (c) => byRating([2, 3, 5], c.r),
@@ -552,8 +556,10 @@ const CYBER_RULES: CyberRule[] = [
     effects: (c) => ({ smartlink: true, smartlinkLevel: c.r >= 2 || /\bii\b/i.test(c.text) ? 2 : 1 }) },
   { re: /data\s*-?jack/i, kind: 'datajack', essence: () => 0.2 },
   { re: /chip\s*-?jack/i, kind: 'chipjack', essence: () => 0.2 },
-  { re: /skill\s*-?wires?/i, kind: 'skillwires', needsRating: true, essence: (c) => round2(0.2 * c.r) },
-  { re: /encephalon/i, kind: 'encephalon', needsRating: true, essence: (c) => byRating([0.75, 1.5], c.r) },
+  // v0.92.3: .1/.2/.3 × rating by band (Core p. 249; FoF p. 103; was .2 × rating).
+  { re: /skill\s*-?wires?/i, kind: 'skillwires', needsRating: true, essence: (c) => bk(round2((c.r <= 3 ? 0.1 : c.r <= 6 ? 0.2 : 0.3) * c.r), round2(0.2 * c.r)) },
+  // v0.92.3: levels 1–4 .5/.75/1.5/1.75 (Shadowtech p. 49; was .75/1.5 for 1–2).
+  { re: /encephalon/i, kind: 'encephalon', needsRating: true, essence: (c) => bk(byRating([0.5, 0.75, 1.5, 1.75], c.r), byRating([0.75, 1.5], c.r)) },
   { re: /headware\s*memory|\bmemory\b/i, kind: 'memory', essence: (c) => (c.r > 0 ? round2(0.01 * c.r) : null) },
   { re: /\bradio\b/i, kind: 'other', essence: () => 0.75 },
   { re: /(?:tele)?phone/i, kind: 'other', essence: () => 0.5 },
@@ -563,7 +569,8 @@ const CYBER_RULES: CyberRule[] = [
     effects: (c) => ({ attributes: attrs({ strength: c.r, quickness: c.r }) }) },
   { re: /cyber\s*-?eyes?|\beyes?\b|low.?light|thermo|flare\s*comp|magnif|image\s*link|eye\s*camera/i, kind: 'eyes',
     // v0.78.0 (RULES.BOOK_V78.senseAllowance): enhancements inside cybereyes are free up to 0.5 Essence.
-    essence: (c) => { const host = /cyber\s*-?eye|\beyes?\b/i.test(c.text); return sensoryEssence('eyes', { base: host ? 0.2 : 0, host, options: [...EYE_OPTIONS.filter(([re]) => re.test(c.text)).map(([, e]) => e), ...(magnificationOf(c.text) ? [0.1 * magnificationOf(c.text)] : [])] }); },
+        // v0.92.3: vision magnification is a flat .2 (optical) or .1 (electronic) at any level (SSC p. 85; was .1 × level).
+    essence: (c) => { const host = /cyber\s*-?eye|\beyes?\b/i.test(c.text); const mag = magnificationOf(c.text); return sensoryEssence('eyes', { base: host ? 0.2 : 0, host, options: [...EYE_OPTIONS.filter(([re]) => re.test(c.text)).map(([, e]) => e), ...(mag ? [bk(/electronic/i.test(c.text) ? 0.1 : 0.2, 0.1 * mag)] : [])] }); },
     effects: (c) => ({
       ...(/low.?light/i.test(c.text) ? { lowLight: true } : {}),
       ...(/thermo/i.test(c.text) ? { thermographic: true } : {}),
@@ -578,7 +585,8 @@ const CYBER_RULES: CyberRule[] = [
       ...(/amplif|hearing\s*amp/i.test(c.text) ? { hearingAmp: 1 } : {}),
       ...(/damp(?:er|ener)/i.test(c.text) ? { dampener: true } : {}),
     }) },
-  { re: /cyber\s*-?(?:arm|leg|hand|foot)/i, kind: 'cyberlimb', essence: (c) => (/hand|foot/i.test(c.text) ? 0.25 : 1),
+  // v0.92.3: a cyberhand or foot .35, a forearm or lower leg .65 (Cybertechnology p. 98; was .25 for a hand or foot).
+  { re: /cyber\s*-?(?:arm|leg|hand|foot)/i, kind: 'cyberlimb', essence: (c) => (/hand|foot/i.test(c.text) ? bk(0.35, 0.25) : bk(/fore\s*-?arm|lower\s*leg/i.test(c.text) ? 0.65 : 1, 1)),
     effects: (c) => {
       const leg = /leg|foot/i.test(c.text);
       const left = /\bleft\b/i.test(c.text);
@@ -593,12 +601,13 @@ const CYBER_RULES: CyberRule[] = [
   { re: /\bspurs?\b/i, kind: 'cyberweapon', essence: () => 0.1, weaponLevel: 'M' },
   { re: /retractable\s*(?:hand\s*)?razors?/i, kind: 'cyberweapon', essence: () => 0.2, weaponLevel: 'L' },
   { re: /razors?/i, kind: 'cyberweapon', essence: () => 0.1, weaponLevel: 'L' },
-  { re: /pheromones?/i, kind: 'pheromones', needsRating: true, essence: (c) => byRating([0.4, 0.6], c.r), effects: (c) => ({ pheromones: c.r }) },
+  // v0.92.3: tailored pheromones are bioware, Body Cost .4/.6 (Shadowtech p. 18; was cyberware at that Essence).
+  { re: /pheromones?/i, kind: 'pheromones', needsRating: true, essence: (c) => bk(0, byRating([0.4, 0.6], c.r)), effects: (c) => ({ pheromones: c.r, ...(gearBook('wareTables') ? { bioware: true, bodyIndex: byRating([0.4, 0.6], c.r) } : {}) }) },
   // v0.58.0: bone lacing and filtration get their own kinds (and what they do).
   { re: /bone\s*lacing/i, kind: 'boneLacing', effects: (c) => ({ lacing: /titanium/i.test(c.text) ? 'titanium' : /alumin/i.test(c.text) ? 'aluminum' : 'plastic' }), essence: (c) => (/titanium/i.test(c.text) ? 2.25 : /alumin/i.test(c.text) ? 1.15 : /plastic/i.test(c.text) ? 0.5 : null) },
   { re: /voice\s*mod/i, kind: 'other', essence: () => 0.2 },
   { re: /\biccm\b|biofeedback\s*filter/i, kind: 'iccm', essence: () => null },
-  { re: /(air|blood|ingested)\s*(?:filtration|filter)/i, kind: 'filtration', needsRating: true, effects: (c) => ({ filterKind: /blood/i.test(c.text) ? 'blood' : /ingest/i.test(c.text) ? 'ingested' : 'air' }), essence: (c) => round2((/blood/i.test(c.text) ? 0.2 : 0.1) * c.r) },
+  { re: /(air|blood|ingested)\s*(?:filtration|filter)/i, kind: 'filtration', needsRating: true, effects: (c) => ({ filterKind: /blood/i.test(c.text) ? 'blood' : /ingest/i.test(c.text) ? 'ingested' : 'air' }), essence: (c) => round2((/blood/i.test(c.text) || (gearBook('wareTables') && /ingest/i.test(c.text)) ? 0.2 : 0.1) * c.r) }, // v0.92.3: ingested-toxin filters rating ÷ 5 (Core p. 248; FoF p. 102; was ÷ 10)
 ];
 
 interface BioRule {
@@ -613,11 +622,12 @@ interface BioRule {
 }
 
 const BIO_RULES: BioRule[] = [
-  { re: /muscle\s*aug/i, bioKind: 'muscleAugmentation', scales: true, bodyIndex: (r) => round2(0.2 * r) },
-  { re: /cerebral\s*boost/i, bioKind: 'cerebralBooster', scales: true, bodyIndex: (r) => byRating([0.2, 0.4], r) },
-  { re: /synaptic\s*acc/i, bioKind: 'synapticAccelerator', scales: true, bodyIndex: (r) => byRating([0.4, 1], r) },
-  { re: /adrenal\s*pump/i, bioKind: 'adrenalPump', scales: true, bodyIndex: (r) => byRating([0.25, 0.75], r) },
-  { re: /orthoskin/i, bioKind: 'orthoskin', scales: true, bodyIndex: (r) => byRating([0.25, 0.5, 0.75], r) },
+  // v0.92.3 (RULES.GEAR_V923.wareTables 'book'): Shadowtech's Body Costs (FoF pp. 103–104).
+  { re: /muscle\s*aug/i, bioKind: 'muscleAugmentation', scales: true, bodyIndex: (r) => bk(round2(0.8 * Math.min(4, r)), round2(0.2 * r)) },
+  { re: /cerebral\s*boost/i, bioKind: 'cerebralBooster', scales: true, bodyIndex: (r) => bk(byRating([0.4, 0.8], r), byRating([0.2, 0.4], r)) },
+  { re: /synaptic\s*acc/i, bioKind: 'synapticAccelerator', scales: true, bodyIndex: (r) => bk(byRating([0.3, 1.6], r), byRating([0.4, 1], r)) },
+  { re: /adrenal\s*pump/i, bioKind: 'adrenalPump', scales: true, bodyIndex: (r) => bk(byRating([1.25, 2.5], r), byRating([0.25, 0.75], r)) },
+  { re: /orthoskin/i, bioKind: 'orthoskin', scales: true, bodyIndex: (r) => bk(byRating([0.5, 1, 1.5], r), byRating([0.25, 0.5, 0.75], r)) },
   { re: /toxin\s*extract/i, bioKind: 'toxinExtractor', scales: true, bodyIndex: (r) => round2(0.2 * r) },
   { re: /trache(?:a)?l\s*filter/i, bioKind: 'trachealFilter', scales: true, bodyIndex: (r) => round2(0.2 * r) },
   { re: /platelet\s*fact/i, bioKind: 'plateletFactory', bodyIndex: () => 0.4 },
@@ -625,11 +635,11 @@ const BIO_RULES: BioRule[] = [
   { re: /enhanced\s*articul/i, bioKind: 'enhancedArticulation', bodyIndex: () => 0.6 },
   { re: /trauma\s*damper/i, bioKind: 'traumaDamper', scales: true, bodyIndex: () => 0.4 },
   { re: /pain\s*editor/i, bioKind: 'painEditor', bodyIndex: () => 0.6 },
-  { re: /suprathyroid/i, bioKind: 'suprathyroid', bodyIndex: () => 0.7 },
+  { re: /suprathyroid/i, bioKind: 'suprathyroid', bodyIndex: () => bk(1.4, 0.7) },
   { re: /reflex\s*recorder/i, bioKind: 'other', unmodelled: true, bodyIndex: () => 0.25 },
-  { re: /mnemonic\s*enhanc/i, bioKind: 'other', unmodelled: true, bodyIndex: (r) => round2(0.1 * Math.max(1, r)) },
+  { re: /mnemonic\s*enhanc/i, bioKind: 'other', unmodelled: true, bodyIndex: (r) => bk(round2(0.2 * Math.max(1, r)), round2(0.1 * Math.max(1, r))) },
   { re: /nephritic\s*screen/i, bioKind: 'nephriticScreen', bodyIndex: () => 0.4 },
-  { re: /extended\s*volume/i, bioKind: 'extendedVolume', scales: true, bodyIndex: (r) => round2(0.2 * Math.max(1, r)) },
+  { re: /extended\s*volume/i, bioKind: 'extendedVolume', scales: true, bodyIndex: (r) => bk(byRating([0.2, 0.3, 0.4], r), round2(0.2 * Math.max(1, r))) },
   // v0.72.0 (O9): Shadowtech symbiotes (rules/vitals.ts). VERIFY Body Index.
   { re: /symbiote/i, bioKind: 'symbiotes', scales: true, bodyIndex: (r) => bioIndexV72('symbiotes', r) ?? round2(0.2 * Math.max(1, r)) },
 ];
@@ -940,7 +950,8 @@ function cyberwareItem(c: ParsedCyberware, p: ParsedStatBlock, notes: { essence:
       system.weapon = { strengthPower: true, damagePower: 0, damageLevel: rule.weaponLevel, damageType: 'physical', reach: 0, ...(skill ? { skill: skill.name } : {}) };
     }
   }
-  const mult = own(RULES.GRADE_ESSENCE_MULTIPLIER, c.grade) ?? 1;
+  // v0.92.3: the grade's factor as RULES.GEAR_V923.grades has it.
+  const mult = gradeEssenceFactor(String(c.grade ?? 'standard'));
   if (c.essence !== undefined) {
     // The block's Essence is for its grade; the item stores the standard cost (the grade multiplies it).
     system.essenceCost = round2(c.essence / mult);

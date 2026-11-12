@@ -1,11 +1,13 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import { oldWay } from './oldway.ts';
 import { essenceLoss, totalEssenceLoss, currentEssence, effectiveMagic, sumBonuses, type Augmentation } from '../cyberware.ts';
 
 const aug = (over: Partial<Augmentation> = {}): Augmentation => ({ essenceCost: 1, grade: 'standard', installed: true, ...over });
 
 describe('essence', () => {
-  test('grade multipliers reduce the cost', () => {
+  test('grade multipliers reduce the cost', (t) => {
+    t.after(oldWay({ "GEAR_V923.grades": "old" })); // v0.92.3: the old (v0.92.2) way; rules/__tests__/v0923-gear.test.ts has the book's
     assert.equal(essenceLoss({ essenceCost: 2, grade: 'standard' }), 2);
     assert.equal(essenceLoss({ essenceCost: 2, grade: 'alpha' }), 1.6);
     assert.equal(essenceLoss({ essenceCost: 2, grade: 'beta' }), 1.4);

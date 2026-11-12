@@ -678,14 +678,15 @@ async function markCardDone(message: any, actor: any, key: string): Promise<void
 
 /** A heavy hit's cyberware damage check (v0.43.0): once per card. */
 async function onCyberDamage(message: any, button: HTMLButtonElement): Promise<void> {
-  const f = message.getFlag(SYSTEM_ID, 'cyberDamage') as { actorUuid: string; location: string } | undefined;
+  const f = message.getFlag(SYSTEM_ID, 'cyberDamage') as { actorUuid: string; location: string; level?: string } | undefined;
   const actor: any = f ? await fromUuid(f.actorUuid) : null;
   if (!f || !actor) return;
   if (!actor.isOwner) return ui.notifications.warn(tx('SR2E.Notify.Chat.onlySOwnerOrTheGm4', { actorName: escHtml(actor.name) }));
   if (!(await playerMay(message, actor, origin(message), tx('SR2E.Card.Chat.rollsACyberwareDamageCheckInstalled', { actorName: actor.name, slice: String(f.location ?? '').slice(0, 60) })))) return;
   if (cardDone(message, actor, 'cyberDamageRolled')) return ui.notifications.warn(tx('SR2E.Notify.Chat.theCyberwareCheckHasAlreadyBeen'));
   button.disabled = true;
-  await actor.cyberDamageCheck(String(f.location ?? '').slice(0, 60));
+  // v0.92.3: the wound's level (RULES.GEAR_V923.cyberDamage 'book' counts the systems hit by it).
+  await actor.cyberDamageCheck(String(f.location ?? '').slice(0, 60), ['L', 'M', 'S', 'D'].includes(String(f.level ?? '')) ? String(f.level) : '');
   await markCardDone(message, actor, 'cyberDamageRolled');
   if (message.isOwner) {
     // A Karma re-roll of this card must not roll it again.
@@ -2105,14 +2106,15 @@ async function onDrugCrash(message: any, button: HTMLButtonElement): Promise<voi
 
 /** An adrenal pump's crash: the wearer resists. */
 async function onAdrenalCrash(message: any, button: HTMLButtonElement): Promise<void> {
-  const c = message.getFlag(SYSTEM_ID, 'adrenalCrash') as { actorUuid: string; rating: number } | undefined;
+  const c = message.getFlag(SYSTEM_ID, 'adrenalCrash') as { actorUuid: string; rating: number; turns?: number } | undefined;
   const actor: any = c ? await fromUuid(c.actorUuid) : null;
   if (!c || !actor) return ui.notifications.warn(tx('SR2E.Notify.Chat.thatCharacterNoLongerExists'));
   if (!actor.isOwner) return ui.notifications.warn(tx('SR2E.Notify.Chat.onlySOwnerOrTheGm4', { actorName: escHtml(actor.name) }));
   if (!(await playerMay(message, actor, origin(message), tx('SR2E.Card.Chat.resistsAnAdrenalPumpCrashRating', { actorName: actor.name, rating: safeInt(c.rating, 0, 10, 0) })))) return;
   if (cardDone(message, actor, 'adrenalRolled')) return ui.notifications.warn(tx('SR2E.Notify.Chat.theCrashHasAlreadyBeenRolled'));
   button.disabled = true;
-  await actor.rollAdrenalCrash(safeInt(c.rating, 0, 10, 0));
+  // v0.92.3 (RULES.GEAR_V923.adrenalCrash 'book'): the turns it ran set the crash's Power.
+  await actor.rollAdrenalCrash(safeInt(c.rating, 0, 10, 0), c.turns === undefined ? undefined : safeInt(c.turns, 0, 12, 0));
   await markCardDone(message, actor, 'adrenalRolled');
 }
 

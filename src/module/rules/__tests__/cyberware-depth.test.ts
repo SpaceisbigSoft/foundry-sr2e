@@ -1,5 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import { oldWay } from './oldway.ts';
 import {
   reflexTypeOf, stackAugmentations, capInitiativeDice, smartlinkModifier, magnifiedRange, pheromoneDice, datajackCheck,
   limbCapacity, cyberCost, softRating, effectiveMagic, sumBonuses, type Augmentation, type Skillsoft,
@@ -56,7 +57,8 @@ describe('cyberware depth (v0.29.0)', () => {
     assert.deepEqual(smokeModifier('smoke', { thermographic: true, ultrasound: true }), { value: 0, using: 'thermographic' });
   });
 
-  test('pheromones help social skills; datajack checks; limb capacity; grade cost', () => {
+  test('pheromones help social skills; datajack checks; limb capacity; grade cost', (t) => {
+    t.after(oldWay({ "GEAR_V923.grades": "old" })); // v0.92.3: the old (v0.92.2) way; rules/__tests__/v0923-gear.test.ts has the book's
     assert.equal(pheromoneDice('Negotiation', 2), 2);
     assert.equal(pheromoneDice('Etiquette (Street)', 1), 1);
     assert.equal(pheromoneDice('Firearms', 2), 0);
