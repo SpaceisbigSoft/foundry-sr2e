@@ -287,7 +287,9 @@ describe('v0.91.8 learning needs a formula (documents/index.ts)', () => {
       faces.push(1, 1, 1, 1, 1);
       await a.learnFormula('ZZ Stunbolt', { ...STUN.system, learnedForce: 4 }, 'study', { origin: 'shop' });
       const snap = chat.at(-1).flags.sr2e.test;
-      assert.equal(snap.targetNumber, 4 + F.foreignTn);
+      // v0.92.3 (RULES.SORCERY_V923.learning, formulaAloneTn; Core p. 132, Grimoire p. 114): 2 × Force, + the other
+      // tradition's penalty, + 2 for a formula with no teacher.
+      assert.equal(snap.targetNumber, 2 * 4 + F.foreignTn + RULES.SORCERY_V923.formulaAloneTn);
       assert.equal(snap.learn.foreign, true);
       const b = mage();
       faces.push(...Array(5 + 12).fill(1));

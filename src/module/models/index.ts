@@ -743,7 +743,11 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
     const reflexNotes: string[] = [];
     let dropFxReflexes = false;
     if (reflexFx.length > 1) reflexNotes.push(tx('SR2E.App.Models.onlyTheBestReflexSpellCounts'));
-    if (RULES.MAGIC_V56.spellEffects.reflexesExclusive && fxReflexes > 0 && otherReflexes > 0) {
+    // v0.92.3 (RULES.SORCERY_V923.increaseReflexes 'book', Core p. 155): no spell boosts someone with cybernetic
+    // initiative dice, whichever is better.
+    const cyberReflexes = stacked.cyber.some((a: any) => a.installed !== false && !a.damaged && (a.initiativeDice ?? 0) > 0);
+    if (RULES.SORCERY_V923.increaseReflexes === 'book' && fxReflexes > 0 && cyberReflexes) { dropFxReflexes = true; reflexNotes.push(tx('SR2E.App.Models.reflexSpellNoCyber')); }
+    else if (RULES.MAGIC_V56.spellEffects.reflexesExclusive && fxReflexes > 0 && otherReflexes > 0) {
       if (otherReflexes >= fxReflexes) { dropFxReflexes = true; reflexNotes.push(tx('SR2E.App.Models.magicalReflexesDoNotStack')); }
       else {
         stacked.cyber = stacked.cyber.map((a) => (isOtherReflex(a, false) ? { ...a, initiativeDice: 0, reaction: 0 } : a));
@@ -1646,6 +1650,8 @@ export class SpellDataModel extends foundry.abstract.TypeDataModel {
       /** Spell options that lower the drain TN. */
       exclusive: new fields.BooleanField({ required: true, initial: false }),
       fetish: new fields.BooleanField({ required: true, initial: false }),
+      /** v0.92.3: the fetish is expendable (used up each cast): Force +2 instead of +1 (Core p. 133). */
+      fetishExpendable: new fields.BooleanField({ required: true, initial: false }),
       /** Elemental manipulation (Fireball...): handled like a ranged attack with Power = Force. */
       elemental: new fields.BooleanField({ required: true, initial: false }),
       /** The spell's element, for elemental aid and sustaining and elementalists. */

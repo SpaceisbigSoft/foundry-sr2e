@@ -59,6 +59,8 @@ export interface Geas {
 
 /** Magic lost to unmet geasa. */
 export function geasaPenalty(geasa: readonly Geas[]): number {
+  // v0.92.3 (RULES.SORCERY_V923.geasa 'book', Grimoire p. 52): a broken geas costs +2 TN on magical tests, not Magic.
+  if (RULES.SORCERY_V923.geasa === 'book') return 0;
   return geasa.filter((g) => !g.met).reduce((s, g) => s + Math.max(0, g.magic), 0);
 }
 

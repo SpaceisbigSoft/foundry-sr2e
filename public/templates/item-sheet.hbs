@@ -348,6 +348,7 @@
     <label>{{sr2eT "SR2E.UI.area"}} <input type="checkbox" name="system.area" {{checked system.area}}></label>
     <label>{{sr2eT "SR2E.UI.exclusive"}} <input type="checkbox" name="system.exclusive" {{checked system.exclusive}}></label>
     <label>{{sr2eT "SR2E.UI.fetishLimited"}} <input type="checkbox" name="system.fetish" {{checked system.fetish}}></label>
+    {{#if system.fetish}}<label>{{sr2eT "SR2E.UI.fetishExpendable"}} <input type="checkbox" name="system.fetishExpendable" {{checked system.fetishExpendable}}></label>{{/if}}
     <label>{{sr2eT "SR2E.UI.elementalLikeFireball"}} <input type="checkbox" name="system.elemental" {{checked system.elemental}}></label>
     <label>{{sr2eT "SR2E.UI.element"}}
       <select name="system.element">{{selectOptions elementChoices selected=system.element valueAttr="key" labelAttr="label"}}</select>

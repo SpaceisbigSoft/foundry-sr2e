@@ -8,7 +8,7 @@
 import { RULES, type DamageLevel } from './config.ts';
 import { isShamanic, isHermetic } from './arcana.ts';
 import { bestSite, type BackgroundSource, type MagicSite, type SiteKind } from './mysticism.ts';
-import { urrMagSiteCost } from './urr80-magic.ts';
+import { siteCost, bookGrade, bookDesignDrain, restrictedDrainMods } from './sorcery923.ts';
 import { t as tx, tCount, tList } from '../helpers/i18n.ts';
 
 const O = () => RULES.OCCULT;
@@ -118,6 +118,9 @@ export function initiationCost(newGrade: number, o: { group?: boolean; ordeal?: 
   const k = RULES.MAGIC_EXTRA.karmaCosts;
   const base = o.group ? i.multipliers.group : i.multipliers.self;
   const multiplier = Math.max(i.minMultiplier, base - (o.ordeal ? i.ordealReduction : 0));
+  // v0.92.3 (RULES.SORCERY_V923.initiation 'book', Grimoire p. 38): the first initiation is Grade 0, (6 + 0) × 3 = 18;
+  // always round down.
+  if (RULES.SORCERY_V923.initiation === 'book') return { cost: Math.max(0, Math.floor((k.initiationBase + bookGrade(Math.max(1, Math.floor(newGrade)))) * multiplier + 1e-9)), multiplier };
   return { cost: Math.max(0, Math.ceil((k.initiationBase + Math.max(1, Math.floor(newGrade))) * multiplier)), multiplier };
 }
 
@@ -154,8 +157,10 @@ export function designDrain(d: SpellDesign): { drainModifier: number; drainLevel
   const notes: string[] = [];
   const add = (on: boolean | undefined, n: number, why: string) => { if (on && n) { mod += n; notes.push(tx('SR2E.Text.Occult.designNote', { why, value: `${n > 0 ? '+' : ''}${n}` })); } };
   add(d.spellType === 'physical', m.physical, tx('SR2E.Text.Occult.physical'));
-  add(d.area, m.area, tx('SR2E.Text.Occult.area'));
-  add(d.duration === 'sustained', m.sustained, tx('SR2E.Text.Occult.sustained'));
+  // v0.92.3 (RULES.SORCERY_V923.design 'book'): area and sustained follow the book's tables (bookDesignDrain below).
+  const bookDesign = RULES.SORCERY_V923.design === 'book';
+  add(d.area && !bookDesign, m.area, tx('SR2E.Text.Occult.area'));
+  add(d.duration === 'sustained' && !bookDesign, m.sustained, tx('SR2E.Text.Occult.sustained'));
   add(d.duration === 'permanent', m.permanent, tx('SR2E.Text.Occult.permanent'));
   add(d.touch, m.touch, tx('SR2E.Text.Occult.touch'));
   add(combat && d.damageType === 'stun', m.stun, tx('SR2E.Text.Occult.stunDamage'));
@@ -164,14 +169,18 @@ export function designDrain(d: SpellDesign): { drainModifier: number; drainLevel
   add(d.category === 'detection' && d.extendedRange, m.extendedRange, tx('SR2E.Text.Occult.extendedRange'));
   add(d.category === 'illusion' && d.singleSense, m.singleSense, tx('SR2E.Text.Occult.oneSense'));
   // Exclusive and fetish spells keep their own drain TN changes, applied when cast (RULES.SPELLCRAFT).
-  if (d.exclusive) notes.push(tx('SR2E.Text.Occult.exclusiveWhenCast', { mod: RULES.SPELLCRAFT.exclusiveDrainMod }));
-  if (d.fetish) notes.push(tx('SR2E.Text.Occult.fetishWhenCast', { mod: RULES.SPELLCRAFT.fetishDrainMod }));
+  // v0.92.3 (RULES.SORCERY_V923.restrictedSpells 'book', Core p. 133): they take effect at a higher Force instead.
+  const rf = RULES.SORCERY_V923.restrictedForce;
+  if (d.exclusive) notes.push(restrictedDrainMods() ? tx('SR2E.Text.Occult.exclusiveWhenCast', { mod: RULES.SPELLCRAFT.exclusiveDrainMod }) : tx('SR2E.Text.Sorcery923.exclusiveForce', { force: rf.exclusive }));
+  if (d.fetish) notes.push(restrictedDrainMods() ? tx('SR2E.Text.Occult.fetishWhenCast', { mod: RULES.SPELLCRAFT.fetishDrainMod }) : tx('SR2E.Text.Sorcery923.fetishForce', { force: rf.fetishReusable, expendable: rf.fetishExpendable }));
   if (d.elemental && m.elemental) {
     const i = LEVELS.indexOf(level);
     level = LEVELS[Math.min(LEVELS.length - 1, i + m.elemental)]!;
     notes.push(tx('SR2E.Text.Occult.elementalLevel', { elemental: m.elemental }));
   }
-  return { drainModifier: mod, drainLevel: level, notes };
+  // v0.92.3 (RULES.SORCERY_V923.design 'book', Grimoire pp. 117–121): detection base M, area and touch change the level.
+  const old = { drainModifier: mod, drainLevel: level, notes };
+  return bookDesignDrain(d, old) ?? old;
 }
 
 /** The design test: TN, and dice a library or lodge adds. */
@@ -282,7 +291,8 @@ export function siteRaiseCost(kind: string, from: number, to: number): { nuyen: 
   const per = s.nuyenPerRating[kind] ?? RULES.MAGIC_V39.sites.nuyenPerRating;
   const diff = Math.max(0, Math.floor(to) - Math.max(0, Math.floor(from)));
   // v0.80.0 (RULES.URR_V80.magSiteCost 'urr', URR): a library costs rating² × the price; a circle takes hours.
-  const urr = urrMagSiteCost(kind, from, to, per, s.daysPerRating);
+  // v0.92.3 (RULES.SORCERY_V923.siteCost 'book', Core pp. 123–124): the same costs and times.
+  const urr = siteCost(kind, from, to, per, s.daysPerRating);
   if (urr) return urr;
   return { nuyen: diff * per, days: diff * s.daysPerRating };
 }

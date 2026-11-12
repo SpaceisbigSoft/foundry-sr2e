@@ -6,6 +6,7 @@
  * as the stubs do.
  */
 import { test, describe, before, beforeEach } from 'node:test';
+import { SORCERY_V922 } from '../rules/__tests__/sorcery922.ts';
 import { oldWay } from '../rules/__tests__/oldway.ts';
 import assert from 'node:assert/strict';
 import { RULES, haggledPrice, hotFencePrice, icInitiative, initiativeWoundPenalty } from '../rules/index.ts';
@@ -425,7 +426,9 @@ describe('R11 a partial dispel shrinks the spell\'s effect', () => {
     return { subj, oldSubj, caster, d, oldFx };
   };
 
-  test('2 of 3 successes dispelled: the subject\'s effect is rebuilt at 1; an old entry (no spec) is left with a note', async () => {
+  test('2 of 3 successes dispelled: the subject\'s effect is rebuilt at 1; an old entry (no spec) is left with a note', async (t) => {
+    // v0.92.3: 'the book' here is the v0.92.2 reading (RULES.SORCERY_V923 at its old way); the book's way is in v0923-sorcery.test.ts.
+    t.after(oldWay(SORCERY_V922));
     const { subj, oldSubj, caster, d, oldFx } = setup();
     assert.equal(subj.getFlag('sr2e', 'powerEffects')[0].ballistic, 3);
     faces.push(5, 5, 1, 1, ...Array(12).fill(5));                        // 2 successes; drain
@@ -439,7 +442,9 @@ describe('R11 a partial dispel shrinks the spell\'s effect', () => {
     assert.ok(chat.some((m) => /predates v0\.71\.0/.test(m.content) && /Old subject/.test(m.content)));
   });
 
-  test('switched off: the effect keeps its size', async () => {
+  test('switched off: the effect keeps its size', async (t) => {
+    // v0.92.3: 'the book' here is the v0.92.2 reading (RULES.SORCERY_V923 at its old way); the book's way is in v0923-sorcery.test.ts.
+    t.after(oldWay(SORCERY_V922));
     const { subj, caster, d } = setup();
     faces.push(5, 5, 1, 1, ...Array(12).fill(5));
     await withRule(RULES.FIXES_V71, 'dispelShrinks', false, () => d.dispel(caster, 0));

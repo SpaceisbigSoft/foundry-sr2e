@@ -42,6 +42,9 @@ export function resolveCombatSpell(opts: {
   // v0.80.0 (RULES.URR_V80.magSpellTie 'caster', URR): a tie takes effect at the lowest level.
   const tie = urrMagSpellTie(opts.casterSuccesses, opts.resistSuccesses);
   if (tie) return tie;
+  // v0.92.3 (RULES.SORCERY_V923.spellTie 'book', Core p. 131): a tie goes to the caster at the spell's minimum effect
+  // (its base Damage Level, unstaged).
+  if (RULES.SORCERY_V923.spellTie === 'book' && opts.casterSuccesses > 0 && opts.casterSuccesses === opts.resistSuccesses) return { hit: true, netSuccesses: 0, level: opts.level };
   if (net <= 0) return { hit: false, netSuccesses: 0, level: null };
   return { hit: true, netSuccesses: net, level: stageForNetSuccesses(opts.level, net) };
 }

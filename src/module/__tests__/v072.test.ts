@@ -6,6 +6,7 @@
  * not that Foundry behaves as the stubs do.
  */
 import { test, describe, before, beforeEach, after } from 'node:test';
+import { SORCERY_V922 } from '../rules/__tests__/sorcery922.ts';
 import { oldWay } from '../rules/__tests__/oldway.ts';
 import assert from 'node:assert/strict';
 import { RULES, initiativeWoundPenalty } from '../rules/index.ts';
@@ -718,7 +719,9 @@ describe('O16 Spell Pool dice for dispelling drain', () => {
     return { caster, d };
   };
 
-  test('drainPoolDice are spent and rolled on the drain; switched off none are', async () => {
+  test('drainPoolDice are spent and rolled on the drain; switched off none are', async (t) => {
+    // v0.92.3: 'the book' here is the v0.92.2 reading (RULES.SORCERY_V923 at its old way); the book's way is in v0923-sorcery.test.ts.
+    t.after(oldWay(SORCERY_V922));
     const { caster, d } = setup();
     const left = d.system.derived.spellPoolLeft;
     assert.ok(left >= 2, `spell pool ${left}`);

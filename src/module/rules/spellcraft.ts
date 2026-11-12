@@ -1,13 +1,15 @@
-import { urrMagLossHit } from './urr80-magic.ts';
+import { magicLossHit, restrictedDrainMods, treatBase, weaponFocusKarma } from './sorcery923.ts';
 import { RULES } from './config.ts';
 import type { TargetNumberModifier } from './dice.ts';
 import { own } from './util.ts';
 import { t as tx } from '../helpers/i18n.ts';
 
 /** Healing TN: 10 - the patient's Essence (min 2), or a fixed TN. VERIFY */
-export function healingTargetNumber(patientEssence: number, fixed: number): number {
+export function healingTargetNumber(patientEssence: number, fixed: number, treat = false): number {
   const h = RULES.SPELLCRAFT.healing;
-  const tn = h.tn === 'essence' ? h.base - Math.floor(patientEssence) : fixed;
+  // v0.92.3 (RULES.SORCERY_V923.treatTn, Core p. 155): Treat is 8 − Essence, Heal 10 − Essence.
+  const base = treat ? treatBase() ?? h.base : h.base;
+  const tn = h.tn === 'essence' ? base - Math.floor(patientEssence) : fixed;
   return Math.max(RULES.MIN_TARGET_NUMBER, tn);
 }
 
@@ -19,6 +21,10 @@ export function boxesHealed(successes: number, marked: number): number {
 /** Drain TN modifiers from spell options. VERIFY */
 export function spellOptionDrainMods(opts: { exclusive?: boolean; fetish?: boolean }): TargetNumberModifier[] {
   const out: TargetNumberModifier[] = [];
+  // v0.92.3 (RULES.SORCERY_V923.restrictedSpells 'book', Core p. 133): they take effect at a higher Force instead;
+  // Drain is at the normal Force with no change.
+  // (The Revamp's own exclusive/fetish switches keep its rows, at 0, as before.)
+  if (!restrictedDrainMods() && !(RULES.URR_V80.magExclusiveForce || RULES.URR_V80.magFetishForce)) return out;
   if (opts.exclusive) out.push({ id: 'exclusive', label: tx('SR2E.Card.Mod.exclusive'), value: RULES.SPELLCRAFT.exclusiveDrainMod });
   if (opts.fetish) out.push({ id: 'fetish', label: tx('SR2E.Card.Mod.fetish'), value: RULES.SPELLCRAFT.fetishDrainMod });
   return out;
@@ -50,7 +56,8 @@ export function magicLossOutcome(total: number, magic: number): { lost: number; 
   const m = RULES.MAGIC_LOSS;
   const threshold = m.compareTo === 'magic' ? magic : m.fixed;
   // v0.80.0 (RULES.URR_V80.magLossLe, URR): under the Revamp a total equal to the threshold loses too.
-  return { lost: urrMagLossHit(total, threshold) ? m.loss : 0, threshold };
+  // v0.92.3 (RULES.SORCERY_V923.magicLoss 'book', Core p. 115): at or below Magic.
+  return { lost: magicLossHit(total, threshold) ? m.loss : 0, threshold };
 }
 
 /** Days an enchanting task takes; null if it failed. */
@@ -69,7 +76,8 @@ export function focusKarmaCost(focusType: string, rating: number, more: { target
     if (focusType === 'sustaining') return r > 0 ? B.spellLockFlat : 0;
     if (focusType === 'spirit') return r * B.spirit;
     if (focusType === 'power') return r * B.power;
-    if (focusType === 'weapon') return r * (more.size === 'large' ? B.weaponLarge : B.weaponSmall);
+    // v0.92.3 (RULES.SORCERY_V923.weaponFocusKarma, Grimoire p. 27): 6 × rating, whatever the size.
+    if (focusType === 'weapon') return weaponFocusKarma(r) ?? r * (more.size === 'large' ? B.weaponLarge : B.weaponSmall);
   }
   return r * (own(RULES.ENCHANTING.focusKarma, focusType) ?? 1);
 }

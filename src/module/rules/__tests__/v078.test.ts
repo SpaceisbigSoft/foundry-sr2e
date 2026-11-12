@@ -213,7 +213,9 @@ describe('v0.78.0 invisibility (BOOK_V78.invisibility)', () => {
 });
 
 describe('v0.78.0 focus bonding Karma (BOOK_V78.focusKarma)', () => {
-  test('the book’s table', () => {
+  test('the book’s table', (t) => {
+    // v0.92.3: the v0.92.2 rule (RULES.SORCERY_V923).
+    t.after(oldWay({ 'SORCERY_V923.weaponFocusKarma': 0 }));
     assert.equal(focusKarmaCost('spell', 3, { target: 'Mana Bolt' }), 3);
     assert.equal(focusKarmaCost('spell', 3, { category: 'combat' }), 9);
     assert.equal(focusKarmaCost('sustaining', 4), 1);

@@ -1,4 +1,5 @@
 import { test, describe } from 'node:test';
+import { oldWay } from './oldway.ts';
 import assert from 'node:assert/strict';
 import {
   reflexTypeOf, stackAugmentations, capInitiativeDice, smartlinkModifier, magnifiedRange, pheromoneDice, datajackCheck,
@@ -79,7 +80,9 @@ describe('cyberware depth (v0.29.0)', () => {
     assert.equal(softRating({ ...japanese, slotted: false }, { skillwires: 0, chipjack: true, datajack: true }).rating, 0);
   });
 
-  test('Magic and Essence: capped (default) or reduced by every point of Essence lost', () => {
+  test('Magic and Essence: capped (default) or reduced by every point of Essence lost', (t) => {
+    // v0.92.3: the v0.92.2 rule (RULES.SORCERY_V923).
+    t.after(oldWay({ 'SORCERY_V923.magicFromEssence': 'v922' }));
     assert.equal(effectiveMagic(6, 5.5), 6);
     assert.equal(effectiveMagic(4, 5.5), 4);
     (RULES as any).MAGIC_ESSENCE_MODE = 'reduce';

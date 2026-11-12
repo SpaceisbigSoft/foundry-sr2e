@@ -6,6 +6,8 @@
  * that Foundry behaves as the stubs do.
  */
 import { test, describe, before, beforeEach } from 'node:test';
+import { oldWay } from '../rules/__tests__/oldway.ts';
+import { SORCERY_V922 } from '../rules/__tests__/sorcery922.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { RULES, attributeMaximums, attributeMaximumsWith, effectiveMagic, nativeLanguageRating, karmaAward, skillCost, parseSkillWeb, webDistance, relatedDefaultTn } from '../rules/index.ts';
@@ -165,6 +167,8 @@ describe('v0.80.0 core: existing pure functions, wired', () => {
   });
 
   test('Magic capped by Essence rounded down under the Revamp (up in the book)', (t) => {
+    // v0.92.3: 'the book' here is the v0.92.2 reading (RULES.SORCERY_V923 at its old way); the book's way is in v0923-sorcery.test.ts.
+    t.after(oldWay(SORCERY_V922));
     assert.equal(effectiveMagic(6, 4.2), 5);
     t.after(urrMode());
     assert.equal(effectiveMagic(6, 4.2), 4);

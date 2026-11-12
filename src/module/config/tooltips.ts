@@ -147,6 +147,7 @@ export const FIELD_TOOLTIPS: Record<string, string> = {
   'spell:system.resist': 'SR2E.Tooltip.spell.system__resist',
   'spell:system.exclusive': 'SR2E.Tooltip.spell.system__exclusive',
   'spell:system.fetish': 'SR2E.Tooltip.spell.system__fetish',
+  'spell:system.fetishExpendable': 'SR2E.Tooltip.spell.system__fetishExpendable',
   'spell:system.elemental': 'SR2E.Tooltip.spell.system__elemental',
   'focus:system.focusType': 'SR2E.Tooltip.focus.system__focusType',
   'focus:system.rating': 'SR2E.Tooltip.focus.system__rating',

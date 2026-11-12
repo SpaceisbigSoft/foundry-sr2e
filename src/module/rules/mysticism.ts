@@ -1,7 +1,7 @@
 /** The rest of magic (v0.39.0): elemental effects, sustain limits, domains, focus addiction, sites, rituals, signatures, background count. */
 import { RULES } from './config.ts';
 import { tags } from './thaumaturgy.ts';
-import { urrMagRitualMaterials } from './urr80-magic.ts';
+import { ritualMaterials, ritualNeedsCircle } from './sorcery923.ts';
 import { isShamanic, isHermetic } from './arcana.ts';
 import { t as tx } from '../helpers/i18n.ts';
 
@@ -77,7 +77,8 @@ export function missingSites(task: 'elemental' | 'ritual', tradition: string, si
   }
   if (task === 'ritual' && c.ritualSite) {
     // v0.80.0 (RULES.URR_V80.magRitualCircle, URR): a hermetic ritual needs a hermetic circle.
-    if (hermetic) { if (RULES.URR_V80.magRitualCircle) need('circle', '', tx('SR2E.Text.Mysticism.aHermeticCircle')); else need('library', 'sorcery', tx('SR2E.Text.Mysticism.aSorceryLibrary')); }
+    // v0.92.3 (RULES.SORCERY_V923.ritualTeam 'book', Core p. 135): the book's rule too.
+    if (hermetic) { if (ritualNeedsCircle()) need('circle', '', tx('SR2E.Text.Mysticism.aHermeticCircle')); else need('library', 'sorcery', tx('SR2E.Text.Mysticism.aSorceryLibrary')); }
     if (shamanic) need('lodge', o.totem ?? '', o.totem ? tx('SR2E.Text.Mysticism.aLodgeTotem', { totem: o.totem }) : tx('SR2E.Text.Mysticism.aLodge'));
   }
   return out;
@@ -86,7 +87,8 @@ export function missingSites(task: 'elemental' | 'ritual', tradition: string, si
 /** Ritual materials for a ritual of this Force (nuyen). */
 export function ritualMaterialsCost(force: number, category = ''): number {
   // v0.80.0 (RULES.URR_V80.magRitualMaterials 'category', URR): by spell category.
-  const urr = urrMagRitualMaterials(force, category);
+  // v0.92.3 (RULES.SORCERY_V923.ritualMaterials 'book', Core p. 135): the same costs.
+  const urr = ritualMaterials(force, category);
   if (urr !== null) return urr;
   return Math.max(0, force) * RULES.MAGIC_V39.ritualStages.materialsPerForce;
 }

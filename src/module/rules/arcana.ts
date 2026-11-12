@@ -3,6 +3,7 @@ import type { TargetNumberModifier } from './dice.ts';
 import { modifierIs } from './dice.ts';
 import type { Augmentation } from './cyberware.ts';
 import { urrMagNoTotemDice } from './urr80-magic.ts';
+import { bookGrade, spellLockAnyForce } from './sorcery923.ts';
 import type { Attributes } from './stats.ts';
 import { own } from './util.ts';
 import { t as tx, tCount } from '../helpers/i18n.ts';
@@ -112,7 +113,8 @@ function withPower(foci: readonly Focus[], test: 'sorcery' | 'conjuring' | 'astr
 /** A free sustaining focus that can hold a spell of this Force and category, or null. VERIFY */
 export function availableSustainingFocus(foci: readonly Focus[], sustained: readonly SustainedSpell[], spell: { force: number; category: string }): Focus | null {
   const used = new Set(sustained.map((s) => s.focusId).filter(Boolean));
-  return foci.find((f) => f.focusType === 'sustaining' && f.active && (f as { bonded?: boolean }).bonded !== false && f.rating >= spell.force
+  // v0.92.3 (RULES.SORCERY_V923.spellLock 'book', Core p. 138): a spell lock holds a spell of any Force.
+  return foci.find((f) => f.focusType === 'sustaining' && f.active && (f as { bonded?: boolean }).bonded !== false && (spellLockAnyForce() ? f.rating > 0 : f.rating >= spell.force)
     && (!f.category || same(f.category, spell.category)) && !(f.id && used.has(f.id))) ?? null;
 }
 
@@ -192,12 +194,13 @@ export type Metamagic = (typeof METAMAGIC)[number];
 
 /** Magic after initiation: each grade adds RULES.MAGIC.magicPerGrade (only for the magically active). VERIFY */
 export function initiateMagic(magic: number, grade: number): number {
-  return magic > 0 ? magic + Math.max(0, Math.floor(grade || 0)) * RULES.MAGIC.magicPerGrade : 0;
+  // v0.92.3 (RULES.SORCERY_V923.initiation 'book', Grimoire p. 37): the first initiation is Grade 0 and adds no Magic.
+  return magic > 0 ? magic + bookGrade(Math.max(0, Math.floor(grade || 0))) * RULES.MAGIC.magicPerGrade : 0;
 }
 
 /** Shielding: extra dice when resisting spells. VERIFY */
 export function shieldingDice(grade: number, techniques: readonly string[]): number {
-  return techniques.includes('shielding') ? Math.max(0, grade) * RULES.MAGIC.shieldingDicePerGrade : 0;
+  return techniques.includes('shielding') ? bookGrade(Math.max(0, grade)) * RULES.MAGIC.shieldingDicePerGrade : 0;
 }
 
 /**
@@ -207,7 +210,7 @@ export function shieldingDice(grade: number, techniques: readonly string[]): num
 export function centeringModifiers(grade: number, techniques: readonly string[], penalties: readonly TargetNumberModifier[]): TargetNumberModifier[] {
   if (!techniques.includes('centering')) return [];
   const total = penalties.filter((m) => m.value > 0 && (modifierIs(m, 'wounds', /^Wounds/) || modifierIs(m, 'sustaining', /^Sustaining/))).reduce((s, m) => s + m.value, 0);
-  const cut = Math.min(total, Math.max(0, grade) * RULES.MAGIC.centeringPerGrade);
+  const cut = Math.min(total, bookGrade(Math.max(0, grade)) * RULES.MAGIC.centeringPerGrade);
   return cut > 0 ? [{ id: 'centering', label: tx('SR2E.Card.Mod.centering'), value: -cut }] : [];
 }
 

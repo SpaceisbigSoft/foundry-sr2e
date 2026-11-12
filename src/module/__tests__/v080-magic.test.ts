@@ -5,6 +5,7 @@
  * The Revamp side lays only this area's patch (magicMode), so the other areas' rows can't move these dice.
  */
 import { test, describe, before, beforeEach } from 'node:test';
+import { SORCERY_V922 } from '../rules/__tests__/sorcery922.ts';
 import assert from 'node:assert/strict';
 import { RULES } from '../rules/index.ts';
 import { oldWay } from '../rules/__tests__/oldway.ts';
@@ -169,7 +170,9 @@ const spell = (over: any = {}) => ({ id: 'sp1', name: 'Detect Life', type: 'spel
 const drainCard = () => [...chat].reverse().find((m) => /(Drain|Ward drain) [LMSD] \(TN/.test(String(m.content ?? '')));
 
 describe('v0.80.0 magic loss on 2D6 ≤ Magic (URR_V80.magLossLe)', () => {
-  test('the book: a roll equal to Magic keeps it', async () => {
+  test('the book: a roll equal to Magic keeps it', async (t) => {
+    // v0.92.3: 'the book' here is the v0.92.2 reading (RULES.SORCERY_V923 at its old way); the book's way is in v0923-sorcery.test.ts.
+    t.after(oldWay(SORCERY_V922));
     const m = mage();
     faces.push(3, 3);
     assert.deepEqual(await m.rollMagicLoss(), { total: 6, lost: 0 });
@@ -186,7 +189,9 @@ describe('v0.80.0 magic loss on 2D6 ≤ Magic (URR_V80.magLossLe)', () => {
 });
 
 describe('v0.80.0 casting (magCastDice, magRuleOfOneDrain, magExclusiveForce, magSustainCap, magAstralDrainPhysical)', () => {
-  test('the book: Sorcery dice; no drain change on a disaster', async () => {
+  test('the book: Sorcery dice; no drain change on a disaster', async (t) => {
+    // v0.92.3: 'the book' here is the v0.92.2 reading (RULES.SORCERY_V923 at its old way); the book's way is in v0923-sorcery.test.ts.
+    t.after(oldWay(SORCERY_V922));
     const m = mage();
     faces.push(1, 1, 1, 1, 1);                                        // Sorcery 5: a disaster
     faces.push(5, 5, 1, 1, 1);                                        // drain: Willpower 5 vs 2
@@ -216,7 +221,9 @@ describe('v0.80.0 casting (magCastDice, magRuleOfOneDrain, magExclusiveForce, ma
     assert.equal(drainCard().flags.sr2e.test.targetNumber, 2);
     assert.doesNotMatch(drainCard().content, /physical/);
   });
-  test('the book: an exclusive spell is cast at its Force, drain TN −2', async () => {
+  test('the book: an exclusive spell is cast at its Force, drain TN −2', async (t) => {
+    // v0.92.3: 'the book' here is the v0.92.2 reading (RULES.SORCERY_V923 at its old way); the book's way is in v0923-sorcery.test.ts.
+    t.after(oldWay(SORCERY_V922));
     const m = mage();
     faces.push(5, 5, 5, 1, 1);
     faces.push(5, 5, 1, 1, 1);
@@ -226,6 +233,8 @@ describe('v0.80.0 casting (magCastDice, magRuleOfOneDrain, magExclusiveForce, ma
     assert.ok(drainCard().flags.sr2e.test.modifiers.some((x: any) => x.label === 'Exclusive' && x.value === -2));
   });
   test('sustaining: the Revamp stops at the Sorcery rating; the book has no limit', async (t) => {
+    // v0.92.3: 'the book' here is the v0.92.2 reading (RULES.SORCERY_V923 at its old way); the book's way is in v0923-sorcery.test.ts.
+    t.after(oldWay(SORCERY_V922));
     const held = [{ spellName: 'Armor', force: 2, category: 'manipulation', focusId: '' }];
     const m1 = who({ name: 'Mage', magic: 6, tradition: 'hermetic', sustaining: [...held] }, [skill('so', 'Sorcery', 1, 'willpower')]);
     faces.push(5);                                                    // Sorcery 1
@@ -260,7 +269,9 @@ describe('v0.80.0 casting (magCastDice, magRuleOfOneDrain, magExclusiveForce, ma
 describe('v0.80.0 spell resistance: a tie (magSpellTie) and a ritual leader (magRitualResistTn)', () => {
   const state = (t: any, over: any = {}) => ({ casterUuid: 'x', targetUuid: t.uuid, spellName: 'Manabolt', force: 5, resistAttribute: 'willpower',
     level: 'M', damageType: 'physical', casterSuccesses: 1, ...over });
-  test('the book: a tie is resisted', async () => {
+  test('the book: a tie is resisted', async (ctx) => {
+    // v0.92.3: 'the book' here is the v0.92.2 reading (RULES.SORCERY_V923 at its old way); the book's way is in v0923-sorcery.test.ts.
+    ctx.after(oldWay(SORCERY_V922));
     const t = who({ name: 'Goon' });
     faces.push(5, 1, 1, 1, 1);                                        // Willpower 5 vs 5: 1 success
     await t.resistSpell(state(t), 0);
@@ -344,6 +355,8 @@ describe('v0.80.0 conjuring, wards, learning, sites and traditions', () => {
     assert.match(domainConflict(['forest'], 'city') ?? '', /only one at a time/);
   });
   test('wards: the Revamp uses Sorcery, caps the Force and drains at Force + successes, Stun', async (t) => {
+    // v0.92.3: 'the book' here is the v0.92.2 reading (RULES.SORCERY_V923 at its old way); the book's way is in v0923-sorcery.test.ts.
+    t.after(oldWay(SORCERY_V922));
     const book = wardPlan(4, 2);
     assert.deepEqual([book.drainTn, book.drainLevel, book.nuyen], [2, 'M', 0]);
     t.after(magicMode());
@@ -359,6 +372,8 @@ describe('v0.80.0 conjuring, wards, learning, sites and traditions', () => {
     assert.equal(wardPlan(3, 0).nuyen, 300);
   });
   test('learning: Sorcery vs Force (book); + Magical Theory vs 2 × Force (Revamp)', async (t) => {
+    // v0.92.3: 'the book' here is the v0.92.2 reading (RULES.SORCERY_V923 at its old way); the book's way is in v0923-sorcery.test.ts.
+    t.after(oldWay(SORCERY_V922));
     t.after(oldWay({ 'MAGIC_V56.learning.enabled': true, 'MAGIC_V56.learning.site': 'off' }));
     const m1 = mage({}, [skill('mt', 'Magical Theory', 3, 'intelligence')]);
     faces.push(5, 5, 1, 1, 1);
@@ -372,6 +387,8 @@ describe('v0.80.0 conjuring, wards, learning, sites and traditions', () => {
     assert.equal(learningPlan(3, 0).tn, 6);
   });
   test('sites, ritual materials and the hermetic ritual site', (t) => {
+    // v0.92.3: 'the book' here is the v0.92.2 reading (RULES.SORCERY_V923 at its old way); the book's way is in v0923-sorcery.test.ts.
+    t.after(oldWay(SORCERY_V922));
     const lib = [{ kind: 'library', tag: 'sorcery', rating: 5, name: 'Library' }] as any[];
     assert.deepEqual(siteRaiseCost('library', 0, 3), { nuyen: 3000, days: 3 });
     assert.equal(ritualMaterialsCost(4, 'health'), 0);

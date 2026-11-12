@@ -730,6 +730,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const ordeals = RULES.OCCULT.initiation.ordeals;
     const costOf = (group: boolean, ordeal: boolean) => initiationCost(grade, { group, ordeal });
     const content = `<p>${tx('SR2E.Dialog.Sheet.grade', { grade: escHtml(grade) })} <strong data-cost>${costOf(false, false).cost}</strong> ${tx('SR2E.Dialog.Sheet.goodKarmaAvailable', { karmaGood: escHtml(actor.system.karma.good) })}</p>
+        ${RULES.SORCERY_V923.initiation === "book" ? `<p class="hint">${tx('SR2E.Dialog.Sheet.initiationBookGrade', { grade: escHtml(grade), bookGrade: escHtml(Math.max(0, grade - 1)) })}</p>` : ""}
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.learnMetamagic')}</label><select name="tech"><option value="">${tx('SR2E.Dialog.Sheet.none')}</option>${unknown.map((k) => `<option value="${escHtml(k)}">${escHtml(cap(k))}</option>`).join("")}</select></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.ordeal')}</label><select name="ordeal"><option value="">${tx('SR2E.Dialog.Sheet.none')}</option>${ordeals.map((o) => `<option value="${escHtml(o.id)}">${escHtml(o.label)}</option>`).join("")}</select></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.asceticismLower')}</label><select name="attr">${ATTRIBUTE_KEYS.map((k) => `<option value="${k}">${escHtml(cap(k))} (${escHtml(actor.system.attributes[k].base)})</option>`).join("")}</select></div>
@@ -824,10 +825,10 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         <label class="sr2e-check"><input type="checkbox" name="restricted"> ${tx('SR2E.Dialog.Sheet.veryRestrictedTargetOneMetatypeOne')}</label>
         <label class="sr2e-check"><input type="checkbox" name="extendedRange"> ${tx('SR2E.Dialog.Sheet.detectionExtendedRange')}</label>
         <label class="sr2e-check"><input type="checkbox" name="singleSense"> ${tx('SR2E.Dialog.Sheet.illusionOneSenseOnly')}</label>
-        <label class="sr2e-check"><input type="checkbox" name="exclusive"> ${tx('SR2E.Dialog.Sheet.exclusiveDrainWhenCast', { spellcraftExclusiveDrainMod: RULES.SPELLCRAFT.exclusiveDrainMod })}</label>
-        <label class="sr2e-check"><input type="checkbox" name="fetish"> ${tx('SR2E.Dialog.Sheet.fetishLimitedDrainWhenCast', { spellcraftFetishDrainMod: RULES.SPELLCRAFT.fetishDrainMod })}</label>
+        <label class="sr2e-check"><input type="checkbox" name="exclusive"> ${RULES.SORCERY_V923.restrictedSpells === "book" ? tx('SR2E.Dialog.Sheet.exclusiveForceWhenCast', { force: RULES.SORCERY_V923.restrictedForce.exclusive }) : tx('SR2E.Dialog.Sheet.exclusiveDrainWhenCast', { spellcraftExclusiveDrainMod: RULES.SPELLCRAFT.exclusiveDrainMod })}</label>
+        <label class="sr2e-check"><input type="checkbox" name="fetish"> ${RULES.SORCERY_V923.restrictedSpells === "book" ? tx('SR2E.Dialog.Sheet.fetishForceWhenCast', { force: RULES.SORCERY_V923.restrictedForce.fetishReusable, expendable: RULES.SORCERY_V923.restrictedForce.fetishExpendable }) : tx('SR2E.Dialog.Sheet.fetishLimitedDrainWhenCast', { spellcraftFetishDrainMod: RULES.SPELLCRAFT.fetishDrainMod })}</label>
         <p class="hint" data-drain></p>
-        <p class="hint">${tx('SR2E.Dialog.Sheet.vsForceALibraryHermeticOr', { designSkill: RULES.OCCULT.design.skill })}</p>`,
+        <p class="hint">${RULES.SORCERY_V923.design === "book" ? tx('SR2E.Dialog.Sheet.designBookHint') : tx('SR2E.Dialog.Sheet.vsForceALibraryHermeticOr', { designSkill: RULES.OCCULT.design.skill })}</p>`,
       render: (_e: Event, dialog: any) => {
         const form: HTMLFormElement | null = dialog.element?.querySelector?.("form") ?? null;
         const upd = () => {
@@ -4192,7 +4193,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
             // v0.78.0 (RULES.BOOK_V78.focusKarma): the book's bonding costs.
             const B = RULES.BOOK_V78.focusKarma;
             const cost = B.mode !== "book" ? tx('SR2E.Dialog.Sheet.karmaPerRating', { karma: RULES.ENCHANTING.focusKarma[k] ?? 1 })
-              : k === "spell" ? tx('SR2E.Dialog.Sheet.spellFocusCost', { specificSpell: B.specificSpell, spellCategory: B.spellCategory }) : k === "sustaining" ? tx('SR2E.Dialog.Sheet.karmaFlat', { karma: B.spellLockFlat }) : k === "weapon" ? tx('SR2E.Dialog.Sheet.weaponFocusCost', { weaponSmall: B.weaponSmall, weaponLarge: B.weaponLarge }) : tx('SR2E.Dialog.Sheet.karmaPerRating', { karma: escHtml((B as any)[k] ?? 1) });
+              : k === "spell" ? tx('SR2E.Dialog.Sheet.spellFocusCost', { specificSpell: B.specificSpell, spellCategory: B.spellCategory }) : k === "sustaining" ? tx('SR2E.Dialog.Sheet.karmaFlat', { karma: B.spellLockFlat }) : k === "weapon" ? (Number(RULES.SORCERY_V923.weaponFocusKarma) > 0 ? tx('SR2E.Dialog.Sheet.karmaPerRating', { karma: Number(RULES.SORCERY_V923.weaponFocusKarma) }) : tx('SR2E.Dialog.Sheet.weaponFocusCost', { weaponSmall: B.weaponSmall, weaponLarge: B.weaponLarge })) : tx('SR2E.Dialog.Sheet.karmaPerRating', { karma: escHtml((B as any)[k] ?? 1) });
             return `<option value="${k}">${escHtml(cap(k))} (${cost})</option>`;
           }).join("")}</select></div>
           <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.weaponFocusSize')}</label><select name="fsize"><option value="small">${tx('SR2E.Dialog.Sheet.smallNoReach')}</option><option value="large">${tx('SR2E.Dialog.Sheet.largeReach')}</option></select></div>

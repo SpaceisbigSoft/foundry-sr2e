@@ -70,7 +70,9 @@ describe('v0.45.0 metamagic', () => {
 });
 
 describe('v0.45.0 initiation and design', () => {
-  test('ordeals and group initiation lower the multiplier; the old cost is the self rate', () => {
+  test('ordeals and group initiation lower the multiplier; the old cost is the self rate', (t) => {
+    // v0.92.3: the v0.92.2 rule (RULES.SORCERY_V923).
+    t.after(oldWay({ 'SORCERY_V923.initiation': 'v922', 'OCCULT.initiation.ordealReduction': 1 }));
     assert.deepEqual(initiationCost(1), { cost: 21, multiplier: 3 });
     assert.deepEqual(initiationCost(2, { ordeal: true }), { cost: 16, multiplier: 2 });
     assert.deepEqual(initiationCost(2, { group: true, ordeal: true }), { cost: 8, multiplier: 1 });
@@ -87,7 +89,9 @@ describe('v0.45.0 initiation and design', () => {
     withRule(RULES.OCCULT.initiation, 'site', 'off', () => assert.deepEqual(initiationSiteMissing('hermetic', [], 3), []));
   });
 
-  test('spell design: drain code from the formula, test and days', () => {
+  test('spell design: drain code from the formula, test and days', (t) => {
+    // v0.92.3: the v0.92.2 rule (RULES.SORCERY_V923).
+    t.after(oldWay({ 'SORCERY_V923.design': 'v922' }));
     assert.deepEqual(designDrain({ category: 'combat', spellType: 'mana', damageLevel: 'S' }), { drainModifier: 0, drainLevel: 'S', notes: [] });
     const fb = designDrain({ category: 'combat', spellType: 'physical', area: true, elemental: true, damageLevel: 'M' });
     assert.equal(fb.drainModifier, 2);
@@ -153,7 +157,9 @@ describe('v0.45.0 powers, rituals, sites, diet', () => {
     withRule(RULES.OCCULT.ritualNotice, 'mundanes', true, () => assert.equal(ritualNoticeTn({ awakened: false, astral: false }), 6));
   });
 
-  test('raising a site costs the difference', () => {
+  test('raising a site costs the difference', (t) => {
+    // v0.92.3: the v0.92.2 rule (RULES.SORCERY_V923).
+    t.after(oldWay({ 'SORCERY_V923.siteCost': 'v922' }));
     assert.deepEqual(siteRaiseCost('library', 2, 5), { nuyen: 3000, days: 3 });
     assert.deepEqual(siteRaiseCost('lodge', 0, 4), { nuyen: 2000, days: 4 });
     assert.deepEqual(siteRaiseCost('circle', 5, 3), { nuyen: 0, days: 0 });
