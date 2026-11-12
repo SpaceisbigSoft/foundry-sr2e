@@ -40,10 +40,11 @@ describe('v0.80.0 health-social: shipped values are the book', () => {
   });
   test('the book patch targets keep their book values', () => {
     assert.equal(RULES.STUN_OVERFLOW_PER_PHYSICAL_BOX, 2);
-    assert.equal(RULES.METATYPES.types['troll']!.run, 3);
+    // v0.92.3 (book alignment): the book's own values moved: troll running × 2 (Core p. 83), climbing 3/5/8/14 (FoF p. 75).
+    assert.equal(RULES.METATYPES.types['troll']!.run, 2);
     assert.equal(RULES.STREET.haggle.percentPerNet, 5);
     assert.equal(RULES.SOCIAL.skills['Negotiation'], 'willpower');
-    assert.deepEqual(RULES.STREET.athletics.climb.map((c) => c.tn), [2, 4, 6, 8]);
+    assert.deepEqual(RULES.STREET.athletics.climb.map((c) => c.tn), [3, 5, 8, 14]);
   });
   test('a numeric turnsPerBox still counts', (t) => {
     const keep = RULES.CONDITIONS.dying.turnsPerBox;

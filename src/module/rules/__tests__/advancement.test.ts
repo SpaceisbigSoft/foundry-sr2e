@@ -5,6 +5,7 @@ import {
   creationRecordFrom, isCreationRecord, ledgerAdded, composeAdvancement, appendAdvancement, describeLine, advancementTotals, itemRaises, actorRaises, sinceCreation, delta,
   attributeSources, ratingLockApplies, lockedRaises, needsApproval, makeRequest, withRequest, describeRequest, RULES, type LedgerEntry, type AdvanceEvent,
 } from '../index.ts';
+import { oldWay } from './oldway.ts';
 
 const ctx = (n = 0) => { let i = n; return { by: 'Corvo', at: '2026-10-22T00:00:00.000Z', t: 100, ids: () => `id${i++}` }; };
 
@@ -34,7 +35,9 @@ describe('v0.64.0 wizard steps', () => {
     assert.equal(s.magic, '');
   });
 
-  test('the priority table: races by letter, magic, points and nuyen from RULES.CREATION', () => {
+  test('the priority table: races by letter, magic, points and nuyen from RULES.CREATION', (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.priorities': 'old' }));
     const t = priorityTable();
     assert.equal(t.length, 5);
     const a = t[0]!, e = t[4]!;
@@ -46,7 +49,9 @@ describe('v0.64.0 wizard steps', () => {
     assert.equal(e.magic, '—');
   });
 
-  test('metatypes allowed by the Race letter', () => {
+  test('metatypes allowed by the Race letter', (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.priorities': 'old' }));
     const types = { human: { label: 'Human' }, troll: { label: 'Troll' }, dwarf: { label: 'Dwarf' } };
     const d = metatypeChoices('D', types);
     assert.equal(d.find((x) => x.key === 'troll')!.allowed, false);
@@ -55,7 +60,9 @@ describe('v0.64.0 wizard steps', () => {
     assert.equal(metatypeChoices(undefined, types).every((x) => x.allowed), true);
   });
 
-  test('magic kinds by the Magic letter, and a tradition\'s kind', () => {
+  test('magic kinds by the Magic letter, and a tradition\'s kind', (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.priorities': 'old' }));
     assert.deepEqual(magicChoices('A').filter((m) => m.allowed).map((m) => m.key), ['none', 'full', 'adept', 'aspected']);
     assert.deepEqual(magicChoices('B').filter((m) => m.allowed).map((m) => m.key), ['none', 'adept', 'aspected']);
     assert.deepEqual(magicChoices('C').filter((m) => m.allowed).map((m) => m.key), ['none']);
@@ -67,7 +74,9 @@ describe('v0.64.0 wizard steps', () => {
     assert.equal(magicKindOf('none', 3), 'full');
   });
 
-  test('attribute points and complete priorities', () => {
+  test('attribute points and complete priorities', (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.priorities': 'old' }));
     assert.deepEqual(attributePoints({ body: 4, quickness: 5, strength: 3.7, charisma: -1 }, 'C'), { used: 12, allowed: RULES.CREATION.priorities.C.attributes, left: RULES.CREATION.priorities.C.attributes - 12 });
     assert.equal(attributePoints({}, undefined).allowed, 0);
     assert.equal(prioritiesComplete({ race: 'A', magic: 'B', attributes: 'C', skills: 'D', resources: 'E' }), true);

@@ -283,7 +283,9 @@ describe('R1 Karma Pool on contest and street cards', () => {
     assert.match(again.content, /Found in/);
   });
 
-  test('fence: the offer on the card flag; a share the heat eats whole: the fence passes, no Sell flag', async () => {
+  test('fence: the offer on the card flag; a share the heat eats whole: the fence passes, no Sell flag', async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.fence': 'old' }));
     const loot = (heat: number) => ({ id: 'loot', type: 'gear', name: 'Loot', system: { cost: 1000, streetIndex: 1, quantity: 1, heat, heatAt: 0 } });
     const a = dealer(3, [loot(0)]);
     faces.push(5, 5, 1, 1, 2, 2, 2, 2);
@@ -343,7 +345,9 @@ describe('R2 contests through the shared skill-dice path', () => {
     await withRule(RULES.FIXES_V71, 'contestSkillDice', false, () => { assert.equal(a.stealthSide().dice, 3); });
   });
 
-  test('perceptionDice: Perception + gear dice; the old raw rating with the switch off; no skill: Intelligence', async () => {
+  test('perceptionDice: Perception + gear dice; the old raw rating with the switch off; no skill: Intelligence', async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.perception': 'opposed' }));
     const a = sneaky();
     const p = a.perceptionDice();
     assert.equal(p.dice, 5);                                             // 4 + suit 1
@@ -625,6 +629,8 @@ describe('R18 vehicle repair', () => {
   const easier = [{ label: 'Easy job', value: -4 }];
 
   test('no tools: + the no-tools TN; the success fixes the shot-out tires first, then a box', async (t) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    t.after(oldWay({ 'CHARACTERS_V58.tools.none': 'tn' }));
     t.after(oldWay({ 'DOCS_V79.vehRepair.mode': 'perSuccess' })); // v0.79.0: the old rule (a house rule)
     const m = mechanic();
     const v = vehicle({ condition: 2, systems: { tires: true, engine: false, sensors: false } });
@@ -644,7 +650,9 @@ describe('R18 vehicle repair', () => {
     assert.equal(faces.length, 0);
   });
 
-  test('a destroyed vehicle needs a success to start a rebuild; then everything is fixed', async () => {
+  test('a destroyed vehicle needs a success to start a rebuild; then everything is fixed', async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CHARACTERS_V58.tools.none': 'tn' }));
     const m = mechanic();
     const v = vehicle({ condition: RULES.VEHICLES.conditionBoxes, systems: { tires: true, engine: true, sensors: false } });
     assert.equal(v.system.derived.destroyed, true);

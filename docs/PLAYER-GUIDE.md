@@ -377,7 +377,7 @@ The strip at the top of a card is coloured by the kind of test: red for combat, 
 If the character has a Karma Pool, their test cards get Karma buttons:
 
 - **Re-roll N failures (Karma X)**: rolls the failed dice again. Each re-roll of the same test costs more.
-- **Avoid disaster**: on a roll where every die shows 1.
+- **Avoid disaster**: on a roll where every die shows 1. After it no more Karma can be spent on that test.
 - **Buy a success**: when the test has at least one success. The label says *permanent* when the point is gone for good rather than back at the next refresh.
 
 On an attack, use Karma before the target defends: once they have, the attack card's Karma buttons refuse.
@@ -392,11 +392,11 @@ Karma Pool left shows under **Derived** on the Main tab. The circular arrow besi
 
 The pools are the Combat Pool, Spell Pool, Hacking Pool (Matrix), Control Pool (rigging) and Karma Pool. The [status strip](#layouts-the-status-strip-and-your-turn) shows each as pips; click a pip to set how many are left (clicking the last filled pip takes one die off).
 
-A test dialog that can take pool dice has a box for them. What you use comes off what is left. The Main tab shows the Combat Pool spent; the Matrix and Rigging tabs show theirs, with a box to correct the spent number.
+A test dialog that can take pool dice has a box for them. What you use comes off what is left. The Main tab shows the Combat Pool spent; the Matrix and Rigging tabs show theirs, with a box to correct the spent number. Skill and attribute dialogs also have a box for **Karma Pool dice**: one point a die, up to the test's own dice.
 
 An encephalon gives a small **Task Pool** for Intelligence, knowledge and Build/Repair skills: the skill dialog has a box for it (used up only in combat). An adept's Combat Sense adds to the Combat Pool, and a power focus adds its rating to the Spell Pool.
 
-The Combat, Spell, Hacking, Control and Task Pools refill when a combat starts and at each new Combat Turn. The GM can also refill them from the GM panel (Party tab: **Refresh pools**). The Karma Pool doesn't refill with them: use the circular arrow beside **Karma Pool left** on the Main tab, or the GM's **Refresh Karma Pools**. A house rule can refill Karma Pools by themselves at the start of each session or when a combat ends.
+The Combat, Spell, Hacking, Control and Task Pools refill when a combat starts and at each new Combat Turn. The GM can also refill them from the GM panel (Party tab: **Refresh pools**). The Karma Pool refills by itself when a combat ends; between other scenes use the circular arrow beside **Karma Pool left** on the Main tab, or the GM's **Refresh Karma Pools**. A house rule can refill Karma Pools at the start of each session instead, or only by hand.
 
 On the Current tab, **Initiative and pools** lists the initiative (and Matrix or rigged initiative) and each pool, read only. Your combatants in the combat tracker show their pools too.
 
@@ -653,11 +653,11 @@ On a new character, the Creation tab (and the Bio tab) has **Create character…
 - Priorities: pick a letter, A to E, for each of Race, Magic, Attributes, Skills and Resources. Picking a letter another one holds swaps the two.
 - Metatype: choices the Race priority doesn't allow are greyed out.
 - Attributes: base ratings, with points used and allowed.
-- Magic: mundane, full magician, adept or aspected, as the priority allows; tradition and totem; spells or adept powers through the Add window. A magician's foci bought in creation arrive bonded and count against the spell points.
+- Magic: mundane, full magician, adept or aspected, as the priority allows (a metahuman magician needs Magic B, a metahuman adept C); tradition and totem; spells or adept powers through the Add window. A magician's foci bought in creation arrive bonded and count against the Force Points, which come from the Resources priority.
 - Skills: the + for each kind opens the skill picker (free in creation). Set ratings and specializations here; a specialization taken here lowers the skill as the trade works, and a check flags a trade that doesn't. Common skills you haven't taken are listed: click one to add it at 1.
 - Resources: the lifestyle, months paid ahead or bought outright, and the **Shopping** buttons, which open the Add window. Free and bought items both come out of the Resources nuyen.
 - Contacts: **Add a contact**, then its name, level (1 to 3) and role. The first ones are free; more cost nuyen.
-- Finish: every build check with ✓ or ✗; click a check to go to its step. You can finish with checks unmet; the record notes it. Finishing pays the lifestyle and keeps the cash left, as the hint says.
+- Finish: every build check with ✓ or ✗; click a check to go to its step. You can finish with checks unmet; the record notes it. Finishing pays the lifestyle, keeps a tenth of the cash left, adds 3D6 × ¥1,000 starting cash and gives a metahuman a Karma Pool of 2, as the hint says.
 
 The **Totals** panel keeps the build checks in view at every step. Closing the wizard keeps the draft: **Continue creation…** opens it again. **Finish creation** freezes the [creation record](#creation-record-and-advancement-log).
 

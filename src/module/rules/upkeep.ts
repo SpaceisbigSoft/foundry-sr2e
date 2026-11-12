@@ -1,6 +1,7 @@
 import { RULES } from './config.ts';
 import { docsSkillCost } from './docs79-social-core.ts';
 import { urrCoreKarmaAward, urrCoreSkillCost } from './urr80-core.ts';
+import { bookSkillCost } from './core923.ts';
 import { t as tx } from '../helpers/i18n.ts';
 
 /** Upkeep (v0.33.0): lifestyle, Karma, contacts and buying gear. Values in RULES.UPKEEP (VERIFY). */
@@ -55,6 +56,9 @@ export function skillCost(o: { to: number; attribute: number; kind: 'active' | '
   // v0.80.0 (RULES.URR_V80.coreLanguageKarma): a language at new rating × 1 (null in the book).
   const urr = urrCoreSkillCost(o);
   if (urr != null) return urr;
+  // v0.92.3 (RULES.CORE_V923.skillKarma 'book', Core p. 190): a language × 1, a knowledge skill as a general skill.
+  const book = bookSkillCost(o);
+  if (book != null) return book;
   const flat = docsSkillCost(o);
   if (flat != null) return flat;
   const k = RULES.UPKEEP.karma;

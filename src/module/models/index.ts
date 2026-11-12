@@ -40,6 +40,7 @@ import { magicPoolBase, sorceryRating } from '../rules/docs79-drones-magic.ts';
 import { poolLayers, narrowLeft, sorcerySkillOf } from '../rules/magicpool.ts';
 import { TWEAK_TARGETS, sumTweaks, isCarried } from '../rules/tweaks.ts';
 import * as U80C from '../rules/urr80-combat.ts';
+import { dermalArmor, threatBook } from '../rules/core923.ts';
 import { armorTotal } from '../rules/gear.ts';
 import { FEEDS } from '../rules/tactics.ts';
 import { ART_ARCHETYPES } from '../rules/tokenart.ts';
@@ -348,7 +349,7 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
         pool: new fields.NumberField({ required: true, integer: true, min: 0, max: SANE_MAX, initial: 1 }),
         /** Karma Pool points used since the last refresh. */
         poolSpent: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
-        /** Karma earned over the career (v0.33.0): every 10 (20 for metahumans) puts a point in the pool. */
+        /** Karma earned over the career (v0.33.0): every RULES.UPKEEP.karma.poolEvery (v0.92.3: 11) puts a point in the pool. */
         career: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
       }),
       /** Upkeep (v0.33.0): lifestyle and when it is paid until (world time; -1 never), contacts, a ledger. */
@@ -849,14 +850,17 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
     const adeptPool = sys.tradition === 'adept' && RULES.ADEPT.spellPool;
     const d = { ...d0, spellPool: adeptPool ? d0.spellPool : magicPoolBase({ sorcery: sorceryRating((this as any).parent?.items), intelligence: totals.intelligence, willpower: totals.willpower, magic: poolMagic }) };
     // An NPC's Threat Rating adds Combat Pool dice (v0.44.0).
-    const threat = (this as any).parent?.type === 'npc' && RULES.STREET.threat.addsToPool ? Math.max(0, Math.floor(sys.threatRating ?? 0)) : 0;
+    // v0.92.3 (RULES.CORE_V923.threat 'book', Core p. 187): Threat dice go on every test instead, and replace the pools.
+    const threatNpc = (this as any).parent?.type === 'npc' && Math.max(0, Math.floor(sys.threatRating ?? 0)) > 0;
+    const threat = !threatBook() && (this as any).parent?.type === 'npc' && RULES.STREET.threat.addsToPool ? Math.max(0, Math.floor(sys.threatRating ?? 0)) : 0;
+    const noPools = threatBook() && threatNpc;
     const bodyStatus = monitorStatus(sys.monitor, overflowBody(totals.body, qv)) as Status;
     // v0.81.0 (RB-11): shared values, computed once so the paired derived fields stay in step.
     const foci = fociOf((this as any).parent, String(sys.tradition ?? ''));
     // v0.78.0 (RULES.BOOK_V78.powerFocus 'magic'): a power focus adds its rating to the Spell Pool and to the Magic for drain.
     const powerFocus = poolMagic > 0 ? powerFocusRating(foci) : 0;
     // v0.78.0 (RULES.BOOK_V78.combatSense 'pool', Core Rules): an adept's Combat Sense adds its level to the Combat Pool.
-    const combatPool = Math.max(0, Math.max(0, d.combatPool - armorPool80) + threat + (RULES.BOOK_V78.combatSense === 'pool' ? adeptSpecialLevel(adept as any, 'combatSense') * RULES.ADEPT.combatSense.dicePerLevel : 0) + (tw.pools.combat ?? 0));
+    const combatPool = noPools ? 0 : Math.max(0, Math.max(0, d.combatPool - armorPool80) + threat + (RULES.BOOK_V78.combatSense === 'pool' ? adeptSpecialLevel(adept as any, 'combatSense') * RULES.ADEPT.combatSense.dicePerLevel : 0) + (tw.pools.combat ?? 0));
     // v0.92.1 review (N10): a Spell Pool tweak only for someone with a Spell Pool.
     const spellPool = Math.max(0, d.spellPool + powerFocus + (poolMagic > 0 ? (tw.pools.spell ?? 0) : 0));
     sys.derived = {
@@ -931,6 +935,10 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
       reachBonus: this.usesMetatype() ? race.reach : 0,
       // Dwarves, toxin extractors; Body Index takes some off.
       toxinDice: (this.usesMetatype() ? race.toxinDice : 0) + bw.toxinDice - bodyIndexToxinPenalty(bio_index_used(ware)),
+      // v0.92.3 (RULES.CORE_V923.dwarfResistance): the racial part of toxinDice, which the book gives against disease only.
+      racialToxinDice: this.usesMetatype() ? race.toxinDice : 0,
+      // v0.92.3 (RULES.CORE_V923.trollDermal 'body', Core p. 45): dermal armor as extra Body dice for damage resistance.
+      racialDermal: this.usesMetatype() ? race.dermal : 0,
       // Token bars (v0.36.0): boxes left on each track.
       // v0.60.0: and the Matrix condition monitor (a persona's boxes left).
       bars: { ...monitorBars(sys.monitor), matrix: trackBar(sys.matrix?.monitor ?? 0, RULES.MATRIX.monitorBoxes) ?? { value: 0, max: 0 } },
@@ -953,8 +961,8 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
       // Cyberware armor, plus a troll's natural dermal armor.
       cyberArmor: {
         // Cyberlimbs' own armor is added per hit (armorRating, v0.43.0).
-        ballistic: installed.filter((i: any) => i.system.kind !== 'cyberlimb').reduce((n: number, i: any) => n + (i.system.armorBallistic ?? 0), 0) + (this.usesMetatype() ? race.dermal : 0) + bw.ballistic + tw.armor.ballistic,
-        impact: installed.filter((i: any) => i.system.kind !== 'cyberlimb').reduce((n: number, i: any) => n + (i.system.armorImpact ?? 0), 0) + (this.usesMetatype() ? race.dermal : 0) + bw.impact + tw.armor.impact,
+        ballistic: installed.filter((i: any) => i.system.kind !== 'cyberlimb').reduce((n: number, i: any) => n + (i.system.armorBallistic ?? 0), 0) + (this.usesMetatype() ? dermalArmor(race.dermal) : 0) + bw.ballistic + tw.armor.ballistic,
+        impact: installed.filter((i: any) => i.system.kind !== 'cyberlimb').reduce((n: number, i: any) => n + (i.system.armorImpact ?? 0), 0) + (this.usesMetatype() ? dermalArmor(race.dermal) : 0) + bw.impact + tw.armor.impact,
       },
     };
     Object.assign(sys.derived, deckerDerived((this as any).parent, sys, totals.intelligence, totals as unknown as Record<string, number>, tw.pools.hacking ?? 0));

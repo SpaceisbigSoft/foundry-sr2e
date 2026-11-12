@@ -1,3 +1,4 @@
+import { individualAwardRows } from '../rules/core923.ts';
 import type { AttackState, DamageState, SpellState, TestSnapshot, PoolKind, BlastContext, Contest } from '../documents/index.ts';
 import { opposedMelee, SR2Actor, serialTicks } from '../documents/index.ts';
 import { settleClock } from './clock.ts';
@@ -2243,7 +2244,7 @@ export async function openAwardDialog(): Promise<void> {
         <p class="hint">${tx('SR2E.Dialog.Chat.teamAwardsGoToEveryoneTicked')}</p>
         ${RULES.CHARACTERS_V58.karmaAward.team.map((t) => `<div class="form-group"><label>${escHtml(t.label)} (0–${t.max})</label><input name="team-${escHtml(t.id)}" type="number" min="0" max="${t.max}" value="${t.value}"></div>`).join('')}
         <table class="sr2e-award-table"><thead><tr><th></th>${chars.map((a: any) => `<th>${escHtml(a.name)}</th>`).join('')}</tr></thead><tbody>
-          ${RULES.CHARACTERS_V58.karmaAward.individual.map((row) => `<tr><td>${escHtml(row.label)} (+${row.value})</td>${chars.map((a: any) => `<td><input type="checkbox" name="ind-${escHtml(row.id)}" value="${escHtml(a.uuid)}"></td>`).join('')}</tr>`).join('')}
+          ${individualAwardRows().map((row) => `<tr><td>${escHtml(row.label)} (+${row.value})</td>${chars.map((a: any) => `<td><input type="checkbox" name="ind-${escHtml(row.id)}" value="${escHtml(a.uuid)}"></td>`).join('')}</tr>`).join('')}
         </tbody></table>
       </details>`,
     ok: {
@@ -2252,7 +2253,7 @@ export async function openAwardDialog(): Promise<void> {
         const f = b.form;
         const team = Object.fromEntries(RULES.CHARACTERS_V58.karmaAward.team.map((t) => [t.id, Number(f.elements[`team-${t.id}`]?.value) || 0]));
         const ind: Record<string, Record<string, boolean>> = {};
-        for (const row of RULES.CHARACTERS_V58.karmaAward.individual) {
+        for (const row of individualAwardRows()) {
           for (const i of [...f.querySelectorAll(`input[name="ind-${row.id}"]:checked`)] as any[]) (ind[String(i.value)] ??= {})[row.id] = true;
         }
         return {

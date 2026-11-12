@@ -1,6 +1,7 @@
 import { RULES } from './config.ts';
 import type { TargetNumberModifier, DieResult } from './dice.ts';
 import { contactsCost, lifestyleCost } from './everyday.ts';
+import { priorityRow, qualitiesZero, fenceFloor } from './core923.ts';
 import { t as tx } from '../helpers/i18n.ts';
 
 /**
@@ -29,7 +30,8 @@ export interface BuildPlan {
 export function buildPlan(o: { resources?: string; magic: 'none' | 'full' | 'adept' | 'aspected'; gearCost: number; contacts?: Array<{ level: number }> }): BuildPlan {
   const b = S().builder;
   const p = (o.resources ?? 'E') as 'A' | 'B' | 'C' | 'D' | 'E';
-  const cash = RULES.CREATION.priorities[p]?.resources ?? 0;
+  // v0.92.3 (RULES.CORE_V923.priorities): the book's Resources (Core p. 47) or the old table.
+  const cash = priorityRow(p).resources;
   const lifestyle = b.lifestyles[p] ?? 'low';
   const life = lifestyleCost(lifestyle, b.lifestyleMonths);
   const contacts = o.contacts ? contactsCost(o.contacts).cost : 0;
@@ -63,6 +65,14 @@ export function qualityCheck(list: readonly Quality[]): { label: string; used: s
   const q = S().qualities;
   if (!q.enabled || !list.length) return null;
   const p = qualityPoints(list);
+  // v0.92.3 (RULES.CORE_V923.qualities 'zero', Companion p. 21): the Edges and Flaws must come to 0 (no per-side cap);
+  // surplus flaws only with the house rule CHARACTERS_V73.qualities.surplusFlaws.
+  const zero = qualitiesZero();
+  if (zero) {
+    const surplus = RULES.CHARACTERS_V73.qualities.surplusFlaws.use !== 'none';
+    const bad = p.edges > p.flaws ? tx('SR2E.Text.Street.moreEdgesThanFlaws') : !surplus && p.flaws > p.edges ? tx('SR2E.Text.Core923.moreFlawsThanEdges') : '';
+    return { label: tx('SR2E.Text.Street.edgesAndFlaws'), used: tx('SR2E.Text.Street.edgesFlaws', { edges: p.edges, flaws: p.flaws }), allowed: tx('SR2E.Text.Core923.qualitiesZero'), ok: !bad, ...(bad ? { note: bad } : {}) };
+  }
   const problems = [p.edges > q.maxEdges ? tx('SR2E.Text.Street.edgesOver', { max: q.maxEdges }) : '', p.flaws > q.maxFlaws ? tx('SR2E.Text.Street.flawsOver', { max: q.maxFlaws }) : '', q.balance && p.edges > p.flaws ? tx('SR2E.Text.Street.moreEdgesThanFlaws') : ''].filter(Boolean);
   return { label: tx('SR2E.Text.Street.edgesAndFlaws'), used: tx('SR2E.Text.Street.edgesFlaws', { edges: p.edges, flaws: p.flaws }), allowed: q.balance ? tx('SR2E.Text.Street.atMostBalance', { maxEdges: q.maxEdges, maxFlaws: q.maxFlaws }) : tx('SR2E.Text.Street.atMost', { maxEdges: q.maxEdges, maxFlaws: q.maxFlaws }), ok: !problems.length, ...(problems.length ? { note: problems.join('; ') } : {}) };
 }
@@ -171,6 +181,7 @@ export function haggledPrice(price: number, net: number): { price: number; perce
 /** What a fence pays for loot worth `value`: the base share plus percentPerNet per net success, capped. */
 export function fencePrice(value: number, net: number): { price: number; percent: number } {
   const f = S().fence;
-  const pct = Math.max(0, Math.min(f.maxPercent, f.basePercent + net * f.percentPerNet));
+  // v0.92.3 (RULES.CORE_V923.fence 'book', Core p. 188): a fence who wins never pays below 10%.
+  const pct = Math.max(fenceFloor(), Math.min(f.maxPercent, f.basePercent + net * f.percentPerNet));
   return { price: Math.max(0, Math.round(value * pct / 100)), percent: pct };
 }

@@ -2846,7 +2846,9 @@ describe("v0.22.0 core rules", () => {
     return sys;
   };
 
-  test("metatypes: racial modifiers, vision, reach, dermal armor and limit warnings", () => {
+  test("metatypes: racial modifiers, vision, reach, dermal armor and limit warnings", (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.trollDermal': 'armor', 'CORE_V923.racialMods': 'old' }));
     const sys = troll();
     assert.equal(sys.attributes.body.total, 11);
     assert.equal(sys.attributes.charisma.total, 1);   // v0.73.0 (O34): base 2 − 2 floors at 1, with a warning
@@ -4267,6 +4269,8 @@ describe("v0.31.0 toxins, drugs, hazards, stun weapons, statuses", () => {
   });
 
   test("toxins: an Expose card, then Body + toxin dice (inhalant dice when inhaled) vs Power, staged, no armor", async (t) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    t.after(oldWay({ 'CORE_V923.dwarfResistance': 'both' }));
     t.after(oldWay({"BOOK_V78.toxinBioware": "dice"})); // v0.78.0: the old rule (a house rule)
     chat.length = 0;
     const gm = person();
@@ -4365,7 +4369,9 @@ describe("v0.32.0 perception, social tests, grunt groups, morale", () => {
     delete g.game.combat;
   });
 
-  test("perception: Perception vs the sneaker's Stealth, opposed by Stealth vs the observer's Intelligence", async () => {
+  test("perception: Perception vs the sneaker's Stealth, opposed by Stealth vs the observer's Intelligence", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.perception': 'opposed' }));
     chat.length = 0;
     const guard = person([skill("p", "Perception", 3)], { name: "Guard" });
     const ninja = person([skill("s", "Stealth", 5)], { name: "Ninja" });
@@ -4407,7 +4413,9 @@ describe("v0.32.0 perception, social tests, grunt groups, morale", () => {
     assert.match(chat.at(-1).content, /No luck: Mark isn/);
   });
 
-  test("grunt groups: when the front grunt goes down the next steps in; the group attacks with every grunt; morale", async () => {
+  test("grunt groups: when the front grunt goes down the next steps in; the group attacks with every grunt; morale", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.morale': 'old' }));
     chat.length = 0;
     const g4 = person([], { name: "Lone Star", type: "npc", professionalRating: 2, grunts: { size: 3, down: 0 }, care: { dyingSince: -1, stabilised: false } });
     g4.system.monitor.physical = 10; g4.system.prepareDerivedData();
@@ -4453,7 +4461,9 @@ describe("v0.33.0 upkeep: Karma, nuyen, lifestyle, contacts, buying", () => {
     delete g.game.combat;
   });
 
-  test("Karma awards feed the Karma Pool every 10 earned; the ledger records it", async () => {
+  test("Karma awards feed the Karma Pool every 10 earned; the ledger records it", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'UPKEEP.karma.poolEvery.human': 10, 'UPKEEP.karma.poolEvery.metahuman': 20 }));
     const a = person([], { karma: { good: 2, pool: 3, poolSpent: 0, career: 8 } });
     assert.deepEqual(await a.awardKarma(5, "The run"), { good: 4, pool: 1 });
     assert.deepEqual({ g: a.system.karma.good, p: a.system.karma.pool, c: a.system.karma.career }, { g: 6, p: 4, c: 13 });
@@ -4475,7 +4485,9 @@ describe("v0.33.0 upkeep: Karma, nuyen, lifestyle, contacts, buying", () => {
     assert.equal(await a.payLifestyle(1), false);              // ¥500 left
   });
 
-  test("raising attributes and skills with Good Karma", async () => {
+  test("raising attributes and skills with Good Karma", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'UPKEEP.karma.attributeMultiplier': 2, 'CORE_V923.skillKarma': 'old', 'CORE_V923.newSkill': 'old', 'CORE_V923.aboveMax': 'refuse' }));
     chat.length = 0;
     const a = person([{ id: "f", type: "skill", name: "Firearms", system: { rating: 4, attribute: "quickness", specialization: "Pistols", specializationRating: 5, kind: "active" } }], { karma: { good: 20, pool: 1, poolSpent: 0, career: 20 } });
     assert.deepEqual(a.improveCost({ attribute: "body" }), { cost: 10, ok: true, reason: "", from: 4, to: 5, label: "Body" });
@@ -5798,7 +5810,9 @@ describe("v0.44.0 characters and the street", () => {
     delete g.game.combat;
   });
 
-  test("Fill the sheet: metatype, attributes, Magic, cash after gear, lifestyle and free contacts", async () => {
+  test("Fill the sheet: metatype, attributes, Magic, cash after gear, lifestyle and free contacts", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.priorities': 'old', 'CORE_V923.leftoverCash': 'old', 'CORE_V923.racialMods': 'old' }));
     chat.length = 0;
     const a = person([{ id: "g", type: "gear", name: "Medkit", system: { cost: 500, quantity: 2 } }]);
     const r = await a.applyBuild({ priorities: { race: "D", magic: "B", attributes: "A", skills: "C", resources: "E" }, metatype: "ork", magic: "adept", attributes: { body: 6, quickness: 5, strength: 5, charisma: 2, intelligence: 4, willpower: 4 }, gearCost: 1000 });
@@ -5834,7 +5848,9 @@ describe("v0.44.0 characters and the street", () => {
     } finally { (RULES.STREET.qualities as any).enabled = false; }
   });
 
-  test("athletics: distance by successes; movement rates by metatype; Threat Rating adds Combat Pool dice", async () => {
+  test("athletics: distance by successes; movement rates by metatype; Threat Rating adds Combat Pool dice", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.athletics': 'old', 'CORE_V923.threat': 'pool', 'METATYPES.types.troll.run': 3 }));
     chat.length = 0;
     const a = person([skill("at", "Athletics", 3, "body")]);
     faces.push(5, 5, 1);
@@ -5848,7 +5864,9 @@ describe("v0.44.0 characters and the street", () => {
     assert.equal(n.system.derived.combatPool, plain.system.derived.combatPool + 3);
   });
 
-  test("one sneaker against several observers; morale breaks a group and Leadership rallies it", async () => {
+  test("one sneaker against several observers; morale breaks a group and Leadership rallies it", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.perception': 'opposed', 'CORE_V923.morale': 'old' }));
     chat.length = 0;
     const s = person([skill("st", "Stealth", 4)], { name: "Sneak" });
     const o1 = person([], { name: "Guard A" });
@@ -5869,7 +5887,9 @@ describe("v0.44.0 characters and the street", () => {
     assert.equal(grunts.isBroken(), false);
   });
 
-  test("contacts: the fee and paid dice; haggling posts a new price; fencing sells for a share", async () => {
+  test("contacts: the fee and paid dice; haggling posts a new price; fencing sells for a share", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.fence': 'old', 'CORE_V923.haggle': 'old' }));
     chat.length = 0;
     const a = person([skill("et", "Etiquette", 3, "charisma"), skill("ng", "Negotiation", 4, "charisma"),
       { id: "gun", type: "weapon", name: "Pistol", system: { cost: 1000, streetIndex: 1 } }],
@@ -6957,7 +6977,9 @@ describe("v0.48.0 health, magic and critters", () => {
     assert.equal(a.system.radiation.dose, 23);
   });
 
-  test("weather: athletics distances and movement shrink in a storm", async () => {
+  test("weather: athletics distances and movement shrink in a storm", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.athletics': 'old' }));
     chat.length = 0;
     scene.flags.weather = "storm";
     const a = who({ name: "Climber" }, [skill("ath", "Athletics", 4, "body")]);
@@ -7199,7 +7221,9 @@ describe("v0.49.0 street, Matrix, rigging and security leftovers", () => {
   });
   afterEach(() => { delete g.game.actors; delete g.game.scenes; g.game.time = { worldTime: 0 }; delete g.canvas; faces.length = 0; });
 
-  test("Fill the sheet with listed skills (re-rating one already there) and gear from the templates", async () => {
+  test("Fill the sheet with listed skills (re-rating one already there) and gear from the templates", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.priorities': 'old', 'CORE_V923.leftoverCash': 'old' }));
     chat.length = 0;
     const a = person([{ id: "s1", type: "skill", name: "Firearms", system: { rating: 2, attribute: "quickness", kind: "active" } }]);
     const gear = R.parseGearList("Heavy pistol, Medkit ×2, Fake SIN ¥5000", RULES.ITEM_TEMPLATES);
@@ -7218,7 +7242,9 @@ describe("v0.49.0 street, Matrix, rigging and security leftovers", () => {
     assert.match(chat.at(-1).content, /2 skills, 3 pieces of gear/);
   });
 
-  test("an edge gained and a flaw bought off with Karma; too little Karma is refused", async () => {
+  test("an edge gained and a flaw bought off with Karma; too little Karma is refused", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'STREET.qualities.karma.flawPerPoint': 2 }));
     chat.length = 0; warnings.length = 0;
     const a = person([], { karma: { good: 10, pool: 0, poolSpent: 0, career: 10 }, qualities: [{ id: "f", name: "Bad rep", kind: "flaw", points: 3, target: "", tn: 0, notes: "" }] });
     assert.equal(await a.gainEdge({ name: "Lucky", points: 2 }), true);
@@ -7291,7 +7317,9 @@ describe("v0.49.0 street, Matrix, rigging and security leftovers", () => {
     assert.equal(a.system.nuyen, 200);
   });
 
-  test("a mixed group tests morale once on its highest standing rating and breaks together; rallying clears it", async () => {
+  test("a mixed group tests morale once on its highest standing rating and breaks together; rallying clears it", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.morale': 'old' }));
     chat.length = 0;
     const scene: any = { tokens: [] };
     const npc = (name: string, pr: number, extra: any = {}) => {
@@ -7455,6 +7483,8 @@ describe("v0.49.0 street, Matrix, rigging and security leftovers", () => {
   });
 
   test("security: the guards look (each who notices raises the tally), smashed devices, forced doors and masking spells", async (t) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    t.after(oldWay({ 'CORE_V923.perception': 'opposed' }));
     t.after(oldWay({"BOOK_V78.barriers.mode": "subtract"})); // v0.78.0: the old rule (a house rule)
     chat.length = 0;
     const g1 = person([skill("pe", "Perception", 3, "intelligence")], { name: "Guard 1", type: "npc" });
@@ -7489,6 +7519,8 @@ describe("v0.49.0 street, Matrix, rigging and security leftovers", () => {
   });
 
   test("review fixes: a guard counts once, a door trips once (when breached), smashing is once, a one-NPC group doesn't count its fallen twice", async (tc) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tc.after(oldWay({ 'CORE_V923.perception': 'opposed', 'CORE_V923.morale': 'old' }));
     tc.after(oldWay({"BOOK_V78.barriers.mode": "subtract"})); // v0.78.0: the old rule (a house rule)
     chat.length = 0;
     const g1 = person([skill("pe", "Perception", 3, "intelligence")], { name: "Guard A", type: "npc" });
@@ -7620,7 +7652,9 @@ describe("v0.50.0 target-number automation, switching modifiers off, the GM's re
   // v0.81.1 (SEC1-1): a card has an author (here the GM's), as every Foundry message does: retarget re-runs it as them.
   const asMessage = (d: any) => ({ author: { id: "gm1", isGM: true }, ...d, getFlag: (s: string, k: string) => d.flags?.[s]?.[k], async update(u: any) { for (const [k, v] of Object.entries(u)) setPath(d, k.replace(/^flags\.sr2e\./, "flags.sr2e."), v); } });
 
-  test("perception reads light and distance by itself; walls mean by ear; 'block' means no roll", async () => {
+  test("perception reads light and distance by itself; walls mean by ear; 'block' means no roll", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.perception': 'opposed' }));
     chat.length = 0;
     const guard = person([skill("p", "Perception", 3)], { name: "Guard" });
     const ninja = person([skill("s", "Stealth", 4)], { name: "Ninja" });
@@ -7646,7 +7680,9 @@ describe("v0.50.0 target-number automation, switching modifiers off, the GM's re
     } finally { (RULES.TN_AUTO.perception as any).noSight = old; }
   });
 
-  test("perception: the target's chameleon suit and the sneaker's own penalties count", async () => {
+  test("perception: the target's chameleon suit and the sneaker's own penalties count", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.perception': 'opposed' }));
     chat.length = 0;
     const guard = person([skill("p", "Perception", 3)], { name: "Guard" });
     const ninja = person([skill("s", "Stealth", 4), { id: "suit", type: "gear", name: "Suit", system: { stealth: { kind: "chameleon", rating: 3, worn: true } } }], { name: "Ninja", monitor: { physical: 3, stun: 0 } });
@@ -7657,7 +7693,9 @@ describe("v0.50.0 target-number automation, switching modifiers off, the GM's re
     assert.match(chat.at(-1).content, /Ninja: Stealth 4.*?Moderate wound|Ninja: Stealth 4[\s\S]*?\+2/);
   });
 
-  test("sneaking: the observers' conditions go on the observers' TN, not the sneaker's", async () => {
+  test("sneaking: the observers' conditions go on the observers' TN, not the sneaker's", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.perception': 'opposed' }));
     chat.length = 0;
     const ninja = person([skill("s", "Stealth", 4)], { name: "Ninja" });
     const guard = person([skill("p", "Perception", 3)], { name: "Guard" });
@@ -7728,7 +7766,9 @@ describe("v0.50.0 target-number automation, switching modifiers off, the GM's re
     assert.ok(pv2.modifiers.some((m: any) => m.label === "Partial light"));
   });
 
-  test("searching: a frisk takes no weather; looking someone over takes the light and weather", async () => {
+  test("searching: a frisk takes no weather; looking someone over takes the light and weather", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.perception': 'opposed' }));
     chat.length = 0;
     const cop = person([skill("p", "Perception", 3)], { name: "Cop" });
     const runner = person([{ id: "h", type: "weapon", name: "Hold-out", system: { concealability: 6 } }], { name: "Runner" });
@@ -9223,7 +9263,9 @@ describe("v0.58.0 characters, gear and integration", () => {
     assert.match(chat.at(-1).content, /Time taken: <strong>1 hours/);
   });
 
-  test("training time: the Karma goes at once, an instructor shortens it, the rating rises when it is done", async () => {
+  test("training time: the Karma goes at once, an instructor shortens it, the rating rises when it is done", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.trainingTime': 'rating', 'UPKEEP.karma.attributeMultiplier': 2 }));
     chat.length = 0;
     R.CHARACTERS_V58.training.mode = "timed";
     const a = person("Student", [{ id: "fa", type: "skill", name: "Firearms", system: { rating: 2, attribute: "quickness", kind: "active", specializationRating: 0, concentrationRating: 0 } }]);
@@ -9255,7 +9297,9 @@ describe("v0.58.0 characters, gear and integration", () => {
     assert.match(chat.at(-1).content, /finishes training/);
   });
 
-  test("training whose rating was reached another way gives its Karma back at the time step", async () => {
+  test("training whose rating was reached another way gives its Karma back at the time step", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.trainingTime': 'rating', 'UPKEEP.karma.attributeMultiplier': 2 }));
     R.CHARACTERS_V58.training.mode = "timed";
     const a = person("Overtaken", [{ id: "fa", type: "skill", name: "Firearms", system: { rating: 2, attribute: "quickness", kind: "active", specializationRating: 0, concentrationRating: 0 } }]);
     const before = a.system.karma.good;
@@ -9372,7 +9416,9 @@ describe("v0.58.0 characters, gear and integration", () => {
     assert.match(notes[1], /fine ¥5,000/);
   });
 
-  test("Karma awards with the breakdown: team rows for all, individual rows each", async () => {
+  test("Karma awards with the breakdown: team rows for all, individual rows each", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.awards': 'old' }));
     chat.length = 0;
     const a = person("One");
     const b = person("Two");
@@ -9386,7 +9432,9 @@ describe("v0.58.0 characters, gear and integration", () => {
     assert.match(chat.at(-1).content, /Karma awarded: The run/);
   });
 
-  test("Notoriety comes off Street Cred; recognition rolls Intelligence vs 10 − Public Awareness", async () => {
+  test("Notoriety comes off Street Cred; recognition rolls Intelligence vs 10 − Public Awareness", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.recognition': 'old' }));
     chat.length = 0;
     const a = person("Famous", [], { reputation: { streetCred: 4, notoriety: 1, publicAwareness: 4 } });
     const was = R.STREET.reputation.autoCred;

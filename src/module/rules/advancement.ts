@@ -14,6 +14,7 @@
  */
 import { RULES } from './config.ts';
 import { BUILD_COLUMNS, PRIORITY_LETTERS, type BuildColumn, type Priority, type BuildRow } from './creation.ts';
+import { priorityRow, raceNeed, magicTier, bookPriorities } from './core923.ts';
 import { t as tx, tKey } from '../helpers/i18n.ts';
 
 // ---------------------------------------------------------------- The wizard
@@ -52,7 +53,7 @@ export function checkStep(row: string | { label?: string; step?: string }): Wiza
   if (l.startsWith('priorit')) return 'priorities';
   if (l.startsWith('race')) return 'metatype';
   if (l.startsWith('attribute')) return 'attributes';
-  if (l.startsWith('magic') || l.startsWith('spell')) return 'magic';
+  if (l.startsWith('magic') || l.startsWith('spell') || l.startsWith('force')) return 'magic';
   if (l.startsWith('skill')) return 'skills';
   if (l.startsWith('contact')) return 'contacts';
   if (l.startsWith('resource') || l.startsWith('essence') || l.startsWith('cash') || l.startsWith('lifestyle')) return 'resources';
@@ -73,13 +74,20 @@ export function stepStates(rows: ReadonlyArray<Pick<BuildRow, 'label' | 'ok' | '
 /** What a priority letter gives in each column (for the priorities step's table). */
 export function priorityTable(): Array<{ letter: Priority; race: string; magic: string; attributes: number; skills: number; resources: number }> {
   const c = RULES.CREATION;
-  const races = (l: Priority) => Object.entries(c.race).filter(([, need]) => PRIORITY_LETTERS.indexOf(need as Priority) >= PRIORITY_LETTERS.indexOf(l)).map(([k]) => k);
+  // v0.92.3 (RULES.CORE_V923.priorities 'book', Core p. 47): a metahuman needs A (C with More Metahumans).
+  const kinds = bookPriorities() ? Object.keys(RULES.METATYPES.types) : Object.keys(c.race);
+  const races = (l: Priority) => kinds.filter((k) => PRIORITY_LETTERS.indexOf(raceNeed(k)) >= PRIORITY_LETTERS.indexOf(l)).map((k) => k);
   return PRIORITY_LETTERS.map((l) => {
-    const p = c.priorities[l];
+    const p = priorityRow(l);
+    const h = magicTier(l, 'human');
+    const m = magicTier(l, 'elf');
+    const one = (x: string) => (x === 'full' ? tx('SR2E.Text.Advancement.fullMagician') : x === 'adept' ? tx('SR2E.Text.Advancement.adeptOrAspected') : '—');
+    const split = [h === 'full' ? tx('SR2E.Text.Core923.humanMagician') : h === 'adept' ? tx('SR2E.Text.Core923.humanAdept') : '',
+      m === 'full' ? tx('SR2E.Text.Core923.metahumanMagician') : m === 'adept' ? tx('SR2E.Text.Core923.metahumanAdept') : ''].filter(Boolean).join(' / ');
     return {
       letter: l,
       race: races(l).map((k) => cap(k)).join(', ') || tx('SR2E.Text.Advancement.human'),
-      magic: p.magic === 'full' ? tx('SR2E.Text.Advancement.fullMagician') : p.magic === 'adept' ? tx('SR2E.Text.Advancement.adeptOrAspected') : '—',
+      magic: h === m ? one(h) : split,
       attributes: p.attributes, skills: p.skills, resources: p.resources,
     };
   });
@@ -87,9 +95,8 @@ export function priorityTable(): Array<{ letter: Priority; race: string; magic: 
 
 /** The metatypes a Race priority allows (with the letter each needs). */
 export function metatypeChoices(race: Priority | undefined, metatypes: Record<string, { label: string }>): Array<{ key: string; label: string; need: Priority; allowed: boolean }> {
-  const c = RULES.CREATION;
   return Object.entries(metatypes).map(([key, v]) => {
-    const need = (c.race[key] ?? 'E') as Priority;
+    const need = raceNeed(key) as Priority;
     return { key, label: v.label, need, allowed: !race || PRIORITY_LETTERS.indexOf(race) <= PRIORITY_LETTERS.indexOf(need) };
   });
 }
@@ -97,8 +104,9 @@ export function metatypeChoices(race: Priority | undefined, metatypes: Record<st
 export type BuildMagicKind = 'none' | 'full' | 'adept' | 'aspected';
 
 /** The kinds of magic a Magic priority allows. */
-export function magicChoices(magicPriority: Priority | undefined): Array<{ key: BuildMagicKind; label: string; allowed: boolean }> {
-  const m = magicPriority ? RULES.CREATION.priorities[magicPriority].magic : 'none';
+export function magicChoices(magicPriority: Priority | undefined, metatype = 'human'): Array<{ key: BuildMagicKind; label: string; allowed: boolean }> {
+  // v0.92.3 (RULES.CORE_V923.priorities 'book', Core p. 45): a metahuman magician needs B, a metahuman adept C.
+  const m = magicPriority ? magicTier(magicPriority, metatype) : 'none';
   return [
     { key: 'none', label: tx('SR2E.Text.Advancement.mundane'), allowed: true },
     { key: 'full', label: tx('SR2E.Text.Advancement.fullMagician'), allowed: m === 'full' },
@@ -127,7 +135,7 @@ export function magicKindOf(tradition: string, magic: number): BuildMagicKind {
 /** Attribute points spent (base ratings, before racial modifiers) and what the letter allows. */
 export function attributePoints(attrs: Record<string, number>, letter: Priority | undefined): { used: number; allowed: number; left: number } {
   const used = Object.values(attrs ?? {}).reduce((n, v) => n + Math.max(0, Math.floor(Number(v) || 0)), 0);
-  const allowed = letter ? RULES.CREATION.priorities[letter].attributes : 0;
+  const allowed = letter ? priorityRow(letter).attributes : 0;
   return { used, allowed, left: allowed - used };
 }
 

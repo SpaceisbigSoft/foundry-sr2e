@@ -3362,7 +3362,8 @@
         "sWirelessLinkIsJammedClearPlain": "{name}'s wireless link is jammed: clear it or use a hard line.",
         "aCategorySpell": "a {category} spell",
         "aSpellOfNoCategory": "a spell of no category",
-        "notCarried": "{name} isn't carried: tick Carried first."
+        "notCarried": "{name} isn't carried: tick Carried first.",
+        "noKarmaAfterOops": "Karma turned this test's disaster into a failure: no more Karma can be spent on it (Core p. 191)."
       },
       "Migrations": {
         "sr2eMigrationToFailedSeeThe": "SR2e: migration to {version} failed; see the console. Later migrations were not run."
@@ -3946,7 +3947,7 @@
         "commonSkillsNotOnTheSheet": "Common skills not on the sheet yet: {starterSkillsMissing}.",
         "used": "Used",
         "allowed": "Allowed",
-        "spellPoints": "{mark} Spell points",
+        "spellPoints": "{mark} Force Points",
         "lifestyleBoughtOutright": "{mark} Lifestyle bought outright",
         "notEnoughCashPaidByThe": ": not enough cash (paid by the month instead)",
         "months": "{wantMonths} months{part}",
@@ -5002,6 +5003,15 @@
         "bigJumpHint": "Did that time pass for the characters? \"Count it as time passed\" runs everything timed for it: drugs wear off, wounds heal, upkeep and training come due, spirits leave. \"Only the date\" changes the calendar but not the characters' time: everything keeps the time it had left (the hours of a part day count).",
         "dateOnly": "Only the date",
         "countIt": "Count it as time passed"
+      },
+      "Core923": {
+        "perceiveBook": "{actorName}'s Intelligence vs {tn} with the modifiers; one success notices them (SR2 has no Perception skill and no Stealth roll here). Light, walls, smoke, weather, distance and what they wear are read from the scene. (Alt-click a skill for a plain roll.)",
+        "perceiveCompanion": "Their {stealth} ({tn}) first, each success +1 to the TN; then {actorName}'s Intelligence vs {tn} with the modifiers, one success notices them. Light, walls, smoke, weather, distance and what they wear are read from the scene. (Alt-click a skill for a plain roll.)",
+        "sneakBook": "No Stealth roll: each observer's Intelligence vs {tn} with the modifiers; one success notices. The ticked conditions make it harder for the observers.",
+        "sneakCompanion": "{stealth} ({tn}) once; each success adds +1 to every observer's Intelligence test vs {tn}; one success notices. The ticked conditions make it harder for the observers.",
+        "publicRep": "Public rep (blank: private rep, the career Karma)",
+        "recognitionHint": "Each picked character's Etiquette (else Charisma at +4) vs (1,000 − rep) ÷ 50: private rep {rep} gives TN {tn} (whispered to the GM).",
+        "athleticsHint": "{skill} (or {attribute} at +{attributeDefaultTnMod}). Climbing: a quarter of (the average of Quickness and Strength + 2 per success) metres a turn; a Rule of One is a fall. Swimming: a fifth of the running distance, Quickness + 1 per success. Jumping: {jumpMetresPerSuccess} m per success."
       }
     },
     "Window": {
@@ -7591,7 +7601,9 @@
           "one": "· {name}'s {name2} (rating {idnRating}) against a rating {checkerRating} checker ({dice} dice vs TN {tn}): {count} success against the fake's {forgerSuccesses}.",
           "other": "· {name}'s {name2} (rating {idnRating}) against a rating {checkerRating} checker ({dice} dice vs TN {tn}): {count} successes against the fake's {forgerSuccesses}."
         },
-        "tweakPower": "custom tweak Power {value}"
+        "tweakPower": "custom tweak Power {value}",
+        "dermalBody": ", dermal armor +{dermal} Body",
+        "threatDice": " [Threat +{threat}]"
       },
       "Adding": {
         "buysFor": "buys {list} for ¥{planNuyen}.",
@@ -7613,7 +7625,8 @@
           "one": " ({count} build check not met)",
           "other": " ({count} build checks not met)"
         },
-        "mundane": "mundane"
+        "mundane": "mundane",
+        "startingCash": "Starting cash, {formula} × ¥{per}: {total} → ¥{nuyen} (included above)."
       },
       "Inline": {
         "base": "Base {baseTargetNumber}{part}{part2}",
@@ -7908,7 +7921,9 @@
         "legality": "{label} (found openly)",
         "legalityFixer": "{label} (through a fixer)",
         "legalityContact": "{label} (through a contact)",
-        "contactLevel": "Closer contact"
+        "contactLevel": "Closer contact",
+        "speakingDialect": "Speaking a dialect",
+        "stealthSuccesses": "The sneaker's Stealth successes"
       },
       "Drops": {
         "notInstalledTickInstalledAfterSurgery": "not installed (tick Installed after surgery)",
@@ -8089,6 +8104,22 @@
         "alias": "World time",
         "dateOnly": "GM only · World time jumped; only the date changed. The system's clock stays {span} behind the calendar, so nothing came due.",
         "counted": "GM only · World time jumped {span}; it counted as time passed for everything timed."
+      },
+      "Core923": {
+        "withdraws": "{who} withdraws from the fight",
+        "gruntWithdraws": "The grunt in front ({who}) withdraws",
+        "willpowerToStay": "Willpower ({tn}) to stay in the fight",
+        "moraleWillpower": "{name}: Willpower vs {tn} to stay in the fight",
+        "staysInTheFight": "{who} steels their will and stays in the fight.",
+        "looksFor": "{name} looks for {targetName}: {label} vs {tn}",
+        "stealthFirst": "{name}: {skill}{suffix} vs {tn} (each success +1 to the observer's TN)",
+        "successesSay": "({n}: {reveal})",
+        "sneaksNoRoll": "{name} sneaks past {count} (no Stealth roll: each watcher's Intelligence vs {tn})",
+        "sneaksStealth": "{name} sneaks past {count}: {skill}{suffix} vs {tn} (each success +1 to the watchers' TN)",
+        "recognitionPrivate": "Etiquette (else Charisma +4) vs {tn}: (1,000 − private rep {rep}) ÷ 50",
+        "recognitionPublic": "Etiquette (else Charisma +4) vs {tn}: (1,000 − public rep {rep}) ÷ 50",
+        "withdrawsWhy": "(Professional Rating {pr}, a {level} wound). The GM may let them test Willpower to stay.",
+        "gruntWithdrawsWhy": "(Professional Rating {pr}, a {level} wound): the next steps in; {left} standing."
       }
     },
     "Privacy": {
@@ -9082,7 +9113,39 @@
         "SHEET_V921__wizard": "The creation wizard warns but never refuses (advise) or greys out and clamps as before (block)",
         "SHEET_V921__ratingLock": "After creation, players may type higher ratings unless the approval queue is on (queue) or never may (always, the old way)",
         "CLOCK_V922__bigJump": "A big jump of world time outside combat (a calendar setting the date): the GM is asked whether it counts as time passed or only changes the date (ask) or it always counts (count, the old way)",
-        "CLOCK_V922__bigJumpDays": "A big jump of world time: at least this many days, forward or back"
+        "CLOCK_V922__bigJumpDays": "A big jump of world time: at least this many days, forward or back",
+        "CORE_V923__priorities": "Creation priority table: the book's (Attributes 30/24/20/17/15, Skills 40/30/24/20/17, Resources ¥1,000,000 to ¥500 with Force Points 50 to 5; a metahuman needs Race A, a metahuman magician Magic B) (book) or the old table (old)",
+        "CORE_V923__moreMetahumans": "More Metahumans (optional): a metahuman needs only Race C, Magic A full magician / B adept for every race, and metahumans start with 1 Karma Pool point",
+        "CORE_V923__racialMods": "Racial modifiers: the dwarf has Quickness −1 and the troll Willpower −1 as well (book) or without them (old)",
+        "CORE_V923__startPool": "Starting Karma Pool from the creation wizard: 2 for a metahuman, 1 for a human (book) or 1 for everyone (old)",
+        "CORE_V923__leftoverCash": "Creation: unspent Resources are kept at 10:1 (tenth) or by the leftover-cash house rule (old)",
+        "CORE_V923__cashRatio": "Creation: unspent Resources kept at 1 nuyen in this many (with 'tenth')",
+        "CORE_V923__startingCash": "Creation: finishing the wizard adds 3D6 × ¥1,000 starting cash (roll) or nothing (none)",
+        "CORE_V923__nativeLanguage": "Native language free at Intelligence + 2 (book) or at Intelligence (old)",
+        "CORE_V923__streetDialect": "Creation: a Street lifestyle gives a free street dialect (City Speak, Tunnel Talk) at half Intelligence (book) or not (off)",
+        "CORE_V923__aboveMax": "Raising an attribute past its natural maximum with Karma: at double cost, up to the augmented maximum, with the GM's leave (double) or refused (refuse, the old way)",
+        "CORE_V923__trollDermal": "Troll dermal armor: +1 Body die on damage resistance (body) or 1 ballistic and 1 impact armor (armor, the old way)",
+        "CORE_V923__dwarfResistance": "Dwarf resistance (+2 Body dice): against disease only (disease) or disease and toxins (both, the old way)",
+        "CORE_V923__karmaDice": "Karma Pool buys extra dice, one point a die, up to the test's own skill, attribute or rating dice (book) or not at all (off, the old way)",
+        "CORE_V923__afterOops": "After Karma avoided a disaster no more Karma can be spent on that test (book) or the re-roll and buy buttons stay (old)",
+        "CORE_V923__skillKarma": "Karma for knowledge and language skills: a language new rating × 1, a knowledge skill as a general skill (× 2) (book) or the Intelligence bands (old)",
+        "CORE_V923__newSkill": "A new skill's first rating point costs 1 Good Karma (book) or its rating-1 price (old)",
+        "CORE_V923__trainingTime": "Timed training: the base days are the Karma spent × 7 (× 15 for knowledge and language) (karma) or the new rating × the days per rating (rating, the old way)",
+        "CORE_V923__attributeDefault": "Defaulting to an attribute: +2 per Skill Web circle from the attribute when the web links it (web) or always the flat modifier (flat, the old way)",
+        "CORE_V923__webArrows": "Skill Web links written \"A > B\" are one-way, as the book's arrows (book) or work both ways (old)",
+        "CORE_V923__timeRounding": "Base time ÷ successes: rounded to the nearest whole unit (nearest) or up to a tenth (tenth, the old way)",
+        "CORE_V923__perception": "Noticing someone: Intelligence vs 4, one success notices (book); the sneaker's Stealth (4) successes add to that TN (companion); or the old opposed Perception vs Stealth test (opposed)",
+        "CORE_V923__perceptionSounds": "The perception dialogs offer the book's sound, smell, touch and taste modifiers (book) or not (off)",
+        "CORE_V923__languageTns": "Language test TNs: the book's table (2, 4, 6, 9, 11; a dialect +2) (book) or the old complexity list (old)",
+        "CORE_V923__athletics": "Climbing and swimming distances: by Quickness and Strength, with the climbing height and surface modifiers (book) or a fixed number of metres per success (old)",
+        "CORE_V923__threat": "An NPC's Threat Rating: dice on every test it makes and no Combat Pool (book) or extra Combat Pool dice (pool, the old way)",
+        "CORE_V923__morale": "NPC morale: an NPC withdraws at its Professional Rating's wound and may test Willpower (4) to stay (book) or a morale test of Professional Rating dice as grunts fall (old)",
+        "CORE_V923__recognition": "Has an NPC heard of a character: the NPC's Etiquette vs (1,000 − rep) ÷ 50 (book) or Intelligence vs 10 − Public Awareness (old)",
+        "CORE_V923__haggle": "Haggling: the seller rolls against the buyer's Willpower (book) or against the fixed TN (old)",
+        "CORE_V923__qualities": "Edges and flaws at creation must come to 0, with no per-side cap (zero) or the old caps and balance (old)",
+        "CORE_V923__fence": "Fencing: each side rolls against the other's Willpower + 2 and a fence pays at least 10% (book) or both at the fixed TN, down to 0% (old)",
+        "CORE_V923__awards": "Individual Karma awards: the book's (roleplaying, guts, smarts, right place, surprise, humor, drama) (book) or the old five rows (old)",
+        "CORE_V923__interrogation": "Interrogation: the interrogator's skill vs the subject's Willpower, the subject doesn't roll (book; with one-sided social tests) or an opposed test (old)"
       }
     },
     "Rules": {
@@ -9494,16 +9557,16 @@
         "athletics": {
           "climb": {
             "easy": {
-              "label": "Easy (ladder, rope with knots)"
+              "label": "Easily climbable (chain-link fence)"
             },
             "rough": {
-              "label": "Rough wall or tree"
+              "label": "Broken surface (debris, tree, loose stone wall)"
             },
             "smooth": {
-              "label": "Smooth wall"
+              "label": "Flat surface (brick wall)"
             },
             "sheer": {
-              "label": "Sheer or slick"
+              "label": "Sheer surface (metal wall, seamless stone)"
             }
           },
           "swim": {
@@ -10657,6 +10720,115 @@
           },
           "3": {
             "text": "Full and accurate detail."
+          }
+        }
+      },
+      "CORE_V923": {
+        "individualAwards": {
+          "roleplaying": {
+            "label": "Roleplaying (really good: 2)"
+          },
+          "guts": {
+            "label": "Guts"
+          },
+          "smarts": {
+            "label": "Smarts"
+          },
+          "rightPlace": {
+            "label": "Right place, right time"
+          },
+          "surprise": {
+            "label": "Surprise"
+          },
+          "humor": {
+            "label": "Humor"
+          },
+          "drama": {
+            "label": "Drama"
+          }
+        },
+        "senseRows": {
+          "gunshot": {
+            "label": "Sound: a single gunshot"
+          },
+          "gunshotSilenced": {
+            "label": "Sound: a silenced single gunshot"
+          },
+          "burst": {
+            "label": "Sound: burst fire"
+          },
+          "burstSilenced": {
+            "label": "Sound: sound-suppressed burst fire"
+          },
+          "auto": {
+            "label": "Sound: full autofire"
+          },
+          "autoSilenced": {
+            "label": "Sound: sound-suppressed autofire"
+          },
+          "grenade": {
+            "label": "Sound: grenade blast"
+          },
+          "yelling": {
+            "label": "Sound: a person's yell"
+          },
+          "roomsAway": {
+            "label": "Sound is rooms away"
+          },
+          "sameFloor": {
+            "label": "Sound is on the same floor"
+          },
+          "floorsAway": {
+            "label": "Sound is floors away"
+          },
+          "odorObvious": {
+            "label": "Smell: the odor is obvious"
+          },
+          "otherOdors": {
+            "label": "Smell: other odors present"
+          },
+          "temperature": {
+            "label": "Touch: extreme temperature"
+          },
+          "gloves": {
+            "label": "Touch: wearing gloves"
+          },
+          "tasteObvious": {
+            "label": "Taste: the taste is obvious"
+          },
+          "hasCold": {
+            "label": "Taste: perceiver has a cold"
+          }
+        },
+        "languageTable": {
+          "universal": {
+            "label": "Universal concept (hunger, fear)"
+          },
+          "basic": {
+            "label": "Basic conversation (daily life)"
+          },
+          "complex": {
+            "label": "Complex subject (special interests)"
+          },
+          "intricate": {
+            "label": "Intricate subject (technical)"
+          },
+          "obscure": {
+            "label": "Obscure subject (deeply technical)"
+          }
+        },
+        "climbModifiers": {
+          "height2": {
+            "label": "Height 2–4 metres"
+          },
+          "height4": {
+            "label": "Height 4 metres or more"
+          },
+          "wet": {
+            "label": "Slippery or wet"
+          },
+          "greased": {
+            "label": "Greased or gel-treated"
           }
         }
       }
@@ -13278,7 +13450,7 @@
         "system__concealability": "The TN to find it when searching or scanning. Weapons and worn armor at 0 can't be hidden; other gear and cyberware at 0 aren't looked for (scanners still find cyberware).",
         "system__scanner__kind": "A scanner: weapon detector, cyberware scanner or explosive sniffer. Search with it from the Search quick action.",
         "system__scanner__rating": "Dice the scanner rolls against each item's Concealability.",
-        "system__threatRating": "Threat Rating: dice added to this NPC's Combat Pool (house rules; check the book).",
+        "system__threatRating": "Threat Rating: that many extra dice on every test this NPC makes, never spent; it uses no Combat Pool (Core p. 187; a house rule puts them in its Combat Pool instead).",
         "system__reputation__streetCred": "Street Cred (Shadowrun Companion): set by hand when it isn't worked out from career Karma.",
         "system__reputation__notoriety": "Notoriety: bad things the street remembers about this character.",
         "system__reputation__publicAwareness": "Public Awareness: how well known the character is to the public.",
@@ -13824,7 +13996,7 @@
         "theApprovalQueueIsOnThis": "The approval queue is on: this goes to the GM, who approves it before it is added and paid.",
         "theApprovalQueueIsOnFree": "The approval queue is on: free adds go to the GM too.",
         "inCharacterCreation": "In character creation: everything here counts against the Resources nuyen (the wizard keeps the cash in step).",
-        "inCharacterCreationFocus": "In character creation: everything here counts against the Resources nuyen (the wizard keeps the cash in step). A bonded focus also takes its bonding Karma from the starting spell points.",
+        "inCharacterCreationFocus": "In character creation: everything here counts against the Resources nuyen (the wizard keeps the cash in step). A bonded focus also takes its bonding Karma from the starting Force Points.",
         "learningTestsAreOn": "Learning tests are on: each spell rolls {skill}, and the Karma is paid on success.",
         "eachSpellCostsItsForce": "Each spell costs its Force in Good Karma.",
         "karma": "{karma} Karma",
@@ -14003,7 +14175,7 @@
         "noCameraOrSensor": "(no camera or sensor)"
       },
       "Creation": {
-        "spellPoints": "Spell points",
+        "spellPoints": "Force Points",
         "foci": "{used} (foci {foci})",
         "magicPowerPoints": "Magic: power points",
         "unspent": "{value} unspent",
@@ -16866,6 +17038,16 @@
           "smartgun": "Smartgun",
           "quickDraw": "Quick-draw holster"
         }
+      },
+      "Core923": {
+        "metahumanMagician": "Metahuman magician",
+        "metahumanAdept": "Metahuman adept",
+        "leftoverRatio": "¥{amount} unspent is kept at {ratio}:1: ¥{kept}",
+        "humanMagician": "Human magician",
+        "humanAdept": "Human adept or aspected",
+        "karmaDiceBook": "One Karma Pool point a die, up to the test's own skill, attribute or rating dice (not pool dice), spent until the pool refreshes (Core p. 191)",
+        "moreFlawsThanEdges": "the flaws come to more than the edges",
+        "qualitiesZero": "edges and flaws come to 0"
       }
     },
     "Guide": {
@@ -17063,7 +17245,7 @@
           "b1": "If the character has a Karma Pool, their test cards get Karma buttons:",
           "b2": {
             "i1": "<strong>Re-roll N failures (Karma X)</strong>: rolls the failed dice again. Each re-roll of the same test costs more.",
-            "i2": "<strong>Avoid disaster</strong>: on a roll where every die shows 1.",
+            "i2": "<strong>Avoid disaster</strong>: on a roll where every die shows 1. After it no more Karma can be spent on that test.",
             "i3": "<strong>Buy a success</strong>: when the test has at least one success. The label says <em>permanent</em> when the point is gone for good rather than back at the next refresh."
           },
           "b3": "On an attack, use Karma before the target defends: once they have, the attack card's Karma buttons refuse.",
@@ -17074,9 +17256,9 @@
         "pools": {
           "title": "Dice pools",
           "b1": "The pools are the Combat Pool, Spell Pool, Hacking Pool (Matrix), Control Pool (rigging) and Karma Pool. The <a href=\"#layouts\">status strip</a> shows each as pips; click a pip to set how many are left (clicking the last filled pip takes one die off).",
-          "b2": "A test dialog that can take pool dice has a box for them. What you use comes off what is left. The Main tab shows the Combat Pool spent; the Matrix and Rigging tabs show theirs, with a box to correct the spent number.",
+          "b2": "A test dialog that can take pool dice has a box for them. What you use comes off what is left. The Main tab shows the Combat Pool spent; the Matrix and Rigging tabs show theirs, with a box to correct the spent number. Skill and attribute dialogs also have a box for <strong>Karma Pool dice</strong>: one point a die, up to the test's own dice.",
           "b3": "An encephalon gives a small <strong>Task Pool</strong> for Intelligence, knowledge and Build/Repair skills: the skill dialog has a box for it (used up only in combat). An adept's Combat Sense adds to the Combat Pool, and a power focus adds its rating to the Spell Pool.",
-          "b4": "The Combat, Spell, Hacking, Control and Task Pools refill when a combat starts and at each new Combat Turn. The GM can also refill them from the GM panel (Party tab: <strong>Refresh pools</strong>). The Karma Pool doesn't refill with them: use the circular arrow beside <strong>Karma Pool left</strong> on the Main tab, or the GM's <strong>Refresh Karma Pools</strong>. A house rule can refill Karma Pools by themselves at the start of each session or when a combat ends.",
+          "b4": "The Combat, Spell, Hacking, Control and Task Pools refill when a combat starts and at each new Combat Turn. The GM can also refill them from the GM panel (Party tab: <strong>Refresh pools</strong>). The Karma Pool refills by itself when a combat ends; between other scenes use the circular arrow beside <strong>Karma Pool left</strong> on the Main tab, or the GM's <strong>Refresh Karma Pools</strong>. A house rule can refill Karma Pools at the start of each session instead, or only by hand.",
           "b5": "On the Current tab, <strong>Initiative and pools</strong> lists the initiative (and Matrix or rigged initiative) and each pool, read only. Your combatants in the combat tracker show their pools too."
         },
         "shortcuts": {
@@ -17381,11 +17563,11 @@
             "i1": "Priorities: pick a letter, A to E, for each of Race, Magic, Attributes, Skills and Resources. Picking a letter another one holds swaps the two.",
             "i2": "Metatype: choices the Race priority doesn't allow are greyed out.",
             "i3": "Attributes: base ratings, with points used and allowed.",
-            "i4": "Magic: mundane, full magician, adept or aspected, as the priority allows; tradition and totem; spells or adept powers through the Add window. A magician's foci bought in creation arrive bonded and count against the spell points.",
+            "i4": "Magic: mundane, full magician, adept or aspected, as the priority allows (a metahuman magician needs Magic B, a metahuman adept C); tradition and totem; spells or adept powers through the Add window. A magician's foci bought in creation arrive bonded and count against the Force Points, which come from the Resources priority.",
             "i5": "Skills: the + for each kind opens the skill picker (free in creation). Set ratings and specializations here; a specialization taken here lowers the skill as the trade works, and a check flags a trade that doesn't. Common skills you haven't taken are listed: click one to add it at 1.",
             "i6": "Resources: the lifestyle, months paid ahead or bought outright, and the <strong>Shopping</strong> buttons, which open the Add window. Free and bought items both come out of the Resources nuyen.",
             "i7": "Contacts: <strong>Add a contact</strong>, then its name, level (1 to 3) and role. The first ones are free; more cost nuyen.",
-            "i8": "Finish: every build check with ✓ or ✗; click a check to go to its step. You can finish with checks unmet; the record notes it. Finishing pays the lifestyle and keeps the cash left, as the hint says."
+            "i8": "Finish: every build check with ✓ or ✗; click a check to go to its step. You can finish with checks unmet; the record notes it. Finishing pays the lifestyle, keeps a tenth of the cash left, adds 3D6 × ¥1,000 starting cash and gives a metahuman a Karma Pool of 2, as the hint says."
           },
           "b3": "The <strong>Totals</strong> panel keeps the build checks in view at every step. Closing the wizard keeps the draft: <strong>Continue creation…</strong> opens it again. <strong>Finish creation</strong> freezes the <a href=\"#creation-record\">creation record</a>.",
           "b4": "For a character made another way, <strong>Record as it stands</strong> freezes it as it is. <strong>Quick build…</strong> on the Bio tab is the older builder that reads typed lists. <strong>Import a stat block…</strong> on the Bio tab fills the sheet from a pasted character write-up, with a preview of what it read; the GM can record the result as the creation. The priority table's values come from your SR2 rulebook and the GM's house rules.",

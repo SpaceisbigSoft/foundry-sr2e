@@ -51,7 +51,9 @@ import { toolsModifier, gearRepairPlan, surveillanceKind, recognitionTn, readWri
 import { bioKindsV72, bioVitals, smokeCounts, ammoChoices, findAmmo, isKnownAmmo, canFireIndirect, metamagicChoices, BARRIER_KINDS, allySpellKarma, barrierBlocks, hostChoices, droneLinkOf, mountPointFor, skillRollMemoryFields, negotiationAttribute, outrightPurchase, lifestyleStatusText, metatypeOptions } from "../rules/index.ts";
 import { sheafFor } from "../rules/sheafgen.ts";
 import * as U80C from "../rules/urr80-combat.ts";
-import { urrCoreTnPresetRow, urrCoreKarmaDiceRow, urrCoreInstructorRule } from "../rules/urr80-core.ts";
+import { urrCoreTnPresetRow, urrCoreInstructorRule } from "../rules/urr80-core.ts";
+// v0.92.3 book alignment, core mechanics and characters (RULES.CORE_V923).
+import * as C923 from "../rules/core923.ts";
 import { sensorTableRows, sensorTableModifiers, segRows, segConditionModifiers } from "../rules/docs79-vehicles.ts";
 import { modKey, modIn, type TargetNumberModifier } from "../rules/dice.ts";
 import { quickRollArmed } from "./hotkeys.ts";
@@ -1071,7 +1073,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
           : `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.howObvious')}</label><select name="obv">${n.obviousness.map((o) => `<option value="${escHtml(o.id)}" ${o.id === "normal" ? "selected" : ""}>${escHtml(o.label)}${o.value ? ` (${o.value > 0 ? "+" : ""}${o.value})` : ""}</option>`).join("")}</select></div>`}
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.by')}</label><select name="sense"><option value="sight">${tx('SR2E.Dialog.Sheet.sightLightSmokeAndWeatherCount')}</option><option value="hearing">${tx('SR2E.Dialog.Sheet.hearingTheyDonT')}</option></select></div>
         ${targeted?.actor ? `<label class="sr2e-check"><input type="checkbox" name="at" checked> ${tx('SR2E.Dialog.Sheet.atItsLightWallsAndDistance', { targetedName: escHtml(targeted.name) })}</label>` : ""}
-        ${tableChecks(RULES.STREET.perception, "per")}
+        ${tableChecks(C923.perceptionRows(), "per")}
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.otherTnModifier')}</label><input name="mod" type="number" value="0"></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.searchingTakesOptional')}</label><input name="time" type="number" min="0" step="0.5" value="0"> <select name="unit">${units.map((u) => `<option value="${escHtml(u.id)}" ${u.id === "minutes" ? "selected" : ""}>${escHtml(u.label)}</option>`).join("")}</select></div>
         <label class="sr2e-check"><input type="checkbox" name="whisper" ${game.user?.isGM ? "checked" : ""}> ${tx('SR2E.Dialog.Sheet.whisperTheResultToTheGm')}</label>
@@ -1082,7 +1084,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         const obv = n.obviousness.find((o) => o.id === el.obv?.value);
         // v0.79.0: the book's sight rows stack (RULES.DOCS_V79.perceptionSightBook).
         const sightRows = perceptionSightModifiers(perceptionSightRows().filter((o) => el[`obv-${o.id}`]?.checked).map((o) => o.id));
-        const manual = [...(sightRows ?? (obv?.value ? [{ label: tx('SR2E.Card.Mod.obviousness', { obvLabel: obv.label }), value: obv.value }] : [])), ...tableModifiers(RULES.STREET.perception, checkedIds(form, "per")), ...(Number(el.mod?.value) ? [{ id: 'other', label: tx('SR2E.Card.Mod.other'), value: Number(el.mod.value) }] : [])];
+        const manual = [...(sightRows ?? (obv?.value ? [{ label: tx('SR2E.Card.Mod.obviousness', { obvLabel: obv.label }), value: obv.value }] : [])), ...tableModifiers(C923.perceptionRows(), checkedIds(form, "per")), ...(Number(el.mod?.value) ? [{ id: 'other', label: tx('SR2E.Card.Mod.other'), value: Number(el.mod.value) }] : [])];
         const auto = [...actor.noticeModifiers({ sense: el.sense?.value === "hearing" ? "hearing" : "sight", targetUuid: el.at?.checked ? targeted?.actor?.uuid ?? null : null }), ...actor.previewModifiers({ sightHandled: true })];
         return tnPreviewHtml({ base: n.baseTn, baseLabel: tx('SR2E.Dialog.Sheet.perception'), auto, manual, excluded });
       }),
@@ -1092,7 +1094,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     if (!r) return;
     if (!(await actor.useAction("perceive", tx('SR2E.Card.Sheet.aPerceptionTest')))) return;
     await actor.notice({ obviousness: r.obv, sense: r.sense, what: r.what, targetUuid: r.at ? targeted?.actor?.uuid ?? null : null, whisper: r.whisper, exclude: r.exclude,
-      modifiers: [...tableModifiers(RULES.STREET.perception, r.per), ...(r.mod ? [{ id: 'other', label: tx('SR2E.Card.Mod.other'), value: r.mod }] : [])], ...(r.time > 0 ? { baseTime: { value: r.time, unit: r.unit } } : {}) });
+      modifiers: [...tableModifiers(C923.perceptionRows(), r.per), ...(r.mod ? [{ id: 'other', label: tx('SR2E.Card.Mod.other'), value: r.mod }] : [])], ...(r.time > 0 ? { baseTime: { value: r.time, unit: r.unit } } : {}) });
   }
 
   /** v0.58.0: negotiate a job's pay with Mr. Johnson (an opposed Negotiation test moves the fee). */
@@ -1125,11 +1127,13 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const picked = await foundry.applications.api.DialogV2.prompt({
       window: { title: tx('SR2E.Dialog.Sheet.recognised', { actorName: actor.name }) },
       content: `<fieldset class="sr2e-situational"><legend>${tx('SR2E.Dialog.Sheet.whoMightRecogniseThem')}</legend>${near.map((t: any) => `<label class="sr2e-check"><input type="checkbox" name="who" value="${escHtml(t.actor.uuid)}" ${!targeted.length || targeted.includes(t.actor.uuid) ? "checked" : ""}> ${escHtml(t.name)}</label>`).join("")}</fieldset>
-        <p class="hint">${tx('SR2E.Dialog.Sheet.vsPublicAwarenessWhisperedToThe', { recognitionAttribute: escHtml(cap(RULES.CHARACTERS_V58.recognition.attribute)), recognitionTn: recognitionTn(Number(actor.system.reputation?.publicAwareness ?? 0)), recognitionBaseTn: RULES.CHARACTERS_V58.recognition.baseTn })}</p>`,
-      ok: { label: tx('SR2E.Dialog.Sheet.roll'), callback: (_e: Event, b: any) => Array.from(b.form.querySelectorAll('input[name="who"]:checked')).map((i: any) => i.value as string) },
+        ${C923.recognitionBook() ? `<div class="form-group"><label>${tx('SR2E.Dialog.Core923.publicRep')}</label><input name="publicRep" type="number" min="0" placeholder="${Number(actor.system.karma?.career ?? 0)}"></div>
+        <p class="hint">${tx('SR2E.Dialog.Core923.recognitionHint', { rep: Number(actor.system.karma?.career ?? 0), tn: C923.recognitionTnBook(Number(actor.system.karma?.career ?? 0)) })}</p>`
+        : `<p class="hint">${tx('SR2E.Dialog.Sheet.vsPublicAwarenessWhisperedToThe', { recognitionAttribute: escHtml(cap(RULES.CHARACTERS_V58.recognition.attribute)), recognitionTn: recognitionTn(Number(actor.system.reputation?.publicAwareness ?? 0)), recognitionBaseTn: RULES.CHARACTERS_V58.recognition.baseTn })}</p>`}`,
+      ok: { label: tx('SR2E.Dialog.Sheet.roll'), callback: (_e: Event, b: any) => ({ who: Array.from(b.form.querySelectorAll('input[name="who"]:checked')).map((i: any) => i.value as string), rep: String(b.form.elements.publicRep?.value ?? '').trim() }) },
       rejectClose: false,
-    }) as string[] | null;
-    if (picked?.length) await actor.recognitionCheck(picked);
+    }) as { who: string[]; rep: string } | null;
+    if (picked?.who?.length) await actor.recognitionCheck(picked.who, { publicRep: picked.rep === '' ? null : Number(picked.rep) });
   }
 
   /** v0.58.0: repair a broken weapon or piece of gear (its B/R skill, tools as needed). */
@@ -1224,19 +1228,21 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
   static async #onPerceive(this: SR2CharacterSheet) {
     const actor: any = this.document;
     const r = await SR2CharacterSheet.#pickPerson(actor, tx('SR2E.Dialog.Sheet.perceive', { actorName: actor.name }), `<label class="sr2e-check"><input type="checkbox" name="whisper" ${game.user?.isGM ? "checked" : ""}> ${tx('SR2E.Dialog.Sheet.whisperTheResultToTheGm')}</label>
-      ${tableChecks(RULES.STREET.perception, "per")}
-      <p class="hint">${tx('SR2E.Dialog.Sheet.sOrVsTheirStealthTheir', { actorName: escHtml(actor.name), perceptionSkill: escHtml(cap(RULES.PERCEPTION.skill)), perceptionAttribute: escHtml(cap(RULES.PERCEPTION.attribute)) })}</p>`,
+      ${tableChecks(C923.perceptionRows(), "per")}
+      <p class="hint">${C923.perceptionMode() === 'opposed' ? tx('SR2E.Dialog.Sheet.sOrVsTheirStealthTheir', { actorName: escHtml(actor.name), perceptionSkill: escHtml(cap(RULES.PERCEPTION.skill)), perceptionAttribute: escHtml(cap(RULES.PERCEPTION.attribute)) })
+        : C923.perceptionMode() === 'companion' ? tx('SR2E.Dialog.Core923.perceiveCompanion', { actorName: escHtml(actor.name), tn: C923.bookPerceptionTargets({}).observerTn, stealth: escHtml(RULES.PERCEPTION.stealthSkill) })
+        : tx('SR2E.Dialog.Core923.perceiveBook', { actorName: escHtml(actor.name), tn: C923.bookPerceptionTargets({}).observerTn })}</p>`,
       (who, form, excluded) => {
         const pv = actor.perceptionPreview(who);
         const mod = Number((form.elements as any).mod?.value) || 0;
-        const manual = [...tableModifiers(RULES.STREET.perception, checkedIds(form, "per")), ...(mod ? [{ id: 'other', label: tx('SR2E.Card.Mod.other'), value: mod }] : [])];
-        return tnPreviewHtml({ title: actor.name, auto: pv.observer, manual, excluded, ...(pv.blocked ? { warn: tx('SR2E.App.Sheets.cantNoticeThem', { why: pv.why }) } : {}) })
-          + (who ? tnPreviewHtml({ title: who.name, auto: pv.sneaker, excluded, key: "theirs§" }) : "");
+        const manual = [...tableModifiers(C923.perceptionRows(), checkedIds(form, "per")), ...(mod ? [{ id: 'other', label: tx('SR2E.Card.Mod.other'), value: mod }] : [])];
+        return tnPreviewHtml({ title: actor.name, ...(C923.perceptionMode() !== 'opposed' ? { base: C923.bookPerceptionTargets({}).observerTn, baseLabel: tx('SR2E.Dialog.Sheet.targetNumber') } : {}), auto: pv.observer, manual, excluded, ...(pv.blocked ? { warn: tx('SR2E.App.Sheets.cantNoticeThem', { why: pv.why }) } : {}) })
+          + (who && C923.perceptionMode() !== 'book' ? tnPreviewHtml({ title: who.name, auto: pv.sneaker, excluded, key: "theirs§" }) : "");
       });
     if (!r) return;
     if (!(await actor.useAction("perceive", tx('SR2E.Card.Sheet.aPerceptionTest')))) return;
     const mod = Number(r.form.mod) || 0;
-    await actor.perceive(r.uuid, { exclude: r.exclude, excludeTheirs: r.excludeTheirs, whisper: Boolean(r.form.whisper), modifiers: [...tableModifiers(RULES.STREET.perception, checkedIds(r.form, "per")), ...(mod ? [{ id: 'other', label: tx('SR2E.Card.Mod.other'), value: mod }] : [])] });
+    await actor.perceive(r.uuid, { exclude: r.exclude, excludeTheirs: r.excludeTheirs, whisper: Boolean(r.form.whisper), modifiers: [...tableModifiers(C923.perceptionRows(), checkedIds(r.form, "per")), ...(mod ? [{ id: 'other', label: tx('SR2E.Card.Mod.other'), value: mod }] : [])] });
   }
 
   /** v0.50.0: the social skill a plain skill roll handed over to the social test. */
@@ -1290,9 +1296,11 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const r = await foundry.applications.api.DialogV2.prompt({
       window: { title: tx('SR2E.Dialog.Sheet.sneak2', { actorName: actor.name }) },
       content: `<fieldset class="sr2e-situational"><legend>${tx('SR2E.Dialog.Sheet.pastWhom')}</legend>${near.map((t: any) => `<label class="sr2e-check"><input type="checkbox" name="who" value="${escHtml(t.actor.uuid)}" ${targeted.has(t.actor.uuid) || !targeted.size ? "checked" : ""}> ${escHtml(t.name)}</label>`).join("")}</fieldset>
-        ${tableChecks(RULES.STREET.perception, "per")}${spec}
+        ${tableChecks(C923.perceptionRows(), "per")}${spec}
         <label class="sr2e-check"><input type="checkbox" name="whisper" ${game.user?.isGM ? "checked" : ""}> ${tx('SR2E.Dialog.Sheet.whisperTheResultToTheGm')}</label>
-        <p class="hint">${tx('SR2E.Dialog.Sheet.onceAgainstTheSharpestEachObserver', { perceptionStealthSkill: RULES.PERCEPTION.stealthSkill, perceptionAttribute: escHtml(cap(RULES.PERCEPTION.attribute)), perceptionSkill: escHtml(cap(RULES.PERCEPTION.skill)) })}</p>`,
+        <p class="hint">${C923.perceptionMode() === 'opposed' ? tx('SR2E.Dialog.Sheet.onceAgainstTheSharpestEachObserver', { perceptionStealthSkill: RULES.PERCEPTION.stealthSkill, perceptionAttribute: escHtml(cap(RULES.PERCEPTION.attribute)), perceptionSkill: escHtml(cap(RULES.PERCEPTION.skill)) })
+          : C923.perceptionMode() === 'companion' ? tx('SR2E.Dialog.Core923.sneakCompanion', { tn: C923.bookPerceptionTargets({}).observerTn, stealth: escHtml(RULES.PERCEPTION.stealthSkill) })
+          : tx('SR2E.Dialog.Core923.sneakBook', { tn: C923.bookPerceptionTargets({}).observerTn })}</p>`,
       ok: { label: tx('SR2E.Dialog.Sheet.sneak'), callback: (_e: Event, b: any) => ({ who: Array.from(b.form.querySelectorAll('input[name="who"]:checked')).map((i: any) => i.value as string), per: checkedIds(b.form, "per"), whisper: Boolean(b.form.elements.whisper.checked), spec: Boolean(b.form.elements.spec?.checked) }) },
       rejectClose: false,
     }) as { who: string[]; per: string[]; whisper: boolean; spec: boolean } | null;
@@ -1301,7 +1309,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     if (!actor.canAct?.("sneak")) return;
     if (!(await actor.useAction("perceive", tx('SR2E.Card.Sheet.sneaking')))) return;
     // v0.50.0: the observers' conditions go on each observer's own TN (as in Perceive).
-    const mods = tableModifiers(RULES.STREET.perception, r.per).map((m) => ({ label: tx('SR2E.Card.Mod.observers', { label: m.label }), value: m.value }));
+    const mods = tableModifiers(C923.perceptionRows(), r.per).map((m) => ({ label: tx('SR2E.Card.Mod.observers', { label: m.label }), value: m.value }));
     await actor.sneakPast(r.who, { observerModifiers: mods, whisper: r.whisper, useSpecialization: r.spec });
   }
 
@@ -1331,14 +1339,16 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       content: `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.what')}</label><select name="kind"><option value="climb">${tx('SR2E.Dialog.Sheet.climb')}</option><option value="swim">${tx('SR2E.Dialog.Sheet.swim')}</option><option value="jump">${tx('SR2E.Dialog.Sheet.jump')}</option></select></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.climbing')}</label><select name="climb">${a.climb.map((c) => `<option value="${escHtml(c.id)}" ${c.id === "rough" ? "selected" : ""}>${tx('SR2E.Dialog.Sheet.tn2', { label: escHtml(c.label), tn: c.tn })}</option>`).join("")}</select></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.swimming')}</label><select name="swim">${a.swim.map((c) => `<option value="${escHtml(c.id)}" ${c.id === "choppy" ? "selected" : ""}>${tx('SR2E.Dialog.Sheet.tn2', { label: escHtml(c.label), tn: c.tn })}</option>`).join("")}</select></div>
+        ${C923.climbModifierRows().length ? tableChecks(C923.climbModifierRows(), "clm") : ""}
         <label class="sr2e-check"><input type="checkbox" name="running"> ${tx('SR2E.Dialog.Sheet.aRunningJump', { jumpRunningMultiplier: a.jump.runningMultiplier })}</label>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.otherTnModifier')}</label><input name="mod" type="number" value="0"></div>
-        <p class="hint">${tx('SR2E.Dialog.Sheet.orMPerSuccessClimbingOr', { skill: a.skill, attribute: escHtml(cap(a.attribute)), attributeDefaultTnMod: RULES.ATTRIBUTE_DEFAULT_TN_MOD, metresPerSuccess: a.metresPerSuccess, jumpMetresPerSuccess: a.jump.metresPerSuccess, walk: escHtml(actor.movementNow?.()?.walk ?? actor.system.derived?.movement?.walk ?? "?"), run: escHtml(actor.movementNow?.()?.run ?? actor.system.derived?.movement?.run ?? "?"), part: (actor.movementNow?.()?.factor ?? 1) !== 1 ? tx('SR2E.Dialog.Sheet.weatherDistancesToo', { factor: escHtml(actor.movementNow().factor) }) : "" })}</p>`,
-      ok: { label: tx('SR2E.Dialog.Sheet.roll'), callback: (_e: Event, b: any) => { const e = b.form.elements; const kind = String(e.kind.value); return { kind, condition: kind === "climb" ? String(e.climb.value) : kind === "swim" ? String(e.swim.value) : "", running: Boolean(e.running.checked), mod: Number(e.mod.value) || 0 }; } },
+        ${RULES.CORE_V923.athletics === 'book' && RULES.URR_V80.hsAthletics !== 'urr' ? `<p class="hint">${tx('SR2E.Dialog.Core923.athleticsHint', { skill: a.skill, attribute: escHtml(cap(a.attribute)), attributeDefaultTnMod: RULES.ATTRIBUTE_DEFAULT_TN_MOD, jumpMetresPerSuccess: a.jump.metresPerSuccess })}</p>` : `<p class="hint">${tx('SR2E.Dialog.Sheet.orMPerSuccessClimbingOr', { skill: a.skill, attribute: escHtml(cap(a.attribute)), attributeDefaultTnMod: RULES.ATTRIBUTE_DEFAULT_TN_MOD, metresPerSuccess: a.metresPerSuccess, jumpMetresPerSuccess: a.jump.metresPerSuccess, walk: escHtml(actor.movementNow?.()?.walk ?? actor.system.derived?.movement?.walk ?? "?"), run: escHtml(actor.movementNow?.()?.run ?? actor.system.derived?.movement?.run ?? "?"), part: (actor.movementNow?.()?.factor ?? 1) !== 1 ? tx('SR2E.Dialog.Sheet.weatherDistancesToo', { factor: escHtml(actor.movementNow().factor) }) : "" })}</p>`}`,
+      ok: { label: tx('SR2E.Dialog.Sheet.roll'), callback: (_e: Event, b: any) => { const e = b.form.elements; const kind = String(e.kind.value); return { kind, condition: kind === "climb" ? String(e.climb.value) : kind === "swim" ? String(e.swim.value) : "", running: Boolean(e.running.checked), mod: Number(e.mod.value) || 0, clm: kind === "climb" ? checkedIds(b.form, "clm") : [] }; } },
       rejectClose: false,
-    }) as { kind: string; condition: string; running: boolean; mod: number } | null;
+    }) as { kind: string; condition: string; running: boolean; mod: number; clm: string[] } | null;
     if (!r) return;
-    await actor.athleticsTest(r.kind, { condition: r.condition, running: r.running, modifiers: r.mod ? [{ id: 'other', label: tx('SR2E.Card.Mod.other'), value: r.mod }] : [] });
+    // v0.92.3 (RULES.CORE_V923.athletics 'book', Fields of Fire p. 75): the Climbing Table's height and surface modifiers.
+    await actor.athleticsTest(r.kind, { condition: r.condition, running: r.running, modifiers: [...tableModifiers(C923.climbModifierRows(), r.clm ?? []), ...(r.mod ? [{ id: 'other', label: tx('SR2E.Card.Mod.other'), value: r.mod }] : [])] });
   }
 
   static async #onMoraleTest(this: SR2CharacterSheet) {
@@ -1435,7 +1445,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         const spells = [...(actor.items ?? [])].filter((i: any) => i.type === "spell").map((i: any) => ({ learnedForce: Number(i.system?.learnedForce ?? 0), force: Number(i.system?.force ?? 0) }));
         // v0.71.0 (R21): bonded foci take their bonding Karma from the spell points (RULES.FIXES_V71.creationFoci).
         const foci = [...(actor.items ?? [])].filter((i: any) => i.type === "focus").map((i: any) => ({ name: i.name, focusType: String(i.system?.focusType ?? ""), rating: Number(i.system?.rating ?? 0), bonded: Boolean(i.system?.bonded), target: String(i.system?.target ?? ""), category: String(i.system?.category ?? ""), size: String(i.system?.size ?? "") }));
-        const sp = spellPointCheck({ allowance: spellPointAllowance({ priority: String(c.priorities.magic ?? ""), adept: c.magic === "adept" }), spells, ...(c.magic === "adept" ? {} : { foci }) });
+        const sp = spellPointCheck({ allowance: spellPointAllowance({ priority: String(c.priorities.magic ?? ""), adept: c.magic === "adept", resources: String(c.priorities.resources ?? "") }), spells, ...(c.magic === "adept" ? {} : { foci }) });
         if (sp.allowance > 0 || sp.used > 0) rows.push(`<tr class="${sp.ok ? "" : "sr2e-warning"}"><td>${tx('SR2E.Dialog.Sheet.spellPoints', { mark: sp.ok ? "✓" : "✗" })}</td><td>${sp.used}</td><td>${sp.allowance}</td><td>${escHtml(sp.note)}</td></tr>`);
       }
       const plan = buildPlan({ resources: c.priorities.resources, magic: c.magic, gearCost: input.gearCost });
@@ -3037,7 +3047,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const c2 = await foundry.applications.api.DialogV2.prompt({
       window: { title: tx('SR2E.Dialog.Sheet.roll2', { key: cap(key) }) },
       content: `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.targetNumber')}</label><input name="tn" type="number" value="4" min="2" autofocus></div>
-        ${urrCoreTnPresetRow()}${urrCoreKarmaDiceRow(Number(actor.system?.derived?.karmaPoolLeft ?? 0))}
+        ${urrCoreTnPresetRow()}${C923.karmaDiceRow(Number(actor.system?.derived?.karmaPoolLeft ?? 0), true, Number(actor.system?.attributes?.[key]?.total ?? 0))}
         <label class="sr2e-check"><input type="checkbox" name="open"> ${tx('SR2E.Dialog.Sheet.openTestNoTnTheHighest')}</label>
         <div class="sr2e-preview" aria-live="polite"></div>`,
       render: (_e: Event, dialog: any) => {
@@ -3081,16 +3091,20 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const isLang = item.system?.kind === "language";
     const toolsBest = isBR ? actor.toolsFor?.(item.name) ?? "none" : "none";
     const levelOpts = (sel: string) => c58.tools.levels.map((l) => `<option value="${escHtml(l.id)}" ${l.id === sel ? "selected" : ""}>${escHtml(l.label)}</option>`).join("");
+    // v0.92.3 (RULES.CORE_V923.languageTns 'book', Core p. 184): the Language Skills Table and the dialect's +2.
+    const langTable = C923.languageTable();
+    const langDefault = (langTable.find((x) => x.tn === 4) ?? langTable[0])?.id ?? "";
+    const dialectMod = isLang ? C923.dialectModifier() : null;
     const extra58 = `${isBR ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.theJobNeeds')}</label><select name="toolsNeed">${levelOpts("kit")}</select></div><div class="form-group"><label>${tx('SR2E.Dialog.Sheet.toolsAtHand')}</label><select name="toolsHave">${levelOpts(toolsBest)}</select></div>` : ""}
-        ${isLang ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.language')}</label><select name="langMode"><option value="speak">${tx('SR2E.Dialog.Sheet.speakingListening')}</option><option value="rw">${tx('SR2E.Dialog.Sheet.readingWritingRating', { readWriteRating: readWriteRating(Number(item.system?.rating ?? 0)) })}</option></select></div><div class="form-group"><label>${tx('SR2E.Dialog.Sheet.howComplex')}</label><select name="langCx">${c58.languages.complexity.map((x) => `<option value="${escHtml(x.id)}" data-tn="${x.tn}" ${x.id === "everyday" ? "selected" : ""}>${tx('SR2E.Dialog.Sheet.tn2', { label: escHtml(x.label), tn: x.tn })}</option>`).join("")}</select></div>` : ""}
+        ${isLang ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.language')}</label><select name="langMode"><option value="speak">${tx('SR2E.Dialog.Sheet.speakingListening')}</option><option value="rw">${tx('SR2E.Dialog.Sheet.readingWritingRating', { readWriteRating: readWriteRating(Number(item.system?.rating ?? 0)) })}</option></select></div><div class="form-group"><label>${tx('SR2E.Dialog.Sheet.howComplex')}</label><select name="langCx">${langTable.map((x) => `<option value="${escHtml(x.id)}" data-tn="${x.tn}" ${x.id === langDefault ? "selected" : ""}>${tx('SR2E.Dialog.Sheet.tn2', { label: escHtml(x.label), tn: x.tn })}</option>`).join("")}</select></div>${dialectMod ? `<label class="sr2e-check"><input type="checkbox" name="dialect"> ${escHtml(dialectMod.label)} +${dialectMod.value}</label>` : ""}` : ""}
         <div class="form-group"><label title="${tx('SR2E.Dialog.Sheet.timeSuccessesIsShownOnThe')}">${tx('SR2E.Dialog.Sheet.baseTimeOptional')}</label><input name="baseTime" type="number" min="0" step="0.5" value="0"> <select name="baseUnit">${c58.time.units.map((u) => `<option value="${escHtml(u.id)}" ${u.id === "hours" ? "selected" : ""}>${escHtml(u.label)}</option>`).join("")}</select></div>`;
     // v0.78.0 (RULES.BOOK_V78.encephalon 'shadowtech'): an encephalon's Task Pool on the skills it helps.
     const taskLeft = encephalonFits({ attribute: String(item.system?.attribute ?? ""), kind: String(item.system?.kind ?? "active") }) ? Number(actor.system?.derived?.taskPoolLeft ?? 0) : 0;
     const taskRow = taskLeft > 0 ? `<div class="form-group"><label title="${tx('SR2E.Dialog.Sheet.refreshesEachCombatTurnNotUsed')}">${tx('SR2E.Dialog.Sheet.taskPoolDiceEncephalonLeft', { taskLeft })}</label><input name="taskPool" type="number" min="0" max="${taskLeft}" value="0"></div>` : "";
     const choice = await foundry.applications.api.DialogV2.prompt({
       window: { title: tx('SR2E.Dialog.Sheet.roll3', { itemName: item.name }) },
-      content: `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.targetNumber')}</label><input name="tn" type="number" value="${isLang ? (c58.languages.complexity.find((x) => x.id === "everyday")?.tn ?? 4) : 4}" min="2" autofocus></div>
-        ${urrCoreTnPresetRow(String(item.system?.kind ?? ""))}${extra58}${taskRow}${urrCoreKarmaDiceRow(Number(actor.system?.derived?.karmaPoolLeft ?? 0), Number(item.system?.rating ?? 0) > 0)}
+      content: `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.targetNumber')}</label><input name="tn" type="number" value="${isLang ? (langTable.find((x) => x.id === langDefault)?.tn ?? 4) : 4}" min="2" autofocus></div>
+        ${urrCoreTnPresetRow(String(item.system?.kind ?? ""))}${extra58}${taskRow}${C923.karmaDiceRow(Number(actor.system?.derived?.karmaPoolLeft ?? 0), Number(item.system?.rating ?? 0) > 0, Number(item.system?.rating ?? 0))}
         ${skillChoiceRows(this.document, item, false)}
         <label class="sr2e-check"><input type="checkbox" name="open"> ${tx('SR2E.Dialog.Sheet.openTestNoTnTheHighest')}</label>
         ${others.length ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.complementarySkill1DiePerSuccesses', { complementarySuccessesPerDie: RULES.STREET.tests.complementary.successesPerDie })}</label><select name="comp"><option value="">${tx('SR2E.Dialog.Sheet.none')}</option>${others.map((o: any) => `<option value="${escHtml(o.id)}">${escHtml(o.name)} ${escHtml(o.system.rating)}</option>`).join("")}</select></div>` : ""}
@@ -3106,7 +3120,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         livePreview(dialog, (form, excluded) => {
           const el: any = form.elements;
           const t = el.toolsNeed ? toolsModifier(String(el.toolsNeed.value), String(el.toolsHave?.value ?? "none")) : null;
-          return tnPreviewHtml({ base: Number(el.tn?.value) || 4, baseLabel: tx('SR2E.Dialog.Sheet.targetNumber'), auto: actor.previewModifiers(), manual: t?.modifier ? [t.modifier] : [], excluded, note: tx('SR2E.Dialog.Sheet.edgesFlawsAndDefaultingAreAdded'), ...(t?.blocked ? { warn: tx('SR2E.Dialog.Sheet.canTDoItWithoutTools') } : {}) });
+          const dm = dialectMod && el.dialect?.checked ? [dialectMod] : [];
+          return tnPreviewHtml({ base: Number(el.tn?.value) || 4, baseLabel: tx('SR2E.Dialog.Sheet.targetNumber'), auto: actor.previewModifiers(), manual: [...(t?.modifier ? [t.modifier] : []), ...dm], excluded, note: tx('SR2E.Dialog.Sheet.edgesFlawsAndDefaultingAreAdded'), ...(t?.blocked ? { warn: tx('SR2E.Dialog.Sheet.canTDoItWithoutTools') } : {}) });
         });
       },
       ok: {
@@ -3115,7 +3130,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
           return { tn: Number(el.tn.value) || 4, useSpec: Boolean(el.useSpec?.checked), useConc: Boolean(el.useConc?.checked), related: (el.related?.value as string) || null,
             open: Boolean(el.open?.checked), comp: (el.comp?.value as string) || null, helpers: Array.from(button.form.querySelectorAll('input[name="helper"]:checked')).map((i: any) => i.value as string), exclude: excludedOf(button.form),
             baseTime: Number(el.baseTime?.value) || 0, baseUnit: String(el.baseUnit?.value ?? "hours"), toolsNeed: el.toolsNeed ? String(el.toolsNeed.value) : null, toolsHave: el.toolsHave ? String(el.toolsHave.value) : null,
-            lang: el.langMode ? { readWrite: el.langMode.value === "rw", complexity: String(el.langCx?.value ?? "everyday") } : null,
+            lang: el.langMode ? { readWrite: el.langMode.value === "rw", complexity: String(el.langCx?.value ?? langDefault) } : null,
+            dialect: Boolean(el.dialect?.checked),
             taskPool: el.taskPool ? Math.max(0, Math.floor(Number(el.taskPool.value) || 0)) : 0,
             karmaDice: el.karmaDice ? Math.max(0, Math.floor(Number(el.karmaDice.value) || 0)) : 0 };
         },
@@ -3128,6 +3144,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       ...(choice.baseTime > 0 ? { baseTime: { value: choice.baseTime, unit: choice.baseUnit } } : {}),
       ...(choice.toolsNeed ? { tools: { need: choice.toolsNeed, have: choice.toolsHave ?? "none" } } : {}),
       ...(choice.lang ? { language: choice.lang } : {}),
+      ...(choice.dialect && dialectMod ? { modifiers: [dialectMod] } : {}),
       ...(choice.taskPool > 0 ? { pool: "task", poolDice: choice.taskPool } : {}),
       ...(choice.karmaDice > 0 ? { karmaDice: choice.karmaDice } : {}) });
   }
@@ -7404,14 +7421,14 @@ export class SR2SiteSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const r = await foundry.applications.api.DialogV2.prompt({
       window: { title: tx('SR2E.Dialog.Sheet.guardsLook', { siteName: site.name }) },
       content: `<fieldset class="sr2e-situational"><legend>${tx('SR2E.Dialog.Sheet.whoMightTheySee')}</legend>${near.map((t: any) => `<label class="sr2e-check"><input type="checkbox" name="who" value="${escHtml(t.actor.uuid)}" ${targeted.has(t.actor.uuid) || (!targeted.size && t.actor.hasPlayerOwner) ? "checked" : ""}> ${escHtml(t.name)}</label>`).join("")}</fieldset>
-        ${tableChecks(RULES.STREET.perception, "per")}
+        ${tableChecks(C923.perceptionRows(), "per")}
         <p class="hint">${RULES.SECURITY.guards.alert ? tx('SR2E.Dialog.Sheet.eachIntruderSOnceAgainstEveryAlert', { perceptionStealthSkill: RULES.PERCEPTION.stealthSkill, perceptionSkill: RULES.PERCEPTION.skill, guardsTallyPerGuard: RULES.SECURITY.guards.tallyPerGuard, guardsAlert: RULES.SECURITY.guards.alert }) : tx('SR2E.Dialog.Sheet.eachIntruderSOnceAgainstEvery', { perceptionStealthSkill: RULES.PERCEPTION.stealthSkill, perceptionSkill: RULES.PERCEPTION.skill, guardsTallyPerGuard: RULES.SECURITY.guards.tallyPerGuard })}</p>`,
       ok: { label: tx('SR2E.Dialog.Sheet.look'), callback: (_e2: Event, b: any) => ({ who: Array.from(b.form.querySelectorAll('input[name="who"]:checked')).map((i: any) => i.value as string), per: checkedIds(b.form, "per") }) },
       rejectClose: false,
     }) as { who: string[]; per: string[] } | null;
     if (!r?.who.length) return;
     // v0.50.0: the guards' conditions go on the guards' own TN (as in Perceive).
-    const mods = tableModifiers(RULES.STREET.perception, r.per).map((m) => ({ label: tx('SR2E.Card.Mod.guards', { label: m.label }), value: m.value }));
+    const mods = tableModifiers(C923.perceptionRows(), r.per).map((m) => ({ label: tx('SR2E.Card.Mod.guards', { label: m.label }), value: m.value }));
     await site.guardsWatch(r.who, { observerModifiers: mods });
   }
 

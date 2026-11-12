@@ -4,6 +4,7 @@
  * for learning a skill or spell, how each type can be paid for, the row-edit fields, the setup
  * warnings banner, and the sheet search's match.
  */
+import { newSkillCost } from './core923.ts';
 import { itemPrice, skillCost, parseAvailability } from './upkeep.ts';
 import { wareCost } from './bioware.ts';
 import { gradedAvailability } from './implants.ts';
@@ -118,7 +119,8 @@ export function entryAvailability(type: string, s: any): { label: string; tn: nu
 export function newSkillKarma(o: { rating: number; attribute: number; kind: SkillKind; specializationRating?: number; specialization?: boolean }): number {
   const rating = Math.max(0, Math.floor(o.rating) || 0);
   let total = 0;
-  for (let to = 1; to <= rating; to++) total += skillCost({ to, attribute: o.attribute, kind: o.kind });
+  // v0.92.3 (RULES.CORE_V923.newSkill 'book', Core p. 190): the first point of a new skill costs 1 Good Karma.
+  for (let to = 1; to <= rating; to++) total += newSkillCost(to - 1, to) ?? skillCost({ to, attribute: o.attribute, kind: o.kind });
   const sr = Math.floor(o.specializationRating ?? 0);
   if (o.specialization && sr > rating) for (let to = rating + 1; to <= sr; to++) total += skillCost({ to, attribute: o.attribute, kind: o.kind, specialization: true });
   return total;

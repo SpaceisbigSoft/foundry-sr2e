@@ -1,3 +1,4 @@
+import { forcePoints, leftoverAtRatio } from './core923.ts';
 import { RULES } from './config.ts';
 import type { TargetNumberModifier } from './dice.ts';
 import { legalCheck, legalityOf } from './outfit.ts';
@@ -165,10 +166,13 @@ export function legalWithLicences(
  * v0.61.0: spell points at creation for the Magic column's priority letter (A–E, case-insensitive;
  * unknown → 0); adepts get none when creation.adeptGetsNone. `tradition` 'none' / 'mundane' gets 0.
  */
-export function spellPointAllowance(o: { priority: string; tradition?: string; adept?: boolean }): number {
+export function spellPointAllowance(o: { priority: string; tradition?: string; adept?: boolean; resources?: string }): number {
   const c = C().creation;
   if (o?.adept && c.adeptGetsNone) return 0;
   if (['none', 'mundane'].includes(lower(o?.tradition))) return 0;
+  // v0.92.3 (RULES.CORE_V923.priorities 'book', Core p. 47): Force Points by the Resources priority, 50/35/25/15/5.
+  const fp = o?.resources !== undefined ? forcePoints({ resources: o.resources, magician: true }) : null;
+  if (fp !== null) return fp;
   return whole(c.spellPointsByPriority[String(o?.priority ?? '').trim().toUpperCase()]);
 }
 
@@ -216,6 +220,9 @@ export function spellPointCheck(o: { allowance: number; spells: ReadonlyArray<{ 
 
 /** v0.61.0: cash left after creation: kept in full ('keep'), up to the cap ('cap'), or lost ('lose'). */
 export function leftoverCash(nuyen: number): { kept: number; lost: number; note: string } {
+  // v0.92.3 (RULES.CORE_V923.leftoverCash 'tenth', Core p. 47): unspent Resources at 10:1.
+  const r = leftoverAtRatio(nuyen);
+  if (r) return r;
   const l = C().creation.leftoverCash;
   const n = whole(nuyen);
   const kept = l.mode === 'lose' ? 0 : l.mode === 'cap' ? Math.min(n, whole(l.cap)) : n;

@@ -6,6 +6,7 @@
 import { test, describe, before, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { RULES } from '../rules/index.ts';
+import { oldWay } from '../rules/__tests__/oldway.ts';
 
 const g = globalThis as any;
 const faces: number[] = [];
@@ -362,7 +363,9 @@ describe('D1 findings (index.ts 1-5800)', () => {
     assert.doesNotMatch(chat.at(-1).content, /Complications/);
   });
 
-  test('D1-2: a broken group that passes a later morale test stays broken until rallied', async () => {
+  test('D1-2: a broken group that passes a later morale test stays broken until rallied', async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.morale': 'old' }));
     const npc = who({ name: 'Goon', type: 'npc', professionalRating: 3 });
     await npc.setFlag('sr2e', 'broken', true);
     faces.push(5, 5, 5);

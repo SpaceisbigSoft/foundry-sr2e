@@ -10,6 +10,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { RULES, attributeMaximums, attributeMaximumsWith, effectiveMagic, nativeLanguageRating, karmaAward, skillCost, parseSkillWeb, webDistance, relatedDefaultTn } from '../rules/index.ts';
 import { urrMode } from '../rules/__tests__/urrmode.ts';
+import { oldWay } from '../rules/__tests__/oldway.ts';
 
 const g = globalThis as any;
 const faces: number[] = [];
@@ -155,6 +156,8 @@ const skill = (id: string, name: string, rating: number, attribute = 'quickness'
 
 describe('v0.80.0 core: existing pure functions, wired', () => {
   test('natural maximums: dwarf Quickness 5 and troll Willpower 5 under the Revamp', (t) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    t.after(oldWay({ 'CORE_V923.racialMods': 'old' }));
     assert.equal(attributeMaximums('dwarf', 'quickness').natural, 6);
     assert.equal(attributeMaximumsWith('troll', 'willpower', []).natural, 6);
     t.after(urrMode());
@@ -172,6 +175,8 @@ describe('v0.80.0 core: existing pure functions, wired', () => {
   });
 
   test('native language: Intelligence (book), Intelligence + 2 (Revamp)', (t) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    t.after(oldWay({ 'CORE_V923.nativeLanguage': 'old' }));
     assert.equal(nativeLanguageRating(5), 5);
     t.after(urrMode());
     assert.equal(nativeLanguageRating(5), 7);
@@ -193,6 +198,8 @@ describe('v0.80.0 core: existing pure functions, wired', () => {
   });
 
   test('Skill Web: "A > B" is one-way and steps are unlimited under the Revamp', (t) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    t.after(oldWay({ 'CORE_V923.webArrows': 'old', 'SKILLS.web.maxSteps': 3 }));
     const links = parseSkillWeb('Firearms > Gunnery: 1\nGunnery - Car: 2\nCar - Bike: 1');
     assert.deepEqual(links[0], { a: 'Firearms', b: 'Gunnery', steps: 1, oneWay: true });
     assert.deepEqual(links[1], { a: 'Gunnery', b: 'Car', steps: 2 });
@@ -212,6 +219,8 @@ describe('v0.80.0 core: existing pure functions, wired', () => {
 
 describe('v0.80.0 core: tests on the sheet', () => {
   test('Karma Pool dice: ignored in the book, bought under the Revamp', async (t) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    t.after(oldWay({ 'CORE_V923.karmaDice': 'off' }));
     const a = who({ karma: { pool: 3, poolSpent: 0, good: 30, career: 30 } }, [skill('pi', 'Pistols', 2)]);
     faces.push(5, 1);
     const r1 = await a.rollSkill(a.items.get('pi'), { targetNumber: 4, karmaDice: 2 });
@@ -278,6 +287,8 @@ describe('v0.80.0 core: tests on the sheet', () => {
 
 describe('v0.80.0 core: Karma and training', () => {
   test('raising an attribute: × 2 and days by rating (book); × 1.5 and Karma × 8 hours (Revamp)', async (t) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    t.after(oldWay({ 'UPKEEP.karma.attributeMultiplier': 2, 'CORE_V923.trainingTime': 'rating' }));
     const book = who({ karma: { pool: 0, poolSpent: 0, good: 30, career: 30 } });
     assert.equal(await book.improve({ attribute: 'quickness' }), true);
     assert.equal(book.system.karma.good, 30 - 12);
@@ -310,6 +321,8 @@ describe('v0.80.0 core: Karma and training', () => {
   });
 
   test('a metahuman finishing the creation wizard: Karma Pool 1 (book), 2 (Revamp)', async (t) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    t.after(oldWay({ 'CORE_V923.startPool': 'old' }));
     // A plain actor (the record deep-copies its system).
     const who = (o: any) => ({ type: 'character', name: 'New', items: [], flags: {} as any, system: { attributes: {}, essence: 6, ...o },
       getFlag(s: string, k: string) { return this.flags[s]?.[k]; }, async update(d: any) { for (const [k, v] of Object.entries(d)) setPath(this, k, v); } });
@@ -344,6 +357,8 @@ describe('v0.80.0 core: gear', () => {
   });
 
   test("haggling: the seller rolls vs 4 (book), vs the buyer's Intelligence (Revamp)", async (t) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    t.after(oldWay({ 'CORE_V923.haggle': 'old' }));
     const a = who({}, [skill('ne', 'Negotiation', 2, 'charisma')], { ...A, intelligence: 6 });
     faces.push(1, 1, 1, 1, 1, 1);
     await a.haggle({ itemId: 'x', price: 1000, name: 'Gun' });
@@ -359,7 +374,8 @@ describe('v0.80.0 core: the roll dialogs (source)', () => {
   test('the skill and attribute dialogs show the Revamp rows only through urrCore helpers (empty in the book)', () => {
     const src = readFileSync(new URL('../applications/sheets.ts', import.meta.url), 'utf8');
     assert.match(src, /\$\{urrCoreTnPresetRow\(String\(item\.system\?\.kind \?\? ""\)\)\}\$\{extra58\}/);
-    assert.match(src, /urrCoreKarmaDiceRow\(Number\(actor\.system\?\.derived\?\.karmaPoolLeft \?\? 0\), Number\(item\.system\?\.rating \?\? 0\) > 0\)/);
+    // v0.92.3: the Karma dice row comes through C923.karmaDiceRow (the Revamp's row when coreKarmaDice is on, the book's otherwise).
+    assert.match(src, /C923\.karmaDiceRow\(Number\(actor\.system\?\.derived\?\.karmaPoolLeft \?\? 0\), Number\(item\.system\?\.rating \?\? 0\) > 0, Number\(item\.system\?\.rating \?\? 0\)\)/);
     assert.equal((src.match(/f\?\.elements\?\.tnPreset\?\.addEventListener/g) ?? []).length, 2);
     assert.match(src, /karmaDice: choice\.karmaDice/);
     assert.match(src, /karmaDice: c2\.karmaDice/);
