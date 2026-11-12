@@ -204,7 +204,7 @@ export const HOUSE_MATRIX_V923: Array<{ path: string; section: string; type: 'nu
   { section: 'magicAndTheMatrix', path: 'MATRIX_V923.deckBuilding', type: 'select', choices: ['book', 'v922'] },
   { section: 'magicAndTheMatrix', path: 'MATRIX_V923.otaku', type: 'select', choices: ['book', 'v922'] },
   { section: 'magicAndTheMatrix', path: 'MATRIX_V923.paydata', type: 'select', choices: ['book', 'v922'] },
-  // Existing values with no row before (their defaults moved to the book's; see docs/verify923/matrix.md).
+  // Existing values with no row before (their defaults moved to the book's; see docs/VERIFY.md, "Checked against the books (v0.92.3)").
   { section: 'magicAndTheMatrix', path: 'MATRIX.download.ioPerTurn', type: 'number' },
   { section: 'magicAndTheMatrix', path: 'MATRIX.attributeDamage.minOnHit', type: 'number' },
   { section: 'magicAndTheMatrix', path: 'MATRIX.utilitySize.kinds.smoke', type: 'number' },

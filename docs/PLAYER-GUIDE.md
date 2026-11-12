@@ -314,7 +314,7 @@ They are interpretations, not rulings: the GM's call always wins.
 
 ## Credits and licence
 
-**Built with AI.** This system was written by an AI model, Anthropic's Claude, under the direction of its human owner: the code, the rules numbers and this guide. The numbers came from the AI's memory of the books; many have since been checked against the books, and the rest are listed in `docs/VERIFY.md`. Check anything that looks off against your rulebook and tell your GM; the GM can correct values in the house rules. It has not yet been play-tested at a real table.
+**Built with AI.** This system was written by an AI model, Anthropic's Claude, under the direction of its human owner: the code, the rules numbers and this guide. The numbers first came from the AI's memory of the books; in v0.92.3 the AI checked the default rules against the books and corrected them (a person has not re-checked that yet), and every number is listed with its source in `docs/VERIFY.md`. Check anything that looks off against your rulebook and tell your GM; the GM can correct values in the house rules. It has not yet been play-tested at a real table.
 
 This is an **unofficial** fan system for Shadowrun, Second Edition. It is not affiliated with or endorsed by The Topps Company, Catalyst Game Labs or Black Book Editions. Shadowrun and Matrix are registered trademarks and/or trademarks of The Topps Company, Inc.
 
@@ -1022,4 +1022,4 @@ Configure Settings itself is in sections:
 - *Other*: *Rules source* (see [the Unified Rules Revamp](#the-unified-rules-revamp-alternate-rules)), *Apply players' GM-only changes by themselves* and each player's *Dice So Nice: SR2e colours*.
 - *Look and layout*: each player's own look (see [Your look](#your-look-theme-colours-and-text-size)).
 
-Many values were entered from memory and need checking against your SR2 rulebook: the list is `docs/VERIFY.md` in the project's source.
+Many values were first entered from memory; in v0.92.3 the defaults were checked against the SR2 books. Every value and its source is listed in `docs/VERIFY.md` in the project's source, for checking against your rulebook.
