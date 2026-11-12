@@ -2096,7 +2096,7 @@ export class SR2Actor extends Actor {
   bodyShockMods(): TargetNumberModifier[] {
     const bi = this.sys.derived?.bodyIndex;
     const v = bi ? systemShockTn(Number(bi.used ?? 0), Number(bi.max ?? 0)) : 0;
-    return v ? [{ label: tx('SR2E.Card.Mod.systemShock'), value: v }] : [];
+    return v ? [{ id: 'systemShock', label: tx('SR2E.Card.Mod.systemShock'), value: v }] : [];
   }
 
   /** Body Index makes a patient harder to heal (RULES.BIOWARE.bodyIndex). */
@@ -3015,7 +3015,10 @@ export class SR2Actor extends Actor {
         const attack = snap.defendAgainst as AttackState;
         if (attack.matrix) return this.#matrixHit(snap, attack, s, true);
         if (opposedMelee(attack) && this.type !== 'vehicle') return this.#resolveMeleeDefense(snap);
-        const outcome = resolveAttack({ attackSuccesses: attack.attackSuccesses, defenseSuccesses: s, power: attack.power, level: attack.level });
+        const outcome0 = resolveAttack({ attackSuccesses: attack.attackSuccesses, defenseSuccesses: s, power: attack.power, level: attack.level });
+        // v0.92.3 (RULES.VEHICLES_V923.ram 'book', Rigger 2 p. 47): a ram's level is the Impact Damage Levels table's for
+        // the speed difference; the Ramming Test's successes only take the rammer's Body off its own Power (no staging up).
+        const outcome = attack.ram && veh923('ram') === 'book' && outcome0.level ? { ...outcome0, level: attack.level } : outcome0;
         // v0.73.0 (O25): the rammer's share, only when the ram still hits after the defense.
         const rs = ramSelfAfterDefense({ hit: Boolean(outcome.hit && outcome.level), ram: attack.ram, vehicleName: attack.ram ? String(fromUuidSync(attack.ram.vehicleUuid)?.name ?? '') : '' });
         if (!outcome.hit || !outcome.level) {
@@ -9818,7 +9821,7 @@ export class SR2Actor extends Actor {
       const until = effectEnds({ round: combat?.started ? Number(combat.round ?? 0) : null, worldTime: sysNow(), seconds: turns * Math.max(1, Number(RULES.COMBAT_TURN_SECONDS) || 3), combatId: combat?.started ? String(combat.id ?? '') : null });
       await SR2Actor.setPowerEffect(String(this.uuid), { id: 'shockDisoriented923', fromUuid: '', fromName: fromName || tx('SR2E.Card.Actor.shockWeapon923'), name: tx('SR2E.Card.Actor.disoriented923'), attributes: {}, testsTn: tn, until } as FxEntry);
     }
-    await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), rolls, content: `<p><strong>${escText(this.name)}</strong> ${turns > 0 ? tCount(turns, 'SR2E.Card.Actor.shockDisoriented923', { attribute: cap(attr), successes: r.successes, tn }) : tx('SR2E.Card.Actor.shockShrugged923', { attribute: cap(attr), successes: r.successes })}</p>` });
+    await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), rolls, content: `<p><strong>${escText(this.name)}</strong> ${turns > 0 ? tCount(turns, 'SR2E.Card.Actor.shockDisoriented923', { attribute: escText(cap(attr)), successes: r.successes, tn }) : tx('SR2E.Card.Actor.shockShrugged923', { attribute: escText(cap(attr)), successes: r.successes })}</p>` });
     return turns;
   }
 
@@ -11148,7 +11151,7 @@ export class SR2Actor extends Actor {
       const dp = S923.dropOnProjecting(this.sustained());
       if (dp.dropped.length) {
         await this.update({ 'system.sustaining': dp.keep });
-        await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p>${tx('SR2E.Card.Actor.projectingDropsSpells', { name: escText(this.name), list: escText(dp.dropped.map((d) => d.spellName).join(', ')) })}</p>` });
+        await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p><strong>${escText(this.name)}</strong> ${tx('SR2E.Card.Actor.projectingDropsSpells', { list: escText(dp.dropped.map((d) => d.spellName).join(', ')) })}</p>` });
       }
       return;
     }
@@ -12151,7 +12154,7 @@ export class SR2Actor extends Actor {
       }
       if (lost > 0) await a.setFlag(SYSTEM_ID, key, { lost, at: Number(f.at) + back * 3600 });
       else await clearFlag(a, key);
-      await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: a }), content: `<p>${tx(key === 'banishForce' ? 'SR2E.Card.Actor.banishForceBack' : 'SR2E.Card.Actor.banishMagicBack', { name: escText(a.name), back })}</p>` });
+      await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: a }), content: `<p>${key === 'banishForce' ? tx('SR2E.Card.Actor.banishForceBack', { name: escText(a.name), back }) : tx('SR2E.Card.Actor.banishMagicBack', { name: escText(a.name), back })}</p>` });
     }
   }
 
@@ -12539,7 +12542,7 @@ export class SR2Actor extends Actor {
       : tx('SR2E.Card.Actor.permanentDamageLimb923', { part: parts[out.result] ?? out.result });
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor: this }), rolls,
-      content: `<div class="sr2e-roll"><h3>${tx('SR2E.Card.Actor.permanentDamageTest923')}</h3><p>${tx('SR2E.Card.Actor.permanentDamageRoll923', { dice: Number(this.sys.attributes.body.total ?? 0) + dermal, dermal, tn, successes: r.successes })}</p><p><strong>${escText(this.name)}</strong>: ${what}</p></div>`,
+      content: `<div class="sr2e-roll"><h3>${tx('SR2E.Card.Actor.permanentDamageTest923')}</h3><p>${tx('SR2E.Card.Actor.permanentDamageRoll923', { dice: Number(this.sys.attributes.body.total ?? 0) + dermal, dermal, tn, successes: r.successes })}</p><p><strong>${escText(this.name)}</strong>: ${escText(what)}</p></div>`,
     });
     return { ...out, successes: r.successes };
   }
@@ -13494,7 +13497,7 @@ export class SR2Actor extends Actor {
       // v0.92.3: no Hacking Pool, an ICCM −2 TN (VR2 pp. 17, 47, 86; RULES.MATRIX_V923.blackIc). It is a Complex Action (VR2 p. 47).
       const bk = RULES.MATRIX_V923.blackIc !== 'v922';
       if (bk && !opts.force && !(await this.useAction(`matrix:${'complex'}`, tx('SR2E.Card.Actor.jackingOut')))) return;
-      const iccm923: TargetNumberModifier[] = bk && Number(this.sys.derived?.cyber?.iccm ?? 0) > 0 ? [{ id: 'iccm', label: 'ICCM', value: -2 }] : [];
+      const iccm923: TargetNumberModifier[] = bk && Number(this.sys.derived?.cyber?.iccm ?? 0) > 0 ? [{ id: 'iccm', label: tx('SR2E.Card.Mod.iccm'), value: -2 }] : [];
       await this.#runTest(t.label, t.dice, {
         targetNumber: t.tn, poolDice: cfg.pool && !bk ? (opts.poolDice ?? 0) : 0, pool: 'hacking', modifiers: [...iccm923, ...matrixWoundModifiers(Number(this.sys.matrix?.monitor ?? 0))],
       }, { kind: 'jackOut', jackOut: { icUuid: hold.uuid, icName: hold.name, needed: t.needed } });
@@ -15293,7 +15296,7 @@ export class SR2Actor extends Actor {
       const result = await successTest({ dice: this.sys.attributes[attr].total + iccm, poolDice: blackPool, targetNumber: bk ? matrixSoakTn(res.tn, 0, shield?.rating ?? 0) : matrixSoakTn(damage.power, 0, shield?.rating ?? 0), roll: foundryRoller(rolls) });
       if (blackPool > 0) await this.#spendPool('hacking', blackPool);
       const hard923 = bk && Number(m?.hardening ?? 0) > 0 ? tx('SR2E.Card.Actor.hardening', { hardening: Number(m.hardening) }) : '';
-      await this.#post(this.#snapshot(tx('SR2E.Card.Actor.resistBlackIc', { damagePower: damage.power, damageLevel: damage.level, damageDamageType: damage.damageType, attr: cap(attr), part: `${iccm ? tx('SR2E.Card.Actor.iccm', { iccm }) : ''}${withIccm ? ' (ICCM)' : ''}${hard923}`, part2: shield ? `, ${shield.name} ${shield.rating}` : '' }), result, {
+      await this.#post(this.#snapshot(tx('SR2E.Card.Actor.resistBlackIc', { damagePower: damage.power, damageLevel: damage.level, damageDamageType: damage.damageType, attr: cap(attr), part: `${iccm ? tx('SR2E.Card.Actor.iccm', { iccm }) : ''}${withIccm ? tx('SR2E.Card.Actor.iccm2') : ''}${hard923}`, part2: shield ? `, ${shield.name} ${shield.rating}` : '' }), result, {
         kind: 'soak',
         soak: { mode: 'stage', noun: 'damage', level: damage.level, type: damage.damageType, body: this.sys.attributes.body.total, before: this.#monitor(), ...(shield ? { matrixUtility: shield } : {}) },
       }), result, rolls);
@@ -17515,7 +17518,7 @@ export class SR2Actor extends Actor {
     const moving = Number(this.sys.currentSpeed ?? 0) > 0;
     // v0.92.3 (RULES.VEHICLES_V923.autoCrash 'book', Rigger 2 p. 53): a moving vehicle whose monitor fills crashes, no test.
     if (level && result.destroyed && current < max && current === expected && moving && !ctx.crash && veh923('autoCrash') === 'book') {
-      extra += `</p><p>${tx('SR2E.Card.Actor.destroyedVehicleCrashes', { name: escText(this.name) })} <button type="button" data-sr2e-action="vehicleCrash">${tx('SR2E.Card.Actor.crashDamagePower', { power: veh80CrashDamage(Number(this.sys.currentSpeed ?? 0)).power })}</button>`;
+      extra += `</p><p><strong>${tx('SR2E.Card.Actor.destroyedVehicleCrashes', { name: escText(this.name) })}</strong> <button type="button" data-sr2e-action="vehicleCrash">${tx('SR2E.Card.Actor.crashDamagePower', { power: veh80CrashDamage(Number(this.sys.currentSpeed ?? 0)).power })}</button>`;
       flags = { crash: { vehicleUuid: this.uuid, speed: Number(this.sys.currentSpeed ?? 0) } };
     }
     // v0.92.3 (RULES.VEHICLES_V923.ram 'book', Rigger 2 p. 47): any damage from a ram (to either vehicle) calls for a Crash Test.
@@ -19305,7 +19308,7 @@ export class SR2Actor extends Actor {
     // v0.92.3 (RULES.SORCERY_V923.design 'book', Grimoire p. 115): Magical Theory.
     const bookDesign = S923.s923('design');
     const sorcery = this.findSkill(bookDesign ? 'Magical Theory' : RULES.OCCULT.design.skill);
-    if (!sorcery || !((sorcery.system?.rating ?? 0) > 0)) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.needsToDesignSpells', { name: escHtml(this.name), designSkill: bookDesign ? 'Magical Theory' : RULES.OCCULT.design.skill })); return null; }
+    if (!sorcery || !((sorcery.system?.rating ?? 0) > 0)) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.needsToDesignSpells', { name: escHtml(this.name), designSkill: bookDesign ? tx('SR2E.Card.Actor.magicalTheory2') : RULES.OCCULT.design.skill })); return null; }
     const force = Math.max(1, Math.floor(d.force || 1));
     const drain = designDrain({ ...d, resisted: Boolean(d.resist && d.resist !== 'none') });
     const kind = isShamanic(this.tradition) ? 'lodge' : 'library';

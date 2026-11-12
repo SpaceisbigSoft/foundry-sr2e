@@ -235,7 +235,7 @@ export const GEAR_STACK_FIELDS: readonly string[] = [
   ...['body', 'quickness', 'strength', 'charisma', 'intelligence', 'willpower'].map((k) => `toxin.attributes.${k}`),
   'toxin.reaction', 'toxin.initiativeDice',
   ...['ballistic', 'impact', 'testsTn', 'perceivedTn', 'attackedTn', 'movementFactor', 'ignoreWounds', 'stunIgnoreBoxes'].map((k) => `toxin.extra.${k}`),
-  'toxin.durationMinutes', 'toxin.crashPower', 'toxin.crashLevel', 'toxin.addiction', 'toxin.addictionType',
+  'toxin.durationMinutes', 'toxin.crashPower', 'toxin.crashLevel', 'toxin.addiction', 'toxin.addictionType', 'toxin.tolerance', 'toxin.strength',
   'toxin.incubationHours', 'toxin.intervalHours', 'toxin.recoveries', 'toxin.contagious',
   'protection.kind', 'protection.rating', 'protection.worn', 'site.kind', 'site.rating', 'site.tag',
   'scanner.kind', 'scanner.rating', 'chip.kind', 'chip.skill', 'chip.rating', 'chip.slotted',

@@ -309,7 +309,7 @@ describe('v0.92.3 vehicles: shot inside a vehicle', () => {
     chat.length = 0;
     const d = { targetUuid: a.uuid, melee: false, damageType: 'physical', power: 8, level: 'M', occupantShot: true, extraArmor: 4 };
     assert.equal(await diceUsed(() => a.resistFromState(d, 3)), 4);
-    assert.match(chat.at(-1).content, /TN 7|vs 7|target number 7/i);
+    assert.match(chat.at(-1).content, /TN (<strong>)?7\b|vs 7|target number 7/i);
     t.after(v922Vehicles());
     assert.equal(await diceUsed(() => a.resistFromState(d, 3)), 4 + 3);
   });
@@ -352,7 +352,7 @@ describe('v0.92.3 vehicles: gunnery and the Revamp', () => {
     await diceUsed(() => a.fireMounted(v, v.items.get('wturret'), { range: 'short', poolDice: 3 }));
     assert.deepEqual([a.system.poolSpent.control, a.system.poolSpent.combat], [3, 0]);
   });
-  test('under the Revamp the vehicle rules are as before (its evasive driving, its uncapped pool on resistance)', async (t) => {
+  test('under the Revamp its own vehicle rules are as before (its evasive driving, its uncapped pool on resistance); the book\'s autonav dice, which the Revamp is silent on, apply there too', async (t) => {
     t.after(urrMode());
     let { v, a } = await jumped();
     const atk = { attackerUuid: 'x', targetUuid: v.uuid, weaponName: 'Gun', melee: false, damageType: 'physical', power: 8, level: 'M', attackSuccesses: 2, targetNumber: 4, antiVehicle: true };
@@ -360,6 +360,6 @@ describe('v0.92.3 vehicles: gunnery and the Revamp', () => {
     ({ v, a } = await jumped());
     assert.equal(await diceUsed(() => v.resistVehicleDamage(hit(v, { antiVehicle: true }), 8), 1), 4 + 8);
     assert.equal(a.system.poolSpent.control, 8);
-    assert.equal(await diceUsed(() => a.driveTest({ poolDice: 0 })), 5);
+    assert.equal(await diceUsed(() => a.driveTest({ poolDice: 0 })), 5 + 2);    // Car 5 + autonav 2 (Rigger 2 p. 20)
   });
 });

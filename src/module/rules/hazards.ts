@@ -136,14 +136,14 @@ export function withdrawalState(a: Pick<Addiction, 'addicted' | 'lastDose'> & Bo
  * as spellcasting) and the pain of a persistent Moderate Stun wound (its +2 when the Stun track's own is less);
  * recovering +2 (+4). `who`: the addict's attributes and Stun wound modifier; without it the old way.
  */
-export function withdrawalModifiers(list: readonly Addiction[], now: number, who?: { body: number; willpower: number; stunWoundTn?: number; concentration?: boolean }): Array<{ label: string; value: number }> {
+export function withdrawalModifiers(list: readonly Addiction[], now: number, who?: { body: number; willpower: number; stunWoundTn?: number; concentration?: boolean }): Array<{ id?: string; label: string; value: number }> {
   if (addictionBook() && who) {
     const all = list.map((a) => ({ a, w: bookWithdrawalTn(a as Addiction & BookAddiction, now, who, Boolean(who.concentration)) })).filter((x) => x.w);
     if (!all.length) return [];
     const worst = all.reduce((m, x) => (x.w!.tn > m.w!.tn ? x : m));
-    const out = [{ label: tx('SR2E.Card.Mod.withdrawal', { w: all.map((x) => x.a.drug).join(', ') }), value: worst.w!.tn }];
+    const out: Array<{ id?: string; label: string; value: number }> = [{ label: tx('SR2E.Card.Mod.withdrawal', { w: all.map((x) => x.a.drug).join(', ') }), value: worst.w!.tn }];
     const pain = all.some((x) => x.w!.kind === 'forced') ? Math.max(0, (RULES.WOUND_MODIFIERS.find(([min]) => min === RULES.BOXES_PER_LEVEL.M)?.[1] ?? 2) - Math.max(0, Number(who.stunWoundTn) || 0)) : 0;
-    if (pain) out.push({ label: tx('SR2E.Card.Mod.withdrawalPain923'), value: pain });
+    if (pain) out.push({ id: 'withdrawalPain', label: tx('SR2E.Card.Mod.withdrawalPain923'), value: pain });
     return out;
   }
   const w = list.filter((a) => withdrawalState(a, now).withdrawal);

@@ -2029,7 +2029,7 @@ async function onResistToxin(message: any, button: HTMLButtonElement): Promise<v
  * again (the GM). A fresh card, with the toxin's onset counted from now.
  */
 async function onReexposeToxin923(message: any): Promise<void> {
-  if (!game.user?.isGM) return ui.notifications.warn(tx('SR2E.Notify.Chat.onlyTheGm923'));
+  if (!game.user?.isGM) return ui.notifications.warn(tx('SR2E.Notify.Chat.onlyTheGmCanDoThat'));
   const list = listFlag(message.getFlag(SYSTEM_ID, 'toxins')).filter((t: any) => t && typeof t === 'object').map((t: any) => boundToxin(t));
   const first: any = list[0];
   if (!first || first.kind === 'disease') return;

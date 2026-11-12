@@ -377,8 +377,8 @@ describe('v0.80.0 core: the roll dialogs (source)', () => {
   test('the skill and attribute dialogs show the Revamp rows only through urrCore helpers (empty in the book)', () => {
     const src = readFileSync(new URL('../applications/sheets.ts', import.meta.url), 'utf8');
     assert.match(src, /\$\{urrCoreTnPresetRow\(String\(item\.system\?\.kind \?\? ""\)\)\}\$\{extra58\}/);
-    // v0.92.3: the Karma dice row comes through C923.karmaDiceRow (the Revamp's row when coreKarmaDice is on, the book's otherwise).
-    assert.match(src, /C923\.karmaDiceRow\(Number\(actor\.system\?\.derived\?\.karmaPoolLeft \?\? 0\), Number\(item\.system\?\.rating \?\? 0\) > 0, Number\(item\.system\?\.rating \?\? 0\)\)/);
+    // v0.92.3: the Karma dice row comes through CO923.karmaDiceRow (core923.ts) (the Revamp's row when coreKarmaDice is on, the book's otherwise).
+    assert.match(src, /CO923\.karmaDiceRow\(Number\(actor\.system\?\.derived\?\.karmaPoolLeft \?\? 0\), Number\(item\.system\?\.rating \?\? 0\) > 0, Number\(item\.system\?\.rating \?\? 0\)\)/);
     assert.equal((src.match(/f\?\.elements\?\.tnPreset\?\.addEventListener/g) ?? []).length, 2);
     assert.match(src, /karmaDice: choice\.karmaDice/);
     assert.match(src, /karmaDice: c2\.karmaDice/);

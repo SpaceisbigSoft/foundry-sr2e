@@ -2589,8 +2589,7 @@
         "alreadyConfirmed": "Already confirmed.",
         "hasNoInitiationWaitingOnThis": "{name} has no initiation waiting on this deed.",
         "thatCardHasNoRollWhose": "That card has no roll whose target number can be changed.",
-        "thisIsBeingAppliedByItself": "This is being applied by itself.",
-        "onlyTheGm923": "Only the GM can do that."
+        "thisIsBeingAppliedByItself": "This is being applied by itself."
       },
       "Creation": {
         "theCreationWizardIsForCharacters": "The creation wizard is for characters.",
@@ -3370,9 +3369,7 @@
         "aSpellOfNoCategory": "a spell of no category",
         "notCarried": "{name} isn't carried: tick Carried first.",
         "allyNeedsMagicPoint": "{name} has no Magic point to give the ally.",
-        "dispelForceOverGrade": "{name} can only dispel a spell of Force up to their grade ({grade}); this one is Force {force}.",
         "summonOutsideDomain": "{name} can't summon a nature spirit of {domain} here: it is outside its domain.",
-        "wardForceOverMagic": "{name} can raise a ward of at most Force {cap} (twice their Magic).",
         "noSpellHealsStun": "{spellName}: no spell heals Stun; it recovers by rest.",
         "firstAidPhysicalOnly": "First aid treats Physical damage only; Stun recovers by rest.",
         "notAddictedOrRecovering923": "{name} isn't addicted to {drug}, or is already kicking it.",
@@ -4852,8 +4849,7 @@
         "frameAttackHint923": "{frameName} rolls its {fd} vs a TN by the host's security code and the target's status.",
         "exclusiveForceWhenCast": "Exclusive (Force +{force} when cast)",
         "fetishForceWhenCast": "Fetish-limited (Force +{force} when cast, +{expendable} expendable)",
-        "designBookHint": "Magical Theory (at most your library's or lodge's rating; 1 die per 2 points it is higher) vs 2 × Force − Magic + the drain modifiers; 6, 18, 30 or 60 days by drain level ÷ successes. A success gives a formula card: learn it for Good Karma = Force, or offer it to your group's grimoire.",
-        "initiationBookGrade": "Initiation {grade} is the book's Grade {bookGrade}: the first initiation is Grade 0 and adds no Magic."
+        "designBookHint": "Magical Theory (at most your library's or lodge's rating; 1 die per 2 points it is higher) vs 2 × Force − Magic + the drain modifiers; 6, 18, 30 or 60 days by drain level ÷ successes. A success gives a formula card: learn it for Good Karma = Force, or offer it to your group's grimoire."
       },
       "Spendkarma": {
         "raise": "Raise",
@@ -7654,7 +7650,7 @@
         "vehicleNoDodge": "{name}: no dodge test (the rigger's Control Pool goes on the damage resistance)",
         "bodyZeroDestroyed": "{name} (Body 0) takes {incPower}{incLevel}: any hit destroys it",
         "vehicleCompleteMiss": "A complete miss (more Control Pool dice than the attacker's successes).",
-        "destroyedVehicleCrashes": "<strong>{name} is destroyed and crashes.</strong>",
+        "destroyedVehicleCrashes": "{name} is destroyed and crashes.",
         "powerTheVehicleTakesThenAboard": "Power {power}: the vehicle takes {power}{vehicleLevel}{part}; everyone aboard then takes the Power at the level the vehicle's test leaves.",
         "allyMagicPoint": "and gives up {mag} Magic for good",
         "allyRitualDay": "Ally ritual, day {day}: fatigue",
@@ -7665,8 +7661,6 @@
         "barrierBacklash": "{bn} strikes back: {power}{level}, resisted with astral Body against its rating.",
         "charismaOwnSpirit": "Charisma +{cha} (own spirit)",
         "conjuringVsSpirit": ", Conjuring {dice} against a spirit",
-        "dispelForceByHand": "The GM lowers {spellName}'s Force to {force} by hand.",
-        "dispelForceLeft": "Force {force} left.",
         "holdsControlOf": "{name} holds on to {spiritName} (Conjuring vs Force {force})",
         "regenDeathCheck": "{name}: regeneration death check, 1D6 = {die}.",
         "regenDies": "A 1: it is dead.",
@@ -7751,16 +7745,18 @@
         "shieldingTn": " (shielding: caster's TN +{tn}, {before} → {after} successes)",
         "aidSpent": " [{name} is used up and vanishes]",
         "aidLeft": " [{name}: {left} dice left]",
-        "projectingDropsSpells": "<strong>{name}</strong> projects: the spells they sustained drop ({list}).",
+        "projectingDropsSpells": "projects: the spells they sustained drop ({list}).",
         "dispelsForce": "{name} dispels {spellName} on {targetName}: Force {from} → {to}",
         "forceLeft": "Force {force} left.",
         "focusAddictionMagic": "Focus addiction test (Magic vs {tn}: foci {faTotal}, Magic {magic})",
         "focusGeasDue": "{name} has lost 2 Magic to foci and takes the focus geas: magic without an active focus is at +{addictionWithdrawalTn} TN.",
         "detectionRangeTest": "{spellName}: range (Force {force} vs 4)",
-        "detectionRangeIs": "The spell reaches <strong>{metres} m</strong>.",
+        "detectionRangeIs": "The spell reaches {metres} m.",
         "detectionOutOfRange": "is {metres} m away; the spell reaches {range} m.",
         "dermalBody": ", dermal armor +{dermal} Body",
-        "threatDice": " [Threat +{threat}]"
+        "threatDice": " [Threat +{threat}]",
+        "iccm2": " (ICCM)",
+        "magicalTheory2": "Magical Theory"
       },
       "Adding": {
         "buysFor": "buys {list} for ¥{planNuyen}.",
@@ -8094,7 +8090,8 @@
         "partyIc923": "Party IC ({n})",
         "formulaNoTeacher": "Formula, no teacher",
         "speakingDialect": "Speaking a dialect",
-        "stealthSuccesses": "The sneaker's Stealth successes"
+        "stealthSuccesses": "The sneaker's Stealth successes",
+        "iccm": "ICCM"
       },
       "Drops": {
         "notInstalledTickInstalledAfterSurgery": "not installed (tick Installed after surgery)",

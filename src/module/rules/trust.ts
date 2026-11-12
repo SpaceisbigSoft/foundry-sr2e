@@ -516,7 +516,9 @@ export function describeGmChange(action: string, flags: Record<string, any>, nam
       if (f.masterDied) out.push(tx('SR2E.Text.Trust.masterDead', { who }));
       if (f.handSpirit) out.push(tCount(Number(f.handSpirit.services), 'SR2E.Text.Trust.changesHands', { who, to: nm(f.handSpirit.toUuid) }));
       if (f.lower) out.push(`${who}: ${String(f.lower.key)} ${Number(f.lower.from)} → ${Number(f.lower.to)}`);
-      if (f.dispel) out.push(tx(f.dispel.mode === 'force' ? 'SR2E.Text.Trust.dispelledForce' : 'SR2E.Text.Trust.dispelled', { who, spell: String(f.dispel.spellName), force: Number(f.dispel.force), from: Number(f.dispel.from), to: Number(f.dispel.to) }));
+      if (f.dispel) out.push(f.dispel.mode === 'force'
+        ? tx('SR2E.Text.Trust.dispelledForce', { who, spell: String(f.dispel.spellName), from: Number(f.dispel.from), to: Number(f.dispel.to) })
+        : tx('SR2E.Text.Trust.dispelled', { who, spell: String(f.dispel.spellName), force: Number(f.dispel.force), from: Number(f.dispel.from), to: Number(f.dispel.to) }));
       if (f.by) out.push(tx('SR2E.Text.Trust.fromName', { name: nm(f.by) }));
       break;
     }
