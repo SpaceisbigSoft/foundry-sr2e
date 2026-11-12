@@ -85,7 +85,7 @@ export function effectRows(actor: any): EffectRow[] {
   if (actor?.isJackedIn?.() && !states.some((s) => s.state === 'jackedIn')) rows.push({ group: 'Matrix and rigging', name: tx('SR2E.App.Effects.jackedIn'), detail: '', until: '' });
   if (sys.rigging?.jumpedIn && !states.some((s) => s.state === 'jumpedIn')) rows.push({ group: 'Matrix and rigging', name: tx('SR2E.App.Effects.jumpedIn'), detail: '', until: '' });
   // v0.92.1: the custom tweaks on items that count now (rules/tweaks.ts).
-  for (const t of ((d.tweaks?.list ?? []) as any[]).filter((x: any) => x?.active)) rows.push({ group: 'Tweaks', name: String(t.label || t.text), detail: t.label ? `${t.text} · ${t.itemName}` : String(t.itemName ?? ''), until: '' });
+  for (const t of ((d.tweaks?.list ?? []) as any[]).filter((x: any) => x?.active)) rows.push({ group: 'Tweaks', name: String(t.label || t.text), detail: t.label && t.text !== t.label ? `${t.text} · ${t.itemName}` : String(t.itemName ?? ''), until: '' });
   return rows;
 }
 

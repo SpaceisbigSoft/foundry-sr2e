@@ -60,7 +60,8 @@ export function normalizeTweak(raw: unknown, idFor: () => string = () => Math.ra
   let key = str(r['key'], 60);
   if (Array.isArray(keys)) { if (!keys.includes(key)) key = keys[0] as string; }
   else if (keys === null) key = '';
-  const value = target === 'note' ? 0 : Math.max(-TWEAK_VALUE_MAX, Math.min(TWEAK_VALUE_MAX, int(r['value'])));
+  // v0.92.1 review (B4): armor tweaks add (the armor model has no part below 0 to take them off).
+  const value = target === 'note' ? 0 : Math.max(target === 'armor' ? 0 : -TWEAK_VALUE_MAX, Math.min(TWEAK_VALUE_MAX, int(r['value'])));
   const id = /^[A-Za-z0-9]{1,24}$/.test(String(r['id'] ?? '')) ? String(r['id']) : idFor();
   return { id, label: str(r['label']), target, key, value, on: r['on'] !== false };
 }

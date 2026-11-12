@@ -5393,7 +5393,7 @@ export class SR2ItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
     if (!item.isOwner) return;
     const list = normalizeTweaks(item.system.tweaks);
     if (list.length >= TWEAK_MAX) return ui.notifications.warn(tx('SR2E.Notify.Sheet.tweaksFull', { max: TWEAK_MAX }));
-    await item.update({ "system.tweaks": [...list, { id: foundry.utils.randomID(), label: "", target: "attribute", key: "body", value: 1, on: true }] });
+    await item.update({ "system.tweaks": [...list, { id: foundry.utils.randomID(), label: "", target: "note", key: "", value: 0, on: true }] });
   }
 
   /** v0.92.1: remove a custom tweak row. */
@@ -5459,7 +5459,7 @@ export class SR2ItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
     }
     // v0.92.1: the custom tweak rows become the item's tweaks (every row is in the form, so the list is rebuilt whole).
     if (data && Object.prototype.hasOwnProperty.call(data, "tweak")) {
-      data.system = { ...(data.system ?? {}), tweaks: tweaksFromForm(data.tweak) };
+      data.system = { ...(data.system ?? {}), tweaks: tweaksFromForm(data.tweak, (this.document as any).system?.tweaks) };
       delete data.tweak;
     }
     // v0.70.0: loading or unloading a program on an actor goes through Swap Memory (its time and action), as the Matrix tab does.
@@ -5814,10 +5814,16 @@ function tweakLiveNote(item: any): string {
 }
 
 /** v0.92.1: the item sheet's tweak rows (form fields `tweak.<n>.<field>`) back into the item's tweaks. */
-export function tweaksFromForm(rows: unknown): unknown[] {
+export function tweaksFromForm(rows: unknown, previous: unknown = []): unknown[] {
   if (!rows || typeof rows !== "object") return [];
   const list = Array.isArray(rows) ? rows : Object.keys(rows as Record<string, unknown>).sort((a, b) => Number(a) - Number(b)).map((k) => (rows as any)[k]);
-  return normalizeTweaks(list.map((r: any) => ({ ...r, target: String(r?.target ?? "") as TweakTarget })));
+  // Review (B2): a row whose kind changed starts with an empty key (not the old kind's key read as a skill's name).
+  const before = new Map(normalizeTweaks(previous).map((t) => [t.id, t.target]));
+  return normalizeTweaks(list.map((r: any) => {
+    const target = String(r?.target ?? "") as TweakTarget;
+    const was = before.get(String(r?.id ?? ""));
+    return { ...r, target, ...(was && was !== target ? { key: "" } : {}) };
+  }));
 }
 
 /* ---- v0.23.0: sheet layout, summary and quick actions ---- */
@@ -6235,12 +6241,17 @@ export function cyberRow(actor: any, i: any): any {
  * v0.92.1 (the owner's feedback): the Essence line's tooltip: the installed ware that takes Essence, each at its grade
  * ("Wired reflexes 2 (alpha): 2.4"), biggest first. Bioware (Body Index) and ware housed in a limb take none.
  */
+/** v0.92.1 review (N11): a ware grade's name, translated. */
+function wareGradeLabel(g: string): string {
+  return g === "alpha" ? tx('SR2E.App.Sheets.alphaware') : g === "beta" ? tx('SR2E.App.Sheets.betaware') : g === "delta" ? tx('SR2E.App.Sheets.deltaware') : g === "standard" ? tx('SR2E.App.Sheets.standard') : g;
+}
+
 export function essenceWareLine(items: any[]): string {
   const rows = items.filter((i: any) => i.type === "cyberware" && i.system?.installed && !i.system?.bioware && !i.system?.housedIn)
     .map((i: any) => ({ name: String(i.name), grade: String(i.system.grade ?? "standard"), e: wareEssenceLoss({ essenceCost: Number(i.system.essenceCost ?? 0), grade: i.system.grade ?? "standard" } as any) }))
     .filter((r) => r.e > 0).sort((a, b) => b.e - a.e);
   if (!rows.length) return "";
-  return rows.map((r) => (r.grade === "standard" ? tx('SR2E.App.Sheets.essenceWareRow', { name: r.name, essence: r.e }) : tx('SR2E.App.Sheets.essenceWareRowGrade', { name: r.name, grade: r.grade, essence: r.e }))).join("\n");
+  return rows.map((r) => (r.grade === "standard" ? tx('SR2E.App.Sheets.essenceWareRow', { name: r.name, essence: r.e }) : tx('SR2E.App.Sheets.essenceWareRowGrade', { name: r.name, grade: wareGradeLabel(r.grade), essence: r.e }))).join("\n");
 }
 
 /** A weapon row: damage, ranges in metres for this wielder, ammunition. */

@@ -321,3 +321,47 @@ describe('v0.92.1 wiring: sheets, wizard, shop, reference, language', () => {
     assert.deepEqual(keys.filter((k) => !keyIn(k)), []);
   });
 });
+
+describe('v0.92.1 review fixes (glue)', () => {
+  test('negative tweaks never take initiative dice below 1 or Reaction below 0', () => {
+    const a = who({}, [{ id: 'g1', type: 'gear', name: 'ZZ Curse', system: { quantity: 1, tweaks: [{ id: 'a', target: 'initiativeDice', value: -5, on: true }, { id: 'b', target: 'reaction', value: -20, on: true }] } }]);
+    assert.equal(a.system.derived.initiativeDice, 1);
+    assert.equal(a.system.derived.reaction, 0);
+  });
+  test('a Spell Pool tweak gives a mundane nothing', () => {
+    const a = who({}, [{ id: 'g1', type: 'gear', name: 'ZZ Charm', system: { quantity: 1, tweaks: [{ id: 'a', target: 'pool', key: 'spell', value: 3, on: true }] } }]);
+    assert.equal(a.system.derived.spellPool, 0);
+  });
+  test('left behind: no parry with it, no drug, no armor rating', async () => {
+    const a = who({}, [{ id: 'k', type: 'weapon', name: 'ZZ Katana', system: { melee: true, carried: false } }, { id: 'ar', type: 'armor', name: 'ZZ Coat', system: { ballistic: 4, impact: 2, worn: true, carried: false } }]);
+    assert.ok(!a.meleeWeapons().some((w: any) => w.name === 'ZZ Katana'));
+    assert.equal(a.armorRating('ballistic'), a.sys?.derived?.cyberArmor?.ballistic ?? 0);
+  });
+  test('an edit reads only accessories it newly mentions; a copy already read isn\'t read again', () => {
+    const c: any = { system: { description: 'smartgun link and a laser sight' } };
+    SR2Item.readDescriptionInto(c, { smartgun: false, laserSight: false }, { fields: {}, dismissed: [], noted: [] }, { oldDescription: 'smartgun link' });
+    assert.equal(c.system.smartgun, undefined, 'cleared by hand before: not ticked again');
+    assert.equal(c.system.laserSight, true);
+    assert.match(SRC('documents/index.ts'), /!data\?\.flags\?\.sr2e\?\.fromDescription\) \{/);
+  });
+  test('with the lock on, a player\'s new or stronger tweak is refused; a note or switching one off is fine', async () => {
+    const adv: any = await import('../applications/advancement.ts');
+    assert.equal(adv.tweaksRaise([], [{ id: 'a', target: 'note', label: 'x' }]), false);
+    assert.equal(adv.tweaksRaise([], [{ id: 'a', target: 'attribute', key: 'body', value: 2, on: true }]), true);
+    assert.equal(adv.tweaksRaise([{ id: 'a', target: 'attribute', key: 'body', value: 2, on: true }], [{ id: 'a', target: 'attribute', key: 'body', value: 2, on: false }]), false);
+    assert.equal(adv.tweaksRaise([{ id: 'a', target: 'attribute', key: 'body', value: 2, on: true }], [{ id: 'a', target: 'attribute', key: 'body', value: 3, on: true }]), true);
+    const a = who({ name: 'Locked' });
+    a.flags.sr2e = { creation: { v: 1, finishedAt: 'x', attributes: {} } };
+    g.game.user = { id: 'player', name: 'P', isGM: false };
+    settings['approvalQueue'] = true;
+    const skill = { type: 'skill', parent: a, system: { rating: 3, tweaks: [] } };
+    const ch: Record<string, unknown> = { 'system.tweaks': [{ id: 'z', target: 'pool', key: 'combat', value: 9, on: true }] };
+    assert.deepEqual(adv.refuseLockedRaises(skill, 'item', ch), ['system.tweaks']);
+    assert.ok(!('system.tweaks' in ch));
+  });
+  test('the new tweak row is a note; a row whose kind changes drops its old key', () => {
+    const s = SRC('applications/sheets.ts');
+    assert.match(s, /target: "note", key: "", value: 0, on: true \}\] \}\);/);
+    assert.match(s, /was && was !== target \? \{ key: "" \} : \{\}/);
+  });
+});

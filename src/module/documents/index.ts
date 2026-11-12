@@ -162,7 +162,7 @@ import {
   urrMagWardDrain, urrMagWardForceProblem, urrMagAstralModeFor,
 } from '../rules/urr80-magic.ts';
 import { riggerDumpShock, rcdFlux, castingPoolDice } from '../rules/docs79-drones-magic.ts';
-import { attackPowerTweak, isCarried, accessoryPlan, normalizeTweaks, ACCESSORY_NAME_KEYS } from '../rules/index.ts';
+import { attackPowerTweak, isCarried, accessoryPlan, readAccessories, normalizeTweaks, ACCESSORY_NAME_KEYS, TWEAK_MAX } from '../rules/index.ts';
 import * as U80C from '../rules/urr80-combat.ts';
 import { dsInterceptPlan, dsDecryptPassed, dsRadioDecrypt, dsDeviceStepWords, dsSequencerSeconds, dsMadScanOn, dsHighestDie, dsMadFinds, dsDisorientation } from '../rules/urr80-drones-security.ts';
 import {
@@ -3192,7 +3192,7 @@ export class SR2Actor extends Actor {
     const order = ['L', 'M', 'S', 'D'];
     if (dg.enabled && ctx.armorKind && !ctx.degraded && order.indexOf(ctx.level) >= order.indexOf(dg.atLevel)) {
       const kindKey = ctx.armorKind;
-      const best = [...this.items].filter((i: any) => i.type === 'armor' && i.system.worn && (i.system[kindKey] ?? 0) - (i.system.degraded ?? 0) > 0)
+      const best = [...this.items].filter((i: any) => i.type === 'armor' && i.system.worn && isCarried(i) && (i.system[kindKey] ?? 0) - (i.system.degraded ?? 0) > 0)
         .sort((a: any, b: any) => ((b.system[kindKey] ?? 0) - (b.system.degraded ?? 0)) - ((a.system[kindKey] ?? 0) - (a.system.degraded ?? 0)))[0];
       if (best) {
         await best.update({ 'system.degraded': (best.system.degraded ?? 0) + dg.points });
@@ -3817,6 +3817,7 @@ export class SR2Actor extends Actor {
     const ex = item?.system?.explosive;
     if (!item || !(ex?.power > 0)) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.thatIsNotAnExplosive')); return null; }
     if ((item.system.quantity ?? 1) < 1) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.noLeft', { itemName: escHtml(item.name) })); return null; }
+    if (!isCarried(item)) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.notCarried', { name: escHtml(item.name) })); return null; }
     const d = RULES.COMBAT.demolitions;
     const sd = this.#skillDice(this.findSkill(d.skill), false, null, d.attribute as AttributeKey);
     const rolls: any[] = [];
@@ -6835,7 +6836,7 @@ export class SR2Actor extends Actor {
   /** Worn protective gear against toxins (v0.42.0). */
   protectiveGear(): Array<{ kind: string; rating: number; worn: boolean; name: string }> {
     return [...this.items].filter((i: any) => i.type === 'gear' && i.system?.protection?.kind)
-      .map((i: any) => ({ kind: i.system.protection.kind, rating: Number(i.system.protection.rating ?? 0), worn: Boolean(i.system.protection.worn), name: i.name }));
+      .map((i: any) => ({ kind: i.system.protection.kind, rating: Number(i.system.protection.rating ?? 0), worn: Boolean(i.system.protection.worn) && isCarried(i), name: i.name }));
   }
 
   /** The scene's weather (v0.42.0): a scene flag the GM sets in the GM panel. */
@@ -7346,6 +7347,7 @@ export class SR2Actor extends Actor {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.thatIsNotADrug'));
       return false;
     }
+    if (!isCarried(it)) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.notCarried', { name: escHtml(it.name) })); return false; }
     if ((it.system.quantity ?? 0) <= 0) {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.hasNoLeft', { name: escHtml(this.name), name2: escHtml(it.name) }));
       return false;
@@ -7764,7 +7766,7 @@ export class SR2Actor extends Actor {
 
   /** The best worn shield (a Parry rating on armor) for melee defense. */
   shieldParry(): { dice: number; tn: number; name: string } {
-    return shieldParry([...this.items].filter((i: any) => i.type === 'armor').map((i: any) => ({ name: i.name, worn: Boolean(i.system.worn), parry: Number(i.system.parry ?? 0) })));
+    return shieldParry([...this.items].filter((i: any) => i.type === 'armor').map((i: any) => ({ name: i.name, worn: Boolean(i.system.worn) && isCarried(i), parry: Number(i.system.parry ?? 0) })));
   }
 
   /** Set up (or fold) a weapon's bipod or tripod: setting it up takes an action (RULES.ACTIONS.costs.setUpWeapon). */
@@ -8304,7 +8306,7 @@ export class SR2Actor extends Actor {
     const blastExtras = blast ? { ...(arming && !arming.armed ? { dud: true } : {}), ...(w.fuse ? { fuse: String(w.fuse) } : {}), ...(smartGrenade ? { smart: true } : {}), ...(opts.bounce ? { bounce: true } : {}), ...(blastToxin ? { toxin: blastToxin } : {}), ...(indirect ? { indirect: { spotterSuccesses: Math.min(Math.max(0, Number(RULES.COMBAT_V72.indirect.maxSpotterSuccesses) || 0), Math.max(0, Math.floor(Number(indirect.spotterSuccesses) || 0))) } } : {}) } : {};
     // v0.92.1 (RULES.SHEET_V921.tweaks): Power from custom tweaks (this weapon's own, every melee or ranged attack's, any attack's).
     const tweakPower = attackPowerTweak(this.sys?.derived?.tweaks, { weaponId: String(weapon?.id ?? ''), melee });
-    if (tweakPower) { power = Math.max(0, power + tweakPower); notes.push(tx('SR2E.Card.Actor.tweakPower', { value: tweakPower > 0 ? `+${tweakPower}` : `${tweakPower}` })); }
+    if (tweakPower) { power = Math.max(0, power + tweakPower); if (extras.barrierPower !== undefined) extras.barrierPower = Math.max(0, extras.barrierPower + tweakPower); notes.push(tx('SR2E.Card.Actor.tweakPower', { value: tweakPower > 0 ? `+${tweakPower}` : `${tweakPower}` })); }
     return { w, melee, blast, base, power, level, damageType, modeLabel, rounds, earlier, wasted, extras, notes, situational, dice, suffix, modifiers, ammoShort, sd, pool, blastExtras, firstShotSingle };
   }
 
@@ -8733,7 +8735,7 @@ export class SR2Actor extends Actor {
   /** The melee weapons this actor can defend with, plus unarmed. */
   meleeWeapons(): Array<{ id: string; name: string; system: any }> {
     const parry = RULES.SKILLS.parry ? this.findSkill(RULES.SKILLS.parrySkill) : null;
-    return [...[...this.items].filter((i: any) => i.type === 'weapon' && i.system.melee), ...this.cyberWeapons(), SR2Actor.unarmed(),
+    return [...[...this.items].filter((i: any) => i.type === 'weapon' && i.system.melee && isCarried(i)), ...this.cyberWeapons(), SR2Actor.unarmed(),
       // Parry (house rule, v0.38.0): block with the Parry skill; no counterattack.
       ...(parry && parry.system.rating > 0 ? [{ id: 'parry', name: tx('SR2E.Text.Actor.blockOnly', { name: parry.name }), system: { melee: true, damageLevel: 'L', damageType: 'stun', damagePower: 0 } }] : [])];
   }
@@ -9337,7 +9339,7 @@ export class SR2Actor extends Actor {
   armorRating(kind: 'ballistic' | 'impact', opts: { ignoreImmunity?: boolean; noWorn?: boolean; calledLocation?: string } = {}): number {
     // Layering (v0.37.0): only the best piece counts, plus pieces that add to others (RULES.COMBAT.armorLayering).
     const worn = armorTotal([...this.items]
-      .filter((i: any) => i.type === 'armor' && i.system.worn)
+      .filter((i: any) => i.type === 'armor' && i.system.worn && isCarried(i))
       .map((i: any) => ({ ballistic: i.system.ballistic ?? 0, impact: i.system.impact ?? 0, adds: Boolean(i.system.adds), degraded: i.system.degraded ?? 0 })), kind);
     // v0.56.0: a critter's immunity to normal weapons (RULES.CRITTERS_V56.immunity), and armor from spells and powers on it.
     const critterImmune = this.type !== 'spirit' && !opts.ignoreImmunity && this.immunities().normalWeapons ? immunityArmorFromEssence(Number(this.sys.derived?.essence ?? this.sys.essence ?? 0)) : 0;
@@ -17067,7 +17069,7 @@ export class SR2Actor extends Actor {
     }
     if (kind === 'corrode') {
       const pts = RULES.MAGIC_V39.corrode.points;
-      const best = [...this.items].filter((i: any) => i.type === 'armor' && i.system.worn)
+      const best = [...this.items].filter((i: any) => i.type === 'armor' && i.system.worn && isCarried(i))
         .sort((a: any, b: any) => ((b.system.ballistic ?? 0) + (b.system.impact ?? 0)) - ((a.system.ballistic ?? 0) + (a.system.impact ?? 0)))[0];
       if (best) await best.update({ 'system.degraded': (best.system.degraded ?? 0) + pts });
       await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }),
@@ -18712,7 +18714,7 @@ export class SR2Actor extends Actor {
   concealmentOf(): Array<{ kind: string; rating: number; source: string; key?: string; force?: number }> {
     const out: Array<{ kind: string; rating: number; source: string; key?: string; force?: number }> = [];
     for (const i of [...(this.items ?? [])] as any[]) {
-      const st = i.type === 'gear' ? i.system?.stealth : null;
+      const st = i.type === 'gear' && isCarried(i) ? i.system?.stealth : null;
       if (st?.kind && st.worn && st.rating > 0) out.push({ kind: st.kind, rating: st.rating, source: i.name });
     }
     // v0.49.0: masking spells too (silence, masks), and spells someone else sustains on this actor.
@@ -19201,7 +19203,7 @@ export class SR2Item extends Item {
     if (changed?.system) SR2Item.carriedRules((this as any).type, (this as any).system ?? {}, changed.system);
     // v0.92.1 (RULES.SHEET_V921.accessories): a weapon's new description is read for accessories.
     if ((this as any).type === 'weapon' && changed?.system?.description !== undefined && String(changed.system.description ?? '') !== String((this as any).system?.description ?? '')) {
-      SR2Item.readDescriptionInto(changed, (this as any).system ?? {}, (this as any).flags?.sr2e?.fromDescription);
+      SR2Item.readDescriptionInto(changed, (this as any).system ?? {}, (this as any).flags?.sr2e?.fromDescription, { oldDescription: String((this as any).system?.description ?? '') });
     }
     // v0.73.0 (O28): a weapon on a vehicle must fit its firmpoints and hardpoints.
     const ms = changed?.system ?? {};
@@ -19232,7 +19234,8 @@ export class SR2Item extends Item {
       for (const [k, v] of Object.entries(patch)) if (k !== 'carried') flat[`system.${k}`] = v;
       if (Object.keys(flat).length) (this as any).updateSource(foundry.utils.expandObject(flat));
     }
-    if (data?.type === 'weapon' && String(data?.system?.description ?? '').trim()) {
+    // A copy of a weapon already read keeps its values (a field someone cleared by hand isn't filled again).
+    if (data?.type === 'weapon' && String(data?.system?.description ?? '').trim() && !data?.flags?.sr2e?.fromDescription) {
       const ch: any = { system: { description: data.system.description } };
       const cur: any = (this as any).system?.toObject?.() ?? { ...(this as any).system };
       SR2Item.readDescriptionInto(ch, cur, data?.flags?.sr2e?.fromDescription, { creating: true });
@@ -19280,13 +19283,15 @@ export class SR2Item extends Item {
    * (rules/accessories.ts) and adds to `changed`: the fields still at their default (never one this edit sets itself), note
    * tweaks for accessories without a field, and the record the sheet's "From the description" line and Undo use.
    */
-  static readDescriptionInto(changed: any, current: any, record: any, _o: { creating?: boolean } = {}): void {
+  static readDescriptionInto(changed: any, current: any, record: any, o: { creating?: boolean; oldDescription?: string } = {}): void {
     if (RULES.SHEET_V921.accessories !== 'auto' || !changed?.system) return;
     const rec = record && typeof record === 'object' ? record : {};
     const dismissed: string[] = Array.isArray(rec.dismissed) ? rec.dismissed.map(String) : [];
     const noted: string[] = Array.isArray(rec.noted) ? rec.noted.map(String) : [];
     const merged = { ...(current ?? {}), ...(changed.system ?? {}) };
-    const plan = accessoryPlan(changed.system.description, merged, { dismissed, noted });
+    // Review (B6): an edit reads only accessories it newly mentions, so a value cleared by hand stays cleared.
+    const already = o.oldDescription ? readAccessories(o.oldDescription).map((h) => h.id) : [];
+    const plan = accessoryPlan(changed.system.description, merged, { dismissed: [...dismissed, ...already], noted });
     if (!plan.filled.length && !plan.notes.length) return;
     const fields: Record<string, unknown> = { ...(rec.fields && typeof rec.fields === 'object' ? rec.fields : {}) };
     for (const h of plan.filled) {
@@ -19300,7 +19305,7 @@ export class SR2Item extends Item {
     if (newNotes.length) {
       const base = Array.isArray(changed.system.tweaks) ? changed.system.tweaks : normalizeTweaks(current?.tweaks ?? []);
       const have = new Set(base.map((t: any) => String(t?.id ?? '')));
-      changed.system.tweaks = [...base, ...newNotes.filter((t) => !have.has(t.id))];
+      changed.system.tweaks = [...base, ...newNotes.filter((t) => !have.has(t.id))].slice(0, TWEAK_MAX);
     }
     const next = { fields, dismissed, noted: [...noted, ...plan.notes.map((h) => h.id)] };
     changed.flags = foundry.utils.mergeObject(changed.flags ?? {}, { sr2e: { fromDescription: next } }, { inplace: false });

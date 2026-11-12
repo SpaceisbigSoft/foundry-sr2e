@@ -772,7 +772,7 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
     const cyber = cyberDerived((this as any).parent, ware);
     // v0.92.1: skill tweaks count as the gear skill bonuses do (one source per tweak).
     if (tw.skillMods.length) cyber.skillMods = [...cyber.skillMods, ...tw.skillMods];
-    const initDice = capInitiativeDice(RULES.BASE_INITIATIVE_DICE + sys.initiativeDiceBonus + bonus.initiativeDice + tw.initiativeDice);
+    const initDice = capInitiativeDice(Math.max(1, RULES.BASE_INITIATIVE_DICE + sys.initiativeDiceBonus + bonus.initiativeDice + tw.initiativeDice));
     const limbOver = cyber.limbs.filter((l: any) => l.capacity.over).map((l: any) => tx('SR2E.App.Models.capacityOfUsed', { name: l.name, used: l.capacity.used, capacity: l.capacity.capacity }));
     // Cyber armor (not bioware) for orthoskin's conflict with dermal plating.
     const cyberOnly = installed.filter((i: any) => !i.system.bioware);
@@ -839,6 +839,8 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
     // v0.54.0: physical adepts get no Spell Pool (RULES.ADEPT.spellPool).
     const poolMagic = sys.tradition === 'adept' && !RULES.ADEPT.spellPool ? 0 : magic;
     const d0 = deriveStats(totals, { magic: poolMagic, reactionBonus: sys.reactionBonus + bonus.reaction + tw.reaction });
+    // v0.92.1 review (B3): a negative tweak never takes Reaction below 0.
+    if (tw.reaction < 0) d0.reaction = Math.max(0, d0.reaction);
     // v0.79.0 (RULES.DOCS_V79.magicPool.size 'sorcery', SR2 p85): the Spell (Magic) Pool is the Sorcery rating (a power
     // focus still adds below, as v0.78.0); 'attributes': (Int + Wil + Magic) / 3 as before.
     // An adept's Spell Pool exists only as a house rule (RULES.ADEPT.spellPool); adepts rarely have Sorcery, so that
@@ -854,7 +856,8 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
     const powerFocus = poolMagic > 0 ? powerFocusRating(foci) : 0;
     // v0.78.0 (RULES.BOOK_V78.combatSense 'pool', Core Rules): an adept's Combat Sense adds its level to the Combat Pool.
     const combatPool = Math.max(0, Math.max(0, d.combatPool - armorPool80) + threat + (RULES.BOOK_V78.combatSense === 'pool' ? adeptSpecialLevel(adept as any, 'combatSense') * RULES.ADEPT.combatSense.dicePerLevel : 0) + (tw.pools.combat ?? 0));
-    const spellPool = Math.max(0, d.spellPool + powerFocus + (tw.pools.spell ?? 0));
+    // v0.92.1 review (N10): a Spell Pool tweak only for someone with a Spell Pool.
+    const spellPool = Math.max(0, d.spellPool + powerFocus + (poolMagic > 0 ? (tw.pools.spell ?? 0) : 0));
     sys.derived = {
       // v0.72.0: health edges and flaws, and Shadowtech bioware vitals (rules/vitals.ts).
       vitals: { ...qv, overflowBody: overflowBody(totals.body, qv) },

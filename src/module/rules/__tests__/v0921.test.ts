@@ -200,3 +200,17 @@ describe('v0.92.1 the reference pane\'s search', () => {
     assert.deepEqual(referenceDragData({ id: 'world:abc', type: 'weapon', name: 'Knife' }), { type: REFERENCE_DRAG_TYPE, key: 'world:abc', entryType: 'weapon', name: 'Knife' });
   });
 });
+
+describe('v0.92.1 review fixes (pure)', () => {
+  test('the reader skips "version", "ready", "compatible" and "available"; the negation window stops at and/with; no bare "can"', () => {
+    for (const t of ['Smartgun version available at double cost.', 'Silenced version: +100 nuyen.', 'Smart-gun ready (needs a smartgun adapter, sold separately)', 'Gyro-mount compatible.', 'laser designator', 'It can mount a scope.']) assert.deepEqual(readAccessories(t), [], t);
+    assert.deepEqual(readAccessories('A no-frills pistol with a laser sight.').map((h) => h.field), ['laserSight']);
+    assert.deepEqual(readAccessories('Sporting rifle with no silencer and a hunting scope.').map((h) => h.field), ['scope']);
+    assert.deepEqual(readAccessories('It can fire bursts and has a silencer').map((h) => h.field), ['muzzle']);
+    assert.equal(readAccessories('gyro stabilizer (rating 5)')[0]!.value, 5);
+    assert.equal(readAccessories('Scope (low-light, magnification 2)').find((h) => h.field === 'scopeVision')!.value, 'lowLight');
+  });
+  test('armor tweaks only add', () => {
+    assert.equal(normalizeTweak({ target: 'armor', key: 'ballistic', value: -2 })!.value, 0);
+  });
+});

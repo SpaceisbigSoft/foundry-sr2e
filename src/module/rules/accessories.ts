@@ -62,10 +62,13 @@ export function plainText(html: unknown): string {
     .trim();
 }
 
-/** Words before a mention that say the weapon doesn't have it (or only could). */
-const NEG_BEFORE = /\b(no|not|without|lacks?|cannot|can't|can|could|may|might|accepts?|optional(ly)?|possible|room for|mounts? for|threaded for|compatible with|instead of|except)\b[^.;,]{0,24}$/i;
-/** Words after a mention that say the same. */
-const NEG_AFTER = /^[^.;]{0,30}\b(sold separately|not included|optional|extra cost|at extra|available separately|can be (added|fitted|mounted)|may be (added|fitted|mounted)|is available)\b/i;
+/**
+ * Words just before a mention that say the weapon doesn't have it, or only could. The window stops at punctuation and
+ * at "and", "with", "has" and "but" (review: "a no-frills pistol with a laser sight" has one).
+ */
+const NEG_BEFORE = /\b(no|not|without|lacks?|cannot|can't|accepts?|optional(ly)?|possible|room for|mounts? for|threaded for|compatible with|instead of|except|can (mount|take|accept|fit|be fitted with)|could (mount|take|have)|may (mount|take|have))\b(?:(?!\b(and|with|has|have|but|plus)\b)[^.;,]){0,24}$/i;
+/** Words after a mention that say the same ("sold separately", "version available", "-ready", "compatible"). */
+const NEG_AFTER = /^[^.;]{0,60}?\b(sold separately|not included|optional|extra cost|at extra|available separately|can be (added|fitted|mounted)|may be (added|fitted|mounted)|is available|available|compatible)\b|^\s*(versions?|variants?|models?|ready|compatible|adapters?)\b|^[- ]?(ready|compatible)\b/i;
 
 interface Rule { id: string; re: RegExp; hit: (m: RegExpExecArray) => Omit<AccessoryHit, 'id' | 'text'> | null }
 
@@ -78,15 +81,15 @@ const RULES_LIST: Rule[] = [
   { id: 'suppressor', re: /\b(?:sound\s+)?suppressor\b/gi, hit: () => ({ field: 'muzzle', value: 'suppressor' }) },
   { id: 'silencer', re: /\bsilencer\b|\bsilenced\b/gi, hit: () => ({ field: 'muzzle', value: 'silencer' }) },
   { id: 'smartgun', re: /\bsmart[- ]?gun(?:\s+(?:link|system|adapter))?\b|\bsmart[- ]?link(?:ed)?\b|\bsmart\s+system\b/gi, hit: () => ({ field: 'smartgun', value: true }) },
-  { id: 'laserSight', re: /\blaser\s+sight\b|\blaser\s+(?:pointer|designator)\b/gi, hit: () => ({ field: 'laserSight', value: true }) },
-  { id: 'scopeVision', re: /\b(low[- ]?light|thermo(?:graphic)?|thermal)\s+(?:imaging\s+)?scope\b/gi,
-    hit: (m) => ({ field: 'scopeVision', value: /low/i.test(m[1] ?? '') ? 'lowLight' : 'thermographic' }) },
+  { id: 'laserSight', re: /\blaser\s+sight\b|\blaser\s+pointer\b/gi, hit: () => ({ field: 'laserSight', value: true }) },
+  { id: 'scopeVision', re: /\b(low[- ]?light|thermo(?:graphic)?|thermal)\s+(?:imaging\s+)?scope\b|\bscope\s*\(\s*(low[- ]?light|thermo(?:graphic)?|thermal)\b/gi,
+    hit: (m) => ({ field: 'scopeVision', value: /low/i.test(m[1] ?? m[2] ?? '') ? 'lowLight' : 'thermographic' }) },
   { id: 'scope', re: /\b(?:imaging\s+|telescopic\s+|optical\s+)?scope\b(?:[^.;]{0,24}?\b(?:magnification|mag\.?)\s*(\d))?|\b(?:magnification|mag\.?)\s*(\d)\s+scope\b|\b(\d)\s*x\s+scope\b/gi,
     hit: (m) => { const n = numberOf(m[1] ?? m[2] ?? m[3]); return { field: 'scope', value: Math.min(3, n ?? 1) }; } },
   { id: 'shockPad', re: /\bshock\s+pad\b/gi, hit: () => ({ field: 'shockPad', value: true }) },
   { id: 'tripod', re: /\btripod\b/gi, hit: () => ({ field: 'support', value: 'tripod' }) },
   { id: 'bipod', re: /\bbipod\b/gi, hit: () => ({ field: 'support', value: 'bipod' }) },
-  { id: 'gyro', re: /\bgyro(?:[- ]?stabili[sz](?:ed|ation|er)|scopic)?(?:\s+(?:mount|harness|stabili[sz](?:er|ation)))?(?:\s*(?:rating\s*)?(\d))?\b/gi,
+  { id: 'gyro', re: /\bgyro(?:[- ]?stabili[sz](?:ed|ation|er)|scopic)?(?:\s+(?:mount|harness|stabili[sz](?:er|ation)))?(?:\s*\(?\s*(?:rating\s*)?(\d))?\b/gi,
     hit: (m) => { const n = numberOf(m[1]); return n ? { field: 'gyro', value: n } : {}; } },
   { id: 'quickDraw', re: /\bquick[- ]?draw\s+holster\b/gi, hit: () => ({ field: 'quickDraw', value: true }) },
   // Recognised, with no field of their own: notes (custom tweaks the owner can turn into numbers).

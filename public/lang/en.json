@@ -2386,7 +2386,8 @@
         "thoseRatings": "those ratings",
         "creationIsFinishedRaiseWithSpend": "Creation is finished: raise {part} with Spend Karma (or ask the GM).",
         "theApprovalQueueIsOnThe": "The approval queue is on: the GM awards nuyen and Karma.",
-        "raisedWithoutKarma": "Raised by hand after creation: no Karma was spent (Spend Karma pays for raises). The GM can turn the lock back on in the house rules."
+        "raisedWithoutKarma": "Raised by hand after creation: no Karma was spent (Spend Karma pays for raises). The GM can turn the lock back on in the house rules.",
+        "tweaksLocked": "Creation is finished and ratings are locked: a new or stronger custom tweak needs the GM (ask them to add it)."
       },
       "Approvals": {
         "theCharacter": "the character",
