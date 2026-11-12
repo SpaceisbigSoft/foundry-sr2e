@@ -3,10 +3,11 @@
  * (book and page in each comment). Each switch's first choice is the book's way (the default); the other puts the
  * old v0.92.2 behaviour back.
  *
- * These switches act under the Book Rules source only: under the "SR2E Unified Rules Revamp" source
- * (RULES.URR_V80.active) the Revamp keeps its own rules exactly as before. Where the Revamp already had the book's
- * procedure (clean miss, net staging, knockdown, scatter, shotguns, tracers, reloads,
- * initiative ties), the book way runs through the same code path. Pure logic: rules/combat923.ts.
+ * Under the "SR2E Unified Rules Revamp" source (RULES.URR_V80.active) a switch for a rule the Revamp changes itself
+ * (rules/combat923.ts REVAMP_COMBAT_RULES) reads its v0.92.2 choice, so the Revamp keeps its own rule as before; the
+ * other switches are book corrections the Revamp is silent on and act under either source. Where the Revamp already
+ * had the book's procedure (clean miss, net staging, knockdown, scatter, shotguns, tracers, reloads, initiative ties),
+ * the book way runs through the same code path. Pure logic: rules/combat923.ts.
  *
  * Changed in place (old → new, the GM can set them back in the house-rules window):
  * - ATTACK_STAGING 'afterFirst' → 'all': every 2 net successes stage the damage one level (Core p. 91, the 2 net

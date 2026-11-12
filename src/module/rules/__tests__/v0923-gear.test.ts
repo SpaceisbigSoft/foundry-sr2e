@@ -15,8 +15,9 @@ import {
   gearBook, gradedEssence, essenceKills, isDermalPlating, dermalRating, limbPairsBody, housedEssenceCost, boneLacingBook,
   cyberReplacements, awakenedBioEssence, systemShockTn, culturedBodyCost, culturedPriceApplies,
   adrenalCrashBook, bookLoad, isHeavyArmor, heavyArmorPoolPenalty, surgeryTnBook, surgeryEssenceFactor, surgeryEssenceCost,
-  systemsHit, systemDamage, gradeResistTn, systemStops,
+  systemsHit, systemDamage, gradeResistTn, systemStops, REVAMP_GEAR_RULES,
 } from '../gear923.ts';
+import { urrMode } from './urrmode.ts';
 
 const bio = (bioKind: string, rating: number, more: any = {}) => ({ name: bioKind, bioKind, rating, installed: true, ...more });
 
@@ -24,10 +25,15 @@ describe('v0.92.3 gear: the defaults are the book', () => {
   test('every switch starts at the book way', () => {
     for (const k of Object.keys(RULES.GEAR_V923) as Array<keyof typeof RULES.GEAR_V923>) assert.equal(gearBook(k), true, k);
   });
-  test('under the Revamp source every switch reads as the old way', (t) => {
-    t.after(oldWay({ 'URR_V80.active': true }));
-    for (const k of Object.keys(RULES.GEAR_V923) as Array<keyof typeof RULES.GEAR_V923>) assert.equal(gearBook(k), false, k);
-    assert.equal(essenceLoss({ essenceCost: 2, grade: 'beta' }), 1.4);
+  test('under the Revamp source: the rule the Revamp changes itself (armor and the Combat Pool) reads as the old way', (t) => {
+    t.after(urrMode());
+    assert.equal(gearBook('armorEncumbrance'), false);
+    assert.deepEqual([...REVAMP_GEAR_RULES], ['armorEncumbrance']);
+  });
+  test('under the Revamp source: a book fix the Revamp is silent on applies (beta grade × 0.6)', (t) => {
+    t.after(urrMode());
+    for (const k of Object.keys(RULES.GEAR_V923) as Array<keyof typeof RULES.GEAR_V923>) if (!REVAMP_GEAR_RULES.has(k)) assert.equal(gearBook(k), true, k);
+    assert.equal(essenceLoss({ essenceCost: 2, grade: 'beta' }), 1.2);
   });
 });
 

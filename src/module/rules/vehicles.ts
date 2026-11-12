@@ -2,16 +2,17 @@ import { RULES, type DamageLevel } from './config.ts';
 import type { TargetNumberModifier } from './dice.ts';
 import { stageDown, woundModifier, resistanceTargetNumber } from './damage.ts';
 import { crashVehicleLevel, ramLevels, impactLevel } from './docs79-vehicles.ts';
-import { VEHICLES_V923_OLD } from './config923/vehicles.ts';
+import { VEHICLES_V923_OLD, REVAMP_VEHICLE_RULES } from './config923/vehicles.ts';
 import { t as tx } from '../helpers/i18n.ts';
 
 type V923 = typeof RULES.VEHICLES_V923;
 /**
- * v0.92.3: a RULES.VEHICLES_V923 switch. Under the Unified Rules Revamp (RULES.URR_V80.active) its v0.92.2 choice, so the
- * Revamp behaves as before (its own URR_V80 switches decide there).
+ * v0.92.3: a RULES.VEHICLES_V923 switch. Under the Unified Rules Revamp (RULES.URR_V80.active) a switch for a rule the
+ * Revamp changes itself (REVAMP_VEHICLE_RULES) reads its v0.92.2 choice, so the Revamp's own URR_V80 switch decides
+ * there as before; any other switch (a book correction the Revamp is silent on) reads the same under either source.
  */
 export function veh923<K extends keyof V923>(k: K): V923[K] {
-  if (RULES.URR_V80.active && Object.hasOwn(VEHICLES_V923_OLD, k)) return VEHICLES_V923_OLD[k] as V923[K];
+  if (RULES.URR_V80.active && REVAMP_VEHICLE_RULES.has(k) && Object.hasOwn(VEHICLES_V923_OLD, k)) return VEHICLES_V923_OLD[k] as V923[K];
   return RULES.VEHICLES_V923[k];
 }
 

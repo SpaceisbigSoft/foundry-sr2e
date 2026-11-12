@@ -1,9 +1,12 @@
 ### Combat
 
 Every switch is in `RULES.COMBAT_V923` (`src/module/rules/config923/combat.ts`; logic in `rules/combat923.ts`); its first
-choice is the book's way, the second puts v0.92.2 back. The switches act under the Book Rules source only: under the
-Unified Rules Revamp (`URR_V80.active`) they answer the v0.92.2 way, so the Revamp behaves exactly as before. Where the
-Revamp already had the book's procedure (`urr80-combat.ts`), the Book Rules go through the same code.
+choice is the book's way, the second puts v0.92.2 back. Under the Unified Rules Revamp (`URR_V80.active`) a switch for
+a rule the Revamp changes itself (`REVAMP_COMBAT_RULES`: rangedDefense, fullDefense, knockdown, blastStaging, scatter,
+shotgun, tracers, reload, initiativeTies, subdueTn, spreadFire, delay, rangedRows) answers the v0.92.2 way, so the
+Revamp's own rule decides as before; the other switches are book corrections the Revamp is silent on and act under
+either source. Where the Revamp already had the book's procedure (`urr80-combat.ts`), the Book Rules go through the
+same code.
 
 | Rule | Was | Now (book) | Source | Switch |
 |---|---|---|---|---|

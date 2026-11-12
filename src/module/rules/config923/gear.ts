@@ -1,8 +1,9 @@
 /**
  * v0.92.3 book alignment: Gear, cyberware and bioware. Read through RULES.GEAR_V923. Every value here was checked against the SR2 books
  * (book and page in each comment). Each switch's first choice is the book's way (the default); the other puts the
- * old v0.92.2 behaviour back. Under the Unified Rules Revamp source every switch reads as its old choice
- * (rules/gear923.ts `gearBook`), so the Revamp behaves exactly as before.
+ * old v0.92.2 behaviour back. Under the Unified Rules Revamp source only armorEncumbrance (the Revamp has its own
+ * armor-and-Combat-Pool rule, URR_V80.cbtArmorPool) reads as its old choice; the others are book corrections the
+ * Revamp is silent on and apply under either source (rules/gear923.ts `gearBook`, REVAMP_GEAR_RULES).
  *
  * - grades: 'book' — ware grades cost Essence × 0.8 / 0.6 / 0.5 (alpha, beta, delta) rounded up to the hundredth and
  *   never below .05, and nuyen × 3 / 7 / 10 (SSC Custom Cyberware; Cybertechnology p. 44). 'old': beta × 0.7,

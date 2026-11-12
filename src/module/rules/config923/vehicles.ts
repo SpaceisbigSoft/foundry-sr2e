@@ -6,9 +6,10 @@
  * Vehicles follow Rigger 2 first (its vehicle rules replace the core book's, Rigger 2 p. 20); the core book only where
  * Rigger 2 is silent. Building security follows the Corporate Security Handbook (CSH).
  *
- * Under the "SR2E Unified Rules Revamp" rules source these switches are read at their old (v0.92.2) choice
- * (VEHICLES_V923_OLD, through veh923() in rules/vehicles.ts), so the Revamp behaves exactly as before; its own
- * URR_V80 switches still decide there.
+ * Under the "SR2E Unified Rules Revamp" rules source a switch for a rule the Revamp changes itself
+ * (REVAMP_VEHICLE_RULES below) is read at its old (v0.92.2) choice (VEHICLES_V923_OLD, through veh923() in
+ * rules/vehicles.ts), so the Revamp's own URR_V80 switch decides there as before; the other switches are book
+ * corrections the Revamp is silent on and read the same under either source.
  *
  * - avArmor: anti-vehicle munitions against vehicle armor. 'half': only half the Armor (round down) comes off the Power,
  *   the level is not lowered, and the armor never stops them outright (Rigger 2 p. 53; Core p. 108). 'full': the whole
@@ -154,7 +155,7 @@ export const VEHICLES_V923 = {
   body0: 'destroyed' as 'destroyed' | 'old',
 };
 
-/** The v0.92.2 choice of each switch: what veh923() reads under the Unified Rules Revamp. */
+/** The v0.92.2 choice of each switch (what veh923() reads under the Revamp for REVAMP_VEHICLE_RULES). */
 export const VEHICLES_V923_OLD: { [K in keyof typeof VEHICLES_V923]?: (typeof VEHICLES_V923)[K] } = {
   avArmor: 'full', cpResist: 'none', vehicleDodge: 'old', gunneryPool: 'control', cpCap: 'none', feedback: 'old', vcrTn: 'flat',
   autonavDice: 'none', autonavMin: 'any', damageInit: 'none', damageSpeed: 'none', crashPower: 'down', crashMods: 'old',
@@ -162,6 +163,23 @@ export const VEHICLES_V923_OLD: { [K in keyof typeof VEHICLES_V923]?: (typeof VE
   interception: 'old', dumpDisorient: 'none', cardCasing: 'single', circuitFail: 'tally', passkey: 'old', sequencer: 'old',
   autoCrash: 'old', body0: 'old',
 };
+
+/**
+ * The VEHICLES_V923 switches for rules the Unified Rules Revamp changes itself (its own URR_V80 switch or a
+ * URR_V80_PATCH entry for the same rule): under the Revamp source veh923() reads their v0.92.2 choice, so the Revamp's
+ * rule decides as before. avArmor, body0 (URR_V80.vehDamage), cpResist and vehicleDodge (vehCpResist: the vehicle's
+ * defence), gunneryPool (vehCpGunnery), cpCap (vehCpCap), feedback (vehFeedback), damageSpeed (vehDamageSpeed),
+ * crashPower and ram (vehImpact), crashMods (VEHICLES.terrain), passengers (vehPassengers), occupant
+ * (vehOccupantArmor), gunneryMods (vehGunnery), drivingRows (VEHICLES.drivingModifiers), repairTn (vehRepairTn),
+ * interception (dsLinkIntercept), dumpDisorient (dsDumpDisorient), cardCasing (dsLockCasing), passkey (dsPasskey),
+ * sequencer (dsSequencer). The others (vcrTn, autonavDice, autonavMin, damageInit, accel, circuitFail, autoCrash)
+ * are book corrections the Revamp is silent on: they read the same under either source.
+ */
+export const REVAMP_VEHICLE_RULES: ReadonlySet<keyof typeof VEHICLES_V923> = new Set<keyof typeof VEHICLES_V923>([
+  'avArmor', 'body0', 'cpResist', 'vehicleDodge', 'gunneryPool', 'cpCap', 'feedback', 'damageSpeed', 'crashPower', 'ram',
+  'crashMods', 'passengers', 'occupant', 'gunneryMods', 'drivingRows', 'repairTn', 'interception', 'dumpDisorient',
+  'cardCasing', 'passkey', 'sequencer',
+]);
 
 const sel = (path: string, choices: string[], section = 'vehiclesAndRigging') => ({ path: `VEHICLES_V923.${path}`, section, type: 'select' as const, choices });
 

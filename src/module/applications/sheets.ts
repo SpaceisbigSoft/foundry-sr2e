@@ -83,6 +83,7 @@ import { refusePermitTick, permitRowFor, vehiclePermitPayer } from "./permits.ts
 import { timeLabel } from "../rules/waiting.ts";
 import { dropRequest, approvalNeeded, inCreation as inCreationNow, creationRecordOf } from "./approvals.ts";
 import { escHtml } from "../rules/html.ts";
+import { gearBook } from "../rules/gear923.ts";
 import { requestGm, onRelay, type RelayOp } from "./socket.ts";
 import { openHelp } from "./help.ts";
 import { artSheetContext, useDefaultArt } from "./tokenart.ts";
@@ -4458,7 +4459,7 @@ function occultContext(actor: any) {
     possessedSkills: actor.getFlag?.("sr2e", "possessedBy")?.skills ? RULES.OCCULT.metamagic.possessing.skills : "",
     pendingDeed: actor.getFlag?.("sr2e", "pendingInitiation")?.grade ?? 0,
     // v0.92.3 (RULES.GEAR_V923.overBodyIndex 'shock'): system shock instead of the rejection test.
-    rejectionDue: Boolean(bi?.over) && RULES.BIOWARE.rejection.enabled && !(RULES.GEAR_V923.overBodyIndex === 'shock' && !RULES.URR_V80.active),
+    rejectionDue: Boolean(bi?.over) && RULES.BIOWARE.rejection.enabled && !gearBook('overBodyIndex'),
   };
 }
 

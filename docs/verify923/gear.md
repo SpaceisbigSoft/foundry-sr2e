@@ -2,7 +2,8 @@
 
 v0.92.3 book alignment (RULES.GEAR_V923, rules/config923/gear.ts; the rules in rules/gear923.ts). Each switch's first
 choice is the book's way and the default; the other puts the v0.92.2 behaviour back. Under the Unified Rules Revamp
-source every GEAR_V923 switch reads as its old choice, so the Revamp behaves as before.
+source only `armorEncumbrance` (the Revamp's own `URR_V80.cbtArmorPool`) reads as its old choice; the other switches
+are book corrections the Revamp is silent on and apply under either source.
 
 | Rule | Was | Now (book) | Source | Switch |
 |---|---|---|---|---|

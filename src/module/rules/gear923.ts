@@ -4,7 +4,9 @@ import { num, round2, own } from './util.ts';
 
 /**
  * v0.92.3 book alignment, gear, cyberware and bioware (RULES.GEAR_V923). Pure rules, no Foundry dependency.
- * Under the Unified Rules Revamp source every switch reads as its old choice, so the Revamp behaves as before.
+ * The Unified Rules Revamp is the book's rules plus its own changes: under the Revamp source a switch for a rule the
+ * Revamp changes itself (REVAMP_GEAR_RULES) reads as its old choice, so the Revamp's rule decides as before; every
+ * other switch (a book correction the Revamp is silent on) reads the same under either source.
  */
 
 type G = typeof RULES.GEAR_V923;
@@ -15,9 +17,15 @@ const BOOK: { [K in keyof G]: G[K] } = {
   cyberDamage: 'book', filtration: 'opposed',
 };
 
-/** Whether a GEAR_V923 switch is at the book's way (never under the Revamp source). */
+/**
+ * The GEAR_V923 switches for rules the Revamp changes itself: armorEncumbrance (heavy armor and the Combat Pool: the
+ * Revamp's own URR_V80.cbtArmorPool).
+ */
+export const REVAMP_GEAR_RULES: ReadonlySet<keyof G> = new Set<keyof G>(['armorEncumbrance']);
+
+/** Whether a GEAR_V923 switch is at the book's way (under the Revamp source never for REVAMP_GEAR_RULES). */
 export function gearBook(key: keyof G): boolean {
-  if ((RULES as any).URR_V80?.active) return false;
+  if ((RULES as any).URR_V80?.active && REVAMP_GEAR_RULES.has(key)) return false;
   return (RULES as any).GEAR_V923?.[key] === BOOK[key];
 }
 

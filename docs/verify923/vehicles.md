@@ -3,8 +3,10 @@
 Rigger 2 first (its vehicle rules replace the core book's, Rigger 2 p. 20); the core book only where Rigger 2 is silent;
 building security from the Corporate Security Handbook (CSH). Switches in `RULES.VEHICLES_V923`
 (`rules/config923/vehicles.ts`); each one's first choice is the book's way and the other puts v0.92.2 back. Under the
-"SR2E Unified Rules Revamp" source every `VEHICLES_V923` switch reads its v0.92.2 choice (`veh923()` in
-`rules/vehicles.ts`), so the Revamp is unchanged.
+"SR2E Unified Rules Revamp" source a `VEHICLES_V923` switch for a rule the Revamp changes itself
+(`REVAMP_VEHICLE_RULES`) reads its v0.92.2 choice (`veh923()` in `rules/vehicles.ts`), so the Revamp's own rule decides
+as before; the book corrections the Revamp is silent on (vcrTn, autonavDice, autonavMin, damageInit, accel,
+circuitFail, autoCrash) apply under either source.
 
 | Rule | Was | Now (book) | Source | Switch |
 |---|---|---|---|---|

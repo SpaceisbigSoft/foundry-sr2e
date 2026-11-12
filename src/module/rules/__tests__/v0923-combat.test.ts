@@ -275,9 +275,9 @@ describe('v0.92.3 combat: tracers, reloads, heavy armor, initiative ties', () =>
     assert.equal(U80C.cbtReloadAmount(2, 'internal', 3, 5, 5), 2);
     assert.equal(U80C.cbtReloadAmount(2, 'break', 0, 2, 5), 2);
   });
-  test('book heavy armor: Combat Pool dice, not Quickness (Dice Pools p. 85)', () => {
-    assert.equal(U80C.cbtEncumbrance(3), 0);
-    assert.equal(U80C.cbtArmorPoolPenalty(8, 5), 3);
+  test('heavy armor is one rule, GEAR_V923.armorEncumbrance (Dice Pools p. 85): the Revamp\'s any-armor pool rule stays off in the book', () => {
+    assert.equal(U80C.cbtArmorPoolPenalty(8, 5), 0);
+    assert.ok(!('armorPenalty' in COMBAT_V923));
   });
   test('book ties: adjusted Reaction, then natural Reaction (Core p. 79)', () => {
     assert.deepEqual(U80C.cbtTieKeys(), ['reaction', 'naturalReaction']);
@@ -391,6 +391,28 @@ describe('v0.92.3 combat: Take Aim (Core p. 82)', () => {
   test('old: at least 1', (t) => {
     t.after(combat922());
     assert.equal(aimCap(1), 1);
+  });
+  test('Revamp (silent on Take Aim): the book\'s cap applies there too', (t) => {
+    t.after(urrMode());
+    assert.ok(!C923.REVAMP_COMBAT_RULES.has('aim'));
+    assert.equal(aimCap(1), 0);
+    assert.equal(aimCap(5), 2);
+  });
+});
+
+describe('v0.92.3 combat: the Revamp source', () => {
+  test('a switch for a rule the Revamp changes itself answers the v0.92.2 way there (its own rule decides)', (t) => {
+    t.after(urrMode());
+    assert.equal(C923.rangedDefenseBook(), false);
+    assert.equal(C923.knockdownBook(), false);
+    assert.equal(C923.tiesBook(), false);
+    assert.equal(C923.scatterBook(), null);
+  });
+  test('book fixes the Revamp is silent on apply there: melee visibility halved, flechette, called shots', (t) => {
+    t.after(urrMode());
+    assert.equal(C923.meleeVisibility({ label: 'Partial light', value: 2 })?.value, 1);
+    assert.equal(C923.flechetteArmorBook(5, 3, 2)?.armor, 6);
+    assert.equal(C923.calledShotGap(), false);
   });
 });
 

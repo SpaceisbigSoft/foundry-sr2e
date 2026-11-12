@@ -22,7 +22,7 @@ import { speedChangeLimit, bypassPlan } from '../roadwork.ts';
 import { bypassOutcome } from '../security.ts';
 import { dsCasingModifiers, dsLockToolStep, dsInterceptPlan } from '../urr80-drones-security.ts';
 import { actionCost } from '../index.ts';
-import { VEHICLES_V923, VEHICLES_V923_OLD, HOUSE_VEHICLES_V923 } from '../config923/vehicles.ts';
+import { VEHICLES_V923, VEHICLES_V923_OLD, HOUSE_VEHICLES_V923, REVAMP_VEHICLE_RULES } from '../config923/vehicles.ts';
 const TEMPLATE = (id: string): any => (RULES.ITEM_TEMPLATES as any[]).find((t) => t.id === id)?.system;
 
 const sum = (m: Array<{ value: number }>) => m.reduce((n, x) => n + x.value, 0);
@@ -37,9 +37,13 @@ describe('v0.92.3 vehicles: the switches', () => {
       assert.notEqual((VEHICLES_V923 as any)[k], old, k);
     }
   });
-  test('under the Revamp every switch reads its v0.92.2 choice', (t) => {
+  test('under the Revamp a switch for a rule the Revamp changes itself reads its v0.92.2 choice; a book fix the Revamp is silent on applies', (t) => {
     t.after(urrMode());
-    for (const [k, old] of Object.entries(VEHICLES_V923_OLD)) assert.equal(veh923(k as any), old, k);
+    for (const [k, old] of Object.entries(VEHICLES_V923_OLD)) {
+      if (REVAMP_VEHICLE_RULES.has(k as any)) assert.equal(veh923(k as any), old, k);
+      else assert.equal(veh923(k as any), (VEHICLES_V923 as any)[k], k);
+    }
+    for (const k of ['vcrTn', 'autonavDice', 'autonavMin', 'damageInit', 'accel', 'circuitFail', 'autoCrash']) assert.ok(!REVAMP_VEHICLE_RULES.has(k as any), k);
   });
 });
 
@@ -131,9 +135,10 @@ describe('v0.92.3 vehicles: the Control Pool and the control rig (Rigger 2 pp. 1
     assert.deepEqual([rig('driving'), rig('maneuver'), rig('crash')], [-2, -2, -2]);
     assert.equal(controlRigTn({ test: 'gunnery', vcr: 2, jumpedIn: true })[0]?.value, -2);
   });
-  test('under the Revamp the rig is −1 a level on every jumped-in test, as before', (t) => {
+  test('under the Revamp (silent on the control rig) the book\'s rig applies too: a book fix reaches Revamp worlds', (t) => {
     t.after(urrMode());
-    assert.equal(sum(drivingModifiers({ mode: 'jumped', vcr: 2, kind: 'driving' }).filter((m) => /Control rig/.test(m.label))), -2);
+    const rig = (kind: any) => sum(drivingModifiers({ mode: 'jumped', vcr: 2, kind }).filter((m) => /Control rig/.test(m.label)));
+    assert.deepEqual([rig('driving'), rig('maneuver'), rig('crash')], [-4, -2, 0]);
   });
 });
 

@@ -1,7 +1,8 @@
 /**
- * v0.92.3 book alignment (area: combat): pure functions for RULES.COMBAT_V923 (config923/combat.ts). Each switch acts
- * only under the Book Rules source: under the Unified Rules Revamp (RULES.URR_V80.active) every function here answers
- * the v0.92.2 way, so the Revamp keeps its own rules unchanged.
+ * v0.92.3 book alignment (area: combat): pure functions for RULES.COMBAT_V923 (config923/combat.ts). The Unified Rules
+ * Revamp is the book's rules plus its own changes: a switch whose rule the Revamp changes itself (REVAMP_COMBAT_RULES:
+ * a URR_V80 switch or a URR_V80_PATCH entry for the same rule) answers the v0.92.2 way under the Revamp source, so the
+ * Revamp's own rule decides as before; every other switch reads the same under either source.
  */
 import { RULES, type DamageLevel } from './config.ts';
 import type { TargetNumberModifier } from './dice.ts';
@@ -11,9 +12,21 @@ const V = () => RULES.COMBAT_V923;
 const num = (x: unknown): number => (Number.isFinite(Number(x)) ? Number(x) : 0);
 
 type Sw = typeof RULES.COMBAT_V923;
-/** Whether a switch is at the given value, never under the Revamp source. */
+/**
+ * The COMBAT_V923 switches for rules the Revamp changes itself, with the Revamp's own switch or patched path:
+ * rangedDefense, fullDefense (URR_V80.cbtDefense), knockdown (cbtKnockdown), blastStaging (cbtBlastStaging), scatter
+ * (cbtScatter), shotgun (cbtShotgun), tracers (cbtTracers), reload (cbtReload), initiativeTies (cbtTies), subdueTn
+ * (cbtSubdueTn), spreadFire (COMBAT.spreadFire.wastedRoundsPerMetre), delay (DELAY.lostAtPassEnd), rangedRows
+ * (SITUATIONAL_MODIFIERS).
+ */
+export const REVAMP_COMBAT_RULES: ReadonlySet<keyof Sw> = new Set<keyof Sw>([
+  'rangedDefense', 'fullDefense', 'knockdown', 'blastStaging', 'scatter', 'shotgun', 'tracers', 'reload',
+  'initiativeTies', 'subdueTn', 'spreadFire', 'delay', 'rangedRows',
+]);
+/** Whether a switch is at the given value; under the Revamp source never for a rule the Revamp changes itself. */
 function is<K extends keyof Sw>(key: K, value: Sw[K]): boolean {
-  return !RULES.URR_V80?.active && V()[key] === value;
+  if (RULES.URR_V80?.active && REVAMP_COMBAT_RULES.has(key)) return false;
+  return V()[key] === value;
 }
 
 // ---------------------------------------------------------------- defense (Core pp. 87, 91, 102)
@@ -228,7 +241,8 @@ export function delayCarries(flagRound: number, round: number): boolean {
 
 /** Whether a SITUATIONAL_MODIFIERS row shows in the Attack dialog (the v0.92.3 rows can be hidden). */
 export function rangedRowShown(id: string): boolean {
-  return V().rangedRows || !V().rangedRowIds.includes(id);
+  // Under the Revamp its own rows (SITUATIONAL_MODIFIERS, patched) all show, as before.
+  return V().rangedRows || !V().rangedRowIds.includes(id) || Boolean(RULES.URR_V80?.active);
 }
 
 /** Visibility in melee the book's way: half (round down), except full darkness (Core p. 102). */
