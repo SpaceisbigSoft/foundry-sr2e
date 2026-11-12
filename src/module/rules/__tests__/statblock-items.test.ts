@@ -253,9 +253,20 @@ describe('statBlockItems: spells and powers data', () => {
     assert.ok(statBlockItems(p3, { adept: false }).items.every((i) => i.type === 'power'));
   });
   test('attribute bonuses the items add (to subtract from manual modifiers)', (t) => {
-    t.after(oldWay({ "GEAR_V923.bioware": "old" })); // v0.92.3: the old (v0.92.2) way; rules/__tests__/v0923-gear.test.ts has the book's
+    t.after(oldWay({ "GEAR_V923.bioware": "old", "GEAR_V923.dermal": "armor", "GEAR_V923.boneLacing": "dice", "GEAR_V923.limbPairs": "off" })); // v0.92.3: the old (v0.92.2) way; rules/__tests__/v0923-gear.test.ts has the book's
     assert.deepEqual(statBlockAttributeBonuses(items), { strength: 3, quickness: 2 });
     assert.deepEqual(statBlockAttributeBonuses(statBlockItems(parseStatBlock(ADEPT)).items), { body: 2 });
+  });
+  test('v0.92.3 review fix: the Body the book adds from dermal plating, bone lacing and limb pairs comes off too', (t) => {
+    const ware: StatBlockItem[] = [
+      { name: 'Dermal Plating 2', type: 'cyberware', system: { kind: 'other', rating: 2, bioware: false } },
+      { name: 'Bone Lacing (Titanium)', type: 'cyberware', system: { kind: 'boneLacing', lacing: 'titanium', bioware: false } },
+      { name: 'Cyberarm', type: 'cyberware', system: { kind: 'cyberlimb', limb: { location: 'leftArm' }, bioware: false } },
+      { name: 'Cyberarm', type: 'cyberware', system: { kind: 'cyberlimb', limb: { location: 'rightArm' }, bioware: false } },
+    ];
+    assert.deepEqual(statBlockAttributeBonuses(ware), { body: 2 + 2 + 1 });
+    t.after(oldWay({ 'GEAR_V923.dermal': 'armor', 'GEAR_V923.boneLacing': 'dice', 'GEAR_V923.limbPairs': 'off' }));
+    assert.deepEqual(statBlockAttributeBonuses(ware), {});
   });
 });
 

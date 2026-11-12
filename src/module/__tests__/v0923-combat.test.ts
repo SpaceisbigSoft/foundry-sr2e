@@ -392,6 +392,31 @@ describe('v0.92.3 combat: pools and delays (Core pp. 78, 80, 84)', () => {
     await combat.refreshActingPool();
     assert.equal(a.system.poolSpent.combat, 0);
   });
+  test('review fix: going back to an earlier turn and forward again refreshes no action twice; Previous and a later round are left alone', async () => {
+    const a = who(), b = who();
+    const combat = new SR2Combat();
+    const cA = { id: 'cA', actor: a }, cB = { id: 'cB', actor: b };
+    Object.assign(combat, { id: 'cmb3', round: 2, started: true, combatant: cA });
+    combat.flags = { pass: 0 };
+    await combat.refreshActingPool();                                  // A's action
+    combat.combatant = cB;
+    await combat.refreshActingPool();                                  // B's action
+    a.system.poolSpent.combat = 2; b.system.poolSpent.combat = 3;
+    combat.combatant = cA;                                             // Previous Turn
+    await combat.refreshActingPool();
+    combat.combatant = cB;                                             // Next Turn again
+    await combat.refreshActingPool();
+    assert.equal(a.system.poolSpent.combat, 2);
+    assert.equal(b.system.poolSpent.combat, 3);
+    // _onUpdate: a step back and a round change past the first don't refresh (nextRound does after the re-roll).
+    let calls = 0;
+    combat.refreshActingPool = async () => { calls++; };
+    combat._onUpdate({ turn: 0 }, { direction: -1 }, 'gm1');
+    combat._onUpdate({ round: 3, turn: 0 }, { direction: 1 }, 'gm1');
+    assert.equal(calls, 0);
+    combat._onUpdate({ turn: 1 }, { direction: 1 }, 'gm1');
+    assert.equal(calls, 1);
+  });
   test('book: using pool dice while delaying breaks the delay', async () => {
     const a = who();
     g.game.combat = { started: true, id: 'cmb2', round: 1, pass: 0 };

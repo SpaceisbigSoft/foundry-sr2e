@@ -81,8 +81,8 @@
  *
  * NPCs
  * - threat: 'book' — a Threat Rating adds that many dice to every test the NPC makes (attacks, defence, damage
- *   resistance and other tests), never spent, and the NPC uses no Combat Pool (Core p. 187). 'pool': it adds Combat
- *   Pool dice (the old way, RULES.STREET.threat.addsToPool).
+ *   resistance and other tests), never spent, counted as Combat Pool dice for a clean miss (Core p. 86), and the NPC
+ *   uses no Dice Pools (Core p. 187). 'pool': it adds Combat Pool dice (the old way, RULES.STREET.threat.addsToPool).
  * - morale: 'book' — an NPC withdraws on its Professional Rating's wound (1 Light, 2 Moderate, 3 Serious; 4 never), and
  *   the GM may let it test Willpower (`moraleWillpowerTn` 4) to stay (Core p. 187); the Morale test is that Willpower
  *   test. 'old': Professional Rating dice vs 4 + 1 per casualty (RULES.MORALE).

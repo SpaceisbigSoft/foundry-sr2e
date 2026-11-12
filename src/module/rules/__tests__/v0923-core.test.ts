@@ -23,6 +23,14 @@ const build = (o: any) => buildCheck({ priorities: { race: 'E', magic: 'A', attr
 const row = (rows: any[], label: string) => rows.find((r) => r.label === label);
 
 describe('v0.92.3 core: the priority table (Core pp. 45–47)', () => {
+  test('review fix: a creation draft keeps the table it was started with (withPriorityTable)', () => {
+    assert.equal(C.withPriorityTable('old', () => C.priorityRow('A').attributes), RULES.CREATION.priorities.A.attributes);
+    assert.equal(C.withPriorityTable('old', () => C.bookPriorities()), false);
+    assert.equal(C.withPriorityTable('book', () => C.priorityRow('A').attributes), 30);
+    assert.equal(C.withPriorityTable(null, () => C.bookPriorities()), true, 'no draft: the switch as set');
+    assert.throws(() => C.withPriorityTable('old', () => { throw new Error('x'); }));
+    assert.equal(C.bookPriorities(), true, 'restored after a throw');
+  });
   test('the book: attributes 30/24/20/17/15, skills 40/30/24/20/17, Resources 1,000,000 … 500', () => {
     assert.deepEqual(['A', 'B', 'C', 'D', 'E'].map((l) => C.priorityRow(l)), [
       { attributes: 30, skills: 40, resources: 1000000 }, { attributes: 24, skills: 30, resources: 400000 }, { attributes: 20, skills: 24, resources: 90000 },

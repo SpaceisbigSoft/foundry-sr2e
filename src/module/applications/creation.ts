@@ -19,8 +19,8 @@ import {
   creationLifestylePatch,
 } from '../rules/index.ts';
 import { buildInputFor } from './buildinput.ts';
-import { priorityRow, racialModsOf, startingCashRoll } from '../rules/core923.ts';
-import { creationRecordOf, inCreation, queueOn, DRAFT_FLAG } from './approvals.ts';
+import { priorityRow, racialModsOf, startingCashRoll, withPriorityTable } from '../rules/core923.ts';
+import { creationRecordOf, inCreation, queueOn, DRAFT_FLAG, draftTable } from './approvals.ts';
 import { recordCreation } from './advancement.ts';
 import { SR2AddWindow, openSkillPicker } from './adding.ts';
 import { runSheetAction } from './tokens.ts';
@@ -32,19 +32,31 @@ const cap = (s: string) => String(s ?? '').charAt(0).toUpperCase() + String(s ??
 /** A-15: the shared escape helper (rules/html.ts). */
 const esc = escHtml;
 
-interface Draft { step: WizardStep; startedAt: string; by: string; months: number; outright: boolean }
+/** v0.92.3 review fix: `table`, the priority table (RULES.CORE_V923.priorities) the draft was started with. */
+interface Draft { step: WizardStep; startedAt: string; by: string; months: number; outright: boolean; table?: 'book' | 'old' }
 
 export function draftOf(actor: any): Draft | null {
   const d = actor?.flags?.[SYSTEM.id]?.[DRAFT_FLAG];
   if (!d || typeof d !== 'object') return null;
   return { step: (WIZARD_STEPS.some((s) => s.id === d.step) ? d.step : 'priorities') as WizardStep, startedAt: String(d.startedAt ?? ''), by: String(d.by ?? ''),
-    months: Math.max(1, Math.floor(Number(d.months) || RULES.STREET.builder.lifestyleMonths || 1)), outright: Boolean(d.outright) };
+    months: Math.max(1, Math.floor(Number(d.months) || RULES.STREET.builder.lifestyleMonths || 1)), outright: Boolean(d.outright),
+    // A draft saved before v0.92.3 was begun under the old table (draftTable).
+    table: d.table === 'book' || d.table === 'old' ? d.table : 'old' };
 }
 
 const prioritiesOf = (actor: any): Partial<Record<BuildColumn, Priority>> => Object.fromEntries(Object.entries((actor.getFlag?.(SYSTEM.id, 'build') ?? {}) as Record<string, unknown>).filter(([, v]) => typeof v === 'string' && v)) as any;
 
-/** The build check as the wizard sees it (its lifestyle months), plus the spell points row. */
-export function wizardChecks(actor: any): { rows: BuildRow[]; cash: number | null; life: number; contacts: number; gearCost: number; extraSpell: number; allowance: number; spells: ReturnType<typeof spellPointCheck> | null } {
+type WizardChecks = { rows: BuildRow[]; cash: number | null; life: number; contacts: number; gearCost: number; extraSpell: number; allowance: number; spells: ReturnType<typeof spellPointCheck> | null };
+
+/**
+ * The build check as the wizard sees it (its lifestyle months), plus the spell points row. v0.92.3 review fix: against
+ * the priority table the draft was started with.
+ */
+export function wizardChecks(actor: any): WizardChecks {
+  return withPriorityTable(draftTable(actor), () => wizardChecksNow(actor));
+}
+
+function wizardChecksNow(actor: any): WizardChecks {
   const pr = prioritiesOf(actor);
   const d = draftOf(actor);
   const input = buildInputFor(actor, pr);
@@ -111,7 +123,7 @@ export class SR2CreationWizard extends HandlebarsApplicationMixin(ApplicationV2)
         ui.notifications?.warn?.(tx('SR2E.Notify.Creation.hasEarnedKarmaAlreadyAskThe', { actorName: escHtml(actor.name) }));
         return null;
       }
-      const draft: Draft = { step: 'priorities', startedAt: new Date().toISOString(), by: String(game.user?.name ?? ''), months: RULES.STREET.builder.lifestyleMonths || 1, outright: false };
+      const draft: Draft = { step: 'priorities', startedAt: new Date().toISOString(), by: String(game.user?.name ?? ''), months: RULES.STREET.builder.lifestyleMonths || 1, outright: false, table: RULES.CORE_V923.priorities === 'old' ? 'old' : 'book' };
       await actor.setFlag(SYSTEM.id, DRAFT_FLAG, draft);
     }
     if (!SR2CreationWizard.#hooked) {
@@ -164,6 +176,11 @@ export class SR2CreationWizard extends HandlebarsApplicationMixin(ApplicationV2)
   }
 
   async _prepareContext(_o: any): Promise<any> {
+    // v0.92.3 review fix: the steps show the priority table the draft was started with.
+    return withPriorityTable(draftTable(this.actor), () => this.#contextNow());
+  }
+
+  #contextNow(): any {
     const a = this.actor;
     if (!a) return {};
     const d = draftOf(a) ?? { step: 'priorities' as WizardStep, startedAt: '', by: '', months: 1, outright: false };

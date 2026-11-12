@@ -9381,6 +9381,18 @@ describe("v0.58.0 characters, gear and integration", () => {
     assert.equal(SR2Actor.essenceOf(a.items.get("sl")), 0);
   });
 
+  test("v0.92.3 review fix: the book's housed ware already costs Essence, so a limb in or out moves only the difference", () => {
+    // Cybertechnology p. 49: a smartlink in a cyberlimb costs .25 (0.5 outside); other ware its full cost.
+    const a = person("Armed (book)", [
+      { id: "arm", type: "cyberware", name: "Cyberarm", system: { essenceCost: 1, grade: "standard", installed: true, bioware: false, attributes: {}, kind: "cyberlimb", limb: { location: "rightArm", strength: 4, quickness: 4, capacity: 1 } } },
+      { id: "sl", type: "cyberware", name: "Smartlink", system: { essenceCost: 0.5, grade: "standard", installed: true, bioware: false, attributes: {}, kind: "other", housedIn: "arm" } },
+      { id: "dc", type: "cyberware", name: "Datajack", system: { essenceCost: 0.2, grade: "standard", installed: true, bioware: false, attributes: {}, kind: "other", housedIn: "arm" } },
+    ]);
+    assert.equal(SR2Actor.essenceOf(a.items.get("sl")), 0.25);
+    assert.equal(SR2Actor.essenceOf(a.items.get("dc")), 0.2);
+    assert.equal(SR2Actor.housedEssence(a.items.get("arm")), 0.25, "only the smartlink's saving; the datajack costs the same either way");
+  });
+
   test("giving training up gives the Karma back", async () => {
     R.CHARACTERS_V58.training.mode = "timed";
     const a = person("Quitter", [], {});

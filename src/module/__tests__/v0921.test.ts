@@ -229,6 +229,23 @@ describe('v0.92.1 Carried', () => {
     assert.equal(r, null);
     assert.ok(warnings.some((w) => /isn.t carried/.test(w)), warnings.join(' | '));
   });
+  test('v0.92.3 review fix: a carried weapon saved holstered is drawn by the attack (a Simple Action), not refused', async () => {
+    assert.equal(RULES.COMBAT.ready.rule, 'action');
+    const a = who({}, [GUN({ ready: false })]);
+    const used: string[] = [];
+    a.useAction = async (kind: string) => { used.push(kind); return true; };
+    for (let i = 0; i < 20; i++) faces.push(4);
+    const r = await a.attackWith(a.items.get('gun'), {});
+    assert.notEqual(r, null);
+    assert.deepEqual(used, ['draw']);
+    assert.equal(a.items.get('gun').system.ready, true);
+    assert.ok(!warnings.some((w) => /holstered/.test(w)), warnings.join(' | '));
+    // When the action rules refuse the draw, the attack is refused too.
+    const b = who({}, [GUN({ ready: false })]);
+    b.useAction = async () => false;
+    assert.equal(await b.attackWith(b.items.get('gun'), {}), null);
+    assert.equal(b.items.get('gun').system.ready, false);
+  });
   test('leaving it behind takes armor off and holsters a weapon; wearing or drawing it brings it along', () => {
     const ch1: any = { carried: false };
     SR2Item.carriedRules('armor', { worn: true, carried: true }, ch1);

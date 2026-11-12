@@ -21,8 +21,21 @@ const isHuman = (metatype: unknown) => !metatype || String(metatype) === 'human'
 
 // ---------------------------------------------------------------- The priority table
 
-/** Whether the book's creation table is in use (Core pp. 45–47). */
-export const bookPriorities = (): boolean => V().priorities !== 'old';
+/** Review fix: the table a creation draft was started with, while that draft is being checked (withPriorityTable). */
+let tableOverride: 'book' | 'old' | null = null;
+
+/** Whether the book's creation table is in use (Core pp. 45–47); inside withPriorityTable, the draft's table. */
+export const bookPriorities = (): boolean => (tableOverride ?? V().priorities) !== 'old';
+
+/**
+ * Run `fn` (synchronous) with the priority table a creation draft was started with ('book' or 'old'; anything else =
+ * the switch as set). A character whose draft began under v0.92.2 keeps checking against the old table.
+ */
+export function withPriorityTable<T>(table: unknown, fn: () => T): T {
+  const was = tableOverride;
+  tableOverride = table === 'book' || table === 'old' ? table : null;
+  try { return fn(); } finally { tableOverride = was; }
+}
 
 /** What a priority letter gives in the Attributes, Skills and Resources columns (the book's table or the old one). */
 export function priorityRow(letter: unknown): { attributes: number; skills: number; resources: number } {

@@ -58,3 +58,9 @@ Not built:
 - Blast in a confined space: the rebounding wave's Power in full per target (Core p. 98); the nearest-wall approximation stays.
 - Quick draw as a Reaction (4) test (Core p. 82); surprise: no actions at all for 10 phases when out-rolled by everyone (Core p. 86).
 - Reaction 0 or less from wounds means no actions (Core p. 112).
+- The other Dice Pools at each action (Core p. 84 refreshes all of them at the start of each action): only the Combat
+  Pool follows `COMBAT_V923.poolRefresh`; the Spell, Hacking, Control and Task Pools still refresh each Combat Turn
+  (Rigger 2 keeps the Control Pool per Combat Turn; per-action Spell Pool would also wipe allotted spell defense dice).
+
+Readying a weapon (`COMBAT.ready.rule` 'action'): an attack with a weapon not yet drawn spends the Simple Action to
+draw it itself instead of refusing, so weapons saved holstered by a v0.92.2 world still fire.

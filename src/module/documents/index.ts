@@ -1926,7 +1926,9 @@ export class SR2Actor extends Actor {
     const rapid = rapidHealingDice(adeptSpecialLevel(adeptPowersOf(this) as any, 'rapidHealing'));
     // v0.72.0 (O9): symbiotes add dice to natural healing.
     const sym = Math.max(0, Number(this.sys.derived?.bio?.vitals?.healingDice ?? 0));
-    const result = await successTest({ dice: (this.sys.attributes[attr].total as number) + rapid + sym, targetNumber: tn, modifiers: [...(stunUrr ? stunUrr.modifiers : careMods), ...(H923.bodyIndexOn('natural') ? SR2Actor.bodyIndexHealingMods(this) : [])], roll: foundryRoller(rolls) });
+    // v0.92.3 review fix (RULES.HEALTH_V923.healingBody 'natural', Core p. 112): Physical healing rolls the natural Body.
+    const healDice = track === 'physical' && attr === 'body' ? H923.healingBody(Number(this.sys.attributes.body.total), this.sys.attributes.body.natural) : (this.sys.attributes[attr].total as number);
+    const result = await successTest({ dice: healDice + rapid + sym, targetNumber: tn, modifiers: [...(stunUrr ? stunUrr.modifiers : careMods), ...(H923.bodyIndexOn('natural') ? SR2Actor.bodyIndexHealingMods(this) : [])], roll: foundryRoller(rolls) });
     // v0.78.0 (RULES.BOOK_V78.symbiotes 'time'): symbiotes shorten the healing time instead.
     const timeFactor = Math.min(1, Math.max(0.1, Number(this.sys.derived?.bio?.vitals?.healingTimeFactor ?? 1) || 1));
     await this.#post(this.#snapshot(tx('SR2E.Card.Actor.woundHRest', { part: stages ? tx('SR2E.Card.Actor.healingStage') : tx('SR2E.Card.Actor.naturalHealing'), track, woundLevel: woundLevel(before), hours: opts.hours, part2: cost ? tx('SR2E.Card.Actor.paid', { cost: cost.toLocaleString() }) : '', part3: rapid ? tx('SR2E.Card.Actor.rapidHealing', { rapid }) : '', part4: sym ? tx('SR2E.Card.Actor.symbiotes', { sym }) : '', part5: timeFactor < 1 ? tx('SR2E.Card.Actor.symbiotesTime', { timeFactor }) : '' }), result, {
@@ -1945,6 +1947,8 @@ export class SR2Actor extends Actor {
       const prev = (this.getFlag(SYSTEM_ID, 'damagedAt') as Record<string, number> | undefined) ?? {};
       await this.setFlag(SYSTEM_ID, 'damagedAt', { ...prev, ...(grew.physical ? { physical: now } : {}), ...(grew.stun ? { stun: now } : {}) });
     }
+    // v0.92.3 review fix: a trauma patch's +2 belongs to the wound it was used on: healed fully, it goes.
+    if (Number(this.sys.monitor?.physical ?? 0) === 0 && this.getFlag?.(SYSTEM_ID, 'traumaPatched923')) await clearFlag(this, 'traumaPatched923');
     const status = this.sys.derived?.status as string | undefined;
     // v0.61.0: hurt in a fight, a shaman of a berserk totem may go berserk (MAGIC_V61.totems).
     if ((grew.physical || grew.stun) && !incapacitated(status) && berserkTriggered(this.totemDrawbacks(), { damaged: true, inCombat: Boolean((game.combat as any)?.started) })) await this.berserkCheck(tx('SR2E.Card.Actor.wounded'));
@@ -2133,7 +2137,7 @@ export class SR2Actor extends Actor {
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor: this }),
       content: `<p>${tx('SR2E.Card.Actor.sShutsDownTheCrashComes', { name: escText(this.name), name2: escText(it.name) })}</p><p><button type="button" data-sr2e-action="adrenalCrash">${tx('SR2E.Card.Actor.resistTheCrashVsStun', { attribute: escText(cap(c.attribute)), tn: c.tn, level: c.level })}</button></p>`,
-      flags: { [SYSTEM_ID]: { adrenalCrash: { actorUuid: this.uuid, rating: it.system.rating ?? 1, ...(book ? { turns } : {}) } } },
+      flags: { [SYSTEM_ID]: { adrenalCrash: { actorUuid: this.uuid, itemId: it.id, rating: it.system.rating ?? 1, ...(book ? { turns } : {}) } } },
     });
   }
 
@@ -2289,9 +2293,15 @@ export class SR2Actor extends Actor {
       const was = Number(opItem.getFlag?.(SYSTEM_ID, 'surgeryEssence'));
       const baseEss = Number.isFinite(was) ? was : Number(opItem.system.essenceCost ?? 0);
       if (!Number.isFinite(was)) { try { await opItem.setFlag(SYSTEM_ID, 'surgeryEssence', baseEss); } catch { /* not saved */ } }
-      const cost = surgeryEssenceCost(baseEss, safeInt(snap.successes, 0, 40, 0));
+      let cost = surgeryEssenceCost(baseEss, safeInt(snap.successes, 0, 40, 0));
+      // v0.92.3 review fix (Cybertechnology p. 54): a cost that would leave the patient below 0 Essence aborts there:
+      // the patient survives at Essence 0 (the cost is capped at the Essence left, an Essence hole counting as room).
+      const room = SR2Actor.surgeryEssenceRoom(patient, opItem);
+      const per = essenceLoss({ essenceCost: sensitiveEssence(1, qualityVitals(patient?.system?.qualities ?? [], RULES.STREET.qualities.enabled)), grade: opItem.system.grade });
+      const capped = per > 0 && cost * per > room + 1e-9;
+      if (capped) cost = Math.max(0, Math.floor((room / per) * 100 + 1e-9) / 100);
       if (cost !== Number(opItem.system.essenceCost ?? 0)) await opItem.update({ 'system.essenceCost': cost });
-      essNote = ` ${tx('SR2E.Card.Actor.surgeryEssenceCost', { name: escText(sg.itemName), base: baseEss, cost })}`;
+      essNote = ` ${tx('SR2E.Card.Actor.surgeryEssenceCost', { name: escText(sg.itemName), base: baseEss, cost })}${capped ? ` ${tx('SR2E.Card.Actor.surgeryEssenceZero')}` : ''}`;
     }
     const base = recoveryDays(sg.points, cyberBook ? Math.max(1, snap.successes) : snap.successes);
     // v0.48.0: the patient's care stretches or shortens the recovery.
@@ -2333,7 +2343,9 @@ export class SR2Actor extends Actor {
       }
       // v0.92.3 (RULES.HEALTH_V923.surgeryMagicLoss 'drastic', Core p. 114; Shadowtech bionetics): a magician through
       // drastic invasive surgery tests for Magic loss after healing (the card waits for the GM or the player).
-      if (Number(patient.system?.magic ?? 0) > 0 && patient.type !== 'spirit' && RULES.MAGIC_LOSS.enabled && H923.surgeryMagicLossDue(Number(sg.points ?? 0), Boolean(it?.system?.bioware))) {
+      // Review fix: cyberware by the Essence it really costs now it is in (grade, Sensitive System, the surgery's change).
+      const drasticPoints = it && !it.system?.bioware ? SR2Actor.essenceOf(it, patient) : Number(sg.points ?? 0);
+      if (Number(patient.system?.magic ?? 0) > 0 && patient.type !== 'spirit' && RULES.MAGIC_LOSS.enabled && H923.surgeryMagicLossDue(drasticPoints, Boolean(it?.system?.bioware))) {
         await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: patient }), content: `<p><strong>${escText(patient.name)}</strong> ${tx('SR2E.Card.Actor.drasticSurgeryMagicLoss')}</p><p><button type="button" data-sr2e-action="magicLoss">${tx('SR2E.Card.Actor.magicLossTestD6', { magicLossDice: RULES.MAGIC_LOSS.dice })}</button></p>`, flags: { [SYSTEM_ID]: { magicLossFor: patient.uuid } } });
       }
       // v0.45.0: it works once the patient has recovered; a re-roll moves the date.
@@ -2727,9 +2739,11 @@ export class SR2Actor extends Actor {
     // v0.92.3 (RULES.CORE_V923.threat 'book', Core p. 187): an NPC's Threat Rating adds dice to every test.
     const threat = this.#threatDice();
     if (threat) label = `${label}${tx('SR2E.Card.Actor.threatDice', { threat })}`;
+    // Threat dice count as Combat Pool dice for a clean miss (Core p. 86; Core p. 187): rolled as pool-tagged dice,
+    // never spent.
     const result = await successTest({
-      dice: dice + aligned + karmaDice + threat,
-      poolDice,
+      dice: dice + aligned + karmaDice,
+      poolDice: poolDice + threat,
       targetNumber: opts.targetNumber ?? 4,
       modifiers: this.#testModifiers(opts),
       roll: foundryRoller(rolls),
@@ -5457,12 +5471,32 @@ export class SR2Actor extends Actor {
     });
   }
 
-  /** v0.58.0: the Essence the ware housed in a cyberlimb would cost outside it. */
+  /**
+   * v0.58.0: the Essence the ware housed in a cyberlimb would cost outside it, beyond what it costs inside. v0.92.3
+   * review fix (RULES.GEAR_V923.limbHoused 'book', Cybertechnology p. 49): housed ware already costs its housed Essence,
+   * so only the difference changes when the limb goes in or out (0 for most ware, which costs the same either way).
+   */
   static housedEssence(limb: any, actor: any = limb?.parent): number {
     if (limb?.system?.kind !== 'cyberlimb') return 0;
+    const qv = qualityVitals(actor?.system?.qualities ?? [], RULES.STREET.qualities.enabled);
     const sum = [...(actor?.items ?? [])].filter((i: any) => i.type === 'cyberware' && i.id !== limb.id && i.system?.housedIn === limb.id && i.system?.installed && !i.system?.bioware)
-      .reduce((n: number, i: any) => n + essenceLoss({ essenceCost: sensitiveEssence(Number(i.system.essenceCost ?? 0), qualityVitals(actor?.system?.qualities ?? [], RULES.STREET.qualities.enabled)), grade: i.system.grade }), 0);
+      .reduce((n: number, i: any) => {
+        const outside = essenceLoss({ essenceCost: sensitiveEssence(Number(i.system.essenceCost ?? 0), qv), grade: i.system.grade });
+        const hc = housedEssenceCost({ name: i.name, essenceCost: i.system.essenceCost });
+        const inside = hc === null ? 0 : essenceLoss({ essenceCost: sensitiveEssence(hc, qv), grade: i.system.grade });
+        return n + Math.max(0, outside - inside);
+      }, 0);
     return Math.round(sum * 100) / 100;
+  }
+
+  /**
+   * v0.92.3 review fix: the Essence a patient can still give up for this item before going below 0: the Essence now,
+   * plus an Essence hole (new ware fills it first), plus what the item already costs if it is in.
+   */
+  static surgeryEssenceRoom(patient: any, item: any): number {
+    const now = Number(patient?.system?.derived?.essence ?? patient?.system?.essence ?? 6);
+    const hole = RULES.GEAR_V58.essenceHoles.enabled ? Math.max(0, Number(patient?.system?.essenceHole ?? 0)) : 0;
+    return Math.max(0, now + hole + (item?.system?.installed ? SR2Actor.essenceOf(item, patient) : 0));
   }
 
   /** v0.58.0: the Essence an item costs in the body (0 for bioware, ware housed in a cyberlimb, or not installed). */
@@ -8942,11 +8976,11 @@ export class SR2Actor extends Actor {
     }
     // v0.55.0: drawing the weapon first (RULES.COMBAT.ready): a Simple Action, free with a quick-draw holster.
     // (With 'action', a holstered weapon is drawn first from the sheet: a Simple Action before the attack's own.)
+    // v0.92.3 review fix: with 'action' (now the default, Core p. 82) a weapon that isn't ready is drawn as part of the
+    // attack, spending the Simple Action (useAction refuses only when the action rules block it), instead of refusing:
+    // weapons a v0.92.2 world saved holstered (which 'off' ignored) still fire.
+    const drawFirst = Boolean(weapon?.system && weapon.system.ready === false && typeof weapon.update === 'function' && RULES.COMBAT.ready.rule === 'action' && !weapon.system.quickDraw);
     if (weapon?.system && weapon.system.ready === false && typeof weapon.update === 'function' && RULES.COMBAT.ready.rule !== 'off') {
-      if (RULES.COMBAT.ready.rule === 'action' && !weapon.system.quickDraw) {
-        ui.notifications?.warn?.(tx('SR2E.Notify.Actor.isHolsteredDrawItFirstA', { weaponName: escHtml(weapon.name) }));
-        return null;
-      }
       opts = { ...opts, note: [opts.note, weapon.system.quickDraw ? tx('SR2E.Card.Actor.quickDrawn') : tx('SR2E.Card.Actor.drawnASimpleAction')].filter(Boolean).join(', ') };
     }
     // v0.71.0 (R12): every attack (group, mounted, quick rolls) resists an invisibility spell on its targets first,
@@ -8963,6 +8997,7 @@ export class SR2Actor extends Actor {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.isManifestingSeenAndHeardIn', { name: escHtml(this.name) }));
       return null;
     }
+    if (drawFirst && !(await this.useAction('draw', tx('SR2E.Card.Sheet.drawing', { name: weapon.name })))) return null;
     const seen = [opts.targetUuid, ...(opts.hits ?? []).map((h: any) => h.targetUuid)].filter(Boolean).map((u) => fromUuidSync(u as string)).filter(Boolean);
     await this.spotInvisible(seen);
     const plan = seen.length ? this.planAttack(weapon, opts) : pre;
@@ -9222,8 +9257,9 @@ export class SR2Actor extends Actor {
     // v0.92.3 (RULES.CORE_V923.threat 'book', Core p. 187): an NPC's Threat Rating dice defend too.
     const threat = helpless ? 0 : this.#threatDice();
     const result = await successTest({
-      dice: baseDice + threat,
-      poolDice: helpless ? 0 : pool,
+      dice: baseDice,
+      // Threat dice count as pool dice for a clean miss (Core p. 86), never spent.
+      poolDice: (helpless ? 0 : pool) + threat,
       targetNumber: attack.targetNumber,
       roll: foundryRoller(rolls),
     });
@@ -9819,7 +9855,10 @@ export class SR2Actor extends Actor {
     if (turns > 0 && tn) {
       const combat: any = (game as any).combat;
       const until = effectEnds({ round: combat?.started ? Number(combat.round ?? 0) : null, worldTime: sysNow(), seconds: turns * Math.max(1, Number(RULES.COMBAT_TURN_SECONDS) || 3), combatId: combat?.started ? String(combat.id ?? '') : null });
-      await SR2Actor.setPowerEffect(String(this.uuid), { id: 'shockDisoriented923', fromUuid: '', fromName: fromName || tx('SR2E.Card.Actor.shockWeapon923'), name: tx('SR2E.Card.Actor.disoriented923'), attributes: {}, testsTn: tn, until } as FxEntry);
+      // Review fix: a second hit never shortens a disorientation already running (the later end stays).
+      const had: any = ((this.getFlag?.(SYSTEM_ID, 'powerEffects') as any[] | undefined) ?? []).find((e: any) => e?.id === 'shockDisoriented923');
+      const longer = had?.until && Number(had.until.worldTime) >= Number(until.worldTime) && (!had.until.combatId || had.until.combatId === until.combatId) && Number(had.until.round ?? -1) >= Number(until.round ?? -1);
+      if (!longer) await SR2Actor.setPowerEffect(String(this.uuid), { id: 'shockDisoriented923', fromUuid: '', fromName: fromName || tx('SR2E.Card.Actor.shockWeapon923'), name: tx('SR2E.Card.Actor.disoriented923'), attributes: {}, testsTn: tn, until } as FxEntry);
     }
     await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), rolls, content: `<p><strong>${escText(this.name)}</strong> ${turns > 0 ? tCount(turns, 'SR2E.Card.Actor.shockDisoriented923', { attribute: escText(cap(attr)), successes: r.successes, tn }) : tx('SR2E.Card.Actor.shockShrugged923', { attribute: escText(cap(attr)), successes: r.successes })}</p>` });
     return turns;
@@ -9871,8 +9910,9 @@ export class SR2Actor extends Actor {
     const threat = this.#threatDice();
     const result = await successTest({
       // v0.58.0: bone lacing adds to Body for damage resistance only.
-      dice: conjDice ? conjDice + threat : (opts.astral ? this.sys.derived.astral.body : this.sys.attributes.body.total + lacing + tough + dermal) + threat,
-      poolDice,
+      dice: conjDice ? conjDice : (opts.astral ? this.sys.derived.astral.body : this.sys.attributes.body.total + lacing + tough + dermal),
+      // Threat dice count as Combat Pool dice for a clean miss (Core p. 86), never spent.
+      poolDice: poolDice + threat,
       targetNumber: tn,
       // v0.92.3: system shock over the Body Index (RULES.GEAR_V923.overBodyIndex).
       ...(opts.astral ? {} : { modifiers: this.bodyShockMods() }),
@@ -12523,9 +12563,12 @@ export class SR2Actor extends Actor {
     const tn = H923.permanentDamageTn(patched) ?? 4;
     // v0.92.3 (RULES.GEAR_V923.dermal 'body'): dermal plating is already in Body's total, so it isn't added twice.
     const dermalBody = gearBook('dermal');
-    const dermal = [...this.items].filter((i: any) => i.type === 'cyberware' && i.system?.installed !== false && !i.system?.bioware && i.system?.kind !== 'cyberlimb' && i.system?.kind !== 'filtration' && Number(i.system?.armorBallistic ?? 0) > 0
+    // v0.92.3 review fix: only working ware counts (not damaged or still healing in), and a troll's natural dermal
+    // armor counts too (Core p. 45: +1 Body for damage resistance, or 1 armor the old way; neither is in Body's total).
+    const healing = new Set(recoveringItemIds(this.sys.recovering ?? [], sysNow()));
+    const dermal = [...this.items].filter((i: any) => i.type === 'cyberware' && i.system?.installed !== false && !i.system?.damaged && !healing.has(i.id) && !i.system?.bioware && i.system?.kind !== 'cyberlimb' && i.system?.kind !== 'filtration' && Number(i.system?.armorBallistic ?? 0) > 0
       && !(dermalBody && isDermalPlating({ name: i.name, bioware: i.system?.bioware, kind: i.system?.kind })))
-      .reduce((n: number, i: any) => n + Math.floor(Number(i.system.armorBallistic) || 0), 0);
+      .reduce((n: number, i: any) => n + Math.floor(Number(i.system.armorBallistic) || 0), 0) + Math.max(0, Math.floor(Number(this.sys.derived?.racialDermal ?? 0)));
     const rolls: any[] = [];
     const r = await successTest({ dice: Number(this.sys.attributes.body.total ?? 0) + dermal, targetNumber: tn, modifiers: [], roll: foundryRoller(rolls) });
     const faces = r.successes < 2 ? await foundryRoller(rolls)(2) : [1, 1];
@@ -20942,8 +20985,6 @@ export class SR2Combat extends Combat {
 
   /** v0.92.3: a new Combat Turn is being set up (initiative re-rolled): the acting combatant isn't known yet. */
   #roundTurning = false;
-  /** v0.92.3: the last action whose Combat Pool was refreshed, by combat (once per action). */
-  static #poolKeys = new Map<string, string>();
 
   /**
    * v0.92.3 (COMBAT_V923.poolRefresh 'action', Core pp. 78, 84): when a combatant's action comes up (a new turn, pass
@@ -20952,18 +20993,30 @@ export class SR2Combat extends Combat {
   _onUpdate(changed: any, options: any, userId: string): void {
     (super._onUpdate as any)?.(changed, options, userId);
     if (this.#roundTurning || !C923.poolRefreshPerAction() || !isRelayGm()) return;
+    // Review fix: stepping back (Previous Turn / Previous Round) is no new action; and a new Combat Turn after the
+    // first is refreshed by nextRound once initiative is re-rolled (here the old turn order would still be in place,
+    // e.g. on a second GM's client).
+    if ((options as any)?.direction === -1) return;
     const c = changed ?? {};
+    if ('round' in c && Number(c.round) > 1) return;
     if (!('turn' in c) && !('round' in c) && c?.flags?.[SYSTEM_ID]?.pass === undefined) return;
     void this.refreshActingPool().catch((err) => console.warn('sr2e | Combat Pool refresh', err));
   }
 
-  /** v0.92.3: refresh the acting combatant's Combat Pool (once per action). */
+  /**
+   * v0.92.3: refresh the acting combatant's Combat Pool (once per action). Review fix: the actions already refreshed
+   * this Combat Turn are kept on the combat (flag `poolRefreshed`), so going back and forth between turns, or a second
+   * GM's client, never refreshes the same action twice.
+   */
   async refreshActingPool(): Promise<void> {
     const c: any = (this as any).started ? (this as any).combatant : null;
     if (!c?.actor || !this.id) return;
-    const key = C923.actionKey({ combatId: String(this.id), round: Number((this as any).round ?? 0), pass: this.pass, combatantId: String(c.id) });
-    if (SR2Combat.#poolKeys.get(String(this.id)) === key) return;
-    SR2Combat.#poolKeys.set(String(this.id), key);
+    const round = Number((this as any).round ?? 0);
+    const key = C923.actionKey({ combatId: String(this.id), round, pass: this.pass, combatantId: String(c.id) });
+    const was: any = this.getFlag(SYSTEM_ID, 'poolRefreshed');
+    const done: string[] = was && Number(was.round) === round && Array.isArray(was.keys) ? was.keys.map(String) : [];
+    if (done.includes(key)) return;
+    await this.setFlag(SYSTEM_ID, 'poolRefreshed', { round, keys: [...done, key] });
     await c.actor.refreshCombatPool?.();
   }
 
@@ -21022,23 +21075,27 @@ export class SR2Combat extends Combat {
     const hist = this.#endingPass ?? { round: Number((this as any).round ?? 0), pass: this.pass, init: Object.fromEntries([...(this.combatants as any)].map((c: any) => [c.id, c.initiative ?? null])) };
     this.#endingPass = null;
     this.#roundTurning = Boolean(started);
-    try { await super.nextRound(); } catch (err) { this.#roundTurning = false; throw err; }
-    if (!started) return this;
-    await this.setFlag(SYSTEM_ID, 'lastPass', hist);
-    // Foundry's rollAll() only rolls combatants whose initiative is null, so clear the
-    // spent (<= 0) scores first or nobody would be re-rolled and the turn order stays empty.
-    await this.updateEmbeddedDocuments(
-      'Combatant',
-      this.combatants.map((c: any) => ({ _id: c.id, initiative: null })),
-    );
-    await this.rollAll();
-    await this.alignParties();
-    // v0.92.3 (COMBAT_V923.poolRefresh 'action', Core pp. 78, 84): Combat Pool dice left over last until each
-    // character's first action, where they refresh (refreshActingPool).
+    // Review fix: #roundTurning is cleared whatever happens (a throw in the re-roll must not stop every later refresh).
     const perAction = C923.poolRefreshPerAction();
-    for (const c of this.combatants) await (c.actor as any)?.refreshPools?.(perAction ? { keepCombat: true } : {});
-    await this.update({ turn: 0, [`flags.${SYSTEM_ID}.pass`]: 0 });
-    this.#roundTurning = false;
+    try {
+      await super.nextRound();
+      if (!started) return this;
+      await this.setFlag(SYSTEM_ID, 'lastPass', hist);
+      // Foundry's rollAll() only rolls combatants whose initiative is null, so clear the
+      // spent (<= 0) scores first or nobody would be re-rolled and the turn order stays empty.
+      await this.updateEmbeddedDocuments(
+        'Combatant',
+        this.combatants.map((c: any) => ({ _id: c.id, initiative: null })),
+      );
+      await this.rollAll();
+      await this.alignParties();
+      // v0.92.3 (COMBAT_V923.poolRefresh 'action', Core pp. 78, 84): Combat Pool dice left over last until each
+      // character's first action, where they refresh (refreshActingPool).
+      for (const c of this.combatants) await (c.actor as any)?.refreshPools?.(perAction ? { keepCombat: true } : {});
+      await this.update({ turn: 0, [`flags.${SYSTEM_ID}.pass`]: 0 });
+    } finally {
+      this.#roundTurning = false;
+    }
     if (perAction) await this.refreshActingPool();
     const round = Number((this as any).round ?? 0);
     if (isRelayGm() || !activeGm()) await SR2Combat.#awaitTicks(this.runRoundTicks(round));

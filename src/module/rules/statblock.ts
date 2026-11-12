@@ -6,7 +6,7 @@ import { SPELL_DURATIONS } from './arcana.ts';
 import { bioEffect } from './bioware.ts';
 import { bioIndexV72 } from './vitals.ts';
 import { sensoryEssence } from './cyberware.ts';
-import { gearBook, gradeEssenceFactor } from './gear923.ts';
+import { gearBook, gradeEssenceFactor, isDermalPlating, dermalRating, boneLacingBook, cyberReplacements, limbPairsBody } from './gear923.ts';
 import { own } from './util.ts';
 import { t as tx } from '../helpers/i18n.ts';
 
@@ -1085,12 +1085,21 @@ export function statBlockAttributeBonuses(items: readonly StatBlockItem[]): Part
   const add = (a: Record<string, unknown> | undefined) => {
     for (const [k, v] of Object.entries(a ?? {})) if (typeof v === 'number' && v) out[k as AttributeKey] = (out[k as AttributeKey] ?? 0) + v;
   };
+  // v0.92.3 review fix: the Body the data model now adds from ware (RULES.GEAR_V923 dermal, boneLacing, limbPairs)
+  // is in the shown Body too, so it comes off here as well (else the import counts it twice).
+  const cyber = items.filter((i) => i.type === 'cyberware' && !i.system.bioware);
+  const replacements = cyberReplacements(cyber.map((i) => ({ name: i.name, kind: String(i.system.kind ?? '') })));
   for (const i of items) {
     const s = i.system;
     if (i.type === 'cyberware' && s.bioware) {
       add(bioEffect({ name: i.name, bioKind: String(s.bioKind ?? 'other'), rating: Number(s.rating ?? 0), installed: true, damaged: false, active: false, cultured: Boolean(s.cultured) }).attributes);
     } else if (i.type === 'cyberware' || i.type === 'adeptpower') add(s.attributes as Record<string, unknown> | undefined);
+    if (i.type === 'cyberware' && !s.bioware) {
+      if (gearBook('dermal') && isDermalPlating({ name: i.name, bioware: false, kind: String(s.kind ?? '') })) add({ body: dermalRating(s as any) });
+      if (s.kind === 'boneLacing') add({ body: boneLacingBook(String(s.lacing ?? ''), replacements).body });
+    }
   }
+  add({ body: limbPairsBody(cyber.filter((i) => i.system.kind === 'cyberlimb').map((i) => ({ name: i.name, location: String((i.system.limb as any)?.location ?? 'other') }))) });
   return out;
 }
 

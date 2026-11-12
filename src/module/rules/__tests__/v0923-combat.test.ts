@@ -101,6 +101,11 @@ describe('v0.92.3 combat: ranged defense (COMBAT_V923.rangedDefense, Core pp. 87
     assert.equal(U80C.cbtCleanMissRanged(shot, true), false);                 // opposed melee keeps its own test
     assert.equal(U80C.cbtCleanMissRanged({ suppressive: true }, false), false);
   });
+  test('review fix: a melee attack that isn\'t opposed (defender down, unaware) keeps the v0.92.2 path, not the ranged rule', (t) => {
+    assert.equal(U80C.cbtCleanMissRanged({ melee: true }, false), false);
+    t.after(urrMode({ 'URR_V80.cbtDefense': 'cleanMiss' }));
+    assert.equal(U80C.cbtCleanMissRanged({ melee: true }, false), true, 'the Revamp\'s own flow still takes it');
+  });
   test('book: Ka-Ge 7 Q4: 9M, 6 attack successes against 8 resistance is L', () => {
     const r = U80C.cbtSoakLevel('M', { hits: 6, net: 6 }, 8, 1);
     assert.equal(r.level, 'L');

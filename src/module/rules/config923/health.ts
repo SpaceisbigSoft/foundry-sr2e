@@ -10,6 +10,8 @@
  * Damage and healing (Core pp. 110–115)
  * - death: 'natural' — dead only when the Overflow is MORE than the natural Body (unaugmented by cyberware or magic;
  *   Will to Live boxes still count) (Core p. 111) / 'total': dead when the Overflow reaches the augmented Body.
+ * - healingBody: 'natural' — the Body Test to heal Physical damage naturally rolls the natural Body only; cyberware
+ *   doesn't help (Core p. 112) / 'total': the augmented Body (the old way). No Revamp rule of its own: either source.
  * - bleed: 'tenMinutes' — a dying character, unattended, takes another box every 10 minutes (Core pp. 111, 115) /
  *   'bodyTurns': every (Body) Combat Turns (RULES.CONDITIONS.dying).
  * - stunRecovery: 'book' — the higher of Body and Willpower vs 2 + the injury modifiers (Stun and Physical); no care,
@@ -74,6 +76,7 @@
  */
 export const HEALTH_V923 = {
   death: 'natural' as 'natural' | 'total',
+  healingBody: 'natural' as 'natural' | 'total',
   bleed: 'tenMinutes' as 'tenMinutes' | 'bodyTurns',
   /** The book's minutes per box while dying unattended (Core p. 111). */
   bleedMinutes: 10,
@@ -132,6 +135,7 @@ export const HEALTH_V923 = {
 /** The house-rules window's rows for HEALTH_V923 (spread into settings.ts HOUSE_RULES). */
 export const HOUSE_HEALTH_V923: Array<{ path: string; section: string; type: 'number' | 'boolean' | 'select'; choices?: string[]; step?: number }> = [
   { section: 'characters', path: 'HEALTH_V923.death', type: 'select', choices: ['natural', 'total'] },
+  { section: 'characters', path: 'HEALTH_V923.healingBody', type: 'select', choices: ['natural', 'total'] },
   { section: 'characters', path: 'HEALTH_V923.bleed', type: 'select', choices: ['tenMinutes', 'bodyTurns'] },
   { section: 'characters', path: 'HEALTH_V923.stunRecovery', type: 'select', choices: ['book', 'old'] },
   { section: 'characters', path: 'HEALTH_V923.firstAid', type: 'select', choices: ['level', 'boxes'] },

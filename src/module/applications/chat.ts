@@ -2143,15 +2143,21 @@ async function onDrugCrash(message: any, button: HTMLButtonElement): Promise<voi
 
 /** An adrenal pump's crash: the wearer resists. */
 async function onAdrenalCrash(message: any, button: HTMLButtonElement): Promise<void> {
-  const c = message.getFlag(SYSTEM_ID, 'adrenalCrash') as { actorUuid: string; rating: number; turns?: number } | undefined;
+  const c = message.getFlag(SYSTEM_ID, 'adrenalCrash') as { actorUuid: string; itemId?: string; rating: number; turns?: number } | undefined;
   const actor: any = c ? await fromUuid(c.actorUuid) : null;
   if (!c || !actor) return ui.notifications.warn(tx('SR2E.Notify.Chat.thatCharacterNoLongerExists'));
   if (!actor.isOwner) return ui.notifications.warn(tx('SR2E.Notify.Chat.onlySOwnerOrTheGm4', { actorName: escHtml(actor.name) }));
   if (!(await playerMay(message, actor, origin(message), tx('SR2E.Card.Chat.resistsAnAdrenalPumpCrashRating', { actorName: actor.name, rating: safeInt(c.rating, 0, 10, 0) })))) return;
   if (cardDone(message, actor, 'adrenalRolled')) return ui.notifications.warn(tx('SR2E.Notify.Chat.theCrashHasAlreadyBeenRolled'));
+  // v0.92.3 review fix: the rating and the turns it ran come from the pump itself (the card's numbers are only its text):
+  // the card's item, else the wearer's adrenal pump.
+  const pumps = Array.from((actor.items ?? []) as Iterable<any>).filter((i: any) => i.type === 'cyberware' && i.system?.bioKind === 'adrenalPump');
+  const pump: any = pumps.find((i: any) => i.id === c.itemId) ?? pumps[0];
+  if (!pump) return ui.notifications.warn(tx('SR2E.Notify.Chat.thatCharacterNoLongerExists'));
   button.disabled = true;
   // v0.92.3 (RULES.GEAR_V923.adrenalCrash 'book'): the turns it ran set the crash's Power.
-  await actor.rollAdrenalCrash(safeInt(c.rating, 0, 10, 0), c.turns === undefined ? undefined : safeInt(c.turns, 0, 12, 0));
+  const ran = Number(pump.getFlag?.(SYSTEM_ID, 'adrenalTurns'));
+  await actor.rollAdrenalCrash(safeInt(pump.system?.rating, 0, 10, 1), Number.isFinite(ran) ? safeInt(ran, 0, 12, 0) : c.turns === undefined ? undefined : 0);
   await markCardDone(message, actor, 'adrenalRolled');
 }
 

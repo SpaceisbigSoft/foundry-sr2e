@@ -6,6 +6,7 @@ Switches in `RULES.HEALTH_V923` (`rules/config923/health.ts`, helpers in `rules/
 | --- | --- | --- | --- | --- |
 | Stun overflow | 2 Stun boxes to a Physical box | box for box | Core p. 111 | `STUN_OVERFLOW_PER_PHYSICAL_BOX` 2 → 1 |
 | Death | dead when the Overflow reaches the total (augmented) Body | dead only when the Overflow is more than the natural Body (Will to Live still adds boxes); the sheet's Overflow row follows | Core p. 111 | `HEALTH_V923.death` 'natural' / 'total' |
+| Natural healing Body | the augmented Body | the natural Body only (cyberware doesn't help) for the Physical healing test | Core p. 112 | `HEALTH_V923.healingBody` 'natural' / 'total' |
 | Bleeding out | 1 box every (Body) Combat Turns | 1 box every 10 minutes unattended | Core pp. 111, 115 | `HEALTH_V923.bleed` 'tenMinutes' / 'bodyTurns' (`bleedMinutes` 10) |
 | Stun recovery | Body vs 2/4/6/8 by wound, care rows, home lifestyle, hospital fee | the higher of Body and Willpower vs 2 + the injury modifiers (Stun and Physical); no care, no fee | Core p. 112 | `HEALTH_V923.stunRecovery` 'book' / 'old' (`stunRecoveryTn` 2) |
 | First aid effect | 1 box per success, at most half | any success lowers the wound one level (to the next level's lowest box; Light clears); a Deadly wound only stabilised | Core p. 115 | `HEALTH_V923.firstAid` 'level' / 'boxes' |

@@ -38,7 +38,7 @@ Switches in `RULES.CORE_V923` (`rules/config923/core.ts`, pure functions in `rul
 | Build/Repair without tools | +4 TN | not allowed | Core p. 183 | `CHARACTERS_V58.tools.none` 'tn' → 'block' |
 | Climbing TNs | 2 / 4 / 6 / 8 | 3 / 5 / 8 / 14 | Fields of Fire p. 75 | `STREET.athletics.climb` (the Revamp's patch sets the same) |
 | Climbing and swimming distance | 2 m per success | climb ¼ × ((Q + S) ÷ 2 + 2 per success); height/wet modifiers; swim (Q + successes) × run ÷ 5 | Fields of Fire p. 75; Cyberpirates | `CORE_V923.athletics`, `.climbModifiers` (the Revamp's hsAthletics wins) |
-| Threat Rating | + Combat Pool dice | + dice on every test (attacks, defence, damage resistance, tests through the test path), never spent; no Combat Pool | Core p. 187 | `CORE_V923.threat` |
+| Threat Rating | + Combat Pool dice | + dice on every test (attacks, defence, damage resistance, tests through the test path), never spent, counted as Combat Pool dice for a clean miss (Core p. 86); no Dice Pools (Combat, Spell, Hacking, Control, Task) | Core pp. 86, 187 | `CORE_V923.threat` |
 | Morale | PR dice vs 4 + casualties | withdraws at the PR's wound (1 L, 2 M, 3 S, 4 never); Willpower (4) to stay | Core p. 187 | `CORE_V923.morale`, `.moraleWound` |
 | Recognition | Intelligence vs 10 − Public Awareness | the NPC's Etiquette vs (1,000 − rep) ÷ 50 (rep: career Karma, or a public rep) | Core p. 199 | `CORE_V923.recognition` |
 | Haggling | the seller vs TN 4 | the seller vs the buyer's Willpower (cap kept, see below) | Core p. 184 | `CORE_V923.haggle` |

@@ -30,6 +30,17 @@ export function deathBody(total: number, natural: number | null | undefined): nu
   return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : t;
 }
 
+/**
+ * v0.92.3 review fix: the Body that heals Physical damage naturally: the natural Body by the book (Core p. 112:
+ * cyberware doesn't help), else the total. Under either rules source (the Revamp has no rule of its own for it).
+ */
+export function healingBody(total: number, natural: number | null | undefined): number {
+  const t = Math.max(0, Math.floor(Number(total) || 0));
+  if (H().healingBody !== 'natural') return t;
+  const n = Number(natural);
+  return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : t;
+}
+
 /** Minutes of game time per box while dying unattended (Core p. 111), or 0 for the (Body) Combat Turns rule. */
 export function bleedMinutes(): number {
   const urr = Number(U().hsBleedMinutes) || 0;

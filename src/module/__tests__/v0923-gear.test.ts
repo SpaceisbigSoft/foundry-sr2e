@@ -170,6 +170,15 @@ describe('v0.92.3 gear glue: dermal plating, cyberlimbs, bone lacing', () => {
     assert.equal(a.system.attributes.body.total, 4);
     assert.deepEqual(a.system.derived.cyberArmor, { ballistic: 2, impact: 2 });
   });
+  test('review fix: plating that is Body no longer takes orthoskin\'s armor away; the old way keeps the conflict', (t) => {
+    const ortho = { id: 'os', type: 'cyberware', name: 'Orthoskin 3', system: { bioware: true, bioKind: 'orthoskin', rating: 3, bodyIndex: 0.5, installed: true, attributes: {} } };
+    const a = who({}, [ware('dp', 'Dermal plating 2', { rating: 2, armorBallistic: 2, armorImpact: 2, essenceCost: 1 }), ortho]);
+    assert.deepEqual(a.system.derived.cyberArmor, { ballistic: 1, impact: 2 }, 'orthoskin 3: 2 impact, 1 ballistic');
+    assert.ok(a.system.derived.cyberWarnings.some((w: string) => /Orthoskin/.test(w)), 'still incompatible (a warning)');
+    t.after(oldWay({ 'GEAR_V923.dermal': 'armor' }));
+    a.system.prepareDerivedData();
+    assert.deepEqual(a.system.derived.cyberArmor, { ballistic: 2, impact: 2 }, 'the old way: the plating\'s armor, orthoskin cancelled');
+  });
   test('dermal plating counts once on the permanent damage test (in Body; the old way as dermal armor dice)', async (t) => {
     const a = who({}, [ware('dp', 'Dermal plating 2', { rating: 2, armorBallistic: 2, armorImpact: 2, essenceCost: 1 })]);
     faces.push(...Array(12).fill(1));
@@ -309,6 +318,17 @@ describe('v0.92.3 gear glue: surgery and system damage', () => {
     assert.equal(it.system.essenceCost, 2.3);
     assert.match(chat.at(-1).content, /Essence cost is 2\.3 \(was 2\)/);
     assert.doesNotMatch(chat.at(-1).content, /Complications/);
+  });
+  test('review fix: a cost that would take the patient below 0 Essence stops at 0 (Cybertechnology p. 54)', async () => {
+    const doc = who({}, [biotech]);
+    const p = who({ essence: 2.2 }, [ware('ww', 'Wired reflexes 1', { essenceCost: 2, installed: false, reaction: 2, initiativeDice: 1 })]);
+    faces.push(1, 1, 1, 2, 2); // vs TN 10 (10 − 0): nothing, +15% = 2.3 > 2.2 left
+    await p.surgery('ww', { surgeon: doc });
+    const it = p.items.get('ww');
+    assert.equal(it.system.essenceCost, 2.2);
+    assert.equal(p.system.derived.essence, 0);
+    assert.notEqual(p.system.derived.status, 'dead');
+    assert.match(chat.at(-1).content, /survives at Essence 0/);
   });
   test('old: TN 4 + grade, no successes is complications', async (t) => {
     t.after(oldWay({ 'GEAR_V923.surgery': 'old' }));

@@ -81,7 +81,7 @@ import { underwayRows, PROJECT_SHEET_ACTIONS } from "./projects.ts";
 import { recordCreation, reopenCreation, addAdvancementNote, deleteAdvancementLine, refuseLockedRaises } from "./advancement.ts";
 import { refusePermitTick, permitRowFor, vehiclePermitPayer } from "./permits.ts";
 import { timeLabel } from "../rules/waiting.ts";
-import { dropRequest, approvalNeeded, inCreation as inCreationNow, creationRecordOf } from "./approvals.ts";
+import { dropRequest, approvalNeeded, inCreation as inCreationNow, creationRecordOf, draftTable } from "./approvals.ts";
 import { escHtml } from "../rules/html.ts";
 import { gearBook } from "../rules/gear923.ts";
 import { requestGm, onRelay, type RelayOp } from "./socket.ts";
@@ -1380,7 +1380,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     });
     if (!ok) return;
     const saved = (actor.getFlag(SYSTEM.id, "build") ?? null) as Partial<Record<BuildColumn, Priority>> | null;
-    await recordCreation(actor, { how: "asIs", priorities: saved ?? {}, checks: saved && Object.values(saved).some((v) => v) ? buildCheck(buildInputFor(actor, saved)) : [] });
+    await recordCreation(actor, { how: "asIs", priorities: saved ?? {}, checks: saved && Object.values(saved).some((v) => v) ? CO923.withPriorityTable(draftTable(actor), () => buildCheck(buildInputFor(actor, saved))) : [] });
   }
 
   /** v0.64.0 (GM): take the record away so creation can be done again. */
@@ -1439,7 +1439,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       const attributes = Object.fromEntries(ATTRIBUTE_KEYS.map((k) => [k, Math.max(0, Math.floor(Number(el[`attr-${k}`]?.value) || 0))]));
       return { priorities, metatype: String(el.metatype?.value || base.metatype), magic: String(el.magicKind?.value || base.magic) as BuildInput["magic"], attributes, outright: Boolean(el.outright?.checked), ...lists(el) };
     };
-    const render = (c: { priorities: Partial<Record<BuildColumn, Priority>>; metatype: string; magic: BuildInput["magic"]; attributes: Record<string, number>; skills?: any[]; gear?: { items: any[]; total: number }; warnings?: string[]; outright?: boolean }) => {
+    const render0 = (c: { priorities: Partial<Record<BuildColumn, Priority>>; metatype: string; magic: BuildInput["magic"]; attributes: Record<string, number>; skills?: any[]; gear?: { items: any[]; total: number }; warnings?: string[]; outright?: boolean }) => {
       const input = { ...buildInputFor(actor, c.priorities), metatype: c.metatype, magic: c.magic, attributes: c.attributes, intelligence: c.attributes["intelligence"] ?? base.intelligence };
       // The lists replace sheet skills of the same name, and add their gear's price.
       const listed = (c.skills ?? []);
@@ -1468,6 +1468,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       if (c.warnings?.length) rows.push(`<tr class="sr2e-warning"><td>${tx('SR2E.Dialog.Sheet.lists')}</td><td colspan="3">${escHtml(c.warnings.join(" "))}</td></tr>`);
       return rows.join("");
     };
+    // v0.92.3 review fix: a creation draft is checked against the priority table it was started with.
+    const render = (c: Parameters<typeof render0>[0]) => CO923.withPriorityTable(draftTable(actor), () => render0(c));
     const selects = BUILD_COLUMNS.map((k) => `<label>${escHtml(cap(k))} <select name="${k}"><option value="">–</option>${PRIORITY_LETTERS.map((l) => `<option value="${l}" ${saved[k] === l ? "selected" : ""}>${l}</option>`).join("")}</select></label>`).join(" ");
     const metas = Object.entries(RULES.METATYPES.types).map(([k, v]) => `<option value="${escHtml(k)}" ${k === base.metatype ? "selected" : ""}>${escHtml(v.label)}</option>`).join("");
     const magics = [["none", tx('SR2E.App.Sheets.mundane')], ["full", tx('SR2E.App.Sheets.fullMagician')], ["adept", tx('SR2E.App.Sheets.physicalAdept')], ["aspected", tx('SR2E.App.Sheets.aspectedMagician')]].map(([k, l]) => `<option value="${escHtml(k)}" ${k === base.magic ? "selected" : ""}>${escHtml(l)}</option>`).join("");
@@ -3122,7 +3124,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const choice = await foundry.applications.api.DialogV2.prompt({
       window: { title: tx('SR2E.Dialog.Sheet.roll3', { itemName: item.name }) },
       content: `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.targetNumber')}</label><input name="tn" type="number" value="${isLang ? (langTable.find((x) => x.id === langDefault)?.tn ?? 4) : 4}" min="2" autofocus></div>
-        ${urrCoreTnPresetRow(String(item.system?.kind ?? ""))}${extra58}${taskRow}${CO923.karmaDiceRow(Number(actor.system?.derived?.karmaPoolLeft ?? 0), Number(item.system?.rating ?? 0) > 0, Number(item.system?.rating ?? 0))}
+        ${urrCoreTnPresetRow(String(item.system?.kind ?? ""))}${extra58}${taskRow}${CO923.karmaDiceRow(Number(actor.system?.derived?.karmaPoolLeft ?? 0), Number(item.system?.rating ?? 0) > 0 || !RULES.URR_V80.coreKarmaDice, Number(item.system?.rating ?? 0) > 0 ? Number(item.system?.rating ?? 0) : Number(actor.system?.attributes?.[String(item.system?.attribute ?? '')]?.total ?? 0))}
         ${skillChoiceRows(this.document, item, false)}
         <label class="sr2e-check"><input type="checkbox" name="open"> ${tx('SR2E.Dialog.Sheet.openTestNoTnTheHighest')}</label>
         ${others.length ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.complementarySkill1DiePerSuccesses', { complementarySuccessesPerDie: RULES.STREET.tests.complementary.successesPerDie })}</label><select name="comp"><option value="">${tx('SR2E.Dialog.Sheet.none')}</option>${others.map((o: any) => `<option value="${escHtml(o.id)}">${escHtml(o.name)} ${escHtml(o.system.rating)}</option>`).join("")}</select></div>` : ""}

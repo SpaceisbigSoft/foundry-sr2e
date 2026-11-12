@@ -216,6 +216,24 @@ describe('v0.92.3 core: perception on the sheet (Core p. 185; Companion p. 90)',
   });
 });
 
+describe('v0.92.3 review fix: a creation draft keeps the priority table it was started with', () => {
+  test('a draft saved before v0.92.3 (no table) checks against the old table; a new one against the book', async () => {
+    const { draftTable } = await import('../applications/approvals.ts');
+    const { buildRowsFor } = await import('../applications/buildinput.ts');
+    const old = who({ name: 'Old draft' });
+    old.flags = { sr2e: { creationDraft: { step: 'priorities' }, build: { attributes: 'A' } } };
+    assert.equal(draftTable(old), 'old');
+    const row = (a: any) => buildRowsFor(a).find((r: any) => r.label === 'Attributes');
+    assert.equal(row(old)?.allowed, String(RULES.CREATION.priorities.A.attributes));
+    const fresh = who({ name: 'New draft' });
+    fresh.flags = { sr2e: { creationDraft: { step: 'priorities', table: 'book' }, build: { attributes: 'A' } } };
+    assert.equal(draftTable(fresh), 'book');
+    assert.equal(row(fresh)?.allowed, '30');
+    const done = who({ name: 'No draft' });
+    assert.equal(draftTable(done), null);
+  });
+});
+
 describe('v0.92.3 core: NPCs (Core p. 187)', () => {
   test('a Threat Rating: no Combat Pool, its dice on tests, defence and damage resistance; the pool way with the switch', async (t) => {
     const npc = who({ name: 'Boss', type: 'npc', threatRating: 3 });
@@ -233,6 +251,30 @@ describe('v0.92.3 core: NPCs (Core p. 187)', () => {
     assert.equal(old.system.derived.combatPool - plain.system.derived.combatPool, 3);
     faces.push(5, 5, 5, 5);
     assert.equal((await old.rollAttribute('body', { targetNumber: 4 })).totalDice, 4);
+  });
+
+  test('review fix: a Threat-rated NPC uses no standard Dice Pool at all (Core p. 187); the pool way keeps them', (t) => {
+    const mage = who({ name: 'Mage', type: 'npc', threatRating: 3, magic: 5, tradition: 'hermetic' }, [{ id: 's1', type: 'skill', name: 'Sorcery', system: { rating: 5, attribute: 'willpower' } }]);
+    assert.equal(mage.system.derived.spellPool, 0);
+    assert.equal(mage.system.derived.taskPool, 0);
+    assert.equal(mage.system.derived.hackingPool, 0);
+    assert.equal(mage.system.derived.controlPool, 0);
+    t.after(oldWay({ 'CORE_V923.threat': 'pool' }));
+    const old = who({ name: 'Mage', type: 'npc', threatRating: 3, magic: 5, tradition: 'hermetic' }, [{ id: 's1', type: 'skill', name: 'Sorcery', system: { rating: 5, attribute: 'willpower' } }]);
+    assert.ok(old.system.derived.spellPool > 0);
+  });
+
+  test('review fix: Threat dice count as Combat Pool dice for a clean miss (Core p. 86), never spent', async () => {
+    const npc = who({ name: 'Boss', type: 'npc', threatRating: 3 });
+    faces.push(5, 5, 5, 5, 5, 5, 5);
+    const r = await npc.rollAttribute('body', { targetNumber: 4 });
+    assert.equal(r.dice.filter((d: any) => d.pool).length, 3, 'the Threat dice are tagged as pool dice');
+    assert.equal(npc.system.poolSpent.combat, 0);
+    faces.push(1, 1, 1, 1, 5, 5, 1);                               // Body 4 fail; Threat 2 of 3 succeed vs 1 attack success
+    await npc.resistDamage({ power: 4, level: 'M', type: 'physical', cleanMiss80: { hits: 1, net: 1, apart: true } });
+    assert.equal(faces.length, 0);
+    assert.match(chat.at(-1).content, /Clean miss/);
+    assert.equal(npc.system.monitor.physical, 0);
   });
 
   test('morale: a Professional Rating 2 NPC withdraws at a Moderate wound; Willpower (4) lets it stay', async () => {

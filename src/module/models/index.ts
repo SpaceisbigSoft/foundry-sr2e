@@ -827,8 +827,10 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
     if (tw.skillMods.length) cyber.skillMods = [...cyber.skillMods, ...tw.skillMods];
     const initDice = capInitiativeDice(Math.max(1, RULES.BASE_INITIATIVE_DICE + sys.initiativeDiceBonus + bonus.initiativeDice + tw.initiativeDice));
     const limbOver = cyber.limbs.filter((l: any) => l.capacity.over).map((l: any) => tx('SR2E.App.Models.capacityOfUsed', { name: l.name, used: l.capacity.used, capacity: l.capacity.capacity }));
-    // Cyber armor (not bioware) for orthoskin's conflict with dermal plating.
-    const cyberOnly = installed.filter((i: any) => !i.system.bioware);
+    // Cyber armor (not bioware) for orthoskin's conflict with dermal plating. v0.92.3 review fix (RULES.GEAR_V923.dermal
+    // 'body'): plating is Body, not armor, so its armor fields don't take orthoskin's armor away (the two being
+    // incompatible, Shadowtech p. 17, stays a warning).
+    const cyberOnly = installed.filter((i: any) => !i.system.bioware && !(gearBook('dermal') && isDermalPlating({ name: i.name, bioware: i.system.bioware, kind: i.system.kind })));
     const bw = bioDerived(ware, {
       ballistic: Math.max(0, ...cyberOnly.map((i: any) => i.system.armorBallistic ?? 0)),
       impact: Math.max(0, ...cyberOnly.map((i: any) => i.system.armorImpact ?? 0)),
@@ -930,7 +932,8 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
     const projecting923 = RULES.SPIRITS_V923.astralPool === 'book' && astralPool923 > 0 && (sys.astral ?? 'physical') === 'projecting';
     const combatPool = projecting923 ? astralPool923 : noPools ? 0 : Math.max(0, Math.max(0, d.combatPool - armorPool80 - heavyPool) + threat + (RULES.BOOK_V78.combatSense === 'pool' ? adeptSpecialLevel(adept as any, 'combatSense') * RULES.ADEPT.combatSense.dicePerLevel : 0) + (tw.pools.combat ?? 0));
     // v0.92.1 review (N10): a Spell Pool tweak only for someone with a Spell Pool.
-    const spellPool = Math.max(0, d.spellPool + powerFocus + (poolMagic > 0 ? (tw.pools.spell ?? 0) : 0));
+    // Review fix (Core p. 187: "do not use standard Dice Pools" for a Threat-rated NPC): no Spell Pool either.
+    const spellPool = noPools ? 0 : Math.max(0, d.spellPool + powerFocus + (poolMagic > 0 ? (tw.pools.spell ?? 0) : 0));
     sys.derived = {
       // v0.72.0: health edges and flaws, and Shadowtech bioware vitals (rules/vitals.ts).
       vitals: { ...qv, overflowBody: overflowBody(deathBodyNow, qv) },
@@ -954,7 +957,7 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
       // v0.92.0 (RULES.MAGIC_V920.poolLayers): the Spell Pool's narrow layers (Sorcery's concentration and
       // specialization; rules/magicpool.ts), for a Sorcery-sized pool only.
       spellLayers: (() => {
-        const sk: any = poolMagic > 0 && !adeptPool && RULES.DOCS_V79.magicPool.size === 'sorcery' ? sorcerySkillOf((this as any).parent?.items) : null;
+        const sk: any = !noPools && poolMagic > 0 && !adeptPool && RULES.DOCS_V79.magicPool.size === 'sorcery' ? sorcerySkillOf((this as any).parent?.items) : null;
         const l = poolLayers(sk?.system ?? null);
         const left = narrowLeft(l, { conc: sys.poolSpent.spellConc, spec: sys.poolSpent.spellSpec });
         return { ...l, concLeft: left.conc, specLeft: left.spec };
@@ -1042,6 +1045,8 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
     // v0.92.3: the decker's own Reaction (no cyber or magic Reaction boosts) for the persona (VR2 p. 120).
     Object.assign(sys.derived, deckerDerived((this as any).parent, sys, totals.intelligence, totals as unknown as Record<string, number>, tw.pools.hacking ?? 0, d.reaction - bonus.reaction));
     Object.assign(sys.derived, riggerDerived(sys, installed, d.reaction, bonus, [...((this as any).parent?.items ?? [])], tw.pools.control ?? 0));
+    // Review fix (RULES.CORE_V923.threat 'book', Core p. 187): a Threat-rated NPC uses no standard Dice Pool at all.
+    if (noPools) Object.assign(sys.derived, { taskPool: 0, taskPoolLeft: 0, hackingPool: 0, hackingPoolLeft: 0, controlPool: 0, controlPoolLeft: 0 });
   }
 }
 

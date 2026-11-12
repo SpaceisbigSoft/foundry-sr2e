@@ -317,6 +317,19 @@ describe('v0.92.3 Stun recovery and Body Index (HEALTH_V923.stunRecovery, bodyIn
     const rest2 = await p2.naturalHeal({ track: 'stun', hours: 1 });
     assert.ok(rest2.modifiers.some((m: any) => /^Body Index/.test(String(m.label))));
   });
+  test('review fix: natural healing of Physical damage rolls the natural Body (Core p. 112); total: the augmented Body', async (t) => {
+    const boost = { id: 'bb', type: 'cyberware', name: 'Body boost', system: { essenceCost: 0.5, grade: 'standard', installed: true, bioware: false, attributes: { body: 2 }, kind: 'other' } };
+    const p = who({ name: 'Chromed patient', monitor: { physical: 2, stun: 0 } }, [boost]);
+    assert.equal(p.system.attributes.body.total - p.system.attributes.body.natural, 2);
+    fives(20);
+    const r = await p.naturalHeal({ track: 'physical', hours: 24 });
+    assert.equal(r.totalDice, p.system.attributes.body.natural);
+    t.after(off({ 'HEALTH_V923.healingBody': 'total' }));
+    const p2 = who({ name: 'Chromed patient', monitor: { physical: 2, stun: 0 } }, [boost]);
+    faces.length = 0; fives(20);
+    const o = await p2.naturalHeal({ track: 'physical', hours: 24 });
+    assert.equal(o.totalDice, p2.system.attributes.body.total);
+  });
   test('no spell heals Stun by the book', async (t) => {
     const p = who({ name: 'Dazed', monitor: { physical: 0, stun: 4 } });
     const c = mage({ name: 'Healer' }, [spell('hs', 'Heal', { healTrack: 'stun' })]);
@@ -354,6 +367,24 @@ describe('v0.92.3 permanent damage and drastic surgery (HEALTH_V923.permanentDam
     assert.deepEqual({ kind: out.kind, result: out.result }, { kind: 'limb', result: 'leftEye' });
     assert.match(chat.at(-1).content, /vs 6/);
   });
+  test('review fix: a troll\'s dermal armor adds its die; damaged ware doesn\'t; a full heal clears the trauma patch\'s +2', async () => {
+    const troll = who({ name: 'Troll', metatype: 'troll', monitor: { physical: 10, stun: 0 } });
+    const dermal = Number(troll.system.derived.racialDermal);
+    assert.ok(dermal > 0);
+    faces.push(...Array(30).fill(1));
+    await troll.rollPermanentDamage();
+    assert.match(chat.at(-1).content, new RegExp(`Body ${troll.system.attributes.body.total + dermal} dice \\(dermal armor ${dermal}\\)`));
+    faces.length = 0;
+    const broken = { id: 'ar', type: 'cyberware', name: 'Subdermal armor', system: { essenceCost: 0.5, grade: 'standard', installed: true, damaged: true, bioware: false, kind: 'other', armorBallistic: 2, armorImpact: 2, attributes: {} } };
+    const b = who({ name: 'Broken', monitor: { physical: 10, stun: 0 } }, [broken]);
+    faces.push(...Array(30).fill(1));
+    await b.rollPermanentDamage();
+    assert.match(chat.at(-1).content, /\(dermal armor 0\)/);
+    faces.length = 0;
+    const p = who({ name: 'Patched', monitor: { physical: 0, stun: 0 }, flags: { sr2e: { traumaPatched923: true } } });
+    await p.syncCondition('ok', { physical: false, stun: false }, { physical: 3, stun: 0 });
+    assert.equal(p.getFlag('sr2e', 'traumaPatched923') ?? null, null);
+  });
   test('a magician through drastic surgery is asked for a Magic loss test', async (t) => {
     const doc = who({ name: 'Doc' }, [skill('bt', 'Biotech', 5, 'intelligence')]);
     const ware = { id: 'ww', type: 'cyberware', name: 'Wired Reflexes 1', system: { essenceCost: 2, grade: 'standard', installed: false, attributes: {}, reaction: 2, initiativeDice: 1 } };
@@ -366,6 +397,15 @@ describe('v0.92.3 permanent damage and drastic surgery (HEALTH_V923.permanentDam
     const q = who({ name: 'Adept', magic: 5 }, [{ ...ware, id: 'w2' }]);
     fives(6);
     await q.surgery('w2', { surgeon: doc, pay: false });
+    assert.ok(!chat.some((c: any) => /drastic invasive surgery/.test(c.content)));
+  });
+  test('review fix: drastic is judged on the graded Essence (1.2 alphaware = 0.96: not drastic)', async () => {
+    const doc = who({ name: 'Doc' }, [skill('bt', 'Biotech', 5, 'intelligence')]);
+    const ware = { id: 'wa', type: 'cyberware', name: 'Alpha ware', system: { essenceCost: 1.2, grade: 'alpha', installed: false, attributes: {}, reaction: 0, initiativeDice: 0 } };
+    const p = who({ name: 'Adept', magic: 5 }, [ware]);
+    fives(6);
+    await p.surgery('wa', { surgeon: doc, pay: false });
+    assert.ok(p.items.get('wa').system.installed);
     assert.ok(!chat.some((c: any) => /drastic invasive surgery/.test(c.content)));
   });
 });
@@ -442,6 +482,16 @@ describe('v0.92.3 shock weapons (HEALTH_V923.shock; Core p. 103)', () => {
     ones(4);
     await b.resistFromState({ targetUuid: b.uuid, melee: false, damageType: 'stun', power: 10, level: 'S', armorKind: 'impact', armorMultiplier: 0.5, shock: true } as any, 0);
     assert.equal((b.getFlag('sr2e', 'powerEffects') ?? []).length, 0);
+  });
+  test('review fix: a second, shorter shock never cuts the disorientation short', async () => {
+    const a = who({ name: 'Mark' });
+    faces.push(1, 1, 1, 1, 1);                                        // no successes: 10 turns
+    assert.equal(await a.shockDisorient(10, 0), 10);
+    const first = (a.getFlag('sr2e', 'powerEffects') ?? []).find((e: any) => e.id === 'shockDisoriented923');
+    faces.push(1, 1, 1, 1, 1);
+    assert.equal(await a.shockDisorient(3, 0), 3);
+    const after = (a.getFlag('sr2e', 'powerEffects') ?? []).find((e: any) => e.id === 'shockDisoriented923');
+    assert.deepEqual(after.until, first.until);
   });
 });
 

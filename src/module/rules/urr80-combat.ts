@@ -42,9 +42,11 @@ export function cbtCleanMissOn(): boolean {
  * Whether an attack against a character takes the clean-miss path (no dodge; the pool goes to the resistance test).
  * Opposed melee, astral, Matrix, ram, flamethrower, elemental, suppressive and blast attacks keep the book path.
  */
-export function cbtCleanMissRanged(a: { astral?: boolean; matrix?: boolean; ram?: unknown; flame?: boolean; elemental?: boolean; suppressive?: boolean; fixedDamage?: boolean; noDodge?: boolean } | null | undefined, opposed: boolean): boolean {
-  // v0.92.3 (COMBAT_V923.rangedDefense 'book', Core pp. 87, 91): the book's ranged defense is this procedure.
-  if (!(cbtCleanMissOn() || C923.rangedDefenseBook()) || !a || opposed) return false;
+export function cbtCleanMissRanged(a: { melee?: boolean; astral?: boolean; matrix?: boolean; ram?: unknown; flame?: boolean; elemental?: boolean; suppressive?: boolean; fixedDamage?: boolean; noDodge?: boolean } | null | undefined, opposed: boolean): boolean {
+  // v0.92.3 (COMBAT_V923.rangedDefense 'book', Core pp. 87, 91): the book's ranged defense is this procedure. It is a
+  // ranged rule: a melee attack that isn't opposed (defender down, unaware, held; melee.opposed off) keeps the v0.92.2
+  // path unless the Revamp's own flow is on.
+  if (!a || opposed || !(cbtCleanMissOn() || (C923.rangedDefenseBook() && !a.melee))) return false;
   return !(a.astral || a.matrix || a.ram || a.flame || a.elemental || a.suppressive || a.fixedDamage || a.noDodge);
 }
 
