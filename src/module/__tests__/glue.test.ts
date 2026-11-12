@@ -2731,7 +2731,8 @@ describe("v0.20.0 combat additions", () => {
     assert.match(chat.at(-1).content, /knocked down/);
   });
 
-  test("cyberware armor, smartlink and vision; bioware costs Body Index and Magic, not Essence", () => {
+  test("cyberware armor, smartlink and vision; bioware costs Body Index and Magic, not Essence", (t) => {
+    t.after(oldWay({ "GEAR_V923.dermal": "armor", "GEAR_V923.awakenedBioware": "magic" })); // v0.92.3: the old way (v0.92.2); __tests__/v0923-gear.test.ts has the book's
     const sys = Object.create(CharacterDataModel.prototype);
     sys.attributes = Object.fromEntries(Object.entries(A).map(([k, v]) => [k, { base: v, mod: 0 }]));
     Object.assign(sys, { essence: 6, magic: 5, reactionBonus: 0, initiativeDiceBonus: 0, poolSpent: { combat: 0, spell: 0 }, monitor: { physical: 0, stun: 0 } });
@@ -2790,7 +2791,8 @@ describe("v0.21.0 combat fixes", () => {
     assert.equal(r.targetNumber, 4 + 4 - 3);                   // heavy recoil 4, gyro −3
   });
 
-  test("armor heavier than Quickness lowers Quickness and the Combat Pool", () => {
+  test("armor heavier than Quickness lowers Quickness and the Combat Pool", (t) => {
+    t.after(oldWay({ "GEAR_V923.armorEncumbrance": "old" })); // v0.92.3: the old way (v0.92.2); __tests__/v0923-gear.test.ts has the book's
     const sys = Object.create(CharacterDataModel.prototype);
     sys.attributes = Object.fromEntries(Object.entries(A).map(([k, v]) => [k, { base: v, mod: 0 }]));
     Object.assign(sys, { essence: 6, magic: 0, reactionBonus: 0, initiativeDiceBonus: 0, poolSpent: { combat: 0, spell: 0 }, monitor: { physical: 0, stun: 0 } });
@@ -4068,7 +4070,8 @@ describe("v0.29.0 cyberware depth", () => {
     assert.equal(await a.repairCyberware("w"), null);            // not damaged now
   });
 
-  test("cyberlimbs: housed cyberware costs capacity instead of Essence; attacks with the arm use its Strength; cyberweapons attack and parry", async () => {
+  test("cyberlimbs: housed cyberware costs capacity instead of Essence; attacks with the arm use its Strength; cyberweapons attack and parry", async (t) => {
+    t.after(oldWay({ "GEAR_V923.limbHoused": "capacity", "GEAR_V923.limbPairs": "off" })); // v0.92.3: the old way (v0.92.2); __tests__/v0923-gear.test.ts has the book's
     const a = sam([
       cw("arm", "Cyberarm", { essenceCost: 1, kind: "cyberlimb", limb: { location: "rightArm", strength: 7, quickness: 5, capacity: 0.5 } }),
       cw("spur", "Spur", { essenceCost: 0.3, kind: "cyberweapon", housedIn: "arm", weapon: { skill: "Armed Combat", strengthPower: true, damagePower: 0, damageLevel: "M", damageType: "physical", reach: 0 } }),
@@ -4166,7 +4169,8 @@ describe("v0.30.0 bioware depth", () => {
     g.game.time = { worldTime: 0 };
   });
 
-  test("bioware kinds add their effects; synaptic accelerators don't stack with wired reflexes; cultured and conflict warnings", () => {
+  test("bioware kinds add their effects; synaptic accelerators don't stack with wired reflexes; cultured and conflict warnings", (t) => {
+    t.after(oldWay({ "GEAR_V923.bioware": "old", "GEAR_V923.cultured": "old", "GEAR_V923.dermal": "armor" })); // v0.92.3: the old way (v0.92.2); __tests__/v0923-gear.test.ts has the book's
     const a = person([
       bw("mus", "Muscle Augmentation 2", { bioKind: "muscleAugmentation", rating: 2, bodyIndex: 0.8 }),
       bw("cb", "Cerebral Booster 1", { bioKind: "cerebralBooster", rating: 1, bodyIndex: 0.4 }),
@@ -4204,7 +4208,8 @@ describe("v0.30.0 bioware depth", () => {
     assert.equal(a.system.derived.toxinDice, 3 - 0);             // Body Index 1.4 × 0.5 → −0 dice
   });
 
-  test("Body Index raises the patient's healing TNs", async () => {
+  test("Body Index raises the patient's healing TNs", async (t) => {
+    t.after(oldWay({ "GEAR_V923.bioHealing": "all" })); // v0.92.3: the old way (v0.92.2); __tests__/v0923-gear.test.ts has the book's
     chat.length = 0;
     const a = person([bw("big", "Lots of bioware", { bodyIndex: 4 })]);
     await a.update({ "system.monitor.stun": 2 });
@@ -4213,7 +4218,8 @@ describe("v0.30.0 bioware depth", () => {
     assert.ok(r.modifiers.some((m: any) => m.label === "Body Index 4" && m.value === 2));
   });
 
-  test("adrenal pumps: bonuses while active, a Stun crash when switched off", async () => {
+  test("adrenal pumps: bonuses while active, a Stun crash when switched off", async (t) => {
+    t.after(oldWay({ "GEAR_V923.bioware": "old", "GEAR_V923.adrenalCrash": "old" })); // v0.92.3: the old way (v0.92.2); __tests__/v0923-gear.test.ts has the book's
     chat.length = 0;
     const a = person([bw("ap", "Adrenal Pump 1", { bioKind: "adrenalPump", rating: 1, bodyIndex: 1.25 })]);
     assert.equal(a.system.attributes.quickness.total, 4);
@@ -4228,7 +4234,8 @@ describe("v0.30.0 bioware depth", () => {
     assert.equal(a.system.monitor.stun, 3);
   });
 
-  test("surgery installs the item and sets recovery; no successes means complications", async () => {
+  test("surgery installs the item and sets recovery; no successes means complications", async (t) => {
+    t.after(oldWay({ "GEAR_V923.surgery": "old" })); // v0.92.3: the old way (v0.92.2); __tests__/v0923-gear.test.ts has the book's
     chat.length = 0;
     const doc = person([{ id: "bt", type: "skill", name: "Biotech", system: { rating: 5, attribute: "intelligence" } }]);
     const patient = person([{ id: "ww", type: "cyberware", name: "Wired Reflexes 1", system: { essenceCost: 2, grade: "alpha", installed: false, attributes: {}, reaction: 2, initiativeDice: 1 } }]);
@@ -4732,7 +4739,8 @@ describe("v0.37.0 gear and combat leftovers", () => {
     delete g.game.combat;
   });
 
-  test("armor layering, degrading under a heavy hit, and carried weight", async () => {
+  test("armor layering, degrading under a heavy hit, and carried weight", async (t) => {
+    t.after(oldWay({ "GEAR_V923.load": "old", "GEAR_V923.armorEncumbrance": "old" })); // v0.92.3: the old way (v0.92.2); __tests__/v0923-gear.test.ts has the book's
     chat.length = 0;
     const a = person([armor("Jacket", 5, 3), armor("Vest", 4, 1), armor("Helmet", 1, 1, { adds: true })]);
     assert.equal(a.armorRating("ballistic"), 6);
@@ -5621,7 +5629,8 @@ describe("v0.43.0 gear and combat", () => {
     assert.equal(a.armorRating("impact", { calledLocation: "rightLeg" }), 0);
   });
 
-  test("a Deadly physical hit offers a cyberware damage check; a called shot's cyberlimb is likelier to break", async () => {
+  test("a Deadly physical hit offers a cyberware damage check; a called shot's cyberlimb is likelier to break", async (t) => {
+    t.after(oldWay({ "GEAR_V923.cyberDamage": "old" })); // v0.92.3: the old way (v0.92.2); __tests__/v0923-gear.test.ts has the book's
     chat.length = 0;
     const a = person([ware("arm", "Cyberarm", { kind: "cyberlimb", limb: { location: "leftArm", strength: 6, quickness: 6, capacity: 1 }, armorBallistic: 2 }), ware("eye", "Cybereyes")]);
     faces.push(1, 1, 1, 1);                                               // Body 4 vs 10 − 2: no successes
@@ -5629,7 +5638,7 @@ describe("v0.43.0 gear and combat", () => {
     const card = chat.at(-1);
     assert.match(card.content, /armor 2/);
     assert.match(card.content, /data-sr2e-action="cyberDamage"/);
-    assert.deepEqual(card.flags.sr2e.cyberDamage, { actorUuid: a.uuid, location: "leftArm" });
+    assert.deepEqual(card.flags.sr2e.cyberDamage, { actorUuid: a.uuid, location: "leftArm", level: "D" }); // v0.92.3: the wound's level rides along
     faces.push(3, 2);                                                     // the arm on 1–3, the eyes on 1
     assert.deepEqual(await a.cyberDamageCheck("leftArm"), ["Cyberarm"]);
     assert.equal(a.items.get("arm").system.damaged, true);
@@ -6067,7 +6076,8 @@ describe("v0.45.0 magic and critters", () => {
     assert.equal(gh.getFlag("sr2e", "essenceLossAt"), 8 * 86400);
   });
 
-  test("surgery: the ware works after recovery; bioware over the limit risks rejection", async () => {
+  test("surgery: the ware works after recovery; bioware over the limit risks rejection", async (t) => {
+    t.after(oldWay({ "GEAR_V923.overBodyIndex": "rejection", "GEAR_V923.surgery": "old" })); // v0.92.3: the old way (v0.92.2); __tests__/v0923-gear.test.ts has the book's
     chat.length = 0;
     const ware = { id: "mus", name: "Muscle augmentation", type: "cyberware", sort: 0, system: { installed: false, bioware: true, bodyIndex: 5, bioKind: "muscleAugmentation", rating: 2, grade: "standard", cultured: false, essenceCost: 0, attributes: {} } };
     const old = { id: "old", name: "Old filter", type: "cyberware", sort: 5, system: { installed: true, bioware: true, bodyIndex: 0, bioKind: "other", rating: 0, grade: "standard", cultured: false, essenceCost: 0, attributes: {} } };
@@ -6092,6 +6102,7 @@ describe("v0.45.0 magic and critters", () => {
   });
 
   test("encephalons add dice; chips beyond the jacks don't run; bioware kinds", async (t) => {
+    t.after(oldWay({ "GEAR_V923.bioware": "old", "GEAR_V923.cultured": "old" })); // v0.92.3: the old way (v0.92.2); __tests__/v0923-gear.test.ts has the book's
     t.after(oldWay({"BOOK_V78.encephalon.mode": "dice"})); // v0.78.0: the old rule (a house rule)
     chat.length = 0;
     const a = who({}, [
@@ -6116,7 +6127,8 @@ describe("v0.45.0 magic and critters", () => {
     assert.equal(a.system.derived.woundModifier, 0);
   });
 
-  test("graded Availability and price when finding cyberware", async () => {
+  test("graded Availability and price when finding cyberware", async (t) => {
+    t.after(oldWay({ "GEAR_V923.grades": "old" })); // v0.92.3: the old way (v0.92.2); __tests__/v0923-gear.test.ts has the book's
     chat.length = 0;
     const a = who({}, [skill("et", "Etiquette", 3, "charisma"), { id: "cw", name: "Wired reflexes", type: "cyberware", system: { installed: false, grade: "beta", cost: 1000, availability: "4/48hrs", streetIndex: 1, essenceCost: 2, attributes: {} } }]);
     faces.push(6, 6, 1, 1, 1);                                // vs 9 (beta): 6+1 = 7 each, no success
@@ -6970,7 +6982,8 @@ describe("v0.48.0 health, magic and critters", () => {
     assert.equal((await a.athleticsTest("climb", { condition: "easy", weather: false })).metres, 8);
   });
 
-  test("surgery: care stretches or shortens recovery and is paid for; changing it rescales the days left", async () => {
+  test("surgery: care stretches or shortens recovery and is paid for; changing it rescales the days left", async (t) => {
+    t.after(oldWay({ "GEAR_V923.surgery": "old" })); // v0.92.3: the old way (v0.92.2); __tests__/v0923-gear.test.ts has the book's
     chat.length = 0;
     const patient = who({ name: "Patient", nuyen: 5000 }, [{ id: "cw", type: "cyberware", name: "Wired reflexes", system: { installed: false, bioware: false, essenceCost: 2, grade: "standard", kind: "other" } }]);
     const doc2 = who({ name: "Doc" }, [skill("bt", "Biotech", 4, "intelligence")]);
@@ -9267,7 +9280,8 @@ describe("v0.58.0 characters, gear and integration", () => {
     assert.equal(a.items.get("fa").system.rating, 3);
   });
 
-  test("a cyberlimb's housed ware costs Essence once the limb is out", () => {
+  test("a cyberlimb's housed ware costs Essence once the limb is out", (t) => {
+    t.after(oldWay({ "GEAR_V923.limbHoused": "capacity", "GEAR_V923.limbPairs": "off" })); // v0.92.3: the old way (v0.92.2); __tests__/v0923-gear.test.ts has the book's
     const a = person("Armed", [
       { id: "arm", type: "cyberware", name: "Cyberarm", system: { essenceCost: 1, grade: "standard", installed: true, bioware: false, attributes: {}, kind: "cyberlimb", limb: { location: "rightArm", strength: 4, quickness: 4, capacity: 1 } } },
       { id: "sl", type: "cyberware", name: "Smartlink", system: { essenceCost: 0.5, grade: "standard", installed: true, bioware: false, attributes: {}, kind: "other", housedIn: "arm" } },
@@ -9316,7 +9330,8 @@ describe("v0.58.0 characters, gear and integration", () => {
     R.GEAR_V58.essenceHoles.enabled = true;
   });
 
-  test("filtration adds dice against its vector; bone lacing adds to Body for resistance and to unarmed Power", async () => {
+  test("filtration adds dice against its vector; bone lacing adds to Body for resistance and to unarmed Power", async (t) => {
+    t.after(oldWay({ "GEAR_V923.boneLacing": "dice" })); // v0.92.3: the old way (v0.92.2); __tests__/v0923-gear.test.ts has the book's
     chat.length = 0;
     const a = person("Laced", [
       { id: "f", type: "cyberware", name: "Air filtration", system: { essenceCost: 0.1, grade: "standard", installed: true, bioware: false, attributes: {}, kind: "filtration", filterKind: "air", rating: 3 } },

@@ -1,5 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import { oldWay } from './oldway.ts';
 import { parseStatBlock, statBlockItems, statBlockAttributeBonuses, STAT_BLOCK_ITEM_CHOICES as C, type StatBlockItem } from '../statblock.ts';
 import { RULES } from '../config.ts';
 import { POWER_DICE_SOURCES, POWER_RESIST } from '../powers.ts';
@@ -180,7 +181,7 @@ describe('statBlockItems: cyberware and bioware data', () => {
     assert.equal(sa.cultured, true);
     assert.equal(byName(items, 'Platelet Factory').system.bodyIndex, 0.4);
     assert.equal(byName(items, 'Platelet Factory').system.rating, 1);
-    assert.ok(warnings.some((w) => w.startsWith('Body Index guessed') && w.includes('Orthoskin (0.5)') && !w.includes('Platelet')));
+    assert.ok(warnings.some((w) => w.startsWith('Body Index guessed') && w.includes('Orthoskin (1)') /* v0.92.3: Shadowtech p. 17, level 2 Body Cost 1 (was 0.5) */ && !w.includes('Platelet')));
   });
   test('unknown cyberware warns and gets Essence 0', () => {
     const r = statBlockItems(parseStatBlock('Cyberware: Gizmo Implant 2, Wired Reflexes'));
@@ -251,7 +252,8 @@ describe('statBlockItems: spells and powers data', () => {
     const p3 = parseStatBlock(ADEPT);
     assert.ok(statBlockItems(p3, { adept: false }).items.every((i) => i.type === 'power'));
   });
-  test('attribute bonuses the items add (to subtract from manual modifiers)', () => {
+  test('attribute bonuses the items add (to subtract from manual modifiers)', (t) => {
+    t.after(oldWay({ "GEAR_V923.bioware": "old" })); // v0.92.3: the old (v0.92.2) way; rules/__tests__/v0923-gear.test.ts has the book's
     assert.deepEqual(statBlockAttributeBonuses(items), { strength: 3, quickness: 2 });
     assert.deepEqual(statBlockAttributeBonuses(statBlockItems(parseStatBlock(ADEPT)).items), { body: 2 });
   });

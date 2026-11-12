@@ -185,7 +185,8 @@ describe('v0.45.0 fire', () => {
 
 describe('v0.45.0 bioware and cyberware', () => {
   const bio = (bioKind: string, rating = 1) => bioEffect({ name: bioKind, bioKind, rating, installed: true });
-  test('new bioware kinds', () => {
+  test('new bioware kinds', (t) => {
+    t.after(oldWay({ 'GEAR_V923.bioware': 'old' })); // v0.92.3: the old way; v0923-gear.test.ts has the book's
     assert.equal(bio('enhancedArticulation', 2).physicalSkillDice, 1);
     assert.equal(bio('traumaDamper', 2).stunBoxesOff, 2);
     const pe = bio('painEditor', 3);
@@ -201,7 +202,8 @@ describe('v0.45.0 bioware and cyberware', () => {
     assert.deepEqual(bio('muscleAugmentation', 2).attributes, { strength: 2 });
   });
 
-  test('rejection and recovery', () => {
+  test('rejection and recovery', (t) => {
+    t.after(oldWay({ 'GEAR_V923.overBodyIndex': 'rejection' })); // v0.92.3: the old way; v0923-gear.test.ts has the book's
     assert.equal(rejectionTn(4, 5), null);
     assert.equal(rejectionTn(6.5, 5), 6);
     const items = [{ id: 'a', installed: true, sort: 1 }, { id: 'b', installed: true, cultured: true, sort: 5 }, { id: 'c', installed: true, sort: 3 }];

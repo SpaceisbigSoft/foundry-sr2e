@@ -1,6 +1,7 @@
 import { RULES, type DamageLevel } from './config.ts';
 import { DAMAGE_LEVELS as LEVELS, own } from './util.ts';
 import { t as tx } from '../helpers/i18n.ts';
+import { gearBook } from './gear923.ts';
 
 /**
  * Gear and combat (v0.43.0): concealment and scanners, weapon accessories, spells against vehicles,
@@ -174,6 +175,8 @@ export function wallRepair(o: { rating: number; original: number; successes?: nu
 export function cyberDamageDue(level: DamageLevel | null, type: string): boolean {
   const c = G().cyberDamage;
   if (c.mode === 'off' || !level || type !== 'physical') return false;
+  // v0.92.3 (RULES.GEAR_V923.cyberDamage 'book', Shadowtech p. 36): any Serious or Deadly physical wound.
+  if (gearBook('cyberDamage')) return level === 'S' || level === 'D';
   return LEVELS.indexOf(level) >= LEVELS.indexOf(c.atLevel);
 }
 

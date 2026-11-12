@@ -320,7 +320,8 @@ describe('v0.80.0 combat: the attack plan (recoil, tracers, charging)', () => {
 
 describe('v0.80.0 combat: armor (URR_V80.cbtArmorPool, cbtArmorLayers)', () => {
   const heavy = { id: 'a1', type: 'armor', name: 'Heavy', system: { worn: true, ballistic: 8, impact: 2 } };
-  test('book: armor over Quickness lowers Quickness', () => {
+  test('book: armor over Quickness lowers Quickness', (t) => {
+    t.after(oldWay({ 'GEAR_V923.armorEncumbrance': 'old' })); // v0.92.3: the old way; the book's: v0923-gear.test.ts
     const a = who({}, [heavy]);
     assert.equal(a.system.attributes.quickness.total, 2);
     assert.equal(a.system.derived.encumbrance, 3);

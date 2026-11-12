@@ -5,6 +5,7 @@
  */
 import { test, describe, before, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { oldWay } from '../rules/__tests__/oldway.ts';
 import { RULES } from '../rules/index.ts';
 
 const g = globalThis as any;
@@ -211,7 +212,8 @@ describe('v0.92.1 custom tweaks in the derived data', () => {
 });
 
 describe('v0.92.1 Carried', () => {
-  test('left behind: no weight, armor doesn\'t count, a search doesn\'t find it', () => {
+  test('left behind: no weight, armor doesn\'t count, a search doesn\'t find it', (t) => {
+    t.after(oldWay({ 'GEAR_V923.load': 'old', 'GEAR_V923.armorEncumbrance': 'old' })); // v0.92.3: the old Quickness penalties show it
     const heavy = (carried: boolean) => who({}, [{ id: 'g1', type: 'gear', name: 'ZZ Anvil', system: { quantity: 1, weight: 200, carried } }]);
     assert.ok(heavy(true).system.derived.load.penalty > 0);
     assert.equal(heavy(false).system.derived.load.penalty, 0);
