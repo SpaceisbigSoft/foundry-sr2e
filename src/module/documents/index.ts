@@ -119,6 +119,7 @@ import {
   icFromStep, stepsToLaunch, gasDeviceToxin, gasDeviceRadius, gasDevicesToRelease,
 } from '../rules/index.ts';
 import { ATTRIBUTE_KEYS, adeptPowersOf, activeDeckOf, fociOf, type AttributeKey } from '../models/index.ts';
+import { sysNow } from '../helpers/clock.ts';
 import { dsnColoursOn, dsnColorsetFor } from '../applications/dice.ts';
 import { allActors } from '../helpers/actors.ts';
 import { initiativeFormula } from '../helpers/initiative.ts';
@@ -1697,7 +1698,7 @@ export class SR2Actor extends Actor {
       return null;
     }
     const hurtAt = (patient.getFlag?.(SYSTEM_ID, 'damagedAt') as Record<string, number> | undefined)?.[track];
-    const now = Number(game.time?.worldTime ?? 0);
+    const now = sysNow();
     if (!opts.ignoreWindow && typeof hurtAt === 'number' && now - hurtAt > f.windowHours * 3600) {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.moreThanHourHasPassedSince', { windowHours: tCount(f.windowHours, 'SR2E.Count.hour'), patientName: escHtml(patient.name) }));
       return null;
@@ -1724,7 +1725,7 @@ export class SR2Actor extends Actor {
    */
   homeSafehouses(): Array<{ uuid: string; name: string; comfort: string; medical: number; workshop: number }> {
     const ids = new Set([this.uuid as string, `Actor.${this.id}`]);
-    const now = Number((game as any).time?.worldTime ?? 0);
+    const now = sysNow();
     return allActors()
       .filter((h: any) => h.type === 'safehouse' && [...(h.system.owners ?? []), ...(h.system.residents ?? [])].some((u: string) => ids.has(u)))
       .map((h: any) => ({
@@ -1771,7 +1772,7 @@ export class SR2Actor extends Actor {
         const g = await successTest({ dice: Number(this.sys.attributes.body.natural ?? this.sys.attributes.body.total), targetNumber: st.tn, modifiers: [], roll: foundryRoller(gRolls) });
         gate = g.successes > 0 ? 'passed' : 'failed';
         // The flag is written when the card resolves (#resolvePlain), so a Karma re-roll or a GM's TN change corrects it.
-        await this.#post(this.#snapshot(tx('SR2E.Card.Actor.selfRecoveryTestPhysicalWoundNatural', { woundLevel: woundLevel(before) }), g, { kind: 'plain', selfRecovery: { boxes: before, t: Number(game.time?.worldTime ?? 0) } }), g, gRolls);
+        await this.#post(this.#snapshot(tx('SR2E.Card.Actor.selfRecoveryTestPhysicalWoundNatural', { woundLevel: woundLevel(before) }), g, { kind: 'plain', selfRecovery: { boxes: before, t: sysNow() } }), g, gRolls);
       }
       const can = canRollStage({ boxes: before, care, gate });
       if (!can.ok) {
@@ -1843,7 +1844,7 @@ export class SR2Actor extends Actor {
    * Runs on the client that changed the monitor.
    */
   async syncCondition(prevStatus: string | undefined, grew: { physical: boolean; stun: boolean }): Promise<void> {
-    const now = Number(game.time?.worldTime ?? 0);
+    const now = sysNow();
     if (grew.physical || grew.stun) {
       const prev = (this.getFlag(SYSTEM_ID, 'damagedAt') as Record<string, number> | undefined) ?? {};
       await this.setFlag(SYSTEM_ID, 'damagedAt', { ...prev, ...(grew.physical ? { physical: now } : {}), ...(grew.stun ? { stun: now } : {}) });
@@ -1890,7 +1891,7 @@ export class SR2Actor extends Actor {
     // v0.70.0: new Physical damage on a dying patient who was stabilised: they need stabilising again (and the
     // clock starts over) (RULES.FIXES_V70.newDamageUnstabilises).
     if (RULES.FIXES_V70.newDamageUnstabilises && status === 'dying' && prevStatus === 'dying' && grew.physical && this.sys.care?.stabilised) {
-      await this.update({ 'system.care.stabilised': false, [`flags.${SYSTEM_ID}.dyingAt`]: { t: Number((game as any).time?.worldTime ?? 0), boxes: 0 } });
+      await this.update({ 'system.care.stabilised': false, [`flags.${SYSTEM_ID}.dyingAt`]: { t: sysNow(), boxes: 0 } });
       await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p><strong>${escText(this.name)}</strong> ${tx('SR2E.Card.Actor.isHurtAgainWhileDyingNo')}</p>` });
     }
     if (!RULES.CONDITIONS.statuses || status === prevStatus) return;
@@ -1904,7 +1905,7 @@ export class SR2Actor extends Actor {
     // Dying: note when it began and reset stabilisation; leaving it clears both.
     // v0.70.0: the world time too (RULES.FIXES_V70.dyingOutOfCombat: the boxes come with world time, in or out of combat).
     const round = Number((game.combat as any)?.round ?? 0);
-    const nowT = Number((game as any).time?.worldTime ?? 0);
+    const nowT = sysNow();
     if (status === 'dying' && prevStatus !== 'dying') await this.update({ 'system.care.dyingSince': round, 'system.care.stabilised': false, [`flags.${SYSTEM_ID}.dyingAt`]: { t: nowT, boxes: 0 } });
     else if (status !== 'dying' && prevStatus === 'dying') await this.update({ 'system.care.dyingSince': -1, 'system.care.stabilised': false, ...clearFlagUpdate(this, 'dyingAt') });
     // v0.61.0: a DocWagon biomonitor calls the team when its wearer is dying (HEALTH_V61.docwagon).
@@ -2038,7 +2039,7 @@ export class SR2Actor extends Actor {
 
   /** v0.48.0: change a recovering patient's care; the days left stretch or shrink (RULES.BIOWARE.recovery.care). */
   async setRecoveryCare(itemId: string, care: string): Promise<number | null> {
-    const now = Number((game as any).time?.worldTime ?? 0);
+    const now = sysNow();
     const list: any[] = [...(this.sys.recovering ?? [])].map((r: any) => ({ ...r }));
     const r = list.find((x) => x.itemId === itemId);
     if (!r) return null;
@@ -2177,7 +2178,7 @@ export class SR2Actor extends Actor {
     let rejectHtml = '';
     let traumaNote = '';
     let flags: Record<string, unknown> = {};
-    const now = Number((game as any).time?.worldTime ?? 0);
+    const now = sysNow();
     if (!sg.installed && patient) {
       const it: any = [...patient.items].find((i: any) => i.id === sg.itemId);
       if (it && !it.system.installed) await it.update({ 'system.installed': true });
@@ -2515,12 +2516,12 @@ export class SR2Actor extends Actor {
       extra.push({ id: 'focusWithdrawal', label: tx('SR2E.Card.Mod.focusWithdrawal'), value: RULES.MAGIC_V39.addiction.withdrawalTn });
     }
     // v0.61.0: a totem that dislikes daylight (Owl) (MAGIC_V61.totems).
-    if (!opts.noPenalties) { const dl = daylightModifier(this.totemDrawbacks(), Number((game as any).time?.worldTime ?? 0)); if (dl) extra.push(dl); }
+    if (!opts.noPenalties) { const dl = daylightModifier(this.totemDrawbacks(), sysNow()); if (dl) extra.push(dl); }
     // Drug withdrawal (v0.42.0).
-    if (!opts.noPenalties && this.sys.addictions?.length) extra.push(...withdrawalModifiers(this.sys.addictions as Addiction[], Number((game as any).time?.worldTime ?? 0)));
+    if (!opts.noPenalties && this.sys.addictions?.length) extra.push(...withdrawalModifiers(this.sys.addictions as Addiction[], sysNow()));
     // v0.45.0: recovering from surgery, and a ghoul or vampire going hungry.
     if (!opts.noPenalties && this.sys.recovering?.length) {
-      const r = recoveryTn(this.sys.recovering as Recovery[], Number((game as any).time?.worldTime ?? 0));
+      const r = recoveryTn(this.sys.recovering as Recovery[], sysNow());
       if (r) extra.push({ id: 'recoveringFromSurgery', label: tx('SR2E.Card.Mod.recoveringFromSurgery'), value: r });
     }
     const hu = !opts.noPenalties && this.type !== 'vehicle' ? this.hungerInfo() : null;
@@ -2633,7 +2634,7 @@ export class SR2Actor extends Actor {
     if (!ctx) return snap;
     const s = snap.successes;
     const list = this.sustained();
-    const now = Number((game as any).time?.worldTime ?? 0);
+    const now = sysNow();
     const permanentAt = ctx.permanent ? permanentUntil(now, ctx.force, s, SR2Actor.secondsPerTurn()) ?? -1 : -1;
     if (!ctx.applied) {
       if (s <= 0) return snap;
@@ -3836,7 +3837,7 @@ export class SR2Actor extends Actor {
     let timed: ArmedCharge | null = null;
     if (power > 0 && secs > 0 && opts.point && scene && (isGmNow() || canWriteNow(scene))) {
       const combat: any = (game as any).combat;
-      const at = effectEnds({ round: combat?.started ? Number(combat.round ?? 0) : null, worldTime: Number((game as any).time?.worldTime ?? 0), seconds: secs, combatId: combat?.started ? String(combat.id ?? '') : null });
+      const at = effectEnds({ round: combat?.started ? Number(combat.round ?? 0) : null, worldTime: sysNow(), seconds: secs, combatId: combat?.started ? String(combat.id ?? '') : null });
       timed = { id: chargeId, actorUuid: this.uuid as string, name: item.name, power, perMetre: ex.perMetre, shaped: Boolean(ex.shaped), point: opts.point, at, seconds: secs, place: opts.placeName ?? '', messageId: '', setterSuccesses: r.successes };
     }
     const timerNote = timed ? ` ${tx('SR2E.Card.Actor.timer')} <strong>${secs} s</strong>${tx('SR2E.Card.Actor.itGoesOffByItself', { part: timed.at.round >= 0 ? tx('SR2E.Card.Actor.combatTurn', { atRound: timed.at.round }) : '', part2: timed.place ? tx('SR2E.Card.Actor.on7', { timedPlace: escText(timed.place) }) : '' })}` : secs > 0 && power > 0 ? tx('SR2E.Card.Actor.theTimerNeedsAGmTo') : '';
@@ -4589,7 +4590,7 @@ export class SR2Actor extends Actor {
 
   /** v0.58.0: training under way, soonest first. */
   trainingList(): Array<{ id: string; label: string; readyAt: number; days: number; to: number; daysLeft: number }> {
-    const now = Number((game as any).time?.worldTime ?? 0);
+    const now = sysNow();
     return [...((this.sys.training as any[] | undefined) ?? [])].map((t: any) => ({ id: t.id, label: t.label, readyAt: t.readyAt, days: t.days, to: t.to, daysLeft: Math.max(0, Math.ceil((t.readyAt - now) / 86400)) }))
       .sort((a, b) => a.readyAt - b.readyAt);
   }
@@ -4606,7 +4607,7 @@ export class SR2Actor extends Actor {
     const kind = target.attribute ? 'attribute' : target.specialization ? 'specialization' : target.concentration ? 'concentration' : String(skill?.system?.kind ?? 'active');
     // v0.80.0 (RULES.URR_V80.coreTraining 'urr'): Karma × 8 hours at 4 (or Willpower) hours a day; null in the book.
     const days = urrCoreTrainingDays({ cost: c.cost, willpower: Number(this.sys.attributes?.willpower?.total ?? 0) }) ?? trainingDays({ kind, newRating: c.to });
-    const now = Number((game as any).time?.worldTime ?? 0);
+    const now = sysNow();
     const entry = { id: SR2Actor.#newId(), label: `${c.label} ${c.from} → ${c.to}`, attribute: target.attribute ?? '', skillId: target.skillId ?? '', part, to: c.to, cost: c.cost, startedAt: now, readyAt: trainingReadyAt(now, days), days, baseDays: days,
       // v0.73.0 (O42): who started it (the Done line).
       ...(({ by, approvedBy }) => ({ by, approvedBy }))(projectCredit({ user: String((game as any).user?.name ?? ''), requester: approvalContext(String(this.uuid))?.requester, gm: approvalContext(String(this.uuid))?.gm })) };
@@ -4639,7 +4640,7 @@ export class SR2Actor extends Actor {
       await this.update({ [`flags.${SYSTEM_ID}.projects.${p.id}`]: p });
       return p;
     }
-    const now = Number((game as any).time?.worldTime ?? 0);
+    const now = sysNow();
     // v0.73.0 (O42): an approved request is the player's, approved by the GM (RULES.CROSSCUT_V73.advancement.creditRequester).
     const credit = projectCredit({ user: String((game as any).user?.name ?? ''), requester: approvalContext(String(this.uuid))?.requester, gm: approvalContext(String(this.uuid))?.gm });
     const p = makeProject({ ...o, id: SR2Actor.#newId(), startedAt: now, by: credit.by, ...(credit.approvedBy ? { approvedBy: credit.approvedBy } : {}) } as any);
@@ -4705,15 +4706,15 @@ export class SR2Actor extends Actor {
     }
     const t = [...((this.sys.training as any[] | undefined) ?? [])].find((x: any) => x.id === id);
     if (!t) return false;
-    await this.update({ 'system.training': [...(this.sys.training as any[])].map((x: any) => (x.id === id ? { ...x, readyAt: Number((game as any).time?.worldTime ?? 0) } : x)) });
-    await SR2Actor.#trainingTick(this, Number((game as any).time?.worldTime ?? 0));
+    await this.update({ 'system.training': [...(this.sys.training as any[])].map((x: any) => (x.id === id ? { ...x, readyAt: sysNow() } : x)) });
+    await SR2Actor.#trainingTick(this, sysNow());
     return true;
   }
 
   /** GM: set how much time is left on a project or a training entry (hours from now; 0 = done at the next time step). */
   async setProjectTimeLeft(id: string, hoursLeft: number): Promise<boolean> {
     if (!(game as any).user?.isGM) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.onlyTheGmCanChangeThe2')); return false; }
-    const now = Number((game as any).time?.worldTime ?? 0);
+    const now = sysNow();
     const h = Math.max(0, Number(hoursLeft) || 0);
     const p = this.projects().find((x) => x.id === id);
     if (p) {
@@ -5715,7 +5716,7 @@ export class SR2Actor extends Actor {
     const cash = Math.max(0, plan0.nuyen - (out ? extraCost : 0));
     const left = leftoverCash(cash);
     const plan = { ...plan0, nuyen: left.kept, lifestyleMonths: out ? out.months : plan0.lifestyleMonths };
-    const now = Number((game as any).time?.worldTime ?? 0);
+    const now = sysNow();
     const days = RULES.UPKEEP.monthDays * plan.lifestyleMonths;
     const up: Record<string, unknown> = {
       'system.nuyen': plan.nuyen,
@@ -5896,7 +5897,7 @@ export class SR2Actor extends Actor {
     const value = itemPrice({ cost: item.type === 'cyberware' ? wareCost(item.system) : (item.system.cost ?? 0), streetIndex: item.system.streetIndex ?? 1, quantity: 1 });
     if (value <= 0) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.hasNoCostSetSoA', { itemName: escHtml(item.name) })); return null; }
     // v0.49.0: hot goods sell for less, and the hottest not at all (RULES.STREET.heat).
-    const heat = RULES.STREET.heat.enabled ? currentHeat(item.system.heat ?? 0, item.system.heatAt ?? -1, Number(game.time?.worldTime ?? 0)) : 0;
+    const heat = RULES.STREET.heat.enabled ? currentHeat(item.system.heat ?? 0, item.system.heatAt ?? -1, sysNow()) : 0;
     if (heat > RULES.STREET.heat.refuseAbove) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.isTooHotHeatNoFence', { itemName: escHtml(item.name), heat })); return null; }
     const f = RULES.STREET.fence;
     const sd = this.#skillDice(this.findSkill(f.skill), false, null, f.attribute as AttributeKey);
@@ -5982,7 +5983,7 @@ export class SR2Actor extends Actor {
 
   /** The ledger with one more entry (newest last, at most RULES.UPKEEP.ledgerMax). */
   #ledgerWith(...entries: Array<{ kind: 'karma' | 'nuyen' | 'pool'; amount: number; reason: string }>): any[] {
-    const t = Number(game.time?.worldTime ?? 0);
+    const t = sysNow();
     const list = [...((this.sys.ledger as any[] | undefined) ?? []), ...entries.map((e) => ({ t, ...e }))];
     return list.slice(-RULES.UPKEEP.ledgerMax);
   }
@@ -6027,7 +6028,7 @@ export class SR2Actor extends Actor {
   lifestyleStatus(): { id: string; label: string; cost: number; days: number | null; permanent: boolean } {
     const l = lifestyleOf(this.sys.lifestyle?.level ?? 'low');
     // v0.73.0 (O31): a lifestyle owned outright never lapses (RULES.CHARACTERS_V73.lifestyle).
-    const st = lifestyleStanding({ paidUntil: this.sys.lifestyle?.paidUntil ?? -1, now: Number(game.time?.worldTime ?? 0), outright: Boolean(this.sys.lifestyle?.outright) });
+    const st = lifestyleStanding({ paidUntil: this.sys.lifestyle?.paidUntil ?? -1, now: sysNow(), outright: Boolean(this.sys.lifestyle?.outright) });
     return { ...l, days: st.days, permanent: st.permanent };
   }
 
@@ -6039,7 +6040,7 @@ export class SR2Actor extends Actor {
     const from = String(this.sys.lifestyle?.level ?? 'low');
     const to = lifestyleDown(from);
     if (to === from) return from;
-    await this.update({ 'system.lifestyle.level': to, 'system.lifestyle.paidUntil': Number(game.time?.worldTime ?? 0) });
+    await this.update({ 'system.lifestyle.level': to, 'system.lifestyle.paidUntil': sysNow() });
     await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p><strong>${escText(this.name)}</strong> ${tx('SR2E.Card.Actor.movesDownFromTo', { label: escText(lifestyleOf(from).label) })} <strong>${escText(lifestyleOf(to).label)}</strong> ${tx('SR2E.Card.Actor.lifestyle', { reason: escText(reason) })}</p>` });
     return to;
   }
@@ -6082,7 +6083,7 @@ export class SR2Actor extends Actor {
   /** v0.73.0 (O31): buy the current lifestyle outright (RULES.CHARACTERS_V73.lifestyle; the creation price). */
   async buyLifestyleOutright(): Promise<boolean> {
     const l = this.sys.lifestyle ?? { level: 'low', paidUntil: -1, outright: false };
-    const now = Number(game.time?.worldTime ?? 0);
+    const now = sysNow();
     const p: any = outrightPurchase({ lifestyle: l.level, outright: Boolean(l.outright), paidUntil: Number(l.paidUntil ?? -1), now, nuyen: Number(this.sys.nuyen ?? 0) });
     if (!p.ok) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.canTBuyTheLifestyleOutright', { label: escHtml(p.label), reason: escHtml(p.reason) })); return false; }
     if (approvalNeeded(this)) { await fileRequest(this, { kind: 'improve', label: tx('SR2E.Text.Actor.buyLifestyleOutright', { label: p.label, cost: p.cost.toLocaleString() }), karma: 0, nuyen: p.cost, data: { method: 'buyLifestyleOutright', args: [] } }); return false; }
@@ -6097,7 +6098,7 @@ export class SR2Actor extends Actor {
     // v0.73.0 (O31): nothing to pay on a lifestyle owned outright.
     if (this.sys.lifestyle?.outright && RULES.CHARACTERS_V73.lifestyle.outrightPermanent) { ui.notifications?.info?.(tx('SR2E.Notify.Actor.sLifestyleIsOwnedOutrightNothing', { name: escHtml(this.name) })); return false; }
     const l = this.sys.lifestyle ?? { level: 'low', paidUntil: -1 };
-    const p = payLifestyle({ lifestyle: l.level, months, paidUntil: l.paidUntil, now: Number(game.time?.worldTime ?? 0) });
+    const p = payLifestyle({ lifestyle: l.level, months, paidUntil: l.paidUntil, now: sysNow() });
     const name = lifestyleOf(l.level).label;
     if (p.cost > 0 && !(await this.adjustNuyen(-p.cost, tCount(months, 'SR2E.Text.Actor.lifestyleMonths', { name })))) return false;
     await this.update({ 'system.lifestyle.paidUntil': p.paidUntil });
@@ -6135,7 +6136,7 @@ export class SR2Actor extends Actor {
     const d = this.sys.docwagon ?? { tier: '', paidUntil: -1 };
     const tier = docwagonTier(String(d.tier ?? ''));
     if (!tier) return { tier: '', label: '', active: false, status: tx('SR2E.Text.Actor.noContract') };
-    const st = docwagonStatus({ tier: tier.id, paidUntil: Number(d.paidUntil ?? -1), now: Number(game.time?.worldTime ?? 0) });
+    const st = docwagonStatus({ tier: tier.id, paidUntil: Number(d.paidUntil ?? -1), now: sysNow() });
     return { tier: tier.id, label: tier.label, active: st.active, status: st.label };
   }
 
@@ -6144,7 +6145,7 @@ export class SR2Actor extends Actor {
     const d = this.sys.docwagon ?? { tier: '', paidUntil: -1, resuscitationsUsed: 0 };
     const tier = docwagonTier(String(d.tier ?? ''));
     if (!tier) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.pickADocwagonContractFirst')); return false; }
-    const now = Number(game.time?.worldTime ?? 0);
+    const now = sysNow();
     const p = docwagonPay({ tier: tier.id, years, paidUntil: Number(d.paidUntil ?? -1), now });
     if (!p.cost) return false;
     if (!(await this.adjustNuyen(-p.cost, tCount(years, 'SR2E.Text.Actor.docwagonYears', { label: tier.label })))) return false;
@@ -6167,7 +6168,7 @@ export class SR2Actor extends Actor {
       await ChatMessage.create({ speaker: { alias: tx('SR2E.Card.Actor.docwagon') }, content: `<p>${tx('SR2E.Card.Actor.sDocwagonContract', { part: o.auto ? tx('SR2E.Card.Actor.biomonitorAlert') : '', who, stLabel: escText(st.label), part2: st.active ? tx('SR2E.Card.Actor.getsNoResponse') : tx('SR2E.Card.Actor.hasLapsedNoOneComes'), part3: call.notes.length ? ` ${escText(call.notes.join(' '))}` : '' })}</p>` });
       return;
     }
-    const now = Number(game.time?.worldTime ?? 0);
+    const now = sysNow();
     const arriveAt = docwagonArrivalAt(now, call.responseSeconds);
     const fees = call.fees.length ? call.fees.map((f) => `${escText(f.label)} ¥${f.amount.toLocaleString()}`).join(', ') : tx('SR2E.Card.Actor.none');
     await ChatMessage.create({
@@ -6387,7 +6388,7 @@ export class SR2Actor extends Actor {
     const heldPermit = Boolean(buy['itemId']) && Boolean(sys.permit);
     const legalLine = SR2Actor.#legalLine(legal, heldPermit || Boolean(this.licenceCover(src.name, legal)), sys.rating);
     const rk = retryFlagKey(retryKey);
-    const now = Number(game.time?.worldTime ?? 0);
+    const now = sysNow();
     const waitLeft = retryHoursLeft(((this.flags as any)?.[SYSTEM_ID]?.findRetry ?? {})[rk], now, Boolean(game.user?.isGM));
     if (waitLeft > 0) { ui.notifications?.warn?.(tx('SR2E.Notify.Shop.tryAgainLater', { name: escHtml(src.name), time: escHtml(timeLabel(waitLeft)) })); return null; }
     const flags = { [SYSTEM_ID]: { buy } };
@@ -6808,7 +6809,7 @@ export class SR2Actor extends Actor {
     if (id === 'deaf' && deafeningBlocked(this.hearingNow())) return;
     try { await (this as any).toggleStatusEffect?.(id, { active: true }); } catch { /* no status */ }
     const combat: any = (game as any).combat;
-    const ends = effectEnds({ round: combat?.started ? Number(combat.round ?? 0) : null, worldTime: Number((game as any).time?.worldTime ?? 0), seconds, combatId: combat?.started ? String(combat.id ?? '') : null });
+    const ends = effectEnds({ round: combat?.started ? Number(combat.round ?? 0) : null, worldTime: sysNow(), seconds, combatId: combat?.started ? String(combat.id ?? '') : null });
     const until = { ...((this.getFlag?.(SYSTEM_ID, 'statusUntil') as Record<string, unknown> | undefined) ?? {}), [id]: ends };
     try { await this.setFlag(SYSTEM_ID, 'statusUntil', until); } catch { /* not saved */ }
   }
@@ -7060,7 +7061,7 @@ export class SR2Actor extends Actor {
 
   /** v0.61.0: when a toxin of this Speed takes effect (0 = now) and how to say it. */
   static #onsetFor(speed: string): { at: number; label: string } {
-    const now = Number((game as any).time?.worldTime ?? 0);
+    const now = sysNow();
     const o = toxinOnset({ speed, worldTime: now });
     return o.immediate || o.seconds <= 0 ? { at: 0, label: '' } : { at: o.at, label: toxinOnsetLabel(o.seconds, now, o.at) };
   }
@@ -7144,7 +7145,7 @@ export class SR2Actor extends Actor {
     // v0.55.0: an antidote patch's dice, used up by this test while it lasts.
     const isToxin = !t.kind || t.kind === 'toxin';
     const anti = isToxin ? this.getFlag?.(SYSTEM_ID, 'antidote') as { dice: number; until: number; name: string } | undefined : undefined;
-    const antiDice = anti && Number((game as any).time?.worldTime ?? 0) <= anti.until ? Math.max(0, Number(anti.dice) || 0) : 0;
+    const antiDice = anti && sysNow() <= anti.until ? Math.max(0, Number(anti.dice) || 0) : 0;
     if (anti) await clearFlag(this, 'antidote');
     // v0.58.0: a cyber filtration system for this vector.
     const filt = isToxin || t.kind === 'drug' ? this.filtrationFor(t.vector) : { dice: 0, label: '' };
@@ -7229,7 +7230,7 @@ export class SR2Actor extends Actor {
    */
   async spreadDisease(index: number, targetUuids: string[] | null = null): Promise<number> {
     const d = (this.sys.diseases ?? [])[index] as DiseaseEntry | undefined;
-    const now = Number((game as any).time?.worldTime ?? 0);
+    const now = sysNow();
     const problem = contagionProblem(d ?? null, now);
     if (problem) { ui.notifications?.warn?.(escHtml(problem)); return 0; }
     const reach = contagionReach(d!.contagious ?? '');
@@ -7262,7 +7263,7 @@ export class SR2Actor extends Actor {
     const dz = snap.disease!;
     const level = resolveResistance(dz.level, snap.successes);
     if (dz.applied) return { html: `<p><em>${tx('SR2E.Card.Actor.alreadyAppliedAdjustByHandIf')}</em></p>`, flags: {}, snap };
-    const now = Number((game as any).time?.worldTime ?? 0);
+    const now = sysNow();
     const list: any[] = [...(this.sys.diseases ?? [])].map((x: any) => ({ ...x }));
     if (dz.mode === 'infect') {
       if (!level) return { html: `<p><strong>${tx('SR2E.Card.Actor.fightsOff', { name: escText(this.name), dzName: escText(dz.name) })}</strong></p>`, flags: {}, snap: { ...snap, disease: { ...dz, applied: true } } };
@@ -7301,7 +7302,7 @@ export class SR2Actor extends Actor {
   async drugAddictionTest(drug: string, mode: 'dose' | 'kick' = 'dose'): Promise<SuccessTestResult | null> {
     const a: any = (this.sys.addictions ?? []).find((x: any) => x.drug === drug);
     if (!a) return null;
-    const now = Number((game as any).time?.worldTime ?? 0);
+    const now = sysNow();
     if (mode === 'kick') {
       const st = withdrawalState(a, now);
       if (!st.canKick) {
@@ -7362,7 +7363,7 @@ export class SR2Actor extends Actor {
       return true;
     }
     const combat: any = (game as any).combat;
-    const now = Number((game as any).time?.worldTime ?? 0);
+    const now = sysNow();
     const ends = effectEnds({ round: combat?.started ? Number(combat.round ?? 0) : null, worldTime: now, seconds: (t.durationMinutes ?? 0) * 60, combatId: combat?.started ? String(combat.id ?? '') : null });
     // Addiction (v0.42.0): track recent doses; an addict's tolerance takes points off the bonuses.
     const addictions: any[] = [...(this.sys.addictions ?? [])].map((x: any) => ({ ...x }));
@@ -7492,7 +7493,7 @@ export class SR2Actor extends Actor {
    * (a disease; a worse stage replaces a milder one).
    */
   async addRadiation(rating: number, hours: number): Promise<{ dose: number; stage: number }> {
-    const now = Number((game as any).time?.worldTime ?? 0);
+    const now = sysNow();
     if (!RULES.HEALTH.radiationSickness.enabled) return { dose: Number(this.sys.radiation?.dose ?? 0), stage: -1 };
     const rad = this.sys.radiation ?? { dose: 0, at: now };
     const days = Math.max(0, Math.floor((now - Number(rad.at ?? now)) / 86400));
@@ -7572,7 +7573,7 @@ export class SR2Actor extends Actor {
     if (!(game as any).user?.isGM) return;
     const active = (game as any).users?.activeGM;
     if (!now.anyGm && active && !isLeadGm()) return;
-    const time = now.worldTime ?? Number((game as any).time?.worldTime ?? 0);
+    const time = now.worldTime ?? sysNow();
     const at = { round: now.round ?? null, worldTime: time, ...(now.combatId !== undefined ? { combatId: now.combatId } : {}) };
     // Timed demolition charges (v0.43.0).
     await SR2Actor.chargeTicks(at);
@@ -8445,7 +8446,7 @@ export class SR2Actor extends Actor {
     // v0.55.0: a cybergun works only while its cyberware is installed, working and healed in.
     if (weapon?.system?.implantId) {
       const ware: any = [...this.items].find((i: any) => i.id === weapon.system.implantId);
-      const healing = recoveringItemIds(this.sys.recovering ?? [], Number((game as any).time?.worldTime ?? 0));
+      const healing = recoveringItemIds(this.sys.recovering ?? [], sysNow());
       if (!ware || !ware.system?.installed || ware.system?.damaged || healing.includes(ware.id)) {
         ui.notifications?.warn?.(tx('SR2E.Notify.Actor.isBuiltIntoWhichIs', { weaponName: escHtml(weapon.name), wareName: escHtml(ware?.name ?? tx('SR2E.Notify.Actor.cyberwareThatIsGone')), part: !ware ? tx('SR2E.Notify.Actor.missing') : !ware.system?.installed ? tx('SR2E.Notify.Actor.notInstalled') : ware.system?.damaged ? tx('SR2E.Notify.Actor.damaged') : tx('SR2E.Notify.Actor.stillHealingIn') }));
         return null;
@@ -8959,7 +8960,7 @@ export class SR2Actor extends Actor {
   /** v0.70.0: what a slap patch does to its target (the owner's client, or the GM's from an Apply (GM) card). */
   static async patchEffect(target: any, p: { kind: string; rating: number; name: string }): Promise<string> {
     const rating = Math.max(0, Math.floor(Number(p.rating) || 0));
-    const now = Number((game as any).time?.worldTime ?? 0);
+    const now = sysNow();
     let text = '';
     if (p.kind === 'trauma' && target.system.derived?.status !== 'dying') return tx('SR2E.Card.Actor.isnTDyingNothingHappens', { targetName: escText(target.name) });
     if (p.kind === 'stim') {
@@ -9609,7 +9610,7 @@ export class SR2Actor extends Actor {
       // v0.56.0: Treat works only soon after the wound (RULES.MAGIC_V56.healing.treatHours).
       if (sp.treat) {
         const at = (patient.getFlag?.(SYSTEM_ID, 'damagedAt') as Record<string, number> | undefined)?.[track];
-        const problem = treatWindowProblem(at, Number(game.time?.worldTime ?? 0));
+        const problem = treatWindowProblem(at, sysNow());
         if (problem) {
           ui.notifications?.warn?.(tx('SR2E.Notify.Actor.on', { spellName: escHtml(spell.name), patientName: escHtml(patient.name), problem: escHtml(problem) }));
           if (RULES.MAGIC_V56.healing.treatBlock) return null;
@@ -9821,7 +9822,7 @@ export class SR2Actor extends Actor {
     const sum = sumBundles([base, special, ...(hold?.armorBonus ? [{ ballistic: hold.armorBonus, impact: hold.armorBonus }] : []),
       ...(drain ? [{ attributes: { quickness: -Math.max(0, Math.floor(Number(fx.essence ?? fx.force ?? 0))) } }] : [])]);
     const combat: any = (globalThis as any).game?.combat;
-    const until = drain ? effectEnds({ round: combat?.started ? Number(combat.round ?? 0) : null, worldTime: Number((globalThis as any).game?.time?.worldTime ?? 0), seconds: Math.max(1, Number(fx.minutes ?? 7)) * 60, combatId: combat?.started ? String(combat.id ?? '') : null }) : null;
+    const until = drain ? effectEnds({ round: combat?.started ? Number(combat.round ?? 0) : null, worldTime: sysNow(), seconds: Math.max(1, Number(fx.minutes ?? 7)) * 60, combatId: combat?.started ? String(combat.id ?? '') : null }) : null;
     return { ...sum, attributes: sum.attributes as Record<string, number>, id, fromUuid, fromName, name: fx.name, kind: fx.kind ?? 'power', successes, spec: fx, ...(fx.special ? { special: fx.special } : {}), ...(fx.permanent ? { permanent: true } : {}),
       ...(hold ? { status: hold.status, holdTurns: hold.turns, ...(hold.breakTest ? { breakTn: hold.breakTest.tn } : {}) } : {}),
       ...(until ? { until } : {}) };
@@ -10045,7 +10046,7 @@ export class SR2Actor extends Actor {
       await spirit.update({ 'system.services': spirit.system.services - 1 });
     }
     // It holds the spell for a limited time (v0.39.0).
-    const now = Number((game as any).time?.worldTime ?? 0);
+    const now = sysNow();
     const until = elementalSustainUntil(now, Number(spirit.system.force ?? 1));
     list[index] = { ...entry, spiritUuid: spirit.uuid, until } as any;
     await this.update({ 'system.sustaining': list });
@@ -10252,7 +10253,7 @@ export class SR2Actor extends Actor {
     const mine = Boolean(cur && cur.testId && cur.testId === snap.testId);
     try {
       if (fresh || mine) {
-        if (s > 0) await this.setFlag(SYSTEM_ID, 'centered', { successes: s, at: fresh ? Number((game as any).time?.worldTime ?? 0) : Number((cur as any)?.at ?? 0), testId: snap.testId ?? '' });
+        if (s > 0) await this.setFlag(SYSTEM_ID, 'centered', { successes: s, at: fresh ? sysNow() : Number((cur as any)?.at ?? 0), testId: snap.testId ?? '' });
         else await clearFlag(this, 'centered');
       }
     } catch { /* not saved */ }
@@ -10266,7 +10267,7 @@ export class SR2Actor extends Actor {
   centeredSuccesses(): number {
     const c = this.getFlag?.(SYSTEM_ID, 'centered') as { successes: number; at: number } | undefined;
     if (!c) return 0;
-    const now = Number((game as any).time?.worldTime ?? 0);
+    const now = sysNow();
     return now - Number(c.at ?? 0) <= RULES.MAGIC_V56.centering.windowSeconds ? Math.max(0, Number(c.successes) || 0) : 0;
   }
 
@@ -10466,7 +10467,7 @@ export class SR2Actor extends Actor {
       if (from !== to) await this.update({ 'system.astral': 'physical' }, { sr2eNoAction: true });
       return;
     }
-    const now = (game.time?.worldTime as number | undefined) ?? 0;
+    const now = sysNow();
     // v0.71.0 (R19): perceiving or projecting takes an action in combat (RULES.ACTIONS.costs astralPerceive / astralProject);
     // refused (actions 'block'), the switch is put back. Coming back to the body is free.
     if (RULES.FIXES_V71.astralSwitchCost && !opts.noAction && to !== 'physical' && from !== to && !(this.sys.tradition === 'adept' && to === 'projecting')) {
@@ -10510,7 +10511,7 @@ export class SR2Actor extends Actor {
   projectionStatus(): { hours: number; limit: number; over: number } | null {
     if (this.sys.derived?.astralMode !== 'projecting') return null;
     const start = this.getFlag(SYSTEM_ID, 'projectionStart') as number | undefined;
-    const now = (game.time?.worldTime as number | undefined) ?? 0;
+    const now = sysNow();
     const hours = typeof start === 'number' ? Math.max(0, (now - start) / 3600) : 0;
     const o = projectionOverstay(hours, this.sys.derived.essence);
     return { hours: Math.round(hours * 10) / 10, limit: o.limit, over: o.over };
@@ -10530,7 +10531,7 @@ export class SR2Actor extends Actor {
       const to = changed?.['system.lifestyle.level'] ?? changed?.system?.lifestyle?.level;
       const setsOutright = changed?.['system.lifestyle.outright'] !== undefined || changed?.system?.lifestyle?.outright !== undefined;
       if (!setsOutright) {
-        const lp = lifestyleLevelChangePatch({ from: String(this.sys.lifestyle?.level ?? 'low'), to, outright: Boolean(this.sys.lifestyle?.outright), now: Number((game as any).time?.worldTime ?? 0) } as any);
+        const lp = lifestyleLevelChangePatch({ from: String(this.sys.lifestyle?.level ?? 'low'), to, outright: Boolean(this.sys.lifestyle?.outright), now: sysNow() } as any);
         for (const [k, v] of Object.entries(lp)) foundry.utils.setProperty(changed, k, v);
       }
     }
@@ -10611,7 +10612,7 @@ export class SR2Actor extends Actor {
    * became permanent), and a permanent healing spell dropped before it took gives the boxes back.
    */
   async #sustainingDropped(before: any[], after: any[]): Promise<void> {
-    const now = Number((game as any).time?.worldTime ?? 0);
+    const now = sysNow();
     const still = (e: any) => after.some((x: any) => (e.effectId ? x.effectId === e.effectId : x.spellName === e.spellName && x.force === e.force));
     for (const e of before) {
       if (still(e)) continue;
@@ -11152,7 +11153,7 @@ export class SR2Actor extends Actor {
         ...(offsets ? { offsets } : {}),
         ...(flesh ? { hostUuid: c.hostUuid, materialized: true } : {}),
         // v0.56.0: a nature spirit stays only until the next sunrise or sunset (RULES.MAGIC_V56.natureSpirits).
-        departsAt: c.spiritKind === 'nature' && RULES.MAGIC_V56.natureSpirits.departs === 'dawnDusk' ? nextDawnOrDusk(Number((game as any).time?.worldTime ?? 0)).at : -1,
+        departsAt: c.spiritKind === 'nature' && RULES.MAGIC_V56.natureSpirits.departs === 'dawnDusk' ? nextDawnOrDusk(sysNow()).at : -1,
         monitor: { physical: 0, stun: 0 },
         poolSpent: { combat: 0, spell: 0, spellConc: 0, spellSpec: 0 },
       },
@@ -11484,7 +11485,7 @@ export class SR2Actor extends Actor {
   async leaveSignature(kind: string, label: string, force: number): Promise<void> {
     const sceneId = SR2Actor.currentSceneId();
     if (!sceneId || !(force > 0)) return;
-    const now = (game.time?.worldTime as number | undefined) ?? 0;
+    const now = sysNow();
     const mask = maskingModifiers(this.initiate.grade, this.initiate.techniques)[0]?.value ?? 0;
     const sig: Signature & { masking?: number } = { id: `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, sceneId, kind, label, force, worldTime: now, ...(mask ? { masking: mask } : {}) };
     const list = pruneSignatures([...((this.getFlag(SYSTEM_ID, 'signatures') as Signature[] | undefined) ?? []), sig], now);
@@ -11497,7 +11498,7 @@ export class SR2Actor extends Actor {
 
   /** Signatures still lingering at a scene, from every actor in the world, newest first. */
   static signaturesAt(sceneId: string): Array<Signature & { actorUuid: string; actorName: string; ageHours: number; hoursLeft: number }> {
-    const now = (game.time?.worldTime as number | undefined) ?? 0;
+    const now = sysNow();
     const out: any[] = [];
     for (const a of allActors()) {
       const sigs = (a.getFlag?.(SYSTEM_ID, 'signatures') as Signature[] | undefined) ?? [];
@@ -11526,7 +11527,7 @@ export class SR2Actor extends Actor {
       return null;
     }
     const sig = opts.signature ?? null;
-    const now = (game.time?.worldTime as number | undefined) ?? 0;
+    const now = sysNow();
     // A signature on an object doesn't fade like one left at a scene (v0.39.0).
     // v0.61.0: a magical link (MAGIC_V61.links) doesn't fade; its own TN modifiers.
     const link = (sig as any)?.link ? linkTrackTest({ dice: 0, kind: String((sig as any).link), force: Number(sig!.force ?? 1) }) : null;
@@ -11642,7 +11643,7 @@ export class SR2Actor extends Actor {
       const key = h.mode === 'firstAid' ? 'firstAidAt' : h.mode === 'natural' ? 'restedAt' : 'healedAt';
       await patient.setFlag?.(SYSTEM_ID, key, { ...(patient.getFlag?.(SYSTEM_ID, key) ?? {}), [h.track]: target });
       // v0.55.0: when magic healed it, so a later wound (damagedAt) frees first aid again.
-      if (key === 'healedAt') await patient.setFlag?.(SYSTEM_ID, 'healedTime', { ...(patient.getFlag?.(SYSTEM_ID, 'healedTime') ?? {}), [h.track]: Number(game.time?.worldTime ?? 0) });
+      if (key === 'healedAt') await patient.setFlag?.(SYSTEM_ID, 'healedTime', { ...(patient.getFlag?.(SYSTEM_ID, 'healedTime') ?? {}), [h.track]: sysNow() });
     } else if (h.mode === 'firstAid') {
       // A failed attempt still uses up first aid for this wound.
       await patient.setFlag?.(SYSTEM_ID, 'firstAidAt', { ...(patient.getFlag?.(SYSTEM_ID, 'firstAidAt') ?? {}), [h.track]: target });
@@ -11662,7 +11663,7 @@ export class SR2Actor extends Actor {
     // v0.79.0: an unfinished stage keeps its successes (flag healStage): the next Rests add hours without a new roll,
     // so a stage can't be re-rolled until the successes suit. A Karma re-roll of this card rewrites it.
     if (stage && canWriteNow(patient) && h.track === 'physical') {
-      if (!stage.done && snap.successes > 0) await patient.setFlag(SYSTEM_ID, 'healStage', { boxes: h.before, successes: snap.successes, stageHours: stage.stageHours, rested: h.hours ?? 0, t: Number(game.time?.worldTime ?? 0), timeFactor: h.timeFactor ?? 1 });
+      if (!stage.done && snap.successes > 0) await patient.setFlag(SYSTEM_ID, 'healStage', { boxes: h.before, successes: snap.successes, stageHours: stage.stageHours, rested: h.hours ?? 0, t: sysNow(), timeFactor: h.timeFactor ?? 1 });
       else if (patient.getFlag?.(SYSTEM_ID, 'healStage') != null) await clearFlag(patient, 'healStage');
     }
     // v0.56.0: a permanent healing spell remembers what it healed until it takes (dropped early, it comes back).
@@ -11675,7 +11676,7 @@ export class SR2Actor extends Actor {
         await this.update({ 'system.sustaining': list });
       }
       const at = (list[i] as any)?.permanentAt;
-      if (healed > 0 && typeof at === 'number' && at >= 0) note += ` <em>${tx('SR2E.Card.Actor.itMustBeSustainedUntilIt', { span: escText(describeSpan(Math.max(0, at - Number(game.time?.worldTime ?? 0)))) })}</em>`;
+      if (healed > 0 && typeof at === 'number' && at >= 0) note += ` <em>${tx('SR2E.Card.Actor.itMustBeSustainedUntilIt', { span: escText(describeSpan(Math.max(0, at - sysNow()))) })}</em>`;
     }
     const body = snap.successes <= 0 ? `<strong>${tx('SR2E.Card.Actor.theHealingFails')}</strong>`
       : healed > 0 ? `<strong>${escText(h.targetName)}</strong> ${tCount(healed, 'SR2E.Card.Actor.healsBoxes', { track: h.track, before: h.before, target })}`
@@ -12641,7 +12642,7 @@ export class SR2Actor extends Actor {
   static matrixNow(): { round: number | null; worldTime: number; combatId: string | null } {
     // v0.81.0: the combat's id too, so a round stamped in one combat isn't compared with another's (rules/util.ts sameCombatRound).
     const combat: any = (game as any).combat;
-    return { round: combat?.started ? Number(combat.round ?? 0) : null, worldTime: Number((game as any).time?.worldTime ?? 0), combatId: combat?.started ? String(combat.id ?? '') : null };
+    return { round: combat?.started ? Number(combat.round ?? 0) : null, worldTime: sysNow(), combatId: combat?.started ? String(combat.id ?? '') : null };
   }
 
   /** Smoke released in a host (v0.40.0): + TN on every Matrix test there while it lasts. */
@@ -14100,7 +14101,7 @@ export class SR2Actor extends Actor {
         const turns = traceTurns(net) ?? RULES.MATRIX.trace.baseTurns;
         const combat: any = (game as any).combat;
         const round = combat?.started ? Number(combat.round ?? 0) : null;
-        const due = traceDue({ round, worldTime: Number((game as any).time?.worldTime ?? 0), turns, combatId: combat?.started ? String(combat.id ?? '') : null });
+        const due = traceDue({ round, worldTime: sysNow(), turns, combatId: combat?.started ? String(combat.id ?? '') : null });
         const t = target?.system?.matrix?.trace ?? {};
         await target?.update({ 'system.matrix.trace': { ...t, active: true, icUuid: ic!.icUuid, icName: ic!.icName, mode: ic!.traceMode ?? 'dump', rating: ic!.rating, hostUuid: ic!.hostUuid ?? '', round: due.round, worldTime: due.worldTime, combatId: due.combatId ?? '' } });
         body = `<strong>${tx('SR2E.Card.Actor.locksOnTo', { icIcName: escText(ic!.icName), tName: escText(tName) })}</strong>${tx('SR2E.Card.Actor.theTraceCompletesIn')} <strong>${tCount(turns, 'SR2E.Card.Actor.combatTurns')}</strong>${tx('SR2E.Card.Actor.thenJackOutDerezItOr', { part: round != null ? tx('SR2E.Card.Actor.combatTurn3', { dueRound: due.round }) : '', part2: ic!.traceMode === 'report' ? tx('SR2E.Card.Actor.reportsTheirLocation') : ic!.traceMode === 'burn' ? tx('SR2E.Card.Actor.dumpsThemAndBurnsTheDeck') : tx('SR2E.Card.Actor.dumpsThem') })}`;
@@ -14505,7 +14506,7 @@ export class SR2Actor extends Actor {
     if (!t?.active) return null;
     const combat: any = (game as any).combat;
     const turnsLeft = t.round >= 0 && combat?.started ? Math.max(0, t.round - Number(combat.round ?? 0)) : null;
-    const secondsLeft = t.worldTime >= 0 ? Math.max(0, t.worldTime - Number((game as any).time?.worldTime ?? 0)) : null;
+    const secondsLeft = t.worldTime >= 0 ? Math.max(0, t.worldTime - sysNow()) : null;
     return { icName: t.icName, mode: t.mode, turnsLeft, secondsLeft };
   }
 
@@ -14520,7 +14521,7 @@ export class SR2Actor extends Actor {
     if (!(game as any).user?.isGM) return;
     const active = (game as any).users?.activeGM;
     if (!now.anyGm && active && !isLeadGm()) return;
-    const time = now.worldTime ?? Number((game as any).time?.worldTime ?? 0);
+    const time = now.worldTime ?? sysNow();
     for (const a of allActors().filter((x: any) => x.system?.matrix?.trace?.active)) {
       const t = a.system.matrix.trace;
       if (!a.isJackedIn?.()) {
@@ -15012,7 +15013,7 @@ export class SR2Actor extends Actor {
 
   /** v0.57.0: count a dose of something addictive (a drug or a BTL), and roll the addiction test when RULES.HEALTH.addiction.auto. */
   async #recordDose(name: string, rating: number, type: string): Promise<void> {
-    const now = Number((game as any).time?.worldTime ?? 0);
+    const now = sysNow();
     const addictions: any[] = [...(this.sys.addictions ?? [])].map((x: any) => ({ ...x }));
     let add: any = addictions.find((x) => x.drug === name);
     if (!add) { add = { drug: name, rating, type, recent: [], lastDose: now, addicted: false, dosesAddicted: 0, withdrawalNoted: false }; addictions.push(add); }
@@ -17236,7 +17237,7 @@ export class SR2Actor extends Actor {
     if (!(game as any).user?.isGM) return;
     const active = (game as any).users?.activeGM;
     if (!now.anyGm && active && !isLeadGm()) return;
-    const time = now.worldTime ?? Number((game as any).time?.worldTime ?? 0);
+    const time = now.worldTime ?? sysNow();
     for (const a of SR2Actor.tickActors()) {
       // v0.56.0: permanent spells that have been sustained long enough take, and leave the list.
       await SR2Actor.#permanentTicks(a, time);
@@ -17310,7 +17311,7 @@ export class SR2Actor extends Actor {
   objectSignature(force: number, label: string): Signature & { actorUuid: string; actorName: string; onObject: true } {
     return {
       id: `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, sceneId: '', kind: 'object', label, force,
-      worldTime: Number((game as any).time?.worldTime ?? 0), actorUuid: this.uuid as string, actorName: this.name as string, onObject: true,
+      worldTime: sysNow(), actorUuid: this.uuid as string, actorName: this.name as string, onObject: true,
     };
   }
 
@@ -17333,7 +17334,7 @@ export class SR2Actor extends Actor {
     const r = await this.#runTest(tx('SR2E.Card.Actor.cleanAstralSignatureForce', { sigLabel: sig.label, sigForce: sig.force, part: (skill?.system?.rating ?? 0) > 0 ? '' : tx('SR2E.Card.Actor.magic4') }), dice,
       { targetNumber: Math.max(2, sig.force), modifiers: opts.modifiers ?? [], background: true });
     if (r.successes <= 0) return r;
-    const now = Number((game as any).time?.worldTime ?? 0);
+    const now = sysNow();
     const list: any[] = [...((owner.getFlag(SYSTEM_ID, 'signatures') as Signature[] | undefined) ?? [])];
     const i = list.findIndex((x) => x.id === sig.id);
     if (i < 0) return r;
@@ -17363,7 +17364,7 @@ export class SR2Actor extends Actor {
       if (!(await this.adjustNuyen(-cost, tx('SR2E.Text.Actor.ritualMaterialsForce', { name: spell?.name ?? tx('SR2E.Text.Actor.spell'), force })))) return;
     }
     const hours = ritualHours(force);
-    const startedAt = Number((game as any).time?.worldTime ?? 0);
+    const startedAt = sysNow();
     const names = [this.name, ...team.map((m) => m.name)];
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor: this }),
@@ -17391,7 +17392,7 @@ export class SR2Actor extends Actor {
     }
     // v0.81.1 (SEC1-1): a GM sending a player's ritual (runAsAuthor) waits for the preparation as the player would.
     isGm = Boolean(isGm) && Boolean((game as any).user?.isGM);
-    const left = ritualPrepLeft(Number(prep.startedAt) || 0, Number((game as any).time?.worldTime ?? 0), Number(prep.hours) || 0);
+    const left = ritualPrepLeft(Number(prep.startedAt) || 0, sysNow(), Number(prep.hours) || 0);
     const wait = RULES.MAGIC_V39.ritualStages.waitForPrep;
     if (left > 0 && wait !== 'off') {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.theRitualNeedsMorePreparation', { hoursLabel: hoursLabel(left), part: wait === 'block' && !isGm ? '' : tx('SR2E.Notify.Actor.sendingAnyway') }));
@@ -18037,13 +18038,13 @@ export class SR2Actor extends Actor {
   hungerInfo(): { days: number; hungry: boolean; tn: number } | null {
     if (!this.hasCritterPower('essenceLoss')) return null;
     const last = Number(this.getFlag?.(SYSTEM_ID, 'lastFed') ?? NaN);
-    return hunger(last, Number((game as any).time?.worldTime ?? 0));
+    return hunger(last, sysNow());
   }
 
   /** A ghoul or vampire feeds: the Essence loss clock starts again and hunger ends. */
   async feed(opts: { quiet?: boolean } = {}): Promise<boolean> {
     if (!this.hasCritterPower('essenceLoss')) { if (!opts.quiet) ui.notifications?.warn?.(tx('SR2E.Notify.Actor.hasNoEssenceLossToFeed', { name: escHtml(this.name) })); return false; }
-    const now = Number((game as any).time?.worldTime ?? 0);
+    const now = sysNow();
     await this.setFlag(SYSTEM_ID, 'lastFed', now);
     if (RULES.CRITTERS.diet.feedingResets) await this.setFlag(SYSTEM_ID, 'essenceLossAt', now);
     if (!opts.quiet) await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p><strong>${tx('SR2E.Card.Actor.feeds', { name: escText(this.name) })}</strong> ${tx('SR2E.Card.Actor.theEssenceLossClockStartsAgain')}</p>` });
@@ -18319,7 +18320,7 @@ export class SR2Actor extends Actor {
     // v0.72.0 (O11): Sensitive System calls for rejection tests even within the Body Index.
     const tn = sensitiveRejectionTn(rejectionTn(Number(bi.used ?? 0), Number(bi.max ?? 0)), Number(bi.used ?? 0), this.sys.derived?.vitals ?? { sensitive: false });
     if (tn === null) { ui.notifications?.info?.(tx('SR2E.Notify.Actor.sBodyIndexOfIsWithin', { name: escHtml(this.name), biUsed: escHtml(bi.used), biMax: escHtml(bi.max) })); return null; }
-    try { await this.setFlag(SYSTEM_ID, 'rejectionAt', nextRejectionAt(Number((game as any).time?.worldTime ?? 0))); } catch { /* not saved */ }
+    try { await this.setFlag(SYSTEM_ID, 'rejectionAt', nextRejectionAt(sysNow())); } catch { /* not saved */ }
     return this.#runTest(tx('SR2E.Card.Actor.biowareRejectionBodyVsBodyIndex', { tn, biUsed: bi.used, biMax: bi.max }), Number(this.sys.attributes?.body?.total ?? 0),
       { targetNumber: tn, noPenalties: true }, { kind: 'rejection', rejection: {} });
   }
@@ -18418,7 +18419,7 @@ export class SR2Actor extends Actor {
     const ppm = (canvas as any)?.scene?.id === scene.id ? pxPerMetre() : Number(scene.grid?.size ?? 100) / Math.max(0.01, Number(scene.grid?.distance ?? 1));
     const near = fires.find((f) => !f.burntOut && Math.hypot(f.x - point.x, f.y - point.y) / ppm <= f.radius);
     if (near) return near;
-    const now = Number((game as any).time?.worldTime ?? 0);
+    const now = sysNow();
     const area = SR2Actor.fuelAreas(scene).find((a) => !a.burnt && !a.burning && circleTouchesRect(point, 0, a.rect));
     const fire: SceneFire = { ...newFire({ id: SR2Actor.#newId(), x: point.x, y: point.y, source: o.source, now, ...(o.radius ? { radius: o.radius } : {}),
       ...(area ? { fuel: area.kind, maxRadius: fuelSpan(area.rect, ppm), fuelId: area.id } : {}) }), lastRound: (game as any).combat?.started ? Number((game as any).combat.round ?? 0) : -1 } as any;
@@ -18659,12 +18660,12 @@ export class SR2Actor extends Actor {
     const update: Record<string, unknown> = { 'system.devices': devices, 'system.tally': t.tally, 'system.alert': t.alert };
     if (alertAtLeast(t.alert, 'active') && before.round < 0 && before.time < 0) {
       const combat: any = (game as any).combat;
-      const r = responseDue({ round: combat?.started ? Number(combat.round ?? 0) : null, worldTime: Number((game as any).time?.worldTime ?? 0), own: sys.response ?? {} });
+      const r = responseDue({ round: combat?.started ? Number(combat.round ?? 0) : null, worldTime: sysNow(), own: sys.response ?? {} });
       update['system.response.round'] = r.round ?? -1;
       // v0.70.0: a world-time deadline too (3 s per Combat Turn in a fight), and the Combat Turn counts only in
       // the combat it was set in, so the response isn't lost when the fight ends or due in the next one.
       update['system.response.worldTime'] = r.round != null
-        ? Number((game as any).time?.worldTime ?? 0) + r.turns * RULES.COMBAT_TURN_SECONDS : r.worldTime;
+        ? sysNow() + r.turns * RULES.COMBAT_TURN_SECONDS : r.worldTime;
       update[`flags.${SYSTEM_ID}.responseCombat`] = r.round != null ? String(combat?.id ?? '') : '';
       update['system.response.arrived'] = false;
       notes.push(r.round != null ? tx('SR2E.Card.Actor.theResponseArrivesInCombatTurn', { round: r.round }) : tx('SR2E.Card.Actor.theResponseArrivesInMinutes', { minutes: r.minutes }));
@@ -19156,7 +19157,7 @@ export class SR2Actor extends Actor {
     // Hooks fire on every client: only the active GM answers them (the combat path passes anyGm).
     const active = (game as any).users?.activeGM;
     if (!now.anyGm && active && !isLeadGm()) return;
-    const time = now.worldTime ?? Number((game as any).time?.worldTime ?? 0);
+    const time = now.worldTime ?? sysNow();
     for (const site of allActors().filter((a: any) => a.type === 'site')) {
       const r = site.system.response;
       if (!r || r.arrived) continue;
@@ -19197,7 +19198,7 @@ export class SR2Item extends Item {
     }
     const heat = changed?.system?.heat;
     if (heat !== undefined && Number(heat) !== Number((this as any).system?.heat ?? 0) && changed.system.heatAt === undefined) {
-      changed.system.heatAt = Number(heat) > 0 ? Number((game as any).time?.worldTime ?? 0) : -1;
+      changed.system.heatAt = Number(heat) > 0 ? sysNow() : -1;
     }
     // v0.92.1 (RULES.SHEET_V921.carried): left behind, it can't be worn, drawn or switched on; putting it on brings it along.
     if (changed?.system) SR2Item.carriedRules((this as any).type, (this as any).system ?? {}, changed.system);
@@ -19224,7 +19225,7 @@ export class SR2Item extends Item {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.comesInAsAnOrdinaryProgram', { name: escHtml(String(data?.name ?? tx('SR2E.Notify.Actor.thatProgram'))) }));
     }
     const heat = Number(data?.system?.heat ?? 0);
-    if (heat > 0 && !(Number(data?.system?.heatAt ?? -1) >= 0)) (this as any).updateSource({ 'system.heatAt': Number((game as any).time?.worldTime ?? 0) });
+    if (heat > 0 && !(Number(data?.system?.heatAt ?? -1) >= 0)) (this as any).updateSource({ 'system.heatAt': sysNow() });
     // v0.92.1: an item arriving left behind isn't worn or drawn; a weapon arriving is read for accessories (only defaults filled).
     if (data?.system && data.system.carried === false) {
       const sys: any = { ...((this as any).system?.toObject?.() ?? (this as any).system ?? {}) };

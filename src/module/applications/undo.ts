@@ -15,6 +15,7 @@
  * The log lives in this browser (localStorage, per world and GM). What it can't undo is listed by
  * `undoLimits()` (rules/gmtools.ts) and shown in the GM panel.
  */
+import { COUNTED_TIME } from '../helpers/clock.ts';
 import { SYSTEM } from '../config/system.ts';
 import { deltaSafeUpdate } from '../helpers/flags.ts';
 import { undoFieldsToKeep } from '../rules/trust.ts';
@@ -287,7 +288,7 @@ export class SR2Undo {
         const f = e.fields?.find((x) => x.path === 'value');
         const before = Number(JSON.parse(String(f?.before ?? '0')));
         const now = Number((game as any).time?.worldTime ?? 0);
-        if (Number.isFinite(before) && before !== now) await (game as any).time.advance(before - now);
+        if (Number.isFinite(before) && before !== now) await (game as any).time.advance(before - now, COUNTED_TIME);
         return true;
       }
       // v0.75.0: on an unlinked token's actor a removed flag is written as null (a `-=` stays on open clients).
@@ -300,7 +301,7 @@ export class SR2Undo {
       // A setting saved for the first time: put back its default (deleting the document wouldn't tell anyone).
       if (e.settingKey === 'core.time') {
         const now = Number((game as any).time?.worldTime ?? 0);
-        if (now) await (game as any).time.advance(-now);
+        if (now) await (game as any).time.advance(-now, COUNTED_TIME);
         return true;
       }
       const key = String(e.settingKey ?? '');

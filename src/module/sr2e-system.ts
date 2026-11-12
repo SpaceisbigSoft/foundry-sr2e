@@ -26,6 +26,7 @@ import { SR2CharacterSheet, SR2NpcSheet, SR2SpiritSheet, SR2BarrierSheet, SR2Hos
 import { registerChatHandlers } from "./applications/chat.ts";
 import { configureTokens, registerTokenHooks, useItem, runSheetAction, syncTokenVision, registerStateStatusHooks, registerMovementRuler, latestAttackOn } from "./applications/tokens.ts";
 import { registerMigrationSetting, runMigrations } from "./migrations.ts";
+import { registerClockSetting } from "./helpers/clock.ts";
 import { registerSettings } from "./settings.ts";
 import { registerUiHooks, SR2GmPanel } from "./applications/ui.ts";
 import { registerUndoHooks, registerUndoKeybinding, SR2Undo } from "./applications/undo.ts";
@@ -130,6 +131,8 @@ export class SR2System {
     registerUndoHooks();
     registerUndoKeybinding();
     registerMigrationSetting();
+    // v0.92.2: the system's clock (RULES.CLOCK_V922).
+    registerClockSetting();
     registerSettings();
     registerBugReport();
     // v0.60.0

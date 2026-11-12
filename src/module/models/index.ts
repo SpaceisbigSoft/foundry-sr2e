@@ -33,6 +33,7 @@ import {
 } from '../rules/index.ts';
 // v0.71.0 (R7): MPCP caps on loaded programs.
 import { programsOverMpcp, mpcpProgramWarnings, mpcpCapsOn, programRunRating } from '../rules/matrix.ts';
+import { sysNow } from '../helpers/clock.ts';
 import { urrMagAstralModeFor, urrMagAdeptFoci } from '../rules/urr80-magic.ts';
 import { bleedEveryText } from '../rules/urr80-health-social.ts';
 import { magicPoolBase, sorceryRating } from '../rules/docs79-drones-magic.ts';
@@ -46,7 +47,7 @@ import { t as tx, tCount } from '../helpers/i18n.ts';
 
 const f = () => foundry.data.fields;
 /** World time now (0 outside Foundry). */
-const worldNow = (): number => Number((globalThis as any).game?.time?.worldTime ?? 0);
+const worldNow = (): number => sysNow();
 /** v0.57.0: Matrix timers now: the Combat Turn of a started combat (else null) and the world time. */
 const matrixNowM = (): { round: number | null; worldTime: number; combatId: string | null } => {
   const c: any = (globalThis as any).game?.combat;

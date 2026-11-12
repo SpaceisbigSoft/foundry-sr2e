@@ -76,8 +76,9 @@ interface Rule { id: string; re: RegExp; hit: (m: RegExpExecArray) => Omit<Acces
 const RULES_LIST: Rule[] = [
   // v0.92.2: also plural ("gas vents 3"), a bracketed rating ("gas vent (2)", "(rating 3)") and ", rating 2" (digits only
   // after a comma, so "gas vent, i.e." reads no rating).
-  { id: 'gasVent', re: /\bgas[- ]?vents?(?:\s*(?:system|compensator)s?)?(?:\s*,\s*rating\s*(\d)\b|\s*\(?\s*(?:rating\s*)?(\d|iii|ii|iv|vi|v|i)\b\)?)?/gi,
-    hit: (m) => { const n = numberOf(m[1] ?? m[2]); return n ? { field: 'recoilComp', value: n } : {}; } },
+  { id: 'gasVent', re: /\bgas[- ]?vents?(?:\s*(?:system|compensator)s?)?(?:\s*,\s*rating\s*(\d)\b|\s*\(\s*(?:rating\s*)?(\d|iii|ii|iv|vi|v|i)\s*\)|\s*(?:rating\s*)?(\d|iii|ii|iv|vi|v|i)\b)?/gi,
+    // Review (v0.92.2): a bracketed rating needs its closing bracket, so "gas vent (I think)" reads none.
+    hit: (m) => { const n = numberOf(m[1] ?? m[2] ?? m[3]); return n ? { field: 'recoilComp', value: n } : {}; } },
   { id: 'recoilComp', re: /\b(?:recoil\s+comp(?:ensation|ensator)?|rc)\s*(?:of\s*)?[+:]?\s*\(?\s*(?:rating\s*)?(\d)\b|\b(\d)\s+(?:points?\s+of\s+)?recoil\s+comp(?:ensation)?\b/gi,
     hit: (m) => { const n = numberOf(m[1] ?? m[2]); return n ? { field: 'recoilComp', value: n } : null; } },
   { id: 'suppressor', re: /\b(?:sound\s+)?suppressor\b/gi, hit: () => ({ field: 'muzzle', value: 'suppressor' }) },
@@ -139,8 +140,9 @@ export function readAccessories(description: unknown): AccessoryHit[] {
   if (vision && !out.some((h) => h.field === 'scope')) {
     const at = text.toLowerCase().indexOf(vision.text.toLowerCase());
     const near = at >= 0 ? text.slice(at + vision.text.length, at + vision.text.length + 32) : '';
-    const mag = /^[^.;]*?\b(?:magnification|mag\.?)\s*(\d)|^[^.;]*?\b(\d)\s*x\b/i.exec(near);
-    out.push({ id: 'scope', field: 'scope', value: Math.min(3, Math.max(1, numberOf(mag?.[1] ?? mag?.[2]) ?? 1)), text: vision.text });
+    // Review: "magnification N" within the phrase, or "(N)" / ", N x" straight after (not "and 2 x spare clips").
+    const mag = /^[^.;]*?\b(?:magnification|mag\.?)\s*(\d)|^\s*\(\s*(\d)\s*\)|^\s*,?\s*(\d)\s*x\b/i.exec(near);
+    out.push({ id: 'scope', field: 'scope', value: Math.min(3, Math.max(1, numberOf(mag?.[1] ?? mag?.[2] ?? mag?.[3]) ?? 1)), text: vision.text });
   }
   return out;
 }

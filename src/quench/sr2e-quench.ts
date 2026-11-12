@@ -23,15 +23,29 @@ class Made {
   actors: any[] = [];
   messages = new Set<string>();
   combats: any[] = [];
-  windows = new Set<any>();
+  scenes: any[] = [];
   worldTime = 0;
+  started = false;
   #hook = 0;
   #before = new Set<any>();
+  #roundTime: number | undefined = undefined;
 
-  start(): void {
+  /** Starts only for a GM (a player's run makes and removes nothing). */
+  start(): boolean {
+    if (!game.user?.isGM) return false;
+    this.started = true;
     this.worldTime = Number(game.time?.worldTime ?? 0);
-    this.#hook = Hooks.on('createChatMessage', (m: any) => { this.messages.add(String(m.id)); });
+    // Review (v0.92.2): only this run's own cards: posted by this user, about a test actor (a speaker or the text).
+    this.#hook = Hooks.on('createChatMessage', (m: any) => {
+      if (String(m.author?.id ?? m.user?.id ?? '') !== String(game.user?.id)) return;
+      const ids = new Set(this.actors.map((a) => String(a.id)));
+      if (ids.has(String(m.speaker?.actor ?? '')) || String(m.content ?? '').includes(PREFIX) || String(m.speaker?.alias ?? '').includes(PREFIX)) this.messages.add(String(m.id));
+    });
     this.#before = new Set(openApps());
+    // Review: a Combat Turn must not move world time (every actor's timers would tick); put back afterwards.
+    this.#roundTime = (CONFIG as any).time?.roundTime;
+    if ((CONFIG as any).time) (CONFIG as any).time.roundTime = 0;
+    return true;
   }
 
   async actor(data: Record<string, unknown>): Promise<any> {
@@ -40,16 +54,25 @@ class Made {
     return a;
   }
 
-  async cleanup(): Promise<void> {
+  /** Removes what this run made; each step on its own, so one failure doesn't leave the rest. */
+  async cleanup(prevScene: any = null): Promise<void> {
+    if (!this.started) return;
+    const step = async (fn: () => Promise<unknown> | unknown) => { try { await fn(); } catch (err) { console.warn('sr2e | Quench cleanup', err); } };
     Hooks.off('createChatMessage', this.#hook);
-    for (const app of openApps()) if (!this.#before.has(app)) { try { await app.close({ animate: false }); } catch { /* already closed */ } }
-    for (const c of this.combats) { try { if (game.combats?.get(c.id)) await c.delete(); } catch { /* gone */ } }
-    const ids = [...this.messages].filter((id) => game.messages?.get(id));
-    if (ids.length) await ChatMessage.deleteDocuments(ids);
-    const actorIds = this.actors.map((a) => a.id).filter((id) => game.actors?.get(id));
-    if (actorIds.length) await Actor.deleteDocuments(actorIds);
-    const dt = this.worldTime - Number(game.time?.worldTime ?? 0);
-    if (dt) await game.time.advance(dt);
+    for (const app of openApps()) if (!this.#before.has(app)) await step(() => app.close({ animate: false }));
+    for (const c of this.combats) await step(() => (game.combats?.get(c.id) ? c.delete() : null));
+    await step(() => { const ids = [...this.messages].filter((id) => game.messages?.get(id)); return ids.length ? ChatMessage.deleteDocuments(ids) : null; });
+    await step(() => { const ids = this.actors.map((a) => a.id).filter((id) => game.actors?.get(id)); return ids.length ? Actor.deleteDocuments(ids) : null; });
+    for (const sc of this.scenes) {
+      await step(async () => {
+        if (!game.scenes?.get(sc.id)) return;
+        if (game.scenes.viewed?.id === sc.id && prevScene && game.scenes.get(prevScene.id)) await prevScene.view();
+        await sc.delete();
+      });
+    }
+    await step(() => { const dt = this.worldTime - Number(game.time?.worldTime ?? 0); return dt ? game.time.advance(dt, { sr2eTime: 'count' }) : null; });
+    if ((CONFIG as any).time) (CONFIG as any).time.roundTime = this.#roundTime;
+    this.started = false;
   }
 }
 
@@ -120,13 +143,12 @@ function newestCard(made: Made, since: number): any {
     .find((m: any) => m.flags?.[SYSTEM.id]?.test);
 }
 
-function gmOnly(ctx: any): void { if (!game.user?.isGM) ctx.skip(); }
 
 /** A runner with skills and items, used by several batches. */
 async function runner(made: Made, extra: Record<string, unknown> = {}): Promise<any> {
   return made.actor({
     type: 'character', name: 'Runner',
-    system: { attributes: { body: { value: 4 }, quickness: { value: 5 }, strength: { value: 4 }, charisma: { value: 3 }, intelligence: { value: 5 }, willpower: { value: 4 } } },
+    system: { attributes: { body: { base: 4 }, quickness: { base: 5 }, strength: { base: 4 }, charisma: { base: 3 }, intelligence: { base: 5 }, willpower: { base: 4 } } },
     items: [
       { name: 'Firearms', type: 'skill', system: { rating: 5, attribute: 'quickness' } },
       { name: 'Armed Combat', type: 'skill', system: { rating: 4, attribute: 'strength' } },
@@ -142,7 +164,7 @@ function batchDocuments(ctx: Ctx): void {
   describe('Every document type', function (this: any) {
     this.timeout(20000);
     const made = new Made();
-    before(function (this: any) { gmOnly(this); made.start(); });
+    before(function (this: any) { if (!made.start()) this.skip(); });
     after(async () => { await made.cleanup(); });
 
     for (const type of ACTOR_TYPES) {
@@ -192,7 +214,7 @@ function batchRolls(ctx: Ctx): void {
     const made = new Made();
     let pc: any; let foe: any;
     before(async function (this: any) {
-      gmOnly(this); made.start();
+      if (!made.start()) this.skip();
       pc = await runner(made);
       foe = await made.actor({ type: 'npc', name: 'Foe', items: [{ name: 'Armed Combat', type: 'skill', system: { rating: 3, attribute: 'strength' } }] });
     });
@@ -265,10 +287,14 @@ function batchSheet921(ctx: Ctx): void {
   describe('v0.92.1 the flexible record sheet', function (this: any) {
     this.timeout(20000);
     const made = new Made();
-    before(function (this: any) { gmOnly(this); made.start(); });
+    const R = () => (game.sr2e?.api?.rules?.SHEET_V921 ?? {}) as Record<string, string>;
+    before(function (this: any) { if (!made.start()) this.skip(); });
+    // Review: these test the new way; a world with the house rule set back skips them.
+    const needs = (ctx: any, key: string, on: string) => { if (R()[key] !== on) ctx.skip(); };
     after(async () => { await made.cleanup(); });
 
-    it('a tweak on carried gear raises an attribute; leaving it behind takes it off', async () => {
+    it('a tweak on carried gear raises an attribute; leaving it behind takes it off', async function (this: any) {
+      needs(this, 'tweaks', 'on'); needs(this, 'carried', 'on');
       const a = await runner(made);
       const base = Number(a.system.attributes.strength.total);
       const [g] = await a.createEmbeddedDocuments('Item', [{ name: `${PREFIX} belt`, type: 'gear', system: { weight: 3, tweaks: [{ id: 'q1', label: 'test', target: 'attribute', key: 'strength', value: 1 }] } }]);
@@ -279,7 +305,8 @@ function batchSheet921(ctx: Ctx): void {
       assert.equal(Number(a.system.derived.load.kg), kg - 3, 'left behind: no weight');
     });
 
-    it('a damage tweak on a weapon raises its Power', async () => {
+    it('a damage tweak on a weapon raises its Power', async function (this: any) {
+      needs(this, 'tweaks', 'on');
       const a = await runner(made, { name: 'Power' });
       const knife = a.items.find((i: any) => i.name === 'Knife');
       const p0 = Number(a.planAttack(knife, {}).power);
@@ -287,7 +314,8 @@ function batchSheet921(ctx: Ctx): void {
       assert.equal(Number(a.planAttack(knife, {}).power), p0 + 2);
     });
 
-    it('a weapon left behind can\'t attack', async () => {
+    it('a weapon left behind can\'t attack', async function (this: any) {
+      needs(this, 'carried', 'on');
       const a = await runner(made, { name: 'Unarmed' });
       const knife = a.items.find((i: any) => i.name === 'Knife');
       await knife.update({ 'system.carried': false });
@@ -295,7 +323,8 @@ function batchSheet921(ctx: Ctx): void {
       assert.equal(r, null);
     });
 
-    it('accessories in a new weapon\'s description fill fields at their default, with an undo record', async () => {
+    it('accessories in a new weapon\'s description fill fields at their default, with an undo record', async function (this: any) {
+      needs(this, 'accessories', 'auto');
       const a = await runner(made, { name: 'Reader' });
       const [w] = await a.createEmbeddedDocuments('Item', [{ name: `${PREFIX} rifle`, type: 'weapon', system: { skill: 'Firearms', description: '<p>Comes with a laser sight and gas vents (2), and a scope (low-light, magnification 2).</p>' } }]);
       assert.equal(w.system.laserSight, true, 'laser sight');
@@ -305,7 +334,8 @@ function batchSheet921(ctx: Ctx): void {
       assert.ok(w.flags?.[SYSTEM.id]?.fromDescription?.fields?.laserSight, 'undo record');
     });
 
-    it('"no silencer" is not read as a silencer', async () => {
+    it('"no silencer" is not read as a silencer', async function (this: any) {
+      needs(this, 'accessories', 'auto');
       const a = await runner(made, { name: 'Negation' });
       const [w] = await a.createEmbeddedDocuments('Item', [{ name: `${PREFIX} pistol`, type: 'weapon', system: { skill: 'Firearms', description: '<p>No silencer; a smartgun link is sold separately.</p>' } }]);
       assert.equal(String(w.system.muzzle ?? ''), '');
@@ -412,8 +442,21 @@ async function timed<T>(key: string, fn: () => Promise<T> | T): Promise<T> {
   return out;
 }
 
-/** Frames drawn per second over `ms` (requestAnimationFrame). */
+/**
+ * Wait until the table has settled: Dice So Nice's queued 3D dice have finished (a batch posts cards far faster than
+ * people do, so its animations queue up for minutes) and the floating numbers are gone. At most `maxMs`.
+ */
+async function settle(maxMs = 90000): Promise<void> {
+  const end = performance.now() + maxMs;
+  const size = (x: any): number => (x == null ? 0 : typeof x.length === 'number' ? x.length : typeof x.size === 'number' ? x.size : typeof x === 'object' ? Object.keys(x).length : 0);
+  const busy = () => { const d: any = (game as any).dice3d; return Boolean(d?.box?.rolling || size(d?.queue) > 0 || size(d?.pendingThrows) > 0); };
+  while (performance.now() < end && busy()) await wait(500);
+  await wait(3000);
+}
+
+/** Frames drawn per second over `ms` (requestAnimationFrame), once the table has settled. */
 async function fps(ms = 2000): Promise<number> {
+  await settle();
   let frames = 0;
   const end = performance.now() + ms;
   await new Promise<void>((resolve) => { const step = () => { frames++; if (performance.now() < end) requestAnimationFrame(step); else resolve(); }; requestAnimationFrame(step); });
@@ -427,19 +470,17 @@ async function fps(ms = 2000): Promise<number> {
 function batchPerformance(ctx: Ctx): void {
   const { describe, it, before, after, assert } = ctx;
   describe('A busy table', function (this: any) {
-    this.timeout(180000);
+    this.timeout(600000);
     const made = new Made();
     let scene: any = null; let prevScene: any = null; let combat: any = null; let pc: any = null;
     const N = 50; const CARDS = 300;
     before(async function (this: any) {
-      gmOnly(this); made.start();
       prevScene = game.scenes?.viewed ?? null;
+      if (!made.start()) this.skip();
     });
     after(async () => {
-      await made.cleanup();
-      if (scene && game.scenes.get(scene.id)) { if (prevScene && game.scenes.get(prevScene.id)) await prevScene.view(); await scene.delete(); }
-      // eslint-disable-next-line no-console
-      console.table(perfResults);
+      await made.cleanup(prevScene);
+      if (Object.keys(perfResults).length) console.table(perfResults);
     });
 
     it(`builds a scene with ${N} tokens`, async () => {
@@ -450,6 +491,7 @@ function batchPerformance(ctx: Ctx): void {
         made.actors.push(...actors);
       });
       scene = await (globalThis as any).Scene.create({ name: `${PREFIX} busy scene`, width: 4000, height: 3000, grid: { size: 100 }, padding: 0 });
+      made.scenes.push(scene);
       await timed('view', () => scene.view());
       await wait(500);
       await timed('tokens', async () => {
@@ -507,14 +549,14 @@ function batchPerformance(ctx: Ctx): void {
       await wait(500);
       perfResults['fps (hurt)'] = await fps();
       assert.isAtMost(perfResults['damage x50']!, 15000);
-      assert.isAtLeast(perfResults['fps (hurt)']!, 10, 'the canvas still draws');
+      assert.isAtLeast(perfResults['fps (hurt)']!, 30, 'the canvas draws smoothly once the damage has shown');
     });
   });
 }
 
 /** Register the batches (call at init; they appear once Quench is ready). */
 export function registerQuenchBatches(): void {
-  Hooks.on('quenchReady', (quench: any) => {
+  Hooks.once('quenchReady', (quench: any) => {
     const reg = (key: string, name: string, fn: (ctx: Ctx) => void, preSelected = true) => quench.registerBatch(`${SYSTEM.id}.${key}`, fn, { displayName: `SR2e: ${name}`, preSelected });
     reg('api', 'system and API', batchApi);
     reg('documents', 'every document type and sheet', batchDocuments);

@@ -10,6 +10,7 @@
  * The rules (prices, Karma, warnings) are in `rules/catalogue.ts`.
  */
 import { SYSTEM } from '../config/system.ts';
+import { sysNow } from '../helpers/clock.ts';
 import {
   ADD_TYPES, typeLabel, paymentChoices, amountLocked, amountMax, systemWithAmount, RULES, PAYMENT_LABELS, rowAmount, entrySummary, entryPrice, entryAvailability, basketPlan, 
   newSkillKarma, skillAttributeFor, itemAcquireHours, copiesOf, COMMON_SKILLS, SKILL_KIND_LABELS, togglePin, copyName, matchesSearch, specializationTrade,
@@ -297,7 +298,7 @@ export class SR2AddWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     }
     const amt = rowAmount(this.type);
     const isGM = Boolean(game.user?.isGM);
-    const now = Number((game as any).time?.worldTime ?? 0);
+    const now = sysNow();
     const retries: Record<string, any> = (actor?.flags?.[SYSTEM.id]?.findRetry as Record<string, any> | undefined) ?? {};
     // v0.91.2: each row's category; sorted by category, then name.
     // v0.91.2 review (R5): each entry classified once.

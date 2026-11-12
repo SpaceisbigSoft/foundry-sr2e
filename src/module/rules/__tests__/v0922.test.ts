@@ -61,3 +61,52 @@ describe('v0.92.2 the HUD leaves out weapons left behind', async () => {
     try { assert.ok(weaponIds(false).some((id: string) => id.includes('w1'))); } finally { S.carried = prev; }
   });
 });
+
+describe('v0.92.2 the system clock (RULES.CLOCK_V922)', async () => {
+  const { cleanClock, systemTime, isBigJump, wholeDays, nextClock, undoesLast, EMPTY_CLOCK } = await import('../clock.ts');
+  const DAY = 86400;
+  const rules = { bigJump: 'ask' as const, bigJumpDays: 7 };
+  test('a big jump is a week or more either way, outside combat, not one the system made', () => {
+    assert.equal(isBigJump(7 * DAY, {}, rules), true);
+    assert.equal(isBigJump(-7 * DAY, {}, rules), true);
+    assert.equal(isBigJump(7 * DAY - 1, {}, rules), false);
+    assert.equal(isBigJump(30 * DAY, { inCombat: true }, rules), false);
+    assert.equal(isBigJump(30 * DAY, { marked: true }, rules), false);
+    assert.equal(isBigJump(30 * DAY, {}, { bigJump: 'count', bigJumpDays: 7 }), false);
+  });
+  test('only the date: the whole days stay off the system clock, the hours count, the time of day is kept', () => {
+    const from = 0; const to = 57 * 365 * DAY + 3600 * 5 + 127;
+    const s = nextClock(EMPTY_CLOCK, from, to, 'date');
+    assert.equal(s.offset, wholeDays(to - from));
+    assert.equal(s.offset % DAY, 0);
+    assert.equal(systemTime(to, s), 3600 * 5 + 127, 'the part day counted');
+    assert.equal(systemTime(to, s) % DAY, to % DAY, 'same time of day');
+  });
+  test('counting it changes nothing; the same jump back takes the days off again', () => {
+    assert.deepEqual(nextClock(EMPTY_CLOCK, 0, 30 * DAY, 'count'), { offset: 0, last: null });
+    const s = nextClock(EMPTY_CLOCK, 100, 100 + 30 * DAY, 'date');
+    assert.equal(undoesLast(s, 100 + 30 * DAY, 100), true);
+    assert.deepEqual(nextClock(s, 100 + 30 * DAY, 100, 'count'), { offset: 0, last: null });
+    const s2 = nextClock(s, 100 + 30 * DAY, 100 + 60 * DAY, 'date');
+    assert.equal(s2.offset, 60 * DAY);
+  });
+  test('a stored state is cleaned (whole days, a bad value reads as none)', () => {
+    assert.deepEqual(cleanClock(null), { offset: 0, last: null });
+    assert.deepEqual(cleanClock({ offset: 'x' }), { offset: 0, last: null });
+    assert.equal(cleanClock({ offset: DAY * 3 + 5 }).offset, DAY * 3);
+    assert.equal(cleanClock({ offset: DAY, last: { from: 1, to: 'a', add: 2 } }).last, null);
+  });
+});
+
+describe('v0.92.2 review: no ratings from ordinary prose', () => {
+  test('a bracket that is not a rating reads none', () => {
+    for (const d of ['gas vent (i.e. a brake)', "gas vent (I'm told)", 'gas vent (I think)', 'gas vents (V-shaped)', 'gas vent (v.2 model)'])
+      assert.deepEqual(read(d), {}, d);
+    assert.deepEqual(read('gas vents (iii)'), { recoilComp: 3 });
+  });
+  test('only a number right after a vision scope is its magnification', () => {
+    assert.deepEqual(read('low-light scope and 2 x spare clips'), { scopeVision: 'lowLight', scope: 1 });
+    assert.deepEqual(read('thermographic scope (2)'), { scopeVision: 'thermographic', scope: 2 });
+    assert.deepEqual(read('thermographic scope, 3x'), { scopeVision: 'thermographic', scope: 3 });
+  });
+});

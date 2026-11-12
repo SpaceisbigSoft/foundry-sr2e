@@ -2,7 +2,7 @@
   "id": "sr2e",
   "title": "Shadowrun 2nd Edition (Unofficial)",
   "description": "Unofficial Shadowrun 2nd Edition rules for Foundry VTT: success tests with target numbers, Rule of Six, Combat Pool, initiative passes, damage staging, magic, the Matrix, vehicles and security. Requires your own copy of the rulebook; contains no rulebook text. A fan project, not affiliated with or endorsed by The Topps Company, Catalyst Game Labs or Black Book Editions; Shadowrun and Matrix are trademarks of The Topps Company, Inc. Licence CC BY-SA 4.0, based on the SRA2 build setup. Built with AI: written by Anthropic's Claude under human direction; not yet play-tested at a table.",
-  "version": "0.92.1",
+  "version": "0.92.2",
   "compatibility": {
     "minimum": 14,
     "verified": 14

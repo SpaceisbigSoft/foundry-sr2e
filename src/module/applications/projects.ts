@@ -3,6 +3,7 @@
  * paid, Give up (the owner: what was paid comes back), and for the GM, Change time… and Finish now.
  */
 import { describeProject, timeLabel, hoursLeft } from '../rules/index.ts';
+import { sysNow } from '../helpers/clock.ts';
 import { escHtml } from '../rules/html.ts';
 import { t as tx } from '../helpers/i18n.ts';
 
@@ -14,7 +15,7 @@ export interface UnderwayRow { id: string; label: string; left: string; paid: st
 
 /** Everything under way on an actor, soonest first. */
 export function underwayRows(actor: any): UnderwayRow[] {
-  const now = Number((game as any).time?.worldTime ?? 0);
+  const now = sysNow();
   const rows: UnderwayRow[] = [];
   for (const p of (actor?.projects?.() ?? [])) {
     const d = describeProject(p, now);

@@ -37,3 +37,17 @@ export const SHEET_V921 = {
   wizard: 'advise' as 'advise' | 'block',
   ratingLock: 'queue' as 'queue' | 'always',
 };
+
+/**
+ * v0.92.2 (the owner, 12 Nov 2026): a big jump of world time outside combat (a calendar module setting the date, a GM
+ * moving the clock weeks on). Read through RULES.CLOCK_V922.
+ * - bigJump: 'ask' — the GM is asked whether it counts as time passed (drugs, healing, upkeep, training and timers run)
+ *   or only changes the date: then the system's own clock moves by the whole days less (rules/clock.ts), so everything
+ *   keeps its time left and the time of day stays the calendar's; the hours left over count. 'count': every change of
+ *   world time counts as time passed (the old way).
+ * - bigJumpDays: how big a jump is big, in days, either way.
+ */
+export const CLOCK_V922 = {
+  bigJump: 'ask' as 'ask' | 'count',
+  bigJumpDays: 7,
+};

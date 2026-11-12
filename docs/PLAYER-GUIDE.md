@@ -889,6 +889,8 @@ The Party tab lists everyone's things under way, each with **Change the time lef
 
 What waits at all is set in the house rules, section *Time to get things*: the main switch, each area (magic, buying gear, repairs, Matrix work, vehicles), the Availability time multiplier for buying straight from the Add window, and the shortest wait. Training time for raised ratings is the *Characters* house rule about raising a skill or attribute. See [House rules](#house-rules-and-settings).
 
+**A calendar module, or the clock moved by hand:** when world time jumps a week or more outside combat (a calendar setting the date when you turn it on, or you set the campaign's date), you are asked: **Count it as time passed** runs everything timed for it, as above; **Only the date** changes the date but not the characters' time, so drugs, recovery, upkeep and training keep the time they had left (the time of day stays the calendar's). Putting the date back the same way undoes it. The size of a big jump, or always counting, is a house rule (*GM tools*). The Scene tab's own buttons always count.
+
 ## Combat and NPCs tabs
 
 **Combat** tab: the Combat Turn and pass, **Start**, back one turn, **Next**, **Roll NPCs** and **Add selected**. Each row has the crosshair (show and select the token), the token's initiative, ± buttons for Physical and Stun boxes, and quick icons: attack (target a token first), cast, defend, perceive, morale, roll initiative again.

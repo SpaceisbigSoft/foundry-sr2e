@@ -8,6 +8,7 @@
  * `rules/safehouse.ts` (house rules).
  */
 import { SYSTEM } from '../config/system.ts';
+import { sysNow } from '../helpers/clock.ts';
 import { dropItemOnActor } from "./drops.ts";
 import {
   RULES, safehouseOption, describeOption, defaultRating, optionRating, paySafehouse, safehouseUpkeepStatus, safehouseComfort,
@@ -80,7 +81,7 @@ export class SR2SafehouseSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const actor: any = this.document;
     const sys = actor.system;
     const d = sys.derived;
-    const now = Number((game as any).time?.worldTime ?? 0);
+    const now = sysNow();
     const st = safehouseUpkeepStatus(Number(sys.paidUntil ?? -1), now);
     const comfortNow = safehouseComfort(d.comfort, st.lapsed);
     const chosen = (sys.options ?? []).map((c: any, index: number) => ({ c, index, def: safehouseOption(c.key) }));
@@ -267,7 +268,7 @@ export class SR2SafehouseSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       rejectClose: false,
     });
     if (!choice) return;
-    const p = paySafehouse({ upkeep, months: choice.months, paidUntil: Number(h.system.paidUntil ?? -1), now: Number((game as any).time?.worldTime ?? 0) });
+    const p = paySafehouse({ upkeep, months: choice.months, paidUntil: Number(h.system.paidUntil ?? -1), now: sysNow() });
     const payer: any = p.cost > 0 ? await fromUuid(choice.payer) : null;
     if (p.cost > 0) {
       if (!payer) return;

@@ -1,4 +1,5 @@
 import { importIntoCharacter } from './catalogue.ts';
+import { sysNow } from '../helpers/clock.ts';
 import { askFindThrough } from './through.ts';
 import { learnFromFormulaDialog, learnFromTeacherDialog } from './formulas.ts';
 import { teachersOn } from '../rules/formulas.ts';
@@ -514,13 +515,13 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       cyberWeapons: (actor.cyberWeapons?.() ?? []).map((w: any) => weaponRow(actor, w)),
       softSkills: actor.softSkills?.() ?? [],
       addictions: (actor.system.addictions ?? []).map((a: any, index: number) => {
-        const st = withdrawalState(a, Number(game.time?.worldTime ?? 0));
+        const st = withdrawalState(a, sysNow());
         return { ...a, index, withdrawal: a.addicted && st.withdrawal, daysClean: st.daysClean, canKick: a.addicted && st.canKick, recentCount: (a.recent ?? []).length };
       }),
       diseases: (actor.system.diseases ?? []).map((d: any, index: number) => ({ ...d, index,
-        due: d.pending ? tx('SR2E.App.Sheets.dueNow') : tx('SR2E.App.Sheets.nextInHours', { hours: Math.max(0, Math.round((d.nextAt - Number(game.time?.worldTime ?? 0)) / 3600)) }),
+        due: d.pending ? tx('SR2E.App.Sheets.dueNow') : tx('SR2E.App.Sheets.nextInHours', { hours: Math.max(0, Math.round((d.nextAt - sysNow()) / 3600)) }),
         // v0.48.0: contagion and radiation sickness.
-        contagiousLabel: contagionReach(d.contagious ?? "") ? tx('SR2E.App.Sheets.contagious', { reach: d.contagious }) : "", canSpread: !contagionProblem(d, Number(game.time?.worldTime ?? 0)),
+        contagiousLabel: contagionReach(d.contagious ?? "") ? tx('SR2E.App.Sheets.contagious', { reach: d.contagious }) : "", canSpread: !contagionProblem(d, sysNow()),
         radiation: isRadiationSickness(d), from: d.source && d.source !== "radiation" ? d.source : "" })),
       radiation: (() => {
         const dose = Number(actor.system.radiation?.dose ?? 0);
@@ -531,7 +532,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         return { dose, stage: st >= 0 ? stages[st]!.name : "", next: next ? tx('SR2E.App.Sheets.stageAtDose', { name: next.name, dose: next.dose }) : "" };
       })(),
       drugsActive: (actor.system.drugs ?? []).map((d: any, index: number) => ({ ...d, index,
-        until: d.round >= 0 && game.combat?.started ? tx('SR2E.App.Sheets.untilCombatTurn', { round: d.round }) : d.worldTime >= 0 ? tx('SR2E.App.Sheets.minLeft', { minutes: Math.max(0, Math.round((d.worldTime - Number(game.time?.worldTime ?? 0)) / 60)) }) : "" })),
+        until: d.round >= 0 && game.combat?.started ? tx('SR2E.App.Sheets.untilCombatTurn', { round: d.round }) : d.worldTime >= 0 ? tx('SR2E.App.Sheets.minLeft', { minutes: Math.max(0, Math.round((d.worldTime - sysNow()) / 60)) }) : "" })),
       spells: items.filter((i) => i.type === "spell"),
       powers: items.filter((i) => i.type === "power").map((i) => ({ id: i.id, name: i.name, system: i.system, summary: powerSummary(i.system),
         // v0.39.0: weaknesses and built-in effects show their own controls.
@@ -592,9 +593,9 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         ...x, index, focusName: x.focusId ? actor.items.get(x.focusId)?.name ?? tx('SR2E.App.Sheets.focus') : "",
         spiritName: x.spiritUuid ? fromUuidSync(x.spiritUuid)?.name ?? tx('SR2E.App.Sheets.anElemental') : "",
         // v0.39.0: how long an elemental keeps it up.
-        untilLabel: x.spiritUuid && typeof x.until === "number" && x.until >= 0 ? tx('SR2E.App.Sheets.hLeft', { hours: Math.max(0, Math.round((x.until - Number(game.time?.worldTime ?? 0)) / 360) / 10) }) : "",
+        untilLabel: x.spiritUuid && typeof x.until === "number" && x.until >= 0 ? tx('SR2E.App.Sheets.hLeft', { hours: Math.max(0, Math.round((x.until - sysNow()) / 360) / 10) }) : "",
         // v0.56.0: a permanent spell's time to take, and the effect a spell puts on its targets.
-        permanentLabel: typeof x.permanentAt === "number" && x.permanentAt >= 0 ? tx('SR2E.App.Sheets.permanentIn', { span: describeSpan(Math.max(0, x.permanentAt - Number(game.time?.worldTime ?? 0))) }) : "",
+        permanentLabel: typeof x.permanentAt === "number" && x.permanentAt >= 0 ? tx('SR2E.App.Sheets.permanentIn', { span: describeSpan(Math.max(0, x.permanentAt - sysNow())) }) : "",
         effectLabel: (() => {
           if (!x.effectId) return "";
           for (const u of (x.targetUuids?.length ? x.targetUuids : [actor.uuid])) {
@@ -1642,7 +1643,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     // v0.73.0 (O31): owned outright, or buy it outright (RULES.CHARACTERS_V73.lifestyle).
     if (st.permanent) return void ui.notifications?.info?.(tx('SR2E.Notify.Sheet.sLifestyleIsOwnedOutright', { actorName: escHtml(actor.name), stLabel: escHtml(st.label) }));
     const buy: any = RULES.CHARACTERS_V73.lifestyle.buyLater && RULES.CHARACTERS_V73.lifestyle.outrightPermanent
-      ? outrightPurchase({ lifestyle: actor.system.lifestyle?.level ?? "low", outright: false, paidUntil: Number(actor.system.lifestyle?.paidUntil ?? -1), now: Number(game.time?.worldTime ?? 0), nuyen: Number(actor.system.nuyen ?? 0) } as any) : null;
+      ? outrightPurchase({ lifestyle: actor.system.lifestyle?.level ?? "low", outright: false, paidUntil: Number(actor.system.lifestyle?.paidUntil ?? -1), now: sysNow(), nuyen: Number(actor.system.nuyen ?? 0) } as any) : null;
     const choice: any = await foundry.applications.api.DialogV2.wait({
       window: { title: tx('SR2E.Dialog.Sheet.payLifestyle', { actorName: actor.name }) },
       content: `<p>${tx('SR2E.Dialog.Sheet.lifestyleAMonthHas', { stLabel: escHtml(st.label), stCost: st.cost.toLocaleString(), actorName: escHtml(actor.name), actorNuyen: (actor.system.nuyen ?? 0).toLocaleString() })}</p>
@@ -2013,7 +2014,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
   /** v0.48.0 (GM): clear the radiation dose. */
   static async #onClearRadiation(this: SR2CharacterSheet) {
     if (!game.user?.isGM) return;
-    await (this.document as any).update({ "system.radiation": { dose: 0, at: Number(game.time?.worldTime ?? 0) } });
+    await (this.document as any).update({ "system.radiation": { dose: 0, at: sysNow() } });
   }
 
   /** v0.48.0: give up a deed ordeal waiting for the GM. */
@@ -4378,7 +4379,7 @@ function occultContext(actor: any) {
   const mm = actor.system.metamagic ?? {};
   const cls: any = CONFIG.Actor.documentClass;
   const me: string[] = actor.selfUuids?.() ?? [actor.uuid];
-  const now = Number(game.time?.worldTime ?? 0);
+  const now = sysNow();
   const groups = (actor.myGroups?.() ?? []).map((g: any) => {
     const breach = g.breaches.some((b: any) => me.includes(b.uuid));
     return {
@@ -4544,8 +4545,8 @@ function matrixContext(actor: any) {
       return [m.armor ? tx('SR2E.App.Sheets.armorValue', { armor: m.armor }) : "", m.shield ? tx('SR2E.App.Sheets.shieldValue', { shield: m.shield }) : "", m.mirrors ? tx('SR2E.App.Sheets.mirrorsTnToAttacksOnYou', { mirrors: m.mirrors, tn: mirrorsTn(m.mirrors) }) : ""].filter(Boolean).join(" · ");
     })(),
     psyche: (actor.system.matrix?.psyche ?? []).map((e: any, index: number) => ({ index, label: (PSYCHOTROPIC_LABELS as any)[e.kind] ?? e.kind, icName: e.icName,
-      active: e.until < 0 || e.until > Number(game.time?.worldTime ?? 0),
-      when: e.until < 0 ? tx('SR2E.App.Sheets.untilYouJackOut') : tCount(Math.max(0, Math.ceil((e.until - Number(game.time?.worldTime ?? 0)) / 86400)), 'SR2E.App.Sheets.daysLeft') })),
+      active: e.until < 0 || e.until > sysNow(),
+      when: e.until < 0 ? tx('SR2E.App.Sheets.untilYouJackOut') : tCount(Math.max(0, Math.ceil((e.until - sysNow()) / 86400)), 'SR2E.App.Sheets.daysLeft') })),
     transit: (() => {
       const t = actor.transitLeft?.();
       return t ? (t.turns != null ? tCount(t.turns, 'SR2E.App.Sheets.onTheWayToCombatTurnsLeft', { host: t.hostName }) : tx('SR2E.App.Sheets.onTheWayToSecondsLeft', { host: t.hostName, seconds: t.seconds })) : "";
@@ -4667,7 +4668,7 @@ export class SR2SpiritSheet extends SR2CharacterSheet {
       immunityArmor: sys.immuneNormalWeapons ? sys.force * RULES.CONJURING.immunityArmorPerForce : 0,
       greatForm: { attributes: RULES.OCCULT.metamagic.invoking.attributeBonus, powers: RULES.OCCULT.metamagic.invoking.powerBonus },
       // v0.56.0: a nature spirit's departure, and manifesting while unmaterialized.
-      departsLabel: sys.spiritKind === "nature" && Number(sys.departsAt ?? -1) >= 0 ? tx('SR2E.App.Sheets.leavesInSunriseOrSunset', { span: describeSpan(Math.max(0, Number(sys.departsAt) - Number(game.time?.worldTime ?? 0))) }) : "",
+      departsLabel: sys.spiritKind === "nature" && Number(sys.departsAt ?? -1) >= 0 ? tx('SR2E.App.Sheets.leavesInSunriseOrSunset', { span: describeSpan(Math.max(0, Number(sys.departsAt) - sysNow())) }) : "",
       canManifestSpirit: RULES.MAGIC_V56.manifest.enabled && (sys.materialized === false || Boolean(sys.manifesting)),
       manifesting: Boolean((this.document as any).isManifesting?.()),
       // v0.72.0 (O21): an ally's spells taught by its master, its abilities and the sense link (MAGIC_V72.ally).
@@ -4926,7 +4927,7 @@ export class SR2HostSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         const sd = actor.system.shutdown;
         if (!sd?.pending) return "";
         const combat: any = game.combat;
-        const left = sd.round >= 0 && combat?.started ? tCount(Math.max(0, sd.round - Number(combat.round ?? 0)), 'SR2E.App.Sheets.combatTurnsSLeft') : sd.worldTime >= 0 ? tx('SR2E.App.Sheets.secondsLeft', { seconds: Math.max(0, Math.round(sd.worldTime - Number(game.time?.worldTime ?? 0))) }) : "";
+        const left = sd.round >= 0 && combat?.started ? tCount(Math.max(0, sd.round - Number(combat.round ?? 0)), 'SR2E.App.Sheets.combatTurnsSLeft') : sd.worldTime >= 0 ? tx('SR2E.App.Sheets.secondsLeft', { seconds: Math.max(0, Math.round(sd.worldTime - sysNow())) }) : "";
         return left ? tx('SR2E.App.Sheets.shuttingDownLeft', { left }) : tx('SR2E.App.Sheets.shuttingDown');
       })(),
       validated: (actor.system.validated ?? []).map((u: string) => ({ uuid: u, name: fromUuidSync(u)?.name ?? tx('SR2E.App.Sheets.gone') })),
@@ -5755,7 +5756,7 @@ export class SR2ItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
       // v0.49.0: Heat now (it cools with world time), and the program options written in.
       heatNow: (() => {
         if (!["weapon", "armor", "gear", "cyberware"].includes(item.type) || !(Number(item.system.heat ?? 0) > 0)) return "";
-        const now = currentHeat(item.system.heat, item.system.heatAt ?? -1, Number(game.time?.worldTime ?? 0));
+        const now = currentHeat(item.system.heat, item.system.heatAt ?? -1, sysNow());
         return now !== Number(item.system.heat) ? tx('SR2E.App.Sheets.cooledTo', { heat: now }) : "";
       })(),
       heatOn: RULES.STREET.heat.enabled,
@@ -5970,7 +5971,7 @@ export function livePreview(dialog: any, fill: (form: HTMLFormElement, excluded:
 /** The Upkeep tab (v0.33.0): lifestyle, nuyen and Karma, contacts, the ledger. */
 function upkeepContext(actor: any): any {
   const st = actor.lifestyleStatus?.() ?? { label: "", cost: 0, days: null };
-  const now = Number(game.time?.worldTime ?? 0);
+  const now = sysNow();
   const levels = RULES.UPKEEP.contacts.levels;
   // v0.49.0: what the lifestyle does beyond the bill.
   const level = String(actor.system.lifestyle?.level ?? "low");
@@ -6091,7 +6092,7 @@ function summaryContext(actor: any): any {
   if (possessing?.name) chips.push(tx('SR2E.App.Sheets.possessing', { name: possessing.name }));
   if (actor.system?.greatForm) chips.push(tx('SR2E.App.Sheets.greatForm'));
   if (actor.hungerInfo?.()?.hungry) chips.push(tx('SR2E.App.Sheets.hungry'));
-  if ((actor.system?.recovering ?? []).some((r: any) => r.until > Number(game.time?.worldTime ?? 0))) chips.push(tx('SR2E.App.Sheets.recovering'));
+  if ((actor.system?.recovering ?? []).some((r: any) => r.until > sysNow())) chips.push(tx('SR2E.App.Sheets.recovering'));
   if (d.matrix?.trace) chips.push(tx('SR2E.App.Sheets.tracedBy', { name: d.matrix.trace.icName }));
   for (const e of d.matrix?.psyche ?? []) chips.push((PSYCHOTROPIC_LABELS as any)[e.kind]?.toLowerCase?.() ?? e.kind);
   if (actor.transitLeft?.()) chips.push(tx('SR2E.App.Sheets.inTransit'));
@@ -7218,7 +7219,7 @@ export class SR2SiteSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const sys = actor.system;
     const rigger: any = actor.securityRigger?.() ?? null;
     const r = sys.response ?? {};
-    const responseLabel = r.arrived ? tx('SR2E.App.Sheets.arrived') : r.round >= 0 ? tx('SR2E.App.Sheets.dueInCombatTurn', { round: r.round }) : r.worldTime >= 0 ? tx('SR2E.App.Sheets.dueInMin', { minutes: Math.max(0, Math.ceil((r.worldTime - Number(game.time?.worldTime ?? 0)) / 60)) }) : tx('SR2E.App.Sheets.notCalled');
+    const responseLabel = r.arrived ? tx('SR2E.App.Sheets.arrived') : r.round >= 0 ? tx('SR2E.App.Sheets.dueInCombatTurn', { round: r.round }) : r.worldTime >= 0 ? tx('SR2E.App.Sheets.dueInMin', { minutes: Math.max(0, Math.ceil((r.worldTime - sysNow()) / 60)) }) : tx('SR2E.App.Sheets.notCalled');
     return {
       ...context, actor, system: sys,
       alerts: RULES.SECURITY.alerts.map((k) => ({ key: k, label: cap(k) })),

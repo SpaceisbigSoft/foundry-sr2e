@@ -10,6 +10,7 @@
  * record (`recordCreation`): the Creation tab shows it, and the advancement log starts.
  */
 import { SYSTEM } from '../config/system.ts';
+import { sysNow } from '../helpers/clock.ts';
 import { ATTRIBUTE_KEYS } from '../models/index.ts';
 import {
   RULES, BUILD_COLUMNS, WIZARD_STEPS, stepMove, stepStates, checkStep, priorityTable, metatypeChoices, magicChoices, KIND_TRADITIONS, magicKindOf, attributePoints, prioritiesComplete, swapPriority,
@@ -383,7 +384,7 @@ export class SR2CreationWizard extends HandlebarsApplicationMixin(ApplicationV2)
     this.#finishing = true;
     {
       // Last cash sync, then the lifestyle paid ahead and the leftover-cash rule.
-      const now = Number((game as any).time?.worldTime ?? 0);
+      const now = sysNow();
       const out = d.outright ? lifestyleOutright({ lifestyle: String(a.system.lifestyle?.level ?? 'low') }) : null;
       // v0.73.0 (O31): outright = owned for good (RULES.CHARACTERS_V73.lifestyle.outrightPermanent; off: the months ahead).
       const up: Record<string, unknown> = creationLifestylePatch({ outright: Boolean(out), months: d.months, now } as any);

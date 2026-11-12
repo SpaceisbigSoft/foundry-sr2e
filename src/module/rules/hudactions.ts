@@ -244,7 +244,7 @@ function combatActions(s: HudActorSummary): HudAction[] {
   const out: HudAction[] = [sheet('combatActions', 'combat-attack', tx('SR2E.Text.Hudactions.attack'), 'quickAttack', { tooltip: tx('SR2E.Text.Hudactions.pickAWeaponThenAttack') })];
   if (s.items.some((i) => i.type === 'spell')) out.push(sheet('combatActions', 'combat-cast', tx('SR2E.Text.Hudactions.cast'), 'quickCast', { tooltip: tx('SR2E.Text.Hudactions.pickASpellThenCast') }));
   if (s.items.some((i) => i.type === 'weapon' && isCarried(i) && num(i.system?.['ammoMax']) > 0)) out.push(sheet('combatActions', 'combat-reload', tx('SR2E.Text.Hudactions.reload'), 'quickReload'));
-  const jammed = s.items.find((i) => i.type === 'weapon' && i.system?.['jammed']);
+  const jammed = s.items.find((i) => i.type === 'weapon' && isCarried(i) && i.system?.['jammed']);
   if (jammed) out.push(sheet('combatActions', 'combat-clearjam', tx('SR2E.Text.Hudactions.clearJam', { name: jammed.name }), 'clearJam', {}, { itemId: jammed.id }));
   if (f.pendingAttack) out.push({ groupId: 'combatActions', id: 'combat-defend', name: tx('SR2E.Text.Hudactions.defend', { attack: f.pendingAttack }), kind: 'defend', payload: {}, tooltip: tx('SR2E.Text.Hudactions.defendAgainstTheNewestAttack') });
   out.push(sheet('combatActions', 'combat-fulldefense', tx('SR2E.Text.Hudactions.fullDefense'), 'fullDefense', f.fullDefense ? { info: tx('SR2E.Text.Hudactions.on') } : {}));
