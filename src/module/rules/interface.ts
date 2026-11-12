@@ -167,7 +167,7 @@ export const BUTTON_ACTION_KINDS: Record<string, string> = {
   shapeshift: 'shapeshift', takeControl: 'takeControls', toggleJump: 'jumpIn', groupDrive: 'droneCommand', groupAttack: 'droneCommand',
   // v0.71.0 (R14): the Matrix tab, Sneak, and the vehicle sheet's own buttons. A system operation varies by the
   // operation picked in its dialog: the cheaper (simple) one here, so the button isn't greyed wrongly.
-  matrixPerceive: 'matrix:simple', matrixManeuver: 'matrix:complex', useUtility: 'matrix:complex', systemTest: 'matrix:simple',
+  matrixPerceive: 'matrix:simple', matrixManeuver: 'matrixManeuver', useUtility: 'matrix:complex', systemTest: 'matrix:simple',
   releaseSmoke: 'matrix:simple', securityAction: 'matrix:complex', sneak: 'perceive',
   sensorTest: 'sensor', ramVehicle: 'drive', pushSpeed: 'drive', fireMounted: 'fire:SS',
 };

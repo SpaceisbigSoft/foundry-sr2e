@@ -7,6 +7,12 @@ import {
   concealmentEffect, concealmentFromName, tamperTn, tamperTrips, bypassTime, chasePlacement, utilitySize, operation,
 } from '../index.ts';
 import { v922Vehicles } from './v922vehicles.ts';
+// v0.92.3: these tests pin the v0.92.2 Matrix rules (the book's defaults: v0923-matrix.test.ts).
+import { before as before922, after as after922 } from 'node:test';
+import { matrix922 } from '../../__tests__/helpers/matrix922.ts';
+let undo922: () => void = () => {};
+before922(() => { undo922 = matrix922(); });
+after922(() => undo922());
 
 const withRule = (obj: any, key: string, value: unknown, fn: () => void) => { const old = obj[key]; obj[key] = value; try { fn(); } finally { obj[key] = old; } };
 

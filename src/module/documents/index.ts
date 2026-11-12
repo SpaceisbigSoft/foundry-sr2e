@@ -166,6 +166,7 @@ import {
 } from '../rules/urr80-magic.ts';
 import * as SP923 from '../rules/spirits923.ts';
 import { riggerDumpShock, rcdFlux, castingPoolDice } from '../rules/docs79-drones-magic.ts';
+import * as M923 from '../rules/matrix923.ts';
 import { attackPowerTweak, isCarried, accessoryPlan, readAccessories, normalizeTweaks, ACCESSORY_NAME_KEYS, TWEAK_MAX } from '../rules/index.ts';
 import * as U80C from '../rules/urr80-combat.ts';
 import * as C923 from '../rules/combat923.ts';
@@ -502,6 +503,8 @@ export interface AttackState {
   distance?: boolean;
   /** Cybercombat: no dodge; the target resists straight away (persona Bod, IC rating). */
   matrix?: boolean;
+  /** v0.92.3: the attacker's skill dice in cybercombat (a Shield parry's TN, VR2 p. 100). */
+  matrixDice?: number;
   /** Black IC: damages the decker's own Physical/Stun track. */
   black?: boolean;
   /** An elemental manipulation spell: soaked with part of the target's armor. */
@@ -574,6 +577,8 @@ export interface IcAction {
   hostUuid?: string;
   /** Psychotropic IC (v0.40.0): what it does to the decker's mind. */
   payload?: string;
+  /** v0.92.3: the IC's class (white, gray, black): simsense overload is for white and gray IC only (VR2 p. 124). */
+  category?: string;
 }
 
 /** Options for driving tests, rams and chase positioning. */
@@ -824,6 +829,8 @@ export interface DamageState {
   toxinHit?: ToxinHit;
   /** Matrix damage from IC: blaster and sparky crashes damage the deck. */
   ic?: IcAction;
+  /** v0.92.3: who did the Matrix damage (crashing IC raises their tally, VR2 p. 40). */
+  matrixAttacker?: string;
   /** v0.80.0 (URR_V80.cbtDefense 'cleanMiss'): the attacker's successes and the net, staged at the resistance test. */
   /** v0.92.3: `apart` (COMBAT_V923.fullDefense 'book'): the level is already staged; the soak stages down on its own. */
   cleanMiss80?: { hits: number; net: number; noClean?: boolean; apart?: boolean };
@@ -893,6 +900,8 @@ export interface SoakContext {
   matrixAfter?: number;
   /** The IC that did the Matrix damage (blaster and sparky crashes damage the deck). */
   matrixIc?: IcAction;
+  /** v0.92.3: who attacked (crashing IC raises their tally, VR2 p. 40). */
+  matrixAttacker?: string;
   /** Armor (persona damage) or Shield (black IC) soaked this hit and loses rating once (v0.40.0). */
   matrixUtility?: { programId: string; name: string; rating: number; kind: 'armor' | 'shield'; degraded?: boolean };
   /** Vehicle damage: the vehicle's condition track before and after, and the Power (rigger feedback). */
@@ -1252,6 +1261,10 @@ export interface SystemContext {
   callId?: string;
   number?: string;
   bombed?: boolean;
+  /** v0.92.3: the host's successes on its opposed Security Test (VR2 p. 19). */
+  hostSuccesses?: number;
+  /** v0.92.3: Locate File's accumulated successes before this test, and the files it found (VR2 p. 110). */
+  locateBefore?: number;
 }
 
 /** A change to a host's data stores or alert, applied by the GM (or the host's owner). */
@@ -1313,6 +1326,8 @@ interface FollowUps {
   overload?: number;
   /** Set when blaster or sparky IC crash a persona: deck damage (and sparky's biofeedback) follows. */
   deckDamage?: { ic: IcAction; reason: string };
+  /** v0.92.3: a dumped decker's psychotropic tests (VR2 p. 49) and a trace's datatrail (VR2 p. 47) follow. */
+  dumped923?: { psyche: Array<{ icName: string; rating: number; kind: string; hostUuid?: string }>; trace: any | null };
   /** Set by a lock bypass: the change to the site's security follows its card. */
   siteChange?: { site: any; change: SiteChange; label: string };
   /** Set when a vehicle is hit: damage for the people aboard follows its card. */
@@ -2817,7 +2832,7 @@ export class SR2Actor extends Actor {
         const attacks: AttackState[] = list.map((a) => ({ ...a, attackSuccesses: Math.max(0, s), targetNumber: snap.targetNumber, ...(snap.ram?.level ? { ram: snap.ram } : {}) }));
         const attack = attacks[0]!;
         // Cybercombat: the target defends first if it can (RULES.MATRIX.defense), else the hit lands now.
-        if (attack.matrix && !SR2Actor.matrixCanDefend(fromUuidSync(attack.targetUuid))) return this.#matrixHit(snap, attack, 0, false);
+        if (attack.matrix && !SR2Actor.matrixCanDefend(fromUuidSync(attack.targetUuid), attack)) return this.#matrixHit(snap, attack, 0, false);
         if (attack.noDodge && !attack.matrix) {
           // No dodge (cybercombat, blasts, or elemental spells when dodging is off): each target resists straight away.
           const damages: DamageState[] = attacks.map((a) => {
@@ -3478,16 +3493,19 @@ export class SR2Actor extends Actor {
       // v0.81.0 (D3-6): a crash with no dump shock (a tortoise) still unplugs the hitchers.
       await this.#unhitchAll();
     }
+    if (fu.dumped923) await this.#afterJackOut923(fu.dumped923);
     const deckDamage = fu.deckDamage;
     if (deckDamage) {
       const ic = deckDamage.ic;
       const sparky = ic.behavior === 'sparky';
       const sp = RULES.MATRIX.sparky;
+      // v0.92.3: the book's sparky damage follows its Sparky Test (it stages the damage up; VR2 p. 44): see takeDeckDamage.
+      const later = sparky && RULES.MATRIX_V923.grayIc !== 'v922';
       await ChatMessage.create({
         speaker: { alias: ic.icName },
         content: `<p><strong>${escText(ic.icName)}</strong> ${tx('SR2E.Card.Actor.sDeckAsThePersonaCrashes', { part: sparky ? tx('SR2E.Card.Actor.fries') : tx('SR2E.Card.Actor.blasts'), name: escText(this.name) })}</p>
-          <p><button type="button" data-sr2e-action="deckDamage">${tx('SR2E.Card.Actor.deckDamageRatingVsMpcp', { icRating: ic.rating })}</button>${sparky ? ` <button type="button" data-sr2e-action="biofeedback">${tx('SR2E.Card.Actor.resistBiofeedbackVs', { spResist: escText(cap(sp.resist)), icRating: ic.rating, spLevel: sp.level, spType: sp.type })}</button>` : ''}</p>`,
-        flags: { [SYSTEM_ID]: { deckDamage: { deckerUuid: this.uuid, icName: ic.icName, rating: ic.rating, reason: tx('SR2E.Card.Actor.behaviorCrash', { behavior: ic.behavior }) }, ...(sparky ? { biofeedback: { deckerUuid: this.uuid, tn: ic.rating } } : {}) } },
+          <p><button type="button" data-sr2e-action="deckDamage">${tx('SR2E.Card.Actor.deckDamageRatingVsMpcp', { icRating: ic.rating })}</button>${sparky && !later ? ` <button type="button" data-sr2e-action="biofeedback">${tx('SR2E.Card.Actor.resistBiofeedbackVs', { spResist: escText(cap(sp.resist)), icRating: ic.rating, spLevel: sp.level, spType: sp.type })}</button>` : ''}</p>`,
+        flags: { [SYSTEM_ID]: { deckDamage: { deckerUuid: this.uuid, icName: ic.icName, rating: ic.rating, reason: tx('SR2E.Card.Actor.behaviorCrash', { behavior: ic.behavior }), ...(sparky ? { sparky: true } : {}) }, ...(sparky && !later ? { biofeedback: { deckerUuid: this.uuid, tn: ic.rating } } : {}) } },
       });
     }
     const overload = fu.overload;
@@ -13134,7 +13152,22 @@ export class SR2Actor extends Actor {
       'system.matrix.engagedBy': [],
       'system.matrix.maneuvers': [],
       'system.matrix.filter': { hostUuid: '', ok: -1 },
+      // v0.92.3: completed traces and redirected datatrails last the run (VR2 pp. 46, 117).
+      [`flags.${SYSTEM_ID}.traced923`]: [],
+      [`flags.${SYSTEM_ID}.redirects923`]: 0,
     };
+  }
+
+  /** v0.92.3: whether a trace on this decker completed in this host (VR2 p. 46: its IC −1 TN, +1 on each tally increase). */
+  tracedIn(host: any): boolean {
+    if (!host || !M923.traceBook()) return false;
+    const list = (this as any).flags?.[SYSTEM_ID]?.traced923;
+    return Array.isArray(list) && list.includes(host.uuid);
+  }
+
+  /** v0.92.3: a tally increase with the trace's +1 (VR2 p. 46). */
+  #tracedBoost(host: any, successes: number, frame: any = null): number {
+    return successes > 0 && !frame && this.tracedIn(host) ? successes + 1 : successes;
   }
 
   /** Jack in (or move to another host): needs a cyberdeck in use and a persona that has not crashed. */
@@ -13198,8 +13231,12 @@ export class SR2Actor extends Actor {
       const cfg = RULES.MATRIX_V57.blackIcHold;
       const attr = (this.sys.attributes?.[cfg.attribute]?.total as number | undefined) ?? 0;
       const t = jackOutTest(hold, attr, hold.name);
+      // v0.92.3: no Hacking Pool, an ICCM −2 TN (VR2 pp. 17, 47, 86; RULES.MATRIX_V923.blackIc). It is a Complex Action (VR2 p. 47).
+      const bk = RULES.MATRIX_V923.blackIc !== 'v922';
+      if (bk && !opts.force && !(await this.useAction(`matrix:${'complex'}`, tx('SR2E.Card.Actor.jackingOut')))) return;
+      const iccm923: TargetNumberModifier[] = bk && Number(this.sys.derived?.cyber?.iccm ?? 0) > 0 ? [{ id: 'iccm', label: 'ICCM', value: -2 }] : [];
       await this.#runTest(t.label, t.dice, {
-        targetNumber: t.tn, poolDice: cfg.pool ? (opts.poolDice ?? 0) : 0, pool: 'hacking', modifiers: matrixWoundModifiers(Number(this.sys.matrix?.monitor ?? 0)),
+        targetNumber: t.tn, poolDice: cfg.pool && !bk ? (opts.poolDice ?? 0) : 0, pool: 'hacking', modifiers: [...iccm923, ...matrixWoundModifiers(Number(this.sys.matrix?.monitor ?? 0))],
       }, { kind: 'jackOut', jackOut: { icUuid: hold.uuid, icName: hold.name, needed: t.needed } });
       return;
     }
@@ -13208,11 +13245,54 @@ export class SR2Actor extends Actor {
     await this.#leaveMatrix();
   }
 
-  /** v0.57.0: jack out now (no dump shock); hitchers come out with the decker. */
-  async #leaveMatrix(): Promise<void> {
-    await this.update({ 'system.matrix.jackedIn': false, 'system.matrix.hostUuid': '', ...this.#endRunUpdate() });
+  /**
+   * v0.57.0: jack out now; hitchers come out with the decker. v0.92.3: without a Graceful Logoff (`graceful`) the decker
+   * risks dump shock (VR2 p. 124; RULES.MATRIX_V923.dumpShock) and a trace's datatrail stays up (VR2 p. 47); psychotropic
+   * IC that hit them take their test now (VR2 p. 49).
+   */
+  async #leaveMatrix(o: { graceful?: boolean } = {}): Promise<void> {
+    const host: any = this.currentHost();
+    const trace = this.sys.matrix?.trace?.active ? { ...this.sys.matrix.trace } : null;
+    const psyche = this.#pendingPsyche();
+    await this.update({ 'system.matrix.jackedIn': false, 'system.matrix.hostUuid': '', ...this.#endRunUpdate(), ...(psyche.length ? { [`flags.${SYSTEM_ID}.psyche923`]: [] } : {}) });
     await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p><strong>${escText(this.name)}</strong> ${tx('SR2E.Card.Actor.jacksOut')}</p>` });
-    await this.#unhitchAll();
+    const shock = !o.graceful && RULES.MATRIX_V923.dumpShock !== 'v922' && !(this.isTortoise() && !RULES.MATRIX.tortoise.dumpShock);
+    if (shock) await this.#dumpFollowUps(host, tx('SR2E.Card.Actor.jackOutShock923'), true);
+    await this.#afterJackOut923({ psyche, trace: o.graceful ? null : trace });
+    if (!shock) await this.#unhitchAll();
+  }
+
+  /** v0.92.3: the psychotropic IC that hit this decker this run (VR2 p. 49), waiting for the jack-out. */
+  #pendingPsyche(): Array<{ icName: string; rating: number; kind: string; hostUuid?: string }> {
+    const list = (this as any).flags?.[SYSTEM_ID]?.psyche923;
+    return Array.isArray(list) ? list.filter((p: any) => p && typeof p === 'object') : [];
+  }
+
+  /**
+   * v0.92.3: after a jack-out or a dump: a psychotropic test card per IC that hit (VR2 p. 49), and a trace whose datatrail
+   * outlasts the cycle completes (1D6 − 1 turns, min 1; VR2 p. 47).
+   */
+  async #afterJackOut923(d: { psyche: Array<{ icName: string; rating: number; kind: string; hostUuid?: string }>; trace: any | null }): Promise<void> {
+    for (const p of d.psyche) {
+      const label = PSYCHOTROPIC_LABELS[p.kind as keyof typeof PSYCHOTROPIC_LABELS] ?? p.kind;
+      await ChatMessage.create({
+        speaker: { alias: p.icName },
+        content: `<p>${tx('SR2E.Card.Actor.psycheAtJackOut923', { name: escText(this.name), icName: escText(p.icName) })}</p><p><button type="button" data-sr2e-action="psychotropic">${tx('SR2E.Card.Actor.resistVs3', { kindLabel: escText(label), psResist: tx('SR2E.Attribute.willpower'), icRating: p.rating })}</button></p>`,
+        flags: { [SYSTEM_ID]: { psychotropic: { deckerUuid: this.uuid, icName: p.icName, rating: p.rating, kind: p.kind, hostUuid: p.hostUuid ?? '' } } },
+      });
+    }
+    const t = d.trace;
+    if (!t || !M923.traceBook()) return;
+    const combat: any = (game as any).combat;
+    const sameCombat = combat?.started && Number(t.round) >= 0 && (!t.combatId || t.combatId === String(combat.id ?? ''));
+    const left = sameCombat ? Math.max(0, Number(t.round) - Number(combat.round ?? 0)) : Number(t.worldTime) >= 0 ? Math.ceil(Math.max(0, Number(t.worldTime) - sysNow()) / Math.max(1, RULES.MATRIX.trace.secondsPerTurn)) : 0;
+    let d6 = 1;
+    const rolls: any[] = [];
+    try { const r = await new Roll('1d6').evaluate(); rolls.push(r); d6 = Number(r.total ?? r.dice?.[0]?.results?.[0]?.result ?? 1) || 1; } catch { d6 = 1 + Math.floor(Math.random() * 6); }
+    const dt = M923.datatrailHolds(d6, left);
+    const gms = [...((game as any).users ?? [])].filter((u: any) => u.isGM).map((u: any) => u.id);
+    await ChatMessage.create({ speaker: { alias: t.icName }, whisper: gms, rolls, content: `<p><em>${tx('SR2E.Card.Actor.gmOnly')}</em> · ${tx('SR2E.Card.Actor.datatrail923', { name: escText(this.name), turns: dt.turns, left })}</p>` });
+    if (dt.completes) await this.#completeTrace(t);
   }
 
   /** v0.57.0: the black IC holding this decker in their host (null when nothing holds them). */
@@ -13240,7 +13320,9 @@ export class SR2Actor extends Actor {
     }
     if (j.applied) return { html: `<p><strong>${tx('SR2E.Card.Actor.breaksFree', { name: escText(this.name) })}</strong> ${tx('SR2E.Card.Actor.alreadyOut')}</p>`, flags: {}, snap };
     if (this.sys.matrix?.jackedIn) await this.#leaveMatrix();
-    return { html: `<p><strong>${tx('SR2E.Card.Actor.breaksFreeOf', { name: escText(this.name), jIcName: escText(j.icName) })}</strong> ${tx('SR2E.Card.Actor.andJacksOut')}</p>`, flags: {}, snap: { ...snap, jackOut: { ...j, applied: true } } };
+    // v0.92.3: the black IC gets one more attack before the connection goes down (VR2 p. 47).
+    const last = RULES.MATRIX_V923.blackIc !== 'v922' ? ` <em>${tx('SR2E.Card.Actor.oneMoreAttack923', { icName: escText(j.icName) })}</em>` : '';
+    return { html: `<p><strong>${tx('SR2E.Card.Actor.breaksFreeOf', { name: escText(this.name), jIcName: escText(j.icName) })}</strong> ${tx('SR2E.Card.Actor.andJacksOut')}${last}</p>`, flags: {}, snap: { ...snap, jackOut: { ...j, applied: true } } };
   }
 
   /** TN modifiers for how this decker is connected (RULES.MATRIX.connections), and a moving vehicle they ride in. */
@@ -13664,6 +13746,20 @@ export class SR2Actor extends Actor {
       }
     }
 
+    // v0.92.3: what the book adds to the test (RULES.MATRIX_V923): a passive alert raises the subsystem (VR2 p. 61); the
+    // jackpoint modifies Access tests (Grids and Hosts p. 28; a console halves the Access rating and the Security Value);
+    // a trace in progress makes a Graceful Logoff harder by its rating (VR2 p. 47).
+    const book923: TargetNumberModifier[] = [];
+    const fromSub = tnNote === `${cap(sub)} ${rating}`;
+    const alertUp = fromSub ? M923.alertSubsystemBonus(String(host.system.alert ?? 'none')) : 0;
+    if (alertUp) book923.push({ id: 'passiveAlert', label: tx('SR2E.Card.Mod.passiveAlert923'), value: alertUp });
+    const conn = String(this.sys.matrix?.connection ?? 'jackpoint');
+    const console923 = !frame && sub === 'access' && conn === 'console' && RULES.MATRIX_V923.connections !== 'v922';
+    if (!frame && sub === 'access') book923.push(...connectionModifiers(conn, false, { access: true }));
+    if (console923) book923.push({ id: 'console', label: tx('SR2E.Card.Mod.consoleAccess923'), value: -(tn - Math.floor(tn / 2)) });
+    const trace923 = this.sys.matrix?.trace;
+    if (!frame && effect === 'logoff' && trace923?.active && M923.traceBook()) book923.push({ id: 'traceLogoff', label: tx('SR2E.Card.Mod.traceLogoff923', { name: String(trace923.icName ?? '') }), value: Math.max(0, Number(trace923.rating ?? 0)) });
+    ctx.hostSuccesses = 0;
     // The host's detection roll: against the decker's Detection Factor, or an agent's own (v0.40.0).
     // A security decker of this host is a legitimate user: no detection roll.
     const legit = !frame && SR2Actor.isSecurityDecker(host, this) && RULES.MATRIX.security.noDetection;
@@ -13674,15 +13770,28 @@ export class SR2Actor extends Actor {
       const df = ownDf ? agentDetectionFactor(frame.system.rating, frame.bestUtility('sleaze')?.system?.rating ?? 0) : validatedDf(this.liveDetectionFactor(), validated);
       const hostRolls: any[] = [];
       // v0.50.0: smoke in the host hampers its own detection too (RULES.TN_AUTO.matrix.smokeOnDetection).
-      const detect = await successTest({ dice: host.system.securityValue, targetNumber: df, modifiers: RULES.TN_AUTO.matrix.smokeOnDetection ? SR2Actor.smokeMods(host) : [], roll: foundryRoller(hostRolls) });
-      await SR2Actor.addToTally(host, detect.successes, {
+      const sv923 = console923 ? Math.floor(Number(host.system.securityValue ?? 0) / 2) : host.system.securityValue;
+      const detect = await successTest({ dice: sv923, targetNumber: df, modifiers: RULES.TN_AUTO.matrix.smokeOnDetection ? SR2Actor.smokeMods(host) : [], roll: foundryRoller(hostRolls) });
+      // v0.92.3: the host's successes oppose the decker's (VR2 p. 19), and a completed trace adds 1 to each increase (VR2 p. 46).
+      ctx.hostSuccesses = detect.successes;
+      await SR2Actor.addToTally(host, this.#tracedBoost(host, detect.successes, frame), {
         label: tx('SR2E.Card.Actor.detectsSecurityValueVsSDetection', { hostName: host.name, hostSecurityValue: host.system.securityValue, part: ownDf ? frame.name : this.name, df, part2: validated ? tx('SR2E.Card.Actor.passcodeValidated') : '' }),
         result: detect, rolls: hostRolls,
       }, this.tallyFor(frame), this.uuid as string);
+      // v0.92.3: reactive probe IC test every System Test against the Detection Factor (VR2 p. 42; RULES.MATRIX_V923.probe).
+      if (RULES.MATRIX_V923.probe === 'reactive') {
+        for (const probe of SR2Actor.hostIc(host).filter((i: any) => i.system.behavior === 'probe' && !i.system.derived?.crashed && !['frame', 'agent'].includes(i.system.kind))) {
+          const pr: any[] = [];
+          const r = await successTest({ dice: Math.max(0, Number(probe.system.rating ?? 0)), targetNumber: df, roll: foundryRoller(pr) });
+          await SR2Actor.addToTally(host, this.#tracedBoost(host, r.successes, frame), { label: tx('SR2E.Card.Actor.probeTest923', { name: probe.name, rating: probe.system.rating, df }), result: r, rolls: pr }, this.tallyFor(frame), this.uuid as string);
+        }
+      }
     }
 
     const own = this.#matrixDice();
-    const fd = frame ? (agent ? agentDice(frame.system.rating) : frameDice(frame.system.rating, Boolean(frame.system.smart))) : null;
+    // v0.92.3: a dumb frame acts with its owner's Computer, a smart frame with its rating (VR2 p. 104; RULES.MATRIX_V923.frames).
+    const fd923 = frame && !agent ? M923.frameDice923({ rating: frame.system.rating, smart: Boolean(frame.system.smart), ownerComputer: Number(this.findSkill(RULES.MATRIX.skill)?.system?.rating ?? 0) }) : null;
+    const fd = frame ? (agent ? agentDice(frame.system.rating) : fd923 ?? frameDice(frame.system.rating, Boolean(frame.system.smart))) : null;
     // v0.49.0: an otaku's channel for this subsystem works like a utility (or adds dice).
     // v0.71.0 (R7): a decker's utility runs no higher than the working MPCP.
     const progRating = prog ? (fd ? Number(prog.system?.rating ?? 0) : this.utilityRating(prog)) : 0;
@@ -13695,7 +13804,7 @@ export class SR2Actor extends Actor {
     return this.#runTest(`${frame ? `${frame.name}: ` : ''}${ctx.operation ? `${ctx.operation}: ` : ''}${host.name} ${tnNote}${suffix}${legit ? tx('SR2E.Card.Actor.securityDecker2') : ''}`, dice, {
       targetNumber: tn, poolDice: fd ? 0 : opts.poolDice ?? 0, pool: 'hacking', noPenalties: Boolean(fd), ...(opts.exclude?.length ? { exclude: opts.exclude } : {}),
       // A frame runs inside the host: the decker's own connection does not slow it (smoke does).
-      modifiers: [...utilityModifiers(utility), ...(opts.modifiers ?? []), ...(fd ? [...SR2Actor.smokeMods(host), ...matrixWoundModifiers(Number(frame.system.matrix?.monitor ?? 0), { ic: true })] : this.matrixTestMods(host)), ...modifiers],
+      modifiers: [...utilityModifiers(utility), ...book923, ...(opts.modifiers ?? []), ...(fd ? [...SR2Actor.smokeMods(host), ...matrixWoundModifiers(Number(frame.system.matrix?.monitor ?? 0), { ic: true })] : this.matrixTestMods(host)), ...modifiers],
     }, { kind: 'system', system: ctx });
   }
 
@@ -13708,8 +13817,11 @@ export class SR2Actor extends Actor {
     const next: SystemContext = { ...sy };
     const files: DataFile[] = [...(host?.system?.files ?? [])];
     const file = sy.fileId ? files.find((f) => f.id === sy.fileId) : undefined;
-    if (s <= 0) {
-      let extra = '';
+    // v0.92.3: an opposed test: more successes than the host's (VR2 p. 19; RULES.MATRIX_V923.systemTests).
+    const outcome = M923.systemTestOutcome(s, Number(sy.hostSuccesses ?? 0));
+    const versus = RULES.MATRIX_V923.systemTests === 'opposed' && Number(sy.hostSuccesses ?? 0) > 0 ? ` ${tx('SR2E.Card.Actor.versusHost923', { host: Number(sy.hostSuccesses ?? 0) })}` : '';
+    if (!outcome.ok) {
+      let extra = escText(versus);
       // A failed decryption of a file guarded by scramble IC destroys it.
       if (sy.effect === 'decryptFile' && file?.scramble && !sy.failApplied && !sy.applied && host) {
         fu.hostChange = { host, change: { removeFile: file.id }, label: tx('SR2E.Card.Actor.scrambleIcDestroys2', { name: file.name }) };
@@ -13718,7 +13830,7 @@ export class SR2Actor extends Actor {
       }
       return { html: `<p><strong>${tx('SR2E.Card.Actor.fails', { name: escText(name) })}</strong>${extra}</p>`, flags: {}, snap: { ...snap, system: next } };
     }
-    const head = `<p><strong>${tx('SR2E.Card.Actor.succeeds', { name: escText(name) })}</strong> (${escText(sy.subsystem)}, ${escText(plural(s, 'success'))}).</p>`;
+    const head = `<p><strong>${tx('SR2E.Card.Actor.succeeds', { name: escText(name) })}</strong> (${escText(sy.subsystem)}, ${escText(plural(s, 'success'))}${escText(versus)}).</p>`;
     // Who did it, for the GM's notes: the frame that ran it, or the decker.
     const by: string = sy.frameUuid ? (fromUuidSync(sy.frameUuid)?.name ?? this.name) : this.name;
     if (sy.applied || sy.failApplied) return { html: `${head}<p><em>${tx('SR2E.Card.Actor.itsEffectWasAlreadyAppliedAdjust', { part: sy.failApplied ? tx('SR2E.Card.Actor.theFailure') : '' })}</em></p>`, flags: {}, snap };
@@ -13804,9 +13916,26 @@ export class SR2Actor extends Actor {
       }
       case 'redirectTrace': {
         const t = this.sys.matrix?.trace;
+        // v0.92.3: a redirect on this grid adds 1 to the Trace Factor for the run (VR2 pp. 45, 117; RULES.MATRIX_V923.trace).
+        if (M923.traceBook()) {
+          const n = Math.max(0, Number((this as any).flags?.[SYSTEM_ID]?.redirects923 ?? 0)) + 1;
+          await this.update({ [`flags.${SYSTEM_ID}.redirects923`]: n });
+          body = `<p>${tx('SR2E.Card.Actor.redirects923', { name: escText(this.name), n })}</p>`;
+          break;
+        }
         if (t?.active) {
           await this.update({ 'system.matrix.trace': { ...t, active: false } });
           body = `<p>${tx('SR2E.Card.Actor.shakesOffSTraceItMust', { name: escText(this.name), icName: escText(t.icName) })}</p>`;
+        } else body = `<p>${tx('SR2E.Card.Actor.noTraceToShakeOff')}</p>`;
+        break;
+      }
+      case 'relocateTrace': {
+        // v0.92.3: Relocate spoofs a trace in its location cycle for this turn: it completes a turn later (VR2 p. 46).
+        const t = this.sys.matrix?.trace;
+        if (t?.active) {
+          const sec = RULES.MATRIX.trace.secondsPerTurn;
+          await this.update({ 'system.matrix.trace': { ...t, round: Number(t.round ?? -1) >= 0 ? Number(t.round) + 1 : -1, worldTime: Number(t.worldTime ?? -1) >= 0 ? Number(t.worldTime) + sec : -1 } });
+          body = `<p>${tx('SR2E.Card.Actor.relocates923', { name: escText(this.name), icName: escText(t.icName) })}</p>`;
         } else body = `<p>${tx('SR2E.Card.Actor.noTraceToShakeOff')}</p>`;
         break;
       }
@@ -13826,6 +13955,13 @@ export class SR2Actor extends Actor {
         // v0.73.0 (O22): a hold that started since the roll keeps the decker in.
         const lh = logoffHoldCheck({ hold: sy.frameUuid ? null : this.blackIcHold(), deckerName: this.name, frame: Boolean(sy.frameUuid), isGM: Boolean(Boolean((game as any).user?.isGM)) } as any);
         if (lh.block) { body = `<p>${escText(lh.note)}</p>`; break; }
+        // v0.92.3: a Graceful Logoff leaves the host and the grid (the decker is out, no dump shock) and stops a trace (VR2 p. 114).
+        if (!sy.frameUuid && RULES.MATRIX_V923.logoff !== 'v922') {
+          const traced = this.sys.matrix?.trace?.active;
+          if (this.sys.matrix?.jackedIn) await this.#leaveMatrix({ graceful: true });
+          body = `<p>${tx('SR2E.Card.Actor.gracefulOut923', { name: escText(this.name), hostName: escText(host?.name ?? tx('SR2E.Card.Actor.theHost')) })}${traced ? ` ${tx('SR2E.Card.Actor.traceStops923')}` : ''}</p>`;
+          break;
+        }
         // To the parent grid (or out onto the grid when there is none).
         const parentUuid = (host?.system?.parentUuid as string | undefined) ?? '';
         const parent: any = parentUuid ? fromUuidSync(parentUuid) : null;
@@ -13883,12 +14019,26 @@ export class SR2Actor extends Actor {
       }
       case 'locateFile':
       case 'locatePaydata': {
-        const ids = host ? locateFiles(files, this.uuid as string, s, sy.effect === 'locatePaydata') : [];
+        // v0.92.3: a paydata point per net success (VR2 p. 115); Locate File adds up net successes, a file every 5 (VR2 p. 110).
+        let finds = outcome.net;
+        let progress = '';
+        if (sy.effect === 'locateFile' && RULES.MATRIX_V923.operations !== 'v922') {
+          const key = `${host?.uuid ?? ''}`;
+          const saved: any = (this as any).flags?.[SYSTEM_ID]?.locate923 ?? {};
+          const before = sy.locateBefore ?? (saved.hostUuid === key ? Number(saved.total ?? 0) : 0);
+          const pr = M923.locateFileProgress(before, outcome.net);
+          finds = pr.files;
+          next.locateBefore = before;
+          await this.update({ [`flags.${SYSTEM_ID}.locate923`]: { hostUuid: key, total: pr.total } });
+          progress = ` ${tx('SR2E.Card.Actor.locateProgress923', { total: pr.total, need: RULES.MATRIX_V923.locateFileSuccesses })}`;
+        }
+        const ids = host ? locateFiles(files, this.uuid as string, finds, sy.effect === 'locatePaydata') : [];
         const names = files.filter((f) => ids.includes(f.id));
         if (ids.length && host) fu.hostChange = { host, change: { found: { deckerUuid: this.uuid as string, ids } }, label: `${by} locates ${names.map((f) => f.name).join(', ')}` };
         body = names.length
           ? `<p>${tx('SR2E.Card.Actor.found2', { names: names.map((f) => `<strong>${escText(f.name)}</strong> ${tx('SR2E.Card.Actor.mp', { size: f.size, part: f.paydata ? tx('SR2E.Card.Actor.paydata', { value: f.value }) : '', part2: f.scramble ? tx('SR2E.Card.Actor.scrambleIc2') : f.encrypted ? tx('SR2E.Card.Actor.encrypted') : '' })}`).join('; ') })}</p>`
           : `<p>${tx('SR2E.Card.Actor.nothingNewFound')}</p>`;
+        if (progress) body += `<p>${escText(progress.trim())}</p>`;
         break;
       }
       case 'locateSlave': {
@@ -14344,6 +14494,7 @@ export class SR2Actor extends Actor {
   static async generatePaydata(host: any): Promise<number> {
     const code = host.system.securityCode as string;
     const c = RULES.MATRIX.paydata.codes[code] ?? RULES.MATRIX.paydata.codes['orange']!;
+    // v0.92.3: a Paydata Point of 5,000¥ per file, the book's data density and defenses (VR2 p. 65; RULES.MATRIX_V923.paydata).
     const d6 = async (n: number) => n > 0 ? ((await new Roll(`${n}d6`).evaluate()).dice[0].results.map((r: any) => r.result as number)) : [];
     const count = paydataCount(code, await d6(c.pointsDice));
     const existing = [...(host.system.files ?? [])];
@@ -14353,23 +14504,36 @@ export class SR2Actor extends Actor {
       const sizes = await d6(c.sizeDice);
       const [def] = await d6(1);
       const id = (foundry as any).utils?.randomID?.() ?? `f${Date.now()}${i}`;
-      made.push({ id, ...paydataFile(code, host.system.securityValue, sizes, def ?? 1, start + i + 1), foundBy: [] });
+      const book = M923.paydataFile923(code, host.system.securityValue, sizes, def ?? 1, start + i + 1);
+      made.push({ id, ...(book ?? paydataFile(code, host.system.securityValue, sizes, def ?? 1, start + i + 1)), foundBy: [] });
     }
     await host.update({ 'system.files': [...existing, ...made] });
     const gms = [...((game as any).users ?? [])].filter((u: any) => u.isGM).map((u: any) => u.id);
     await ChatMessage.create({
       speaker: { alias: host.name },
-      content: `<p><em>${tx('SR2E.Card.Actor.gmOnly')}</em> · <strong>${tx('SR2E.Card.Actor.paydataFor', { hostName: escText(host.name) })}</strong> ${tCount(count, 'SR2E.Card.Actor.files', { code: escText(code) })}</p>${made.length ? `<ul>${made.map((f) => `<li>${tx('SR2E.Card.Actor.mp2', { name: escText(f.name), size: f.size, value: f.value, part: f.scramble ? tx('SR2E.Card.Actor.scramble', { scramble: f.scramble }) : f.encrypted ? tx('SR2E.Card.Actor.encrypted2', { encrypted: f.encrypted }) : '' })}</li>`).join('')}</ul>` : ''}`,
+      content: `<p><em>${tx('SR2E.Card.Actor.gmOnly')}</em> · <strong>${tx('SR2E.Card.Actor.paydataFor', { hostName: escText(host.name) })}</strong> ${tCount(count, 'SR2E.Card.Actor.files', { code: escText(code) })}</p>${made.length ? `<ul>${made.map((f) => `<li>${tx('SR2E.Card.Actor.mp2', { name: escText(f.name), size: f.size, value: f.value, part: `${f.scramble ? tx('SR2E.Card.Actor.scramble', { scramble: f.scramble }) : f.encrypted ? tx('SR2E.Card.Actor.encrypted2', { encrypted: f.encrypted }) : ''}${Number(f.bomb ?? 0) > 0 ? tx('SR2E.Card.Actor.paydataBomb923', { bomb: f.bomb }) : ''}` })}</li>`).join('')}</ul>` : ''}`,
       whisper: gms,
     });
     return count;
   }
 
   /** Whether the target of a Matrix attack gets to defend (RULES.MATRIX.defense). */
-  static matrixCanDefend(target: any): boolean {
+  static matrixCanDefend(target: any, attack: AttackState | null = null): boolean {
     if (!target) return false;
     if (target.type === 'ic') return RULES.MATRIX.defense.ic === 'rating';
-    return RULES.MATRIX.defense.persona === 'pool' && Boolean(target.isJackedIn?.());
+    if (!target.isJackedIn?.()) return false;
+    // v0.92.3: a crippler or ripper attack is opposed by the persona attribute (VR2 pp. 41, 44); a loaded Shield parries
+    // an attack on the persona (VR2 p. 100; RULES.MATRIX_V923.cybercombat, shield).
+    const beh = attack?.ic?.behavior ?? '';
+    if (SR2Actor.#opposedByAttribute(attack)) return true;
+    if (attack && RULES.MATRIX_V923.shield === 'parry' && target.bestUtility?.('shield') && ['damage', 'attribute'].includes(beh ? icActionKind(beh) : 'damage')) return true;
+    return RULES.MATRIX.defense.persona === 'pool';
+  }
+
+  /** v0.92.3: a crippler or ripper attack, opposed by the targeted persona attribute (VR2 pp. 41, 44). */
+  static #opposedByAttribute(attack: AttackState | null): boolean {
+    const beh = attack?.ic?.behavior ?? '';
+    return M923.cybercombatBook() && (beh === 'crippler' || beh === 'ripper');
   }
 
   /** v0.50.0: the system-operation dialog's preview: what this decker's (or a frame's) operation in the host finds by itself. */
@@ -14383,10 +14547,12 @@ export class SR2Actor extends Actor {
     const target: any = targetUuid ? fromUuidSync(targetUuid) : null;
     if (target && target.type !== 'ic' && !target.isJackedIn?.()) return null;
     const t = !target ? { tn: 4, label: tx('SR2E.Card.Actor.tn8', { tn: 4 }), modifiers: [] as TargetNumberModifier[] }
+      // v0.92.3: the book's TN by code and status (RULES.MATRIX_V923.cybercombat).
+      : M923.cybercombatBook() ? (SR2Actor.#matrixTargetTn(target) ?? { tn: 4, label: '', modifiers: [] as TargetNumberModifier[] })
       : target.type === 'ic' ? { tn: target.system.rating, label: tx('SR2E.Card.Actor.sRating', { name: target.name }), modifiers: [] as TargetNumberModifier[] }
       : { tn: target.system.derived.matrix.evasion, label: tx('SR2E.Card.Actor.sEvasion2', { name: target.name }), modifiers: SR2Actor.mirrorsMods(target) };
     const own = this.#matrixDice();
-    return { base: Number(t.tn) || 4, label: t.label, modifiers: this.#testModifiers({ pool: 'hacking', modifiers: [...t.modifiers, ...(target ? this.#maneuverMods(target) : []), ...this.matrixTestMods(), ...own.modifiers] }) };
+    return { base: Number(t.tn) || 4, label: t.label, modifiers: this.#testModifiers({ pool: 'hacking', modifiers: [...t.modifiers, ...(target ? this.#maneuverMods(target) : []), ...this.matrixTestMods(), ...(M923.cybercombatBook() ? [] : own.modifiers)] }) };
   }
 
   /**
@@ -14414,13 +14580,18 @@ export class SR2Actor extends Actor {
     const target: any = opts.targetUuid ? await fromUuid(opts.targetUuid) : null;
     const t = SR2Actor.#matrixTargetTn(target);
     if (!t) return null;
-    const { dice, modifiers, suffix } = this.#matrixDice();
+    const md = this.#matrixDice();
     // v0.71.0 (R7): no higher than the working MPCP.
     const power = this.utilityRating(prog);
+    // v0.92.3: the attack test rolls the offensive utility's rating (+ Hacking Pool), VR2 p. 123 (RULES.MATRIX_V923.cybercombat).
+    const book = M923.cybercombatBook();
+    const dice = book ? power : md.dice;
+    const modifiers = book ? [] : md.modifiers;
+    const suffix = book ? ` ${tx('SR2E.Card.Actor.utilityDice923', { dice: power })}` : md.suffix;
     const level = prog.system.damageLevel as DamageLevel;
     // v0.57.0: a maneuver for position on the target (used up by this attack); the target's parry.
     const pos = target ? this.#maneuverMods(target) : [];
-    const attack = target ? { attackerUuid: this.uuid as string, targetUuid: target.uuid as string, weaponName: prog.name, melee: false, damageType: 'physical' as DamageType, power, level, matrix: true } : undefined;
+    const attack = target ? { attackerUuid: this.uuid as string, targetUuid: target.uuid as string, weaponName: prog.name, melee: false, damageType: 'physical' as DamageType, power, level, matrix: true, matrixDice: Number(this.findSkill(RULES.MATRIX.skill)?.system?.rating ?? md.dice) } : undefined;
     const r = await this.#runTest(`${prog.name} (${t.label}, ${power}${level})${suffix}`, dice, {
       targetNumber: t.tn, poolDice: opts.poolDice ?? 0, pool: 'hacking', modifiers: [...(opts.modifiers ?? []), ...t.modifiers, ...pos, ...this.matrixTestMods(), ...modifiers],
       ...(opts.exclude?.length ? { exclude: opts.exclude } : {}),
@@ -14448,10 +14619,37 @@ export class SR2Actor extends Actor {
    */
   static #matrixTargetTn(target: any): { tn: number; label: string; modifiers: TargetNumberModifier[] } | null {
     if (!target) return { tn: 4, label: tx('SR2E.Card.Actor.tn42'), modifiers: [] };
+    // v0.92.3: the Cybercombat Target Numbers Table, by the host's code and the target's status (VR2 p. 123); party IC
+    // are harder to hit (VR2 p. 52). Off a host (or with 'v922'): the rating or Evasion below.
+    if (M923.cybercombatBook() && (target.type === 'ic' || target.isJackedIn?.())) {
+      const host: any = target.type === 'ic' ? (target.system.hostUuid ? fromUuidSync(target.system.hostUuid) : null) : target.currentHost?.();
+      if (host?.type === 'host') {
+        const legit = SR2Actor.legitimate923(target, host);
+        const code = String(host.system.securityCode ?? '');
+        const party = target.type === 'ic' && !['frame', 'agent'].includes(target.system.kind) ? M923.partyTn(target.partyMembers?.().length ?? 1) : 0;
+        return {
+          tn: M923.cybercombatTn(code, legit),
+          label: tx('SR2E.Card.Actor.cyberTn923', { name: target.name, code: cap(code), status: legit ? tx('SR2E.Card.Actor.legitimate923') : tx('SR2E.Card.Actor.intruding923'), tn: M923.cybercombatTn(code, legit) }),
+          modifiers: party ? [{ id: 'partyIc', label: tx('SR2E.Card.Mod.partyIc923', { n: party }), value: party }] : [],
+        };
+      }
+    }
     if (target.type === 'ic') return { tn: target.system.rating, label: tx('SR2E.Card.Actor.tnSRating', { targetName: target.name }), modifiers: [] };
     if (target.isJackedIn?.()) return { tn: target.system.derived.matrix.evasion, label: tx('SR2E.Card.Actor.tnSEvasion', { targetName: target.name }), modifiers: SR2Actor.mirrorsMods(target) };
     ui.notifications?.warn?.(tx('SR2E.Notify.Actor.isNotInTheMatrix', { targetName: escHtml(target.name) }));
     return null;
+  }
+
+  /**
+   * v0.92.3: a Legitimate icon in a host (VR2 p. 123): its IC, a security decker, a decker holding a validated passcode (a
+   * frame or agent: its owner's). Everything else is Intruding.
+   */
+  static legitimate923(target: any, host: any): boolean {
+    if (!target || !host) return false;
+    if (target.type === 'ic' && !['frame', 'agent'].includes(target.system?.kind)) return true;
+    const who: any = target.type === 'ic' ? (target.system?.ownerUuid ? fromUuidSync(target.system.ownerUuid) : null) : target;
+    if (!who) return false;
+    return (host.system?.validated ?? []).includes(who.uuid) || SR2Actor.isSecurityDecker(host, who);
   }
 
   /** A frame or agent attacks (v0.40.0): rating + pool dice, Power from its carried attack utility. */
@@ -14479,10 +14677,12 @@ export class SR2Actor extends Actor {
     const t = SR2Actor.#matrixTargetTn(target);
     if (!t) return null;
     const host: any = this.sys.hostUuid ? fromUuidSync(this.sys.hostUuid) : null;
-    const fd = agent ? agentDice(this.sys.rating) : frameDice(this.sys.rating, Boolean(this.sys.smart));
+    // v0.92.3: a dumb frame attacks with its owner's Computer, a smart frame with its rating (VR2 p. 104).
+    const fd923 = agent ? null : M923.frameDice923({ rating: this.sys.rating, smart: Boolean(this.sys.smart), ownerComputer: Number(owner?.findSkill?.(RULES.MATRIX.skill)?.system?.rating ?? 0) });
+    const fd = agent ? agentDice(this.sys.rating) : fd923 ?? frameDice(this.sys.rating, Boolean(this.sys.smart));
     const power = prog.system.rating as number;
     const level = prog.system.damageLevel as DamageLevel;
-    const attack = target ? { attackerUuid: this.uuid as string, targetUuid: target.uuid as string, weaponName: `${this.name}: ${prog.name}`, melee: false, damageType: 'physical' as DamageType, power, level, matrix: true } : undefined;
+    const attack = target ? { attackerUuid: this.uuid as string, targetUuid: target.uuid as string, weaponName: `${this.name}: ${prog.name}`, melee: false, damageType: 'physical' as DamageType, power, level, matrix: true, matrixDice: Number(this.sys.rating ?? 0) } : undefined;
     // v0.57.0: the frame's own Matrix damage, and a target persona's parry against it.
     const parry = target && target.type !== 'ic' ? parryPenalty(target.system?.matrix?.maneuvers ?? [], this.uuid as string, target.name, SR2Actor.matrixNow()) : null;
     return this.#runTest(tx('SR2E.Card.Actor.rating7', { name: this.name, progName: prog.name, label: t.label, power, level, fdDice: fd.dice, part: fd.pool ? tx('SR2E.Card.Actor.pool', { fdPool: fd.pool }) : '' }), fd.dice + fd.pool, {
@@ -14544,8 +14744,17 @@ export class SR2Actor extends Actor {
     // Smoke in the host, and the target's Mirrors on attacks against its Evasion (v0.40.0).
     // v0.57.0: the IC's own Matrix damage, and the target's parry.
     const parry = target && !program ? parryPenalty(target.system?.matrix?.maneuvers ?? [], this.uuid as string, target.name, now57) : null;
-    const situational = (from: string) => [...SR2Actor.smokeMods(host), ...(!program && from === 'evasion' ? SR2Actor.mirrorsMods(target) : []),
-      ...matrixWoundModifiers(Number(this.sys.matrix?.monitor ?? 0), { ic: true }), ...(parry ? [parry] : [])];
+    // v0.92.3 (RULES.MATRIX_V923.cybercombat, trace): party IC +1 TN per member on their attacks (VR2 p. 52); a completed
+    // trace gives the host's proactive IC −1 TN (VR2 p. 46); Mirrors is VR2's Decoy operation, not a TN.
+    const book = M923.cybercombatBook();
+    const proactive = ['damage', 'attribute'].includes(kind);
+    const party923 = proactive ? M923.partyTn(this.partyMembers().length) : 0;
+    const book923: TargetNumberModifier[] = [
+      ...(party923 ? [{ id: 'partyIc', label: tx('SR2E.Card.Mod.partyIc923', { n: party923 }), value: party923 }] : []),
+      ...(proactive && target && !program ? M923.tracedModifiers(Boolean(target.tracedIn?.(host))) : []),
+    ];
+    const situational = (from: string) => [...SR2Actor.smokeMods(host), ...(!program && from === 'evasion' && !book ? SR2Actor.mirrorsMods(target) : []),
+      ...matrixWoundModifiers(Number(this.sys.matrix?.monitor ?? 0), { ic: true }), ...(parry ? [parry] : []), ...book923];
     const rating = this.sys.rating as number;
     // v0.57.0: the IC may roll the host's Security Value (its rating stays the Power).
     const atk = icAttackDiceFor({ rating, securityValue: Number(host?.system?.securityValue ?? 0) });
@@ -14553,7 +14762,8 @@ export class SR2Actor extends Actor {
       // Probe and scout: their successes go on the security tally.
       const t = icActionTarget(behavior, persona);
       const rolls: any[] = [];
-      const r = await successTest({ dice: atk.dice, targetNumber: t.tn, modifiers: [...(opts.modifiers ?? []), ...situational('detectionFactor')], roll: foundryRoller(rolls) });
+      // v0.92.3: a Probe Test rolls the probe's rating (VR2 p. 42): not an attack test.
+      const r = await successTest({ dice: M923.cybercombatBook() ? rating : atk.dice, targetNumber: t.tn, modifiers: [...(opts.modifiers ?? []), ...situational('detectionFactor')], roll: foundryRoller(rolls) });
       const label = tx('SR2E.Card.Actor.ratingVs', { name: this.name, part: behavior === 'scout' ? tx('SR2E.Card.Actor.scouts') : tx('SR2E.Card.Actor.probes'), targetName: target.name, rating, label: t.label, tn: t.tn });
       // v0.57.0: onto the target's own tally (a frame's goes on its owner's).
       const owner: any = program ? (target.system.ownerUuid ? fromUuidSync(target.system.ownerUuid) : null) : target;
@@ -14572,12 +14782,25 @@ export class SR2Actor extends Actor {
       }
     }
     const attribute = opts.attribute || this.sys.attribute || 'evasion';
-    const t = target ? icActionTarget(behavior, persona, { attribute, utilityRating: prog?.system?.rating }) : { tn: 4, label: tx('SR2E.Card.Actor.tn8', { tn: 4 }) };
+    let t = target ? icActionTarget(behavior, persona, { attribute, utilityRating: prog?.system?.rating }) : { tn: 4, label: tx('SR2E.Card.Actor.tn8', { tn: 4 }) };
+    // v0.92.3: the book's TNs: attack tests by the host's code and the target's status (VR2 p. 123; crippler and ripper
+    // too, VR2 p. 41); trace IC hunt against the Trace Factor (VR2 p. 45).
+    if (target && kind === 'trace' && M923.traceBook() && !program) {
+      const jm = M923.jackpointMods(String(target.system?.matrix?.connection ?? 'jackpoint'));
+      const camo = target.utilityRating?.(target.bestUtility?.('camo')) ?? 0;
+      const redirects = Number(target.flags?.[SYSTEM_ID]?.redirects923 ?? 0);
+      const tf = M923.traceFactor({ evasion: persona.evasion, rating, camo, redirects, jackpoint: RULES.MATRIX_V923.connections !== 'v922' ? jm.trace : 0 });
+      t = { tn: tf, label: tx('SR2E.Card.Actor.traceFactor923', { name: target.name }) };
+    } else if (target && book && (kind === 'damage' || kind === 'attribute')) {
+      const ct = SR2Actor.#matrixTargetTn(target);
+      if (ct) t = { tn: ct.tn, label: ct.label };
+    }
     // v0.46.0: a tortoise has no ASIST for black IC to reach the decker through.
     const tortoise = Boolean(target?.system?.derived?.matrix?.tortoise) && RULES.MATRIX.tortoise.immuneToBlackIc;
     const black = kind === 'damage' && this.sys.category === 'black' && !program && !tortoise;
     const power = rating;
-    const level = this.sys.damageLevel as DamageLevel;
+    // v0.92.3: the damage level by the host's code (VR2 p. 123; RULES.MATRIX_V923.icDamageLevel).
+    const level = kind === 'damage' && host?.type === 'host' ? M923.icDamageLevelFor(String(host.system.securityCode ?? ''), String(this.sys.damageLevel ?? 'M')) : this.sys.damageLevel as DamageLevel;
     // Cold sim: black IC do Stun instead of Physical (RULES.MATRIX.sim.cold); so does an ICCM filter (v0.46.0).
     const iccm = Number(target?.system?.derived?.cyber?.iccm ?? 0) > 0 && RULES.MATRIX.iccm.blackIcStun;
     const damageType = (black ? (iccm ? 'stun' : blackIcDamageType(target?.system?.derived?.matrix?.sim ?? target?.system?.matrix?.sim ?? 'cold', this.sys.damageType)) : 'physical') as DamageType;
@@ -14586,14 +14809,16 @@ export class SR2Actor extends Actor {
       ...(kind === 'attribute' ? { attribute } : {}), ...(prog ? { programId: prog.id as string, programName: prog.name as string } : {}),
       ...(kind === 'trace' ? { traceMode: this.sys.traceMode as string } : {}), ...(host ? { hostUuid: host.uuid as string } : {}),
       ...(behavior === 'psychotropic' ? { payload: (this.sys.payload as string) || psychotropicKindFromName(`${this.sys.icType ?? ''} ${this.name}`) } : {}),
+      category: String(this.sys.category ?? 'white'),
     };
-    const attack = target ? { attackerUuid: this.uuid as string, targetUuid: target.uuid as string, weaponName: this.name, melee: false, damageType, power, level, matrix: true, ...(black ? { black: true } : {}), ic } : undefined;
+    const attack = target ? { attackerUuid: this.uuid as string, targetUuid: target.uuid as string, weaponName: this.name, melee: false, damageType, power, level, matrix: true, matrixDice: atk.dice, ...(black ? { black: true } : {}), ic } : undefined;
     const label = kind === 'damage'
       ? tx('SR2E.Card.Actor.attacks2', { name: this.name, part: behavior !== this.sys.behavior ? tx('SR2E.Card.Actor.construct2', { icBehaviorLabels: IC_BEHAVIOR_LABELS[behavior] }) : '', part2: target ? tx('SR2E.Card.Actor.tnS2', { targetName: target.name, part: program ? tx('SR2E.Card.Actor.rating10') : tx('SR2E.Card.Actor.evasion') }) : tx('SR2E.Card.Actor.tn42'), power, level, part3: black ? ` ${damageType}` : '', part4: tortoise && this.sys.category === 'black' ? tx('SR2E.Card.Actor.aTortoiseMatrixDamageOnly') : '' })
       : `${this.name} (${IC_BEHAVIOR_LABELS[behavior]}${behavior !== this.sys.behavior ? tx('SR2E.Card.Actor.construct') : ''}) ${kind === 'trace' ? tx('SR2E.Card.Actor.traces') : kind === 'utility' ? tx('SR2E.Card.Actor.goesAfter', { progName: prog?.name }) : kind === 'attribute' ? tx('SR2E.Card.Actor.goesAfter2', { attribute: cap(attribute) }) : tx('SR2E.Card.Actor.acts2')}${target ? tx('SR2E.Card.Actor.tn10', { label: t.label, tn: t.tn }) : ''}`;
     const from = RULES.MATRIX.icAttackTn[behavior] ?? 'evasion';
     // v0.57.0: black IC that attack a decker engage them: they can't simply jack out.
-    if (this.sys.category === 'black' && target && !program && RULES.MATRIX_V57.blackIcHold.enabled) await SR2Actor.#engage(target, this.uuid as string);
+    // v0.92.3: only once it hits (VR2 p. 47; RULES.MATRIX_V923.blackIc): see #matrixHit.
+    if (this.sys.category === 'black' && target && !program && RULES.MATRIX_V57.blackIcHold.enabled && RULES.MATRIX_V923.blackIc === 'v922') await SR2Actor.#engage(target, this.uuid as string);
     return this.#runTest(`${label}${atk.note ? tx('SR2E.Card.Actor.dice4', { atkNote: atk.note }) : ''}`, atk.dice, { targetNumber: t.tn, modifiers: [...(opts.modifiers ?? []), ...(target ? situational(from) : [...SR2Actor.smokeMods(host), ...matrixWoundModifiers(Number(this.sys.matrix?.monitor ?? 0), { ic: true })])] }, { kind: 'attack', ...(attack ? { attack } : {}) });
   }
 
@@ -14631,6 +14856,32 @@ export class SR2Actor extends Actor {
   /** Defend in cybercombat: a persona with Hacking Pool dice, an IC with its rating (RULES.MATRIX.defense). */
   async #defendMatrix(attack: AttackState, poolDice: number): Promise<void> {
     const ic = this.type === 'ic';
+    // v0.92.3: the persona attribute against a crippler or ripper (TN its rating, VR2 p. 41) and a Shield parry (TN the
+    // attacker's skill, its successes off the attacker's; −1 rating each use, VR2 p. 100).
+    if (!ic) {
+      const opposed = SR2Actor.#opposedByAttribute(attack);
+      const shield: any = RULES.MATRIX_V923.shield === 'parry' ? this.bestUtility('shield') : null;
+      const shieldDice = shield ? this.utilityRating(shield) : 0;
+      if (opposed || shieldDice > 0) {
+        const attr = String(attack.ic?.attribute ?? 'evasion');
+        const attrDice = opposed ? Math.max(0, Number(this.sys.derived?.matrix?.[attr] ?? 0)) : 0;
+        const tn = opposed ? Math.max(RULES.MIN_TARGET_NUMBER, Number(attack.ic?.rating ?? 4)) : Math.max(RULES.MIN_TARGET_NUMBER, Number(attack.matrixDice ?? attack.targetNumber));
+        const pool = Math.max(0, Math.min(poolDice, (this.sys.derived?.hackingPoolLeft as number | undefined) ?? 0));
+        const rolls: any[] = [];
+        const result = await successTest({ dice: attrDice + shieldDice, poolDice: pool, targetNumber: tn, roll: foundryRoller(rolls) });
+        if (pool > 0) await this.#spendPool('hacking', pool);
+        let wear = '';
+        const per = RULES.MATRIX.utilities.shield.degradesPerHit;
+        if (shield && per > 0) {
+          const to = Math.max(0, Number(shield.system.rating ?? 0) - per);
+          await shield.update({ 'system.rating': to });
+          wear = tx('SR2E.Card.Actor.shieldWears923', { name: shield.name, to });
+        }
+        const parts = [opposed ? `${cap(attr)} ${attrDice}` : '', shieldDice ? `${shield.name} ${shieldDice}` : '', pool ? tx('SR2E.Card.Actor.hackingPoolPlus923', { pool }) : ''].filter(Boolean).join(' + ');
+        await this.#post(this.#snapshot(`${tx('SR2E.Card.Actor.matrixDefense923', { parts, tn })}${wear}`, result, { kind: 'defend', defendAgainst: attack }), result, rolls);
+        return;
+      }
+    }
     const dice = ic && RULES.MATRIX.defense.ic === 'rating' ? (this.sys.rating as number) : 0;
     const pool = ic ? 0 : Math.max(0, Math.min(poolDice, (this.sys.derived?.hackingPoolLeft as number | undefined) ?? 0));
     const rolls: any[] = [];
@@ -14652,15 +14903,27 @@ export class SR2Actor extends Actor {
     const tally = defended ? tx('SR2E.Card.Actor.attackVsDefense3', { attackAttackSuccesses: attack.attackSuccesses, defense }) : '';
     if (kind === 'damage') {
       const o = resolveAttack({ attackSuccesses: attack.attackSuccesses, defenseSuccesses: defense, power: attack.power, level: attack.level });
+      // v0.92.3: black IC take hold of the ASIST link with any hit, even one that does no damage (VR2 p. 47).
+      if (o.hit && ic?.category === 'black' && target && target.type !== 'ic' && RULES.MATRIX_V57.blackIcHold.enabled && RULES.MATRIX_V923.blackIc !== 'v922') await SR2Actor.#engage(target, ic.icUuid);
       if (!o.hit || !o.level) return { html: `<p>${outcomeWord('missed')} ${tally || tx('SR2E.Card.Actor.noNetSuccesses')}.</p>`, flags: {}, snap };
       const damage: DamageState = {
         targetUuid: attack.targetUuid, melee: false, damageType: attack.damageType, power: o.power, level: o.level, matrix: true,
-        ...(attack.black ? { black: true } : {}), ...(ic ? { ic } : {}),
+        ...(attack.black ? { black: true } : {}), ...(ic ? { ic } : {}), matrixAttacker: attack.attackerUuid,
       };
       const what = attack.black ? tx('SR2E.Card.Actor.toTheDecker2', { damageDamageType: damageWord(damage.damageType) }) : tx('SR2E.Card.Actor.matrixDamage');
       const lead = defended ? tx('SR2E.Card.Actor.net2', { tally, netSuccesses: o.netSuccesses }) : tCount(o.netSuccesses, 'SR2E.Card.Actor.netSuccesses2');
       // Psychotropic IC: the hit also works on the decker's mind (v0.40.0).
-      const psycho = ic?.behavior === 'psychotropic' && target?.type !== 'ic';
+      // v0.92.3: in the book the test waits for the jack-out (VR2 p. 49): the hit marks the decker (RULES.MATRIX_V923.psychotropic).
+      const psychoLater = ic?.behavior === 'psychotropic' && target?.type !== 'ic' && M923.psychotropicBook();
+      if (psychoLater && target) {
+        const list = target.flags?.[SYSTEM_ID]?.psyche923;
+        const pend = Array.isArray(list) ? list : [];
+        const entry = { icName: ic!.icName, rating: ic!.rating, kind: ic!.payload ?? 'cyberphobia', hostUuid: ic!.hostUuid ?? '' };
+        if (!pend.some((x: any) => x.icName === entry.icName && x.kind === entry.kind)) {
+          try { await target.update({ [`flags.${SYSTEM_ID}.psyche923`]: [...pend, entry] }); } catch (err) { console.warn('sr2e | psychotropic mark (the GM\'s client runs IC)', err); }
+        }
+      }
+      const psycho = ic?.behavior === 'psychotropic' && target?.type !== 'ic' && !psychoLater;
       const kindLabel = PSYCHOTROPIC_LABELS[(ic?.payload ?? 'cyberphobia') as keyof typeof PSYCHOTROPIC_LABELS] ?? ic?.payload;
       const ps = RULES.MATRIX.psychotropic;
       const psychoBtn = psycho ? ` <button type="button" data-sr2e-action="psychotropic" title="${tx('SR2E.Card.Actor.theIcSPsychotropicPayload')}">${tx('SR2E.Card.Actor.resistVs3', { kindLabel: escText(kindLabel), psResist: escText(cap(ps.resist)), icRating: ic!.rating })}</button>` : '';
@@ -14668,8 +14931,14 @@ export class SR2Actor extends Actor {
       const riders: any[] = attack.black && RULES.MATRIX_V57.hitchers.blackIc && target?.hitchers ? target.hitchers() : [];
       const damages: DamageState[] = [damage, ...riders.map((h: any) => ({ ...damage, targetUuid: h.uuid as string }))];
       const riderBtns = riders.map((h: any, i: number) => ` <button type="button" data-sr2e-action="resist" data-index="${i + 1}">${tx('SR2E.Card.Actor.resistHitcher', { name: escText(h.name) })}</button>`).join('');
+      // v0.92.3: black IC hit the icon too: a second resistance with its Bod (VR2 p. 47; RULES.MATRIX_V923.blackIc).
+      let iconBtn = '';
+      if (attack.black && RULES.MATRIX_V923.blackIc !== 'v922' && target?.isJackedIn?.()) {
+        damages.push({ ...damage, black: false, damageType: 'physical' });
+        iconBtn = ` <button type="button" data-sr2e-action="resist" data-index="${damages.length - 1}">${tx('SR2E.Card.Actor.resistIcon923', { tName: escText(tName) })}</button>`;
+      }
       return {
-        html: `<p>${outcomeWord('hit')} ${lead}: <strong>${damage.power}${damage.level}</strong>${escText(what)}</p><p><button type="button" data-sr2e-action="resist" data-index="0">${tx('SR2E.Card.Actor.resist8', { tName: escText(tName) })}</button>${riderBtns}${psychoBtn}</p>`,
+        html: `<p>${outcomeWord('hit')} ${lead}: <strong>${damage.power}${damage.level}</strong>${escText(what)}</p><p><button type="button" data-sr2e-action="resist" data-index="0">${tx('SR2E.Card.Actor.resist8', { tName: escText(tName) })}</button>${iconBtn}${riderBtns}${psychoBtn}</p>`,
         flags: { damage, damages, ...(psycho ? { psychotropic: { deckerUuid: attack.targetUuid, icName: ic!.icName, rating: ic!.rating, kind: ic!.payload ?? 'cyberphobia', hostUuid: ic!.hostUuid ?? '' } } : {}) }, snap,
       };
     }
@@ -14684,7 +14953,9 @@ export class SR2Actor extends Actor {
     try {
       if (kind === 'attribute') {
         const attr = (ic!.attribute ?? 'evasion') as 'bod' | 'evasion' | 'masking' | 'sensors';
-        const loss = personaAttributeLoss(net);
+        // v0.92.3: a crippler never takes an icon attribute below 1 (VR2 p. 41).
+        const nowAttr = Number(target?.system?.derived?.matrix?.[attr] ?? 99);
+        const loss = M923.cybercombatBook() ? Math.max(0, Math.min(personaAttributeLoss(net), nowAttr - 1)) : personaAttributeLoss(net);
         if (ic!.behavior === 'ripper') {
           const deck: any = target?.activeDeck?.();
           const dmg = { ...NO_DECK_DAMAGE, ...(deck?.system?.damage ?? {}) };
@@ -14715,8 +14986,10 @@ export class SR2Actor extends Actor {
         const round = combat?.started ? Number(combat.round ?? 0) : null;
         const due = traceDue({ round, worldTime: sysNow(), turns, combatId: combat?.started ? String(combat.id ?? '') : null });
         const t = target?.system?.matrix?.trace ?? {};
-        await target?.update({ 'system.matrix.trace': { ...t, active: true, icUuid: ic!.icUuid, icName: ic!.icName, mode: ic!.traceMode ?? 'dump', rating: ic!.rating, hostUuid: ic!.hostUuid ?? '', round: due.round, worldTime: due.worldTime, combatId: due.combatId ?? '' } });
-        body = `<strong>${tx('SR2E.Card.Actor.locksOnTo', { icIcName: escText(ic!.icName), tName: escText(tName) })}</strong>${tx('SR2E.Card.Actor.theTraceCompletesIn')} <strong>${tCount(turns, 'SR2E.Card.Actor.combatTurns')}</strong>${tx('SR2E.Card.Actor.thenJackOutDerezItOr', { part: round != null ? tx('SR2E.Card.Actor.combatTurn3', { dueRound: due.round }) : '', part2: ic!.traceMode === 'report' ? tx('SR2E.Card.Actor.reportsTheirLocation') : ic!.traceMode === 'burn' ? tx('SR2E.Card.Actor.dumpsThemAndBurnsTheDeck') : tx('SR2E.Card.Actor.dumpsThem') })}`;
+        // v0.92.3: VR2's trace reports (p. 46; dump and burn need trap IC).
+        const mode923 = M923.traceBook() ? 'report' : ic!.traceMode ?? 'dump';
+        await target?.update({ 'system.matrix.trace': { ...t, active: true, icUuid: ic!.icUuid, icName: ic!.icName, mode: mode923, rating: ic!.rating, hostUuid: ic!.hostUuid ?? '', round: due.round, worldTime: due.worldTime, combatId: due.combatId ?? '' } });
+        body = `<strong>${tx('SR2E.Card.Actor.locksOnTo', { icIcName: escText(ic!.icName), tName: escText(tName) })}</strong>${tx('SR2E.Card.Actor.theTraceCompletesIn')} <strong>${tCount(turns, 'SR2E.Card.Actor.combatTurns')}</strong>${(M923.traceBook() ? tx('SR2E.Card.Actor.thenTrace923', { part: round != null ? tx('SR2E.Card.Actor.combatTurn3', { dueRound: due.round }) : '', part2: mode923 === 'report' ? tx('SR2E.Card.Actor.reportsTheirLocation') : mode923 === 'burn' ? tx('SR2E.Card.Actor.dumpsThemAndBurnsTheDeck') : tx('SR2E.Card.Actor.dumpsThem') }) : tx('SR2E.Card.Actor.thenJackOutDerezItOr', { part: round != null ? tx('SR2E.Card.Actor.combatTurn3', { dueRound: due.round }) : '', part2: mode923 === 'report' ? tx('SR2E.Card.Actor.reportsTheirLocation') : mode923 === 'burn' ? tx('SR2E.Card.Actor.dumpsThemAndBurnsTheDeck') : tx('SR2E.Card.Actor.dumpsThem') }))}`;
       }
     } catch (err) {
       console.warn('sr2e | Matrix effect not applied', err);
@@ -14747,33 +15020,64 @@ export class SR2Actor extends Actor {
       return p && p.system.rating > 0 ? { programId: p.id as string, name: p.name as string, rating: this.utilityRating(p), kind: k } : null;
     };
     if (damage.black && !ic) {
-      const attr = RULES.MATRIX.blackIcResist as AttributeKey;
-      const shield = soaker('shield');
+      // v0.92.3 (RULES.MATRIX_V923.blackIc): Body against lethal, Willpower against non-lethal, Hardening off the Power, no
+      // Hacking Pool; an ICCM lets the better of Body and Willpower resist (VR2 pp. 17, 47–48, 86). Shield is a parry, not a soak.
+      const bk = RULES.MATRIX_V923.blackIc !== 'v922';
+      const res = M923.blackIcResistance({ damageType: damage.damageType === 'stun' ? 'stun' : 'physical', power: damage.power, hardening: Number(m?.hardening ?? 0) });
+      const withIccm = bk && Number(this.sys.derived?.cyber?.iccm ?? 0) > 0;
+      const better: AttributeKey = (this.sys.attributes.body?.total ?? 0) >= (this.sys.attributes.willpower?.total ?? 0) ? 'body' : 'willpower';
+      const attr = (bk ? (withIccm ? better : res.attribute) : RULES.MATRIX.blackIcResist) as AttributeKey;
+      const shield = RULES.MATRIX_V923.shield === 'soak' ? soaker('shield') : null;
       const iccm = iccmDice(this.sys.derived?.cyber?.iccm ?? 0);
-      const result = await successTest({ dice: this.sys.attributes[attr].total + iccm, poolDice: pool, targetNumber: matrixSoakTn(damage.power, 0, shield?.rating ?? 0), roll: foundryRoller(rolls) });
-      if (pool > 0) await this.#spendPool('hacking', pool);
-      await this.#post(this.#snapshot(tx('SR2E.Card.Actor.resistBlackIc', { damagePower: damage.power, damageLevel: damage.level, damageDamageType: damage.damageType, attr: cap(attr), part: iccm ? tx('SR2E.Card.Actor.iccm', { iccm }) : '', part2: shield ? `, ${shield.name} ${shield.rating}` : '' }), result, {
+      const blackPool = bk ? 0 : pool;
+      const result = await successTest({ dice: this.sys.attributes[attr].total + iccm, poolDice: blackPool, targetNumber: bk ? matrixSoakTn(res.tn, 0, shield?.rating ?? 0) : matrixSoakTn(damage.power, 0, shield?.rating ?? 0), roll: foundryRoller(rolls) });
+      if (blackPool > 0) await this.#spendPool('hacking', blackPool);
+      const hard923 = bk && Number(m?.hardening ?? 0) > 0 ? tx('SR2E.Card.Actor.hardening', { hardening: Number(m.hardening) }) : '';
+      await this.#post(this.#snapshot(tx('SR2E.Card.Actor.resistBlackIc', { damagePower: damage.power, damageLevel: damage.level, damageDamageType: damage.damageType, attr: cap(attr), part: `${iccm ? tx('SR2E.Card.Actor.iccm', { iccm }) : ''}${withIccm ? ' (ICCM)' : ''}${hard923}`, part2: shield ? `, ${shield.name} ${shield.rating}` : '' }), result, {
         kind: 'soak',
         soak: { mode: 'stage', noun: 'damage', level: damage.level, type: damage.damageType, body: this.sys.attributes.body.total, before: this.#monitor(), ...(shield ? { matrixUtility: shield } : {}) },
       }), result, rolls);
       return;
     }
-    const dice = ic ? (this.sys.rating as number) : (m.bod as number);
-    const hardening = ic ? 0 : (m.hardening as number);
+    // v0.92.3: IC resist with the host's Security Value (VR2 p. 40); Hardening protects the deck and the decker, not the
+    // icon (VR2 p. 123; RULES.MATRIX_V923.iconHardening).
+    const icHost: any = ic && M923.cybercombatBook() && this.sys.hostUuid ? fromUuidSync(this.sys.hostUuid) : null;
+    const icSv = icHost?.type === 'host' && !['frame', 'agent'].includes(this.sys.kind) ? Number(icHost.system.securityValue ?? 0) : 0;
+    const dice = ic ? (icSv > 0 ? icSv : (this.sys.rating as number)) : (m.bod as number);
+    const hardening = ic || RULES.MATRIX_V923.iconHardening !== 'hardening' ? 0 : (m.hardening as number);
     const armor = soaker('armor');
     const result = await successTest({ dice, poolDice: pool, targetNumber: matrixSoakTn(damage.power, hardening, armor?.rating ?? 0), roll: foundryRoller(rolls) });
     if (pool > 0) await this.#spendPool('hacking', pool);
     const before = (this.sys.matrix?.monitor as number | undefined) ?? 0;
-    await this.#post(this.#snapshot(tx('SR2E.Card.Actor.resistMatrixDamage', { damagePower: damage.power, damageLevel: damage.level, part: ic ? tx('SR2E.Card.Actor.rating10') : tx('SR2E.Card.Actor.bod'), part2: hardening ? tx('SR2E.Card.Actor.hardening', { hardening }) : '', part3: armor ? `, ${armor.name} ${armor.rating}` : '' }), result, {
+    await this.#post(this.#snapshot(tx('SR2E.Card.Actor.resistMatrixDamage', { damagePower: damage.power, damageLevel: damage.level, part: ic ? (icSv > 0 ? tx('SR2E.Text.Datawar.securityValue', { securityValue: icSv }) : tx('SR2E.Card.Actor.rating10')) : tx('SR2E.Card.Actor.bod'), part2: hardening ? tx('SR2E.Card.Actor.hardening', { hardening }) : '', part3: armor ? `, ${armor.name} ${armor.rating}` : '' }), result, {
       kind: 'soak',
-      soak: { mode: 'stage', noun: 'damage', level: damage.level, type: 'physical', body: 0, before: { physical: 0, stun: 0 }, track: 'matrix', matrixBefore: before, power: damage.power, ...(damage.ic ? { matrixIc: damage.ic } : {}), ...(armor ? { matrixUtility: armor } : {}) },
+      soak: { mode: 'stage', noun: 'damage', level: damage.level, type: 'physical', body: 0, before: { physical: 0, stun: 0 }, track: 'matrix', matrixBefore: before, power: damage.power, ...(damage.ic ? { matrixIc: damage.ic } : {}), ...(armor ? { matrixUtility: armor } : {}), ...(damage.matrixAttacker ? { matrixAttacker: damage.matrixAttacker } : {}) },
     }), result, rolls);
+  }
+
+  /** v0.92.3: this IC crashed: its rating (or half) onto the attacker's security tally (VR2 p. 40); a frame's goes on its owner's. */
+  async #crashTally923(attackerUuid: string): Promise<void> {
+    const pts = M923.crashTallyPoints(Number(this.sys.rating ?? 0));
+    const host: any = this.sys.hostUuid ? fromUuidSync(this.sys.hostUuid) : null;
+    const attacker: any = fromUuidSync(attackerUuid);
+    if (!(pts > 0) || host?.type !== 'host' || !attacker) return;
+    const frame = attacker.type === 'ic' && ['frame', 'agent'].includes(attacker.system?.kind) ? attacker : null;
+    const owner: any = frame ? (frame.system.ownerUuid ? fromUuidSync(frame.system.ownerUuid) : null) : attacker;
+    if (!owner?.tallyFor) return;
+    const who = owner.tallyFor(frame);
+    const boosted = owner.tracedIn?.(host) && !frame ? pts + 1 : pts;
+    let html: string | null = null;
+    try { html = await SR2Actor.applyTallyCard(host.uuid, boosted, who, owner.uuid as string); } catch (err) { console.warn('sr2e | crash tally (the GM applies it)', err); }
+    const gms = [...((game as any).users ?? [])].filter((u: any) => u.isGM).map((u: any) => u.id);
+    await ChatMessage.create({ speaker: { alias: host.name }, whisper: gms, content: `<p><em>${tx('SR2E.Card.Actor.gmOnly')}</em> · ${tx('SR2E.Card.Actor.crashTally923', { icName: escText(this.name), name: escText(owner.name), n: boosted })}</p>${html ?? ''}` });
   }
 
   /** Armor or Shield that soaked a hit loses rating, once per card (RULES.MATRIX.utilities). */
   async #wearSoakUtility(r: Resolved): Promise<Resolved> {
     const u = r.snap.soak?.matrixUtility;
     if (!u || u.degraded) return r;
+    // v0.92.3: Armor loses a point only when it fails to absorb the whole hit (VR2 p. 99; RULES.MATRIX_V923.armorWear).
+    if (u.kind === 'armor' && RULES.MATRIX_V923.armorWear !== 'every' && resolveResistance(r.snap.soak!.level, r.snap.successes) === null) return r;
     const per = RULES.MATRIX.utilities[u.kind]?.degradesPerHit ?? 0;
     const prog: any = this.items.get(u.programId);
     let note = '';
@@ -14794,8 +15098,11 @@ export class SR2Actor extends Actor {
     const attr = ps.resist as AttributeKey;
     const shield = ps.shieldDice ? this.utilityRating(this.bestUtility('shield')) : 0;
     const label = PSYCHOTROPIC_LABELS[p.kind as keyof typeof PSYCHOTROPIC_LABELS] ?? p.kind;
+    // v0.92.3: −2 TN on a cool deck, no Hacking Pool (VR2 pp. 17, 49; RULES.MATRIX_V923.psychotropic).
+    const bk = M923.psychotropicBook();
+    const cool: TargetNumberModifier[] = bk && this.matrixSim() === 'cold' ? [{ id: 'coolDeck', label: tx('SR2E.Text.Matrix923.coolDeck'), value: -2 }] : [];
     return this.#runTest(tx('SR2E.Card.Actor.resistVs4', { label, icName: p.icName, attr: cap(attr), part: shield ? tx('SR2E.Card.Actor.shield', { shield }) : '', rating: p.rating }), (this.sys.attributes?.[attr]?.total ?? 0) + shield, {
-      targetNumber: Math.max(RULES.MIN_TARGET_NUMBER, p.rating), poolDice, pool: 'hacking',
+      targetNumber: Math.max(RULES.MIN_TARGET_NUMBER, p.rating), poolDice: bk ? 0 : poolDice, pool: 'hacking', modifiers: cool,
     }, { kind: 'psyche', psyche: { icName: p.icName, rating: p.rating, kind: p.kind, ...(p.hostUuid ? { hostUuid: p.hostUuid } : {}) } });
   }
 
@@ -14814,11 +15121,13 @@ export class SR2Actor extends Actor {
       return { html: `<p><strong>${tx('SR2E.Card.Actor.resists', { name: escText(this.name), label: escText(label) })}</strong></p>`, flags: {}, snap };
     }
     if (ps.applied) return { html: `<p><strong>${tx('SR2E.Card.Actor.takesHold', { label: escText(label) })}</strong> ${tx('SR2E.Card.Actor.alreadyApplied')}</p>`, flags: {}, snap };
-    const effect = psychotropicEffect(ps.kind, ps.icName, ps.rating, SR2Actor.matrixNow().worldTime);
+    // v0.92.3: the effect lasts until the decker recovers (VR2 p. 50): no fixed time (RULES.MATRIX_V923.psychotropic).
+    const bk = M923.psychotropicBook();
+    const effect = bk ? { kind: ps.kind, icName: ps.icName, rating: ps.rating, until: M923.PSYCHE_UNTIL_RECOVERED } : psychotropicEffect(ps.kind, ps.icName, ps.rating, SR2Actor.matrixNow().worldTime);
     await this.update({ 'system.matrix.psyche': [...list, effect] });
-    const days = effect.until < 0 ? '' : tCount(Number(Math.round((effect.until - SR2Actor.matrixNow().worldTime) / 86400)), 'SR2E.Card.Actor.forDays');
+    const days = bk ? ` ${tx('SR2E.Card.Actor.untilRecovered923', { rating: ps.rating, every: ps.kind === 'frenzy' ? tx('SR2E.Card.Actor.daily923') : tx('SR2E.Card.Actor.weekly923') })}` : effect.until < 0 ? '' : tCount(Number(Math.round((effect.until - SR2Actor.matrixNow().worldTime) / 86400)), 'SR2E.Card.Actor.forDays');
     const what: Record<string, string> = {
-      cyberphobia: tx('SR2E.Card.Actor.tnOnEveryMatrixTest', { tn: RULES.MATRIX.psychotropic.cyberphobiaTn }),
+      cyberphobia: tx('SR2E.Card.Actor.tnOnEveryMatrixTest', { tn: M923.cyberphobiaTn(ps.rating) }),
       frenzy: tx('SR2E.Card.Actor.theyMustAttackInCybercombatUntil'),
       judas: tx('SR2E.Card.Actor.theyAreCompelledToBetrayTheir'),
       conditioning: tx('SR2E.Card.Actor.theyAreConditionedInTheCorp'),
@@ -14853,14 +15162,26 @@ export class SR2Actor extends Actor {
         update['system.matrix.hostUuid'] = '';
         Object.assign(update, this.#endRunUpdate());
         // A tortoise takes no dump shock (v0.46.0).
-        if (!(this.isTortoise() && !RULES.MATRIX.tortoise.dumpShock)) fu.dumpShock = { tn: (host?.system?.securityValue as number | undefined) ?? RULES.MATRIX.dumpShockTn, level: dumpShockLevel(String(host?.system?.securityCode ?? '')) };
+        const ds = this.dumpShockFor(host);
+        if (!(this.isTortoise() && !RULES.MATRIX.tortoise.dumpShock) && ds.level) fu.dumpShock = { tn: ds.tn, level: ds.level };
         else fu.unhitch = true;
+        // v0.92.3: the psychotropic tests and the datatrail of a trace follow the dump (VR2 pp. 47, 49).
+        const psyche923 = this.#pendingPsyche();
+        if (psyche923.length) update[`flags.${SYSTEM_ID}.psyche923`] = [];
+        if (psyche923.length || this.sys.matrix?.trace?.active) fu.dumped923 = { psyche: psyche923, trace: this.sys.matrix?.trace?.active ? { ...this.sys.matrix.trace } : null };
         // Blaster and sparky crashes damage the deck too.
         if (ctx.matrixIc && (ctx.matrixIc.behavior === 'blaster' || ctx.matrixIc.behavior === 'sparky')) fu.deckDamage = { ic: ctx.matrixIc, reason: ctx.matrixIc.behavior };
       }
       await this.update(update);
+      // v0.92.3: crashing IC raises its attacker's tally by its rating (VR2 p. 40; RULES.MATRIX_V923.crashTally).
+      if (newlyCrashed && ic && ctx.matrixAttacker && !['frame', 'agent'].includes(this.sys.kind)) await this.#crashTally923(ctx.matrixAttacker);
       // Hot sim: heavy Matrix damage overloads the decker's senses.
-      if (!ic && ctx.matrixAfter === undefined && simsenseOverload(this.matrixSim(), level)) fu.overload = ctx.power ?? 0;
+      // v0.92.3: any white or gray IC damage, by its level (VR2 p. 124; RULES.MATRIX_V923.overload).
+      if (RULES.MATRIX_V923.overload !== 'v922') {
+        const tn923 = !ic && ctx.matrixAfter === undefined && ctx.matrixIc && ctx.matrixIc.category !== 'black' && !this.isTortoise()
+          ? M923.overloadTnFor(level, { hot: this.matrixSim() === 'hot', iccm: Number(this.sys.derived?.cyber?.iccm ?? 0) > 0 }) : null;
+        if (tn923 != null) fu.overload = tn923;
+      } else if (!ic && ctx.matrixAfter === undefined && simsenseOverload(this.matrixSim(), level)) fu.overload = ctx.power ?? 0;
     } else {
       note = ` <em>${tx('SR2E.Card.Actor.theMatrixMonitorChangedSinceThis', { resultAfter: result.after })}</em>`;
     }
@@ -14868,6 +15189,17 @@ export class SR2Actor extends Actor {
       ? outcomeWord('fullyResisted', false)
       : takenMark(level, 'matrix', tx('SR2E.Card.Outcome.takesMatrix', { level: `<strong>${level}</strong>`, plural: escText(plural(result.boxes, 'box')), resultAfter: result.after, matrixMonitorBoxes: RULES.MATRIX.monitorBoxes })) + (result.crashed ? ` <strong>${ic ? tx('SR2E.Card.Actor.isDerezzed', { name: escText(this.name) }) : tx('SR2E.Card.Actor.thePersonaCrashes')}</strong>` : '');
     return { html: `<p>${body}${note}</p>`, flags: {}, snap: { ...snap, soak: { ...ctx, matrixAfter: result.after } } };
+  }
+
+  /**
+   * v0.92.3: dump shock from this host: Power (TN) = its Security Value, level by its code; a cool deck and an ICCM each
+   * take 2 off the Power and a level (VR2 p. 124; RULES.MATRIX_V923.dumpShock). Level null: nothing left.
+   */
+  dumpShockFor(host: any): { tn: number; level: DamageLevel | null } {
+    const tn = (host?.system?.securityValue as number | undefined) ?? RULES.MATRIX.dumpShockTn;
+    const level = dumpShockLevel(String(host?.system?.securityCode ?? ''));
+    const c = M923.dumpShockCode({ power: tn, level, cool: this.matrixSim() === 'cold', iccm: Number(this.sys.derived?.cyber?.iccm ?? 0) > 0 });
+    return { tn: c.power, level: c.level };
   }
 
   /** Dump shock after a crash: Willpower vs the host's Security Value, stun damage staged down. */
@@ -14950,7 +15282,13 @@ export class SR2Actor extends Actor {
       return null;
     }
     const limit = carryLimit(prog.system.rating);
-    if (carry.length > limit) {
+    // v0.92.3: the utilities' combined ratings may not exceed the frame's rating (VR2 p. 105; RULES.MATRIX_V923.frames).
+    const fits923 = M923.frameCarryOk(carry.map((p: any) => Number(p.system.rating ?? 0)), Number(prog.system.rating ?? 0));
+    if (fits923 === false) {
+      ui.notifications?.warn?.(tx('SR2E.Notify.Actor.frameCarry923', { progName: escHtml(prog.name), progRating: escHtml(prog.system.rating) }));
+      return null;
+    }
+    if (fits923 === null && carry.length > limit) {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.ratingCanCarryAtMostUtilit', { progName: escHtml(prog.name), progRating: escHtml(prog.system.rating), limit: tCount(limit, 'SR2E.Count.utility') }));
       return null;
     }
@@ -14982,12 +15320,14 @@ export class SR2Actor extends Actor {
   }
 
   /** Sparky biofeedback: the decker resists the IC's rating (RULES.MATRIX.sparky). */
-  async rollBiofeedback(targetNumber: number): Promise<void> {
+  async rollBiofeedback(targetNumber: number, level923: DamageLevel | null = null): Promise<void> {
     const sp = RULES.MATRIX.sparky;
     const iccm = iccmDice(this.sys.derived?.cyber?.iccm ?? 0);
+    // v0.92.3: the book's sparky damage: Body, at the level its Sparky Test reached (VR2 p. 44; RULES.MATRIX_V923.grayIc).
+    const bk = RULES.MATRIX_V923.grayIc !== 'v922' && level923 != null;
     await this.#drainTest({
-      label: tx('SR2E.Card.Actor.sparkyBiofeedback'), attribute: sp.resist as AttributeKey, targetNumber: Math.max(RULES.MIN_TARGET_NUMBER, targetNumber),
-      level: sp.level as DamageLevel, type: sp.type as DamageType, poolDice: 0, noun: 'damage', physicalNote: '',
+      label: tx('SR2E.Card.Actor.sparkyBiofeedback'), attribute: (bk ? 'body' : sp.resist) as AttributeKey, targetNumber: Math.max(RULES.MIN_TARGET_NUMBER, targetNumber),
+      level: (bk ? level923 : sp.level) as DamageLevel, type: sp.type as DamageType, poolDice: 0, noun: 'damage', physicalNote: '',
       extraDice: iccm, extraNote: `ICCM +${iccm}`,
     });
   }
@@ -14996,13 +15336,16 @@ export class SR2Actor extends Actor {
    * Deck damage (blaster or sparky crash, trace and burn): the IC rolls its rating vs TN = this
    * decker's MPCP; each RULES.MATRIX.mpcpDamage.successesPerPoint successes = 1 MPCP damage.
    */
-  async takeDeckDamage(icName: string, rating: number, reason = tx('SR2E.Card.Actor.crashReason')): Promise<number> {
+  async takeDeckDamage(icName: string, rating: number, reason = tx('SR2E.Card.Actor.crashReason'), opts: { sparky?: boolean } = {}): Promise<number> {
     const deck: any = this.activeDeck() ?? [...this.items].find((i: any) => i.type === 'cyberdeck');
     if (!deck) {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.hasNoCyberdeck', { name: escHtml(this.name) }));
       return 0;
     }
-    const mpcp = (this.sys.derived?.matrix?.mpcp as number | undefined) ?? deck.system.mpcp;
+    const mpcp0 = (this.sys.derived?.matrix?.mpcp as number | undefined) ?? deck.system.mpcp;
+    // v0.92.3: Hardening raises the Blaster/Sparky Test's TN, and sparky's is MPCP + 2 (VR2 pp. 43–44; RULES.MATRIX_V923.grayIc).
+    const hardening = Number(this.sys.derived?.matrix?.hardening ?? deck.system.hardening ?? 0);
+    const mpcp = M923.grayIcTn({ mpcp: mpcp0, hardening, sparky: Boolean(opts.sparky) });
     const rolls: any[] = [];
     const r = await successTest({ dice: rating, targetNumber: Math.max(RULES.MIN_TARGET_NUMBER, mpcp), roll: foundryRoller(rolls) });
     const points = mpcpDamage(r.successes);
@@ -15010,9 +15353,18 @@ export class SR2Actor extends Actor {
     if (points > 0) await deck.update({ 'system.damage': { ...dmg, mpcp: dmg.mpcp + points } });
     await ChatMessage.create({
       speaker: { alias: icName },
-      content: `${describeResult(tx('SR2E.Card.Actor.damagesRatingVsMpcp', { icName, deckName: deck.name, reason, rating, mpcp }), r)}<p>${points > 0 ? `<strong>${tx('SR2E.Card.Actor.mpcp', { points })}</strong> ${tx('SR2E.Card.Actor.nowUntilRepaired', { value: Math.max(0, deck.system.mpcp - dmg.mpcp - points) })}` : tx('SR2E.Card.Actor.theMpcpHolds')}</p>`,
+      content: `${describeResult(tx('SR2E.Card.Actor.damagesRatingVsMpcp', { icName, deckName: deck.name, reason, rating, mpcp }), r)}<p>${points > 0 ? `<strong>${tx('SR2E.Card.Actor.mpcp', { points })}</strong> ${(RULES.MATRIX_V923.grayIc !== 'v922' ? tx('SR2E.Card.Actor.nowUntilReplaced923', { value: Math.max(0, deck.system.mpcp - dmg.mpcp - points) }) : tx('SR2E.Card.Actor.nowUntilRepaired', { value: Math.max(0, deck.system.mpcp - dmg.mpcp - points) }))}` : tx('SR2E.Card.Actor.theMpcpHolds')}</p>`,
       rolls,
     });
+    // v0.92.3: sparky's (rating)M to the decker, a level up per 2 Sparky successes, Hardening off the Power (VR2 p. 44).
+    if (opts.sparky && RULES.MATRIX_V923.grayIc !== 'v922') {
+      const sd = M923.sparkyDamage({ rating, successes: r.successes, hardening });
+      await ChatMessage.create({
+        speaker: { alias: icName },
+        content: `<p><button type="button" data-sr2e-action="biofeedback">${tx('SR2E.Card.Actor.resistBiofeedbackVs', { spResist: tx('SR2E.Attribute.body'), icRating: sd.tn, spLevel: sd.level, spType: RULES.MATRIX.sparky.type })}</button></p>`,
+        flags: { [SYSTEM_ID]: { biofeedback: { deckerUuid: this.uuid, tn: sd.tn, level: sd.level } } },
+      });
+    }
     return points;
   }
 
@@ -15072,6 +15424,11 @@ export class SR2Actor extends Actor {
     const before: DeckDamage = { ...NO_DECK_DAMAGE, ...(deck.system.damage ?? {}) };
     if (!Object.values(before).some((v) => v > 0)) {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.isNotDamaged', { deckName: escHtml(deck.name) }));
+      return null;
+    }
+    // v0.92.3: gray IC damage is permanent: the damaged chip must be replaced (VR2 p. 43; RULES.MATRIX_V923.grayIc).
+    if (RULES.MATRIX_V923.grayIc !== 'v922') {
+      ui.notifications?.warn?.(tx('SR2E.Notify.Actor.replaceChip923', { deckName: escHtml(deck.name) }));
       return null;
     }
     const rp = RULES.MATRIX.repair;
@@ -15229,11 +15586,17 @@ export class SR2Actor extends Actor {
 
   static async #beginShutdown(host: any): Promise<void> {
     const now = SR2Actor.matrixNow();
-    const due = shutdownDue(now);
+    // v0.92.3: the sequence lasts 1D6 per 2 points (or part) of the Security Value (VR2 p. 53; RULES.MATRIX_V923.shutdown).
+    const n923 = M923.shutdownDice(Number(host.system?.securityValue ?? 0));
+    const rolls: any[] = [];
+    let turns = Number(RULES.MATRIX_V57.shutdown.turns);
+    if (n923 != null) {
+      try { const r = await new Roll(`${n923}d6`).evaluate(); rolls.push(r); turns = Math.max(1, Number(r.total) || n923); } catch { turns = n923 * 3; }
+    }
+    const due = shutdownDue(now, turns);
     try { await host.update({ 'system.shutdown': { pending: true, round: due.round, worldTime: due.worldTime, combatId: due.combatId ?? '' } }); } catch (err) { console.warn('sr2e | shutdown not started', err); ui.notifications?.warn?.(tx('SR2E.Notify.Actor.sShutdownCouldnTStartHere', { hostName: escHtml(host.name) })); return; }
-    const turns = Number(RULES.MATRIX_V57.shutdown.turns);
     await ChatMessage.create({
-      speaker: { alias: host.name },
+      speaker: { alias: host.name }, ...(rolls.length ? { rolls } : {}),
       content: `<p><strong>${tx('SR2E.Card.Actor.shutsDown', { hostName: escText(host.name) })}</strong> ${turns > 0 ? tCount(turns, 'SR2E.Card.Actor.everyoneInsideIsDumpedInCombat', { part: due.round >= 0 ? tx('SR2E.Card.Actor.combatTurn3', { dueRound: due.round }) : ` (${turns * RULES.MATRIX_V57.shutdown.secondsPerTurn} s)` }) : tx('SR2E.Card.Actor.everyoneInsideIsDumped')}</p>`,
     });
     if (turns <= 0) await SR2Actor.#completeShutdown(host);
@@ -15271,8 +15634,12 @@ export class SR2Actor extends Actor {
 
   /** v0.57.0: this decker is dumped from the Matrix (a shutdown): the run ends and dump shock follows; hitchers feel it too. */
   async #dumped(host: any, why: string): Promise<void> {
-    await this.update({ 'system.matrix.jackedIn': false, 'system.matrix.hostUuid': '', ...this.#endRunUpdate() });
+    const psyche = this.#pendingPsyche();
+    const trace = this.sys.matrix?.trace?.active ? { ...this.sys.matrix.trace } : null;
+    await this.update({ 'system.matrix.jackedIn': false, 'system.matrix.hostUuid': '', ...this.#endRunUpdate(), ...(psyche.length ? { [`flags.${SYSTEM_ID}.psyche923`]: [] } : {}) });
     await this.#dumpFollowUps(host, why, true);
+    // v0.92.3: psychotropic tests and a trace's datatrail (VR2 pp. 47, 49).
+    await this.#afterJackOut923({ psyche, trace });
   }
 
   /**
@@ -15280,17 +15647,19 @@ export class SR2Actor extends Actor {
    * everyone riding them unplugged. v0.81.0 (D3-6): shared by a shutdown and a jam.
    */
   async #dumpFollowUps(host: any, why: string, card: boolean): Promise<void> {
-    const tn = (host?.system?.securityValue as number | undefined) ?? RULES.MATRIX.dumpShockTn;
-    const level = dumpShockLevel(String(host?.system?.securityCode ?? ''));
-    const none = this.isTortoise() && !RULES.MATRIX.tortoise.dumpShock;
+    // v0.92.3: a cool deck and an ICCM soften it (VR2 p. 124); nothing may be left.
+    const ds = this.dumpShockFor(host);
+    const tn = ds.tn;
+    const level = ds.level ?? 'L';
+    const none = (this.isTortoise() && !RULES.MATRIX.tortoise.dumpShock) || !ds.level;
     if (card) {
       await ChatMessage.create({
         speaker: ChatMessage.getSpeaker({ actor: this }),
-        content: `<p><strong>${escText(why)}:</strong> ${tx('SR2E.Card.Actor.isDumpedFromTheMatrix', { name: escText(this.name) })}</p><p>${none ? tx('SR2E.Card.Actor.aTortoiseNoDumpShock') : `<button type="button" data-sr2e-action="dumpShock">${tx('SR2E.Card.Actor.resistDumpShockWillpowerVs2', { tn, level })}</button>`}</p>`,
+        content: `<p><strong>${escText(why)}:</strong> ${tx('SR2E.Card.Actor.isDumpedFromTheMatrix', { name: escText(this.name) })}</p><p>${none ? (ds.level ? tx('SR2E.Card.Actor.aTortoiseNoDumpShock') : tx('SR2E.Card.Actor.noDumpShockLeft923')) : `<button type="button" data-sr2e-action="dumpShock">${tx('SR2E.Card.Actor.resistDumpShockWillpowerVs2', { tn, level })}</button>`}</p>`,
         flags: { [SYSTEM_ID]: { dumpShockFor: this.uuid, dumpShockTn: tn, dumpShockLevel: level } },
       });
     }
-    await this.#hitcherShock(tn, level);
+    if (ds.level) await this.#hitcherShock(tn, level);
     await this.#unhitchAll();
   }
 
@@ -15453,9 +15822,12 @@ export class SR2Actor extends Actor {
     }
     const m = this.sys.derived.matrix;
     const tm = target.system?.derived?.matrix;
+    // v0.92.3: IC maneuver with the host's Security Value (VR2 p. 121; RULES.MATRIX_V923.cybercombat).
+    const icHost: any = ic && M923.cybercombatBook() && !['frame', 'agent'].includes(target.system?.kind) && target.system?.hostUuid ? fromUuidSync(target.system.hostUuid) : null;
+    const icRating = icHost?.type === 'host' && Number(icHost.system.securityValue ?? 0) > 0 ? Number(icHost.system.securityValue) : Number(target.system?.rating ?? 0);
     const sides = maneuverSides({
       evasion: Number(m?.evasion ?? 0), cloak: this.utilityRating(this.bestUtility('cloak')),
-      opponent: { ic, rating: Number(target.system?.rating ?? 0), sensors: Number(tm?.sensors ?? 0), lockOn: ic ? 0 : Number(target.bestUtility?.('lock-on')?.system?.rating ?? 0) },
+      opponent: { ic, rating: icRating, sensors: Number(tm?.sensors ?? 0), lockOn: ic ? 0 : Number(target.bestUtility?.('lock-on')?.system?.rating ?? 0) },
     });
     const host: any = this.currentHost();
     const oppRolls: any[] = [];
@@ -15638,12 +16010,20 @@ export class SR2Actor extends Actor {
     if (RULES.HEALTH.addiction.auto && !add.addicted) await this.drugAddictionTest(name, 'dose');
   }
 
-  /** A trace completes: report the decker's location, or dump them (and burn their deck). */
-  async #completeTrace(): Promise<void> {
-    const t = this.sys.matrix.trace;
+  /**
+   * A trace completes: report the decker's location, or dump them (and burn their deck). v0.92.3: VR2's trace only
+   * reports (VR2 p. 46), and the host's IC then get −1 TN on the decker and +1 on each tally increase
+   * (RULES.MATRIX_V923.trace). `tIn`: a trace that completes after the decker jacked out (its datatrail, VR2 p. 47).
+   */
+  async #completeTrace(tIn: any = null): Promise<void> {
+    const t = tIn ? { ...tIn, mode: 'report' } : M923.traceBook() ? { ...this.sys.matrix.trace, mode: 'report' } : this.sys.matrix.trace;
     const host: any = t.hostUuid ? fromUuidSync(t.hostUuid) : null;
     const gms = [...((game as any).users ?? [])].filter((u: any) => u.isGM).map((u: any) => u.id);
-    await this.update({ 'system.matrix.trace': { ...t, active: false } });
+    if (!tIn) await this.update({ 'system.matrix.trace': { ...t, active: false } });
+    if (!tIn && M923.traceBook() && host && this.isJackedIn()) {
+      const list = (this as any).flags?.[SYSTEM_ID]?.traced923;
+      await this.update({ [`flags.${SYSTEM_ID}.traced923`]: [...new Set([...(Array.isArray(list) ? list : []), host.uuid])] });
+    }
     let where = '';
     try {
       const token: any = (this as any).getActiveTokens?.()?.[0];
@@ -15654,17 +16034,19 @@ export class SR2Actor extends Actor {
       await ChatMessage.create({ speaker: { alias: t.icName }, content: `<p><em>${tx('SR2E.Card.Actor.gmOnly')}</em> · <strong>${tx('SR2E.Card.Actor.traceComplete')}</strong> ${where ? tx('SR2E.Card.Actor.hasLocatedSJackpointAt', { icName: escText(t.icName), name: escText(this.name), sceneName: escText(where) }) : tx('SR2E.Card.Actor.hasLocatedSJackpoint', { icName: escText(t.icName), name: escText(this.name) })}</p>`, whisper: gms });
       return;
     }
-    const tn = (host?.system?.securityValue as number | undefined) ?? RULES.MATRIX.dumpShockTn;
-    const level = dumpShockLevel(String(host?.system?.securityCode ?? ''));
+    // v0.92.3: softened by a cool deck and an ICCM (VR2 p. 124).
+    const ds = this.dumpShockFor(host);
+    const tn = ds.tn;
+    const level = ds.level ?? 'L';
     await this.update({ 'system.matrix.jackedIn': false, 'system.matrix.hostUuid': '', ...this.#endRunUpdate() });
     const burn = t.mode === 'burn' && RULES.MATRIX.trace.burnMpcp;
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor: this }),
       content: `<p><strong>${tx('SR2E.Card.Actor.traceComplete')}</strong> ${(burn ? tx('SR2E.Card.Actor.dumpsFromTheMatrixWithAndBurnsTheDeck', { icName: escText(t.icName), name: escText(this.name) }) : tx('SR2E.Card.Actor.dumpsFromTheMatrixPlain', { icName: escText(t.icName), name: escText(this.name) }))}</p>
-        <p>${this.isTortoise() && !RULES.MATRIX.tortoise.dumpShock ? tx('SR2E.Card.Actor.aTortoiseNoDumpShock') : `<button type="button" data-sr2e-action="dumpShock">${tx('SR2E.Card.Actor.resistDumpShockWillpowerVs2', { tn, level })}</button>`}${burn ? ` <button type="button" data-sr2e-action="deckDamage">${tx('SR2E.Card.Actor.deckDamageRatingVsMpcp2', { icName: escText(t.icName), rating: escText(t.rating) })}</button>` : ''}</p>`,
+        <p>${this.isTortoise() && !RULES.MATRIX.tortoise.dumpShock ? tx('SR2E.Card.Actor.aTortoiseNoDumpShock') : !ds.level ? tx('SR2E.Card.Actor.noDumpShockLeft923') : `<button type="button" data-sr2e-action="dumpShock">${tx('SR2E.Card.Actor.resistDumpShockWillpowerVs2', { tn, level })}</button>`}${burn ? ` <button type="button" data-sr2e-action="deckDamage">${tx('SR2E.Card.Actor.deckDamageRatingVsMpcp2', { icName: escText(t.icName), rating: escText(t.rating) })}</button>` : ''}</p>`,
       flags: { [SYSTEM_ID]: { dumpShockFor: this.uuid, dumpShockTn: tn, dumpShockLevel: level, ...(burn ? { deckDamage: { deckerUuid: this.uuid, icName: t.icName, rating: t.rating, reason: tx('SR2E.Card.Actor.traceAndBurn') } } : {}) } },
     });
-    await this.#hitcherShock(tn, level);
+    if (ds.level) await this.#hitcherShock(tn, level);
     await this.#unhitchAll();
   }
 
@@ -15890,7 +16272,12 @@ export class SR2Actor extends Actor {
     if (!deck) {
       const zero = { mpcp: 0, bod: 0, evasion: 0, masking: 0, sensors: 0, hardening: 0, responseIncrease: 0 };
       await this.createEmbeddedDocuments('Item', [{ name, type: 'cyberdeck', system: { ...zero, active: false, [part]: value } }]);
-    } else await deck.update({ [`system.${part}`]: value });
+    } else {
+      // v0.92.3: a new chip replaces a damaged one: that part's gray IC damage goes with it (VR2 p. 43; RULES.MATRIX_V923.grayIc).
+      const dmg: any = { ...NO_DECK_DAMAGE, ...(deck.system?.damage ?? {}) };
+      const replaces = !memory && RULES.MATRIX_V923.grayIc !== 'v922' && Number(dmg[part] ?? 0) > 0;
+      await deck.update({ [`system.${part}`]: value, ...(replaces ? { 'system.damage': { ...dmg, [part]: 0 } } : {}) });
+    }
     return true;
   }
 

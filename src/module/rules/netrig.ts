@@ -1,6 +1,7 @@
 import { RULES } from './config.ts';
 import type { TargetNumberModifier } from './dice.ts';
 import { utilitySize, IC_BEHAVIORS, type IcBehavior } from './matrix.ts';
+import { deckPartBook } from './matrix923.ts';
 import { dsDeviceEccm } from './urr80-drones-security.ts';
 import { fluxRangeKm } from './docs79-drones-magic.ts';
 import { bearingDiff, own } from './util.ts';
@@ -145,10 +146,12 @@ export function deckPartPlan(part: string, rating: number, mpcp: number): { tn: 
     return { tn: Math.max(RULES.MIN_TARGET_NUMBER, def.tn), baseDays: Math.max(1, Math.ceil(size * db.daysPerMp)), cost: Math.round(r * def.costPerMp), size, label: def.label, memory: true, warnings };
   }
   const mult = def.squared ? r * r : r;
-  const size = Math.max(1, Math.ceil(def.size * mult));
+  // v0.92.3: the book's design sizes and TNs (VR2 pp. 83–87; RULES.MATRIX_V923.deckBuilding).
+  const book = deckPartBook(part, r, mpcp);
+  const size = book ? book.size : Math.max(1, Math.ceil(def.size * mult));
   if (['bod', 'evasion', 'masking', 'sensors'].includes(part) && r > mpcp) warnings.push(tx('SR2E.Text.Netrig.isAboveTheDecksMpcp', { label: def.label, rating: r, mpcp }));
   if (part === 'responseIncrease' && r > RULES.MATRIX.maxResponseIncrease) warnings.push(tx('SR2E.Text.Netrig.responseIncreaseCountsOnly', { max: RULES.MATRIX.maxResponseIncrease }));
-  return { tn: Math.max(RULES.MIN_TARGET_NUMBER, r + def.tn), baseDays: Math.max(1, Math.ceil(size * db.daysPerMp)), cost: Math.round(size * def.costPerMp), size, label: def.label, memory: false, warnings };
+  return { tn: Math.max(RULES.MIN_TARGET_NUMBER, book ? book.tn : r + def.tn), baseDays: Math.max(1, Math.ceil(size * db.daysPerMp)), cost: Math.round(size * def.costPerMp), size, label: def.label, memory: false, warnings };
 }
 
 // ---------------------------------------------------------------- Tortoises, ICCM, otaku
@@ -167,7 +170,8 @@ export function iccmDice(rating: number): number {
 export function otakuPersona(attrs: Record<string, number>): { mpcp: number; bod: number; evasion: number; masking: number; sensors: number; hardening: number; responseIncrease: number; activeMemory: number } {
   const o = RULES.MATRIX.otaku;
   const sum = o.mpcp.reduce((s, k) => s + Math.max(0, attrs[k] ?? 0), 0);
-  const mpcp = Math.max(1, Math.floor(sum / Math.max(1, o.divisor)));
+  // v0.92.3: rounded up (VR2 p. 145; RULES.MATRIX_V923.otaku).
+  const mpcp = Math.max(1, (RULES.MATRIX_V923.otaku !== 'v922' ? Math.ceil : Math.floor)(sum / Math.max(1, o.divisor)));
   const p = (k: string) => Math.min(mpcp, Math.max(0, attrs[o.persona[k] ?? 'intelligence'] ?? 0));
   return { mpcp, bod: p('bod'), evasion: p('evasion'), masking: p('masking'), sensors: p('sensors'), hardening: 0, responseIncrease: 0, activeMemory: mpcp * o.memoryPerMpcp };
 }

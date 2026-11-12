@@ -3,6 +3,7 @@ import { woundLevel } from './core.ts';
 import type { TargetNumberModifier } from './dice.ts';
 import { combatStamp, levelIndex, sameCombatRound, type Clock, type ClockDue, own } from './util.ts';
 import { t as tx, tCount } from '../helpers/i18n.ts';
+import { icInitiativeTable, matrixOperations, responseCapWarning, traceBook, traceCycleTurns, jackpointMods, cyberphobiaTn } from './matrix923.ts';
 
 /** Utility programs a decker can load. 'attack' utilities deal damage in cybercombat. */
 export const UTILITY_KINDS = [
@@ -10,6 +11,8 @@ export const UTILITY_KINDS = [
   'medic', 'mirrors', 'shield', 'smoke', 'spoof', 'validate', 'track', 'armor', 'cloak', 'lock-on', 'frame', 'smart-frame', 'agent', 'other',
   // v0.57.0
   'slow', 'restore',
+  // v0.92.3: the utilities VR2's System Operations Table (p. 161) uses.
+  'camo', 'crash', 'commlink', 'scanner', 'defuse',
 ] as const;
 export type UtilityKind = (typeof UTILITY_KINDS)[number];
 
@@ -74,6 +77,8 @@ export function personaWarnings(deck: Deck): string[] {
   const max = deck.mpcp * RULES.MATRIX.personaTotalPerMpcp;
   if (total > max) out.push(tx('SR2E.Text.Matrix.personaTotalIsAbove', { total, max, per: RULES.MATRIX.personaTotalPerMpcp }));
   if (deck.responseIncrease > RULES.MATRIX.maxResponseIncrease) out.push(tx('SR2E.Text.Matrix.responseIncreaseCountsOnly', { max: RULES.MATRIX.maxResponseIncrease }));
+  // v0.92.3: and at most MPCP ÷ 4 (VR2 p. 87; RULES.MATRIX_V923.initiative).
+  else out.push(...responseCapWarning(deck.mpcp, deck.responseIncrease));
   return out;
 }
 
@@ -143,7 +148,8 @@ export function nextSheafStep(tally: number, sheaf: readonly SheafStep[]): Sheaf
 
 /** IC initiative dice for a host's security code. VERIFY */
 export function icInitiativeDice(code: string): number {
-  return own(RULES.MATRIX.icInitiativeDice, code) ?? 1;
+  // v0.92.3: VR2 p. 120's table, or the old one (RULES.MATRIX_V923.icInitiative).
+  return own(icInitiativeTable(), code) ?? 1;
 }
 
 // ---------------------------------------------------------------- Matrix depth (v0.27.0)
@@ -212,6 +218,8 @@ export function personaAttributeLoss(net: number): number {
 /** Combat Turns until a trace completes, for its net successes (null: no lock). */
 export function traceTurns(net: number): number | null {
   if (!(net > 0)) return null;
+  // v0.92.3: 10 ÷ successes, rounded down (VR2 p. 46; RULES.MATRIX_V923.trace).
+  if (traceBook()) return traceCycleTurns(net);
   return Math.max(1, Math.ceil(RULES.MATRIX.trace.baseTurns / net));
 }
 
@@ -371,7 +379,8 @@ export type OperationDef = (typeof RULES.MATRIX.operations)[number];
 
 /** A system operation by id (null if unknown). */
 export function operation(id: string | null | undefined): OperationDef | null {
-  return RULES.MATRIX.operations.find((o) => o.id === id) ?? null;
+  // v0.92.3: the book's table or the old values (RULES.MATRIX_V923.operations).
+  return matrixOperations().find((o) => o.id === id) ?? null;
 }
 
 /** A file in a host's data stores. */
@@ -482,10 +491,14 @@ export function frameDice(rating: number, smart: boolean): { dice: number; pool:
 }
 
 /** TN modifiers from how the decker connects (and from a moving vehicle they are aboard). */
-export function connectionModifiers(connection: string, movingVehicle: boolean): Array<{ id?: string; label: string; value: number }> {
+export function connectionModifiers(connection: string, movingVehicle: boolean, opts: { access?: boolean } = {}): Array<{ id?: string; label: string; value: number }> {
   const out: Array<{ id?: string; label: string; value: number }> = [];
   const c = RULES.MATRIX.connections.find((x) => x.id === connection);
-  if (c && c.tn) out.push({ label: c.label, value: c.tn });
+  // v0.92.3: the jackpoint modifies Access tests only, by VR2's table (Grids and Hosts p. 28; RULES.MATRIX_V923.connections).
+  if (RULES.MATRIX_V923.connections !== 'v922') {
+    const j = jackpointMods(connection);
+    if (opts.access && j.access) out.push({ id: 'jackpoint', label: c?.label ?? connection, value: j.access });
+  } else if (c && c.tn) out.push({ label: c.label, value: c.tn });
   if (movingVehicle && RULES.MATRIX.movingVehicle) out.push({ id: 'movingVehicle', label: tx('SR2E.Card.Mod.movingVehicle'), value: RULES.MATRIX.movingVehicle });
   return out;
 }
@@ -521,8 +534,10 @@ export function activePsyche(list: readonly PsycheEffect[], worldTime: number): 
 
 /** TN modifiers on Matrix tests from psychotropic effects (cyberphobia). */
 export function psycheModifiers(list: readonly PsycheEffect[], worldTime: number): TargetNumberModifier[] {
-  const phobia = activePsyche(list, worldTime).some((e) => e.kind === 'cyberphobia');
-  return phobia && RULES.MATRIX.psychotropic.cyberphobiaTn ? [{ id: 'cyberphobia', label: tx('SR2E.Card.Mod.cyberphobia'), value: RULES.MATRIX.psychotropic.cyberphobiaTn }] : [];
+  const phobias = activePsyche(list, worldTime).filter((e) => e.kind === 'cyberphobia');
+  // v0.92.3: + the IC's rating (VR2 p. 49; RULES.MATRIX_V923.psychotropic), the strongest one.
+  const tn = phobias.reduce((m, e) => Math.max(m, cyberphobiaTn(e.rating)), 0);
+  return phobias.length && tn ? [{ id: 'cyberphobia', label: tx('SR2E.Card.Mod.cyberphobia'), value: tn }] : [];
 }
 
 /** rating × per, rounded down, at least 1 (0 for no rating). */

@@ -130,6 +130,13 @@ export function dyingTick(roundsSince: number, body: number): boolean {
 export type ActionCost = 'free' | 'simple' | 'complex';
 
 export function actionCost(kind: string): ActionCost {
+  // v0.92.3: cybercombat attacks and maneuvers are Simple Actions (VR2 pp. 121, 123; RULES.MATRIX_V923.actions).
+  if (kind === 'matrixAttack' || kind === 'matrixManeuver') {
+    if (RULES.MATRIX_V923.actions !== 'v922') return 'simple';
+    return own(RULES.ACTIONS.costs, kind) ?? 'complex';
+  }
+  // v0.92.3: a Free system operation (VR2 p. 161).
+  if (kind.startsWith('matrix') && kind.endsWith(':free')) return 'free';
   return own(RULES.ACTIONS.costs, kind) ?? 'simple';
 }
 

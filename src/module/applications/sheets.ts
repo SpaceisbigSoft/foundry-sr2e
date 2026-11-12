@@ -61,6 +61,7 @@ import { quickRollArmed } from "./hotkeys.ts";
 import { visibilityV79, perceptionSightRows, perceptionSightModifiers } from "../rules/docs79-melee-vision.ts";
 import { superiorPositionModifiers, parseSkillMods, skillModsText, spellPointCheck, spellPointAllowance, lifestyleOutright, leftoverCash, starterSkillsMissing, buildPlan, icFromStep } from "../rules/index.ts";
 import { monitorView, trackView } from "../rules/index.ts";
+import { matrixOperations, PSYCHE_UNTIL_RECOVERED } from "../rules/matrix923.ts";
 import { socialDesiredPick, socialDesiredRows, socialDesiredModifiers, socialOneSided } from "../rules/index.ts";
 import { socialExtraRows, deathBoxExtra } from "../rules/index.ts";
 import { promptPoolDice } from "./chat.ts";
@@ -2132,12 +2133,12 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.opponent')}</label><select name="target">${targets.map((t: any) => `<option value="${escHtml(t.uuid)}" ${(t.uuid === targeted?.uuid || t.uuid === held?.uuid) ? "selected" : ""}>${escHtml(t.name)}${t.type === "ic" ? tx('SR2E.Dialog.Sheet.rating3', { rating: escHtml(t.system.rating) }) : tx('SR2E.Dialog.Sheet.persona')}</option>`).join("")}</select></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.otherTnModifier')}</label><input name="mod" type="number" value="0"></div>
         ${left > 0 ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.hackingPoolDiceLeft', { left })}</label><input name="pool" type="number" value="0" min="0" max="${left}"></div>` : ""}
-        <p class="hint">${tx('SR2E.Dialog.Sheet.opposedYourEvasionCloakLowersThe', { maneuversMaxTn: RULES.MATRIX_V57.maneuvers.maxTn })}</p>`,
+        <p class="hint">${RULES.MATRIX_V923.cybercombat !== "v922" ? tx('SR2E.Dialog.Sheet.opposedManeuver923', { maneuversMaxTn: RULES.MATRIX_V57.maneuvers.maxTn }) : tx('SR2E.Dialog.Sheet.opposedYourEvasionCloakLowersThe', { maneuversMaxTn: RULES.MATRIX_V57.maneuvers.maxTn })}</p>`,
       ok: { label: tx('SR2E.Dialog.Sheet.roll'), callback: (_e: Event, b: any) => { const el = b.form.elements; return { kind: String(el.kind.value), target: String(el.target.value), mod: Number(el.mod.value) || 0, pool: Math.max(0, Math.min(left, Math.floor(Number(el.pool?.value) || 0))) }; } },
       rejectClose: false,
     } as any) as any;
     if (!choice) return;
-    if (!(await actor.useAction("matrix:complex", tx('SR2E.Card.Sheet.aCybercombatManeuver')))) return;
+    if (!(await actor.useAction("matrixManeuver", tx('SR2E.Card.Sheet.aCybercombatManeuver')))) return;
     await actor.matrixManeuver(choice.kind, choice.target, { poolDice: choice.pool, modifiers: choice.mod ? [{ id: 'other', label: tx('SR2E.Card.Mod.other'), value: choice.mod }] : [] });
   }
 
@@ -2213,7 +2214,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const files: any[] = host ? cls.foundFiles(host, actor.uuid) : [];
     const ics: any[] = host ? cls.hostIc(host).filter((i: any) => !i.system.derived?.crashed && i.uuid !== frameUuid) : [];
     const devices: any[] = host ? cls.slaveDevices(host) : [];
-    const ops = host ? RULES.MATRIX.operations : RULES.MATRIX.operations.filter((o) => o.effect === "logon");
+    const ops = host ? matrixOperations() : matrixOperations().filter((o) => o.effect === "logon");
     const subRating = (k: string) => host?.system?.subsystems?.[k] ?? "?";
     const deckFiles = frame ? [] : actor.items.filter((i: any) => i.type === "cyberdeck").flatMap((d: any) => (d.system.files ?? []).map((f: any, index: number) => ({ deck: d, f, index })));
     const known: string[] = actor.system.matrix?.numbers ?? [];
@@ -2266,7 +2267,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       rejectClose: false,
     } as any) as any;
     if (!choice) return;
-    const op = choice.opId ? RULES.MATRIX.operations.find((o) => o.id === choice.opId) : null;
+    const op = choice.opId ? matrixOperations().find((o) => o.id === choice.opId) : null;
     if (!frame && !(await actor.useAction(`matrix:${op?.action ?? "complex"}`, op?.label ?? (choice.op || tx('SR2E.Card.Sheet.aSystemOperation'))))) return;
     const [kind, ref] = [choice.target.split(":")[0], choice.target.slice(choice.target.indexOf(":") + 1)];
     const [siteUuid, deviceId] = kind === "dev" ? ref.split("|") : [null, null];
@@ -2304,7 +2305,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         ${rememberMarker(`cyber|${actor.uuid}`, ["prog", "pool"])}
         ${targeted && !targets.some((t: any) => t.uuid === targeted.uuid) ? `<p class="sr2e-warn">${tx('SR2E.Dialog.Sheet.targetedIsNotInSHost', { targetedName: escHtml(targeted.name), actorName: escHtml(actor.name) })}</p>` : ""}
         <div class="sr2e-preview" aria-live="polite"></div>
-        <p class="hint">${RULES.MATRIX.defense.ic === "rating" ? tx('SR2E.Dialog.Sheet.vsTheIcSRatingIcDefend', { matrixSkill: RULES.MATRIX.skill, part: RULES.MATRIX.defense.persona === "pool" ? tx('SR2E.Dialog.Sheet.personasDefendWithHackingPoolDice') : tx('SR2E.Dialog.Sheet.personasDoNotDefend') }) : tx('SR2E.Dialog.Sheet.vsTheIcSRatingIcNoDefend', { matrixSkill: RULES.MATRIX.skill, part: RULES.MATRIX.defense.persona === "pool" ? tx('SR2E.Dialog.Sheet.personasDefendWithHackingPoolDice') : tx('SR2E.Dialog.Sheet.personasDoNotDefend') })}</p>`,
+        <p class="hint">${RULES.MATRIX_V923.cybercombat !== "v922" ? tx('SR2E.Dialog.Sheet.attackHint923', { part: RULES.MATRIX.defense.persona === "pool" ? tx('SR2E.Dialog.Sheet.personasDefendWithHackingPoolDice') : tx('SR2E.Dialog.Sheet.personasDoNotDefend') }) : RULES.MATRIX.defense.ic === "rating" ? tx('SR2E.Dialog.Sheet.vsTheIcSRatingIcDefend', { matrixSkill: RULES.MATRIX.skill, part: RULES.MATRIX.defense.persona === "pool" ? tx('SR2E.Dialog.Sheet.personasDefendWithHackingPoolDice') : tx('SR2E.Dialog.Sheet.personasDoNotDefend') }) : tx('SR2E.Dialog.Sheet.vsTheIcSRatingIcNoDefend', { matrixSkill: RULES.MATRIX.skill, part: RULES.MATRIX.defense.persona === "pool" ? tx('SR2E.Dialog.Sheet.personasDefendWithHackingPoolDice') : tx('SR2E.Dialog.Sheet.personasDoNotDefend') })}</p>`,
       ok: {
         label: tx('SR2E.Dialog.Sheet.attack'),
         callback: (_e: Event, b: any) => {
@@ -4481,7 +4482,7 @@ export async function frameAttackDialog(frame: any): Promise<void> {
     content: `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.target')}</label><select name="target">${targets.map((t: any) => `<option value="${escHtml(t.uuid)}" ${isTargeted(t) ? "selected" : ""}>${escHtml(t.name)}${t.type === "ic" ? ` (${escHtml(t.system.kind === "ic" ? tx('SR2E.Dialog.Sheet.ic') : t.system.kind)} ${escHtml(t.system.rating)})` : tx('SR2E.Dialog.Sheet.persona')}</option>`).join("")}</select></div>
       <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.attackUtility')}</label><select name="prog">${attacks.map((p: any) => `<option value="${escHtml(p.id)}">${escHtml(p.name)} (${escHtml(p.system.rating)}${escHtml(p.system.damageLevel)})</option>`).join("")}</select></div>
       <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.otherTnModifier')}</label><input name="mod" type="number" value="0"></div>
-      <p class="hint">${tx('SR2E.Dialog.Sheet.rollsItsVsTheTargetS', { frameName: escHtml(frame.name), fd: escHtml(fd) })}</p>`,
+      <p class="hint">${RULES.MATRIX_V923.cybercombat !== "v922" ? tx('SR2E.Dialog.Sheet.frameAttackHint923', { frameName: escHtml(frame.name), fd: escHtml(fd) }) : tx('SR2E.Dialog.Sheet.rollsItsVsTheTargetS', { frameName: escHtml(frame.name), fd: escHtml(fd) })}</p>`,
     ok: { label: tx('SR2E.Dialog.Sheet.attack'), callback: (_e: Event, b: any) => ({ target: String(b.form.elements.target.value), prog: String(b.form.elements.prog.value), mod: Number(b.form.elements.mod.value) || 0 }) },
     rejectClose: false,
   });
@@ -4575,7 +4576,7 @@ function matrixContext(actor: any) {
     })(),
     psyche: (actor.system.matrix?.psyche ?? []).map((e: any, index: number) => ({ index, label: (PSYCHOTROPIC_LABELS as any)[e.kind] ?? e.kind, icName: e.icName,
       active: e.until < 0 || e.until > sysNow(),
-      when: e.until < 0 ? tx('SR2E.App.Sheets.untilYouJackOut') : tCount(Math.max(0, Math.ceil((e.until - sysNow()) / 86400)), 'SR2E.App.Sheets.daysLeft') })),
+      when: e.until < 0 ? tx('SR2E.App.Sheets.untilYouJackOut') : e.until >= PSYCHE_UNTIL_RECOVERED ? tx('SR2E.App.Sheets.untilRecovered923') : tCount(Math.max(0, Math.ceil((e.until - sysNow()) / 86400)), 'SR2E.App.Sheets.daysLeft') })),
     transit: (() => {
       const t = actor.transitLeft?.();
       return t ? (t.turns != null ? tCount(t.turns, 'SR2E.App.Sheets.onTheWayToCombatTurnsLeft', { host: t.hostName }) : tx('SR2E.App.Sheets.onTheWayToSecondsLeft', { host: t.hostName, seconds: t.seconds })) : "";
@@ -4598,7 +4599,7 @@ function matrixContext(actor: any) {
     })(),
     numbers: (actor.system.matrix?.numbers ?? []).map((n: string, index: number) => ({ index, number: n,
       name: allActors().find((a: any) => a.type === "host" && String(a.system.ltgNumber ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "") === n.toUpperCase().replace(/[^A-Z0-9]/g, ""))?.name ?? "" })),
-    kindNote: actor.system.derived.matrix?.tortoise ? tx('SR2E.App.Sheets.aTortoiseMeatSpeed', { pct: Math.round(RULES.MATRIX.tortoise.hackingPool * 100), extras: `${RULES.MATRIX.tortoise.coldOnly ? tx('SR2E.App.Sheets.tortoiseColdSimOnly') : ""}${RULES.MATRIX.tortoise.immuneToBlackIc ? tx('SR2E.App.Sheets.tortoiseBlackIcCantReach') : ""}${RULES.MATRIX.tortoise.dumpShock ? "" : tx('SR2E.App.Sheets.tortoiseNoDumpShock')}` })
+    kindNote: actor.system.derived.matrix?.tortoise ? (RULES.MATRIX_V923.initiative !== "v922" ? tx('SR2E.App.Sheets.aTortoiseHalfReaction923', { pct: Math.round(RULES.MATRIX.tortoise.hackingPool * 100), extras: `${RULES.MATRIX.tortoise.coldOnly ? tx('SR2E.App.Sheets.tortoiseColdSimOnly') : ""}${RULES.MATRIX.tortoise.immuneToBlackIc ? tx('SR2E.App.Sheets.tortoiseBlackIcCantReach') : ""}${RULES.MATRIX.tortoise.dumpShock ? "" : tx('SR2E.App.Sheets.tortoiseNoDumpShock')}` }) : tx('SR2E.App.Sheets.aTortoiseMeatSpeed', { pct: Math.round(RULES.MATRIX.tortoise.hackingPool * 100), extras: `${RULES.MATRIX.tortoise.coldOnly ? tx('SR2E.App.Sheets.tortoiseColdSimOnly') : ""}${RULES.MATRIX.tortoise.immuneToBlackIc ? tx('SR2E.App.Sheets.tortoiseBlackIcCantReach') : ""}${RULES.MATRIX.tortoise.dumpShock ? "" : tx('SR2E.App.Sheets.tortoiseNoDumpShock')}` }))
       : actor.system.derived.matrix?.living ? tx('SR2E.App.Sheets.livingPersonaOtaku') : "",
     // v0.49.0: an otaku's channels, a jammed link, a programming suite.
     channels: actor.system.derived.matrix?.living ? RULES.MATRIX.subsystems.map((k) => ({ key: k, label: cap(k), value: actor.otakuChannel?.(k) ?? 0,
@@ -5218,22 +5219,28 @@ function icBehaviorHint(sys: any): string {
   const b = sys.behavior ?? "killer";
   const r = sys.rating;
   const defend = RULES.MATRIX.defense.persona === "pool" ? tx('SR2E.App.Sheets.icPersonaMayDefend') : "";
+  // v0.92.3: the book's cybercombat (RULES.MATRIX_V923): Security Value dice vs the code's TN, and so on.
+  const book = RULES.MATRIX_V923.cybercombat !== "v922";
   switch (icActionKind(b)) {
     case "damage": {
+      if (b === "psychotropic" && RULES.MATRIX_V923.psychotropic !== "v922") return tx('SR2E.App.Sheets.icPsychotropic923', { payload: (PSYCHOTROPIC_LABELS as any)[sys.payload] ?? tx('SR2E.App.Sheets.fromItsName'), rating: r });
       if (b === "psychotropic") return tx('SR2E.App.Sheets.icPsychotropic', { payload: (PSYCHOTROPIC_LABELS as any)[sys.payload] ?? tx('SR2E.App.Sheets.fromItsName'), rating: r, track: sys.damageType, resist: cap(RULES.MATRIX.psychotropic.resist), defend });
-      const resist = sys.category === "black" ? tx('SR2E.App.Sheets.icBlackResists', { attribute: cap(RULES.MATRIX.blackIcResist), track: sys.damageType }) : tx('SR2E.App.Sheets.icPersonaResists');
+      const resist = sys.category === "black" ? (RULES.MATRIX_V923.blackIc !== "v922" ? tx('SR2E.App.Sheets.icBlackResists923') : tx('SR2E.App.Sheets.icBlackResists', { attribute: cap(RULES.MATRIX.blackIcResist), track: sys.damageType }))
+        : RULES.MATRIX_V923.iconHardening !== "hardening" ? tx('SR2E.App.Sheets.icPersonaResists923') : tx('SR2E.App.Sheets.icPersonaResists');
       const crash = b === "blaster" ? tx('SR2E.App.Sheets.icCrashDamagesMpcp') : b === "sparky" ? tx('SR2E.App.Sheets.icCrashDamagesMpcpBiofeedback') : "";
-      return tx('SR2E.App.Sheets.icDamage', { rating: r, resist, crash, defend });
+      return book ? tx('SR2E.App.Sheets.icDamage923', { rating: r, resist, crash, defend }) : tx('SR2E.App.Sheets.icDamage', { rating: r, resist, crash, defend });
     }
     case "tally": return tx('SR2E.App.Sheets.icTally', { rating: r });
-    case "attribute": return b === "ripper"
+    case "attribute": if (book) return b === "ripper" ? tx('SR2E.App.Sheets.icAttributeDeck923', { rating: r, successes: RULES.MATRIX.attributeDamage.successesPerPoint }) : tx('SR2E.App.Sheets.icAttributePersona923', { rating: r, successes: RULES.MATRIX.attributeDamage.successesPerPoint });
+      return b === "ripper"
       ? tx('SR2E.App.Sheets.icAttributeDeck', { rating: r, successes: RULES.MATRIX.attributeDamage.successesPerPoint, defend })
       : tx('SR2E.App.Sheets.icAttributePersona', { rating: r, successes: RULES.MATRIX.attributeDamage.successesPerPoint, defend });
     case "utility": return b === "tarPit" ? tx('SR2E.App.Sheets.icUtilityTarPit', { rating: r, defend })
       : RULES.MATRIX.tar.tarBabyDerezzes ? tx('SR2E.App.Sheets.icUtilityTarBaby', { rating: r, defend }) : tx('SR2E.App.Sheets.icUtility', { rating: r, defend });
-    case "trace": return tx('SR2E.App.Sheets.icTrace', { rating: r, turns: RULES.MATRIX.trace.baseTurns, mode: sys.traceMode, defend });
+    case "trace": if (RULES.MATRIX_V923.trace !== "v922") return tx('SR2E.App.Sheets.icTrace923', { turns: RULES.MATRIX.trace.baseTurns });
+      return tx('SR2E.App.Sheets.icTrace', { rating: r, turns: RULES.MATRIX.trace.baseTurns, mode: sys.traceMode, defend });
     case "passive": return b === "barrier" ? tx('SR2E.App.Sheets.icGuardsSubsystem', { subsystem: sys.guards ? cap(sys.guards) : tx('SR2E.App.Sheets.pickOne'), rating: r }) : tx('SR2E.App.Sheets.icGuardsFile');
-    default: return tx('SR2E.App.Sheets.icDefault', { rating: r, defend });
+    default: return book ? tx('SR2E.App.Sheets.icDefault923', { defend }) : tx('SR2E.App.Sheets.icDefault', { rating: r, defend });
   }
 }
 

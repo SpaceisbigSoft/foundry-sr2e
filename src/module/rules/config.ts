@@ -567,8 +567,8 @@ export const RULES = {
     dumpShockTn: 6,
     subsystems: ['access', 'control', 'index', 'files', 'slave'] as ReadonlyArray<'access' | 'control' | 'index' | 'files' | 'slave'>,
     securityCodes: ['blue', 'green', 'orange', 'red', 'black'] as ReadonlyArray<'blue' | 'green' | 'orange' | 'red' | 'black'>,
-    /** Default IC initiative dice by the host's security code (IC initiative = rating + Nd6). */
-    icInitiativeDice: { blue: 1, green: 1, orange: 2, red: 2, black: 3 } as Record<string, number>,
+    /** Default IC initiative dice by the host's security code (IC initiative = rating + Nd6). v0.92.3: VR2 p. 120 (was 1/1/2/2/3; RULES.MATRIX_V923.icInitiative). */
+    icInitiativeDice: { blue: 1, green: 2, orange: 3, red: 4, black: 4 } as Record<string, number>,
     /** Alert levels, in order; a sheaf step can raise the host to one of them. */
     alerts: ['none', 'passive', 'active', 'shutdown'] as ReadonlyArray<'none' | 'passive' | 'active' | 'shutdown'>,
 
@@ -580,7 +580,8 @@ export const RULES = {
      * attacker's). `ic`: 'none' = IC never defend (as v0.17.0); 'rating' = IC roll their rating
      * against the decker's attack TN.
      */
-    defense: { persona: 'pool' as 'pool' | 'none', ic: 'none' as 'none' | 'rating' },
+    // v0.92.3: VR2 has no dodge (pp. 121–123: parry, Shield, resistance): persona 'none' (was 'pool').
+    defense: { persona: 'none' as 'pool' | 'none', ic: 'none' as 'none' | 'rating' },
     /**
      * What each IC does (the IC's `behavior`), and the TN its attack rolls against:
      * 'evasion' (the persona's Evasion), 'attribute' (the persona program it targets),
@@ -603,7 +604,8 @@ export const RULES = {
       probe: 'detectionFactor', scout: 'detectionFactor',
       tarBaby: 'utility', tarPit: 'utility', crippler: 'attribute', ripper: 'attribute',
     } as Record<string, 'evasion' | 'attribute' | 'utility' | 'detectionFactor' | 'masking'>,
-    attributeDamage: { successesPerPoint: 2, minOnHit: 1 },
+    // v0.92.3: VR2 p. 41 (1 net success does nothing): minOnHit 0 (was 1).
+    attributeDamage: { successesPerPoint: 2, minOnHit: 0 },
     tar: { tarBabyDerezzes: true },
     trace: { baseTurns: 10, secondsPerTurn: 3, burnMpcp: true },
     /** Blaster and sparky crashes: the IC rolls its rating vs TN = MPCP; each `successesPerPoint` successes = 1 MPCP damage. */
@@ -630,10 +632,14 @@ export const RULES = {
       attack: { L: 2, M: 3, S: 4, D: 5 } as Record<string, number>,
       kinds: {
         sleaze: 3, deception: 2, analyze: 3, browse: 1, decrypt: 1, evaluate: 2, 'read/write': 2, relocate: 2,
-        medic: 4, mirrors: 3, shield: 4, smoke: 1, spoof: 3, validate: 4, track: 8, armor: 3, cloak: 3, 'lock-on': 3, other: 0,
+        // v0.92.3: smoke 2 (Core p. 175; was 1).
+        medic: 4, mirrors: 3, shield: 4, smoke: 2, spoof: 3, validate: 4, track: 8, armor: 3, cloak: 3, 'lock-on': 3, other: 0,
         // v0.57.0 (VERIFY)
         slow: 4, restore: 3,
-        frame: 3, 'smart-frame': 5, agent: 6,
+        // v0.92.3: frame cores: dumb 2, smart 3 (VR2 p. 105; were 3 and 5).
+        frame: 2, 'smart-frame': 3, agent: 6,
+        // v0.92.3: utilities of VR2 p. 161 the operations table uses.
+        camo: 3, crash: 3, commlink: 1, scanner: 3, defuse: 2,
       } as Record<string, number>,
     },
     /**
@@ -642,38 +648,44 @@ export const RULES = {
      * instead of the subsystem's. Add or change rows freely; 'custom' does nothing automatic.
      */
     operations: [
-      { id: 'analyzeHost', label: 'Analyze host', subsystem: 'control', utility: 'analyze', action: 'simple', effect: 'analyzeHost' },
-      { id: 'analyzeIc', label: 'Analyze IC', subsystem: 'control', utility: 'analyze', action: 'simple', effect: 'analyzeIc' },
+      // v0.92.3: tests, utilities and actions from the VR2 System Operations Table (p. 161); the old values are in
+      // RULES.MATRIX_V923.oldOperations (switch RULES.MATRIX_V923.operations).
+      { id: 'analyzeHost', label: 'Analyze host', subsystem: 'control', utility: 'analyze', action: 'complex', effect: 'analyzeHost' },
+      { id: 'analyzeIc', label: 'Analyze IC', subsystem: 'control', utility: 'analyze', action: 'free', effect: 'analyzeIc' },
       { id: 'analyzeSecurity', label: 'Analyze security', subsystem: 'control', utility: 'analyze', action: 'simple', effect: 'analyzeSecurity' },
-      { id: 'redirectDatatrail', label: 'Redirect datatrail', subsystem: 'control', utility: 'relocate', action: 'complex', effect: 'redirectTrace' },
-      { id: 'crashHost', label: 'Crash host', subsystem: 'control', utility: '', action: 'complex', effect: 'crashHost' },
-      { id: 'invalidatePasscode', label: 'Invalidate passcode', subsystem: 'control', utility: '', action: 'complex', effect: 'invalidate' },
+      { id: 'redirectDatatrail', label: 'Redirect datatrail', subsystem: 'control', utility: 'camo', action: 'complex', effect: 'redirectTrace' },
+      { id: 'relocateTrace', label: 'Relocate (spoof a trace)', subsystem: 'control', utility: 'relocate', action: 'simple', effect: 'relocateTrace' },
+      { id: 'crashHost', label: 'Crash host', subsystem: 'control', utility: 'crash', action: 'complex', effect: 'crashHost' },
+      { id: 'invalidatePasscode', label: 'Invalidate passcode', subsystem: 'control', utility: 'validate', action: 'complex', effect: 'invalidate' },
       // v0.57.0 (VERIFY): passcodes, data bombs and comcalls.
-      { id: 'validatePasscode', label: 'Validate passcode', subsystem: 'access', utility: 'validate', action: 'complex', effect: 'validate' },
+      { id: 'validatePasscode', label: 'Validate passcode', subsystem: 'control', utility: 'validate', action: 'complex', effect: 'validate' },
       { id: 'scanFile', label: 'Scan file (data bombs)', subsystem: 'files', utility: 'analyze', action: 'simple', effect: 'scanFile' },
       { id: 'defuseBomb', label: 'Defuse data bomb', subsystem: 'files', utility: 'decrypt', action: 'complex', effect: 'defuseBomb', tn: 'target' },
-      { id: 'makeComcall', label: 'Make comcall (LTG)', subsystem: 'slave', utility: '', action: 'complex', effect: 'makeCall' },
-      { id: 'tapComcall', label: 'Tap comcall (LTG)', subsystem: 'slave', utility: 'spoof', action: 'complex', effect: 'tapCall' },
+      { id: 'makeComcall', label: 'Make comcall (LTG)', subsystem: 'files', utility: 'commlink', action: 'complex', effect: 'makeCall' },
+      { id: 'tapComcall', label: 'Tap comcall (LTG)', subsystem: 'slave', utility: 'commlink', action: 'complex', effect: 'tapCall' },
       { id: 'rerouteComcall', label: 'Reroute comcall (LTG)', subsystem: 'control', utility: 'relocate', action: 'complex', effect: 'rerouteCall' },
-      { id: 'decryptAccess', label: 'Decrypt access (barrier IC)', subsystem: 'access', utility: 'decrypt', action: 'complex', effect: 'decryptGuard', tn: 'target' },
-      { id: 'gracefulLogoff', label: 'Graceful logoff', subsystem: 'access', utility: 'deception', action: 'simple', effect: 'logoff' },
+      { id: 'decryptAccess', label: 'Decrypt access (barrier IC)', subsystem: 'access', utility: 'decrypt', action: 'simple', effect: 'decryptGuard', tn: 'target' },
+      { id: 'gracefulLogoff', label: 'Graceful logoff', subsystem: 'access', utility: 'deception', action: 'complex', effect: 'logoff' },
       { id: 'locateFile', label: 'Locate file', subsystem: 'index', utility: 'browse', action: 'complex', effect: 'locateFile' },
       { id: 'locatePaydata', label: 'Locate paydata', subsystem: 'index', utility: 'evaluate', action: 'complex', effect: 'locatePaydata' },
       { id: 'locateNumber', label: 'Locate LTG number', subsystem: 'index', utility: 'browse', action: 'complex', effect: 'locateNumber' },
-      { id: 'locateSlave', label: 'Locate slave', subsystem: 'index', utility: 'browse', action: 'complex', effect: 'locateSlave' },
-      { id: 'downloadData', label: 'Download data', subsystem: 'files', utility: 'read/write', action: 'complex', effect: 'download' },
-      { id: 'uploadData', label: 'Upload data', subsystem: 'files', utility: 'read/write', action: 'complex', effect: 'upload' },
-      { id: 'editFile', label: 'Edit file', subsystem: 'files', utility: 'read/write', action: 'complex', effect: 'editFile' },
-      { id: 'decryptFile', label: 'Decrypt file', subsystem: 'files', utility: 'decrypt', action: 'complex', effect: 'decryptFile', tn: 'target' },
+      { id: 'locateSlave', label: 'Locate slave', subsystem: 'index', utility: 'analyze', action: 'complex', effect: 'locateSlave' },
+      { id: 'downloadData', label: 'Download data', subsystem: 'files', utility: 'read/write', action: 'simple', effect: 'download' },
+      { id: 'uploadData', label: 'Upload data', subsystem: 'files', utility: 'read/write', action: 'simple', effect: 'upload' },
+      { id: 'editFile', label: 'Edit file', subsystem: 'files', utility: 'read/write', action: 'simple', effect: 'editFile' },
+      { id: 'decryptFile', label: 'Decrypt file', subsystem: 'files', utility: 'decrypt', action: 'simple', effect: 'decryptFile', tn: 'target' },
       { id: 'controlSlave', label: 'Control slave', subsystem: 'slave', utility: 'spoof', action: 'complex', effect: 'controlSlave' },
       { id: 'editSlave', label: 'Edit slave', subsystem: 'slave', utility: 'spoof', action: 'complex', effect: 'controlSlave' },
       { id: 'monitorSlave', label: 'Monitor slave', subsystem: 'slave', utility: 'spoof', action: 'simple', effect: 'monitorSlave' },
-      { id: 'decryptSlave', label: 'Decrypt slave (barrier IC)', subsystem: 'slave', utility: 'decrypt', action: 'complex', effect: 'decryptGuard', tn: 'target' },
+      { id: 'decryptSlave', label: 'Decrypt slave (barrier IC)', subsystem: 'slave', utility: 'decrypt', action: 'simple', effect: 'decryptGuard', tn: 'target' },
       { id: 'logon', label: 'Log on (host, LTG or RTG)', subsystem: 'access', utility: 'deception', action: 'complex', effect: 'logon' },
-      { id: 'nullOperation', label: 'Null operation', subsystem: 'access', utility: '', action: 'simple', effect: 'none' },
-    ] as ReadonlyArray<{ id: string; label: string; subsystem: 'access' | 'control' | 'index' | 'files' | 'slave'; utility: string; action: 'simple' | 'complex'; effect: string; tn?: 'subsystem' | 'target' }>,
-    /** Downloading: Combat Turns = file size ÷ (I/O speed × `ioPerTurn`), rounded up (shown only). */
-    download: { ioPerTurn: 1 },
+      { id: 'nullOperation', label: 'Null operation', subsystem: 'control', utility: 'deception', action: 'complex', effect: 'none' },
+    ] as ReadonlyArray<{ id: string; label: string; subsystem: 'access' | 'control' | 'index' | 'files' | 'slave'; utility: string; action: 'free' | 'simple' | 'complex'; effect: string; tn?: 'subsystem' | 'target' }>,
+    /**
+     * Downloading: Combat Turns = file size ÷ (I/O speed × `ioPerTurn`), rounded up (shown only). v0.92.3: I/O speed is
+     * Mp per second (VR2 pp. 86, 110), 3 seconds a turn: 3 (was 1); loading a utility at the I/O speed uses it too.
+     */
+    download: { ioPerTurn: 3 },
     /**
      * Paydata generated by security code: `points` = Nd6 + mod files; each is `sizeDice`d6 ×
      * `sizeMultiplier` Mp, worth `valuePerMp` nuyen per Mp. Defenses on 1d6: up to `plainUpTo`
@@ -709,8 +721,9 @@ export const RULES = {
      * (off by default; a house rule), black IC that would do Physical damage do Stun.
      */
     sim: {
-      hot: { initiativeDice: 1, dumpShockType: 'physical' as 'physical' | 'stun', overloadAt: 'S' as 'L' | 'M' | 'S' | 'D', overloadLevel: 'L' as 'L' | 'M' | 'S' | 'D' },
-      cold: { coldBlackIcStun: false },
+      // v0.92.3: dump shock is Stun (VR2 p. 124; was 'physical'); lethal black IC acts as non-lethal on a cool deck (VR2 p. 48; was false).
+      hot: { initiativeDice: 1, dumpShockType: 'stun' as 'physical' | 'stun', overloadAt: 'S' as 'L' | 'M' | 'S' | 'D', overloadLevel: 'L' as 'L' | 'M' | 'S' | 'D' },
+      cold: { coldBlackIcStun: true },
     },
     /**
      * Frames: programs a decker launches into a host to run system operations by themselves. A
@@ -719,7 +732,8 @@ export const RULES = {
      * detection roll is against the owner's Detection Factor. Its initiative is rating + 1d6.
      * Frames are IC actors with kind 'frame'; deckers can crash them in cybercombat. The owner must be jacked in.
      */
-    frames: { smartPoolPerRating: 0.5, initiativeDice: 1 },
+    // v0.92.3: no pool dice for smart frames (VR2 p. 104; was 0.5).
+    frames: { smartPoolPerRating: 0, initiativeDice: 1 },
     /**
      * How the decker connects: a TN modifier on every Matrix test, and whether being aboard a
      * moving vehicle adds `movingVehicle` more.
@@ -730,6 +744,11 @@ export const RULES = {
       { id: 'satellite', label: 'Satellite uplink', tn: 2 },
       { id: 'vehicle', label: "A vehicle's comm system", tn: 1 },
       { id: 'remote', label: 'Remote deck (relayed)', tn: 2 },
+      // v0.92.3: VR2's other jackpoints (Grids and Hosts p. 28); their Access and Trace modifiers are in RULES.MATRIX_V923.jackpoints.
+      { id: 'legal', label: 'Legal jackpoint (registered line)', tn: 0 },
+      { id: 'workstation', label: 'Workstation', tn: 0 },
+      { id: 'device', label: 'Remote device (slaved to the host)', tn: 0 },
+      { id: 'console', label: 'Console access', tn: 0 },
     ] as ReadonlyArray<{ id: string; label: string; tn: number }>,
     movingVehicle: 1,
 
@@ -748,7 +767,7 @@ export const RULES = {
       kinds: ['cyberphobia', 'frenzy', 'judas', 'conditioning'] as ReadonlyArray<'cyberphobia' | 'frenzy' | 'judas' | 'conditioning'>,
       resist: 'willpower' as 'willpower' | 'intelligence',
       successesNeeded: 1,
-      shieldDice: true,
+      shieldDice: false, // v0.92.3: VR2 p. 49 (was true)
       daysPerRating: 1,
       cyberphobiaTn: 2,
       judasAlert: 'passive' as 'none' | 'passive' | 'active',
@@ -769,7 +788,8 @@ export const RULES = {
       armor: { degradesPerHit: 1 },
       shield: { degradesPerHit: 1 },
       mirrors: { tnPerRating: 0.5 },
-      smoke: { tnPerRating: 0.5, turnsPerRating: 1, secondsPerTurn: 3 },
+      // v0.92.3: + the rating to every TN (Core p. 175; was 0.5).
+      smoke: { tnPerRating: 1, turnsPerRating: 1, secondsPerTurn: 3 },
     },
     /**
      * Frames and agents carrying utilities. A frame or agent takes copies of the owner's loaded
@@ -789,7 +809,8 @@ export const RULES = {
      * to a host from its own grid, and jacking in at a jackpoint, take no travel. While travelling,
      * the decker's tests in the new node are refused (`blockInTransit`), or warned.
      */
-    travel: { turnsPerHop: 1, secondsPerTurn: 3, blockInTransit: true },
+    // v0.92.3: Matrix movement is all but instant (Core p. 177; VR2 has only log-on operations): 0 (was 1).
+    travel: { turnsPerHop: 0, secondsPerTurn: 3, blockInTransit: true },
     /**
      * Security deckers: characters the GM lists on a host. Their own system tests there have no
      * detection roll (`noDetection`). Security actions roll Computer + Hacking Pool:
@@ -810,7 +831,8 @@ export const RULES = {
      * Construct IC: one IC that can also act as any of its `construct` behaviors, at its own
      * rating (the GM picks the behavior each time), at most `maxComponents` behaviors in all.
      */
-    party: { sharedInitiative: true },
+    // v0.92.3: each program of a party rolls its own initiative (VR2 p. 120; was true).
+    party: { sharedInitiative: false },
     construct: { maxComponents: 4 },
     /**
      * LTG numbers: a host, LTG or RTG can have a number. A decker who dials a node's number logs on
@@ -830,7 +852,8 @@ export const RULES = {
      * program. The new program arrives unloaded.
      */
     programming: {
-      skill: 'Computer', concentration: 'Programming', tnMod: 0, daysPerMp: 1,
+      // v0.92.3: base time = size × 2 days (VR2 p. 100; was 1).
+      skill: 'Computer', concentration: 'Programming', tnMod: 0, daysPerMp: 2,
       /**
        * v0.49.0 (Virtual Realities, VERIFY): a programming suite (gear with a suite rating) adds its
        * rating as dice ('dice') or takes it off the TN ('tn') on programming tests, capped at the
@@ -887,7 +910,8 @@ export const RULES = {
      * Physical damage do Stun (`blackIcStun`), and + rating × `dicePerRating` dice to resist black
      * IC, dump shock, sparky biofeedback and simsense overload.
      */
-    iccm: { blackIcStun: true, dicePerRating: 1 },
+    // v0.92.3: an ICCM resists with the better of Body or Willpower and doesn't add dice (VR2 p. 86; were true and 1).
+    iccm: { blackIcStun: false, dicePerRating: 0 },
     /**
      * Otaku (optional, off): a cyberdeck item ticked "Living persona" takes its ratings from the
      * otaku's attributes: MPCP = the sum of `mpcp` ÷ `divisor` (rounded down), each persona program
@@ -2101,7 +2125,8 @@ export const RULES = {
       melee: 'complex', throw: 'simple', reload: 'simple', 'reload:clip': 'complex', 'reload:complex': 'complex', cast: 'complex', summon: 'complex', banish: 'complex',
       power: 'complex', astral: 'complex', assense: 'simple', dispel: 'complex', firstAid: 'complex', skill: 'complex',
       drive: 'complex', stand: 'simple', drug: 'simple', perceive: 'simple', social: 'complex', clearJam: 'simple', fullDefense: 'complex',
-      'matrix:simple': 'simple', 'matrix:complex': 'complex', matrixAttack: 'complex', medic: 'complex',
+      // v0.92.3: matrixAttack and matrixManeuver are Simple under RULES.MATRIX_V923.actions 'book' (VR2 pp. 121, 123); these are the 'v922' costs.
+      'matrix:simple': 'simple', 'matrix:complex': 'complex', matrixAttack: 'complex', matrixManeuver: 'complex', medic: 'complex',
       shapeshift: 'complex', cleanSignature: 'complex',
       // v0.43.0
       setUpWeapon: 'complex', search: 'complex', scan: 'simple',
@@ -2987,9 +3012,11 @@ export const RULES = {
     wounds: { enabled: true, ic: true },
     blackIcHold: { enabled: true, attribute: 'willpower' as 'willpower' | 'intelligence', pool: true, successes: 1 },
     shutdown: { enabled: true, turns: 3, secondsPerTurn: 3 },
-    dumpShock: { levelBy: 'fixed' as 'fixed' | 'code', byCode: { blue: 'L', green: 'M', orange: 'S', red: 'D', black: 'D' } as Record<string, 'L' | 'M' | 'S' | 'D'> },
+    // v0.92.3: by code (VR2 p. 124; was 'fixed').
+    dumpShock: { levelBy: 'code' as 'fixed' | 'code', byCode: { blue: 'L', green: 'M', orange: 'S', red: 'D', black: 'D' } as Record<string, 'L' | 'M' | 'S' | 'D'> },
     icInitiative: { from: 'rating' as 'rating' | 'securityValue', diceByCode: { blue: 1, green: 2, orange: 3, red: 4, black: 4 } as Record<string, number> },
-    icAttackDice: 'rating' as 'rating' | 'securityValue',
+    // v0.92.3: the host's Security Value (VR2 p. 40; was 'rating').
+    icAttackDice: 'securityValue' as 'rating' | 'securityValue',
     perception: { dice: 'sensors' as 'sensors' | 'computer', pool: true, analyze: [
       { successes: 1, reveals: ['kind'] },
       { successes: 2, reveals: ['rating', 'state'] },
@@ -2999,7 +3026,8 @@ export const RULES = {
     utilities: {
       slow: { initiativePerNet: 3 },
       restore: { tn: 4, pool: true, deckDamage: false, degrades: true },
-      validate: { dfBonus: 2 },
+      // v0.92.3: a validated passcode doesn't affect System Tests (VR2 p. 123; was 2).
+      validate: { dfBonus: 0 },
     },
     bombs: { level: 'M' as 'L' | 'M' | 'S' | 'D', alert: 'passive' as 'none' | 'passive' | 'active' | 'shutdown' },
     comcalls: { needsLtg: true },
