@@ -53,7 +53,7 @@ No current ruler module for Foundry v14 was found (Elevation Ruler and Drag Rule
 | damage on 50 tokens at once | 1.7 s | 15 s |
 | canvas frame rate, idle / 234 SR2e cards in the log | 144 / 144 fps | |
 
-The frame rate drops only for a moment: about a second after damage on all 50 tokens (the floating numbers), and while a hundred unanswered defense prompts are open (69 fps). The pane can't throttle its own CPU, so the budgets leave about four times headroom for a slower computer.
+A frame rate read while the browser pane is hidden is unreliable (a background page); with the pane shown, 50 tokens idle at about 143 fps, and the batch (which now waits for Dice So Nice's queued 3D dice before measuring) read 67 fps after 300 cards and 66 after damage on every token. The frame rate drops only for a moment: about a second after damage on all 50 tokens (the floating numbers), and while a hundred unanswered defense prompts are open (69 fps). The pane can't throttle its own CPU, so the budgets leave about four times headroom for a slower computer.
 
 ## Found and fixed
 
@@ -75,7 +75,7 @@ A fresh agent reviewed the diff: 3 bugs, 3 risks, 2 nits, all fixed:
 
 ## Tests
 
-3,629 automated tests (3,625 pass, 4 skipped), tsc clean; 31 Quench tests plus the performance batch.
+3,629 automated tests (3,625 pass, 4 skipped), tsc clean; 31 Quench tests plus the performance batch (5 tests, about a minute).
 
 ## Known limits
 

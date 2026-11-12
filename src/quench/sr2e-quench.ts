@@ -448,8 +448,12 @@ async function timed<T>(key: string, fn: () => Promise<T> | T): Promise<T> {
  */
 async function settle(maxMs = 90000): Promise<void> {
   const end = performance.now() + maxMs;
-  const size = (x: any): number => (x == null ? 0 : typeof x.length === 'number' ? x.length : typeof x.size === 'number' ? x.size : typeof x === 'object' ? Object.keys(x).length : 0);
-  const busy = () => { const d: any = (game as any).dice3d; return Boolean(d?.box?.rolling || size(d?.queue) > 0 || size(d?.pendingThrows) > 0); };
+  // Dice So Nice keeps waiting animations in `queue.queue` (and `queue.hiddenAnimationQueue`), and `box.rolling` while
+  // one plays; `pendingThrows` and `queue._currentAnimation` hold something even when idle, so they don't count.
+  const busy = () => {
+    const d: any = (game as any).dice3d;
+    return Boolean(d?.box?.rolling || (d?.queue?.queue?.length ?? 0) > 0 || (d?.queue?.hiddenAnimationQueue?.length ?? 0) > 0);
+  };
   while (performance.now() < end && busy()) await wait(500);
   await wait(3000);
 }
