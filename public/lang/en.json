@@ -9535,6 +9535,12 @@
         "attackerRunning": {
           "label": "Attacker running"
         },
+        "attackerWalkingRough": {
+          "label": "Attacker walking (difficult ground)"
+        },
+        "attackerRunningRough": {
+          "label": "Attacker running (difficult ground)"
+        },
         "calledShot": {
           "label": "Called shot"
         },
@@ -9543,21 +9549,6 @@
         },
         "fullCover": {
           "label": "Target in full cover (blind fire through the barrier)"
-        },
-        "smartlink": {
-          "label": "Smartlink (smartgun + implant)"
-        },
-        "laserSight": {
-          "label": "Laser sight"
-        },
-        "secondWeapon": {
-          "label": "Second weapon (off-hand)"
-        },
-        "attackerWalkingRough": {
-          "label": "Attacker walking (difficult ground)"
-        },
-        "attackerRunningRough": {
-          "label": "Attacker running (difficult ground)"
         },
         "targetRunning": {
           "label": "Target running"
@@ -9571,8 +9562,17 @@
         "attackerInMelee2": {
           "label": "Attacker in melee (two opponents)"
         },
+        "smartlink": {
+          "label": "Smartlink (smartgun + implant)"
+        },
         "smartGoggles": {
           "label": "Smart goggles (smartgun)"
+        },
+        "laserSight": {
+          "label": "Laser sight"
+        },
+        "secondWeapon": {
+          "label": "Second weapon (off-hand)"
         }
       },
       "VISIBILITY": {
@@ -9621,6 +9621,9 @@
           },
           "redirectDatatrail": {
             "label": "Redirect datatrail"
+          },
+          "relocateTrace": {
+            "label": "Relocate (spoof a trace)"
           },
           "crashHost": {
             "label": "Crash host"
@@ -9693,9 +9696,6 @@
           },
           "nullOperation": {
             "label": "Null operation"
-          },
-          "relocateTrace": {
-            "label": "Relocate (spoof a trace)"
           }
         },
         "connections": {
@@ -11153,26 +11153,30 @@
           }
         }
       },
-      "VEHICLES_V923": {
-        "oldDrivingRows": {
-          "easy": {
-            "label": "Easy maneuver"
-          },
-          "hard": {
-            "label": "Hard maneuver"
-          },
-          "overSpeed": {
-            "label": "Above the vehicle's Speed"
-          },
-          "unfamiliar": {
-            "label": "Unfamiliar vehicle"
-          },
-          "poorVisibility": {
-            "label": "Poor visibility"
-          }
-        }
-      },
       "CORE_V923": {
+        "individualAwards": {
+          "roleplaying": {
+            "label": "Roleplaying (really good: 2)"
+          },
+          "guts": {
+            "label": "Guts"
+          },
+          "smarts": {
+            "label": "Smarts"
+          },
+          "rightPlace": {
+            "label": "Right place, right time"
+          },
+          "surprise": {
+            "label": "Surprise"
+          },
+          "humor": {
+            "label": "Humor"
+          },
+          "drama": {
+            "label": "Drama"
+          }
+        },
         "senseRows": {
           "gunshot": {
             "label": "Sound: a single gunshot"
@@ -11256,28 +11260,24 @@
           "greased": {
             "label": "Greased or gel-treated"
           }
-        },
-        "individualAwards": {
-          "roleplaying": {
-            "label": "Roleplaying (really good: 2)"
+        }
+      },
+      "VEHICLES_V923": {
+        "oldDrivingRows": {
+          "easy": {
+            "label": "Easy maneuver"
           },
-          "guts": {
-            "label": "Guts"
+          "hard": {
+            "label": "Hard maneuver"
           },
-          "smarts": {
-            "label": "Smarts"
+          "overSpeed": {
+            "label": "Above the vehicle's Speed"
           },
-          "rightPlace": {
-            "label": "Right place, right time"
+          "unfamiliar": {
+            "label": "Unfamiliar vehicle"
           },
-          "surprise": {
-            "label": "Surprise"
-          },
-          "humor": {
-            "label": "Humor"
-          },
-          "drama": {
-            "label": "Drama"
+          "poorVisibility": {
+            "label": "Poor visibility"
           }
         }
       }
