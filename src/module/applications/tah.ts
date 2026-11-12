@@ -7,6 +7,7 @@
  * The action list itself is built by the pure `hudActions()` (rules/hudactions.ts) from a summary of the
  * actor; each action carries an onClick that runs the matching sheet action (as if clicked on the sheet).
  */
+import { isCarried } from '../rules/tweaks.ts';
 import { hudActions, hudMultiActions, hudDefaults, hudWeaponInfo, hudDamageLabel, encodeHudAction, findHudAction, HUD_GROUPS, type HudAction, type HudActorSummary, type HudItem } from '../rules/hudactions.ts';
 import { runSheetAction, latestAttackOn, useItem } from './tokens.ts';
 import { escHtml } from '../rules/html.ts';
@@ -30,7 +31,7 @@ export function noTags(v: unknown): string { return String(v ?? '').replace(/[<>
 /** The item data the pure builder reads (a few fields per type, not the whole document). */
 const ITEM_FIELDS: Record<string, string[]> = {
   skill: ['rating', 'kind', 'specialization', 'specializationRating'],
-  weapon: ['ammo', 'ammoMax', 'modes', 'melee', 'jammed', 'damagePower', 'damageLevel', 'damageType', 'strengthPower'],
+  weapon: ['ammo', 'ammoMax', 'modes', 'melee', 'jammed', 'damagePower', 'damageLevel', 'damageType', 'strengthPower', 'carried'],
   spell: ['learnedForce', 'category', 'spellType'],
   power: ['active', 'special'],
   adeptpower: ['active', 'level', 'special'],
@@ -95,7 +96,7 @@ export function summarizeActor(actor: any): HudActorSummary {
         controlling: v.system?.controllerUuid === actor.uuid,
         jumpedIn: Boolean(sys.rigging?.jumpedIn),
         owned: Boolean(v.isOwner),
-        weapons: v.isOwner ? [...(v.items ?? [])].filter((i: any) => i.type === 'weapon').map((i: any) => ({ id: i.id, name: i.name, img: i.img, info: hudWeaponInfo(i.system) || hudDamageLabel(i.system) })) : [],
+        weapons: v.isOwner ? [...(v.items ?? [])].filter((i: any) => i.type === 'weapon' && isCarried(i)).map((i: any) => ({ id: i.id, name: i.name, img: i.img, info: hudWeaponInfo(i.system) || hudDamageLabel(i.system) })) : [],
       } : null,
       icProgram: actor.type === 'ic' && ['frame', 'agent'].includes(sys.kind),
     },

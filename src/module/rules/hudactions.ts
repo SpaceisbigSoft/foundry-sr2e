@@ -4,6 +4,7 @@
  * each entry into a TAH action and runs it on click. No Foundry globals here.
  */
 import { t as tx, tKey } from '../helpers/i18n.ts';
+import { isCarried } from './tweaks.ts';
 
 /** Subgroup ids (distinct from the top-level tab ids, so TAH's id lookups never hit a tab). */
 export type HudGroupId =
@@ -228,7 +229,8 @@ function skillActions(s: HudActorSummary): HudAction[] {
 }
 
 function weaponActions(s: HudActorSummary): HudAction[] {
-  const out: HudAction[] = s.items.filter((i) => i.type === 'weapon').sort(byName)
+  // v0.92.2: a weapon left behind (RULES.SHEET_V921.carried) isn't offered: it can't attack.
+  const out: HudAction[] = s.items.filter((i) => i.type === 'weapon' && isCarried(i)).sort(byName)
     .map((i) => itemAction('weapons', i, 'attackWeapon', hudWeaponInfo(i.system), { tooltip: `${i.name}: ${hudDamageLabel(i.system)}` }));
   for (const c of [...(s.cyberWeapons ?? [])].sort(byName)) {
     out.push({ groupId: 'weapons', id: `cyberweapon-${c.id}`, name: c.name, info: hudDamageLabel(c.system), kind: 'sheet', payload: { action: 'attackWeapon', dataset: { itemId: c.id } } });
@@ -241,7 +243,7 @@ function combatActions(s: HudActorSummary): HudAction[] {
   const f = s.flags;
   const out: HudAction[] = [sheet('combatActions', 'combat-attack', tx('SR2E.Text.Hudactions.attack'), 'quickAttack', { tooltip: tx('SR2E.Text.Hudactions.pickAWeaponThenAttack') })];
   if (s.items.some((i) => i.type === 'spell')) out.push(sheet('combatActions', 'combat-cast', tx('SR2E.Text.Hudactions.cast'), 'quickCast', { tooltip: tx('SR2E.Text.Hudactions.pickASpellThenCast') }));
-  if (s.items.some((i) => i.type === 'weapon' && num(i.system?.['ammoMax']) > 0)) out.push(sheet('combatActions', 'combat-reload', tx('SR2E.Text.Hudactions.reload'), 'quickReload'));
+  if (s.items.some((i) => i.type === 'weapon' && isCarried(i) && num(i.system?.['ammoMax']) > 0)) out.push(sheet('combatActions', 'combat-reload', tx('SR2E.Text.Hudactions.reload'), 'quickReload'));
   const jammed = s.items.find((i) => i.type === 'weapon' && i.system?.['jammed']);
   if (jammed) out.push(sheet('combatActions', 'combat-clearjam', tx('SR2E.Text.Hudactions.clearJam', { name: jammed.name }), 'clearJam', {}, { itemId: jammed.id }));
   if (f.pendingAttack) out.push({ groupId: 'combatActions', id: 'combat-defend', name: tx('SR2E.Text.Hudactions.defend', { attack: f.pendingAttack }), kind: 'defend', payload: {}, tooltip: tx('SR2E.Text.Hudactions.defendAgainstTheNewestAttack') });

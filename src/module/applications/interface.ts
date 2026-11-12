@@ -19,6 +19,7 @@ import {
   buttonCost, affordable, ASTRAL_BLOCKED_ACTIONS, memoryFields, rememberRoll, restoredNumber, stepValue, groupNotes, repeatedText, NOTE_GROUP,
   rememberWindow, placeWindow, emptyWinMemory, settingSection, SETTING_SECTIONS, parseFiringModes,
   type SheetLayout, type RollMemory, type WinMemory,
+  isCarried,
 } from '../rules/index.ts';
 import { calledFromSystem, isOurWindow } from './look.ts';
 import { quickRollArmed } from './hotkeys.ts';
@@ -97,7 +98,7 @@ export function stripContext(actor: any, pools: Array<{ key: string; label: stri
   const c: any = (game as any).combat;
   const combatant = c?.started ? [...(c.combatants ?? [])].find((x: any) => x.actor === actor || x.actor?.uuid === actor.uuid) : null;
   const items: any[] = [...(actor?.items ?? [])];
-  const weapons = items.filter((i) => i.type === 'weapon').map((i) => ({
+  const weapons = items.filter((i) => i.type === 'weapon' && isCarried(i)).map((i) => ({
     id: i.id, name: i.name, melee: Boolean(i.system?.melee), ammo: Number(i.system?.ammo ?? 0), ammoMax: Number(i.system?.ammoMax ?? 0),
     mode: '', jammed: Boolean(i.system?.jammed), ready: i.system?.ready !== false,
   }));

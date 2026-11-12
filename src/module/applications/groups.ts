@@ -1,4 +1,5 @@
 /** Pure helpers for the GM panel and token drops (v0.41.0), importable without Foundry's UI classes. */
+import { isCarried } from '../rules/tweaks.ts';
 import { monitorView } from '../rules/look.ts';
 import { mookLine, type MookLine } from '../rules/gmdash.ts';
 import { t as tx, tCount } from '../helpers/i18n.ts';
@@ -87,7 +88,7 @@ export function mookStat(a: any): MookLine | null {
     const attributes: Record<string, number> = {};
     for (const [k, v] of Object.entries(sys.attributes ?? {})) attributes[k] = Number((v as any)?.total ?? (v as any)?.value ?? (v as any)?.base ?? 0);
     const armor = (kind: 'ballistic' | 'impact'): number => { try { return Number(a?.armorRating?.(kind) ?? 0); } catch { return 0; } };
-    const weapons = [...(a?.items ?? [])].filter((i: any) => i.type === 'weapon')
+    const weapons = [...(a?.items ?? [])].filter((i: any) => i.type === 'weapon' && isCarried(i))
       .sort((x: any, y: any) => Number(x.sort ?? 0) - Number(y.sort ?? 0))
       .map((i: any) => ({ name: String(i.name ?? ''), system: i.system ?? {} }));
     return mookLine({

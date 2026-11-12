@@ -39,3 +39,25 @@ describe('v0.92.2 accessory ratings', () => {
     assert.deepEqual(read('Gas vent system 2 and a laser sight'), { recoilComp: 2, laserSight: true });
   });
 });
+
+describe('v0.92.2 the HUD leaves out weapons left behind', async () => {
+  const { hudActions } = await import('../hudactions.ts');
+  const { RULES } = await import('../config.ts');
+  const summary = (carried: boolean): any => ({
+    type: 'character', name: 'Runner',
+    attributes: { body: { total: 4 }, quickness: { total: 5 }, strength: { total: 4 }, charisma: { total: 3 }, intelligence: { total: 4 }, willpower: { total: 4 } },
+    derived: { reaction: 4, initiativeDice: 1, magic: 0, essence: 6, astralMode: 'physical' },
+    items: [{ id: 'w1', type: 'weapon', name: 'Pistol', system: { ammo: 8, ammoMax: 12, modes: 'SA', damagePower: 9, damageLevel: 'M', carried } }],
+    flags: {},
+  });
+  const weaponIds = (carried: boolean) => hudActions(summary(carried)).filter((a: any) => a.groupId === 'weapons').map((a: any) => a.id);
+  test('a carried weapon is offered, one left behind is not (and no reload for it)', () => {
+    assert.ok(weaponIds(true).some((id: string) => id.includes('w1')));
+    assert.ok(!weaponIds(false).some((id: string) => id.includes('w1')));
+    assert.ok(!hudActions(summary(false)).some((a: any) => a.id === 'combat-reload'));
+  });
+  test('with the Carried house rule off every weapon is offered', () => {
+    const S = RULES.SHEET_V921 as any; const prev = S.carried; S.carried = 'off';
+    try { assert.ok(weaponIds(false).some((id: string) => id.includes('w1'))); } finally { S.carried = prev; }
+  });
+});

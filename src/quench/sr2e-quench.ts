@@ -78,7 +78,8 @@ export function findNaN(obj: unknown, path = 'system', seen = new Set<unknown>()
 export function rawKeysIn(el: Element | null): string[] {
   if (!el) return [];
   const out = new Set<string>();
-  const text = (el as HTMLElement).innerText ?? el.textContent ?? '';
+  // Every tab's text, not only the visible one's (innerText leaves hidden tabs out).
+  const text = el.textContent ?? '';
   for (const m of text.matchAll(new RegExp(RAW_KEY, 'g'))) out.add(m[0]);
   for (const node of [el, ...Array.from(el.querySelectorAll("*"))]) {
     for (const attr of ['title', 'placeholder', 'aria-label', 'data-tooltip', 'alt']) {
