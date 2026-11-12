@@ -170,6 +170,17 @@ describe('v0.92.3 gear glue: dermal plating, cyberlimbs, bone lacing', () => {
     assert.equal(a.system.attributes.body.total, 4);
     assert.deepEqual(a.system.derived.cyberArmor, { ballistic: 2, impact: 2 });
   });
+  test('dermal plating counts once on the permanent damage test (in Body; the old way as dermal armor dice)', async (t) => {
+    const a = who({}, [ware('dp', 'Dermal plating 2', { rating: 2, armorBallistic: 2, armorImpact: 2, essenceCost: 1 })]);
+    faces.push(...Array(12).fill(1));
+    await a.rollPermanentDamage();
+    assert.match(chat.at(-1).content, /Body 6 dice \(dermal armor 0\)/);
+    t.after(oldWay({ 'GEAR_V923.dermal': 'armor' }));
+    a.system.prepareDerivedData();
+    faces.length = 0; faces.push(...Array(12).fill(1));
+    await a.rollPermanentDamage();
+    assert.match(chat.at(-1).content, /Body 6 dice \(dermal armor 2\)/);
+  });
   test('a pair of cyberarms adds +1 Body; off: none', (t) => {
     const a = who({}, [limb('l', 'leftArm'), limb('r', 'rightArm')]);
     assert.equal(a.system.attributes.body.total, 5);
@@ -247,11 +258,8 @@ describe('v0.92.3 gear glue: Essence, bioware', () => {
     t.after(oldWay({ 'GEAR_V923.overBodyIndex': 'rejection' }));
     assert.deepEqual(a.bodyShockMods(), []);
   });
-  test('Body Index and healing: magical healing only; all: first aid and natural healing', (t) => {
+  test('Body Index and healing: ½ the Body Index (which healing it applies to is HEALTH_V923.bodyIndexHealing)', () => {
     const a = who({}, [bio('s', 'Suprathyroid', 'other', 1, 4)]);
-    assert.deepEqual(SR2Actor.bodyIndexHealingMods(a).map((m: any) => m.value), []);
-    assert.deepEqual(SR2Actor.bodyIndexHealingMods(a, 'magical').map((m: any) => m.value), [2]);
-    t.after(oldWay({ 'GEAR_V923.bioHealing': 'all' }));
     assert.deepEqual(SR2Actor.bodyIndexHealingMods(a).map((m: any) => m.value), [2]);
   });
   test('cultured bioware: Body Cost × .75', (t) => {

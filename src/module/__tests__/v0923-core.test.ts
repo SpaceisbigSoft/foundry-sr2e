@@ -301,10 +301,11 @@ describe('v0.92.3 core: the metatypes on the sheet (Core p. 45)', () => {
     assert.deepEqual({ ...old.system.derived.cyberArmor }, { ballistic: 1, impact: 1 });
   });
 
-  test('a dwarf\'s racial dice: against disease, not toxins', () => {
+  test('a dwarf\'s racial dice: against disease, not toxins (HEALTH_V923.dwarfResistance)', () => {
     const dwarf = who({ name: 'Dwarf', metatype: 'dwarf' });
     assert.equal(dwarf.system.attributes.quickness.racial, -1);
-    assert.equal(dwarf.system.derived.racialToxinDice, 2);
+    assert.equal(dwarf.system.derived.raceDiseaseDice, 2);
+    assert.equal(dwarf.system.derived.toxinDice, 0);
   });
 });
 

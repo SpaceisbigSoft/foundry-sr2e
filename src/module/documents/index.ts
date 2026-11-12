@@ -188,7 +188,7 @@ import type { Veh80Hit } from '../rules/urr80-vehicles.ts';
 import { METAMAGIC } from '../rules/arcana.ts';
 import { isLeadGm, madeHere } from '../applications/leader.ts';
 import { t as tx, tCount, tKey, tNoun, tList, type CountNoun } from '../helpers/i18n.ts';
-import { gearBook, housedEssenceCost, awakenedBioEssence, culturedBodyCost, surgeryEssenceCost, systemsHit, systemDamage, gradeResistTn, systemStops, adrenalCrashBook, systemShockTn, bodyIndexHealsTn } from '../rules/gear923.ts';
+import { gearBook, housedEssenceCost, awakenedBioEssence, culturedBodyCost, surgeryEssenceCost, systemsHit, systemDamage, gradeResistTn, systemStops, adrenalCrashBook, systemShockTn, isDermalPlating } from '../rules/gear923.ts';
 import { GEAR_V923_TABLES } from '../rules/config923/gear.ts';
 
 const SYSTEM_ID = 'sr2e';
@@ -2100,9 +2100,8 @@ export class SR2Actor extends Actor {
   }
 
   /** Body Index makes a patient harder to heal (RULES.BIOWARE.bodyIndex). */
-  static bodyIndexHealingMods(patient: any, kind: 'magical' | 'other' = 'other'): TargetNumberModifier[] {
-    // v0.92.3 (RULES.GEAR_V923.bioHealing): the book's magical healing only; 'all': first aid and natural healing.
-    if (!bodyIndexHealsTn(kind)) return [];
+  static bodyIndexHealingMods(patient: any): TargetNumberModifier[] {
+    // v0.92.3: which healing it applies to is the caller's (RULES.HEALTH_V923.bodyIndexHealing, rules/health923.ts bodyIndexOn).
     const bi = (patient?.system?.derived?.bodyIndex?.used as number | undefined) ?? 0;
     const v = bodyIndexHealingTn(bi);
     return v ? [{ label: tx('SR2E.Card.Mod.bodyIndex', { bi }), value: v }] : [];
@@ -9784,8 +9783,10 @@ export class SR2Actor extends Actor {
     // v0.92.3 (COMBAT_V923.flechette 'book', Core p. 93): against armor, the higher of double Impact and plain Ballistic.
     const fl923 = fl79?.armored ? C923.flechetteArmorBook(this.armorRating('ballistic', opts), this.armorRating('impact', opts), RULES.DOCS_V79.rangedFlechette.armorMultiplier) : null;
     if (fl79 && fl923) fl79 = { ...fl79, armor: fl923.armor, note: fl923.note };
-    // v0.92.3 (RULES.GEAR_V923.dermal 'body', Core p. 93): dermal armor stops flechette's extra Damage Level.
-    if (fl79) damage = { ...damage, level: !fl79.armored && Number(this.sys.derived?.cyber?.dermal ?? 0) > 0 ? damage.level : fl79.level };
+    // v0.92.3 (RULES.GEAR_V923.dermal 'body', CORE_V923.trollDermal 'body', Core p. 93): dermal armor (plating, pairs of
+    // cyberlimbs, a troll's own) stops flechette's extra Damage Level. (The old ways count it as armor, so armored.)
+    const dermalLevels = Number(this.sys.derived?.cyber?.dermal ?? 0) + CO923.dermalSoakDice(Number(this.sys.derived?.racialDermal ?? 0));
+    if (fl79) damage = { ...damage, level: !fl79.armored && dermalLevels > 0 ? damage.level : fl79.level };
     const armor = damage.elemental
       ? elementalArmor({ ballistic: this.armorRating('ballistic', opts), impact: this.armorRating('impact', opts) })
       : fl79 ? fl79.armor + Math.max(0, damage.extraArmor ?? 0)
@@ -10340,8 +10341,8 @@ export class SR2Actor extends Actor {
       { targetNumber, poolDice: castingPoolDice(opts.poolDice ?? 0, Number(this.sys.derived?.magic ?? 0)), pool: 'spell', spellUse: castUse, magical: true, sightHandled: true,
         modifiers: [...(touch ? [] : this.#spellEnvironment(elemental, targets[0] ?? vehicles[0]?.actor ?? null)), ...(combat || elemental || resistAttribute ? SR2Actor.attackedMods(targets) : []),
           ...(barrierTn ? [{ label: tx('SR2E.Card.Mod.across', { barrierName: barrier.name }), value: barrierTn }] : []),
-          // v0.92.3 (RULES.GEAR_V923.bioHealing 'magical', Shadowtech p. 6): bioware hinders magical healing.
-          ...(heals ? SR2Actor.bodyIndexHealingMods(targets[0] ?? this, 'magical') : [])],
+          // v0.92.3 (RULES.HEALTH_V923.bodyIndexHealing 'magical', Shadowtech p. 6): bioware hinders magical healing.
+          ...(heals && H923.bodyIndexOn('spell') ? SR2Actor.bodyIndexHealingMods(targets[0] ?? this) : [])],
         ...(opts.exclude?.length ? { exclude: opts.exclude } : {}) },
       {
         kind: elemental ? 'attack' : heals ? 'heal' : 'spell',
@@ -12517,7 +12518,10 @@ export class SR2Actor extends Actor {
   async rollPermanentDamage(): Promise<H923.PermanentDamageOutcome & { successes: number }> {
     const patched = Boolean(this.getFlag?.(SYSTEM_ID, 'traumaPatched923'));
     const tn = H923.permanentDamageTn(patched) ?? 4;
-    const dermal = [...this.items].filter((i: any) => i.type === 'cyberware' && i.system?.installed !== false && !i.system?.bioware && i.system?.kind !== 'cyberlimb' && i.system?.kind !== 'filtration' && Number(i.system?.armorBallistic ?? 0) > 0)
+    // v0.92.3 (RULES.GEAR_V923.dermal 'body'): dermal plating is already in Body's total, so it isn't added twice.
+    const dermalBody = gearBook('dermal');
+    const dermal = [...this.items].filter((i: any) => i.type === 'cyberware' && i.system?.installed !== false && !i.system?.bioware && i.system?.kind !== 'cyberlimb' && i.system?.kind !== 'filtration' && Number(i.system?.armorBallistic ?? 0) > 0
+      && !(dermalBody && isDermalPlating({ name: i.name, bioware: i.system?.bioware, kind: i.system?.kind })))
       .reduce((n: number, i: any) => n + Math.floor(Number(i.system.armorBallistic) || 0), 0);
     const rolls: any[] = [];
     const r = await successTest({ dice: Number(this.sys.attributes.body.total ?? 0) + dermal, targetNumber: tn, modifiers: [], roll: foundryRoller(rolls) });
@@ -19973,8 +19977,8 @@ export class SR2Actor extends Actor {
       await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p><strong>${escText(this.name)}</strong> ${tx('SR2E.Card.Actor.breathesThroughTheSmokeDoesNothing', { protLabel: escText(prot.label) })}</p>` });
       return;
     }
-    const rt = Number(this.sys.derived?.racialToxinDice ?? 0);
-    const inhalant = Number(this.sys.derived?.bio?.inhalantDice ?? 0) + Number(this.sys.derived?.toxinDice ?? 0) - (rt - CO923.racialToxinDice(rt, 'toxin'));
+    // v0.92.3 (RULES.HEALTH_V923.dwarfResistance): derived.toxinDice already leaves out a dwarf's disease-only dice.
+    const inhalant = Number(this.sys.derived?.bio?.inhalantDice ?? 0) + Number(this.sys.derived?.toxinDice ?? 0);
     // v0.58.0: an air filtration system helps against smoke too.
     let filt = this.filtrationFor('inhalation');
     // v0.78.0 (RULES.BOOK_V78.toxinBioware 'power'): a tracheal filter lowers the smoke's Power instead.

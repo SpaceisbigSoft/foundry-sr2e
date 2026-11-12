@@ -340,6 +340,16 @@ describe('v0.92.3 combat: flechette (Core p. 93)', () => {
     await def.resistFromState(hit(def), 0);
     assert.equal(chat.at(-1).flags.sr2e.test.targetNumber, 2);
   });
+  test('dermal armor stops the extra level: an unarmored troll (CORE_V923.trollDermal \'body\') takes M, a human S', async () => {
+    const human = who({});
+    faces.push(...Array(30).fill(1));
+    await human.resistFromState(hit(human), 0);
+    const troll = who({ name: 'Troll', metatype: 'troll' });
+    faces.length = 0; faces.push(...Array(30).fill(1));
+    await troll.resistFromState(hit(troll), 0);
+    assert.equal(human.system.monitor.physical, 6);
+    assert.equal(troll.system.monitor.physical, 3);
+  });
 });
 
 describe('v0.92.3 combat: heavy armor and the Combat Pool (Dice Pools p. 85)', () => {

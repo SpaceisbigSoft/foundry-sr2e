@@ -93,11 +93,6 @@ export function dermalSoakDice(dermal: number, astral = false): number {
   return V().trollDermal === 'body' && !astral ? whole(dermal) : 0;
 }
 
-/** The dwarf's resistance dice for a toxin (not a disease): none in the book (disease only, Core p. 45). */
-export function racialToxinDice(dice: number, kind: 'disease' | 'toxin' | string): number {
-  if (V().dwarfResistance === 'disease' && kind !== 'disease') return 0;
-  return whole(dice);
-}
 
 /** The Karma Pool a character starts with when the creation wizard finishes (Core p. 47); null = no change. */
 export function startingPool(metatype: unknown): number | null {

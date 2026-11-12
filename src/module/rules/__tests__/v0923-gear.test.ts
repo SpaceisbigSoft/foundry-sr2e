@@ -13,9 +13,9 @@ import { cyberDamageDue } from '../armory.ts';
 import { statBlockItems, parseStatBlock } from '../statblock.ts';
 import {
   gearBook, gradedEssence, essenceKills, isDermalPlating, dermalRating, limbPairsBody, housedEssenceCost, boneLacingBook,
-  cyberReplacements, awakenedBioEssence, systemShockTn, bodyIndexHealsTn, culturedBodyCost, culturedPriceApplies,
+  cyberReplacements, awakenedBioEssence, systemShockTn, culturedBodyCost, culturedPriceApplies,
   adrenalCrashBook, bookLoad, isHeavyArmor, heavyArmorPoolPenalty, surgeryTnBook, surgeryEssenceFactor, surgeryEssenceCost,
-  surgeryTraumaLevel, systemsHit, systemDamage, gradeResistTn, systemStops,
+  systemsHit, systemDamage, gradeResistTn, systemStops,
 } from '../gear923.ts';
 
 const bio = (bioKind: string, rating: number, more: any = {}) => ({ name: bioKind, bioKind, rating, installed: true, ...more });
@@ -136,11 +136,6 @@ describe('bioware (Shadowtech)', () => {
     assert.equal(systemShockTn(5.5, 4), 0);
     assert.equal(rejectionTn(5, 4), 5);
   });
-  test('Body Index and healing: magical only; all: first aid and natural', (t) => {
-    assert.deepEqual([bodyIndexHealsTn('magical'), bodyIndexHealsTn('other')], [true, false]);
-    t.after(oldWay({ 'GEAR_V923.bioHealing': 'all' }));
-    assert.deepEqual([bodyIndexHealsTn('magical'), bodyIndexHealsTn('other')], [false, true]);
-  });
   test('cultured: Body Cost × .75, neural ware already counted; old: ×4 everywhere', (t) => {
     assert.equal(culturedBodyCost(0.8, true, 'muscleAugmentation'), 0.6);
     assert.equal(culturedBodyCost(0.8, true, 'cerebralBooster'), 0.8);
@@ -190,12 +185,6 @@ describe('surgery (Cybertechnology pp. 53–54; Core pp. 114–115; Shadowtech p
     assert.equal(surgeryEssenceCost(2, 6), 1.6);
     t.after(oldWay({ 'GEAR_V923.surgery': 'old' }));
     assert.equal(surgeryTarget('alpha', 2.3), 5);
-  });
-  test('the surgery wound by size, cyberware or bioware; old: the single table', (t) => {
-    assert.deepEqual([0, 0.3, 0.5, 1].map((p) => surgeryTraumaLevel(p, false)), ['L', 'M', 'S', 'D']);
-    assert.deepEqual([0.2, 0.5, 1.2, 2].map((p) => surgeryTraumaLevel(p, true)), ['L', 'M', 'S', 'D']);
-    t.after(oldWay({ 'GEAR_V923.surgeryTrauma': 'old' }));
-    assert.equal(surgeryTraumaLevel(0.3, false), null);
   });
 });
 

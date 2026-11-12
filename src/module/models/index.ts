@@ -42,7 +42,6 @@ import { magicPoolBase, sorceryRating } from '../rules/docs79-drones-magic.ts';
 import { poolLayers, narrowLeft, sorcerySkillOf } from '../rules/magicpool.ts';
 import { TWEAK_TARGETS, sumTweaks, isCarried } from '../rules/tweaks.ts';
 import * as U80C from '../rules/urr80-combat.ts';
-import * as C923 from '../rules/combat923.ts';
 import { astralCombatPool } from '../rules/spirits923.ts';
 import { dermalArmor, threatBook } from '../rules/core923.ts';
 import { armorTotal } from '../rules/gear.ts';
@@ -878,9 +877,9 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
     // Not on top of the Revamp's own pool rule (URR_V80.cbtArmorPool 'pool').
     const heavyPool = heavyBook && RULES.COMBAT.encumbrance.enabled && RULES.URR_V80.cbtArmorPool !== 'pool' ? heavyArmorPoolPenalty(worn.map((i: any) => ({ name: String(i.name ?? ''), ballistic: Math.max(0, Number(i.system.ballistic ?? 0) - Number(i.system.degraded ?? 0)), adds: Boolean(i.system.adds) })), totals.quickness) : 0;
     // v0.80.0 (URR_V80.cbtArmorPool 'pool', house rule for the Revamp, not in the URR): each point of ballistic armor above Quickness is a Combat Pool die less.
-    // v0.92.3 (COMBAT_V923.armorPenalty 'pool', Dice Pools p. 85): the book's heavy-armor rule.
+    // (The book's heavy-armor rule is heavyPool above, GEAR_V923.armorEncumbrance; never both.)
     // Review #6: the layered ballistic rating (the same pieces as armorRating), not the raw sum.
-    const armorPool80 = U80C.cbtArmorPoolPenalty(RULES.URR_V80.cbtArmorPool === 'pool' || C923.armorPoolBook() ? armorTotal(worn.map((i: any) => ({ ballistic: i.system.ballistic ?? 0, impact: i.system.impact ?? 0, adds: Boolean(i.system.adds), degraded: i.system.degraded ?? 0 })), 'ballistic') : 0, totals.quickness);
+    const armorPool80 = U80C.cbtArmorPoolPenalty(RULES.URR_V80.cbtArmorPool === 'pool' ? armorTotal(worn.map((i: any) => ({ ballistic: i.system.ballistic ?? 0, impact: i.system.impact ?? 0, adds: Boolean(i.system.adds), degraded: i.system.degraded ?? 0 })), 'ballistic') : 0, totals.quickness);
     if (encumbrance > 0) {
       sys.attributes.quickness.total = Math.max(0, sys.attributes.quickness.total - encumbrance);
       totals.quickness = sys.attributes.quickness.total;

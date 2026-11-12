@@ -30,7 +30,6 @@ describe('v0.92.3 sorcery: the switches', () => {
     for (const r of HOUSE_SORCERY_V923) if (r.type === 'select') assert.equal(r.choices?.[0], 'book', r.path);
     assert.equal(SORCERY_V923.ruleOfOneDrain, 2);
     assert.equal(SORCERY_V923.elementalTn, 4);
-    assert.equal(SORCERY_V923.treatTn, 8);
     assert.equal(SORCERY_V923.formulaAloneTn, 2);
     assert.equal(SORCERY_V923.weaponFocusKarma, 6);
     assert.equal(RULES.OCCULT.initiation.ordealReduction, 0.5);
@@ -126,11 +125,11 @@ describe('v0.92.3 casting (Core pp. 128–133)', () => {
     t.after(oldWay({ 'SORCERY_V923.elementalTn': 0 }));
     assert.equal(S.elementalBaseTn(), null);
   });
-  test('Treat is 8 − Essence, Heal 10 − Essence; v922 both 10', (t) => {
+  test('Treat is 8 − Essence, Heal 10 − Essence (HEALTH_V923.treatTn); v922 both 10', (t) => {
     assert.equal(healingTargetNumber(5, 4, true), 3);
     assert.equal(healingTargetNumber(5, 4, false), 5);
     assert.equal(healingTargetNumber(6, 4, true), 2);
-    t.after(oldWay({ 'SORCERY_V923.treatTn': 0 }));
+    t.after(oldWay({ 'HEALTH_V923.treatTn': 'same' }));
     assert.equal(healingTargetNumber(5, 4, true), 5);
   });
 });
@@ -327,10 +326,10 @@ describe('v0.92.3 initiation and metamagic (Grimoire pp. 37–52)', () => {
     assert.equal(geasaPenalty(geasa), 2);
     assert.deepEqual(S.brokenGeasaMods(geasa), []);
   });
-  test('Magic loss: 2D6 at or below Magic loses a point; v922 below', (t) => {
+  test('Magic loss: 2D6 at or below Magic loses a point (HEALTH_V923.magicLoss); v922 below', (t) => {
     assert.equal(magicLossOutcome(5, 5).lost, 1);
     assert.equal(magicLossOutcome(6, 5).lost, 0);
-    t.after(oldWay({ 'SORCERY_V923.magicLoss': 'v922' }));
+    t.after(oldWay({ 'HEALTH_V923.magicLoss': 'below' }));
     assert.equal(magicLossOutcome(5, 5).lost, 0);
   });
   test('a dispel that wears down the Force passes the GM change check', () => {

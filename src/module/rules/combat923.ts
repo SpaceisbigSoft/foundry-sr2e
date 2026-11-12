@@ -116,7 +116,6 @@ export function shotSpreadBook(metres: number, choke: number, power: number): { 
 
 export function tracersBook(): boolean { return is('tracers', 'book'); }
 export function reloadBook(): boolean { return is('reload', 'book'); }
-export function armorPoolBook(): boolean { return is('armorPenalty', 'pool'); }
 export function tiesBook(): boolean { return is('initiativeTies', 'book'); }
 export function meleeTargetsBook(): boolean { return is('meleeTargets', 'book'); }
 export function spreadFireBook(): boolean { return is('spreadFire', 'book'); }

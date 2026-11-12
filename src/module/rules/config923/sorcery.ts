@@ -24,7 +24,7 @@
  * - areaTargets: an area spell's dice are rolled once and counted against each target's own TN (Core p. 130) /
  *   'v922': one test against the highest (MAGIC.areaTn) target's TN.
  * - elementalTn: a ranged damaging manipulation's base TN (Core p. 130; Grimoire p. 112: 4) / 0 = the spell's own TN.
- * - treatTn: the Treat spell's TN base (TN = this − Essence; Core p. 155: 8) / 0 = the Heal base (SPELLCRAFT.healing).
+ * - (Treat 8 − Essence, Core p. 155: one switch, RULES.HEALTH_V923.treatTn.)
  *
  * Learning and design
  * - learning: learning a spell rolls Sorcery + Magical Theory vs 2 × Force (Core p. 132) / 'v922': Sorcery vs Force.
@@ -75,7 +75,7 @@
  *   penalties (Grimoire pp. 43–44) / 'v922': MAGIC_V56.centering (auto: grade points off).
  * - geasa: a broken geas doesn't take Magic away: it adds +2 TN per broken geas to non-astral magical tests
  *   (Grimoire p. 52) / 'v922': an unmet geas takes away the Magic it protects.
- * - magicLoss: the Magic loss test loses a point on 2D6 ≤ Magic (Core p. 115; Awakenings p. 99) / 'v922': below.
+ * - (The Magic loss test, 2D6 ≤ Magic, Core p. 115: one switch, RULES.HEALTH_V923.magicLoss.)
  *
  * Elementals (Core p. 141)
  * - elementalAid: an aiding elemental is an auxiliary pool of Force dice: each die used lowers what is left, the
@@ -102,7 +102,6 @@ export const SORCERY_V923 = {
   spellSituation: 'book' as 'book' | 'v922',
   areaTargets: 'book' as 'book' | 'v922',
   elementalTn: 4 as number,
-  treatTn: 8 as number,
   learning: 'book' as 'book' | 'v922',
   formulaAloneTn: 2 as number,
   design: 'book' as 'book' | 'v922',
@@ -128,7 +127,6 @@ export const SORCERY_V923 = {
   shielding: 'book' as 'book' | 'v922',
   centering: 'book' as 'book' | 'v922',
   geasa: 'book' as 'book' | 'v922',
-  magicLoss: 'book' as 'book' | 'v922',
   elementalAid: 'book' as 'book' | 'v922',
   detectionRange: 'book' as 'book' | 'v922',
   increaseReflexes: 'book' as 'book' | 'v922',
@@ -147,7 +145,6 @@ export const HOUSE_SORCERY_V923: Array<{ path: string; section: string; type: 'n
   { section: 'magicAndCritters', path: 'SORCERY_V923.spellSituation', type: 'select', choices: BV },
   { section: 'magicAndCritters', path: 'SORCERY_V923.areaTargets', type: 'select', choices: BV },
   { section: 'magicAndCritters', path: 'SORCERY_V923.elementalTn', type: 'number' },
-  { section: 'magicAndCritters', path: 'SORCERY_V923.treatTn', type: 'number' },
   { section: 'magicAndCritters', path: 'SORCERY_V923.learning', type: 'select', choices: BV },
   { section: 'magicAndCritters', path: 'SORCERY_V923.formulaAloneTn', type: 'number' },
   { section: 'magicAndCritters', path: 'SORCERY_V923.design', type: 'select', choices: BV },
@@ -169,7 +166,6 @@ export const HOUSE_SORCERY_V923: Array<{ path: string; section: string; type: 'n
   { section: 'magicAndCritters', path: 'SORCERY_V923.shielding', type: 'select', choices: BV },
   { section: 'magicAndCritters', path: 'SORCERY_V923.centering', type: 'select', choices: BV },
   { section: 'magicAndCritters', path: 'SORCERY_V923.geasa', type: 'select', choices: BV },
-  { section: 'magicAndCritters', path: 'SORCERY_V923.magicLoss', type: 'select', choices: BV },
   { section: 'magicAndCritters', path: 'SORCERY_V923.elementalAid', type: 'select', choices: BV },
   { section: 'magicAndCritters', path: 'SORCERY_V923.detectionRange', type: 'select', choices: BV },
   { section: 'magicAndCritters', path: 'SORCERY_V923.increaseReflexes', type: 'select', choices: BV },

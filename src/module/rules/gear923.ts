@@ -10,8 +10,8 @@ import { num, round2, own } from './util.ts';
 type G = typeof RULES.GEAR_V923;
 const BOOK: { [K in keyof G]: G[K] } = {
   grades: 'book', essenceZero: 'survive', dermal: 'body', limbPairs: 'body', limbHoused: 'book', boneLacing: 'book',
-  bioware: 'book', wareTables: 'book', awakenedBioware: 'essence', overBodyIndex: 'shock', bioHealing: 'magical',
-  cultured: 'book', adrenalCrash: 'book', load: 'book', armorEncumbrance: 'book', surgery: 'book', surgeryTrauma: 'book',
+  bioware: 'book', wareTables: 'book', awakenedBioware: 'essence', overBodyIndex: 'shock',
+  cultured: 'book', adrenalCrash: 'book', load: 'book', armorEncumbrance: 'book', surgery: 'book',
   cyberDamage: 'book', filtration: 'opposed',
 };
 
@@ -150,11 +150,6 @@ export function systemShockTn(used: number, max: number): number {
   return over > 0 ? Math.ceil(over) : 0;
 }
 
-/** Whether Body Index raises a healing TN of this kind ('magical' or 'natural' / first aid). */
-export function bodyIndexHealsTn(kind: 'magical' | 'other'): boolean {
-  return gearBook('bioHealing') ? kind === 'magical' : kind !== 'magical';
-}
-
 /** Neural bioware (always cultured; listed cost and Body Cost already count it; Shadowtech p. 6). */
 export const NEURAL_BIOWARE = ['cerebralBooster', 'synapticAccelerator', 'damageCompensator', 'painEditor', 'traumaDamper', 'mnemonicEnhancer', 'reflexRecorder'] as const;
 
@@ -230,14 +225,6 @@ export function surgeryEssenceFactor(successes: number): number {
 /** A cost after the surgery's change, rounded up to the hundredth. */
 export function surgeryEssenceCost(base: number, successes: number): number {
   return Math.ceil(round2(Math.max(0, num(base)) * surgeryEssenceFactor(successes) * 100 * 1000) / 1000) / 100;
-}
-
-/** The surgery wound's level by size, cyberware or bioware (null: the old table). */
-export function surgeryTraumaLevel(points: number, bioware: boolean): 'L' | 'M' | 'S' | 'D' | null {
-  if (!gearBook('surgeryTrauma')) return null;
-  const p = Math.max(0, num(points));
-  const t = bioware ? T.traumaBio : T.traumaCyber;
-  return (t.find((r) => p <= r.upTo + 1e-9) ?? t[t.length - 1]!).level;
 }
 
 // ---------------------------------------------------------------- System damage (rows 7, 17)

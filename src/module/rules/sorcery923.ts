@@ -7,7 +7,7 @@ import type { DieResult, TargetNumberModifier } from './dice.ts';
 import { t as tx, tCount } from '../helpers/i18n.ts';
 import {
   urrMagRuleOfOneDrain, urrMagSustainCapProblem, urrMagSpellForceBonus, urrMagLearnTnFactor, urrMagLearnExtraDice,
-  urrMagRitualProblem, urrMagRitualMaterials, urrMagRitualResistTn, urrMagLossHit, urrMagSiteCost,
+  urrMagRitualProblem, urrMagRitualMaterials, urrMagRitualResistTn, urrMagSiteCost,
 } from './urr80-magic.ts';
 
 const S = () => RULES.SORCERY_V923;
@@ -102,11 +102,6 @@ export function spotterDrains(): boolean {
   return Boolean(RULES.URR_V80.magSpotterDrain) || book('ritualSpotter');
 }
 
-/** The Magic loss test (Core p. 115): lost at or below the threshold (book), or below it (old). */
-export function magicLossHit(total: number, threshold: number): boolean {
-  return book('magicLoss') ? total <= threshold : urrMagLossHit(total, threshold);
-}
-
 /** Raising a site (Core pp. 123–124): library rating² × price, circle an hour per rating; null = the old cost. */
 export function siteCost(kind: string, from: number, to: number, perRating: number, daysPerRating: number): { nuyen: number; days: number } | null {
   const urr = urrMagSiteCost(kind, from, to, perRating, daysPerRating);
@@ -129,12 +124,6 @@ export function restrictedForceBonus(o: { exclusive?: boolean; fetish?: boolean;
 
 /** Whether exclusive and fetish spells still change the Drain TN (the old way only). */
 export function restrictedDrainMods(): boolean { return !book('restrictedSpells'); }
-
-/** The Treat spell's TN base, or null for the Heal base (Core p. 155: Treat 8 − Essence). */
-export function treatBase(): number | null {
-  const t = whole(S().treatTn);
-  return t > 0 ? t : null;
-}
 
 /** A ranged damaging manipulation's base TN (Core p. 130: 4), or null for the spell's own. */
 export function elementalBaseTn(): number | null {

@@ -13,7 +13,6 @@ Switches in `RULES.CORE_V923` (`rules/config923/core.ts`, pure functions in `rul
 | Dwarf modifiers | B+1 S+2 W+1 | also Q−1 (natural maximum 5) | Core p. 43, 45 | `CORE_V923.racialMods` (the Revamp's own maximum table keeps the old modifiers) |
 | Troll modifiers | B+5 Q−1 S+4 C−2 I−2 | also W−1 (natural maximum 5) | Core p. 43, 45 | `CORE_V923.racialMods` |
 | Troll dermal armor | 1 ballistic and 1 impact armor | +1 Body die on damage resistance | Core p. 45 | `CORE_V923.trollDermal` |
-| Dwarf resistance | +2 dice vs disease and toxins | +2 dice vs disease only | Core p. 45 | `CORE_V923.dwarfResistance` |
 | Troll running | × 3 | × 2 | Core p. 83 | `METATYPES.types.troll.run` 3 → 2 (the Revamp's patch sets 2 too) |
 | Native language | free at Intelligence | free at Intelligence + 2 | Core p. 46 | `CORE_V923.nativeLanguage` |
 | Street dialect | none | a Street lifestyle's dialect (City Speak, Tunnel Talk) free at half Intelligence (build check) | Core p. 46 | `CORE_V923.streetDialect` |

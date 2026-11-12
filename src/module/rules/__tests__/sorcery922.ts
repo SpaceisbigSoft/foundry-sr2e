@@ -9,7 +9,6 @@ export const SORCERY_V922: Record<string, unknown> = {
   ...Object.fromEntries(Object.entries(SORCERY_V923).filter(([, v]) => v === 'book').map(([k]) => [`SORCERY_V923.${k}`, 'v922'])),
   'SORCERY_V923.ruleOfOneDrain': 0,
   'SORCERY_V923.elementalTn': 0,
-  'SORCERY_V923.treatTn': 0,
   'SORCERY_V923.formulaAloneTn': 0,
   'SORCERY_V923.weaponFocusKarma': 0,
   'OCCULT.initiation.ordealReduction': 1,

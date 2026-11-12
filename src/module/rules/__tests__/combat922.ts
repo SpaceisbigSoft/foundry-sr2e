@@ -17,7 +17,7 @@ export function combat922(extra: Record<string, unknown> = {}): () => void {
     'COMBAT_V923.shotgun': 'old',
     'COMBAT_V923.tracers': 'old',
     'COMBAT_V923.reload': 'old',
-    'COMBAT_V923.armorPenalty': 'quickness',
+    'GEAR_V923.armorEncumbrance': 'old',
     'COMBAT_V923.initiativeTies': 'quickness',
     'COMBAT_V923.meleeVisibility': 'full',
     'COMBAT_V923.subdueTn': 0,

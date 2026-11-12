@@ -4238,7 +4238,6 @@ describe("v0.30.0 bioware depth", () => {
   });
 
   test("Body Index raises the patient's healing TNs", async (t) => {
-    t.after(oldWay({ "GEAR_V923.bioHealing": "all" })); // v0.92.3: the old way (v0.92.2); __tests__/v0923-gear.test.ts has the book's
     chat.length = 0;
     const a = person([bw("big", "Lots of bioware", { bodyIndex: 4 })]);
     await a.update({ "system.monitor.stun": 2 });
@@ -4308,8 +4307,6 @@ describe("v0.31.0 toxins, drugs, hazards, stun weapons, statuses", () => {
   });
 
   test("toxins: an Expose card, then Body + toxin dice (inhalant dice when inhaled) vs Power, staged, no armor", async (t) => {
-    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
-    t.after(oldWay({ 'CORE_V923.dwarfResistance': 'both' }));
     t.after(oldWay({"BOOK_V78.toxinBioware": "dice"})); // v0.78.0: the old rule (a house rule)
     t.after(oldWay({ 'HEALTH_V923.dwarfResistance': 'both' })); // v0.92.3: the old dwarf dice vs toxins (the book: disease only)
     chat.length = 0;

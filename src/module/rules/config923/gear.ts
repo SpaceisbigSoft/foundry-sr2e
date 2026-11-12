@@ -30,8 +30,7 @@
  *   so Magic falls through Essence. 'magic': Magic −floor(Body Index × 0.5) (the old way).
  * - overBodyIndex: 'shock' — over the Body Index the character is in system shock: +1 TN per point (or part) over
  *   on Body tests (Shadowtech p. 6). 'rejection': the old rejection test.
- * - bioHealing: 'magical' — Body Index × ½ (rounded down) is added to magical healing TNs only (Shadowtech p. 6).
- *   'all': to first aid and natural healing as well (the old way).
+ * - (Body Index on healing: one switch, RULES.HEALTH_V923.bodyIndexHealing.)
  * - cultured: 'book' — cultured bioware costs Body Cost × .75; neural bioware is always cultured and its listed cost
  *   and Body Cost already count it (Shadowtech p. 6). 'old': no Body Cost change; ×4 nuyen on neural ware too.
  * - adrenalCrash: 'book' — an adrenal pump runs 1D6 turns per level; afterwards Deadly Stun with Power = half the
@@ -44,9 +43,7 @@
  * - surgery: 'book' — installing cyberware: Biotech vs 10 − the Essence left after it (rounded down); the successes
  *   change its Essence cost by +15% (none), +10% (1), 0 (2–3), −10% (4–5) or −20% (6+) (Cybertechnology pp. 53–54);
  *   no successes still installs it. 'old': Biotech vs 4 + grade; no successes is complications.
- * - surgeryTrauma: 'book' — the optional surgery wound uses Core pp. 114–115 for cyberware (no Essence: Light; up to
- *   .4 Moderate; up to .99 Serious; 1 or more Deadly) and Shadowtech p. 5 for bioware (.25 / .75 / 1.5 / more).
- *   'old': one table for both.
+ * - (The surgery wound's size bands: one switch, RULES.HEALTH_V923.surgeryBands.)
  * - cyberDamage: 'book' — a Serious or Deadly physical wound checks for system damage: 1D6 − 4 (Serious) or − 2
  *   (Deadly) systems hit, picked at random (a repeat hits nothing); each rolls 1D6 for its damage (Moderate or worse
  *   stops it working; 7 destroyed); alpha, beta and delta ware rolls 5 dice against 5/6, 4/5, 3/4 and one success
@@ -65,13 +62,11 @@ export const GEAR_V923 = {
   wareTables: 'book' as 'book' | 'old',
   awakenedBioware: 'essence' as 'essence' | 'magic',
   overBodyIndex: 'shock' as 'shock' | 'rejection',
-  bioHealing: 'magical' as 'magical' | 'all',
   cultured: 'book' as 'book' | 'old',
   adrenalCrash: 'book' as 'book' | 'old',
   load: 'book' as 'book' | 'old',
   armorEncumbrance: 'book' as 'book' | 'old',
   surgery: 'book' as 'book' | 'old',
-  surgeryTrauma: 'book' as 'book' | 'old',
   cyberDamage: 'book' as 'book' | 'old',
   filtration: 'opposed' as 'opposed' | 'dice',
 };
@@ -98,9 +93,6 @@ export const GEAR_V923_TABLES = {
   orthoskin: [[1, 0], [1, 1], [2, 1]] as ReadonlyArray<readonly [number, number]>,
   /** Surgery (Cybertechnology pp. 53–54): Essence cost change by successes, [min successes, factor]. */
   surgeryEssence: [[6, 0.8], [4, 0.9], [2, 1], [1, 1.1], [0, 1.15]] as ReadonlyArray<readonly [number, number]>,
-  /** Surgery wounds by size: cyberware Essence (Core pp. 114–115), bioware Body Cost (Shadowtech p. 5). */
-  traumaCyber: [{ upTo: 0, level: 'L' }, { upTo: 0.4, level: 'M' }, { upTo: 0.99, level: 'S' }, { upTo: 99, level: 'D' }] as ReadonlyArray<{ upTo: number; level: 'L' | 'M' | 'S' | 'D' }>,
-  traumaBio: [{ upTo: 0.25, level: 'L' }, { upTo: 0.75, level: 'M' }, { upTo: 1.5, level: 'S' }, { upTo: 99, level: 'D' }] as ReadonlyArray<{ upTo: number; level: 'L' | 'M' | 'S' | 'D' }>,
   /** System damage (Shadowtech p. 36): 1D6 − this many systems, by wound; the die for each system → its damage. */
   systemsHitLess: { S: 4, D: 2 } as Record<string, number>,
   /** Index = the die (0–7): '' none, then L, M, S, D, 'X' destroyed. */
@@ -137,13 +129,11 @@ export const HOUSE_GEAR_V923: Array<{ path: string; section: string; type: 'numb
   { section: 'gear', path: 'GEAR_V923.wareTables', type: 'select', choices: ['book', 'old'] },
   { section: 'gear', path: 'GEAR_V923.awakenedBioware', type: 'select', choices: ['essence', 'magic'] },
   { section: 'gear', path: 'GEAR_V923.overBodyIndex', type: 'select', choices: ['shock', 'rejection'] },
-  { section: 'gear', path: 'GEAR_V923.bioHealing', type: 'select', choices: ['magical', 'all'] },
   { section: 'gear', path: 'GEAR_V923.cultured', type: 'select', choices: ['book', 'old'] },
   { section: 'gear', path: 'GEAR_V923.adrenalCrash', type: 'select', choices: ['book', 'old'] },
   { section: 'characters', path: 'GEAR_V923.load', type: 'select', choices: ['book', 'old'] },
   { section: 'characters', path: 'GEAR_V923.armorEncumbrance', type: 'select', choices: ['book', 'old'] },
   { section: 'gear', path: 'GEAR_V923.surgery', type: 'select', choices: ['book', 'old'] },
-  { section: 'gear', path: 'GEAR_V923.surgeryTrauma', type: 'select', choices: ['book', 'old'] },
   { section: 'gear', path: 'GEAR_V923.cyberDamage', type: 'select', choices: ['book', 'old'] },
   { section: 'gear', path: 'GEAR_V923.filtration', type: 'select', choices: ['opposed', 'dice'] },
 ];

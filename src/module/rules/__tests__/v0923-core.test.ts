@@ -105,17 +105,14 @@ describe('v0.92.3 core: metatypes (Core pp. 43, 45, 83)', () => {
     assert.equal(attributeMaximums('dwarf', 'quickness').natural, 5, 'and its table gives 5 (not 4)');
   });
 
-  test('troll running × 2; dermal armor as Body dice; the dwarf\'s resistance against disease only', (t) => {
+  test('troll running × 2; dermal armor as Body dice', (t) => {
     assert.equal(RULES.METATYPES.types['troll']!.run, 2);
     assert.equal(C.dermalArmor(1), 0);
     assert.equal(C.dermalSoakDice(1), 1);
     assert.equal(C.dermalSoakDice(1, true), 0, 'not astral');
-    assert.equal(C.racialToxinDice(2, 'disease'), 2);
-    assert.equal(C.racialToxinDice(2, 'toxin'), 0);
-    t.after(oldWay({ 'CORE_V923.trollDermal': 'armor', 'CORE_V923.dwarfResistance': 'both' }));
+    t.after(oldWay({ 'CORE_V923.trollDermal': 'armor' }));
     assert.equal(C.dermalArmor(1), 1);
     assert.equal(C.dermalSoakDice(1), 0);
-    assert.equal(C.racialToxinDice(2, 'toxin'), 2);
   });
 });
 

@@ -218,13 +218,8 @@ describe('v0.92.1 Carried', () => {
     assert.ok(heavy(true).system.derived.load.penalty > 0);
     assert.equal(heavy(false).system.derived.load.penalty, 0);
     const vest = (carried: boolean) => who({}, [{ id: 'ar', type: 'armor', name: 'ZZ Vest', system: { ballistic: 9, impact: 9, worn: true, carried } }]);
-    // v0.92.3 (COMBAT_V923.armorPenalty 'pool', Dice Pools p. 85): heavy armor costs Combat Pool dice, not Quickness.
-    assert.ok(vest(true).system.derived.combatPool < vest(false).system.derived.combatPool);
-    const undo = oldWay({ 'COMBAT_V923.armorPenalty': 'quickness' });
-    try {
-      assert.ok(vest(true).system.derived.encumbrance > 0);
-      assert.equal(vest(false).system.derived.encumbrance, 0);
-    } finally { undo(); }
+    assert.ok(vest(true).system.derived.encumbrance > 0);
+    assert.equal(vest(false).system.derived.encumbrance, 0);
     const a = who({}, [GUN({ carried: false, concealability: 5 }), { id: 'k', type: 'weapon', name: 'ZZ Knife', system: { melee: true, concealability: 8 } }]);
     assert.deepEqual(a.carriedItems().map((i: any) => i.name), ['ZZ Knife']);
   });

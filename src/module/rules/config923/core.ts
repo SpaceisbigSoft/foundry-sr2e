@@ -31,7 +31,7 @@
  *   CHARACTERS_V73.qualities.karmaAboveRacial (on under the Revamp) still wins when it is on.
  * - trollDermal: 'body' — the troll's dermal armor is +1 Body for Damage Resistance Tests (a die, Core p. 45). 'armor':
  *   1 ballistic and 1 impact armor (the old way).
- * - dwarfResistance: 'disease' — the dwarf's +2 Body is against disease only (Core p. 45). 'both': disease and toxins.
+ * - (The dwarf's +2 dice against disease only, Core p. 45: one switch, RULES.HEALTH_V923.dwarfResistance.)
  * - (troll running × 2, Core p. 83 Running Table: METATYPES.types.troll.run, moved 3 → 2 in place.)
  *
  * Karma
@@ -132,7 +132,6 @@ export const CORE_V923 = {
   streetDialect: 'book' as 'book' | 'off',
   aboveMax: 'double' as 'double' | 'refuse',
   trollDermal: 'body' as 'body' | 'armor',
-  dwarfResistance: 'disease' as 'disease' | 'both',
   karmaDice: 'book' as 'book' | 'off',
   afterOops: 'book' as 'book' | 'old',
   skillKarma: 'book' as 'book' | 'old',
@@ -225,7 +224,6 @@ export const HOUSE_CORE_V923: Array<{ path: string; section: string; type: 'numb
   { section: 'characters', path: 'CORE_V923.streetDialect', type: 'select', choices: ['book', 'off'] },
   { section: 'characters', path: 'CORE_V923.aboveMax', type: 'select', choices: ['double', 'refuse'] },
   { section: 'characters', path: 'CORE_V923.trollDermal', type: 'select', choices: ['body', 'armor'] },
-  { section: 'characters', path: 'CORE_V923.dwarfResistance', type: 'select', choices: ['disease', 'both'] },
   { section: 'testsAndDice', path: 'CORE_V923.karmaDice', type: 'select', choices: ['book', 'off'] },
   { section: 'testsAndDice', path: 'CORE_V923.afterOops', type: 'select', choices: ['book', 'old'] },
   { section: 'upkeep', path: 'CORE_V923.skillKarma', type: 'select', choices: ['book', 'old'] },

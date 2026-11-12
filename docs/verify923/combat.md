@@ -19,7 +19,6 @@ Revamp already had the book's procedure (`urr80-combat.ts`), the Book Rules go t
 | Shotguns | every shotgun spreads; width distance ÷ choke, −1 Power per metre | slug unless loaded with shot ('shot' ammo, flechette rules); 1 m, then 2, 4, 6… m every choke metres, −1 Power and −1 TN per widening; choke 2–10; shot: smartlink −1, no goggles or laser | Core p. 95 | `COMBAT_V923.shotgun` 'book' / 'old' |
 | Tracers | −1 per earlier burst, to −3 | full auto only, −1 per 3 rounds beyond short range, none for a smartgun user, no Power from them | Fields of Fire | `COMBAT_V923.tracers` 'book' / 'old' |
 | Cylinder / internal magazine reload | 2 rounds per action | Quickness rounds per Complex Action (break action 2) | Core p. 95 | `COMBAT_V923.reload` 'book' / 'old' |
-| Heavy armor | ballistic or impact over Quickness lowers Quickness | each Ballistic point over Quickness = −1 Combat Pool die | Dice Pools p. 85; Armor, Core p. 242 | `COMBAT_V923.armorPenalty` 'pool' / 'quickness' |
 | Initiative ties | Reaction, then Quickness | adjusted Reaction, then natural Reaction | Core p. 79 | `COMBAT_V923.initiativeTies` 'book' / 'quickness' |
 | Wounds and initiative | also a mid-turn drop | at the roll only | Core p. 112 | `INITIATIVE_WOUNDS.midTurn` true → false |
 | Delayed action | lost at the end of the pass | lasts through the Combat Turn and into the next; pool dice used while delaying break it | Core pp. 80, 84 | `DELAY.lostAtPassEnd` true → false; `COMBAT_V923.delay` 'book' / 'turn' |

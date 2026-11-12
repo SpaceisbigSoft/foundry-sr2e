@@ -20,7 +20,6 @@ sustaining is in the spirits section (`SPIRITS_V923.elementalSustain`).
 | Visibility and cover on spells | visibility on elemental spells only, no cover | visibility on every spell (`TN_AUTO.magic.environment` 'elemental' read as 'all') and partial cover; touch spells only injury | Core pp. 129–131 | `SORCERY_V923.spellSituation` |
 | Area spell test | one test vs the highest target's TN | one roll; the card rolls at the lowest target's TN and each target's Resist counts the dice against its own TN | Core p. 130 | `SORCERY_V923.areaTargets` |
 | Ranged damaging manipulation TN | the spell item's TN | base TN 4 (+ situation modifiers) | Core p. 130; Grimoire p. 112 | `SORCERY_V923.elementalTn` (4; 0 = old) |
-| Treat TN | 10 − Essence (as Heal) | 8 − Essence | Core p. 155 | `SORCERY_V923.treatTn` (8; 0 = old) |
 | Learning test | Sorcery vs Force | Sorcery + Magical Theory vs 2 × Force | Core p. 132 | `SORCERY_V923.learning` |
 | Learning from a formula with no teacher | no penalty | +2 TN | Grimoire p. 114 | `SORCERY_V923.formulaAloneTn` (2; 0 = old) |
 | Spell design test | Sorcery + site dice vs Force, Force days ÷ successes | Magical Theory (at most the library/lodge rating, + 1 die per 2 points it is higher, +50% time) vs 2 × Force − Magic + drain modifiers; base time L 6 / M 18 / S 30 / D 60 days ÷ successes | Grimoire p. 115 | `SORCERY_V923.design` |
@@ -44,7 +43,6 @@ sustaining is in the spirits section (`SPIRITS_V923.elementalSustain`).
 | Shielding | + grade dice | a shielding initiate's spell defense (and grade) dice also raise the caster's TN by as many | Grimoire p. 45 | `SORCERY_V923.shielding` |
 | Centering | automatic: grade points off penalties | always a test at the TN less the grade; every 2 successes take 1 off the penalties, no grade cap | Grimoire pp. 43–44 | `SORCERY_V923.centering` |
 | Geasa | an unmet geas takes away the Magic it protects | a broken geas adds +2 TN per geas to non-astral magical tests and to every Drain test (spells, conjuring, wards, dispelling); no Magic lost | Grimoire p. 52 | `SORCERY_V923.geasa` |
-| Magic loss test | lost on 2D6 < Magic | lost on 2D6 ≤ Magic | Core p. 115; Awakenings p. 99 | `SORCERY_V923.magicLoss` |
 | Elemental aid | + full Force every cast, a service each time | an auxiliary pool of Force dice: each die used lowers what is left; one service when it starts; at 0 it vanishes | Core p. 141 | `SORCERY_V923.elementalAid` |
 | Detection spell range | Magic × Force metres | a separate Force test vs 4 (+ injury): successes × Magic metres | Core p. 128 | `SORCERY_V923.detectionRange` |
 | Increase Reflexes and cyber | the better of spell and ware counts | no effect on anyone with cybernetic initiative dice | Core p. 155 | `SORCERY_V923.increaseReflexes` |

@@ -274,8 +274,8 @@ export function cbtChargePower(charging: boolean): number {
 
 /** Armor encumbrance on Quickness: `book` (encumbrancePenalty's), or none when armor costs Combat Pool instead. */
 export function cbtEncumbrance(book: number): number {
-  // v0.92.3 (COMBAT_V923.armorPenalty 'pool', Dice Pools p. 85): heavy armor costs Combat Pool dice, not Quickness.
-  return U().cbtArmorPool === 'pool' || C923.armorPoolBook() ? 0 : book;
+  // (The book's heavy-armor rule, GEAR_V923.armorEncumbrance, skips this call: models/index.ts.)
+  return U().cbtArmorPool === 'pool' ? 0 : book;
 }
 
 /** The Attack dialog's charging label: the TN (and the Power under the Revamp). */
@@ -288,7 +288,7 @@ export function cbtChargeLabel(): string {
 
 /** Combat Pool dice lost to worn ballistic armor above Quickness (0 the book way). */
 export function cbtArmorPoolPenalty(ballistic: number, quickness: number): number {
-  if ((U().cbtArmorPool !== 'pool' && !C923.armorPoolBook()) || !RULES.COMBAT.encumbrance.enabled) return 0;
+  if (U().cbtArmorPool !== 'pool' || !RULES.COMBAT.encumbrance.enabled) return 0;
   return Math.max(0, Math.floor(num(ballistic)) - Math.max(0, Math.floor(num(quickness))));
 }
 

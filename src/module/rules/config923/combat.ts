@@ -5,7 +5,7 @@
  *
  * These switches act under the Book Rules source only: under the "SR2E Unified Rules Revamp" source
  * (RULES.URR_V80.active) the Revamp keeps its own rules exactly as before. Where the Revamp already had the book's
- * procedure (clean miss, net staging, knockdown, scatter, shotguns, tracers, reloads, armor and the Combat Pool,
+ * procedure (clean miss, net staging, knockdown, scatter, shotguns, tracers, reloads,
  * initiative ties), the book way runs through the same code path. Pure logic: rules/combat923.ts.
  *
  * Changed in place (old → new, the GM can set them back in the house-rules window):
@@ -84,11 +84,7 @@ export const COMBAT_V923 = {
    * Core p. 95). 'old' (v0.92.2): RULES.COMBAT.reloadFeed's rounds.
    */
   reload: 'book' as 'book' | 'old',
-  /**
-   * Heavy armor. 'pool': each point of worn Ballistic armor over Quickness is one Combat Pool die less, and Quickness
-   * is not lowered (Dice Pools p. 85; Armor, Core p. 242). 'quickness' (v0.92.2): RULES.COMBAT.encumbrance lowers Quickness.
-   */
-  armorPenalty: 'pool' as 'pool' | 'quickness',
+  // Heavy armor and the Combat Pool (Core pp. 84, 242): one switch, RULES.GEAR_V923.armorEncumbrance.
   /**
    * Initiative ties. 'book': the higher adjusted Reaction, then the higher natural Reaction (then the name; the book
    * says simultaneous) (Core p. 79). 'quickness' (v0.92.2): RULES.INITIATIVE_TIES (Reaction, then Quickness).
@@ -178,7 +174,6 @@ export const HOUSE_COMBAT_V923: Array<{ path: string; section: string; type: 'nu
   { section: 'rangedCombat', path: 'COMBAT_V923.shotgun', type: 'select', choices: ['book', 'old'] },
   { section: 'rangedCombat', path: 'COMBAT_V923.tracers', type: 'select', choices: ['book', 'old'] },
   { section: 'rangedCombat', path: 'COMBAT_V923.reload', type: 'select', choices: ['book', 'old'] },
-  { section: 'gear', path: 'COMBAT_V923.armorPenalty', type: 'select', choices: ['pool', 'quickness'] },
   { section: 'initiativeAndActions', path: 'COMBAT_V923.initiativeTies', type: 'select', choices: ['book', 'quickness'] },
   { section: 'melee', path: 'COMBAT_V923.meleeVisibility', type: 'select', choices: ['half', 'full'] },
   { section: 'melee', path: 'COMBAT_V923.subdueTn', type: 'number' },
