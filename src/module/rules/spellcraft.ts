@@ -1,4 +1,5 @@
-import { magicLossHit, restrictedDrainMods, treatBase, weaponFocusKarma } from './sorcery923.ts';
+import { restrictedDrainMods, weaponFocusKarma } from './sorcery923.ts';
+import { urrMagLossHit } from './urr80-magic.ts';
 import { RULES } from './config.ts';
 import { healingSpellBase, magicLossAtOrBelow } from './health923.ts';
 import type { TargetNumberModifier } from './dice.ts';
