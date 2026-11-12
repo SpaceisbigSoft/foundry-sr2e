@@ -4994,6 +4994,9 @@
       },
       "Codex": {
         "title": "Catalogue"
+      },
+      "Interpretations": {
+        "title": "Rules interpretations"
       }
     },
     "Count": {
@@ -8025,6 +8028,9 @@
         "noHelp": "{teacher} is no help this time; the learning test can still be rolled.",
         "learnButton": "Roll the learning test: {spell}, Force {force}",
         "learnIt": "the learning test"
+      },
+      "MagicPool": {
+        "narrow": "{name} {rating}"
       }
     },
     "Privacy": {
@@ -9008,7 +9014,10 @@
         "FORMULA_V918__foreignTn": "The other tradition: learning TN + (VERIFY)",
         "FORMULA_V918__foreignTime": "The other tradition: study time × (VERIFY)",
         "FORMULA_V918__teacher": "Teachers: a character who knows the spell gives their Instruction successes (up to their Sorcery) as learning dice (on, VERIFY) or no teachers (off)",
-        "FORMULA_V918__feePerForce": "A teacher no player plays: fee per point of Force (VERIFY)"
+        "FORMULA_V918__feePerForce": "A teacher no player plays: fee per point of Force (VERIFY)",
+        "MAGIC_V920__poolLayers": "The Spell Pool in layers: Sorcery's rating for any magical action, the concentration's and specialization's extra dice only inside them (layered, the creator's interpretation) or one pool of Sorcery's rating (flat, the old way)",
+        "MAGIC_V920__castNarrow": "A casting or dispelling test inside Sorcery's concentration or specialization rolls its rating (on) or always Sorcery's rating (off, the old way)",
+        "MAGIC_V920__drainNarrow": "The narrow Spell Pool dice left may pay for that casting's Drain (on) or Drain takes general dice only (off)"
       }
     },
     "Rules": {
@@ -14936,6 +14945,10 @@
       "Formula": {
         "learnNeedsFormula": "Out of creation a character needs a formula they hold (the scroll on a row buys one), a teacher or the group's grimoire.",
         "rowHint": "The scroll on a spell's row buys its formula."
+      },
+      "MagicPool": {
+        "layer": "{name}: {left} of {total}",
+        "layersTitle": "Narrow Spell Pool dice, only for actions inside them: {layers}"
       }
     },
     "Text": {
@@ -17467,6 +17480,16 @@
             "i4": "<strong>The other tradition</strong>: a shamanic formula or teacher for a hermetic magician (or the reverse) works, but the learning test's TN is higher and the study takes longer."
           },
           "b3": "The GM can switch every part of this off, or change its numbers, in the house rules (Magic and critters). All the numbers are the creator's interpretation, marked VERIFY until checked against the books."
+        },
+        "interpretations": {
+          "title": "Rules interpretations (†)",
+          "b1": "Where the rules as written leave something unclear, the system uses the creator's reading and marks it with a small <strong>†</strong>: beside a value (the narrow Spell Pool dice on the strip) or as a line at the foot of a chat card. Hover a † for a one-line summary; click it to open <strong>Rules interpretations</strong> at that entry.",
+          "b2": {
+            "i1": "Each entry says what the rules leave unclear, how the system resolves it, and the sources.",
+            "i2": "Each names the house rule that changes it; the GM can open the house rules from there.",
+            "i3": "The whole list opens from the SR2e tools window (Rules interpretations)."
+          },
+          "b3": "They are interpretations, not rulings: the GM's call always wins."
         }
       }
     },
@@ -17582,6 +17605,10 @@
       "catalogue": {
         "label": "Catalogue",
         "hint": "Browse everything you can get, with a page for each (what your shop shows)"
+      },
+      "interpretations": {
+        "label": "Rules interpretations",
+        "hint": "Every place the rules as written leave something unclear and the system uses the creator's reading, with the sources and the house rule to change it."
       }
     },
     "SceneBuilder": {
@@ -17941,6 +17968,107 @@
       "matrix-grid": {
         "label": "Matrix grid",
         "hint": "The open grid: a lattice of datalines with distant host icons. No walls."
+      }
+    },
+    "Interp": {
+      "markLabel": "Rules interpretation: {title}",
+      "lineHead": "Interpretation:",
+      "intro": "Where the rules as written leave something unclear, the system uses the creator's reading. A † beside a value or on a chat card marks one; each is listed here with what is unclear, how it is resolved, the sources, and the house rule that changes it. All are open to the GM's call.",
+      "windowHint": "Every interpretation the system uses, with its sources and house rule.",
+      "gap": "What the rules leave unclear",
+      "resolution": "How the system resolves it",
+      "sources": "Sources",
+      "switch": "House rule",
+      "openHouseRules": "Open the house rules",
+      "Area": {
+        "magic": "Magic",
+        "street": "Gear and the street"
+      },
+      "List": {
+        "magicPoolLayers": {
+          "title": "The layered Magic Pool",
+          "summary": "Sorcery's concentration and specialization add Spell Pool dice usable only inside them.",
+          "gap": "The pool is sized by Sorcery, but the rules don't say what a concentration or specialization does to it.",
+          "resolution": "The pool comes in layers: Sorcery's rating for any magical action, then the concentration's extra dice only for actions inside it, then the specialization's only inside that. A test can use up to the rating it rolls; the Magic cap per test still holds; narrow dice are spent first.",
+          "sources": "SR2 Core pp. 70, 84–85; Awakenings p. 95; the Companion's split Karma Pools as precedent."
+        },
+        "narrowCasting": {
+          "title": "Casting with a concentration or specialization",
+          "summary": "A spell inside Sorcery's concentration or specialization rolls that rating.",
+          "gap": "Other skills roll a concentration's or specialization's rating when it applies; the casting rules only name Sorcery.",
+          "resolution": "A casting or dispelling test inside the concentration or specialization rolls its rating, matched by name: a spell category, the spell's own name, or words such as Spellcasting, Spell Defense or Dispelling.",
+          "sources": "SR2 Core p. 70 (concentrations and specializations), pp. 84–85 (casting)."
+        },
+        "narrowDrain": {
+          "title": "Narrow dice for Drain",
+          "summary": "The narrow Spell Pool dice left may pay for that casting's Drain.",
+          "gap": "Spell Pool dice can go to the Drain test; with narrow dice it isn't said whether they may.",
+          "resolution": "Drain from a casting inside the concentration or specialization may use the narrow dice still left, then general dice.",
+          "sources": "SR2 Core pp. 84–85; the owner's decision."
+        },
+        "formulaRequired": {
+          "title": "Learning needs a formula",
+          "summary": "Out of creation a new spell is learned from a formula, a teacher, the grimoire or a design.",
+          "gap": "How a character comes by a spell's formula after creation isn't laid out step by step.",
+          "resolution": "A player character out of creation learns a new spell only from a formula they hold (at that Force or more), a teacher, their group's grimoire or their own design; raising a Force needs a formula of the new Force.",
+          "sources": "SR2 Core (learning spells); Grimoire."
+        },
+        "formulaPrice": {
+          "title": "A formula's price and Availability",
+          "summary": "Force × ¥500 (combat × 2), Availability Force / 7 days: placeholders.",
+          "gap": "The numbers weren't checked against the book.",
+          "resolution": "Placeholder numbers the GM can change; marked VERIFY.",
+          "sources": "To check: SR2 Core, Grimoire."
+        },
+        "teacher": {
+          "title": "Learning from a teacher",
+          "summary": "A teacher's Instruction successes, up to their Sorcery, add dice to the learning test.",
+          "gap": "How much a teacher helps a spell's learning test isn't given as a number.",
+          "resolution": "The teacher rolls Instruction (the training rule's skill and TN); the successes, up to their Sorcery, are extra dice for the student's own learning test; a teacher no player plays charges a fee per point of Force.",
+          "sources": "SR2 Core (instruction and training); the owner's decision."
+        },
+        "otherTradition": {
+          "title": "The other tradition's formula",
+          "summary": "A formula or teacher of the other tradition works, but the test is harder and slower.",
+          "gap": "How hard it is to learn from a hermetic formula as a shaman (or the reverse) isn't given as a number.",
+          "resolution": "The learning TN + 2 and the study time × 2 (placeholders, VERIFY).",
+          "sources": "Grimoire; the owner's decision."
+        },
+        "findRetry": {
+          "title": "Trying a failed find again",
+          "summary": "A find that fails can be tried again once its base time has passed.",
+          "gap": "When a failed Availability test may be rolled again isn't said clearly.",
+          "resolution": "Again after the item's base Availability time.",
+          "sources": "SR2 Core (Availability); VERIFY."
+        },
+        "legalityFind": {
+          "title": "Legality when finding",
+          "summary": "Restricted +2, Forbidden +4 to the find's TN, Forbidden twice the time.",
+          "gap": "SR2's legality codes don't say how they change finding something.",
+          "resolution": "Found openly, legality adds to the TN and the time (placeholders, VERIFY); a contact halves the row, a fixer drops it.",
+          "sources": "SR2 Core (legality); the owner's decision."
+        },
+        "permits": {
+          "title": "Permits",
+          "summary": "A permit costs a share of the item's price and a wait.",
+          "gap": "The cost and time of a permit aren't given.",
+          "resolution": "10% of the cost (at least ¥100; Restricted 25%, at least ¥500), 7 days (Restricted 30); placeholders, VERIFY.",
+          "sources": "SR2 Core (legality); the creator's call."
+        },
+        "contactHelp": {
+          "title": "A contact helping a find",
+          "summary": "A contact helps as in legwork: closer contacts add dice, the contact can roll too.",
+          "gap": "How a contact helps buying isn't laid out.",
+          "resolution": "As legwork: a buddy +1 die, a friend for life +2, paid dice up to Loyalty, a favour +2 and no fee, the contact's own dice with the better result counting.",
+          "sources": "SR2 Core (contacts, legwork); the owner's decision."
+        },
+        "fixer": {
+          "title": "A fixer's find",
+          "summary": "A fixer finds it with their own dice for a 10% cut and ×1.5 time.",
+          "gap": "What a fixer charges and how long it takes isn't given.",
+          "resolution": "The fixer's dice (or 2 per level), legality not counted, a 10% cut on the price, ×1.5 time, no haggling; a favour waives the cut. Placeholders, VERIFY.",
+          "sources": "SR2 Core (fixers); the owner's decision."
+        }
       }
     }
   },

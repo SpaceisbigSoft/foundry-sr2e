@@ -625,6 +625,10 @@ export const HOUSE_RULES: HouseRuleDef[] = [
   { section: "magicAndCritters", path: "FORMULA_V918.foreignTime", type: "number", step: 0.25 },
   { section: "magicAndCritters", path: "FORMULA_V918.teacher", type: "select", choices: ["on", "off"] },
   { section: "magicAndCritters", path: "FORMULA_V918.feePerForce", type: "number" },
+  // v0.92.0: the layered Magic Pool (RULES.MAGIC_V920); the first choice is the new way, the other the old one.
+  { section: "magicAndCritters", path: "MAGIC_V920.poolLayers", type: "select", choices: ["layered", "flat"] },
+  { section: "magicAndCritters", path: "MAGIC_V920.castNarrow", type: "select", choices: ["on", "off"] },
+  { section: "magicAndCritters", path: "MAGIC_V920.drainNarrow", type: "select", choices: ["on", "off"] },
   { section: "timeToGetThings", path: "WAITING.areas.magic", type: "boolean" },
   { section: "timeToGetThings", path: "WAITING.areas.gear", type: "boolean" },
   { section: "timeToGetThings", path: "WAITING.areas.repairs", type: "boolean" },

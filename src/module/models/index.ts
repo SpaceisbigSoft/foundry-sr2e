@@ -36,6 +36,7 @@ import { programsOverMpcp, mpcpProgramWarnings, mpcpCapsOn, programRunRating } f
 import { urrMagAstralModeFor, urrMagAdeptFoci } from '../rules/urr80-magic.ts';
 import { bleedEveryText } from '../rules/urr80-health-social.ts';
 import { magicPoolBase, sorceryRating } from '../rules/docs79-drones-magic.ts';
+import { poolLayers, narrowLeft, sorcerySkillOf } from '../rules/magicpool.ts';
 import * as U80C from '../rules/urr80-combat.ts';
 import { armorTotal } from '../rules/gear.ts';
 import { FEEDS } from '../rules/tactics.ts';
@@ -365,6 +366,9 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
         control: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
         // v0.78.0: an encephalon's Task Pool (RULES.BOOK_V78.encephalon).
         task: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
+        // v0.92.0: the Spell Pool's narrow layers spent (RULES.MAGIC_V920.poolLayers; rules/magicpool.ts).
+        spellConc: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
+        spellSpec: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
       }),
       /** Rigging: the vehicle this character drives (or is jumped into). The vehicle holds the mode too. */
       rigging: new fields.SchemaField({
@@ -842,6 +846,14 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
       // v0.58.0: Notoriety comes off it (RULES.CHARACTERS_V58.notoriety).
       streetCred: streetCred({ career: sys.karma?.career ?? 0, manual: sys.reputation?.streetCred ?? 0, notoriety: sys.reputation?.notoriety ?? 0 }),
       spellPoolLeft: Math.max(0, spellPool - sys.poolSpent.spell - (sys.spellDefense ?? 0)),
+      // v0.92.0 (RULES.MAGIC_V920.poolLayers): the Spell Pool's narrow layers (Sorcery's concentration and
+      // specialization; rules/magicpool.ts), for a Sorcery-sized pool only.
+      spellLayers: (() => {
+        const sk: any = poolMagic > 0 && !adeptPool && RULES.DOCS_V79.magicPool.size === 'sorcery' ? sorcerySkillOf((this as any).parent?.items) : null;
+        const l = poolLayers(sk?.system ?? null);
+        const left = narrowLeft(l, { conc: sys.poolSpent.spellConc, spec: sys.poolSpent.spellSpec });
+        return { ...l, concLeft: left.conc, specLeft: left.spec };
+      })(),
       karmaPoolLeft: Math.max(0, (sys.karma?.pool ?? 0) - (sys.karma?.poolSpent ?? 0)),
       // Damage compensators ignore the first boxes on each track (v0.30.0).
       // v0.72.0 (O20): 'neither' (MAGIC_V72.astralWounds): a projecting magician's wounds count on nothing (strip, tests, Initiative agree).

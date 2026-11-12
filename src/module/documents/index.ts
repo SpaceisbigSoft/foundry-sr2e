@@ -131,10 +131,12 @@ import { mountedRecoil, sensorGunneryByMode, vehicleRepairByMode } from '../rule
 import { clearFlag, clearFlagUpdate, dropFlagKeys, replaceFlag } from '../helpers/flags.ts';
 export { initiativeFormula };
 import { approvalNeeded, fileRequest, inCreation, approvalContext, queueOn } from '../applications/approvals.ts';
+import { interpLine, interpsForSnapshot, interpsForFind } from '../rules/interpretations.ts';
+import { sorceryUse, sorcerySkillOf, layersOn, narrowCastingOn, narrowRating, poolForUse, spendPlan, drainNarrowOn, type SorceryUse, type SorceryAction } from '../rules/magicpool.ts';
 import { formulasRequired, raiseNeedsFormula, teachersOn, bestFormula, learnerTradition, isForeign, foreignAdjust, formulaForce, isFormula, teacherDice, teacherFee, canTeach, formulaSpellData } from '../rules/formulas.ts';
 import { needsApproval } from '../rules/advancement.ts';
 import { resolveShopKey, shopListPrice, buyShopLine, safeMakeOwnedVehicle, recordVehicleOrder, takeVehicleOrder } from '../applications/shop.ts';
-import { legalityId, legalFindTimeFactor, legalWarning, permitPlan, permitSource } from '../rules/legalbuy.ts';
+import { legalityId, legalFindMods, legalFindTimeFactor, legalWarning, permitPlan, permitSource } from '../rules/legalbuy.ts';
 import { throughOn, throughPlan, throughLegalMods, throughTimeFactor, throughSuccesses, throughSuffix, fixerFeeOf, contactLevelTnMods, type FindThrough, type ThroughMode } from '../rules/fixers.ts';
 import { logProjectDone } from '../applications/advancement.ts';
 import { gearStackKey } from '../rules/catalogue.ts';
@@ -432,6 +434,8 @@ export type PoolKind = 'combat' | 'spell' | 'hacking' | 'control' | 'task';
 
 export interface TestOptions {
   label?: string;
+  /** v0.92.0 (RULES.MAGIC_V920.poolLayers): the Spell Pool's narrow layers this action falls inside. */
+  spellUse?: SorceryUse;
   targetNumber?: number;
   /** Dice to add from a dice pool (capped at what is left). */
   poolDice?: number;
@@ -1142,6 +1146,8 @@ export interface TestSnapshot {
   /** v0.56.0 learn: learning (or raising) a spell; Karma paid and the spell written once. */
   learn?: { name: string; force: number; cost: number; spellId?: string; system?: Record<string, unknown>; from?: string; applied?: boolean; projectId?: string; foreign?: boolean; extraDice?: number };
   /** v0.91.8: a teacher's Instruction test for a student's spell (RULES.FORMULA_V918.teacher); `used` once learned from. */
+  /** v0.92.0: a cast inside Sorcery's narrow layers (the card's interpretations line). */
+  narrow?: { layers: boolean; rating: boolean };
   teach?: { studentUuid: string; teacherUuid: string; spell: string; force: number; spellId?: string; system?: Record<string, unknown>; teacherName: string; sorcery: number; foreign: boolean; fee: number };
   /** v0.56.0 ward: raising a ward by ritual; the barrier actor once made. */
   ward?: { force: number; name: string; team: number; nuyen: number; barrierUuid?: string; pending?: boolean; projectId?: string };
@@ -2550,7 +2556,10 @@ export class SR2Actor extends Actor {
     context: Partial<TestSnapshot> & { kind: TestSnapshot['kind'] } = { kind: 'plain' },
   ): Promise<SuccessTestResult> {
     const pool = opts.pool ?? 'combat';
-    const poolDice = Math.max(0, Math.min(opts.poolDice ?? 0, (this.sys.derived?.[`${pool}PoolLeft`] as number | undefined) ?? 0));
+    // v0.92.0: a Spell Pool spend inside Sorcery's concentration or specialization may take their narrow dice too.
+    const narrowSpend = pool === 'spell' && opts.spellUse && (opts.spellUse.conc || opts.spellUse.spec) ? opts.spellUse : null;
+    const poolMax = narrowSpend ? this.spellPoolFor(narrowSpend) : ((this.sys.derived?.[`${pool}PoolLeft`] as number | undefined) ?? 0);
+    const poolDice = Math.max(0, Math.min(opts.poolDice ?? 0, poolMax));
     // v0.80.0 (RULES.URR_V80.coreKarmaDice): extra dice bought from the Karma Pool, one point a die (0 in the book).
     const karmaDice = urrCoreKarmaDice(opts.karmaDice, Number(this.sys.derived?.karmaPoolLeft ?? 0));
     if (karmaDice > 0) {
@@ -2573,7 +2582,8 @@ export class SR2Actor extends Actor {
       try { await clearFlag(this, 'centered'); } catch { /* not saved */ }
     }
     // v0.78.0: the Task Pool refreshes each Combat Turn, so outside combat it isn't used up.
-    if (poolDice > 0 && !(pool === 'task' && !(game as any).combat?.started)) await this.#spendPool(pool, poolDice);
+    if (poolDice > 0 && narrowSpend) await this.#spendSpellPool(poolDice, narrowSpend);
+    else if (poolDice > 0 && !(pool === 'task' && !(game as any).combat?.started)) await this.#spendPool(pool, poolDice);
     await this.#post(this.#snapshot(label, result, context), result, rolls);
     return result;
   }
@@ -3276,7 +3286,8 @@ export class SR2Actor extends Actor {
     const { html, flags, snap } = await this.#resolve(SR2Actor.#cleanSnapshot(snapIn), fu);
     const data = {
       speaker: ChatMessage.getSpeaker({ actor: this }),
-      content: outcomeBanner(snap, html) + describeResult(`${snap.label}${note}`, result) + html + this.#karmaButtons(snap),
+      // v0.92.0: the rules interpretations the card rests on, as a line of † links.
+      content: outcomeBanner(snap, html) + describeResult(`${snap.label}${note}`, result) + html + interpLine(interpsForSnapshot(snap, RULES)) + this.#karmaButtons(snap),
       rolls,
       flags: { [SYSTEM_ID]: { ...flags, test: snap } },
       ...(snap.privateTo?.length ? { whisper: snap.privateTo } : {}),
@@ -4222,8 +4233,12 @@ export class SR2Actor extends Actor {
       const thr = SR2Actor.#findThrough(c);
       const theirs = thr.mode === 'help' && second?.result ? describeResult(second.label, second.result) : '';
       const fav = d.favNote ? `<p>${escText(String(d.favNote).replace(/<[^>]*>/g, ''))}</p>` : '';
-      const feeLine = thr.mode === 'fixer' && thr.fee > 0 ? `<p class="hint">${tx('SR2E.Card.Through.feeIncluded', { contactName: escText(thr.name), fee: thr.fee.toLocaleString() })}</p>` : '';
-      return `${head}${theirs}${fav}${hours != null ? `<p>${tx('SR2E.Card.Actor.foundIn')} <strong>${escText(hoursLabel(hours))}</strong>.</p>${legalLine}${feeLine}${SR2Actor.#buyButtons(Number(d.price ?? 0), thr.mode !== 'fixer')}` : `<p><strong>${tx('SR2E.Card.Actor.notFound')}</strong> ${tx('SR2E.Card.Actor.thisTimeTryAgainAfter', { hoursLabel: escText(hoursLabel(Number(d.avHours ?? 0))) })}</p>`}`;
+      const feeLine = thr.mode === 'fixer' && thr.fee > 0 ? `<p class="hint">${tx('SR2E.Card.Through.feeIncluded', { contactName: escText(thr.name), fee: thr.fee.toLocaleString() })}</p>`
+        // v0.92.0: the interpretations the find rests on (legality counted, a contact's help, a fixer).
+        : '';
+      // Review (N9): one line, with the retry rule on a card that found nothing.
+      const interp = interpLine(interpsForFind({ legalityCounts: legalFindMods(d.legality).length > 0, through: thr.mode, retried: hours == null && RULES.SHOP_V91.retry === 'wait' }));
+      return `${head}${theirs}${fav}${hours != null ? `<p>${tx('SR2E.Card.Actor.foundIn')} <strong>${escText(hoursLabel(hours))}</strong>.</p>${legalLine}${feeLine}${SR2Actor.#buyButtons(Number(d.price ?? 0), thr.mode !== 'fixer')}` : `<p><strong>${tx('SR2E.Card.Actor.notFound')}</strong> ${tx('SR2E.Card.Actor.thisTimeTryAgainAfter', { hoursLabel: escText(hoursLabel(Number(d.avHours ?? 0))) })}</p>`}${interp}`;
     }
     if (c.kind === 'legwork') {
       const total = contactDigSuccesses(first.result.successes, second?.result ? second.result.successes : null);
@@ -9343,6 +9358,41 @@ export class SR2Actor extends Actor {
   }
 
   /**
+   * v0.92.0 (RULES.MAGIC_V920): which of Sorcery's narrow layers (concentration, specialization) a magical action falls
+   * inside. With both switches back to the old way, none.
+   */
+  sorceryUseFor(action: SorceryAction, o: { category?: string; spellName?: string; skill?: any } = {}): SorceryUse {
+    if (!layersOn() && !narrowCastingOn()) return { conc: false, spec: false };
+    // Review (N11): the skill the test rolls when the caller has it, else the highest Sorcery.
+    return sorceryUse((o.skill ?? sorcerySkillOf([...this.items] as any[]))?.system ?? null, action, o);
+  }
+
+  /** v0.92.0: the Spell Pool dice a casting's Drain may take (the narrow layers only with RULES.MAGIC_V920.drainNarrow). */
+  drainPoolFor(use: SorceryUse | null | undefined): number {
+    return drainNarrowOn() ? this.spellPoolFor(use) : Number(this.sys.derived?.spellPoolLeft ?? 0);
+  }
+
+  /** v0.92.0: the Spell Pool dice an action may use: the general dice left plus the narrow layers it falls inside. */
+  spellPoolFor(use: SorceryUse | null | undefined): number {
+    const d: any = this.sys.derived ?? {};
+    const l = d.spellLayers ?? { concLeft: 0, specLeft: 0 };
+    return poolForUse(Number(d.spellPoolLeft ?? 0), { conc: Number(l.concLeft ?? 0), spec: Number(l.specLeft ?? 0) }, use ?? { conc: false, spec: false });
+  }
+
+  /** v0.92.0: spend Spell Pool dice for an action: the specialization's first, then the concentration's, then general. */
+  async #spendSpellPool(dice: number, use: SorceryUse): Promise<void> {
+    const d: any = this.sys.derived ?? {};
+    const l = d.spellLayers ?? { concLeft: 0, specLeft: 0 };
+    const p = spendPlan(dice, Number(d.spellPoolLeft ?? 0), { conc: Number(l.concLeft ?? 0), spec: Number(l.specLeft ?? 0) }, use);
+    const ps: any = this.sys.poolSpent ?? {};
+    await this.update({
+      'system.poolSpent.spell': Number(ps.spell ?? 0) + p.general,
+      'system.poolSpent.spellConc': Number(ps.spellConc ?? 0) + p.conc,
+      'system.poolSpent.spellSpec': Number(ps.spellSpec ?? 0) + p.spec,
+    });
+  }
+
+  /**
    * Cast a spell: a Sorcery test with Spell Pool dice. Against a combat spell the TN is the
    * target's resisting attribute; otherwise it is the spell's own TN. Drain is resolved
    * straight afterwards. A combat spell that scores successes against a target carries a
@@ -9382,8 +9432,12 @@ export class SR2Actor extends Actor {
     }
     if (opts.anchor) return this.#anchorSpell(spell, opts.force ?? sp.learnedForce, opts.anchor.trigger);
     const sorcery = this.findSkill('Sorcery');
+    // v0.92.0 (RULES.MAGIC_V920): inside Sorcery's concentration or specialization the test rolls its rating, and the
+    // Spell Pool's narrow layers may pay for the test and its Drain.
+    const castUse = this.sorceryUseFor(opts.ritual ? 'ritual' : 'cast', { category: sp.category, spellName: spell.name, skill: sorcery });
+    const castRating = narrowRating(sorcery?.system ?? null, castUse);
     // v0.72.0 (O18): a spirit (Force) or a critter's innate spell (Magic, else Essence) casts without a Sorcery skill (MAGIC_V72.innateSpells).
-    const caster = innateSpellDice({ actorType: this.type, sorceryRating: Number(sorcery?.system?.rating ?? 0), spellInnate: Boolean(sp.innate),
+    const caster = innateSpellDice({ actorType: this.type, sorceryRating: castRating, spellInnate: Boolean(sp.innate),
       spiritKind: String(this.sys.spiritKind ?? ''), force: Number(this.sys.force ?? 0), magic: Number(this.sys.derived?.magic ?? 0),
       essence: Number(this.sys.derived?.essence ?? this.sys.essence ?? 0), intelligence: Number(this.sys.attributes?.intelligence?.total ?? 0) });
     if (!caster) {
@@ -9629,6 +9683,8 @@ export class SR2Actor extends Actor {
     const focus = sorceryFocusDice(this.foci(), { name: spell.name, category: sp.category });
     const totem = totemDice(this.tradition, this.sys.totem, sp.category);
     const extra = bonusNote(focus, totem);
+    // v0.92.0: say which narrow rating the test rolls.
+    if (sorcery && castRating > Number(sorcery.system?.rating ?? 0)) extra.note += ` [${tx('SR2E.Card.MagicPool.narrow', { name: castUse.spec ? sorcery.system.specialization : sorcery.system.concentration, rating: castRating })}]`;
     const env = totemEnvironmentDice(this.tradition, this.sys.totem, this.environmentHere());
     if (env.dice) {
       extra.dice += env.dice;
@@ -9646,12 +9702,15 @@ export class SR2Actor extends Actor {
       // v0.80.0 (RULES.URR_V80.magCastDice 'force', URR): the spell's Force instead of Sorcery.
       Math.max(0, urrMagCastingDice({ dice: caster.dice, force, innate: caster.innate }) + extra.dice + teamDice + aidDice),
       // v0.79.0 (RULES.DOCS_V79.magicPool.castingCap 'magic', SR2 p85): at most Magic-rating Spell Pool dice on the success test.
-      { targetNumber, poolDice: castingPoolDice(opts.poolDice ?? 0, Number(this.sys.derived?.magic ?? 0)), pool: 'spell', magical: true, sightHandled: true,
+      { targetNumber, poolDice: castingPoolDice(opts.poolDice ?? 0, Number(this.sys.derived?.magic ?? 0)), pool: 'spell', spellUse: castUse, magical: true, sightHandled: true,
         modifiers: [...(touch ? [] : this.#spellEnvironment(elemental, targets[0] ?? vehicles[0]?.actor ?? null)), ...(combat || elemental || resistAttribute ? SR2Actor.attackedMods(targets) : []),
           ...(barrierTn ? [{ label: tx('SR2E.Card.Mod.across', { barrierName: barrier.name }), value: barrierTn }] : [])],
         ...(opts.exclude?.length ? { exclude: opts.exclude } : {}) },
       {
         kind: elemental ? 'attack' : heals ? 'heal' : 'spell',
+        // v0.92.0: which interpretations the cast rests on (its card's † line).
+        // Review (N13): the layers this cast falls inside, not any layer.
+        ...(castUse.conc || castUse.spec ? { narrow: { layers: layersOn() && ((castUse.conc && Number(this.sys.derived?.spellLayers?.conc ?? 0) > 0) || (castUse.spec && Number(this.sys.derived?.spellLayers?.spec ?? 0) > 0)), rating: castRating > Number(sorcery?.system?.rating ?? 0) } } : {}),
         ...(attackTargets.length === 1 ? { attack: attackTargets[0] } : {}),
         ...(attackTargets.length > 1 ? { attackTargets } : {}),
         ...(healContext ? { heal: healContext } : {}),
@@ -9672,7 +9731,7 @@ export class SR2Actor extends Actor {
     const drainLevel = heals && sp.healDrain === 'wound' && healContext ? healDrainLevel(healContext.before, sp.drainLevel) : undefined;
     // v0.80.0 (RULES.URR_V80.magRuleOfOneDrain, URR): a disaster on the casting adds to the caster's drain TN.
     const ownDrainMods = [...drainMods, ...urrMagRuleOfOneDrain(Boolean((result as any)?.botch))];
-    if (!caster.innate || innateDrains()) await this.#resistDrain(spell, drainForce, opts.drainPoolDice ?? 0, team.length ? [...ownDrainMods, ...(RULES.RITUAL.leaderDrainMod ? [{ id: 'ritualLeader', label: tx('SR2E.Card.Mod.ritualLeader'), value: RULES.RITUAL.leaderDrainMod }] : [])] : ownDrainMods, tx('SR2E.Card.Actor.drain'), drainLevel);
+    if (!caster.innate || innateDrains()) await this.#resistDrain(spell, drainForce, opts.drainPoolDice ?? 0, team.length ? [...ownDrainMods, ...(RULES.RITUAL.leaderDrainMod ? [{ id: 'ritualLeader', label: tx('SR2E.Card.Mod.ritualLeader'), value: RULES.RITUAL.leaderDrainMod }] : [])] : ownDrainMods, tx('SR2E.Card.Actor.drain'), drainLevel, castUse);
     // Every ritual team member resists the drain too.
     const memberHow = tx('SR2E.Card.Actor.willpowerVsTnDrain', { value: drainTargetNumber(drainForce, sp.drainModifier) + drainMods.reduce((n, x) => n + Number(x.value ?? 0), 0), spDrainLevel: sp.drainLevel });
     for (const m of team) if (typeof m.ritualDrain === 'function') await this.#memberDrain(m, tx('SR2E.Card.Actor.force', { spellName: spell.name, drainForce }), () => m.ritualDrain(spell, drainForce, drainMods), memberHow);
@@ -10608,6 +10667,7 @@ export class SR2Actor extends Actor {
       ?? aspectRestriction(this.tradition, 'cast', { aspectElement: this.sys.aspectElement, category: sp.category, spellElement: sp.element, totem: this.sys.totem });
     if (blocked) { ui.notifications?.warn?.(`${escHtml(this.name)}: ${escHtml(blocked)}`); return null; }
     const sorcery = this.findSkill('Sorcery');
+    const objUse = this.sorceryUseFor('cast', { category: sp.category, spellName: spell.name, skill: sorcery });
     if (!sorcery || sorcery.system.rating <= 0 || (this.sys.derived.magic as number) <= 0) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.cannotCastSpells', { name: escHtml(this.name) })); return null; }
     if (sp.fetish && opts.fetishInHand === false) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.isFetishLimitedNeedsTheFetish', { spellName: escHtml(spell.name), name: escHtml(this.name) })); return null; }
     // The action is spent only once the cast can go ahead.
@@ -10623,13 +10683,16 @@ export class SR2Actor extends Actor {
     const focus = sorceryFocusDice(this.foci(), { name: spell.name, category: sp.category });
     const totem = totemDice(this.tradition, this.sys.totem, sp.category);
     const extra = bonusNote(focus, totem);
+    // v0.92.0: say which narrow rating the test rolls.
+    if (narrowRating(sorcery.system, objUse) > Number(sorcery.system?.rating ?? 0)) extra.note += ` [${tx('SR2E.Card.MagicPool.narrow', { name: objUse.spec ? sorcery.system.specialization : sorcery.system.concentration, rating: narrowRating(sorcery.system, objUse) })}]`;
     const env = totemEnvironmentDice(this.tradition, this.sys.totem, this.environmentHere());
     if (env.dice) { extra.dice += env.dice; extra.note = extra.note ? extra.note.replace(/\]$/, `, ${env.note}]`) : ` [${env.note}]`; }
     // Through the usual pipeline: magical modifiers (background count, centering), Spell Pool, Karma; a sustained spell stays up.
     const result = await this.#runTest(tx('SR2E.Card.Actor.forceAtTn', { spellName: spell.name, force, part: wall ? tx('SR2E.Card.Actor.aWall') : tx('SR2E.Card.Actor.aObject', { kindLabel }), tn, extraNote: extra.note }),
       // v0.80.0 (RULES.URR_V80.magCastDice 'force', URR).
-      Math.max(0, urrMagCastingDice({ dice: sorcery.system.rating, force }) + extra.dice),
-      { targetNumber: tn, poolDice: castingPoolDice(opts.poolDice ?? 0, Number(this.sys.derived?.magic ?? 0)), pool: 'spell', magical: true, modifiers: [...this.blindMods('spell'), ...(opts.modifiers ?? [])] },
+      // v0.92.0 (RULES.MAGIC_V920): inside Sorcery's concentration or specialization, its rating.
+      Math.max(0, urrMagCastingDice({ dice: narrowRating(sorcery.system, objUse), force }) + extra.dice),
+      { targetNumber: tn, poolDice: castingPoolDice(opts.poolDice ?? 0, Number(this.sys.derived?.magic ?? 0)), pool: 'spell', spellUse: objUse, magical: true, modifiers: [...this.blindMods('spell'), ...(opts.modifiers ?? [])] },
       { kind: 'spell', ...(sp.duration === 'sustained' ? { sustain: { spellName: spell.name, force, category: sp.category, focusId: '' } } : {}) });
     await this.leaveSignature('spell', spell.name, force);
     if (wall && result.successes > 0) {
@@ -10641,12 +10704,12 @@ export class SR2Actor extends Actor {
         flags: { [SYSTEM_ID]: { spellWall: { wallUuid: wall.uuid, power, label: `${spell.name} on a wall` } } } });
     }
     // v0.80.0 (RULES.URR_V80.magRuleOfOneDrain, URR): drain at the normal Force, +2 on a disaster.
-    await this.#resistDrain(spell, drainForce, opts.drainPoolDice ?? 0, [...spellOptionDrainMods({ exclusive: sp.exclusive, fetish: sp.fetish }), ...urrMagRuleOfOneDrain(Boolean((result as any)?.botch))]);
+    await this.#resistDrain(spell, drainForce, opts.drainPoolDice ?? 0, [...spellOptionDrainMods({ exclusive: sp.exclusive, fetish: sp.fetish }), ...urrMagRuleOfOneDrain(Boolean((result as any)?.botch))], tx('SR2E.Card.Actor.drain'), undefined, objUse);
     return result;
   }
 
   /** Drain: Willpower (plus Spell Pool dice) vs floor(Force/2) + modifier; 2 successes stage it down a level. */
-  async #resistDrain(spell: any, force: number, poolDice: number, modifiers: TargetNumberModifier[] = [], label = 'Drain', levelOverride?: DamageLevel): Promise<void> {
+  async #resistDrain(spell: any, force: number, poolDice: number, modifiers: TargetNumberModifier[] = [], label = 'Drain', levelOverride?: DamageLevel, use?: SorceryUse): Promise<void> {
     const sp = spell.system;
     const baseDrain80 = drainDamageType(force, Number(this.sys.derived.drainMagic ?? this.sys.derived.magic ?? 0) || (this.type === 'npc' && spell?.system?.innate ? Math.floor(Number(this.sys.derived?.essence ?? this.sys.essence ?? 0)) : 0));
     const drainType80 = urrMagAstralDrainType(baseDrain80, this.sys.derived?.astralMode);
@@ -10662,6 +10725,8 @@ export class SR2Actor extends Actor {
       ...(drainType80 === 'physical' && baseDrain80 !== 'physical' ? { physicalNote: tx('SR2E.Card.Actor.castWhileProjectingPhysical') } : {}),
       poolDice,
       modifiers,
+      // v0.92.0 (RULES.MAGIC_V920.drainNarrow): the narrow dice left may pay for this casting's Drain.
+      ...(use && drainNarrowOn() ? { spellUse: use } : {}),
     });
   }
 
@@ -10678,8 +10743,11 @@ export class SR2Actor extends Actor {
     extraNote?: string;
     /** v0.48.0: a hazard, not magic: no background count. v0.81.0 (D2-5): implied by `noun: 'damage'` (hazards, shocks). */
     noBackground?: boolean;
+    /** v0.92.0: the casting's narrow layers (its Drain may take their dice). */
+    spellUse?: SorceryUse;
   }): Promise<void> {
-    const pool = Math.max(0, Math.min(o.poolDice, this.sys.derived.spellPoolLeft as number));
+    const narrow = o.spellUse && (o.spellUse.conc || o.spellUse.spec) ? o.spellUse : null;
+    const pool = Math.max(0, Math.min(o.poolDice, narrow ? this.spellPoolFor(narrow) : this.sys.derived.spellPoolLeft as number));
     const rolls: any[] = [];
     const bgi = this.backgroundInfo();
     const bg = o.noBackground || o.noun === 'damage' ? [] : RULES.SPELLCRAFT.backgroundCount.affectsDrain || (bgi.toxic && RULES.MAGIC_V39.background.toxicAffectsDrain)
@@ -10691,7 +10759,8 @@ export class SR2Actor extends Actor {
       modifiers: [...(o.modifiers ?? []), ...bg],
       roll: foundryRoller(rolls),
     });
-    if (pool > 0) await this.#spendPool('spell', pool);
+    if (pool > 0 && narrow) await this.#spendSpellPool(pool, narrow);
+    else if (pool > 0) await this.#spendPool('spell', pool);
     await this.#post(this.#snapshot(tx('SR2E.Card.Actor.tn5', { label: o.label, level: o.level, targetNumber: o.targetNumber, part: o.extraDice ? ` [${o.extraNote ?? tx('SR2E.Card.Actor.dice5', { extraDice: o.extraDice })}]` : '', part2: o.type === 'physical' ? (o.physicalNote ?? tx('SR2E.Card.Actor.forceOverMagicPhysical')) : '' }), result, {
       kind: 'soak',
       soak: { mode: 'stage', noun: o.noun ?? 'drain', level: o.level, type: o.type, body: this.sys.attributes.body.total, before: this.#monitor() },
@@ -11070,7 +11139,7 @@ export class SR2Actor extends Actor {
         // v0.56.0: a nature spirit stays only until the next sunrise or sunset (RULES.MAGIC_V56.natureSpirits).
         departsAt: c.spiritKind === 'nature' && RULES.MAGIC_V56.natureSpirits.departs === 'dawnDusk' ? nextDawnOrDusk(Number((game as any).time?.worldTime ?? 0)).at : -1,
         monitor: { physical: 0, stun: 0 },
-        poolSpent: { combat: 0, spell: 0 },
+        poolSpent: { combat: 0, spell: 0, spellConc: 0, spellSpec: 0 },
       },
     };
   }
@@ -11845,11 +11914,18 @@ export class SR2Actor extends Actor {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.thatSpellIsNoLongerBeing'));
       return null;
     }
+    // Review (R7): the dispelled spell's category and name count for a Dispelling specialization.
+    const dispelUse = this.sorceryUseFor('dispel', { category: entry.category, spellName: entry.spellName, skill: sorcery });
     const extra = bonusNote(sorceryFocusDice(this.foci(), { name: entry.spellName, category: entry.category }), 0);
+    const dispelRating = narrowRating(sorcery.system, dispelUse);
+    // Review (B3): the card says which narrow rating it rolls, and carries its interpretations.
+    if (dispelRating > Number(sorcery.system?.rating ?? 0)) extra.note += ` [${tx('SR2E.Card.MagicPool.narrow', { name: dispelUse.spec ? sorcery.system.specialization : sorcery.system.concentration, rating: dispelRating })}]`;
     const result = await this.#runTest(tx('SR2E.Card.Actor.dispelOnTnForce', { entrySpellName: entry.spellName, targetName: target.name, entryForce: entry.force, extraNote: extra.note }),
-      Math.max(0, sorcery.system.rating + extra.dice),
-      { targetNumber: entry.force, poolDice: opts.poolDice ?? 0, pool: 'spell', magical: true },
-      { kind: 'dispel', dispel: { targetUuid: target.uuid, targetName: target.name, spellName: entry.spellName, force: entry.force, successesBefore: entry.successes ?? 1 } });
+      // v0.92.0 (RULES.MAGIC_V920): a Dispelling concentration or specialization rolls its rating and its narrow dice.
+      Math.max(0, dispelRating + extra.dice),
+      { targetNumber: entry.force, poolDice: opts.poolDice ?? 0, pool: 'spell', spellUse: dispelUse, magical: true },
+      { kind: 'dispel', dispel: { targetUuid: target.uuid, targetName: target.name, spellName: entry.spellName, force: entry.force, successesBefore: entry.successes ?? 1 },
+        ...(dispelUse.conc || dispelUse.spec ? { narrow: { layers: layersOn() && ((dispelUse.conc && Number(this.sys.derived?.spellLayers?.conc ?? 0) > 0) || (dispelUse.spec && Number(this.sys.derived?.spellLayers?.spec ?? 0) > 0)), rating: dispelRating > Number(sorcery.system?.rating ?? 0) } } : {}) });
     await this.leaveSignature('dispelling', tx('SR2E.Text.Actor.dispelling', { name: entry.spellName }), entry.force);
     await this.#drainTest({
       label: tx('SR2E.Card.Actor.dispellingDrain'), attribute: 'willpower',
@@ -11857,7 +11933,8 @@ export class SR2Actor extends Actor {
       level: RULES.MAGIC.dispelDrainLevel as DamageLevel,
       type: drainDamageType(entry.force, Number(this.sys.derived.drainMagic ?? this.sys.derived.magic ?? 0)),
       // v0.72.0 (O16): Spell Pool dice go to dispelling drain as to casting drain (MAGIC_V72.dispelDrainPool).
-      poolDice: dispelDrainPoolDice(opts.drainPoolDice ?? 0, Number(this.sys.derived.spellPoolLeft ?? 0)),
+      poolDice: dispelDrainPoolDice(opts.drainPoolDice ?? 0, this.spellPoolFor(drainNarrowOn() ? dispelUse : null)),
+      ...(drainNarrowOn() ? { spellUse: dispelUse } : {}),
     });
     return result;
   }
@@ -19091,7 +19168,7 @@ export class SR2Actor extends Actor {
   /** Refresh pools at the start of a Combat Turn. */
   async refreshPools(): Promise<void> {
     if (!this.sys.poolSpent) return;
-    await this.update({ 'system.poolSpent.combat': 0, 'system.poolSpent.spell': 0, 'system.poolSpent.hacking': 0, 'system.poolSpent.control': 0, 'system.poolSpent.task': 0, 'system.spellDefense': 0 });
+    await this.update({ 'system.poolSpent.combat': 0, 'system.poolSpent.spell': 0, 'system.poolSpent.spellConc': 0, 'system.poolSpent.spellSpec': 0, 'system.poolSpent.hacking': 0, 'system.poolSpent.control': 0, 'system.poolSpent.task': 0, 'system.spellDefense': 0 });
   }
 }
 

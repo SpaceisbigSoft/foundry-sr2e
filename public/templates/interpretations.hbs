@@ -1,0 +1,19 @@
+<section class="sr2e-interp-body">
+  <p class="hint">{{sr2eT "SR2E.Interp.intro"}}</p>
+  <div class="sr2e-interp-list">
+    {{#each areas}}
+    <h3 data-help="interpretations" data-heading="Interpretations area">{{label}}</h3>
+    {{#each entries}}
+    <details class="sr2e-interp-entry" data-interp-id="{{id}}"{{#if open}} open{{/if}}>
+      <summary><strong>† {{title}}</strong> <span class="hint">{{summary}}</span></summary>
+      <dl>
+        <dt>{{sr2eT "SR2E.Interp.gap"}}</dt><dd>{{gap}}</dd>
+        <dt>{{sr2eT "SR2E.Interp.resolution"}}</dt><dd>{{resolution}}</dd>
+        <dt>{{sr2eT "SR2E.Interp.sources"}}</dt><dd>{{sources}}</dd>
+        <dt>{{sr2eT "SR2E.Interp.switch"}}</dt><dd><code>{{rule}}</code> = <code>{{value}}</code>{{#if ../../isGM}} <button type="button" data-action="interpHouseRules"><i class="fa-solid fa-scale-balanced" aria-hidden="true"></i> {{sr2eT "SR2E.Interp.openHouseRules"}}</button>{{/if}}</dd>
+      </dl>
+    </details>
+    {{/each}}
+    {{/each}}
+  </div>
+</section>

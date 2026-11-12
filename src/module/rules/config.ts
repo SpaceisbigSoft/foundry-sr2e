@@ -14,6 +14,7 @@ import { DRONES_V73 } from './config73/drones.ts';
 import { CHARACTERS_V73 } from './config73/characters.ts';
 import { BOOK_V78 } from './config78.ts';
 import { SHOP_V91, SHOP_V915, SHOP_V916, FORMULA_V918 } from './config91.ts';
+import { MAGIC_V920 } from './config92.ts';
 import { DOCS_V79 } from './config79.ts';
 import { URR_V80 } from './config80.ts';
 
@@ -3299,6 +3300,8 @@ export const RULES = {
   SHOP_V916,
   /** v0.91.8: spell formulas (house-rule switches; rules/config91.ts). */
   FORMULA_V918,
+  /** v0.92.0: the layered Magic Pool and Sorcery's narrow uses (house-rule switches; rules/config92.ts). */
+  MAGIC_V920,
 } as const;
 
 export type RangeBand = keyof typeof RULES.RANGE_TN;

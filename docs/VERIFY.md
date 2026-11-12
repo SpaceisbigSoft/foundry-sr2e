@@ -1826,3 +1826,13 @@ Switches in `RULES.FORMULA_V918` (`rules/config91.ts`); the first choice is the 
 | A formula's Availability | TN = Force (at least 2) / **7 days**; Street Index **1**; no legality | `FORMULA_V918.tnPerForce`, `.availDays`, `.streetIndex` |
 | The other tradition | A shamanic formula or teacher for a hermetic magician (or the reverse): learning TN **+2**, study time **×2** | `FORMULA_V918.foreign`, `.foreignTn`, `.foreignTime` |
 | A teacher | Knows the spell at the Force or more; rolls Instruction (Charisma default) against TN **4** (the training rule's); the successes, up to the teacher's Sorcery, are extra dice for the student's learning test; a teacher no player plays charges Force × **¥100** | `FORMULA_V918.teacher`, `.feePerForce`, `CHARACTERS_V58.training.instructionSkill`, `.instructionTn` |
+
+## The layered Magic Pool (v0.92.0), the owner's decisions
+
+Switches in `RULES.MAGIC_V920` (`rules/config92.ts`); the first choice is the new way. An interpretation of SR2 Core pp. 70, 84–85 and Awakenings p. 95, with the Companion's split Karma Pools as precedent; listed in the Rules interpretations window.
+
+| Rule | What the system does | Where |
+|---|---|---|
+| The pool in layers | Sorcery's rating for any magical action; the concentration's extra dice (its rating − Sorcery's) only inside it; the specialization's (its rating − the concentration's, or Sorcery's) only inside that; narrow dice spent first; the Magic cap per test holds | `MAGIC_V920.poolLayers` |
+| Casting inside a narrow use | A casting or dispelling test rolls the concentration's or specialization's rating, matched by name (a spell category, the spell's name, or Spellcasting / Spell Defense / Dispelling / Ritual) | `MAGIC_V920.castNarrow` |
+| Drain | The narrow dice left may pay for that casting's Drain | `MAGIC_V920.drainNarrow` |

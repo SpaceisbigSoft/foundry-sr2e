@@ -881,7 +881,7 @@ export class SR2GmPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     const who = new Map<string, any>();
     for (const a of groupActors('party')) who.set(a.uuid, a);
     for (const c of [...(((game as any).combat?.combatants) ?? [])]) if (c.actor?.system?.poolSpent) who.set(c.actor.uuid, c.actor);
-    for (const a of who.values()) { await a.update({ 'system.poolSpent.combat': 0, 'system.poolSpent.spell': 0, 'system.poolSpent.hacking': 0, 'system.poolSpent.control': 0, 'system.poolSpent.task': 0 }); n++; }
+    for (const a of who.values()) { await a.update({ 'system.poolSpent.combat': 0, 'system.poolSpent.spell': 0, 'system.poolSpent.spellConc': 0, 'system.poolSpent.spellSpec': 0, 'system.poolSpent.hacking': 0, 'system.poolSpent.control': 0, 'system.poolSpent.task': 0 }); n++; }
     ui.notifications.info(tx('SR2E.Notify.Ui.refreshedTheCombatSpellHackingAnd', { n: tCount(n, 'SR2E.Count.character') }));
   }
 

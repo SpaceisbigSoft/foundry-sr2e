@@ -16,6 +16,7 @@ import { inCreation } from './approvals.ts';
 import { askFindThrough } from './through.ts';
 import { resolveShopKey } from './shop.ts';
 import { escHtml } from '../rules/html.ts';
+import { interpMark } from '../rules/interpretations.ts';
 import { t as tx } from '../helpers/i18n.ts';
 
 /** The Force and tradition part of the buy dialog (exported for the tests). */
@@ -25,7 +26,7 @@ export function buyFormulaForm(o: { spell: string; category: string; force: numb
   return `<p>${tx('SR2E.Dialog.Formula.buyIntro', { spell: escHtml(o.spell) })}</p>
     <div class="form-group"><label>${tx('SR2E.Dialog.Formula.force')}</label><input name="force" type="number" value="${formulaForce(o.force)}" min="1" max="12"></div>
     <div class="form-group"><label>${tx('SR2E.Dialog.Formula.tradition')}</label><select name="tradition">${opt('hermetic', tx('SR2E.Text.Formula.hermetic'))}${opt('shamanic', tx('SR2E.Text.Formula.shamanic'))}</select></div>
-    <p class="hint">${tx('SR2E.Dialog.Formula.buyHint', { price: formulaPrice(o.category, 1).toLocaleString(), avail: formulaAvailability(1) })}</p>`;
+    <p class="hint">${tx('SR2E.Dialog.Formula.buyHint', { price: formulaPrice(o.category, 1).toLocaleString(), avail: formulaAvailability(1) })}${interpMark('formulaPrice')}</p>`;
 }
 
 /**

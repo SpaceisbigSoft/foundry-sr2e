@@ -101,6 +101,8 @@ export const GUIDE_TOPICS: GuideTopic[] = [
   topic('spells', 'both', ['Spells'], ['p', 'p', 'p', 'p', 'p']),
   // v0.91.8: spell formulas, teachers and the other tradition (RULES.FORMULA_V918); the formula's sheet heading names it (data-help).
   topic('spell-formulas', 'both', [], ['p', 4, 'p']),
+  // v0.92.0: the rules interpretations (†).
+  topic('interpretations', 'both', [], ['p', 3, 'p']),
   topic('powers', 'both', ['Powers'], ['p', 'p']),
   // ---------------------------------------------------------------- Matrix and Rigging tabs
   topic('matrix', 'both', ['Matrix', 'Cyberdecks', 'Programs', 'Frames and agents', 'Downloaded data'], ['p', 10, 'p', 'p']),
@@ -157,7 +159,7 @@ const category = (id: string, audience: GuideCategory['audience'], topics: strin
   ({ id, audience, topics, get label() { return tKey(`SR2E.Guide.Category.${guideKeyPart(id)}`); } });
 
 export const GUIDE_CATEGORIES: GuideCategory[] = [
-  category('start', 'players', ['getting-started', 'tools', 'rules-v079', 'rules-urr', 'sheet-tools', 'summary-bar', 'layouts', 'look', 'shortcuts', 'printing', 'credits']),
+  category('start', 'players', ['getting-started', 'tools', 'rules-v079', 'rules-urr', 'sheet-tools', 'summary-bar', 'layouts', 'look', 'shortcuts', 'printing', 'interpretations', 'credits']),
   category('rolls', 'players', ['rolling', 'targeting', 'chat-cards', 'karma-pool', 'pools', 'inline-tests']),
   category('character', 'players', ['attributes', 'condition-monitor', 'skills', 'skill-picker', 'current-tab', 'effects', 'health', 'contacts', 'bio', 'token-art']),
   category('gear', 'players', ['weapons', 'cyberware', 'gear', 'item-sheet', 'money', 'adding', 'catalogue', 'new-entry']),

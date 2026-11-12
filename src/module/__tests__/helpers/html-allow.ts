@@ -106,6 +106,7 @@ export const OPEN: Record<string, Record<string, string>> = {
 /** Handlebars triple-stashes, keyed `<file> | <expression>`, each with its reason. */
 const ENRICHED = 'rich text from richtext.ts enrichFields: cleanRichHtml before and after enrichHTML (v0.81.1 design 7; SEC2b-4).';
 export const HBS_ALLOWED: Record<string, string> = {
+  'public/templates/status-strip.hbs | narrowMark': 'v0.92.0: interpMark(\'magicPoolLayers\') from rules/interpretations.ts: a fixed id, its language texts escaped with escHtml.',
   'public/templates/actor-barrier-sheet.hbs | enriched.notes': ENRICHED,
   'public/templates/actor-character-sheet.hbs | enriched.biography': ENRICHED,
   'public/templates/actor-character-sheet.hbs | enriched.notes': ENRICHED,
