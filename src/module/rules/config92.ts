@@ -16,3 +16,24 @@ export const MAGIC_V920 = {
   castNarrow: 'on' as 'on' | 'off',
   drainNarrow: 'on' as 'on' | 'off',
 };
+
+/**
+ * v0.92.1 rule values (the flexible record sheet; the owner's choices, 2 and 12 Nov 2026). Read through RULES.SHEET_V921.
+ * The first choice of each switch is the new way (the default), the other puts the old behaviour back.
+ * - tweaks: 'on' — the custom tweaks on items (rules/tweaks.ts) count. 'off': they are kept but ignored.
+ * - carried: 'on' — a weapon, armor or gear not ticked Carried has no weight, isn't found by a search and can't be used,
+ *   drawn or worn. 'off': the tick is ignored (everything counts as carried, the old way).
+ * - accessories: 'auto' — a weapon's description is read for accessories when it arrives or its description changes
+ *   (rules/accessories.ts); only fields still at their default are filled. 'off': never read.
+ * - wizard: 'advise' — the creation wizard warns (a metatype or magic the priorities don't pay for, an attribute above the
+ *   creation maximum, gear over the budget) but never refuses. 'block': the old way (choices greyed out, clamped, refused).
+ * - ratingLock: 'queue' — after creation a player may type a higher rating (a warning says it skipped Spend Karma) unless
+ *   the GM's approval queue is on; then the lock holds. 'always': the old lock, queue or not.
+ */
+export const SHEET_V921 = {
+  tweaks: 'on' as 'on' | 'off',
+  carried: 'on' as 'on' | 'off',
+  accessories: 'auto' as 'auto' | 'off',
+  wizard: 'advise' as 'advise' | 'block',
+  ratingLock: 'queue' as 'queue' | 'always',
+};

@@ -84,16 +84,18 @@ export function effectRows(actor: any): EffectRow[] {
   // Matrix and rigging (beyond the state icons).
   if (actor?.isJackedIn?.() && !states.some((s) => s.state === 'jackedIn')) rows.push({ group: 'Matrix and rigging', name: tx('SR2E.App.Effects.jackedIn'), detail: '', until: '' });
   if (sys.rigging?.jumpedIn && !states.some((s) => s.state === 'jumpedIn')) rows.push({ group: 'Matrix and rigging', name: tx('SR2E.App.Effects.jumpedIn'), detail: '', until: '' });
+  // v0.92.1: the custom tweaks on items that count now (rules/tweaks.ts).
+  for (const t of ((d.tweaks?.list ?? []) as any[]).filter((x: any) => x?.active)) rows.push({ group: 'Tweaks', name: String(t.label || t.text), detail: t.label ? `${t.text} · ${t.itemName}` : String(t.itemName ?? ''), until: '' });
   return rows;
 }
 
 /** The view's context: groups of rows, for the template. */
 export function effectsContext(actor: any): { groups: Array<{ name: string; heading: string; rows: EffectRow[] }>; empty: boolean } {
   const rows = effectRows(actor);
-  const order = ['Condition', 'Statuses', 'Combat', 'Magic', 'Health', 'Matrix and rigging'];
+  const order = ['Condition', 'Statuses', 'Combat', 'Magic', 'Health', 'Matrix and rigging', 'Tweaks'];
   // v0.89.6: the groups are ids; their names are shown in the user's language.
   const label = (g: string): string => g === 'Condition' ? tx('SR2E.App.Effects.condition') : g === 'Statuses' ? tx('SR2E.App.Effects.statuses') : g === 'Combat' ? tx('SR2E.App.Effects.combat')
-    : g === 'Magic' ? tx('SR2E.App.Effects.magic') : g === 'Health' ? tx('SR2E.App.Effects.health') : tx('SR2E.App.Effects.matrixAndRigging');
+    : g === 'Magic' ? tx('SR2E.App.Effects.magic') : g === 'Health' ? tx('SR2E.App.Effects.health') : g === 'Tweaks' ? tx('SR2E.App.Effects.customTweaks') : tx('SR2E.App.Effects.matrixAndRigging');
   // `heading` (the English group id) is the heading's data-heading: the icon and fold key, the same in every language
   const groups = order.map((name) => ({ name: label(name), heading: name, rows: rows.filter((r) => r.group === name) })).filter((g) => g.rows.length);
   return { groups, empty: !rows.length };

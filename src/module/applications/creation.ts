@@ -202,7 +202,9 @@ export class SR2CreationWizard extends HandlebarsApplicationMixin(ApplicationV2)
       metatypes: metatypeChoices(pr.race, mtypes).map((m) => ({ ...m, selected: m.key === String(sys.metatype ?? 'human'),
         mods: Object.entries(mtypes[m.key]?.mods ?? {}).map(([k, v]) => `${cap(k)} ${Number(v) > 0 ? '+' : ''}${v}`).join(', ') || 'no modifiers' })),
       // Attributes
-      attributes: ATTRIBUTE_KEYS.map((k) => ({ key: k, label: cap(k), base: Number(sys.attributes?.[k]?.base ?? 1), racial: Number(sys.attributes?.[k]?.racial ?? 0), natural: Number(sys.attributes?.[k]?.natural ?? 0) })),
+      attributes: ATTRIBUTE_KEYS.map((k) => ({ key: k, label: cap(k), base: Number(sys.attributes?.[k]?.base ?? 1), racial: Number(sys.attributes?.[k]?.racial ?? 0), natural: Number(sys.attributes?.[k]?.natural ?? 0), over: Number(sys.attributes?.[k]?.base ?? 1) > RULES.CREATION.attributeMax })),
+      // v0.92.1 (RULES.SHEET_V921.wizard): 'advise' warns (the build check's rows) but never refuses; 'block' is the old way.
+      blocks: RULES.SHEET_V921.wizard === 'block',
       attributeMax: RULES.CREATION.attributeMax,
       points: attributePoints(Object.fromEntries(ATTRIBUTE_KEYS.map((k) => [k, Number(sys.attributes?.[k]?.base ?? 0)])), pr.attributes),
       // Magic
@@ -277,7 +279,8 @@ export class SR2CreationWizard extends HandlebarsApplicationMixin(ApplicationV2)
       case 'metatype': await a.update({ 'system.metatype': v }); break;
       case 'attribute': {
         const k = el.dataset['key']!;
-        await a.update({ [`system.attributes.${k}.base`]: Math.max(1, Math.min(RULES.CREATION.attributeMax, n)) });
+        // v0.92.1 (RULES.SHEET_V921.wizard 'advise'): above the creation maximum is allowed (the build check warns).
+        await a.update({ [`system.attributes.${k}.base`]: Math.max(1, RULES.SHEET_V921.wizard === 'block' ? Math.min(RULES.CREATION.attributeMax, n) : n) });
         break;
       }
       case 'magicKind': {

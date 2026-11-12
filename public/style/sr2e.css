@@ -1490,3 +1490,30 @@ li.chat-message.sr2e-card.sr2e-card-note .message-content { font-size: 0.92em; }
 .application.sr2e-look.sr2e-interp-window .sr2e-interp-entry > summary { cursor: pointer; }
 .application.sr2e-look.sr2e-interp-window .sr2e-interp-entry dt { font-weight: bold; margin-top: 0.35rem; }
 .application.sr2e-look.sr2e-interp-window .sr2e-interp-entry dd { margin: 0.1rem 0 0 0.8rem; }
+
+/* v0.92.1: the flexible record sheet: Carried, custom tweaks, the description's accessories, the reference pane. */
+.application.sr2e-look .sr2e-items li.sr2e-left-behind > a[data-action="editItem"], .application.sr2e-look .sr2e-items li.sr2e-left-behind > span { color: var(--sr2e-muted); font-style: italic; }
+.application.sr2e-look a.sr2e-carried { cursor: pointer; color: var(--sr2e-muted); }
+.application.sr2e-look a.sr2e-carried.off { color: var(--sr2e-danger); }
+.application.sr2e-look a.sr2e-carried:hover, .application.sr2e-look a.sr2e-carried:focus-visible { color: var(--sr2e-accent); }
+.application.sr2e-look .sr2e-tweaks { list-style: none; margin: 0.2rem 0; padding: 0; }
+.application.sr2e-look .sr2e-tweaks .sr2e-tweak { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; margin: 0.15rem 0; }
+.application.sr2e-look .sr2e-tweaks .sr2e-tweak.sr2e-dim { color: var(--sr2e-muted); }
+.application.sr2e-look .sr2e-tweaks .sr2e-tweak-label { flex: 1 1 9rem; min-width: 7rem; }
+.application.sr2e-look .sr2e-tweaks select, .application.sr2e-look .sr2e-tweaks input[type="text"]:not(.sr2e-tweak-label) { flex: 0 1 auto; max-width: 10rem; }
+.application.sr2e-look .sr2e-tweaks input.sr2e-num { width: 3.5em; }
+.application.sr2e-look .sr2e-from-description { align-items: center; gap: 0.4rem; }
+.application.sr2e-look .sr2e-grade-essence { font-size: 0.85em; }
+.application.sr2e-look.sr2e-reference .window-content { padding: 0.4rem 0.5rem; }
+.application.sr2e-look.sr2e-reference .sr2e-ref-body { display: flex; flex-direction: column; height: 100%; min-height: 0; gap: 0.3rem; }
+.application.sr2e-look.sr2e-reference .sr2e-ref-search { width: 100%; }
+.application.sr2e-look.sr2e-reference .sr2e-ref-kinds { display: flex; flex-wrap: wrap; gap: 0.25rem; align-items: center; }
+.application.sr2e-look.sr2e-reference .sr2e-ref-kind { padding: 0.1rem 0.45rem; border-radius: 4px; font-size: 0.8rem; cursor: pointer; border: 1px solid color-mix(in srgb, currentColor 22%, transparent); }
+.application.sr2e-look.sr2e-reference .sr2e-ref-kind.active { background: color-mix(in srgb, var(--sr2e-accent) 22%, transparent); color: var(--sr2e-accent); }
+.application.sr2e-look.sr2e-reference .sr2e-ref-reload { margin-left: auto; cursor: pointer; }
+.application.sr2e-look.sr2e-reference .sr2e-ref-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; min-height: 0; }
+.application.sr2e-look.sr2e-reference .sr2e-ref-row > a { display: grid; grid-template-columns: 1.2rem 1fr; column-gap: 0.3rem; padding: 0.25rem 0.2rem; border-bottom: 1px solid color-mix(in srgb, currentColor 10%, transparent); cursor: pointer; }
+.application.sr2e-look.sr2e-reference .sr2e-ref-row[draggable="true"] > a { cursor: grab; }
+.application.sr2e-look.sr2e-reference .sr2e-ref-row > a > i { grid-row: span 2; align-self: center; color: var(--sr2e-muted); }
+.application.sr2e-look.sr2e-reference .sr2e-ref-name { font-weight: 600; }
+.application.sr2e-look.sr2e-reference .sr2e-ref-detail { font-size: 0.78rem; color: var(--sr2e-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

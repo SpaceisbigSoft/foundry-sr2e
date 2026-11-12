@@ -13,7 +13,7 @@
   <div class="sr2e-col-block">
     <h3 class="sr2e-col-head" data-heading="Weapons"><i class="fa-solid fa-gun"></i> {{sr2eT "SR2E.UI.weapons"}}</h3>
     <ul class="sr2e-col-list">
-      {{#each weapons}}
+      {{#each weapons}}{{#unless leftBehind}}
       <li class="{{#unless system.ready}}sr2e-col-holstered{{/unless}}">
         <span class="sr2e-col-name" title="{{name}}">{{name}}</span>
         <span class="sr2e-col-detail">{{damageLabel}}{{#if system.ammoMax}} · <b>{{system.ammo}}/{{system.ammoMax}}</b>{{/if}}{{#if system.jammed}} · <strong class="sr2e-warn">{{sr2eT "SR2E.UI.jammed"}}</strong>{{/if}}</span>
@@ -24,7 +24,7 @@
           {{#unless system.ready}}<a data-action="drawWeapon" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.holsteredDrawIt"}}"><i class="fa-solid fa-hand"></i></a>{{/unless}}
         </span>
       </li>
-      {{/each}}
+      {{/unless}}{{/each}}
       <li><span class="sr2e-col-name">{{sr2eT "SR2E.UI.unarmed"}}</span><span class="sr2e-col-detail">{{unarmed.damageLabel}} {{unarmed.damageType}}</span><span class="sr2e-col-acts"><button type="button" data-action="attackWeapon" data-item-id="unarmed">{{sr2eT "SR2E.UI.attack"}}</button></span></li>
     </ul>
   </div>

@@ -243,6 +243,8 @@ export const GEAR_STACK_FIELDS: readonly string[] = [
   'identity.kind', 'identity.rating', 'identity.fake', 'identity.covers',
   // v0.91.8: a spell formula (two formulas of different spells, Forces or traditions never stack).
   'formula.spell', 'formula.force', 'formula.tradition', 'formula.category',
+  // v0.92.1: carried or left behind, and custom tweaks (a piece left behind or tweaked is its own).
+  'carried', 'tweaks',
 ];
 
 /**
@@ -253,6 +255,7 @@ export const GEAR_STACK_DEFAULTS: Readonly<Record<string, unknown>> = {
   'toxin.vector': 'injection', 'toxin.power': 6, 'toxin.level': 'M', 'toxin.damageType': 'physical', 'toxin.speed': 'immediate',
   'toxin.extra.movementFactor': 1, 'toxin.addictionType': 'mental', 'toxin.incubationHours': 24, 'toxin.intervalHours': 24,
   'explosive.perMetre': 1, 'simchip.minutes': 10, 'tools.level': 'none', 'surveillance.active': true, 'streetIndex': 1,
+  'carried': true,
 };
 
 /** Sub-parts (and the field saying they are in use) whose other fields keep their defaults while it is unset. */

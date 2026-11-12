@@ -153,8 +153,8 @@ describe('v0.81.0 fixRC: gear stacking and Item Piles', () => {
     assert.ok(c.ITEM_SIMILARITIES.includes('system.explosive.power'));
     assert.ok(!c.ITEM_SIMILARITIES.includes('system.explosive.rating'));
     for (const f of ['cost', 'rcdRating', 'radio.rating', 'identity.rating', 'material']) assert.ok(c.ITEM_SIMILARITIES.includes(`system.${f}`), f);
-    // v0.81.1 (RC2-2): every gear stacking field but the one array field.
-    assert.deepEqual(c.ITEM_SIMILARITIES.slice(2), GEAR_STACK_FIELDS.filter((f) => f !== 'skillMods').map((f) => `system.${f}`));
+    // v0.81.1 (RC2-2): every gear stacking field but the array fields (v0.92.1: the custom tweaks too).
+    assert.deepEqual(c.ITEM_SIMILARITIES.slice(2), GEAR_STACK_FIELDS.filter((f) => f !== 'skillMods' && f !== 'tweaks').map((f) => `system.${f}`));
   });
   test('RC-3: the sheet keeps explosives, radios and ammo kinds apart', () => {
     assert.notEqual(gearStackKey('C4', { explosive: { power: 2 } }), gearStackKey('C4', { explosive: { power: 5 } }));

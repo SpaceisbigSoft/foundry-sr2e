@@ -2119,7 +2119,37 @@
       "learnFormulaHint": "Learn the spell from this formula (the learning test and Good Karma)",
       "learnFormula": "Learn this spell…",
       "formulaHint": "A spell formula teaches its spell at up to its Force. Learning from the other tradition's formula is harder and slower.",
-      "learnFromTeacher": "Learn from a teacher…"
+      "learnFromTeacher": "Learn from a teacher…",
+      "carried": "Carried",
+      "carriedHint": "Carried on the person. Left behind, it has no weight, a search doesn't find it, and it can't be used, drawn or worn until it is carried again.",
+      "leftBehindHint": "Left behind: no weight, not found by a search, can't be used.",
+      "carriedClickToLeave": "Carried. Click to leave it behind.",
+      "leftBehindClickToCarry": "Left behind. Click to carry it.",
+      "undoDescriptionHint": "Put the fields back as they were and stop reading these accessories from the description.",
+      "atThisGrade": "At this grade: {essence} Essence, ¥{price}",
+      "atThisGradeHint": "The Essence field is the standard cost; the grade multiplies it.",
+      "customTweaks": "Custom tweaks",
+      "addATweak": "Add a tweak",
+      "tweakLabelPlaceholder": "What it is (e.g. custom grip)",
+      "tweakLabel": "Tweak label",
+      "tweakKind": "What it changes",
+      "tweakWhich": "Which",
+      "tweakSkillPlaceholder": "Skill name",
+      "tweakSkill": "Skill",
+      "tweakValue": "Amount",
+      "tweakOn": "On",
+      "tweakOnHint": "Untick to keep the tweak without it counting.",
+      "noTweaksHint": "No tweaks. Press + for a bespoke modifier the rules don't cover: an attribute, Reaction, initiative dice, a pool, a skill's dice or TN, damage Power, armor, or a note.",
+      "tweaksOffHint": "Custom tweaks are switched off in the house rules: these are kept but don't count.",
+      "aboveCreationMax": "Above the creation maximum of {max}: the build check flags it.",
+      "referenceSearch": "Search the Catalogue, the guide and the rules notes",
+      "referenceKinds": "What to search",
+      "referenceReload": "Read the lists again",
+      "referenceHint": "Type to search. Click a result to open it; drag a Catalogue entry onto the sheet to open the shop with it ticked.",
+      "referenceMore": "The first {shown} of {total}: type more to narrow it.",
+      "referenceShown": "{shown} found.",
+      "referenceDragHint": "Drag onto the sheet to open the shop with it ticked.",
+      "referenceNothing": "Nothing found."
     },
     "Settings": {
       "rulesSource": {
@@ -2348,13 +2378,15 @@
         "giveTheSkillAName": "Give the skill a name.",
         "alreadyHasRaiseItWithIts": "{actorName} already has {name}: raise it with its ⊕ button instead.",
         "hasGoodKarmaNeeds": "{actorName} has {karmaGood} Good Karma (needs {karma}).",
-        "alreadyHas": "{actorName} already has {name}."
+        "alreadyHas": "{actorName} already has {name}.",
+        "overBudgetInCreation": "Over the Resources budget: added anyway. The build check shows the overspend."
       },
       "Advancement": {
         "thatRating": "that rating",
         "thoseRatings": "those ratings",
         "creationIsFinishedRaiseWithSpend": "Creation is finished: raise {part} with Spend Karma (or ask the GM).",
-        "theApprovalQueueIsOnThe": "The approval queue is on: the GM awards nuyen and Karma."
+        "theApprovalQueueIsOnThe": "The approval queue is on: the GM awards nuyen and Karma.",
+        "raisedWithoutKarma": "Raised by hand after creation: no Karma was spent (Spend Karma pays for raises). The GM can turn the lock back on in the house rules."
       },
       "Approvals": {
         "theCharacter": "the character",
@@ -2796,7 +2828,8 @@
         "noOneOnTheSceneFor": "No one on the scene for the guards to look for.",
         "nobodyYouOwnHasAControl": "Nobody you own has a control rig.",
         "makeTheTurretOrDroneAs": "Make the turret or drone as a Vehicle actor (drone ticked, a mounted weapon) first.",
-        "statBlockImported": "Imported: {attributes} attributes, {skills} skills, {weapons} weapons, {cyberware} cyberware/bioware, {spells} spells, {powers} powers ({created} items created, {updated} updated)."
+        "statBlockImported": "Imported: {attributes} attributes, {skills} skills, {weapons} weapons, {cyberware} cyberware/bioware, {spells} spells, {powers} powers ({created} items created, {updated} updated).",
+        "tweaksFull": "An item holds at most {max} tweaks."
       },
       "Spendkarma": {
         "onlyCharactersSpendKarma": "Only characters spend Karma.",
@@ -3327,7 +3360,8 @@
         "sWirelessLinkIsJammedClearWithBy": "{name}'s wireless link is jammed by {jammedBy}: clear it or use a hard line.",
         "sWirelessLinkIsJammedClearPlain": "{name}'s wireless link is jammed: clear it or use a hard line.",
         "aCategorySpell": "a {category} spell",
-        "aSpellOfNoCategory": "a spell of no category"
+        "aSpellOfNoCategory": "a spell of no category",
+        "notCarried": "{name} isn't carried: tick Carried first."
       },
       "Migrations": {
         "sr2eMigrationToFailedSeeThe": "SR2e: migration to {version} failed; see the console. Later migrations were not run."
@@ -3402,6 +3436,10 @@
         "noTeachers": "No one in the world knows a spell to teach.",
         "alreadyTaught": "This teaching has already been used.",
         "notThatTeaching": "That teacher's card can't be used for this: it is someone else's, for another spell or Force, or the teacher no longer knows the spell."
+      },
+      "Reference": {
+        "noActor": "Pick a character for the reference pane.",
+        "notOwner": "Only the owner of {name} can open its reference pane."
       }
     },
     "Dialog": {
@@ -4997,6 +5035,10 @@
       },
       "Interpretations": {
         "title": "Rules interpretations"
+      },
+      "Reference": {
+        "title": "Reference",
+        "titleFor": "Reference: {name}"
       }
     },
     "Count": {
@@ -7538,7 +7580,8 @@
         "sRatingAgainstARatingCheckerFake": {
           "one": "· {name}'s {name2} (rating {idnRating}) against a rating {checkerRating} checker ({dice} dice vs TN {tn}): {count} success against the fake's {forgerSuccesses}.",
           "other": "· {name}'s {name2} (rating {idnRating}) against a rating {checkerRating} checker ({dice} dice vs TN {tn}): {count} successes against the fake's {forgerSuccesses}."
-        }
+        },
+        "tweakPower": "custom tweak Power {value}"
       },
       "Adding": {
         "buysFor": "buys {list} for ¥{planNuyen}.",
@@ -9017,7 +9060,12 @@
         "FORMULA_V918__feePerForce": "A teacher no player plays: fee per point of Force (VERIFY)",
         "MAGIC_V920__poolLayers": "The Spell Pool in layers: Sorcery's rating for any magical action, the concentration's and specialization's extra dice only inside them (layered, the creator's interpretation) or one pool of Sorcery's rating (flat, the old way)",
         "MAGIC_V920__castNarrow": "A casting or dispelling test inside Sorcery's concentration or specialization rolls its rating (on) or always Sorcery's rating (off, the old way)",
-        "MAGIC_V920__drainNarrow": "The narrow Spell Pool dice left may pay for that casting's Drain (on) or Drain takes general dice only (off)"
+        "MAGIC_V920__drainNarrow": "The narrow Spell Pool dice left may pay for that casting's Drain (on) or Drain takes general dice only (off)",
+        "SHEET_V921__tweaks": "Custom tweaks on items count (on) or are kept but ignored (off)",
+        "SHEET_V921__carried": "Weapons, armor and gear not ticked Carried have no weight, aren't searched and can't be used (on) or the tick is ignored (off, the old way)",
+        "SHEET_V921__accessories": "A weapon's description is read for accessories when it arrives or is edited, filling only fields still at their default (auto) or never (off)",
+        "SHEET_V921__wizard": "The creation wizard warns but never refuses (advise) or greys out and clamps as before (block)",
+        "SHEET_V921__ratingLock": "After creation, players may type higher ratings unless the approval queue is on (queue) or never may (always, the old way)"
       }
     },
     "Rules": {
@@ -13891,7 +13939,8 @@
         "combat": "Combat",
         "magic": "Magic",
         "health": "Health",
-        "matrixAndRigging": "Matrix and rigging"
+        "matrixAndRigging": "Matrix and rigging",
+        "customTweaks": "Custom tweaks"
       },
       "Interface": {
         "sheetLayoutYourChoiceFor": "Sheet layout (your choice, for every sheet)",
@@ -14756,7 +14805,18 @@
         "concealSilence": "Silence (physical)",
         "concealMask": "Mask (mana)",
         "concealPhysicalMask": "Physical mask",
-        "elementNone": "(none)"
+        "elementNone": "(none)",
+        "armory": "Armory",
+        "fromDescription": "From the description: {list}.",
+        "tweaksWhenInstalled": "These count while it is installed and working.",
+        "tweaksWhenWorn": "These count while it is worn.",
+        "tweaksWhenCarried": "These count while it is carried and working.",
+        "tweaksWhenBonded": "These count while it is bonded and active.",
+        "tweaksWhenActive": "These count while it is active.",
+        "tweaksWhenLoaded": "These count while it is loaded.",
+        "tweaksWhenInUse": "These count while the deck is in use.",
+        "essenceWareRow": "{name}: {essence}",
+        "essenceWareRowGrade": "{name} ({grade}): {essence}"
       },
       "Shop": {
         "streetIndexTitle": "The price with its Street Index (×{si})",
@@ -14949,6 +15009,17 @@
       "MagicPool": {
         "layer": "{name}: {left} of {total}",
         "layersTitle": "Narrow Spell Pool dice, only for actions inside them: {layers}"
+      },
+      "Reference": {
+        "guideTopic": "Guide · {category}",
+        "interpretation": "Rules interpretation",
+        "kind": {
+          "entry": "Catalogue",
+          "guide": "Guide",
+          "interp": "Interpretations"
+        },
+        "button": "Reference",
+        "buttonFor": "Reference beside {name}'s sheet"
       }
     },
     "Text": {
@@ -16703,6 +16774,81 @@
         "shamanic": "shamanic",
         "either": "either tradition",
         "teacherFee": "Teacher's fee: {spell}"
+      },
+      "Tweaks": {
+        "reaction": "Reaction {value}",
+        "initiativeDice": "Initiative dice {value}",
+        "pool": "{pool} {value}",
+        "skillDice": "{skill}: {value} dice",
+        "skillTn": "{skill}: TN {value}",
+        "damage": "Power {value} ({scope})",
+        "armor": "{kind} armor {value}",
+        "note": "A note",
+        "pools": {
+          "combat": "Combat Pool",
+          "spell": "Spell Pool",
+          "hacking": "Hacking Pool",
+          "control": "Control Pool",
+          "task": "Task Pool"
+        },
+        "scope": {
+          "self": "this weapon",
+          "melee": "every melee attack",
+          "ranged": "every ranged attack",
+          "all": "every attack"
+        },
+        "armorKind": {
+          "ballistic": "Ballistic",
+          "impact": "Impact"
+        },
+        "target": {
+          "attribute": "Attribute",
+          "reaction": "Reaction",
+          "initiativeDice": "Initiative dice",
+          "pool": "Dice pool",
+          "skillDice": "Skill dice",
+          "skillTn": "Skill TN",
+          "damage": "Damage Power",
+          "armor": "Armor",
+          "note": "Note only"
+        }
+      },
+      "Accessories": {
+        "fromDescription": "From the description: {name}",
+        "names": {
+          "gasVent": "Gas vent (no rating given)",
+          "recoilComp": "Recoil compensation",
+          "suppressor": "Sound suppressor",
+          "silencer": "Silencer",
+          "smartgun": "Smartgun",
+          "laserSight": "Laser sight",
+          "scopeVision": "Vision scope",
+          "scope": "Scope",
+          "shockPad": "Shock pad",
+          "tripod": "Tripod",
+          "bipod": "Bipod",
+          "gyro": "Gyro mount (no rating given)",
+          "quickDraw": "Quick-draw holster",
+          "foldingStock": "Folding stock",
+          "flashSuppressor": "Flash suppressor",
+          "bayonet": "Bayonet",
+          "sling": "Sling",
+          "hipPad": "Hip pad",
+          "extendedClip": "Extended clip",
+          "underBarrel": "Under-barrel weapon"
+        },
+        "fields": {
+          "recoilComp": "Recoil compensation",
+          "muzzle": "Muzzle",
+          "laserSight": "Laser sight",
+          "scope": "Scope",
+          "scopeVision": "Scope vision",
+          "shockPad": "Shock pad",
+          "support": "Support",
+          "gyro": "Gyro",
+          "smartgun": "Smartgun",
+          "quickDraw": "Quick-draw holster"
+        }
       }
     },
     "Guide": {
@@ -16791,7 +16937,8 @@
           "b5": "Click a heading to fold its section away, and again to open it. The sheet remembers what you folded.",
           "b6": "Some rows have a number box: a skill's rating, a spell's Force, a gear quantity. Change it there without opening the item. The small <strong>−</strong> and <strong>+</strong> beside a number step it by one, and the scroll wheel changes the number while the box has the cursor (Configure Settings: <em>Sheets: − / + on numbers</em>). Once a character has a creation record (or, with the approval queue on, once they are out of the wizard), a player can't raise a rating this way: use <a href=\"#spend-karma\">Spend Karma</a>. Lowering still works, and the GM can type anything (see <a href=\"#creation-record\">Creation record</a>).",
           "b7": "Row icons: the pin puts the row in the pin bar at the top of the sheet (click the row's pin again to take it off); the pencil opens the item (so does the name on most rows, but a skill's name rolls it); the copy icon duplicates it; the trash can deletes it.",
-          "b8": "You can also drag an item from the Items sidebar or a compendium onto the sheet."
+          "b8": "You can also drag an item from the Items sidebar or a compendium onto the sheet.",
+          "b9": "<strong>Reference</strong> (the open book in the title bar of a character or NPC sheet) opens a pane beside the sheet that searches the Catalogue, the guide and the rules interpretations at once. Click a result to open it. Drag a Catalogue entry onto the sheet to open the shop with it ticked: you still find and buy it as usual (spells and adept powers open Learn)."
         },
         "summaryBar": {
           "title": "The summary bar",
@@ -17011,18 +17158,20 @@
         },
         "weapons": {
           "title": "Weapons and armor",
-          "b1": "The Combat tab lists your weapons, any cyberweapons, and Unarmed. Each has an <strong>Attack</strong> button. Firearms also have one button per firing mode they allow.",
+          "b1": "The Armory tab lists your weapons, any cyberweapons, and Unarmed. Each has an <strong>Attack</strong> button. Firearms also have one button per firing mode they allow.",
           "b2": "Target first (see <a href=\"#targeting\">Targets</a>), then click Attack. The dialog shows the TN preview and boxes for Combat Pool dice and other modifiers. The attack card gives the target a <strong>Defend</strong> button, and a hit gives a <strong>Resist</strong> button. Shift-click Attack to skip the dialog. A weapon that may fire twice in a phase has a <em>Fire twice</em> box in the dialog (it spends two simple actions).",
           "b3": "Row icons and buttons, where they fit: ammunition pips and reload (circular arrow), Take Aim (bullseye), place a blast area (circle), suppressive fire, <em>holstered</em> (click to draw), set up a bipod or tripod, <strong>Repair…</strong> for a broken weapon. A jammed weapon gets a <strong>Clear jam</strong> quick button in the summary bar.",
           "b4": "Cyberweapons and Unarmed have no edit or delete icons: a cyberweapon is changed on its cyberware's sheet.",
           "b5": "A flash grenade doesn't blind outright: everyone with a clear line to it gets a TN penalty (+6 close up, less with distance, halved by flare compensation) for a few Combat Turns; the card rolls each one's Body to shorten it.",
           "b6": "<strong>Armor</strong> lists Ballistic / Impact. A piece you aren't wearing says <em>not worn</em>; open it to change that. <em>adds</em> marks a helmet or shield that adds to other armor; <em>parry</em> and <em>conceal</em> show where they apply. Damaged armor shows a minus and a repair icon. The line under the list says what counts against attacks.",
-          "b7": "The + on either heading opens the <a href=\"#adding\">Add window</a>. Vehicle weapons: see <a href=\"#vehicles\">Vehicle sheets</a>."
+          "b7": "The + on either heading opens the <a href=\"#adding\">Add window</a>. Vehicle weapons: see <a href=\"#vehicles\">Vehicle sheets</a>.",
+          "b8": "Each weapon, armor and gear row has a suitcase: click it to leave the thing behind (at the safehouse, in the car). Left behind, it weighs nothing, a search or frisk doesn't find it, and it can't be used, drawn or worn until you carry it again (armor comes off and a weapon is holstered as you leave it). The combat column lists only the weapons you carry."
         },
         "effects": {
           "title": "Effects and what is in effect",
           "b1": "The Effects tab lists everything acting on the character now, in groups: Condition, Statuses, Combat, Magic, Health, and Matrix and rigging. Rows with a time limit show the time left. The × on a status takes it off.",
-          "b2": "The Current tab's <strong>In effect</strong> list shows the same things. On the Gear tab, <strong>In effect</strong> lists drugs working now, each with a <strong>Wear off</strong> button. NPC and spirit sheets have the same list in a folded <strong>Effects</strong> section at the bottom."
+          "b2": "The Current tab's <strong>In effect</strong> list shows the same things. On the Gear tab, <strong>In effect</strong> lists drugs working now, each with a <strong>Wear off</strong> button. NPC and spirit sheets have the same list in a folded <strong>Effects</strong> section at the bottom.",
+          "b3": "<strong>Custom tweaks</strong> lists every tweak on your items that counts right now, with the item it comes from (see <a href=\"#item-sheet\">Item sheets</a>)."
         },
         "magic": {
           "title": "Magic",
@@ -17113,7 +17262,8 @@
         "cyberware": {
           "title": "Cyberware and bioware",
           "b1": "Cyberware and bioware, each with an <em>Installed</em> tick box. Ticking it by hand skips the surgery: use it for ware fitted before play. Ware that isn't installed has a <strong>Surgery</strong> button: pick who operates, the care while recovering, and whether to pay for a hospital. Recovery shows under the list with the days left; the bed icon changes the care (the GM's × ends it). Damaged ware has <strong>Repair</strong>; the burst or wrench icon marks it damaged or repaired. An adrenal pump has <strong>Activate</strong> and <strong>Switch off</strong>.",
-          "b2": "Lines under the list show the Body Index and other notes, and a <strong>Rejection test</strong> button when over the limit."
+          "b2": "Lines under the list show the Body Index and other notes, and a <strong>Rejection test</strong> button when over the limit.",
+          "b3": "A grade changes the Essence and the price. The item's Essence field keeps the standard cost; its sheet shows <strong>At this grade</strong> with the Essence and price the grade gives. Hover over the Essence line on the Main tab to see which ware makes up the loss."
         },
         "gear": {
           "title": "Gear",
@@ -17132,7 +17282,9 @@
             "i4": "A magical site (library, circle, lodge) on a character has <strong>Raise…</strong> to build or raise it.",
             "i5": "Spells, adept powers and cyberdecks have their own sections: a spell's casting, damage, drain and sustaining (and, folded, the effects it gives while it lasts); a power's cost, level and bonuses; a deck's persona ratings, memory and options. See <a href=\"#spells\">Spells</a>, <a href=\"#powers\">Powers</a> and <a href=\"#matrix\">Matrix</a>."
           },
-          "b3": "Hover a field for what it does. The rules behind the numbers are in your SR2 rulebook."
+          "b3": "Hover a field for what it does. The rules behind the numbers are in your SR2 rulebook.",
+          "b4": "<strong>Custom tweaks</strong> (every item) are for bespoke gear and modifications the rules don't cover. Press + and pick what it changes: an attribute, Reaction, initiative dice, a dice pool, a skill's dice or TN (type the skill's name), damage Power (this weapon, every melee or ranged attack, or every attack), armor, or a note only. Give it a label and an amount; untick <strong>On</strong> to keep it without it counting. Tweaks count while the item does: ware installed and working, armor worn, weapons and gear carried, foci bonded, powers active, programs loaded. The Effects tab lists those in force.",
+          "b5": "<strong>Carried</strong> (weapons, armor, gear): see <a href=\"#weapons\">Weapons and armor</a>. <strong>From the description</strong> (weapons): when a weapon arrives (the shop, the Catalogue, a new entry, a catalogue file, a drop) or its description is edited, the description is read for accessories: gas vents, a silencer or suppressor, a laser sight, a scope, a shock pad, a bipod or tripod, a gyro mount, a smartgun link, a quick-draw holster. Only fields still at their default are filled: a value set by hand is never changed, and \"no silencer\" or \"sold separately\" is skipped. Accessories with no field of their own (a folding stock, a sling…) become note tweaks. The line at the top says what was filled; <strong>Undo</strong> puts it back and stops those accessories being read again."
         },
         "health": {
           "title": "Addictions and diseases",
@@ -17164,7 +17316,8 @@
             "i4": "<strong>Recent Karma</strong>: the last few Karma changes, in and out."
           },
           "b4": "A row you can't afford is dimmed with the reason. With the <a href=\"#approval\">approval queue</a> on, each spend becomes a request and shows under <strong>Waiting for the GM</strong>. If the GM turns the queue off, cancel a waiting request with × and spend again.",
-          "b5": "Training time is on by default: the Karma goes at once and the rating rises when the training is done (<a href=\"#under-way\">Under way</a>). Learning tests are on by default too: raising or learning a spell rolls a learning test first, and the Karma is paid only on success. Costs follow your SR2 rulebook and the GM's house rules."
+          "b5": "Training time is on by default: the Karma goes at once and the rating rises when the training is done (<a href=\"#under-way\">Under way</a>). Learning tests are on by default too: raising or learning a spell rolls a learning test first, and the Karma is paid only on success. Costs follow your SR2 rulebook and the GM's house rules.",
+          "b6": "After creation, raises normally go through Spend Karma, but ratings stay editable by hand: a raise typed in is kept, with a note that no Karma was spent. While the GM runs the <a href=\"#approval\">approval queue</a>, the lock comes back and typed raises are refused. (A house rule keeps the lock on all the time.)"
         },
         "underWay": {
           "title": "Under way: things that take time",
@@ -17219,7 +17372,8 @@
           },
           "b3": "The <strong>Totals</strong> panel keeps the build checks in view at every step. Closing the wizard keeps the draft: <strong>Continue creation…</strong> opens it again. <strong>Finish creation</strong> freezes the <a href=\"#creation-record\">creation record</a>.",
           "b4": "For a character made another way, <strong>Record as it stands</strong> freezes it as it is. <strong>Quick build…</strong> on the Bio tab is the older builder that reads typed lists. <strong>Import a stat block…</strong> on the Bio tab fills the sheet from a pasted character write-up, with a preview of what it read; the GM can record the result as the creation. The priority table's values come from your SR2 rulebook and the GM's house rules.",
-          "b5": "With the approval queue on, a character who has earned Karma can't start the wizard or be recorded by a player: the GM does it."
+          "b5": "With the approval queue on, a character who has earned Karma can't start the wizard or be recorded by a player: the GM does it.",
+          "b6": "The wizard advises and never refuses: a metatype or magic the priorities don't pay for, an attribute above the creation maximum, or gear over the Resources budget are allowed, and the totals mark them. <strong>Finish creation</strong> still says what isn't met. (The GM's house rule can bring back the greyed-out choices and limits.)"
         },
         "creationRecord": {
           "title": "Creation record and advancement log",

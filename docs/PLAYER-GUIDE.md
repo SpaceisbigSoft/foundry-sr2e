@@ -182,6 +182,8 @@ Row icons: the pin puts the row in the pin bar at the top of the sheet (click th
 
 You can also drag an item from the Items sidebar or a compendium onto the sheet.
 
+**Reference** (the open book in the title bar of a character or NPC sheet) opens a pane beside the sheet that searches the Catalogue, the guide and the rules interpretations at once. Click a result to open it. Drag a Catalogue entry onto the sheet to open the shop with it ticked: you still find and buy it as usual (spells and adept powers open Learn).
+
 ## The summary bar
 
 The summary bar sits under the header on character and NPC sheets. The monitor, pools and initiative are in the [status strip](#layouts-the-status-strip-and-your-turn) just below it.
@@ -481,6 +483,8 @@ The Effects tab lists everything acting on the character now, in groups: Conditi
 
 The Current tab's **In effect** list shows the same things. On the Gear tab, **In effect** lists drugs working now, each with a **Wear off** button. NPC and spirit sheets have the same list in a folded **Effects** section at the bottom.
 
+**Custom tweaks** lists every tweak on your items that counts right now, with the item it comes from (see [Item sheets](#item-sheets)).
+
 ## Addictions and diseases
 
 These show on the Gear tab when they apply.
@@ -532,7 +536,7 @@ Every new actor gets a picture and token of the system's own (unless it already 
 
 ## Weapons and armor
 
-The Combat tab lists your weapons, any cyberweapons, and Unarmed. Each has an **Attack** button. Firearms also have one button per firing mode they allow.
+The Armory tab lists your weapons, any cyberweapons, and Unarmed. Each has an **Attack** button. Firearms also have one button per firing mode they allow.
 
 Target first (see [Targets](#targets-and-automatic-modifiers)), then click Attack. The dialog shows the TN preview and boxes for Combat Pool dice and other modifiers. The attack card gives the target a **Defend** button, and a hit gives a **Resist** button. Shift-click Attack to skip the dialog. A weapon that may fire twice in a phase has a *Fire twice* box in the dialog (it spends two simple actions).
 
@@ -546,11 +550,15 @@ A flash grenade doesn't blind outright: everyone with a clear line to it gets a 
 
 The + on either heading opens the [Add window](#the-shop-the-add-window). Vehicle weapons: see [Vehicle sheets](#vehicle-sheets).
 
+Each weapon, armor and gear row has a suitcase: click it to leave the thing behind (at the safehouse, in the car). Left behind, it weighs nothing, a search or frisk doesn't find it, and it can't be used, drawn or worn until you carry it again (armor comes off and a weapon is holstered as you leave it). The combat column lists only the weapons you carry.
+
 ## Cyberware and bioware
 
 Cyberware and bioware, each with an *Installed* tick box. Ticking it by hand skips the surgery: use it for ware fitted before play. Ware that isn't installed has a **Surgery** button: pick who operates, the care while recovering, and whether to pay for a hospital. Recovery shows under the list with the days left; the bed icon changes the care (the GM's × ends it). Damaged ware has **Repair**; the burst or wrench icon marks it damaged or repaired. An adrenal pump has **Activate** and **Switch off**.
 
 Lines under the list show the Body Index and other notes, and a **Rejection test** button when over the limit.
+
+A grade changes the Essence and the price. The item's Essence field keeps the standard cost; its sheet shows **At this grade** with the Essence and price the grade gives. Hover over the Essence line on the Main tab to see which ware makes up the loss.
 
 ## Gear
 
@@ -573,6 +581,10 @@ Click an item's name (or its pencil) to open its sheet. The sheet shows the fiel
 - Spells, adept powers and cyberdecks have their own sections: a spell's casting, damage, drain and sustaining (and, folded, the effects it gives while it lasts); a power's cost, level and bonuses; a deck's persona ratings, memory and options. See [Spells](#spells), [Powers](#powers) and [Matrix](#matrix).
 
 Hover a field for what it does. The rules behind the numbers are in your SR2 rulebook.
+
+**Custom tweaks** (every item) are for bespoke gear and modifications the rules don't cover. Press + and pick what it changes: an attribute, Reaction, initiative dice, a dice pool, a skill's dice or TN (type the skill's name), damage Power (this weapon, every melee or ranged attack, or every attack), armor, or a note only. Give it a label and an amount; untick **On** to keep it without it counting. Tweaks count while the item does: ware installed and working, armor worn, weapons and gear carried, foci bonded, powers active, programs loaded. The Effects tab lists those in force.
+
+**Carried** (weapons, armor, gear): see [Weapons and armor](#weapons-and-armor). **From the description** (weapons): when a weapon arrives (the shop, the Catalogue, a new entry, a catalogue file, a drop) or its description is edited, the description is read for accessories: gas vents, a silencer or suppressor, a laser sight, a scope, a shock pad, a bipod or tripod, a gyro mount, a smartgun link, a quick-draw holster. Only fields still at their default are filled: a value set by hand is never changed, and "no silencer" or "sold separately" is skipped. Accessories with no field of their own (a folding stock, a sling…) become note tweaks. The line at the top says what was filled; **Undo** puts it back and stops those accessories being read again.
 
 ## Money, lifestyle and the ledger
 
@@ -653,6 +665,8 @@ For a character made another way, **Record as it stands** freezes it as it is. *
 
 With the approval queue on, a character who has earned Karma can't start the wizard or be recorded by a player: the GM does it.
 
+The wizard advises and never refuses: a metatype or magic the priorities don't pay for, an attribute above the creation maximum, or gear over the Resources budget are allowed, and the totals mark them. **Finish creation** still says what isn't met. (The GM's house rule can bring back the greyed-out choices and limits.)
+
 ## Creation record and advancement log
 
 After Finish, the Creation tab shows the record: the build, attributes, skills, spells, adept powers, ware, gear, contacts, edges and flaws, and the folded **Build checks at the finish** (click to open).
@@ -677,6 +691,8 @@ The Upkeep tab's **Karma** shows Good Karma (what you spend), Karma earned in al
 A row you can't afford is dimmed with the reason. With the [approval queue](#the-approval-queue) on, each spend becomes a request and shows under **Waiting for the GM**. If the GM turns the queue off, cancel a waiting request with × and spend again.
 
 Training time is on by default: the Karma goes at once and the rating rises when the training is done ([Under way](#under-way-things-that-take-time)). Learning tests are on by default too: raising or learning a spell rolls a learning test first, and the Karma is paid only on success. Costs follow your SR2 rulebook and the GM's house rules.
+
+After creation, raises normally go through Spend Karma, but ratings stay editable by hand: a raise typed in is kept, with a note that no Karma was spent. While the GM runs the [approval queue](#the-approval-queue), the lock comes back and typed raises are refused. (A house rule keeps the lock on all the time.)
 
 ## Under way: things that take time
 
