@@ -60,8 +60,8 @@ describe('v0.78.0 flash grenades (BOOK_V78.flash)', () => {
 });
 
 describe('v0.78.0 blast falloff in whole points (anti-vehicle rocket −1 per 4 m)', () => {
-  test('blastLoss rounds down; avRocket is 0.25', () => {
-    assert.equal((RULES.COMBAT.grenades as any[]).find((g) => g.id === 'avRocket').perMetre, 0.25);
+  test('blastLoss rounds down; the old avRocket falloff was 0.25 (v0.92.4: the book 8, COMBAT_V923.avRocket)', () => {
+    assert.equal(RULES.COMBAT_V923.avRocketOldPerMetre, 0.25);
     assert.deepEqual([0, 3, 4, 7, 8].map((m) => blastLoss(m, 0.25)), [0, 0, 1, 1, 2]);
     assert.equal(blastPower(16, 9, 0.25), 14);
     assert.equal(blastLoss(5, 0.5), 2);

@@ -17,11 +17,11 @@ type Sw = typeof RULES.COMBAT_V923;
  * rangedDefense, fullDefense (URR_V80.cbtDefense), knockdown (cbtKnockdown), blastStaging (cbtBlastStaging), scatter
  * (cbtScatter), shotgun (cbtShotgun), tracers (cbtTracers), reload (cbtReload), initiativeTies (cbtTies), subdueTn
  * (cbtSubdueTn), spreadFire (COMBAT.spreadFire.wastedRoundsPerMetre), delay (DELAY.lostAtPassEnd), rangedRows
- * (SITUATIONAL_MODIFIERS).
+ * (SITUATIONAL_MODIFIERS), avRocket (the patch's COMBAT.grenades avRocket).
  */
 export const REVAMP_COMBAT_RULES: ReadonlySet<keyof Sw> = new Set<keyof Sw>([
   'rangedDefense', 'fullDefense', 'knockdown', 'blastStaging', 'scatter', 'shotgun', 'tracers', 'reload',
-  'initiativeTies', 'subdueTn', 'spreadFire', 'delay', 'rangedRows',
+  'initiativeTies', 'subdueTn', 'spreadFire', 'delay', 'rangedRows', 'avRocket',
 ]);
 /** Whether a switch is at the given value; under the Revamp source never for a rule the Revamp changes itself. */
 function is<K extends keyof Sw>(key: K, value: Sw[K]): boolean {
@@ -263,4 +263,11 @@ export function apartSoak(level: DamageLevel, hits: number, soakSuccesses: numbe
   const order: DamageLevel[] = ['L', 'M', 'S', 'D'];
   const i = order.indexOf(level) - Math.floor(Math.max(0, Math.floor(num(soakSuccesses))) / Math.max(1, RULES.SUCCESSES_PER_STAGE));
   return { level: i < 0 ? null : order[i]!, clean: false };
+}
+
+// ---------------------------------------------------------------- the anti-vehicle rocket (Core p. 99)
+
+/** v0.92.4: the anti-vehicle rocket's falloff when the old house rule is on (−1 per 4 m), else null (the table's value). */
+export function avRocketOldFalloff(kindId: string | null | undefined): number | null {
+  return kindId === 'avRocket' && is('avRocket', 'old') ? Math.max(0, num(V().avRocketOldPerMetre)) : null;
 }

@@ -9,6 +9,7 @@ import type { AmmoRow } from './config72/combat.ts';
 import { strengthRangeMultipliers } from './docs79-ranged.ts';
 import { visibilityV79, smokeV79, smokeKindOld, reachV79, type V79SmokeKind } from './docs79-melee-vision.ts';
 import { t as tx } from '../helpers/i18n.ts';
+import { avRocketOldFalloff } from './combat923.ts';
 
 /** Melee and ranged combat additions (v0.20.0). No Foundry dependency. All VERIFY. */
 
@@ -280,7 +281,7 @@ export function grenadeKind(id: string | null | undefined): GrenadeKind {
 
 /** Power lost per metre: the grenade kind's, or the weapon's own for custom. */
 export function blastFalloff(kindId: string | null | undefined, weaponPerMetre: number): number {
-  return grenadeKind(kindId).perMetre ?? weaponPerMetre;
+  return avRocketOldFalloff(kindId) ?? grenadeKind(kindId).perMetre ?? weaponPerMetre;
 }
 
 /** Whether a token is inside a shotgun's cone: within the spread at its own distance along the line, out to the target. */

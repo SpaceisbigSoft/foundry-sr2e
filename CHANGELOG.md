@@ -2,6 +2,10 @@
 
 This is the history of the unofficial Shadowrun 2nd Edition system for Foundry VTT (system id `sr2e`), newest version first. Every rules change since v0.70.0 has a house-rule switch that puts the old behaviour back. The system was built with AI (Anthropic's Claude) under human direction, and it has not yet been play-tested at a real table.
 
+## v0.92.4 — The anti-vehicle rocket (12 Nov 2026)
+- **Anti-vehicle rockets and missiles** now lose 8 Power per metre from the blast point, as the book's rocket table gives (Core p. 99): they hit what they're aimed at, not everything within 60 m. The GM can put the old −1 per 4 m back in the house rules (*Ranged combat*).
+- The passkey keeps the Core price (¥10,000 × Rating).
+
 ## v0.92.3 — The rules checked against the books (12 Nov 2026)
 - **The book's way is now the default.** Every rule the system models was compared with the SR2 books themselves (Core Rulebook, Companion, Grimoire, Awakenings, Virtual Realities 2.0, Rigger 2, Shadowtech, Cybertechnology, Fields of Fire, the Corporate Security Handbook and others), and about 270 rules that the system had from memory or from SR3 now follow the book; about 50 rules the system lacked are now modelled. Each rule's book and page is listed in `docs/VERIFY.md` ("Checked against the books (v0.92.3)").
 - **Characters:** the SR2 priority table (attributes 30/24/20/17/15, skills 40/30/24/20/17, Resources 1,000,000 to 500¥; any metahuman is Race A; a metahuman magician is Magic B), Force Points by Resources, dwarves Quickness −1 and trolls Willpower −1, attributes at new rating × 1 Karma, Karma Pool dice, starting cash 3D6 × 1,000¥, perception as Intelligence vs 4, Threat dice on every test.
@@ -13,7 +17,7 @@ This is the history of the unofficial Shadowrun 2nd Edition system for Foundry V
 - **Gear:** dermal plating adds to Body, ware grades (beta × 0.6 Essence; costs × 3, × 7, × 10), cyberlimbs, bone lacing, bioware for magicians, carrying Strength × 5 kg free, and Concealability, weight, Availability and Street Index on the starter items.
 - **Your table, your call:** every change has a house rule (*house-rules window*, the sections named in VERIFY.md) that puts the v0.92.2 way back. On the first load after updating, the GM gets one card listing the characters whose numbers change (and why), with the house rule for each; nothing in the world is changed by it.
 - **The Unified Rules Revamp** keeps its own rules; where it has none, the corrected book rule applies there too.
-- **Kept as the creator's decisions:** the shop (finding before buying, legality, permits, contacts and fixers), spell formulas and teachers, the layered Magic Pool with casting by the skill's rating, timed training, the anti-vehicle rocket falloff, the passkey price, and the grenade long-range TN 6.
+- **Kept as the creator's decisions:** the shop (finding before buying, legality, permits, contacts and fixers), spell formulas and teachers, the layered Magic Pool with casting by the skill's rating, timed training, the passkey price, and the grenade long-range TN 6.
 
 ## v0.92.2 — Release testing (12 Nov 2026)
 - **In-Foundry tests:** with the Quench module active, a GM can run the system's own test batches inside Foundry: every actor and item type and its sheet (no errors, no untranslated text in any tab), tests and chat cards, a combat, the record sheet's tweaks, Carried and accessories, the translation, and the world's migrations and data. An opt-in batch times a busy table (50 tokens, a long combat, 300 chat cards). Each batch removes what it made.

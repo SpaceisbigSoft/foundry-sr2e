@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { RULES } from '../config.ts';
 import { COMBAT_V923, HOUSE_COMBAT_V923 } from '../config923/combat.ts';
 import { stageForNetSuccesses } from '../damage.ts';
-import { resolveMelee } from '../weapons.ts';
+import { resolveMelee, blastFalloff, blastPower } from '../weapons.ts';
 import { resolveCombatSpell } from '../magic.ts';
 import { delayValid } from '../flow.ts';
 import { aimCap } from '../tactics.ts';
@@ -35,8 +35,8 @@ describe('v0.92.3 combat: the defaults are the book', () => {
     assert.equal(RULES.INITIATIVE_WOUNDS.midTurn, false);
     assert.equal(RULES.DELAY.lostAtPassEnd, false);
     assert.equal(RULES.COMBAT.grenades.find((g) => g.id === 'apRocket')?.perMetre, 2);
-    // Kept on purpose: the anti-vehicle rocket's −1 per 4 m (the book's table says −8 per metre).
-    assert.equal(RULES.COMBAT.grenades.find((g) => g.id === 'avRocket')?.perMetre, 0.25);
+    // v0.92.4 (the owner's decision): the anti-vehicle rocket's −8 per metre (Core p. 99).
+    assert.equal(RULES.COMBAT.grenades.find((g) => g.id === 'avRocket')?.perMetre, 8);
     assert.equal(RULES.COMBAT.demolitions.tn, 2);
     assert.equal(RULES.COMBAT.ready.rule, 'action');
   });
@@ -442,5 +442,33 @@ describe('v0.92.3 combat: delays and surprise (Core pp. 80, 86)', () => {
   test('DELAY.lostAtPassEnd on: the book delay switch has no effect', (t) => {
     t.after(oldWay({ 'DELAY.lostAtPassEnd': true }));
     assert.equal(C923.delayBook(), false);
+  });
+});
+
+describe('v0.92.4 the anti-vehicle rocket falloff (Core p. 99; COMBAT_V923.avRocket)', () => {
+  test('book: −8 Power per metre; a Power 16 blast is spent at 2 m', () => {
+    assert.equal(COMBAT_V923.avRocket, 'book');
+    const pm = blastFalloff('avRocket', 1);
+    assert.equal(pm, 8);
+    assert.deepEqual([0, 1, 2].map((m) => blastPower(16, m, pm)), [16, 8, 0]);
+    assert.equal(blastFalloff('apRocket', 1), 2, 'the anti-personnel rocket is untouched');
+  });
+  test("old: −1 per 4 m, as v0.78.0–v0.92.3", () => {
+    const was = RULES.COMBAT_V923.avRocket;
+    (RULES.COMBAT_V923 as any).avRocket = 'old';
+    try {
+      assert.equal(blastFalloff('avRocket', 1), 0.25);
+      assert.equal(blastPower(16, 9, blastFalloff('avRocket', 1)), 14);
+      assert.equal(blastFalloff('apRocket', 1), 2);
+    } finally { (RULES.COMBAT_V923 as any).avRocket = was; }
+  });
+  test('the Revamp keeps its own value (8) whatever the switch says', () => {
+    const was = RULES.COMBAT_V923.avRocket, act = RULES.URR_V80.active;
+    (RULES.COMBAT_V923 as any).avRocket = 'old'; (RULES.URR_V80 as any).active = true;
+    try { assert.equal(blastFalloff('avRocket', 1), 8); }
+    finally { (RULES.COMBAT_V923 as any).avRocket = was; (RULES.URR_V80 as any).active = act; }
+  });
+  test('the house-rules window lists the switch', () => {
+    assert.ok(HOUSE_COMBAT_V923.some((r) => r.path === 'COMBAT_V923.avRocket'));
   });
 });

@@ -67,6 +67,12 @@ export const COMBAT_V923 = {
    * success), a missile also its Intelligence in metres less (Core pp. 97, 99). 'old' (v0.92.2):
    * RULES.COMBAT.scatter.metresPerSuccess for all, rockets by range band.
    */
+  /**
+   * v0.92.4 (the owner's decision, 12 Nov 2026): the anti-vehicle rocket's blast loses 8 Power per metre (Core p. 99,
+   * `COMBAT.grenades` avRocket perMetre 8). 'old': −1 per 4 m (avRocketOldPerMetre), the v0.78.0–v0.92.3 stand-in.
+   */
+  avRocket: 'book' as 'book' | 'old',
+  avRocketOldPerMetre: 0.25,
   scatter: 'book' as 'book' | 'old',
   scatterPerSuccess: { standard: 2, aerodynamic: 4, launcher: 4 } as Record<'standard' | 'aerodynamic' | 'launcher', number>,
   scatterRocket: { dice: 2, perSuccess: 4, perIntelligence: 0 },
@@ -176,6 +182,8 @@ export const HOUSE_COMBAT_V923: Array<{ path: string; section: string; type: 'nu
   { section: 'melee', path: 'COMBAT_V923.knockdown', type: 'select', choices: ['book', 'old'] },
   { section: 'rangedCombat', path: 'COMBAT_V923.blastStaging', type: 'select', choices: ['book', 'off'] },
   { section: 'rangedCombat', path: 'COMBAT_V923.scatter', type: 'select', choices: ['book', 'old'] },
+  { section: 'rangedCombat', path: 'COMBAT_V923.avRocket', type: 'select', choices: ['book', 'old'] },
+  { section: 'rangedCombat', path: 'COMBAT_V923.avRocketOldPerMetre', type: 'number', step: 0.05 },
   { section: 'rangedCombat', path: 'COMBAT_V923.shotgun', type: 'select', choices: ['book', 'old'] },
   { section: 'rangedCombat', path: 'COMBAT_V923.tracers', type: 'select', choices: ['book', 'old'] },
   { section: 'rangedCombat', path: 'COMBAT_V923.reload', type: 'select', choices: ['book', 'old'] },

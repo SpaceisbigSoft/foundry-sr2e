@@ -57,7 +57,8 @@ function realSources(message: any, ...more: unknown[]): unknown[] {
  * v0.81.1 (RB review): read when used (house rules apply after this module loads), 0.25 when the list has none.
  */
 function minFallOff(): number {
-  const m = Math.min(...RULES.COMBAT.grenades.map((g) => Number(g.perMetre ?? 1)).filter((n) => Number.isFinite(n) && n > 0));
+  // v0.92.4: the anti-vehicle rocket's old falloff (COMBAT_V923.avRocket 'old') counts too while that house rule is on.
+  const m = Math.min(...[...RULES.COMBAT.grenades.map((g) => Number(g.perMetre ?? 1)), C923.avRocketOldFalloff('avRocket') ?? Infinity].filter((n) => Number.isFinite(n) && n > 0));
   return Number.isFinite(m) ? m : 0.25;
 }
 
