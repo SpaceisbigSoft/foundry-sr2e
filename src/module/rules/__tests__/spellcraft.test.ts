@@ -15,7 +15,9 @@ describe('spellcraft', () => {
     assert.equal(boxesHealed(3, 5), 3);
     assert.equal(boxesHealed(4, 2), 2);
   });
-  test('exclusive and fetish lower drain TN', () => {
+  test('exclusive and fetish lower drain TN', (t) => {
+    // v0.92.3: the v0.92.2 rule (RULES.SORCERY_V923).
+    t.after(oldWay({ 'SORCERY_V923.restrictedSpells': 'v922' }));
     assert.deepEqual(spellOptionDrainMods({ exclusive: true, fetish: true }), [{ label: 'Exclusive', value: -2 }, { label: 'Fetish', value: -1 }]);
     assert.deepEqual(spellOptionDrainMods({}), []);
   });

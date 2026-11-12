@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test';
-import assert from 'node:assert/strict';
 import { oldWay } from './oldway.ts';
+import assert from 'node:assert/strict';
 import { essenceLoss, totalEssenceLoss, currentEssence, effectiveMagic, sumBonuses, type Augmentation } from '../cyberware.ts';
 
 const aug = (over: Partial<Augmentation> = {}): Augmentation => ({ essenceCost: 1, grade: 'standard', installed: true, ...over });
@@ -28,7 +28,9 @@ describe('essence', () => {
 });
 
 describe('magic', () => {
-  test('capped by current Essence rounded up', () => {
+  test('capped by current Essence rounded up', (t) => {
+    // v0.92.3: the v0.92.2 rule (RULES.SORCERY_V923.magicFromEssence); the book's way is in v0923-sorcery.test.ts.
+    t.after(oldWay({ 'SORCERY_V923.magicFromEssence': 'v922' }));
     assert.equal(effectiveMagic(6, 6), 6);
     assert.equal(effectiveMagic(6, 5.4), 6);   // ceil(5.4) = 6
     assert.equal(effectiveMagic(6, 4.9), 5);

@@ -1,4 +1,5 @@
 import { test, describe } from 'node:test';
+import { oldWay } from './oldway.ts';
 import assert from 'node:assert/strict';
 import {
   spellResistAttribute, drainTargetNumber, drainDamageType, resolveCombatSpell, clampForce,
@@ -20,7 +21,9 @@ describe('magic rules', () => {
     assert.equal(drainDamageType(6, 6), 'stun');
     assert.equal(drainDamageType(7, 6), 'physical');
   });
-  test('combat spell outcome', () => {
+  test('combat spell outcome', (t) => {
+    // v0.92.3: the v0.92.2 rule (RULES.SORCERY_V923).
+    t.after(oldWay({ 'SORCERY_V923.spellTie': 'v922' }));
     assert.deepEqual(resolveCombatSpell({ casterSuccesses: 2, resistSuccesses: 2, level: 'M' }), { hit: false, netSuccesses: 0, level: null });
     assert.deepEqual(resolveCombatSpell({ casterSuccesses: 3, resistSuccesses: 2, level: 'M' }), { hit: true, netSuccesses: 1, level: 'M' });
     assert.equal(resolveCombatSpell({ casterSuccesses: 5, resistSuccesses: 0, level: 'M' }).level, 'D');

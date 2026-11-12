@@ -15,8 +15,6 @@ import { projectionOverstay } from '../thaumaturgy.ts';
 import { initiationCost } from '../occult.ts';
 import { allyCosts } from '../afflictions.ts';
 import { wardPlan } from '../arcanum.ts';
-import { resolveDispel } from '../arcana.ts';
-import { geasaPenalty } from '../tracking.ts';
 import { elementalSustainUntil } from '../mysticism.ts';
 import { trueNameOutcome } from '../bestiary.ts';
 import * as S from '../spirits923.ts';
@@ -29,12 +27,11 @@ describe('v0.92.3 spirits: the switches ship at the book way', () => {
     const s = RULES.SPIRITS_V923;
     assert.equal(s.conjDrain, 'book');
     assert.equal(s.banishPerPoint, 2);
-    assert.equal(s.wardMaxForcePerMagic, 2);
     assert.equal(RULES.ASTRAL.initiativeBonus, 15);
     assert.equal(RULES.TRACKING.baseHours, 12);
     assert.equal(RULES.OCCULT.initiation.ordealReduction, 0.5);
     assert.equal(RULES.MAGIC_V39.domains.enforce, 'block');
-    assert.deepEqual([RULES.MAGIC_V56.ward.skill, RULES.MAGIC_V56.ward.nuyenPerForce, RULES.MAGIC_V56.ward.drainLevel], ['Sorcery', 1000, 'L']);
+    assert.equal(RULES.MAGIC_V56.ward.nuyenPerForce, 1000);
     // The v0.92.2 patch names only rules that exist (oldWay throws otherwise) and puts them back.
     const back = oldWay(SPIRITS_V922_WAY);
     try { assert.equal(RULES.SPIRITS_V923.conjDrain, 'v922'); assert.equal(RULES.ASTRAL.initiativeBonus, 20); } finally { back(); }
@@ -173,26 +170,11 @@ describe('v0.92.3 astral (Core pp. 146–148; Grimoire pp. 38, 91)', () => {
   });
 });
 
-describe('v0.92.3 initiation (Grimoire pp. 38–40)', () => {
-  test('book: the first initiation is Grade 0 (18 alone, 15 with an ordeal); ordeals take .5; round down', () => {
-    assert.equal(S.nextInitiationGrade(0, false), 0);
-    assert.equal(S.nextInitiationGrade(0, true), 1);
-    assert.equal(S.nextInitiationGrade(2, true), 3);
-    assert.deepEqual(initiationCost(0), { cost: 18, multiplier: 3 });
-    assert.deepEqual(initiationCost(0, { ordeal: true }), { cost: 15, multiplier: 2.5 });
-    assert.deepEqual(initiationCost(1, { ordeal: true }), { cost: 17, multiplier: 2.5 });    // 7 × 2.5 = 17.5, down
-    assert.deepEqual(initiationCost(1, { group: true, ordeal: true }), { cost: 10, multiplier: 1.5 }); // 10.5, down
-    assert.deepEqual(initiationCost(0, { group: true }), { cost: 12, multiplier: 2 });
-  });
-  test('v0.92.2: the first is Grade 1 (21), an ordeal −1, rounded up', (t) => {
-    t.after(oldWay({ 'SPIRITS_V923.gradeZero': 'v922', 'SPIRITS_V923.initiationRounding': 'up', 'OCCULT.initiation.ordealReduction': 1 }));
-    assert.equal(S.nextInitiationGrade(0, false), 1);
+describe('v0.92.3 initiation through the v0.92.2 patch (the rule is RULES.SORCERY_V923.initiation)', () => {
+  test('SPIRITS_V922_WAY puts back the first initiation at Grade 1, an ordeal −1, rounded up', (t) => {
+    t.after(oldWay(SPIRITS_V922_WAY));
     assert.deepEqual(initiationCost(1), { cost: 21, multiplier: 3 });
     assert.deepEqual(initiationCost(1, { ordeal: true }), { cost: 14, multiplier: 2 });
-  });
-  test('the rounding switch alone', (t) => {
-    t.after(oldWay({ 'SPIRITS_V923.initiationRounding': 'up' }));
-    assert.equal(initiationCost(1, { ordeal: true }).cost, 18);
   });
 });
 
@@ -213,15 +195,10 @@ describe('v0.92.3 allies (Grimoire pp. 67–71)', () => {
   });
 });
 
-describe('v0.92.3 wards (Grimoire p. 92 and errata)', () => {
-  test('book: Force hours, days = successes, drain (Force × days)L Stun, 1,000¥ a Force, Force ≤ 2 × Magic', () => {
-    assert.deepEqual(wardPlan(4, 3), { tn: 4, baseHours: 4, hours: 4, nuyen: 4000, drainTn: 12, drainLevel: 'L', days: 3, stun: true });
-    assert.equal(S.wardMaxForce(5), 10);
-  });
-  test('v0.92.2: hours ÷ successes, drain at Force ÷ 2 M, no materials, no cap', (t) => {
+describe('v0.92.3 wards through the v0.92.2 patch (the rule is RULES.SORCERY_V923.ward)', () => {
+  test('v0.92.2: hours ÷ successes, drain at Force ÷ 2 M, no materials', (t) => {
     t.after(oldWay(SPIRITS_V922_WAY));
     assert.deepEqual(wardPlan(4, 3), { tn: 4, baseHours: 4, hours: 2, nuyen: 0, drainTn: 2, drainLevel: 'M' });
-    assert.equal(S.wardMaxForce(5), Infinity);
   });
   test('the Revamp keeps its drain and time', (t) => {
     t.after(urr());
@@ -229,22 +206,7 @@ describe('v0.92.3 wards (Grimoire p. 92 and errata)', () => {
   });
 });
 
-describe('v0.92.3 geasa, dispelling, elementals, the Spirit Table', () => {
-  test('a broken geas: +2 TN each, no Magic lost (Grimoire p. 52)', (t) => {
-    const g = [{ text: 'a', magic: 1, met: false, checkOnCast: true }, { text: 'b', magic: 2, met: false, checkOnCast: true }, { text: 'c', magic: 1, met: true, checkOnCast: true }];
-    assert.equal(S.geasaTn(g), 4);
-    assert.equal(geasaPenalty(g), 0);
-    t.after(oldWay({ 'SPIRITS_V923.geasa': 'v922' }));
-    assert.equal(S.geasaTn(g), 0);
-    assert.equal(geasaPenalty(g), 3);
-  });
-  test('dispelling: TN the higher of Force and quickening Karma; 1 Force per 2 successes (Grimoire p. 45)', (t) => {
-    assert.equal(S.dispelTn(4, 6), 6);
-    assert.deepEqual(resolveDispel(3, 3, 4), { remaining: 3, dispelled: false, forceLeft: 3 });
-    assert.deepEqual(resolveDispel(3, 8, 4), { remaining: 0, dispelled: true, forceLeft: 0 });
-    t.after(oldWay({ 'SPIRITS_V923.dispelling': 'v922' }));
-    assert.deepEqual(resolveDispel(3, 2, 4), { remaining: 1, dispelled: false });
-  });
+describe('v0.92.3 elementals, the Spirit Table', () => {
   test('an elemental sustains a spell Force Combat Turns (Core p. 142)', (t) => {
     assert.equal(elementalSustainUntil(100, 4), 112);
     t.after(oldWay({ 'SPIRITS_V923.elementalSustain': 'v922' }));
@@ -282,14 +244,3 @@ describe('v0.92.3 reading an aura (Core p. 145; Grimoire p. 90)', () => {
   });
 });
 
-describe('v0.92.3 centering (Grimoire pp. 43–44)', () => {
-  test('book: always a test; every 2 successes take 1 point of penalties off, no grade cap', async (t) => {
-    const { centeringCut, centeringMode } = await import('../arcanum.ts');
-    assert.equal(centeringMode(''), 'test');
-    assert.equal(centeringCut(5, 1, 4), 2);
-    assert.equal(centeringCut(9, 1, 3), 3);
-    t.after(oldWay({ 'SPIRITS_V923.centering': 'v922' }));
-    assert.equal(centeringMode(''), 'auto');
-    assert.equal(centeringCut(5, 1, 4), 1);
-  });
-});

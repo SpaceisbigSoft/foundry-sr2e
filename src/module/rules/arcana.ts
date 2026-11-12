@@ -1,9 +1,9 @@
-import { dispelForceAfter } from './spirits923.ts';
 import { RULES } from './config.ts';
 import type { TargetNumberModifier } from './dice.ts';
 import { modifierIs } from './dice.ts';
 import type { Augmentation } from './cyberware.ts';
 import { urrMagNoTotemDice } from './urr80-magic.ts';
+import { spellLockAnyForce } from './sorcery923.ts';
 import type { Attributes } from './stats.ts';
 import { own } from './util.ts';
 import { t as tx, tCount } from '../helpers/i18n.ts';
@@ -113,7 +113,8 @@ function withPower(foci: readonly Focus[], test: 'sorcery' | 'conjuring' | 'astr
 /** A free sustaining focus that can hold a spell of this Force and category, or null. VERIFY */
 export function availableSustainingFocus(foci: readonly Focus[], sustained: readonly SustainedSpell[], spell: { force: number; category: string }): Focus | null {
   const used = new Set(sustained.map((s) => s.focusId).filter(Boolean));
-  return foci.find((f) => f.focusType === 'sustaining' && f.active && (f as { bonded?: boolean }).bonded !== false && f.rating >= spell.force
+  // v0.92.3 (RULES.SORCERY_V923.spellLock 'book', Core p. 138): a spell lock holds a spell of any Force.
+  return foci.find((f) => f.focusType === 'sustaining' && f.active && (f as { bonded?: boolean }).bonded !== false && (spellLockAnyForce() ? f.rating > 0 : f.rating >= spell.force)
     && (!f.category || same(f.category, spell.category)) && !(f.id && used.has(f.id))) ?? null;
 }
 
@@ -193,6 +194,8 @@ export type Metamagic = (typeof METAMAGIC)[number];
 
 /** Magic after initiation: each grade adds RULES.MAGIC.magicPerGrade (only for the magically active). VERIFY */
 export function initiateMagic(magic: number, grade: number): number {
+  // v0.92.3 (RULES.SORCERY_V923.initiation 'book', Grimoire p. 37): a Grade 0 initiate (the first initiation) stores
+  // grade 0, so it adds no Magic; the stored grade is the grade.
   return magic > 0 ? magic + Math.max(0, Math.floor(grade || 0)) * RULES.MAGIC.magicPerGrade : 0;
 }
 
@@ -213,13 +216,7 @@ export function centeringModifiers(grade: number, techniques: readonly string[],
 }
 
 /** Dispelling: each success removes one of the spell's successes; at 0 it ends. VERIFY */
-export function resolveDispel(spellSuccesses: number, dispelSuccesses: number, force?: number): { remaining: number; dispelled: boolean; forceLeft?: number } {
-  // v0.92.3 (RULES.SPIRITS_V923.dispelling 'book', Grimoire p. 45): every 2 successes take 1 off the spell's Force; at
-  // 0 it is broken (its successes are left alone until then).
-  if (RULES.SPIRITS_V923.dispelling === 'book' && typeof force === 'number') {
-    const forceLeft = dispelForceAfter(force, dispelSuccesses);
-    return { remaining: forceLeft > 0 ? Math.max(0, spellSuccesses) : 0, dispelled: forceLeft <= 0, forceLeft };
-  }
+export function resolveDispel(spellSuccesses: number, dispelSuccesses: number): { remaining: number; dispelled: boolean } {
   const remaining = Math.max(0, spellSuccesses - Math.max(0, dispelSuccesses));
   return { remaining, dispelled: remaining <= 0 };
 }

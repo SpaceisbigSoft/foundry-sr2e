@@ -134,7 +134,9 @@ describe('v0.56.0 touch spells', () => {
 });
 
 describe('v0.56.0 learning and permanent spells', () => {
-  test('learning plan', () => {
+  test('learning plan', (t) => {
+    // v0.92.3: the v0.92.2 rule (RULES.SORCERY_V923).
+    t.after(oldWay({ 'SORCERY_V923.learning': 'v922' }));
     assert.deepEqual(learningPlan(5, 2), { tn: 5, baseDays: 5, days: 3 });
     assert.deepEqual(learningPlan(1, 1), { tn: 2, baseDays: 1, days: 1 });
     assert.deepEqual(learningPlan(4, 0), { tn: 4, baseDays: 4, days: null });
@@ -149,8 +151,9 @@ describe('v0.56.0 learning and permanent spells', () => {
 });
 
 describe('v0.56.0 wards', () => {
-  test('ward plan (v0.92.2)', (t) => {
-    t.after(oldWay({ 'SPIRITS_V923.ward': 'v922', 'MAGIC_V56.ward.nuyenPerForce': 0, 'MAGIC_V56.ward.drainLevel': 'M' }));
+  test('ward plan', (t) => {
+    // v0.92.3: the v0.92.2 rule (RULES.SORCERY_V923).
+    t.after(oldWay({ 'SORCERY_V923.ward': 'v922', 'MAGIC_V56.ward.nuyenPerForce': 0 }));
     assert.deepEqual(wardPlan(5, 2), { tn: 5, baseHours: 5, hours: 3, nuyen: 0, drainTn: 2, drainLevel: 'M' });
     assert.deepEqual(wardPlan(8, 0), { tn: 8, baseHours: 8, hours: null, nuyen: 0, drainTn: 4, drainLevel: 'M' });
     const old = { ...V.ward };
@@ -216,7 +219,7 @@ describe('v0.56.0 assensing (the v0.92.2 table)', () => {
 
 describe('v0.56.0 centering (the v0.92.2 way)', () => {
   let back: () => void = () => {};
-  before(() => { back = oldWay({ 'SPIRITS_V923.centering': 'v922' }); });
+  before(() => { back = oldWay({ 'SORCERY_V923.centering': 'v922' }); });
   after(() => back());
   test('cut is the least of successes, grade cap and penalties', () => {
     assert.equal(centeringCut(3, 2, 5), 2);
@@ -225,7 +228,9 @@ describe('v0.56.0 centering (the v0.92.2 way)', () => {
     assert.equal(centeringCut(-1, 2, 5), 0);
     assert.equal(centeringCut(3, -1, 5), 0);
   });
-  test('mode', () => {
+  test('mode', (t) => {
+    // v0.92.3: the v0.92.2 rule (RULES.SORCERY_V923).
+    t.after(oldWay({ 'SORCERY_V923.centering': 'v922' }));
     assert.equal(centeringMode('Centering (Dance)'), 'test');
     assert.equal(centeringMode('  '), 'auto');
     assert.equal(centeringMode(null), 'auto');

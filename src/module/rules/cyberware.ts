@@ -1,6 +1,7 @@
 import { RULES, type CyberGrade } from './config.ts';
 import type { Attributes } from './stats.ts';
 import { urrCoreEssenceRound } from './urr80-core.ts';
+import { bookMagicFromEssence } from './sorcery923.ts';
 import { round2 } from './util.ts';
 import { t as tx } from '../helpers/i18n.ts';
 import { gradedEssence, gradeCostFactor } from './gear923.ts';
@@ -46,6 +47,9 @@ export function currentEssence(baseEssence: number, items: readonly Augmentation
 export function effectiveMagic(baseMagic: number, essence: number, baseEssence = 6): number {
   if (baseMagic <= 0) return 0;
   if (!RULES.MAGIC_CAPPED_BY_ESSENCE) return baseMagic;
+  // v0.92.3 (RULES.SORCERY_V923.magicFromEssence 'book', Core p. 47; Ka-Ge 7 Q21): every point or part of Essence lost
+  // takes a point of Magic. The Revamp's own rule (URR_V80.coreEssenceFloor) keeps the cap below while it is on.
+  if (!RULES.URR_V80.coreEssenceFloor) { const b = bookMagicFromEssence(baseMagic, essence, baseEssence); if (b !== null) return b; }
   if (RULES.MAGIC_ESSENCE_MODE === 'reduce') return Math.max(0, baseMagic - Math.ceil(Math.max(0, round2(baseEssence - essence))));
   // v0.80.0 (RULES.URR_V80.coreEssenceFloor): Essence rounded down caps Magic (book: rounded up).
   return Math.min(baseMagic, urrCoreEssenceRound(essence));

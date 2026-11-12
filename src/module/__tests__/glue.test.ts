@@ -7,6 +7,7 @@ import { test, describe, before, after, afterEach } from "node:test";
 import { oldWay } from '../rules/__tests__/oldway.ts';
 import { SPIRITS_V922_WAY } from '../rules/__tests__/spirits922.ts';
 import { matrix922 } from "./helpers/matrix922.ts";
+import { SORCERY_V922 } from '../rules/__tests__/sorcery922.ts';
 import assert from "node:assert/strict";
 import { RULES } from "../rules/index.ts";
 import { shown } from "./helpers/shown.ts";
@@ -76,6 +77,8 @@ before(async () => {
   (RULES.CHARACTERS_V58.training as any).mode = 'instant';
   // v0.71.0 (R17): rigger adaptation is needed by default now; these older tests jump into unadapted cars (v071.test.ts covers it).
   (RULES.RIGGING as any).needsAdaptation = false;
+  // v0.92.3: these older tests pin the v0.92.2 sorcery rules (RULES.SORCERY_V923); the book's way is in v0923-sorcery.test.ts.
+  oldWay(SORCERY_V922);
   g.foundry = {
     abstract: { TypeDataModel: class {} },
     data: { fields: new Proxy({}, { get: () => class { constructor(..._a: any[]) {} } }) },

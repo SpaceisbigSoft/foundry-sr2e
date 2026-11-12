@@ -19,7 +19,9 @@ describe('sustained spells', () => {
       { spellName: 'Heal', force: 3, category: 'health', focusId: 'f1' },
     ]), [{ id: 'sustaining', label: 'Sustaining 2 spells', value: 4 }]);
   });
-  test('a sustaining focus must be active, strong enough, the right category and free', () => {
+  test('a sustaining focus must be active, strong enough, the right category and free', (t) => {
+    // v0.92.3: the v0.92.2 rule (RULES.SORCERY_V923).
+    t.after(oldWay({ 'SORCERY_V923.spellLock': 'v922' }));
     const foci = [focus({ id: 'a', focusType: 'sustaining', rating: 3, category: 'health' }), focus({ id: 'b', focusType: 'sustaining', rating: 5 })];
     assert.equal(availableSustainingFocus(foci, [], { force: 3, category: 'health' })?.id, 'a');
     assert.equal(availableSustainingFocus(foci, [], { force: 4, category: 'health' })?.id, 'b');
@@ -93,14 +95,18 @@ describe('initiation, metamagic, area effects and barriers', () => {
     assert.equal(traditionBlocks('sorcerer', 'cast'), null);
     assert.match(traditionBlocks('conjurer', 'cast') ?? '', /conjurers cannot cast/);
   });
-  test('initiation raises Magic by grade; mundanes stay 0', () => {
+  test('initiation raises Magic by grade; mundanes stay 0', (t) => {
+    // v0.92.3: the v0.92.2 rule (RULES.SORCERY_V923).
+    t.after(oldWay({ 'SORCERY_V923.initiation': 'v922' }));
     assert.equal(initiateMagic(6, 2), 8);
     assert.equal(initiateMagic(0, 3), 0);
   });
   test('quickened spells carry no penalty', () => {
     assert.deepEqual(sustainingModifiers([{ spellName: 'Armor', force: 4, category: '', focusId: '', quickened: true }]), []);
   });
-  test('shielding and centering', () => {
+  test('shielding and centering', (t) => {
+    // v0.92.3: the v0.92.2 rule (RULES.SORCERY_V923).
+    t.after(oldWay({ 'SORCERY_V923.initiation': 'v922', 'SORCERY_V923.centering': 'v922' }));
     assert.equal(shieldingDice(2, ['shielding']), 2);
     assert.equal(shieldingDice(2, []), 0);
     const pen = [{ label: 'Wounds (physical)', value: 2 }, { label: 'Sustaining 1 spell', value: 2 }, { label: 'Other', value: 3 }];
