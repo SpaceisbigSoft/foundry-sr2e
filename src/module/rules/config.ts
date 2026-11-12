@@ -17,6 +17,14 @@ import { SHOP_V91, SHOP_V915, SHOP_V916, FORMULA_V918 } from './config91.ts';
 import { MAGIC_V920, SHEET_V921, CLOCK_V922 } from './config92.ts';
 import { DOCS_V79 } from './config79.ts';
 import { URR_V80 } from './config80.ts';
+import { CORE_V923 } from './config923/core.ts';
+import { COMBAT_V923 } from './config923/combat.ts';
+import { HEALTH_V923 } from './config923/health.ts';
+import { SORCERY_V923 } from './config923/sorcery.ts';
+import { SPIRITS_V923 } from './config923/spirits.ts';
+import { MATRIX_V923 } from './config923/matrix.ts';
+import { VEHICLES_V923 } from './config923/vehicles.ts';
+import { GEAR_V923 } from './config923/gear.ts';
 
 /**
  * SR2e rules constants.
@@ -3305,6 +3313,22 @@ export const RULES = {
   /** v0.92.1: the flexible record sheet (custom tweaks, Carried, accessories from the description, the advising wizard; rules/config92.ts). */
   SHEET_V921,
   CLOCK_V922,
+  /** v0.92.3: book alignment, Core mechanics and characters (rules/config923/core.ts). */
+  CORE_V923,
+  /** v0.92.3: book alignment, Combat (rules/config923/combat.ts). */
+  COMBAT_V923,
+  /** v0.92.3: book alignment, Damage, health and hazards (rules/config923/health.ts). */
+  HEALTH_V923,
+  /** v0.92.3: book alignment, Sorcery (rules/config923/sorcery.ts). */
+  SORCERY_V923,
+  /** v0.92.3: book alignment, Conjuring, spirits, astral, initiation, adepts, allies and critters (rules/config923/spirits.ts). */
+  SPIRITS_V923,
+  /** v0.92.3: book alignment, The Matrix (rules/config923/matrix.ts). */
+  MATRIX_V923,
+  /** v0.92.3: book alignment, Vehicles, rigging and building security (rules/config923/vehicles.ts). */
+  VEHICLES_V923,
+  /** v0.92.3: book alignment, Gear, cyberware and bioware (rules/config923/gear.ts). */
+  GEAR_V923,
 } as const;
 
 export type RangeBand = keyof typeof RULES.RANGE_TN;
