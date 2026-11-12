@@ -1093,7 +1093,7 @@ export const RULES = {
       { id: 'gas', label: 'Gas', perMetre: 1, effect: 'gas' },
       { id: 'heRocket', label: 'Rocket / missile: high explosive', perMetre: 1 },
       { id: 'apRocket', label: 'Rocket / missile: anti-personnel', perMetre: 2 }, // v0.92.3: −1 per half metre, Core p. 99 (was 0.5)
-      { id: 'avRocket', label: 'Rocket / missile: anti-vehicle', perMetre: 0.25 }, // v0.78.0 owner's default: −1 per 4 m, as the anti-vehicle mortar round (was 4 per metre). VERIFY
+      { id: 'avRocket', label: 'Rocket / missile: anti-vehicle', perMetre: 8 }, // v0.92.4 (the owner's decision, 12 Nov 2026): the book's −8 per metre, Core p. 99 (v0.78.0–v0.92.3: −1 per 4 m; COMBAT_V923.avRocket 'old')
       { id: 'demolition', label: 'Demolition charge', perMetre: 1 },
       // v0.61.0: smoke grenades leave a smoke region (COMBAT_V61.smoke: radius and how long it lingers).
       { id: 'smoke', label: 'Smoke', perMetre: 1, effect: 'smoke' },
@@ -2844,7 +2844,7 @@ export const RULES = {
     { id: 'sniffer', type: 'gear', name: 'Explosive sniffer', system: { cost: 2000, quantity: 1, scanner: { kind: 'explosive', rating: 4 } } },
     { id: 'powerFocus', type: 'focus', name: 'Power focus', system: { focusType: 'power', rating: 1, active: true, bonded: false } },
     // v0.46.0
-    // v0.78.0 owner's decision: SR2 core 10,000¥ × Rating (Corporate Security says × Rating²: VERIFY).
+    // v0.78.0 owner's decision, confirmed 12 Nov 2026: SR2 core 10,000¥ × Rating (Corporate Security says × Rating²).
     { id: 'passkey', type: 'gear', name: 'Maglock passkey', system: { cost: 40000, quantity: 1, bypassTool: { kind: 'passkey', rating: 4 } } },
     { id: 'rcd', type: 'gear', name: 'Remote control deck', system: { cost: 10000, quantity: 1, rcdRating: 2, signal: 2, weight: 3, availability: '4/72 hrs', streetIndex: 2 } }, // v0.92.3: Rigger 2 p. 97 first: 5,000¥ × Rating, 3 kg (was the core 50,000¥ × Rating, Rating × 2 kg)
     { id: 'jammer', type: 'gear', name: 'Jammer', system: { cost: 4000, quantity: 1, jammer: 4, concealability: 2, weight: 5, availability: '4/72 hrs', streetIndex: 1.5 } }, // v0.92.3: Rating/72 hrs, Concealability 2, 5 kg

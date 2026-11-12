@@ -123,6 +123,7 @@ same code.
 | Blast staging | successes only cut the scatter | each target's resistance successes vs the attack's, 2 net either way = 1 level | Core p. 97 | `COMBAT_V923.blastStaging` 'book' / 'off' |
 | Scatter per success | 2 m for all; rockets by range band | standard 2 m, aerodynamic and launcher 4 m; rockets and missiles 2D6, as a launcher (4 m), missiles also − Intelligence m | Core pp. 97, 99 | `COMBAT_V923.scatter` 'book' / 'old' |
 | AP rocket falloff | −0.5 per m | −1 per ½ m | Core p. 99 | `COMBAT.grenades` apRocket perMetre 0.5 → 2 |
+| AV rocket falloff (v0.92.4, the owner's decision) | −1 per 4 m | −8 per m | Core p. 99 | `COMBAT.grenades` avRocket perMetre 0.25 → 8; `COMBAT_V923.avRocket` book / old |
 | Shotguns | every shotgun spreads; width distance ÷ choke, −1 Power per metre | slug unless loaded with shot ('shot' ammo, flechette rules); 1 m, then 2, 4, 6… m every choke metres, −1 Power and −1 TN per widening; choke 2–10; shot: smartlink −1, no goggles or laser | Core p. 95 | `COMBAT_V923.shotgun` 'book' / 'old' |
 | Tracers | −1 per earlier burst, to −3 | full auto only, −1 per 3 rounds beyond short range, none for a smartgun user, no Power from them | Fields of Fire | `COMBAT_V923.tracers` 'book' / 'old' |
 | Cylinder / internal magazine reload | 2 rounds per action | Quickness rounds per Complex Action (break action 2) | Core p. 95 | `COMBAT_V923.reload` 'book' / 'old' |
@@ -147,7 +148,6 @@ same code.
 | Heavy weapon templates | LMG heavy, shotgun not | shotgun heavy, LMG not (MMG, HMG, shotguns) | Core p. 89 | weapon templates `heavy` |
 
 Kept (the owner's decisions):
-- Anti-vehicle rocket falloff −1 per 4 m (`COMBAT.grenades` avRocket perMetre 0.25); the book's table says −8 per metre (Core p. 99).
 - Grenade long-range TN stays 6 (the owner's decision, 12 Nov 2026): the Core prints 8, which a FASA staff ruling calls a misprint for 6.
 
 Not built:
@@ -456,8 +456,8 @@ circuitFail, autoCrash) apply under either source.
 
 **Kept (the owner's decisions):** voice locks need a voice-deception device (CSH p. 101: opposed, ties repeat; as the
 system); the remote / rigger adaptation costs (the rules text: remote 2,500¥ × Body, rigger 2,800¥); the passkey at
-10,000¥ × Rating (CSH p. 100 prints × Rating²; Core p. 243 × Rating); the anti-vehicle rocket falloff −1 per 4 m (the
-Core Rocket/Missile table: −8 per metre).
+10,000¥ × Rating (CSH p. 100 prints × Rating²; Core p. 243 × Rating; the owner chose the Core price, 12 Nov 2026). The
+anti-vehicle rocket falloff moved to the book's −8 per metre in v0.92.4 (the owner's decision; see Combat).
 
 **Not built:** off-road halving the Speed (needs an off-road suspension flag); rigger defaulting at +1 per dot; autonav
 active in combat maneuvers (+rating TN); cerebral boosters, encephalons and move-by-wire on the rig; the ram range check
@@ -1012,9 +1012,9 @@ Not done (scoped out): the stim patch's magician Magic test; the antidote patch'
 | Hibernate | the spell page: Physical, touch, TN 4, sustained, (F/2)S, voluntary or unconscious subject (it is a spell, not a critter power; the adept power Suspended State works like it) | the stat-block importer's spell table |
 | Club reach | keep 1 | no change |
 | Cybereyes and cyberears | the Core Rules allowance: cybereyes take enhancements up to 0.5 Essence free; cyberears one feature of 0.2 or less | `BOOK_V78.senseAllowance` (importer); templates cybereyes (low-light) 0.2 / 8,000¥, cyberears (amplification, damper) 0.4 / 11,000¥ |
-| Anti-vehicle rocket falloff | −1 per 4 m for now (as the anti-vehicle mortar round) | `COMBAT.grenades` avRocket perMetre 0.25 (was 4). **VERIFY against the SR2 rocket table.** Fractional falloffs now lose whole points of Power (`blastLoss`) |
+| Anti-vehicle rocket falloff | −1 per 4 m for now (as the anti-vehicle mortar round); **v0.92.4: the book's −8 per metre (Core p. 99), the owner's decision of 12 Nov 2026** | `COMBAT.grenades` avRocket perMetre 8 (the old 0.25: `COMBAT_V923.avRocket` 'old'). Fractional falloffs lose whole points of Power (`blastLoss`) |
 | Remote / rigger adaptation costs | the rules text for now | `BOOK_V78.adaptation` 'text': remote adaptation 2,500¥ × Body (a new modification row), rigger adaptation 2,800¥ (`riggerAdaptationCost`) on top of it. **VERIFY: the tables have the two swapped** |
-| Passkey cost | SR2 core for now: 10,000¥ × Rating | a Maglock passkey template (rating 4, 40,000¥). **VERIFY: Corporate Security says 10,000¥ × Rating²** |
+| Passkey cost | SR2 core: 10,000¥ × Rating (**final: the owner kept the Core price, 12 Nov 2026**; the Corporate Security Handbook says × Rating²) | a Maglock passkey template (rating 4, 40,000¥) |
 
 ### Confirmed against the books (no change needed)
 

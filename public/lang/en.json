@@ -9543,7 +9543,9 @@
         "CORE_V923__qualities": "Edges and flaws at creation must come to 0, with no per-side cap (zero) or the old caps and balance (old)",
         "CORE_V923__fence": "Fencing: each side rolls against the other's Willpower + 2 and a fence pays at least 10% (book) or both at the fixed TN, down to 0% (old)",
         "CORE_V923__awards": "Individual Karma awards: the book's (roleplaying, guts, smarts, right place, surprise, humor, drama) (book) or the old five rows (old)",
-        "CORE_V923__interrogation": "Interrogation: the interrogator's skill vs the subject's Willpower, the subject doesn't roll (book; with one-sided social tests) or an opposed test (old)"
+        "CORE_V923__interrogation": "Interrogation: the interrogator's skill vs the subject's Willpower, the subject doesn't roll (book; with one-sided social tests) or an opposed test (old)",
+        "COMBAT_V923__avRocket": "Anti-vehicle rocket blast: loses 8 Power per metre (book, Core p. 99) or the v0.92.3 −1 per 4 m (old)",
+        "COMBAT_V923__avRocketOldPerMetre": "Anti-vehicle rocket blast under the old rule: Power lost per metre"
       }
     },
     "Rules": {

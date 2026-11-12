@@ -283,10 +283,16 @@ describe('v0.81.0 round 2 (RF-APP): the R2-SEC findings in the application files
     assert.equal(gmApplyShapeOk('applyPowerEffect', { powerEffect: { targetUuid: 'Actor.b', effect: null, removeId: 'e' } }), true);
   });
 
-  test('R2-SEC-10: a blast from a flag falls off at least 0.25 per metre (the gentlest RULES kind)', async () => {
+  test('R2-SEC-10: a blast from a flag falls off at least as fast as the gentlest RULES kind', async () => {
     const { boundBlast } = await setup();
-    assert.equal(boundBlast({ power: 200, perMetre: 0 }).perMetre, 0.25);
-    assert.equal(boundBlast({ power: 12, perMetre: 0.5 }).perMetre, 0.5);
+    const { RULES } = await import('../rules/index.ts');
+    const gentlest = Math.min(...(RULES.COMBAT.grenades as any[]).map((g) => Number(g.perMetre)).filter((n) => n > 0));
+    assert.equal(boundBlast({ power: 200, perMetre: 0 }).perMetre, gentlest);
+    assert.ok(gentlest > 0);
+    // v0.92.4: with the anti-vehicle rocket's old falloff on (COMBAT_V923.avRocket 'old'), its 0.25 is allowed again.
+    const was = (RULES as any).COMBAT_V923.avRocket;
+    (RULES as any).COMBAT_V923.avRocket = 'old';
+    try { assert.equal(boundBlast({ power: 200, perMetre: 0 }).perMetre, 0.25); } finally { (RULES as any).COMBAT_V923.avRocket = was; }
   });
 
   test('R2-SEC-7: Resist all on a player\'s card says who posted it; auto-resist skips a player\'s card', async () => {
