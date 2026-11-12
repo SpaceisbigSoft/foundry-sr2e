@@ -185,7 +185,7 @@ import type { Veh80Hit } from '../rules/urr80-vehicles.ts';
 import { METAMAGIC } from '../rules/arcana.ts';
 import { isLeadGm, madeHere } from '../applications/leader.ts';
 import { t as tx, tCount, tKey, tNoun, tList, type CountNoun } from '../helpers/i18n.ts';
-import { gearBook, housedEssenceCost, awakenedBioEssence, culturedBodyCost, surgeryEssenceCost, surgeryTraumaLevel, systemsHit, systemDamage, gradeResistTn, systemStops, adrenalCrashBook, systemShockTn, bodyIndexHealsTn } from '../rules/gear923.ts';
+import { gearBook, housedEssenceCost, awakenedBioEssence, culturedBodyCost, surgeryEssenceCost, systemsHit, systemDamage, gradeResistTn, systemStops, adrenalCrashBook, systemShockTn, bodyIndexHealsTn } from '../rules/gear923.ts';
 import { GEAR_V923_TABLES } from '../rules/config923/gear.ts';
 
 const SYSTEM_ID = 'sr2e';
