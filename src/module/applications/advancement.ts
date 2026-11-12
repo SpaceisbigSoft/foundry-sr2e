@@ -16,6 +16,7 @@ import {
 import { creationRecordOf, approvalContext, queueOn, inCreation, RECORD_FLAG, DRAFT_FLAG } from './approvals.ts';
 import { RULES } from '../rules/config.ts';
 import { urrCoreStartPool } from '../rules/urr80-core.ts';
+import { startPoolPatch } from '../rules/core923.ts';
 import { madeHere } from './leader.ts';
 import { t as tx, tCount } from '../helpers/i18n.ts';
 
@@ -47,6 +48,8 @@ export async function recordCreation(actor: any, o: { how: 'wizard' | 'asIs'; pr
     what: o.how === 'wizard' ? (rec.failed ? tCount(rec.failed, 'SR2E.App.Advancement.creationFinishedBuildChecks') : tx('SR2E.App.Advancement.creationFinished')) : tx('SR2E.App.Advancement.creationRecordedAsTheCharacter'),
   };
   await actor.update({
+    // v0.92.3 (RULES.CORE_V923.startPool 'book', Core p. 47): a metahuman starts with a Karma Pool of 2, a human 1.
+    ...(o.how === 'wizard' ? startPoolPatch(actor.system?.metatype, Number(actor.system?.karma?.pool ?? 0)) : {}),
     // v0.80.0 (RULES.URR_V80.coreStartPoolByMeta): {} in the book.
     ...(o.how === 'wizard' ? urrCoreStartPool(actor.system?.metatype, Number(actor.system?.karma?.pool ?? 0)) : {}),
     [`flags.${SYSTEM.id}.${RECORD_FLAG}`]: rec,

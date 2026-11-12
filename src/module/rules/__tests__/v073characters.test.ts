@@ -9,6 +9,7 @@ import {
   canonicalSkillNames, sameSkillName, exceptionalAttributeBonus, attributeMaximumsWith, attributeLimitsWith, surplusFlawBonus,
   attributeKarmaCost,
 } from '../charfix.ts';
+import { oldWay } from './oldway.ts';
 
 const R = RULES as any;
 const M = CHARACTERS_V73 as any;
@@ -236,7 +237,9 @@ describe('v0.73.0 O38: Exceptional Attribute, surplus flaws, a dearer Karma band
       withRule('qualities.surplusFlaws.use', 'nuyen', () => assert.equal(surplusFlawBonus(list).nuyen, 2 * M.qualities.surplusFlaws.nuyenPerPoint));
     });
   });
-  test('Karma above the racial maximum: refused by default (SR2), the dearer band as a house rule', () => {
+  test('Karma above the racial maximum: refused by default (SR2), the dearer band as a house rule', (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.aboveMax': 'refuse' }));
     assert.deepEqual(attributeKarmaCost({ to: 5, max: 6 }), { cost: Math.ceil(5 * RULES.UPKEEP.karma.attributeMultiplier), ok: true, reason: '', band: 'normal' });
     assert.equal(attributeKarmaCost({ to: 7, max: 6 }).ok, false);
     withRule('qualities.karmaAboveRacial.enabled', true, () => {

@@ -41,7 +41,9 @@ export function socialOneSided(skill: string, o: { pay?: boolean } = {}): boolea
   const s = D().socialInfluence;
   if (s.mode !== 'oneSided' || o.pay) return false;
   const n = String(skill ?? '').trim().toLowerCase();
-  return s.skills.some((k) => { const l = k.toLowerCase(); return n === l || n.startsWith(`${l} `); });
+  // v0.92.3 (RULES.CORE_V923.interrogation 'book', Core p. 73): Interrogation is the interrogator's test vs the subject's Willpower.
+  const list = RULES.CORE_V923.interrogation === 'book' ? [...s.skills, 'Interrogation'] : s.skills;
+  return list.some((k) => { const l = k.toLowerCase(); return n === l || n.startsWith(`${l} `); });
 }
 
 /**

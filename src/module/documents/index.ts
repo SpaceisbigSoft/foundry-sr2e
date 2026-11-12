@@ -143,8 +143,10 @@ import { legalityId, legalFindMods, legalFindTimeFactor, legalWarning, permitPla
 import { throughOn, throughPlan, throughLegalMods, throughTimeFactor, throughSuccesses, throughSuffix, fixerFeeOf, contactLevelTnMods, type FindThrough, type ThroughMode } from '../rules/fixers.ts';
 import { logProjectDone } from '../applications/advancement.ts';
 import { gearStackKey } from '../rules/catalogue.ts';
+// v0.92.3 book alignment, core mechanics and characters (RULES.CORE_V923).
+import * as CO923 from '../rules/core923.ts';
 import {
-  urrCoreCriticalNote, urrCoreKnowledgeCard, urrCoreKnowledgeText, urrCoreOpposed, urrCoreKarmaDice, urrCoreSkillTestDice, urrCoreAttributeTn,
+  urrCoreCriticalNote, urrCoreKnowledgeCard, urrCoreKnowledgeText, urrCoreOpposed, urrCoreSkillTestDice, urrCoreAttributeTn,
   urrCoreTrainingDays, urrCoreInstruction, urrCoreInstructExtra, urrCoreFindMods, urrCoreHaggleSellerTn,
 } from '../rules/urr80-core.ts';
 import { waits, projectList, makeProject, retimed, timeLabel, itemAcquireHours, dueProjects, fromPairs, PROJECT_CALLS, readyAt as projectReadyAt, type WaitArea, type Project, type ProjectEffect } from '../rules/waiting.ts';
@@ -1056,6 +1058,12 @@ export interface Contest {
   pay?: number;
   /** v0.79.0 (RULES.DOCS_V79.socialInfluence): a one-sided social test: only the speaker rolls (one side). */
   oneSided?: boolean;
+  /**
+   * v0.92.3 (RULES.CORE_V923.perception): a perception or sneaking card made the book's way ('book': the observer's
+   * Intelligence vs 4, one success notices) or the Companion's ('companion': the sneaker's Stealth successes raised the
+   * observer's TN first). Missing: the old opposed test.
+   */
+  mode?: 'book' | 'companion';
 }
 
 /**
@@ -1931,7 +1939,7 @@ export class SR2Actor extends Actor {
    * Keep token statuses, sustained spells and dying state in step with the condition monitor.
    * Runs on the client that changed the monitor.
    */
-  async syncCondition(prevStatus: string | undefined, grew: { physical: boolean; stun: boolean }): Promise<void> {
+  async syncCondition(prevStatus: string | undefined, grew: { physical: boolean; stun: boolean }, before?: Monitor): Promise<void> {
     const now = sysNow();
     if (grew.physical || grew.stun) {
       const prev = (this.getFlag(SYSTEM_ID, 'damagedAt') as Record<string, number> | undefined) ?? {};
@@ -1948,7 +1956,8 @@ export class SR2Actor extends Actor {
       const grp = this.moraleGroup();
       const prs = grp ? (grp.standing.length ? grp.standing : grp.actors).map((a: any) => Number(a.system?.professionalRating ?? 0)) : [];
       const pr = grp?.mixed ? mixedMoraleRating(prs, Number(grp.standing[0]?.system?.professionalRating ?? 0)) : Number(this.sys.professionalRating ?? 0);
-      if (grp && RULES.MORALE.onCasualty && pr > 0 && grp.standing.length > 0) {
+      // v0.92.3 (RULES.CORE_V923.morale 'book', Core p. 187): no casualty test in the book (each NPC quits on its wound).
+      if (grp && !CO923.moraleBook() && RULES.MORALE.onCasualty && pr > 0 && grp.standing.length > 0) {
         await ChatMessage.create({
           speaker: ChatMessage.getSpeaker({ actor: this }),
           content: `<p><strong>${tx('SR2E.Card.Actor.goesDown', { name: escText(this.name) })}</strong> ${tx('SR2E.Card.Actor.ofTheGroupStanding', { status: escText(status), standingLength: grp.standing.length })}</p><p><button type="button" data-sr2e-action="morale">${tx('SR2E.Card.Actor.moraleTestPrVs', { pr, moraleTarget: moraleTarget({ casualties: grp.down, hurt: false }) })}</button></p>`,
@@ -1960,13 +1969,18 @@ export class SR2Actor extends Actor {
       const down = (g.down ?? 0) + 1;
       await this.update({ 'system.grunts.down': down, 'system.monitor.physical': 0, 'system.monitor.stun': 0, 'system.care.dyingSince': -1, 'system.care.stabilised': false });
       const left = gruntsStanding(g.size, down);
-      const morale = RULES.MORALE.onCasualty && (this.sys.professionalRating ?? 0) > 0;
+      const morale = !CO923.moraleBook() && RULES.MORALE.onCasualty && (this.sys.professionalRating ?? 0) > 0;
       await ChatMessage.create({
         speaker: ChatMessage.getSpeaker({ actor: this }),
         content: `<p><strong>${tx('SR2E.Card.Actor.oneOfGoesDown', { name: escText(this.name) })}</strong> ${tx('SR2E.Card.Actor.theNextStepsInStanding', { status: escText(status), left })}</p>${morale ? `<p><button type="button" data-sr2e-action="morale">${tx('SR2E.Card.Actor.moraleTestPrVs2', { professionalRating: escText(this.sys.professionalRating ?? 0), moraleTarget: moraleTarget({ casualties: down, hurt: false }) })}</button></p>` : ''}`,
         flags: { [SYSTEM_ID]: { morale: { actorUuid: this.uuid } } },
       });
       return;
+    }
+    // v0.92.3 (RULES.CORE_V923.morale 'book', Core p. 187): an NPC withdraws at its Professional Rating's wound.
+    if (before && (grew.physical || grew.stun) && this.type === 'npc' && status && !['unconscious', 'dying', 'dead'].includes(status)) {
+      const worst = (m: Monitor) => { const p = woundLevel(m.physical), st = woundLevel(m.stun); const r = (l: string | null) => (l ? ['L', 'M', 'S', 'D'].indexOf(l) : -1); return r(p) >= r(st) ? p : st; };
+      if (CO923.moraleWithdraws(Number(this.sys.professionalRating ?? 0), worst(before), worst(this.#monitor()))) await this.#moraleWithdraw();
     }
     // Wound icons on the token (v0.36.0): the worst wound level on either track.
     if (RULES.TOKENS.woundIcons) {
@@ -2701,7 +2715,8 @@ export class SR2Actor extends Actor {
     const poolMax = narrowSpend ? this.spellPoolFor(narrowSpend) : ((this.sys.derived?.[`${pool}PoolLeft`] as number | undefined) ?? 0);
     const poolDice = Math.max(0, Math.min(opts.poolDice ?? 0, poolMax));
     // v0.80.0 (RULES.URR_V80.coreKarmaDice): extra dice bought from the Karma Pool, one point a die (0 in the book).
-    const karmaDice = urrCoreKarmaDice(opts.karmaDice, Number(this.sys.derived?.karmaPoolLeft ?? 0));
+    // v0.92.3 (RULES.CORE_V923.karmaDice 'book', Core p. 191): in the book too, at most the test's own dice.
+    const karmaDice = CO923.karmaDiceFor(opts.karmaDice, Number(this.sys.derived?.karmaPoolLeft ?? 0), dice);
     if (karmaDice > 0) {
       label = tx('SR2E.Card.Actor.karma', { label, karmaDice });
       await this.update({ 'system.karma.poolSpent': Number(this.sys.karma?.poolSpent ?? 0) + karmaDice });
@@ -2710,8 +2725,11 @@ export class SR2Actor extends Actor {
     // An aspected background count aligned with this magician adds dice to magic (v0.39.0).
     const aligned = opts.magical || opts.background ? this.backgroundInfo().bonusDice : 0;
     if (aligned) label = tx('SR2E.Card.Actor.aspectedBackground', { label, aligned });
+    // v0.92.3 (RULES.CORE_V923.threat 'book', Core p. 187): an NPC's Threat Rating adds dice to every test.
+    const threat = this.#threatDice();
+    if (threat) label = `${label}${tx('SR2E.Card.Actor.threatDice', { threat })}`;
     const result = await successTest({
-      dice: dice + aligned + karmaDice,
+      dice: dice + aligned + karmaDice + threat,
       poolDice,
       targetNumber: opts.targetNumber ?? 4,
       modifiers: this.#testModifiers(opts),
@@ -2726,6 +2744,11 @@ export class SR2Actor extends Actor {
     else if (poolDice > 0 && !(pool === 'task' && !(game as any).combat?.started)) await this.#spendPool(pool, poolDice);
     await this.#post(this.#snapshot(label, result, context), result, rolls);
     return result;
+  }
+
+  /** v0.92.3 (RULES.CORE_V923.threat 'book', Core p. 187): this NPC's Threat Rating dice for a test (0 otherwise). */
+  #threatDice(): number {
+    return CO923.threatDice({ npc: this.type === 'npc', threatRating: Number(this.sys.threatRating ?? 0) });
   }
 
   #snapshot(label: string, result: SuccessTestResult, context: Partial<TestSnapshot> & { kind: TestSnapshot['kind'] }): TestSnapshot {
@@ -3402,6 +3425,8 @@ export class SR2Actor extends Actor {
   /** Karma buttons for a card: only for actors who have a Karma Pool at all. */
   #karmaButtons(snap: TestSnapshot): string {
     if (!((this.sys.karma?.pool as number) > 0)) return '';
+    // v0.92.3 (RULES.CORE_V923.afterOops 'book', Core p. 191): no more Karma on a test whose disaster Karma avoided.
+    if (!CO923.karmaAfterOops(snap.disasterAvoided)) return '';
     const parts: string[] = [];
     if (snap.botch) {
       parts.push(`<button type="button" data-sr2e-action="avoidDisaster">${tx('SR2E.Card.Actor.avoidDisasterKarma', { avoidDisasterCost: avoidDisasterCost() })}</button>`);
@@ -3579,6 +3604,7 @@ export class SR2Actor extends Actor {
       return;
     }
     const snap: TestSnapshot = { ...snapIn, rerolls: safeInt(snapIn.rerolls, 0, 1000, 0), bought: safeInt(snapIn.bought, 0, MAX_TEST_DICE, 0) };
+    if (!CO923.karmaAfterOops(snap.disasterAvoided)) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.noKarmaAfterOops')); return; }
     const failures = snap.dice.filter((d) => !d.success).length;
     if (failures === 0) {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.everyDieAlreadySucceededThereIs'));
@@ -3733,6 +3759,7 @@ export class SR2Actor extends Actor {
 
   /** Karma Pool: buy one more success on a test (v0.35.0; permanent by default), and re-resolve it. */
   async buySuccess(snap: TestSnapshot): Promise<boolean> {
+    if (!CO923.karmaAfterOops(snap.disasterAvoided)) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.noKarmaAfterOops')); return false; }
     const k = this.sys.karma ?? {};
     const left = Math.max(0, (k.pool ?? 0) - (k.poolSpent ?? 0));
     const c = canBuySuccess({ successes: snap.successes, poolLeft: left, botch: snap.botch });
@@ -4340,6 +4367,27 @@ export class SR2Actor extends Actor {
     const rolls: any[] = [];
     // Adept enhanced perception adds dice (v0.39.0); v0.71.0 (R2): through the shared skill path.
     const pd = this.perceptionDice();
+    // v0.92.3 (RULES.CORE_V923.perception 'book', Core p. 185): Intelligence vs 4 + the modifiers, one success notices;
+    // 'companion' (Companion p. 90): the sneaker's Stealth (4) Test first, each success +1 to the observer's TN.
+    const mode = CO923.perceptionMode();
+    if (mode !== 'opposed') {
+      const theirs = mode === 'companion' && side.dice > 0
+        ? await successTest({ dice: side.dice, targetNumber: CO923.bookPerceptionTargets({}).sneakerTn, modifiers: side.modifiers.filter((m: TargetNumberModifier) => !modIn(opts.excludeTheirs ?? [], m)), roll: foundryRoller(rolls) })
+        : null;
+      const sm = theirs ? CO923.stealthTnModifier(theirs.successes) : null;
+      const base = CO923.bookPerceptionTargets({}).observerTn;
+      const mine = await successTest({ dice: pd.dice, targetNumber: base, modifiers: this.#testModifiers({ modifiers: [...(opts.modifiers ?? []), ...pd.modifiers, ...sight.modifiers, ...(sm ? [sm] : [])], sightHandled: true, exclude: opts.exclude ?? [] }), roll: foundryRoller(rolls) });
+      const noticed = CO923.bookNoticed(mine.successes);
+      const contest: Contest = { kind: 'perceive', mode, id: SR2Actor.contestId(), actorName: this.name, targetName: target.name, sides: [
+        { name: this.name, uuid: this.uuid as string, label: tx('SR2E.Card.Core923.looksFor', { name: this.name, targetName: target.name, label: pd.label, tn: base }), result: mine },
+        ...(theirs ? [{ name: target.name, uuid: target.uuid, label: tx('SR2E.Card.Core923.stealthFirst', { name: target.name, skill: p.stealthSkill, tn: CO923.bookPerceptionTargets({}).sneakerTn, suffix: side.suffix ?? '' }), result: theirs }] : []),
+      ] };
+      await ChatMessage.create({
+        speaker: ChatMessage.getSpeaker({ actor: this }), content: SR2Actor.contestContent(contest),
+        rolls, ...(opts.whisper ? { whisper: gms, blind: true } : {}), flags: { [SYSTEM_ID]: { contest } },
+      });
+      return { noticed, net: noticed ? mine.successes : 0 };
+    }
     const mine = await successTest({ dice: pd.dice, targetNumber: tns.observerTn, modifiers: this.#testModifiers({ modifiers: [...(opts.modifiers ?? []), ...pd.modifiers, ...sight.modifiers], sightHandled: true, exclude: opts.exclude ?? [] }), roll: foundryRoller(rolls) });
     const theirs = await successTest({ dice: side.dice, targetNumber: tns.sneakerTn, modifiers: side.modifiers.filter((m: TargetNumberModifier) => !modIn(opts.excludeTheirs ?? [], m)), roll: foundryRoller(rolls) });
     // v0.80.0 (RULES.URR_V80.coreTies): opposedOutcome in the book.
@@ -4385,7 +4433,8 @@ export class SR2Actor extends Actor {
       const seen: string[] = [];
       for (const w of rest) {
         if (!w.result) { rows.push(`<li>${tx('SR2E.Card.Actor.canTNotice2', { name: escText(w.name), why: escText(w.why ?? tx('SR2E.Card.Actor.unseen')) })}</li>`); continue; }
-        const noticed = opposedOutcome(w.result.successes, first.result.successes).winner === 'initiator';
+        // v0.92.3 (RULES.CORE_V923.perception): the book and the Companion notice on one success (the Stealth is in the TN).
+        const noticed = c.mode ? CO923.bookNoticed(w.result.successes) : opposedOutcome(w.result.successes, first.result.successes).winner === 'initiator';
         if (noticed) seen.push(w.name);
         const why = escText(w.result.modifiers.map((m) => `${m.label} ${m.value >= 0 ? '+' : ''}${m.value}`).join(', '));
         rows.push(`<li>${escText(w.name)}: <span title="${tx('SR2E.Card.Actor.tnBase', { resultBaseTargetNumber: w.result.baseTargetNumber, part: why ? `; ${why}` : '' })}">${tx('SR2E.Card.Actor.tn3', { resultTargetNumber: w.result.targetNumber })}</span>, ${escText(plural(w.result.successes, 'success'))} — ${noticed ? `<strong>${tx('SR2E.Card.Actor.notices2')}</strong>` : tx('SR2E.Card.Actor.missesIt')}</li>`);
@@ -4415,6 +4464,8 @@ export class SR2Actor extends Actor {
       const tier = legworkTier(total.successes);
       return `${head}${second?.result ? describeResult(second.label, second.result) : ''}${d.favNote ? `<p>${escText(String(d.favNote).replace(/<[^>]*>/g, ''))}</p>` : ''}<p><strong>${escText(tier)}.</strong>${total.note ? ` <span class="hint">(${total.note})</span>` : ''}</p>`;
     }
+    // v0.92.3 (RULES.CORE_V923.perception): the book's perception card (the sneaker's roll, if any, is the second side).
+    if (c.kind === 'perceive' && c.mode && !second?.result) return SR2Actor.#bookPerceiveBody(c, head);
     // v0.79.0 (RULES.DOCS_V79.socialInfluence): a one-sided social test: one success passes, more do better.
     if (c.kind === 'social' && c.oneSided) return `${head}<p><strong>${escText(socialInfluenceLine(first.result.successes, c.targetName || 'The target'))}</strong></p>`;
     if (!second?.result) return head;
@@ -4432,6 +4483,7 @@ export class SR2Actor extends Actor {
     }
     // v0.80.0 (RULES.URR_V80.coreTies): opposedOutcome in the book (an initiator's win there always has net > 0).
     const o = urrCoreOpposed(first.result.successes, second.result.successes);
+    if (c.kind === 'perceive' && c.mode) return SR2Actor.#bookPerceiveBody(c, head);
     const verdict = c.kind === 'perceive'
       ? (o.winner === 'initiator' ? `<strong>${tx('SR2E.Card.Actor.notices', { actorName: escText(c.actorName), targetName: escText(c.targetName) })}</strong> ${tx('SR2E.Card.Actor.net', { net: o.net })}` : `<strong>${tx('SR2E.Card.Actor.goesUnnoticed', { targetName: escText(c.targetName) })}</strong>`)
       : (o.winner === 'initiator' ? `<strong>${tx('SR2E.Card.Actor.wins', { actorName: escText(c.actorName) })}</strong> ${o.net ? tx('SR2E.Card.Actor.by4', { net: o.net }) : tx('SR2E.Card.Actor.theTie')}.` : o.winner === 'defender' ? `<strong>${tx('SR2E.Card.Actor.holdsOut', { targetName: escText(c.targetName) })}</strong> ${tx('SR2E.Card.Actor.by2', { net: o.net })}` : `<strong>${tx('SR2E.Card.Actor.aStandOff')}</strong>`);
@@ -4444,6 +4496,16 @@ export class SR2Actor extends Actor {
     }
     // v0.89.5: the verdict line is marked for the look's contest box (applications/look.ts), not found by its words.
     return `${head}${describeResult(second.label, second.result)}<p${c.kind === 'perceive' ? '' : ' data-sr2e-contest-result="1"'}>${verdict}</p>${payLine}`;
+  }
+
+  /** v0.92.3 (RULES.CORE_V923.perception): a book or Companion perception card: one observer success notices. */
+  static #bookPerceiveBody(c: Contest, head: string): string {
+    const [first, second] = c.sides;
+    const n = Number(first?.result?.successes ?? 0);
+    const verdict = CO923.bookNoticed(n)
+      ? `<strong>${tx('SR2E.Card.Actor.notices', { actorName: escText(c.actorName), targetName: escText(c.targetName) })}</strong> ${tx('SR2E.Card.Core923.successesSay', { n, reveal: escText(noticeReveal(n)) })}`
+      : `<strong>${tx('SR2E.Card.Actor.goesUnnoticed', { targetName: escText(c.targetName) })}</strong>`;
+    return `${second?.result ? describeResult(second.label, second.result) : ''}${head}<p>${verdict}</p>`;
   }
 
   /** v0.91.5: a find card's legality warning ('' when holding it risks nothing). */
@@ -4506,6 +4568,8 @@ export class SR2Actor extends Actor {
       const a: any = fromUuidSync(side.uuid);
       const k = a?.system?.karma;
       if (!a || !((Number(k?.pool) || 0) > 0)) return;
+      // v0.92.3 (RULES.CORE_V923.afterOops 'book', Core p. 191): nothing more after a disaster was avoided.
+      if (!CO923.karmaAfterOops(side.avoided)) return;
       const who = several ? `${side.name}: ` : '';
       const parts: string[] = [];
       const r = side.result;
@@ -4539,6 +4603,7 @@ export class SR2Actor extends Actor {
     if (!(actor instanceof SR2Actor)) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.noLongerExists', { sideName: escHtml(side.name) })); return null; }
     if (!canWriteNow(actor)) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.onlySOwnerOrTheGm', { actorName: escHtml(actor.name) })); return null; }
     const r = side.result;
+    if (!CO923.karmaAfterOops(side.avoided)) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.noKarmaAfterOops')); return null; }
     const rolls: any[] = [];
     let result: SuccessTestResult = r;
     let next = { ...side };
@@ -4772,7 +4837,9 @@ export class SR2Actor extends Actor {
     const skill: any = target.skillId ? this.items.get(target.skillId) : null;
     const kind = target.attribute ? 'attribute' : target.specialization ? 'specialization' : target.concentration ? 'concentration' : String(skill?.system?.kind ?? 'active');
     // v0.80.0 (RULES.URR_V80.coreTraining 'urr'): Karma × 8 hours at 4 (or Willpower) hours a day; null in the book.
-    const days = urrCoreTrainingDays({ cost: c.cost, willpower: Number(this.sys.attributes?.willpower?.total ?? 0) }) ?? trainingDays({ kind, newRating: c.to });
+    // v0.92.3 (RULES.CORE_V923.trainingTime 'karma', Companion pp. 50, 53): the Karma spent × 7 (× 15 knowledge, language).
+    const days = urrCoreTrainingDays({ cost: c.cost, willpower: Number(this.sys.attributes?.willpower?.total ?? 0) })
+      ?? CO923.trainingDaysByKarma({ kind, skillKind: String(skill?.system?.kind ?? 'active'), cost: c.cost }) ?? trainingDays({ kind, newRating: c.to });
     const now = sysNow();
     const entry = { id: SR2Actor.#newId(), label: `${c.label} ${c.from} → ${c.to}`, attribute: target.attribute ?? '', skillId: target.skillId ?? '', part, to: c.to, cost: c.cost, startedAt: now, readyAt: trainingReadyAt(now, days), days, baseDays: days,
       // v0.73.0 (O42): who started it (the Done line).
@@ -5303,9 +5370,14 @@ export class SR2Actor extends Actor {
    * v0.58.0: does anyone recognise this character? Each observer rolls Intelligence vs (10 − Public
    * Awareness); whispered to the GMs.
    */
-  async recognitionCheck(observerUuids: string[]): Promise<string[]> {
+  async recognitionCheck(observerUuids: string[], opts: { publicRep?: number | null } = {}): Promise<string[]> {
     const pa = Number(this.sys.reputation?.publicAwareness ?? 0);
-    const tn = recognitionTn(pa);
+    // v0.92.3 (RULES.CORE_V923.recognition 'book', Core p. 199): the NPC's Etiquette vs (1,000 − rep) ÷ 50; rep is the
+    // character's career Karma (private rep) or the public rep the GM gives.
+    const book = CO923.recognitionBook();
+    const pub = opts.publicRep != null && Number.isFinite(Number(opts.publicRep)) ? Math.max(0, Math.floor(Number(opts.publicRep))) : null;
+    const rep = pub ?? Math.max(0, Math.floor(Number(this.sys.karma?.career ?? 0)));
+    const tn = book ? CO923.recognitionTnBook(rep) : recognitionTn(pa);
     const attr = RULES.CHARACTERS_V58.recognition.attribute;
     const rows: string[] = [];
     const who: string[] = [];
@@ -5313,14 +5385,18 @@ export class SR2Actor extends Actor {
     for (const u of observerUuids) {
       const o: any = await fromUuid(u);
       if (!o || o.uuid === this.uuid) continue;
-      const r = await successTest({ dice: Number(o.system?.attributes?.[attr]?.total ?? 0), targetNumber: tn, modifiers: o.woundModifiers?.() ?? [], roll: foundryRoller(rolls) });
+      const et: any = book ? o.findSkill?.('Etiquette') : null;
+      const etDice = Number(et?.system?.rating ?? 0);
+      const dice = book ? (etDice > 0 ? etDice : Number(o.system?.attributes?.charisma?.total ?? 0)) : Number(o.system?.attributes?.[attr]?.total ?? 0);
+      const dmods: TargetNumberModifier[] = book && !(etDice > 0) ? [{ id: 'defaultingToAttribute', label: tx('SR2E.Card.Mod.defaultingToAttribute'), value: RULES.ATTRIBUTE_DEFAULT_TN_MOD }] : [];
+      const r = await successTest({ dice, targetNumber: tn, modifiers: [...dmods, ...(o.woundModifiers?.() ?? [])], roll: foundryRoller(rolls) });
       if (r.successes > 0) who.push(o.name);
       rows.push(`<li>${escText(o.name)}: ${escText(plural(r.successes, 'success'))}${r.successes > 0 ? ` — <strong>${tx('SR2E.Card.Actor.recognisesThem')}</strong>` : ''}</li>`);
     }
     if (!rows.length) return [];
     const gms = [...((game as any).users ?? [])].filter((u: any) => u.isGM).map((u: any) => u.id);
     await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), whisper: gms, blind: true, rolls,
-      content: `<div class="sr2e-roll"><h3>${tx('SR2E.Card.Actor.whoRecognises', { name: escText(this.name) })}</h3><p>${tx('SR2E.Card.Actor.vsTnPublicAwareness', { attr: escText(cap(attr)), tn, recognitionBaseTn: RULES.CHARACTERS_V58.recognition.baseTn, pa })}</p></div><ul>${rows.join('')}</ul><p>${who.length ? `<strong>${tx('SR2E.Card.Actor.recognised')}</strong> ${tx('SR2E.Card.Actor.by5', { who: who.map(escText).join(', ') })}` : tx('SR2E.Card.Actor.noOneRecognisesThem')}</p>` });
+      content: `<div class="sr2e-roll"><h3>${tx('SR2E.Card.Actor.whoRecognises', { name: escText(this.name) })}</h3><p>${book ? (pub != null ? tx('SR2E.Card.Core923.recognitionPublic', { tn, rep }) : tx('SR2E.Card.Core923.recognitionPrivate', { tn, rep })) : tx('SR2E.Card.Actor.vsTnPublicAwareness', { attr: escText(cap(attr)), tn, recognitionBaseTn: RULES.CHARACTERS_V58.recognition.baseTn, pa })}</p></div><ul>${rows.join('')}</ul><p>${who.length ? `<strong>${tx('SR2E.Card.Actor.recognised')}</strong> ${tx('SR2E.Card.Actor.by5', { who: who.map(escText).join(', ') })}` : tx('SR2E.Card.Actor.noOneRecognisesThem')}</p>` });
     return who;
   }
 
@@ -5789,12 +5865,21 @@ export class SR2Actor extends Actor {
     // v0.50.0: the sneaker's own side (penalties, edges and flaws, movement) and each observer's full side.
     const side = this.stealthSide({ useSpecialization: opts.useSpecialization });
     const rating = helpless ? 0 : side.rating;
-    const tn = Math.max(...watchers.map((w) => perceptionTargets({ stealthRating: rating, observerAttribute: (w.system?.attributes?.[p.attribute]?.total as number | undefined) ?? 0 }).sneakerTn));
+    // v0.92.3 (RULES.CORE_V923.perception): 'book' (Core p. 185) the sneaker doesn't roll; each watcher Intelligence vs 4.
+    // 'companion' (Companion p. 90): the sneaker's Stealth (4) once, each success +1 to every watcher's TN.
+    const mode = CO923.perceptionMode();
+    const bookTns = CO923.bookPerceptionTargets({});
+    const tn = mode !== 'opposed' ? Math.max(RULES.MIN_TARGET_NUMBER, bookTns.sneakerTn) : Math.max(...watchers.map((w) => perceptionTargets({ stealthRating: rating, observerAttribute: (w.system?.attributes?.[p.attribute]?.total as number | undefined) ?? 0 }).sneakerTn));
     const rolls: any[] = [];
-    const mine = await successTest({ dice: helpless ? 0 : side.dice, targetNumber: tn, modifiers: [...(opts.modifiers ?? []), ...(helpless ? [] : side.modifiers)], roll: foundryRoller(rolls) });
+    const sneakerRolls = !helpless && mode !== 'book';
+    const mine = await successTest({ dice: sneakerRolls ? side.dice : 0, targetNumber: tn, modifiers: [...(opts.modifiers ?? []), ...(sneakerRolls ? side.modifiers : [])], roll: foundryRoller(rolls) });
+    const stealthMod = mode === 'companion' ? CO923.stealthTnModifier(mine.successes) : null;
     const out: Array<{ name: string; noticed: boolean }> = [];
-    const contest: Contest = { kind: 'sneak', id: SR2Actor.contestId(), actorName: this.name, sides: [
-      { name: this.name, uuid: this.uuid as string, label: helpless ? tx('SR2E.Card.Actor.noStealthAgainst', { name: this.name, helpless, count: watchers.length }) : rating > 0 ? tx('SR2E.Card.Actor.sneaksPastVsTheSharpest', { name: this.name, count: watchers.length, skill: p.stealthSkill, rating, suffix: side.suffix ?? '', attribute: cap(p.attribute), tn }) : tx('SR2E.Card.Actor.sneaksPastAttributeVsTheSharpest', { name: this.name, count: watchers.length, stealthAttribute: cap(p.stealthAttribute), attribute: cap(p.attribute), tn }), result: mine }] };
+    const contest: Contest = { kind: 'sneak', ...(mode !== 'opposed' ? { mode } : {}), id: SR2Actor.contestId(), actorName: this.name, sides: [
+      { name: this.name, uuid: this.uuid as string, label: helpless ? tx('SR2E.Card.Actor.noStealthAgainst', { name: this.name, helpless, count: watchers.length })
+        : mode === 'book' ? tx('SR2E.Card.Core923.sneaksNoRoll', { name: this.name, count: watchers.length, tn: bookTns.observerTn })
+        : mode === 'companion' ? tx('SR2E.Card.Core923.sneaksStealth', { name: this.name, count: watchers.length, skill: p.stealthSkill, tn, suffix: side.suffix ?? '' })
+        : rating > 0 ? tx('SR2E.Card.Actor.sneaksPastVsTheSharpest', { name: this.name, count: watchers.length, skill: p.stealthSkill, rating, suffix: side.suffix ?? '', attribute: cap(p.attribute), tn }) : tx('SR2E.Card.Actor.sneaksPastAttributeVsTheSharpest', { name: this.name, count: watchers.length, stealthAttribute: cap(p.stealthAttribute), attribute: cap(p.attribute), tn }), result: mine }] };
     for (const w of watchers) {
       // v0.81.1 (D1-4): an unconscious, dying, held or projecting (empty-bodied) guard spots nobody.
       const out0 = w instanceof SR2Actor ? w.#cannotPerceive(true) : '';
@@ -5815,9 +5900,9 @@ export class SR2Actor extends Actor {
       // v0.71.0 (R2): the observer's Perception through the shared skill path.
       const pd = w.perceptionDice ? w.perceptionDice() : { dice: wAttr, modifiers: [] };
       const dice = pd.dice;
-      const mods = w.previewModifiers ? w.previewModifiers({ modifiers: [...(opts.observerModifiers ?? []), ...pd.modifiers, ...sight.modifiers], sightHandled: true }) : (w.woundModifiers?.() ?? []);
-      const theirs = await successTest({ dice, targetNumber: perceptionTargets({ stealthRating: rating, observerAttribute: wAttr }).observerTn, modifiers: mods, roll: foundryRoller(rolls) });
-      const noticed = opposedOutcome(theirs.successes, mine.successes).winner === 'initiator';
+      const mods = w.previewModifiers ? w.previewModifiers({ modifiers: [...(opts.observerModifiers ?? []), ...pd.modifiers, ...sight.modifiers, ...(stealthMod ? [stealthMod] : [])], sightHandled: true }) : [...(w.woundModifiers?.() ?? []), ...(stealthMod ? [stealthMod] : [])];
+      const theirs = await successTest({ dice, targetNumber: mode !== 'opposed' ? bookTns.observerTn : perceptionTargets({ stealthRating: rating, observerAttribute: wAttr }).observerTn, modifiers: mods, roll: foundryRoller(rolls) });
+      const noticed = mode !== 'opposed' ? CO923.bookNoticed(theirs.successes) : opposedOutcome(theirs.successes, mine.successes).winner === 'initiator';
       out.push({ name: w.name, noticed });
       contest.sides.push({ name: w.name, uuid: w.uuid, label: w.name, result: theirs });
     }
@@ -5873,7 +5958,9 @@ export class SR2Actor extends Actor {
     const wf = opts.weather === false ? 1 : movementInWeather({ walk: 1, run: 1 }, this.weatherHere()).factor;
     // v0.80.0 (RULES.URR_V80.hsAthletics 'urr'): distances by Fitness ((Strength + Quickness) ÷ 2) and Quickness.
     const urrMetres = athleticsDistanceUrr(kind, r.successes, Boolean(opts.running), { strength: Number(this.sys.attributes.strength.total), quickness: Number(this.sys.attributes.quickness.total), runMultiplier: Number(RULES.METATYPES.types[String(this.sys.metatype ?? 'human')]?.run ?? RULES.COMBAT.movement.run) });
-    const metres = Math.floor((urrMetres ?? athleticsDistance(kind, r.successes, Boolean(opts.running))) * wf * 2) / 2;
+    // v0.92.3 (RULES.CORE_V923.athletics 'book', Fields of Fire p. 75, Cyberpirates): climbing and swimming by Quickness and Strength.
+    const bookMetres = CO923.athleticsDistanceBook(kind, r.successes, { quickness: Number(this.sys.attributes.quickness.total), strength: Number(this.sys.attributes.strength.total), runMultiplier: Number(RULES.METATYPES.types[String(this.sys.metatype ?? 'human')]?.run ?? RULES.COMBAT.movement.run) });
+    const metres = Math.floor((urrMetres ?? (r.successes > 0 ? bookMetres : null) ?? athleticsDistance(kind, r.successes, Boolean(opts.running))) * wf * 2) / 2;
     const what = metres > 0 ? `${kind === 'jump' ? tx('SR2E.Card.Actor.jumps') : kind === 'climb' ? tx('SR2E.Card.Actor.climbs') : tx('SR2E.Card.Actor.swims')} <strong>${metres} m</strong>${wf !== 1 ? tx('SR2E.Card.Actor.weather', { wf }) : ''}.`
       : kind === 'climb' ? `<strong>${tx('SR2E.Card.Actor.noProgress')}</strong>` + (r.botch ? tx('SR2E.Card.Actor.aFallHazardFalling') : '.') : kind === 'swim' ? `<strong>${tx('SR2E.Card.Actor.goesUnder')}</strong>${tx('SR2E.Card.Actor.drowningStartsHazardDrowning')}` : `<strong>${tx('SR2E.Card.Actor.fallsShort')}</strong>`;
     await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p>${escText(this.name)}: ${what}</p>` });
@@ -6050,7 +6137,9 @@ export class SR2Actor extends Actor {
     const rolls: any[] = [];
     const mine = await successTest({ dice: sd.dice, targetNumber: h.tn, modifiers: this.#testModifiers({ modifiers: [...(opts.modifiers ?? []), ...sd.modifiers, ...this.#dealCred()] }), roll: foundryRoller(rolls) });
     // v0.80.0 (RULES.URR_V80.coreHaggleTn 'intelligence'): h.tn in the book.
-    const theirs = await successTest({ dice: h.sellerDice, targetNumber: urrCoreHaggleSellerTn(Number(this.sys.attributes?.intelligence?.total ?? 0)), roll: foundryRoller(rolls) });
+    // v0.92.3 (RULES.CORE_V923.haggle 'book', Core p. 184): the seller rolls against the buyer's Willpower.
+    const sellerTn = RULES.URR_V80.coreHaggleTn !== 'intelligence' && CO923.haggleBook() ? Math.max(RULES.MIN_TARGET_NUMBER, Number(this.sys.attributes?.willpower?.total ?? h.tn)) : urrCoreHaggleSellerTn(Number(this.sys.attributes?.intelligence?.total ?? 0));
+    const theirs = await successTest({ dice: h.sellerDice, targetNumber: sellerTn, roll: foundryRoller(rolls) });
     const net = mine.successes - theirs.successes;
     const p = haggledPrice(buy.price, net);
     // v0.71.0 (R1): a contest card, so Karma Pool and the GM's TN change work on it.
@@ -6082,8 +6171,10 @@ export class SR2Actor extends Actor {
     const f = RULES.STREET.fence;
     const sd = this.#skillDice(this.findSkill(f.skill), false, null, f.attribute as AttributeKey);
     const rolls: any[] = [];
-    const mine = await successTest({ dice: sd.dice, targetNumber: f.tn, modifiers: this.#testModifiers({ modifiers: [...(opts.modifiers ?? []), ...sd.modifiers, ...this.#dealCred()] }), roll: foundryRoller(rolls) });
-    const theirs = await successTest({ dice: f.fenceDice, targetNumber: f.tn, roll: foundryRoller(rolls) });
+    // v0.92.3 (RULES.CORE_V923.fence 'book', Core p. 188): each side vs the other's Willpower, + 2 for the suspicion.
+    const ft = CO923.fenceTns({ fenceWillpower: f.tn, sellerWillpower: Number(this.sys.attributes?.willpower?.total ?? f.tn), tn: f.tn });
+    const mine = await successTest({ dice: sd.dice, targetNumber: ft.mine, modifiers: this.#testModifiers({ modifiers: [...(opts.modifiers ?? []), ...sd.modifiers, ...this.#dealCred()] }), roll: foundryRoller(rolls) });
+    const theirs = await successTest({ dice: f.fenceDice, targetNumber: ft.theirs, roll: foundryRoller(rolls) });
     const p = hotFencePrice(value, mine.successes - theirs.successes, heat);
     // v0.71.0 (R1): a contest card (Karma Pool, the GM's TN change); a share eaten whole by the heat: the fence passes.
     const contest: Contest = { kind: 'fence', id: SR2Actor.contestId(), actorName: this.name, sides: [
@@ -6136,7 +6227,42 @@ export class SR2Actor extends Actor {
   }
 
   /** Morale: Professional Rating dice vs a TN that rises with casualties; no successes = the group breaks. */
+  /**
+   * v0.92.3 (RULES.CORE_V923.morale 'book', Core p. 187): this NPC withdraws on its Professional Rating's wound. A grunt
+   * group on one sheet: the grunt in front leaves the fight and the next steps in; anyone else is broken (flees or
+   * surrenders), and the GM may let them test Willpower (4) to stay (the card's button).
+   */
+  async #moraleWithdraw(): Promise<void> {
+    const g = this.sys.grunts;
+    const pr = Number(this.sys.professionalRating ?? 0);
+    const level = CO923.moraleWound(pr) ?? 'L';
+    const who = escText(this.name);
+    if (g && (g.size ?? 1) > 1 && gruntsStanding(g.size, g.down) > 1) {
+      const down = (g.down ?? 0) + 1;
+      await this.update({ 'system.grunts.down': down, 'system.monitor.physical': 0, 'system.monitor.stun': 0 });
+      await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p><strong>${tx('SR2E.Card.Core923.gruntWithdraws', { who })}</strong> ${tx('SR2E.Card.Core923.gruntWithdrawsWhy', { pr, level, left: gruntsStanding(g.size, down) })}</p>` });
+      return;
+    }
+    if (this.isBroken()) return;
+    await this.#setBroken(true, null);
+    await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), flags: { [SYSTEM_ID]: { morale: { actorUuid: this.uuid } } },
+      content: `<p><strong>${tx('SR2E.Card.Core923.withdraws', { who })}</strong> ${tx('SR2E.Card.Core923.withdrawsWhy', { pr, level })}</p><p><button type="button" data-sr2e-action="morale">${tx('SR2E.Card.Core923.willpowerToStay', { tn: Number(RULES.CORE_V923.moraleWillpowerTn ?? 4) })}</button></p>` });
+  }
+
   async moraleTest(opts: { modifiers?: TargetNumberModifier[] } = {}): Promise<{ broken: boolean } | null> {
+    // v0.92.3 (RULES.CORE_V923.morale 'book', Core p. 187): the morale test is Willpower (4) to stay in the fight.
+    if (CO923.moraleBook()) {
+      const rolls: any[] = [];
+      const r = await successTest({ dice: Number(this.sys.attributes?.willpower?.total ?? 0), targetNumber: Math.max(RULES.MIN_TARGET_NUMBER, Number(RULES.CORE_V923.moraleWillpowerTn ?? 4)), modifiers: [...(opts.modifiers ?? []), ...this.woundModifiers()], roll: foundryRoller(rolls) });
+      const stays = r.successes > 0;
+      const wasBroken = this.isBroken();
+      if (stays && wasBroken) await this.#setBroken(false, null);
+      if (!stays && !wasBroken) await this.#setBroken(true, null);
+      const who = escText(this.name);
+      await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), rolls,
+        content: `${describeResult(tx('SR2E.Card.Core923.moraleWillpower', { name: this.name, tn: r.targetNumber }), r)}<p>${stays ? `<strong>${tx('SR2E.Card.Core923.staysInTheFight', { who })}</strong>` : `<strong>${tx('SR2E.Card.Actor.breaks', { who })}</strong>${tx('SR2E.Card.Actor.theyFleeOrSurrender')}`}</p>` });
+      return { broken: !stays };
+    }
     // Grunts on separate tokens (v0.44.0): the group's fallen tokens count as casualties.
     // v0.49.0: a mixed group tests once, on RULES.MORALE.mixed of its standing members' ratings.
     const group = this.moraleGroup();
@@ -6413,7 +6539,8 @@ export class SR2Actor extends Actor {
       return { cost: skillCost({ to: from + 1, attribute: attr, kind, specialization: true }), from, to: from + 1, ok: true, reason: '', label: `${skill.name} (${skill.system.specialization})` };
     }
     const from = skill.system.rating ?? 0;
-    return { cost: skillCost({ to: from + 1, attribute: attr, kind }), from, to: from + 1, ok: true, reason: '', label: skill.name };
+    // v0.92.3 (RULES.CORE_V923.newSkill 'book', Core p. 190): a new skill's first point costs 1 Good Karma.
+    return { cost: CO923.newSkillCost(from, from + 1) ?? skillCost({ to: from + 1, attribute: attr, kind }), from, to: from + 1, ok: true, reason: '', label: skill.name };
   }
 
   /** Whether metatype maximums apply (spirits have none). */
@@ -7203,7 +7330,8 @@ export class SR2Actor extends Actor {
     const per: any = this.findSkill?.(p.skill);
     const attr = Number(this.sys.attributes?.[p.attribute]?.total ?? 0);
     const enh = this.adeptSpecial('enhancedPerception') * RULES.ADEPT.enhancedPerception.dicePerLevel;
-    const has = Number(per?.system?.rating ?? 0) > 0;
+    // v0.92.3 (RULES.CORE_V923.perception 'book' / 'companion', Core p. 185): SR2 has no Perception skill: Intelligence.
+    const has = Number(per?.system?.rating ?? 0) > 0 && CO923.perceptionMode() === 'opposed';
     if (!has || !RULES.FIXES_V71.contestSkillDice) return { dice: (has ? per.system.rating : attr) + enh, label: has ? `${per.name} ${per.system.rating}` : `${cap(p.attribute)} ${attr}`, modifiers: [] };
     const sd = this.#skillDice(per, false, null, p.attribute as AttributeKey, { skillName: p.skill });
     const qm = new Set(qualityModifiers(this.sys.qualities ?? [], { skill: p.skill }).map((m) => modKey(m)));
@@ -9089,15 +9217,18 @@ export class SR2Actor extends Actor {
     const shieldDice = rangedShieldDice(sh.dice || sh.tn ? Math.max(sh.dice, -sh.tn) : 0);
     const baseDice = (helpless ? 0 : attack.astral ? this.sys.derived.astral.quickness : attack.melee ? this.sys.attributes.quickness.total : 0) + fullDice + sense + shieldDice;
     const rolls: any[] = [];
+    // v0.92.3 (RULES.CORE_V923.threat 'book', Core p. 187): an NPC's Threat Rating dice defend too.
+    const threat = helpless ? 0 : this.#threatDice();
     const result = await successTest({
-      dice: baseDice,
+      dice: baseDice + threat,
       poolDice: helpless ? 0 : pool,
       targetNumber: attack.targetNumber,
       roll: foundryRoller(rolls),
     });
     if (pool > 0 && !helpless) await this.#spendPool(poolType, pool);
-    const label = held ? tx('SR2E.Card.Actor.defenseless', { held }) : down ? tx('SR2E.Card.Actor.defenseless2', { derivedStatus: this.sys.derived.status }) : pinned ? tx('SR2E.Card.Actor.defenselessHeldCannotDodge') : unaware ? tx('SR2E.Card.Actor.defenselessNeverSawItComing') : emptyBody ? tx('SR2E.Card.Actor.defenselessBodyEmptyWhileProjecting') : attack.astral ? tx('SR2E.Card.Actor.astralDefense')
+    const label0 = held ? tx('SR2E.Card.Actor.defenseless', { held }) : down ? tx('SR2E.Card.Actor.defenseless2', { derivedStatus: this.sys.derived.status }) : pinned ? tx('SR2E.Card.Actor.defenselessHeldCannotDodge') : unaware ? tx('SR2E.Card.Actor.defenselessNeverSawItComing') : emptyBody ? tx('SR2E.Card.Actor.defenselessBodyEmptyWhileProjecting') : attack.astral ? tx('SR2E.Card.Actor.astralDefense')
       : full ? tx('SR2E.Card.Actor.fullDefenseDice', { fullDice, part: shieldDice ? ` (${sh.name} +${shieldDice})` : '' }) : pool === 0 && !attack.melee && !sense && !shieldDice ? tx('SR2E.Card.Actor.defenseNoPoolDice') : tx('SR2E.Card.Actor.defense', { part: attack.melee ? tx('SR2E.Card.Actor.melee') : tx('SR2E.Card.Actor.dodge'), part2: shieldDice ? ` (${sh.name} +${shieldDice})` : '' });
+    const label = threat ? `${label0}${tx('SR2E.Card.Actor.threatDice', { threat })}` : label0;
     await this.#post(this.#snapshot(label, result, { kind: 'defend', defendAgainst: attack }), result, rolls);
   }
 
@@ -9730,9 +9861,13 @@ export class SR2Actor extends Actor {
     // Conjuring in place of the attribute, when that is better.
     const bodyDice = opts.astral ? Number(this.sys.derived.astral.body) : Number(this.sys.attributes.body.total);
     const conjDice = opts.spiritAttacker ? SP923.conjuringDefenseDice({ attackerType: 'spirit', conjuring: Number(this.findSkill?.('Conjuring')?.system?.rating ?? 0), attribute: bodyDice, magic: Number(this.sys.derived?.magic ?? 0) }) : 0;
+    // v0.92.3 (RULES.CORE_V923.trollDermal 'body', Core p. 45): a troll's dermal armor is +1 Body here; (threat 'book',
+    // Core p. 187) an NPC's Threat Rating dice.
+    const dermal = conjDice ? 0 : CO923.dermalSoakDice(Number(this.sys.derived?.racialDermal ?? 0), Boolean(opts.astral));
+    const threat = this.#threatDice();
     const result = await successTest({
       // v0.58.0: bone lacing adds to Body for damage resistance only.
-      dice: conjDice ? conjDice : opts.astral ? this.sys.derived.astral.body : this.sys.attributes.body.total + lacing + tough,
+      dice: conjDice ? conjDice + threat : (opts.astral ? this.sys.derived.astral.body : this.sys.attributes.body.total + lacing + tough + dermal) + threat,
       poolDice,
       targetNumber: tn,
       // v0.92.3: system shock over the Body Index (RULES.GEAR_V923.overBodyIndex).
@@ -9740,7 +9875,7 @@ export class SR2Actor extends Actor {
       roll: foundryRoller(rolls),
     });
     if (poolDice > 0) await this.#spendPool(poolType, poolDice);
-    const armorNote = `${conjDice ? tx('SR2E.Card.Actor.conjuringVsSpirit', { dice: conjDice }) : ''}${opts.armor ? tx('SR2E.Card.Actor.armor', { armor: opts.armor }) : ''}${!conjDice && lacing ? tx('SR2E.Card.Actor.boneLacing', { lacingLabel: this.sys.derived.cyber.lacing.label, lacing }) : ''}${!conjDice && tough ? tx('SR2E.Card.Actor.toughness2', { tough }) : ''}`;
+    const armorNote = `${conjDice ? tx('SR2E.Card.Actor.conjuringVsSpirit', { dice: conjDice }) : ''}${opts.armor ? tx('SR2E.Card.Actor.armor', { armor: opts.armor }) : ''}${dermal ? tx('SR2E.Card.Actor.dermalBody', { dermal }) : ''}${threat ? tx('SR2E.Card.Actor.threatDice', { threat }) : ''}${!conjDice && lacing ? tx('SR2E.Card.Actor.boneLacing', { lacingLabel: this.sys.derived.cyber.lacing.label, lacing }) : ''}${!conjDice && tough ? tx('SR2E.Card.Actor.toughness2', { tough }) : ''}`;
     await this.#post(this.#snapshot((opts.astral ? tx('SR2E.Card.Actor.resist7WithAstral', { power: opts.power, level: opts.level, type, armorNote }) : tx('SR2E.Card.Actor.resist7Plain', { power: opts.power, level: opts.level, type, armorNote })), result, {
       kind: 'soak',
       soak: {
@@ -11112,7 +11247,7 @@ export class SR2Actor extends Actor {
     if (this.type === 'spirit' && changed?.system?.materialized === true && this.sys.manifesting && madeHere(options, userId)) after('manifesting', this.setManifesting(false));
     if (options?.sr2ePrevMonitor && madeHere(options, userId)) {
       const before = options.sr2ePrevMonitor as Monitor;
-      after('condition', this.syncCondition(options.sr2ePrevStatus, { physical: this.sys.monitor.physical > before.physical, stun: this.sys.monitor.stun > before.stun }));
+      after('condition', this.syncCondition(options.sr2ePrevStatus, { physical: this.sys.monitor.physical > before.physical, stun: this.sys.monitor.stun > before.stun }, before));
     }
   }
 
@@ -19838,7 +19973,8 @@ export class SR2Actor extends Actor {
       await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p><strong>${escText(this.name)}</strong> ${tx('SR2E.Card.Actor.breathesThroughTheSmokeDoesNothing', { protLabel: escText(prot.label) })}</p>` });
       return;
     }
-    const inhalant = Number(this.sys.derived?.bio?.inhalantDice ?? 0) + Number(this.sys.derived?.toxinDice ?? 0);
+    const rt = Number(this.sys.derived?.racialToxinDice ?? 0);
+    const inhalant = Number(this.sys.derived?.bio?.inhalantDice ?? 0) + Number(this.sys.derived?.toxinDice ?? 0) - (rt - CO923.racialToxinDice(rt, 'toxin'));
     // v0.58.0: an air filtration system helps against smoke too.
     let filt = this.filtrationFor('inhalation');
     // v0.78.0 (RULES.BOOK_V78.toxinBioware 'power'): a tracheal filter lowers the smoke's Power instead.

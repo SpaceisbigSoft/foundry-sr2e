@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { skillTestDice, parseSkillWeb, webDistance, relatedDefaultTn, martialAttack } from '../skills.ts';
 import { buildCheck } from '../creation.ts';
 import { RULES } from '../config.ts';
+import { oldWay } from './oldway.ts';
 
 describe('skills and creation (v0.38.0)', () => {
   test('concentrations sit between the skill and the specialization', () => {
@@ -27,7 +28,9 @@ describe('skills and creation (v0.38.0)', () => {
     assert.deepEqual(martialAttack({ power: 4, level: 'M', reach: 0 }, { power: 1, stage: 1, reach: 0, defense: 0 }), { power: 5, level: 'S', reach: 0 });
     assert.deepEqual(martialAttack({ power: 4, level: 'S', reach: 0 }, null), { power: 4, level: 'S', reach: 0 });
   });
-  test('the priority-table build check', () => {
+  test('the priority-table build check', (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.priorities': 'old' }));
     const rows = buildCheck({
       priorities: { race: 'D', magic: 'A', attributes: 'B', skills: 'C', resources: 'E' },
       metatype: 'ork', magic: 'full', attributes: { body: 6, quickness: 5, strength: 5, charisma: 3, intelligence: 4, willpower: 4 }, intelligence: 4,

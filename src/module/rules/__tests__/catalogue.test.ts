@@ -4,6 +4,7 @@ import {
   paymentChoices, rowAmount, entrySummary, entryPrice, entryAvailability, newSkillKarma, newSpellKarma, skillAttributeFor, basketPlan, systemWithAmount, copiesOf,
   matchesSearch, setupWarnings, tabForType, findForType, pinAction, cleanPins, togglePin, copyName, foldKey, ADD_TYPES, skillCost, RULES, amountLocked, amountMax, gearStackKey, type SetupInput,
 } from '../index.ts';
+import { oldWay } from './oldway.ts';
 
 const base: SetupInput = {
   actorType: 'character',
@@ -47,7 +48,9 @@ describe('v0.63.0 catalogue: payment, prices, Karma', () => {
     assert.equal(entryAvailability('weapon', { availability: '6/14 days' }).tn, 6);
   });
 
-  test('a new skill costs each step from 1, by the linked attribute', () => {
+  test('a new skill costs each step from 1, by the linked attribute', (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.newSkill': 'old' }));
     const want = skillCost({ to: 1, attribute: 4, kind: 'active' }) + skillCost({ to: 2, attribute: 4, kind: 'active' }) + skillCost({ to: 3, attribute: 4, kind: 'active' });
     assert.equal(newSkillKarma({ rating: 3, attribute: 4, kind: 'active' }), want);
     assert.equal(newSkillKarma({ rating: 0, attribute: 4, kind: 'active' }), 0);

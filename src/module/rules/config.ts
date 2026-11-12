@@ -275,7 +275,8 @@ export const RULES = {
      */
     buyCost: 1, buyPermanent: true, buyNeedsSuccess: true,
     /** When Karma Pools refill on their own: 'manual', 'session' (the GM's first login on a new day), 'combat' (when a combat ends). */
-    refresh: 'manual' as 'manual' | 'session' | 'combat',
+    // v0.92.3 (book alignment): the pool is full again with the next encounter (Core p. 191): when a combat ends (was 'manual').
+    refresh: 'combat' as 'manual' | 'session' | 'combat',
   },
 
   /**
@@ -1210,7 +1211,8 @@ export const RULES = {
       elf: { label: 'Elf', mods: { quickness: 1, charisma: 2 }, vision: { lowLight: true }, reach: 0, dermal: 0, toxinDice: 0, run: 3 },
       dwarf: { label: 'Dwarf', mods: { body: 1, strength: 2, willpower: 1 }, vision: { thermographic: true }, reach: 0, dermal: 0, toxinDice: 2, run: 2 },
       ork: { label: 'Ork', mods: { body: 3, strength: 2, charisma: -1, intelligence: -1 }, vision: { lowLight: true }, reach: 0, dermal: 0, toxinDice: 0, run: 3 },
-      troll: { label: 'Troll', mods: { body: 5, quickness: -1, strength: 4, charisma: -2, intelligence: -2 }, vision: { thermographic: true }, reach: 1, dermal: 1, toxinDice: 0, run: 3 },
+      // v0.92.3 (book alignment): running × 2 (Core p. 83, Running Table; was × 3). The Revamp's patch sets 2 as well.
+      troll: { label: 'Troll', mods: { body: 5, quickness: -1, strength: 4, charisma: -2, intelligence: -2 }, vision: { thermographic: true }, reach: 1, dermal: 1, toxinDice: 0, run: 2 },
     } as Record<string, { label: string; mods: Partial<Record<'body' | 'quickness' | 'strength' | 'charisma' | 'intelligence' | 'willpower', number>>; vision: { lowLight?: boolean; thermographic?: boolean }; reach: number; dermal: number; toxinDice: number; run: number }>,
   },
 
@@ -1538,11 +1540,13 @@ export const RULES = {
        * v0.49.0: edges and flaws after creation (Companion, VERIFY): gaining an edge costs its points ×
        * `edgePerPoint` Good Karma; buying off a flaw costs its points × `flawPerPoint`.
        */
-      karma: { edgePerPoint: 2, flawPerPoint: 2 },
+      // v0.92.3 (book alignment): eliminating a flaw costs 10 × its points (Companion p. 22; was 2).
+      karma: { edgePerPoint: 2, flawPerPoint: 10 },
     },
     athletics: {
       skill: 'Athletics', attribute: 'body' as 'body' | 'quickness' | 'strength',
-      climb: [{ id: 'easy', label: 'Easy (ladder, rope with knots)', tn: 2 }, { id: 'rough', label: 'Rough wall or tree', tn: 4 }, { id: 'smooth', label: 'Smooth wall', tn: 6 }, { id: 'sheer', label: 'Sheer or slick', tn: 8 }] as ReadonlyArray<{ id: string; label: string; tn: number }>,
+      // v0.92.3 (book alignment): the Climbing Table, 3 / 5 / 8 / 14 (Fields of Fire p. 75; was 2 / 4 / 6 / 8).
+      climb: [{ id: 'easy', label: 'Easily climbable (chain-link fence)', tn: 3 }, { id: 'rough', label: 'Broken surface (debris, tree, loose stone wall)', tn: 5 }, { id: 'smooth', label: 'Flat surface (brick wall)', tn: 8 }, { id: 'sheer', label: 'Sheer surface (metal wall, seamless stone)', tn: 14 }] as ReadonlyArray<{ id: string; label: string; tn: number }>,
       swim: [{ id: 'calm', label: 'Calm water', tn: 3 }, { id: 'choppy', label: 'Choppy', tn: 5 }, { id: 'rough', label: 'Rough', tn: 7 }, { id: 'storm', label: 'Storm or rapids', tn: 9 }] as ReadonlyArray<{ id: string; label: string; tn: number }>,
       metresPerSuccess: 2,
       jump: { tn: 4, metresPerSuccess: 1, runningMultiplier: 2 },
@@ -1653,9 +1657,12 @@ export const RULES = {
       { id: 'luxury', label: 'Luxury', cost: 100000 },
     ] as ReadonlyArray<{ id: string; label: string; cost: number }>,
     karma: {
-      poolEvery: { human: 10, metahuman: 20 },
+      // v0.92.3 (book alignment): 10 points to Good Karma, then the next one to the pool, for everyone (Companion p. 76;
+      // Core p. 190 has no metahuman rate). Was human 10, metahuman 20.
+      poolEvery: { human: 11, metahuman: 11 },
       diverts: true,
-      attributeMultiplier: 2,
+      // v0.92.3 (book alignment): new rating × 1 (Core p. 190: Strength 5 → 6 costs 6). Was 2. The Revamp's patch sets 1.5.
+      attributeMultiplier: 1,
       skills: {
         active: [{ upTo: 1, multiplier: 1.5 }, { upTo: 1.5, multiplier: 2 }, { upTo: 99, multiplier: 2.5 }],
         knowledge: [{ upTo: 1, multiplier: 1 }, { upTo: 1.5, multiplier: 1.5 }, { upTo: 99, multiplier: 2 }],
@@ -1767,7 +1774,8 @@ export const RULES = {
    */
   SKILLS: {
     concentrationFraction: 0.75,
-    web: { perStep: 2, maxSteps: 3, unlinked: 'attribute' as 'flat' | 'attribute' },
+    // v0.92.3 (book alignment): no step cap (Core p. 68: any path may be traced; was 3). The Revamp's patch sets 99 too.
+    web: { perStep: 2, maxSteps: 99, unlinked: 'attribute' as 'flat' | 'attribute' },
     parry: false, parrySkill: 'Parry',
     vehicleRepair: { skills: ['Car B/R', 'Bike B/R', 'Aircraft B/R', 'Boat B/R', 'Drone B/R', 'Vehicle B/R'] as readonly string[], tn: 4, boxesPerSuccess: 1, hoursPerBox: 1 },
   },
@@ -3205,7 +3213,8 @@ export const RULES = {
       ] as ReadonlyArray<{ id: string; label: string }>,
       perStepTn: 2,
       noneTn: 4,
-      none: 'tn' as 'tn' | 'block',
+      // v0.92.3 (book alignment): without the tools a Build/Repair job is usually not allowed (Core p. 183; was 'tn', +4).
+      none: 'block' as 'tn' | 'block',
       gearRepair: { tn: 4, baseHours: 2, needs: 'kit', skillSuffix: ' B/R', fallbackSkill: 'Electronics B/R', fallbackAttribute: 'intelligence' },
     },
     creation: {

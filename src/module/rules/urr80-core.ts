@@ -8,6 +8,7 @@ import { opposedOutcome } from './social.ts';
 import { skillTestDice, webDistance, type SkillDiceInput, type SkillDice, type WebLink } from './skills.ts';
 import type { AttrKey } from './core.ts';
 import { escHtml } from './html.ts';
+import { webAttributeDefault } from './core923.ts';
 import { t as tx, tCount } from '../helpers/i18n.ts';
 
 const V = () => RULES.URR_V80;
@@ -131,7 +132,8 @@ export function urrCoreSkillTestDice(input: SkillDiceInput & { attributeTn?: num
     if (spec > 0) return { dice: spec, modifier: { id: 'defaultingFromTheSpecialization', label: tx('SR2E.Card.Mod.defaultingFromTheSpecialization'), value: num(v.coreConcDefaultTn) + num(v.coreSpecDefaultTn) }, using: 'specialization' };
   }
   const r = skillTestDice(input);
-  if (r.using === 'attribute' && v.coreWebAttributes && input.attributeTn !== undefined) {
+  // v0.92.3 (RULES.CORE_V923.attributeDefault 'web', Core p. 68): the book traces attribute defaults through the web too.
+  if (r.using === 'attribute' && (v.coreWebAttributes || webAttributeDefault()) && input.attributeTn !== undefined) {
     return { ...r, modifier: { id: 'defaultingToAttributeSkillWeb', label: tx('SR2E.Card.Mod.defaultingToAttributeSkillWeb'), value: num(input.attributeTn) } };
   }
   return r;
@@ -139,7 +141,7 @@ export function urrCoreSkillTestDice(input: SkillDiceInput & { attributeTn?: num
 
 /** The attribute-defaulting TN traced through the Skill Web (coreWebAttributes): { attributeTn } or {} (no link, or off). */
 export function urrCoreAttributeTn(links: readonly WebLink[], skill: string, attribute: string): { attributeTn?: number } {
-  if (!V().coreWebAttributes || !links.length || !skill || !attribute) return {};
+  if (!(V().coreWebAttributes || webAttributeDefault()) || !links.length || !skill || !attribute) return {};
   const name = attribute.charAt(0).toUpperCase() + attribute.slice(1);
   const d = webDistance(links, skill, name);
   return d !== null && d > 0 ? { attributeTn: d * RULES.SKILLS.web.perStep } : {};

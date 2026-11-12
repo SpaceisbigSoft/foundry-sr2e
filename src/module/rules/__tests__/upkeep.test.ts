@@ -14,13 +14,17 @@ describe('upkeep (v0.33.0)', () => {
     assert.equal(lifestyleDays(0, 3 * DAY_SECONDS - 5), -3);
   });
 
-  test('Karma: every 10 (human) or 20 (metahuman) earned goes into the pool', () => {
+  test('Karma: every 10 (human) or 20 (metahuman) earned goes into the pool', (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'UPKEEP.karma.poolEvery.human': 10, 'UPKEEP.karma.poolEvery.metahuman': 20 }));
     assert.deepEqual(karmaAward({ careerBefore: 8, amount: 5, metahuman: false }), { good: 4, pool: 1, career: 13 });
     assert.deepEqual(karmaAward({ careerBefore: 8, amount: 5, metahuman: true }), { good: 5, pool: 0, career: 13 });
     assert.deepEqual(karmaAward({ careerBefore: 0, amount: 25, metahuman: false }), { good: 23, pool: 2, career: 25 });
   });
 
   test('improvement costs', (t) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    t.after(oldWay({ 'UPKEEP.karma.attributeMultiplier': 2, 'CORE_V923.skillKarma': 'old' }));
     t.after(oldWay({ 'DOCS_V79.skillKarma.mode': 'bands' })); // v0.79.0: the old bands (a house rule)
     assert.deepEqual(attributeCost({ to: 5, max: 6 }), { cost: 10, ok: true, reason: '' });
     assert.equal(attributeCost({ to: 7, max: 6 }).ok, false);

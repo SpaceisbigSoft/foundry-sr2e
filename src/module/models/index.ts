@@ -44,6 +44,7 @@ import { TWEAK_TARGETS, sumTweaks, isCarried } from '../rules/tweaks.ts';
 import * as U80C from '../rules/urr80-combat.ts';
 import * as C923 from '../rules/combat923.ts';
 import { astralCombatPool } from '../rules/spirits923.ts';
+import { dermalArmor, threatBook } from '../rules/core923.ts';
 import { armorTotal } from '../rules/gear.ts';
 import { FEEDS } from '../rules/tactics.ts';
 import { ART_ARCHETYPES } from '../rules/tokenart.ts';
@@ -381,7 +382,7 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
         pool: new fields.NumberField({ required: true, integer: true, min: 0, max: SANE_MAX, initial: 1 }),
         /** Karma Pool points used since the last refresh. */
         poolSpent: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
-        /** Karma earned over the career (v0.33.0): every 10 (20 for metahumans) puts a point in the pool. */
+        /** Karma earned over the career (v0.33.0): every RULES.UPKEEP.karma.poolEvery (v0.92.3: 11) puts a point in the pool. */
         career: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
       }),
       /** Upkeep (v0.33.0): lifestyle and when it is paid until (world time; -1 never), contacts, a ledger. */
@@ -912,7 +913,10 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
     const adeptPool = sys.tradition === 'adept' && RULES.ADEPT.spellPool;
     const d = { ...d0, spellPool: adeptPool ? d0.spellPool : magicPoolBase({ sorcery: sorceryRating((this as any).parent?.items), intelligence: totals.intelligence, willpower: totals.willpower, magic: poolMagic }) };
     // An NPC's Threat Rating adds Combat Pool dice (v0.44.0).
-    const threat = (this as any).parent?.type === 'npc' && RULES.STREET.threat.addsToPool ? Math.max(0, Math.floor(sys.threatRating ?? 0)) : 0;
+    // v0.92.3 (RULES.CORE_V923.threat 'book', Core p. 187): Threat dice go on every test instead, and replace the pools.
+    const threatNpc = (this as any).parent?.type === 'npc' && Math.max(0, Math.floor(sys.threatRating ?? 0)) > 0;
+    const threat = !threatBook() && (this as any).parent?.type === 'npc' && RULES.STREET.threat.addsToPool ? Math.max(0, Math.floor(sys.threatRating ?? 0)) : 0;
+    const noPools = threatBook() && threatNpc;
     // v0.92.3 (RULES.HEALTH_V923.death 'natural', Core p. 111): the natural Body counts for death, not cyber or magic.
     const deathBodyNow = deathBody(totals.body, sys.attributes?.body?.natural);
     const bodyStatus = monitorStatus(sys.monitor, overflowBody(deathBodyNow, qv)) as Status;
@@ -925,7 +929,7 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
     // Astral Combat Pool, (Intelligence + Willpower + Charisma) ÷ 2 + grade; it takes the Combat Pool's place while projecting.
     const astralPool923 = magic > 0 && sys.tradition !== 'adept' ? astralCombatPool({ intelligence: totals.intelligence, willpower: totals.willpower, charisma: totals.charisma, grade: Number(sys.initiateGrade ?? 0) }) : 0;
     const projecting923 = RULES.SPIRITS_V923.astralPool === 'book' && astralPool923 > 0 && (sys.astral ?? 'physical') === 'projecting';
-    const combatPool = projecting923 ? astralPool923 : Math.max(0, Math.max(0, d.combatPool - armorPool80 - heavyPool) + threat + (RULES.BOOK_V78.combatSense === 'pool' ? adeptSpecialLevel(adept as any, 'combatSense') * RULES.ADEPT.combatSense.dicePerLevel : 0) + (tw.pools.combat ?? 0));
+    const combatPool = projecting923 ? astralPool923 : noPools ? 0 : Math.max(0, Math.max(0, d.combatPool - armorPool80 - heavyPool) + threat + (RULES.BOOK_V78.combatSense === 'pool' ? adeptSpecialLevel(adept as any, 'combatSense') * RULES.ADEPT.combatSense.dicePerLevel : 0) + (tw.pools.combat ?? 0));
     // v0.92.1 review (N10): a Spell Pool tweak only for someone with a Spell Pool.
     const spellPool = Math.max(0, d.spellPool + powerFocus + (poolMagic > 0 ? (tw.pools.spell ?? 0) : 0));
     sys.derived = {
@@ -1007,6 +1011,8 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
       // against disease only (raceDiseaseDice); 'both' puts them back on toxins.
       toxinDice: (this.usesMetatype() && dwarfDiceAgainst('toxin') ? race.toxinDice : 0) + bw.toxinDice - bodyIndexToxinPenalty(bio_index_used(ware)),
       raceDiseaseDice: this.usesMetatype() && !dwarfDiceAgainst('toxin') ? Math.max(0, Number(race.toxinDice) || 0) : 0,
+      // v0.92.3 (RULES.CORE_V923.trollDermal 'body', Core p. 45): dermal armor as extra Body dice for damage resistance.
+      racialDermal: this.usesMetatype() ? race.dermal : 0,
       // Token bars (v0.36.0): boxes left on each track.
       // v0.60.0: and the Matrix condition monitor (a persona's boxes left).
       bars: { ...monitorBars(sys.monitor), matrix: trackBar(sys.matrix?.monitor ?? 0, RULES.MATRIX.monitorBoxes) ?? { value: 0, max: 0 } },
@@ -1030,8 +1036,8 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
       cyberArmor: {
         // Cyberlimbs' own armor is added per hit (armorRating, v0.43.0).
         // v0.92.3 (RULES.GEAR_V923.dermal 'body'): dermal plating is Body, not armor; (boneLacing 'book') lacing's armor adds.
-        ballistic: installed.filter((i: any) => i.system.kind !== 'cyberlimb' && !(dermalBody && isDermalPlating({ name: i.name, bioware: i.system.bioware, kind: i.system.kind }))).reduce((n: number, i: any) => n + (i.system.armorBallistic ?? 0), 0) + (this.usesMetatype() ? race.dermal : 0) + bw.ballistic + tw.armor.ballistic + lacingArmor.ballistic,
-        impact: installed.filter((i: any) => i.system.kind !== 'cyberlimb' && !(dermalBody && isDermalPlating({ name: i.name, bioware: i.system.bioware, kind: i.system.kind }))).reduce((n: number, i: any) => n + (i.system.armorImpact ?? 0), 0) + (this.usesMetatype() ? race.dermal : 0) + bw.impact + tw.armor.impact + lacingArmor.impact,
+        ballistic: installed.filter((i: any) => i.system.kind !== 'cyberlimb' && !(dermalBody && isDermalPlating({ name: i.name, bioware: i.system.bioware, kind: i.system.kind }))).reduce((n: number, i: any) => n + (i.system.armorBallistic ?? 0), 0) + (this.usesMetatype() ? dermalArmor(race.dermal) : 0) + bw.ballistic + tw.armor.ballistic + lacingArmor.ballistic,
+        impact: installed.filter((i: any) => i.system.kind !== 'cyberlimb' && !(dermalBody && isDermalPlating({ name: i.name, bioware: i.system.bioware, kind: i.system.kind }))).reduce((n: number, i: any) => n + (i.system.armorImpact ?? 0), 0) + (this.usesMetatype() ? dermalArmor(race.dermal) : 0) + bw.impact + tw.armor.impact + lacingArmor.impact,
       },
     };
     // v0.92.3: the decker's own Reaction (no cyber or magic Reaction boosts) for the persona (VR2 p. 120).

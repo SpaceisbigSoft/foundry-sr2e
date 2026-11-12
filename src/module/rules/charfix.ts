@@ -1,3 +1,4 @@
+import { aboveMaxCost } from './core923.ts';
 import { RULES } from './config.ts';
 import { CHARACTERS_V73 } from './config73/characters.ts';
 import { socialAttribute } from './social.ts';
@@ -357,7 +358,12 @@ export function attributeKarmaCost(o: { to: number; max: number; augmented?: num
   if (to <= o.max) return { cost: Math.ceil(to * RULES.UPKEEP.karma.attributeMultiplier), ok: true, reason: '', band: 'normal' };
   const k = C().qualities.karmaAboveRacial;
   const cap = num(o.augmented, Math.floor(o.max * RULES.METATYPES.augmentedMultiplier));
-  if (!k.enabled) return { cost: 0, ok: false, reason: tx('SR2E.Text.Charfix.aboveNaturalMaximum', { max: o.max }), band: 'normal' };
+  if (!k.enabled) {
+    // v0.92.3 (RULES.CORE_V923.aboveMax 'double', Core p. 190): with the GM's leave, double Karma up to the augmented maximum.
+    const book = aboveMaxCost({ to, max: o.max, augmented: cap });
+    if (book) return { ...book, band: 'aboveRacial' };
+    return { cost: 0, ok: false, reason: tx('SR2E.Text.Charfix.aboveNaturalMaximum', { max: o.max }), band: 'normal' };
+  }
   if (to > cap) return { cost: 0, ok: false, reason: tx('SR2E.Text.Charfix.aboveAugmentedMaximum', { max: cap }), band: 'aboveRacial' };
 
   return { cost: Math.ceil(to * num(k.multiplier, 3)), ok: true, reason: '', band: 'aboveRacial' };

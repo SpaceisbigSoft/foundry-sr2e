@@ -8,6 +8,7 @@ import { oldWay } from '../rules/__tests__/oldway.ts';
 import { SPIRITS_V922_WAY } from '../rules/__tests__/spirits922.ts';
 import assert from 'node:assert/strict';
 import { RULES } from '../rules/index.ts';
+import { oldWay } from '../rules/__tests__/oldway.ts';
 // v0.92.3: this file pins the v0.92.2 conjuring, astral and initiation rules (the book way: v0923-spirits.test.ts).
 let spirits922: () => void = () => {};
 before(() => { spirits922 = oldWay(SPIRITS_V922_WAY); });
@@ -368,7 +369,9 @@ describe('D1 findings (index.ts 1-5800)', () => {
     assert.doesNotMatch(chat.at(-1).content, /Complications/);
   });
 
-  test('D1-2: a broken group that passes a later morale test stays broken until rallied', async () => {
+  test('D1-2: a broken group that passes a later morale test stays broken until rallied', async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.morale': 'old' }));
     const npc = who({ name: 'Goon', type: 'npc', professionalRating: 3 });
     await npc.setFlag('sr2e', 'broken', true);
     faces.push(5, 5, 5);

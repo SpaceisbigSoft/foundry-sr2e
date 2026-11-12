@@ -933,7 +933,9 @@ describe('O35 NPCs: Threat Rating, Professional Rating 1–4, no grunt Karma Poo
       assert.equal(p.karmaPool, RULES.NPCGEN.threat[5]!.karmaPool);
     })));
   });
-  test('a generated NPC\'s Threat Rating adds to its Combat Pool', () => {
+  test('a generated NPC\'s Threat Rating adds to its Combat Pool', (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.threat': 'pool' }));
     const npc = who({ name: 'Guard', type: 'npc', threatRating: 3 });
     const plain = who({ name: 'Guard 2', type: 'npc', threatRating: 0 });
     assert.equal(npc.system.derived.combatPool - plain.system.derived.combatPool, RULES.STREET.threat.addsToPool ? 3 : 0);
@@ -1009,7 +1011,9 @@ describe('O38 Exceptional Attribute, a dearer Karma band, surplus flaws', () => 
   const on = <T>(fn: () => T | Promise<T>) => withRule(RULES.STREET.qualities, 'enabled', true, fn);
   const edge = [{ name: 'Exceptional Attribute', kind: 'edge', points: 2, target: 'Strength' }];
 
-  test('improveCost: at the racial maximum, refused; Exceptional Attribute allows one more', async () => {
+  test('improveCost: at the racial maximum, refused; Exceptional Attribute allows one more', async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.aboveMax': 'refuse' }));
     const plain = who({ name: 'Strong' }, [], { ...A, strength: 6 });
     assert.equal(plain.improveCost({ attribute: 'strength' }).ok, false);
     await on(() => {

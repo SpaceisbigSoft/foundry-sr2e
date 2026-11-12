@@ -4,6 +4,7 @@ import {
   RULES, buildPlan, qualityPoints, qualityCheck, qualityModifiers, movementRates, athleticsTn, athleticsDistance, openTestResult,
   complementaryDice, teamworkDice, streetCred, reputationModifiers, tableModifiers, rallyTarget, paidDice, haggledPrice, fencePrice, buildCheck,
 } from '../index.ts';
+import { oldWay } from './oldway.ts';
 
 const withRule = (obj: any, key: string, value: unknown, fn: () => void) => { const old = obj[key]; obj[key] = value; try { fn(); } finally { obj[key] = old; } };
 
@@ -36,7 +37,8 @@ describe('v0.44.0 movement, athletics and tests', () => {
   test('running by metatype; athletics TNs and distances', () => {
     assert.deepEqual(movementRates(5), { walk: 5, run: 15 });
     assert.deepEqual(movementRates(5, 2), { walk: 5, run: 10 });
-    assert.equal(athleticsTn('climb', 'smooth').tn, 6);
+    // v0.92.3: the Climbing Table's flat surface is 8 (Fields of Fire p. 75; was 6).
+    assert.equal(athleticsTn('climb', 'smooth').tn, 8);
     assert.equal(athleticsTn('swim', 'nope').tn, RULES.STREET.athletics.swim[1]!.tn);
     assert.equal(athleticsTn('jump').tn, 4);
     assert.equal(athleticsDistance('climb', 3), 6);
@@ -67,7 +69,9 @@ describe('v0.44.0 the street', () => {
     assert.equal(paidDice(350, 5), 3);
   });
 
-  test('haggling and fencing prices', () => {
+  test('haggling and fencing prices', (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.fence': 'old' }));
     assert.deepEqual(haggledPrice(1000, 2), { price: 900, percent: 10 });
     assert.deepEqual(haggledPrice(1000, -1), { price: 1050, percent: -5 });
     assert.equal(haggledPrice(1000, 10).percent, RULES.STREET.haggle.maxPercent);

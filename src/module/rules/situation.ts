@@ -3,6 +3,7 @@ import type { TargetNumberModifier } from './dice.ts';
 import { visibilityModifier, smokeModifier, type LightLevel, type Vision } from './weapons.ts';
 import { socialDesiredRows, socialDesiredPick } from './docs79-social-core.ts';
 import { own } from './util.ts';
+import { perceptionRows } from './core923.ts';
 import { t as tx } from '../helpers/i18n.ts';
 
 /** v0.92.3: the Driving Test rows in force (rules/vehicles.ts drivingRows; inline here to keep the imports one way). */
@@ -227,7 +228,8 @@ export function tnCandidates(kind: string): Array<{ group: string; rows: TargetN
     add(tx('SR2E.Card.Situation.terrain'), RULES.VEHICLES.terrain);
     add(tx('SR2E.Card.Situation.weatherDriving'), RULES.HEALTH.weather.filter((w) => w.driving).map((w) => ({ label: tx('SR2E.Card.Mod.driving', { label: w.label }), value: w.driving })));
   } else if (kind === 'perceive' || kind === 'sneak') {
-    add(tx('SR2E.Card.Situation.perception'), RULES.STREET.perception);
+    // v0.92.3 (RULES.CORE_V923.perceptionSounds 'book', Core p. 185): with the book's sound, smell, touch and taste rows.
+    add(tx('SR2E.Card.Situation.perception'), perceptionRows());
     add(tx('SR2E.Card.Situation.visibility'), vis);
     add(tx('SR2E.Card.Situation.smoke'), smoke);
     add(tx('SR2E.Card.Situation.weather'), weather);

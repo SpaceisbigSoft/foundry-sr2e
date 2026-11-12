@@ -38,11 +38,15 @@ describe('v0.58.0 plain Perception', () => {
 });
 
 describe('v0.58.0 time ÷ successes', () => {
-  test('divides and labels', () => {
+  test('divides and labels', (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.timeRounding': 'tenth' }));
     assert.deepEqual(timeTaken(5, 'hours', 2), { ok: true, value: 2.5, unit: 'hours', label: '2.5 hours (5 hours ÷ 2)', seconds: 9000 });
     assert.equal(timeTaken(10, 'turns', 1).label, '10 Combat Turns (10 Combat Turns ÷ 1)');
   });
-  test('rounds up to roundTo without float noise', () => {
+  test('rounds up to roundTo without float noise', (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.timeRounding': 'tenth' }));
     assert.equal(timeTaken(1, 'hours', 3).value, 0.4);           // 0.333… → 0.4
     assert.equal(timeTaken(0.9, 'hours', 3).value, 0.3);         // not 0.30000000000000004
     assert.equal(timeTaken(0.9, 'hours', 3).seconds, 1080);
@@ -66,7 +70,9 @@ describe('v0.58.0 Build/Repair tools', () => {
     assert.deepEqual(toolsModifier('facility', 'kit').modifier, { label: 'Tools: Kit (needs Facility)', value: 4 });
     assert.deepEqual(toolsModifier('shop', 'kit').modifier, { label: 'Tools: Kit (needs Shop)', value: 2 });
   });
-  test('no tools: noneTn or blocked; unknown ids are none', () => {
+  test('no tools: noneTn or blocked; unknown ids are none', (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CHARACTERS_V58.tools.none': 'tn' }));
     assert.deepEqual(toolsModifier('kit', 'none').modifier, { label: 'No tools (needs Kit)', value: 4 });
     assert.deepEqual(toolsModifier('shop', 'wrench').modifier, { label: 'No tools (needs Shop)', value: 4 });
     assert.equal(toolsModifier('bogus', 'none').modifier, null);
@@ -146,7 +152,9 @@ describe('v0.58.0 build check rows', () => {
     const over = buildCheck(baseInput({ priorities: { resources: 'E' }, gearCost: 0, nuyen: 0, lifestyle: 'high' }));
     assert.equal(row(over, 'Resources')!.ok, false);
   });
-  test('native language: free up to Intelligence, the excess counts as knowledge', () => {
+  test('native language: free up to Intelligence, the excess counts as knowledge', (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.nativeLanguage': 'old' }));
     const none = buildCheck(baseInput());
     const at = buildCheck(baseInput({ nativeLanguage: { name: 'English', rating: 4 } }));
     assert.equal(row(at, 'Skills')!.used, `${row(none, 'Skills')!.used.split(' ')[0]} points (+4 free native language)`);
@@ -164,7 +172,9 @@ describe('v0.58.0 build check rows', () => {
 });
 
 describe('v0.58.0 languages', () => {
-  test('native rating and read/write', () => {
+  test('native rating and read/write', (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.nativeLanguage': 'old' }));
     assert.equal(nativeLanguageRating(5), 5);
     assert.equal(nativeLanguageRating(-1), 0);
     withRule(V.languages, 'nativeAtIntelligence', false, () => assert.equal(nativeLanguageRating(5), 0));
@@ -179,7 +189,9 @@ describe('v0.58.0 languages', () => {
     assert.equal(languageReveal(2), 'Understands most of it.');
     assert.equal(languageReveal(7), 'Understands it all, nuance included.');
   });
-  test('free native points', () => {
+  test('free native points', (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.nativeLanguage': 'old' }));
     assert.equal(freeLanguagePoints(4, 6), 4);
     assert.equal(freeLanguagePoints(4, 2), 2);
     assert.equal(freeLanguagePoints(4, -1), 0);
@@ -224,7 +236,9 @@ describe('v0.58.0 pay negotiation', () => {
 });
 
 describe('v0.58.0 Karma award', () => {
-  test('totals, clamping, unknown ids and lines', () => {
+  test('totals, clamping, unknown ids and lines', (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.awards': 'old' }));
     const t = karmaAwardTotal({ team: { survival: 1, objectives: 5, threat: -2, bogus: 9 }, individual: { roleplaying: true, courage: false, humor: 3, nope: true } });
     assert.deepEqual(t, { team: 4, individual: 2, total: 6, lines: ['Survived the run +1', 'Objectives met +3', 'Good roleplaying +1', 'Humor +1'] });
     assert.deepEqual(karmaAwardTotal({ team: {}, individual: {} }), { team: 0, individual: 0, total: 0, lines: [] });
