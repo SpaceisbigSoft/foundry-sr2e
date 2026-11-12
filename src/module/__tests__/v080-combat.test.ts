@@ -7,12 +7,19 @@
  * behaves as the stubs do. The dialogs in applications/chat.ts and sheets.ts (Defend, Attack, reload, shotgun spread,
  * scatter) are covered through their pure functions only.
  */
-import { test, describe, before, beforeEach } from 'node:test';
+import { test, describe, before, beforeEach, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { RULES } from '../rules/index.ts';
 import { oldWay } from '../rules/__tests__/oldway.ts';
 import { URR80_PATCH_COMBAT } from '../rules/config80-combat.ts';
 import { armorTotal } from '../rules/gear.ts';
+import { combat922 } from '../rules/__tests__/combat922.ts';
+
+// v0.92.3: this file's "book" is the v0.92.2 Book Rules (COMBAT_V923 at its old choices, the moved defaults put back);
+// the book alignment is tested in v0923-combat.test.ts.
+let undo922: () => void = () => {};
+before(() => { undo922 = combat922(); });
+after(() => undo922());
 
 const g = globalThis as any;
 const faces: number[] = [];

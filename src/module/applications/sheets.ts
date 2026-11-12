@@ -51,6 +51,7 @@ import { toolsModifier, gearRepairPlan, surveillanceKind, recognitionTn, readWri
 import { bioKindsV72, bioVitals, smokeCounts, ammoChoices, findAmmo, isKnownAmmo, canFireIndirect, metamagicChoices, BARRIER_KINDS, allySpellKarma, barrierBlocks, hostChoices, droneLinkOf, mountPointFor, skillRollMemoryFields, negotiationAttribute, outrightPurchase, lifestyleStatusText, metatypeOptions } from "../rules/index.ts";
 import { sheafFor } from "../rules/sheafgen.ts";
 import * as U80C from "../rules/urr80-combat.ts";
+import * as C923 from "../rules/combat923.ts";
 import { urrCoreTnPresetRow, urrCoreKarmaDiceRow, urrCoreInstructorRule } from "../rules/urr80-core.ts";
 import { sensorTableRows, sensorTableModifiers, segRows, segConditionModifiers } from "../rules/docs79-vehicles.ts";
 import { modKey, modIn, type TargetNumberModifier } from "../rules/dice.ts";
@@ -3216,6 +3217,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         cover, light, barrierArmor: barrierArmor(barriers), barrierCount: barriers.length, smoke, conceal,
         targetProne: isProne(targetActor), attackerProne: isProne(actor),
         friends: melee && fromToken && to ? friendsInMelee(fromToken, to, reachM) : 0,
+        // v0.92.3 (COMBAT_V923.friends 'book', Core p. 102): the target's friends in the same fight count against the attacker.
+        foes: melee && fromToken && to && C923.friendsNetBook() ? friendsInMelee(to, fromToken, reachM) : 0,
         targetReach: Math.max(0, ...[...(targetActor?.items ?? [])].filter((i: any) => i.type === "weapon" && i.system.melee).map((i: any) => i.system.reach ?? 0)) + (targetActor?.reachBonus ?? 0),
       };
     };
@@ -3299,7 +3302,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const laserReady = laserReadyFor(latest);
     // v0.50.0: walking/running are ticked by themselves for ranged attacks (and melee if RULES.TN_AUTO.attack.movementInMelee).
     const moveTicks = !melee || RULES.TN_AUTO.attack.movementInMelee;
-    const situationalRows = RULES.SITUATIONAL_MODIFIERS.filter((m) => m.id !== "calledShot").map((m) => {
+    // v0.92.3 (COMBAT_V923.rangedRows): the book's extra rows can be hidden.
+    const situationalRows = RULES.SITUATIONAL_MODIFIERS.filter((m) => m.id !== "calledShot" && C923.rangedRowShown(m.id)).map((m) => {
       const checked = (m.id === "smartlink" && smartReady) || (m.id === "partialCover" && here.cover?.cover === "partial")
         || (m.id === "laserSight" && laserReady)
         || (moveTicks && m.id === "attackerWalking" && movement === "walking") || (moveTicks && m.id === "attackerRunning" && movement === "running");
@@ -3312,7 +3316,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const meleeRows = melee ? `
         <label class="sr2e-check"><input type="checkbox" name="charging" ${movement === "running" ? "checked" : ""}> ${tx('SR2E.Dialog.Sheet.charging', { cbtChargeLabel: U80C.cbtChargeLabel() })}</label>
         <label class="sr2e-check"><input type="checkbox" name="subdue"> ${tx('SR2E.Dialog.Sheet.subdueDamage', { subdueDamageType: RULES.COMBAT.subdue.damageType })}</label>
-        <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.friendsInMeleeWithTheTarget', { friendsInMeleeTnPerFriend: RULES.COMBAT.friendsInMelee.tnPerFriend })}</label><input name="friends" type="number" value="${here.friends}" min="0"></div>${RULES.COMBAT_V61.superiorPosition.enabled ? `
+        <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.friendsInMeleeWithTheTarget', { friendsInMeleeTnPerFriend: RULES.COMBAT.friendsInMelee.tnPerFriend })}</label><input name="friends" type="number" value="${here.friends}" min="0"></div>${C923.friendsNetBook() ? `
+        <div class="form-group"><label>${tx('SR2E.Dialog.Combat923.foesInMelee')}</label><input name="foes" type="number" value="${here.foes}" min="0"></div>` : ""}${RULES.COMBAT_V61.superiorPosition.enabled ? `
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.superiorPositionHigherGroundABetter')}</label><select name="superior"><option value="">${tx('SR2E.Dialog.Sheet.neither')}</option><option value="attacker">${tx('SR2E.Dialog.Sheet.holdsIt', { actorName: escHtml(actor.name), superiorPositionHolder: RULES.COMBAT_V61.superiorPosition.holder })}</option><option value="defender">${tx('SR2E.Dialog.Sheet.theTargetHoldsIt', { part: RULES.COMBAT_V61.superiorPosition.against ? ` (+${escHtml(RULES.COMBAT_V61.superiorPosition.against)})` : "" })}</option></select></div>` : ""}` : "";
     // Cyberarms (their own Strength) and vision magnification (v0.29.0).
     // v0.43.0: any weapon can be used with a cyberarm (its Quickness when defaulting; its Strength for Strength-based attacks).
@@ -3356,7 +3361,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       `<option value="${escHtml(v.id)}" ${v.id === visFor(here) ? "selected" : ""}>${escHtml(v.label)}${v.value ? ` (+${v.value}${v.using ? `, ${escHtml(v.using)}` : ""})` : v.using ? ` (${escHtml(v.using)})` : ""}</option>`).join("")}</select></div>
       <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.smoke')}</label><select name="smoke">${smokeOptions.map((v) => `<option value="${escHtml(v.id)}" ${v.id === (here.smoke?.kind ?? "none") ? "selected" : ""}>${escHtml(v.label)}${v.value ? ` (+${v.value})` : v.using && v.id !== "none" ? ` (${escHtml(v.using)}: +0)` : ""}</option>`).join("")}</select></div>`;
     const calledRow = `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.calledShot', { value: sit("calledShot")?.value ?? 4 })}</label><select name="calledShot">
-        <option value="none">${tx('SR2E.Dialog.Sheet.no')}</option><option value="damage">${tx('SR2E.Dialog.Sheet.forDamage1Level')}</option><option value="armor">${tx('SR2E.Dialog.Sheet.atAGapNoArmor')}</option></select></div>
+        <option value="none">${tx('SR2E.Dialog.Sheet.no')}</option><option value="damage">${tx('SR2E.Dialog.Sheet.forDamage1Level')}</option>${C923.calledShotGap() ? `<option value="armor">${tx('SR2E.Dialog.Sheet.atAGapNoArmor')}</option>` : ""}</select></div>
       <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.calledShotAt')}</label><select name="calledAt"><option value="">${tx('SR2E.Dialog.Sheet.theBody')}</option>${RULES.CYBERWARE.limbs.locations.filter((k) => k !== "other").map((k) => `<option value="${escHtml(k)}">${escHtml(LIMB_LABELS[k] ?? k)}</option>`).join("")}</select></div>
       ${vehiclePartRow()}`;
     // Grenades (v0.43.0): a bounced throw needs no line of sight; a throw can land off the target in a chosen direction.
@@ -3393,6 +3398,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       if (el.barrier) el.barrier.value = h.barrierArmor;
       if (el.targetProne) el.targetProne.checked = h.targetProne;
       if (el.friends) el.friends.value = h.friends;
+      if (el.foes) el.foes.value = h.foes;
     };
 
     // Reading the form (the dialog's OK, the live preview and Shift-click all use this).
@@ -3414,6 +3420,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         targetProne: Boolean(el.targetProne?.checked), attackerProne: Boolean(el.attackerProne?.checked),
         charging: Boolean(el.charging?.checked), subdue: Boolean(el.subdue?.checked), unaware: Boolean(el.unaware?.checked),
         friends: Math.max(0, Math.floor(Number(el.friends?.value) || 0)),
+        foes: Math.max(0, Math.floor(Number(el.foes?.value) || 0)),
         superior: ((el.superior?.value as string) || "") as "" | "attacker" | "defender",
         mod: Number(el.mod?.value) || 0,
         pool: Math.max(0, Math.min(left, Math.floor(Number(el.pool?.value) || 0))),
@@ -3439,7 +3446,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     // Modifiers the dialog works out: visibility (light and vision), smoke, prone, allies, charging.
     const visMod = (v: string) => {
       const o = visOptions.find((x) => x.id === v);
-      return o && o.value ? [{ label: `${o.label}${o.using ? ` (${o.using})` : ""}`, value: o.value }] : [];
+      // v0.92.3 (COMBAT_V923.meleeVisibility): full darkness is marked (melee halves every other row).
+      return o && o.value ? [{ ...(v === "darkness" ? { id: "fullDarkness" } : {}), label: `${o.label}${o.using ? ` (${o.using})` : ""}`, value: o.value }] : [];
     };
     // v0.50.0: the visibility group goes to planAttack as `sight`, so Blinded, blind fire and weather count once.
     const smokeMod = (id: string) => {
@@ -3455,7 +3463,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const buildOpts = (c: Choice) => {
       const positionMods = (targetProne: boolean) => [
         ...proneModifiers({ melee, targetProne, attackerProne: c.attackerProne }),
-        ...(melee ? [...friendsModifiers(c.friends), ...chargeModifiers(c.charging), ...superiorPositionModifiers(c.superior, "attacker"), ...U80C.cbtSubdueMods(c.subdue)] : []),
+        ...(melee ? [...(C923.friendsNet(c.friends, c.foes ?? 0) ?? friendsModifiers(c.friends)), ...chargeModifiers(c.charging), ...superiorPositionModifiers(c.superior, "attacker"), ...U80C.cbtSubdueMods(c.subdue), ...C923.subdueMods(c.subdue)] : []),
       ];
       const tail = [...(c.mod ? [{ id: 'other', label: tx('SR2E.Card.Mod.other'), value: c.mod }] : [])];
       // A bounced throw replaces blind fire (it needs no line of sight).
@@ -3524,7 +3532,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       if (sm) set.add(`${sm.label}${sm.using ? ` (${sm.using})` : ""}`);
       if (here.targetProne) { set.add("#targetProne"); set.add(tx('SR2E.Card.Mod.targetProne')); }
       if (here.attackerProne) { set.add("#attackerProne"); set.add(tx('SR2E.Card.Mod.attackerProne')); }
-      if (here.friends) set.add(tx('SR2E.Card.Mod.friendsInMelee', { n: Math.min(RULES.COMBAT.friendsInMelee.max, here.friends) }));
+      if (here.friends && !C923.friendsNetBook()) set.add(tx('SR2E.Card.Mod.friendsInMelee', { n: Math.min(RULES.COMBAT.friendsInMelee.max, here.friends) }));
+      for (const m of (C923.friendsNet(here.friends, here.foes ?? 0) ?? [])) set.add(m.label);
       if (movement === "running" && melee) { set.add("#charging"); set.add(tx('SR2E.Card.Mod.charging')); }
       return set;
     };
@@ -3687,10 +3696,11 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     // Shotguns: everyone in the cone (or circle) out to the target, Power reduced by the spread at their distance.
     if (shotgun && U80C.cbtShotgunSpreads(choice.ammoType ?? w.ammoType) && choice.targetUuid && latest.metres != null) {
       const to = targetTokens.get(choice.targetUuid);
-      const choke = w.choke ?? 1;
+      // v0.92.3 (COMBAT_V923.shotgun 'book', Core p. 95): the choke is set from 2 to 10.
+      const choke = C923.shotgunChoke(w.choke ?? 1);
       const atTarget = U80C.cbtShotgunSpread(shotgunSpread(latest.metres, choke, 0), latest.metres, choke, 0);
       const inSpread = !to ? [] : RULES.COMBAT.shotgun.shape === "cone" && fromToken
-        ? tokensInCone(fromToken, to, choke, RULES.URR_V80.cbtShotgun === "urr" ? (m: number) => U80C.cbtShotgunSpread(shotgunSpread(m, choke, 0), m, choke, 0).width : undefined)
+        ? tokensInCone(fromToken, to, choke, RULES.URR_V80.cbtShotgun === "urr" || C923.shotgunBook() ? (m: number) => U80C.cbtShotgunSpread(shotgunSpread(m, choke, 0), m, choke, 0).width : undefined)
         : tokensNear(to.center, atTarget.width / 2).filter((c) => c.token !== fromToken).map((c) => ({ token: c.token, metres: latest.metres as number }));
       const hits = [{ targetUuid: choice.targetUuid, powerDelta: -atTarget.loss },
         ...inSpread.filter((c) => c.token.actor?.uuid !== choice.targetUuid).map((c) => ({ targetUuid: c.token.actor.uuid as string, powerDelta: -U80C.cbtShotgunSpread(shotgunSpread(c.metres, choke, 0), c.metres, choke, 0).loss }))];
@@ -3718,7 +3728,10 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         const a = targetTokens.get(all[i]!), b = targetTokens.get(u);
         return a && b ? measureTokens(a, b)?.metres ?? 0 : 0;
       });
-      const waste = wastedRounds(gaps);
+      // v0.92.3 (COMBAT_V923.spreadFire 'book', Core p. 93): a smartgun with a smartlink wastes no rounds.
+      const smart923 = Boolean(w.smartgun && actor.system?.derived?.smartlink);
+      const wasteBetween = (g: number[]) => C923.walkingWaste(wastedRounds(g), smart923);
+      const waste = wasteBetween(gaps);
       if (rounds - waste < all.length) {
         ui.notifications?.warn?.(tx('SR2E.Notify.Sheet.walkingFireBetweenThoseTargetsWastes', { weaponName: escHtml(weapon.name), waste, rounds }));
         return;
@@ -3737,14 +3750,14 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
           sight = sightFor(visFor(h), h.smoke?.kind ?? "none", h);
         }
         await actor.attackWith(weapon, {
-          ...common, sight, ...(i > 0 && c.band ? { range: c.band } : {}), situational, targetUuid: all[i], rounds: split[i], spreadExtraTargets: all.length - 1, earlierRoundsThisPhase: earlier,
+          ...common, sight, ...(i > 0 && c.band ? { range: c.band } : {}), situational, targetUuid: all[i], rounds: split[i], spreadExtraTargets: all.length - 1, spreadIndex: i, earlierRoundsThisPhase: earlier,
           barrierArmor: i === 0 ? choice.barrier : h.barrierArmor,
           ...(c.metres != null ? { measuredMetres: c.metres } : {}),
           // Rounds wasted walking the fire to the next target: ammo and recoil, no damage.
-          ...(i > 0 ? { wastedRounds: wastedRounds([gaps[i - 1] ?? 0]) } : {}),
+          ...(i > 0 ? { wastedRounds: wasteBetween([gaps[i - 1] ?? 0]) } : {}),
           modifiers: [...positionMods(i === 0 ? choice.targetProne : h.targetProne), ...tail],
         });
-        earlier += split[i]! + (i > 0 ? wastedRounds([gaps[i - 1] ?? 0]) : 0);
+        earlier += split[i]! + (i > 0 ? wasteBetween([gaps[i - 1] ?? 0]) : 0);
       }
       return;
     }
@@ -6126,7 +6139,7 @@ function quickActions(actor: any, items: any[]): Array<{ action: string; label: 
   out.push({ action: "firstAid", label: tx('SR2E.App.Sheets.firstAid'), icon: "fa-solid fa-kit-medical", title: tx('SR2E.App.Sheets.firstAidOnYourselfOr') });
   out.push({ action: "naturalHeal", label: tx('SR2E.App.Sheets.rest'), icon: "fa-solid fa-bed", title: tx('SR2E.App.Sheets.restAndHeal') });
   if (game.combat?.started) out.push(actor.fullDefenseUp?.() ? { action: "fullDefense", label: tx('SR2E.App.Sheets.onFullDefense'), icon: "fa-solid fa-shield-halved", title: tx('SR2E.App.Sheets.alreadyOnFullDefenseUntil') }
-    : { action: "fullDefense", label: tx('SR2E.App.Sheets.fullDefense'), icon: "fa-solid fa-shield-halved", title: tx('SR2E.App.Sheets.declareFullDefense', { attribute: RULES.COMBAT.fullDefense.attribute, cost: RULES.COMBAT.fullDefense.initiativeCost }) });
+    : { action: "fullDefense", label: tx('SR2E.App.Sheets.fullDefense'), icon: "fa-solid fa-shield-halved", title: C923.fullDefenseBook() ? tx('SR2E.App.Combat923.declareFullDefense') : tx('SR2E.App.Sheets.declareFullDefense', { attribute: RULES.COMBAT.fullDefense.attribute, cost: RULES.COMBAT.fullDefense.initiativeCost }) });
   if (actor.isDelaying?.()) out.push({ action: "actNow", label: tx('SR2E.App.Sheets.actNow'), icon: "fa-solid fa-forward", title: tx('SR2E.App.Sheets.takeYourDelayedActionNow') });
   else if (actor.actingNow?.()) out.push({ action: "endDelayed", label: tx('SR2E.App.Sheets.done'), icon: "fa-solid fa-check", title: tx('SR2E.App.Sheets.finishYourDelayedAction') });
   else if (actor.isActing?.() && game.combat?.started) out.push({ action: "delayAction", label: tx('SR2E.App.Sheets.delay'), icon: "fa-solid fa-hourglass-half", title: tx('SR2E.App.Sheets.holdYourActionUntilLater') });

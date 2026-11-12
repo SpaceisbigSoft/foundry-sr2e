@@ -5002,6 +5002,9 @@
         "bigJumpHint": "Did that time pass for the characters? \"Count it as time passed\" runs everything timed for it: drugs wear off, wounds heal, upkeep and training come due, spirits leave. \"Only the date\" changes the calendar but not the characters' time: everything keeps the time it had left (the hours of a part day count).",
         "dateOnly": "Only the date",
         "countIt": "Count it as time passed"
+      },
+      "Combat923": {
+        "foesInMelee": "The target's friends in this melee (+1 each beyond yours)"
       }
     },
     "Window": {
@@ -7908,7 +7911,9 @@
         "legality": "{label} (found openly)",
         "legalityFixer": "{label} (through a fixer)",
         "legalityContact": "{label} (through a contact)",
-        "contactLevel": "Closer contact"
+        "contactLevel": "Closer contact",
+        "meleeHalf": "{label}, halved in melee",
+        "foesInMelee": "Opponent's friends in melee (+{n})"
       },
       "Drops": {
         "notInstalledTickInstalledAfterSurgery": "not installed (tick Installed after surgery)",
@@ -8089,6 +8094,19 @@
         "alias": "World time",
         "dateOnly": "GM only · World time jumped; only the date changed. The system's clock stays {span} behind the calendar, so nothing came due.",
         "counted": "GM only · World time jumped {span}; it counted as time passed for everything timed."
+      },
+      "Combat923": {
+        "goesOnFullDefense": "goes on full defense (no Combat Pool on the melee test; pool dice go to the resistance test, a clean miss if their successes beat the attacker's){part}.",
+        "noInitiativeCost": "no initiative cost",
+        "barrierStops": "is safe: the barrier is rated above the attack's Power and stops it cold. No damage.",
+        "barrierHolds": "the barrier is rated above the Power: the shot can't get through",
+        "shortBurst": "short burst: {rounds} round(s) left",
+        "delayBroken": "used pool dice while delaying: the delayed action is lost.",
+        "ambusher": " (ambusher, TN {tn})",
+        "secondFirearmAids": "second firearm: no smartlink, goggles or laser",
+        "shotAids": "shot: no goggles or laser",
+        "shotSmartlink": "Shot: smartlink only −1",
+        "noCalledShot": "no called shot (single shots, semi-auto and bursts only; no armor gap)"
       }
     },
     "Privacy": {
@@ -8975,18 +8993,18 @@
         "URR_V80__hsFalling": "Falling: Power = metres, Serious (book), or half the metres with the level by height, no armor",
         "URR_V80__hsVisibleArmor": "Social tests: offer the visible-armor-in-a-luxury-setting row",
         "URR_V80__hsVisibleArmorTn": "Visible armor in a luxury setting: TN modifier",
-        "URR_V80__cbtTies": "Initiative ties: Reaction then Quickness (book), or Reaction then natural Reaction (Revamp)",
-        "URR_V80__cbtDefense": "Ranged defense: dodge with the Combat Pool (book), or no dodge: pool dice in the resistance test, clean miss, net staging (Revamp)",
-        "URR_V80__cbtKnockdown": "Knockdown: Body vs the soak TN when Power beats Body (book), or after any damage, 2/3/4 successes for L/M/S, staggering (Revamp)",
-        "URR_V80__cbtReload": "Cylinders and internal magazines: the house rounds per action (book), or Quickness rounds; break action whole (Revamp)",
+        "URR_V80__cbtTies": "Initiative ties: Reaction then Quickness (v0.92.2), or Reaction then natural Reaction (Revamp)",
+        "URR_V80__cbtDefense": "Ranged defense: dodge with the Combat Pool (v0.92.2), or no dodge: pool dice in the resistance test, clean miss, net staging (Revamp)",
+        "URR_V80__cbtKnockdown": "Knockdown: Body vs the soak TN when Power beats Body (v0.92.2), or after any damage, 2/3/4 successes for L/M/S, staggering (Revamp)",
+        "URR_V80__cbtReload": "Cylinders and internal magazines: the house rounds per action (v0.92.2), or Quickness rounds; break action whole (Revamp)",
         "URR_V80__cbtStrengthRecoil": "Strength 5+ takes 1–4 off recoil (Revamp)",
-        "URR_V80__cbtTracers": "Tracers: −1 per earlier burst (book), or full auto only, −1 per third round, no Power (Revamp)",
-        "URR_V80__cbtShotgun": "Shotguns: always spread (book), or slugs unless loaded with shot; the cone doubles every choke metres (Revamp)",
-        "URR_V80__cbtScatter": "Scatter per success: 2 m for all (book), or aerodynamic and launcher 4 m, rockets and missiles 2D6 −1 m (Revamp)",
+        "URR_V80__cbtTracers": "Tracers: −1 per earlier burst (v0.92.2), or full auto only, −1 per third round, no Power (Revamp)",
+        "URR_V80__cbtShotgun": "Shotguns: always spread (v0.92.2), or slugs unless loaded with shot; the cone doubles every choke metres (Revamp)",
+        "URR_V80__cbtScatter": "Scatter per success: 2 m for all (v0.92.2), or aerodynamic and launcher 4 m, rockets and missiles 2D6 −1 m (Revamp)",
         "URR_V80__cbtBlastStaging": "A blast's attack successes stage its damage (Revamp)",
         "URR_V80__cbtSubdueTn": "Subduing in melee: + TN (Revamp 2)",
         "URR_V80__cbtChargePower": "Charging: + Power (Revamp 1)",
-        "URR_V80__cbtArmorPool": "Heavy armor lowers Quickness (book), or ballistic over Quickness costs Combat Pool dice (Revamp)",
+        "URR_V80__cbtArmorPool": "Heavy armor lowers Quickness (v0.92.2), or ballistic over Quickness costs Combat Pool dice (Revamp)",
         "URR_V80__cbtArmorLayers": "Best armor plus half: only the next piece adds half (Revamp)",
         "URR_V80__cbtGradedCover": "Graded cover rows count as partial cover (Revamp)",
         "URR_V80__vehCpCap": "Control Pool on driving tests: any dice, or at most the driving skill",
@@ -9082,7 +9100,32 @@
         "SHEET_V921__wizard": "The creation wizard warns but never refuses (advise) or greys out and clamps as before (block)",
         "SHEET_V921__ratingLock": "After creation, players may type higher ratings unless the approval queue is on (queue) or never may (always, the old way)",
         "CLOCK_V922__bigJump": "A big jump of world time outside combat (a calendar setting the date): the GM is asked whether it counts as time passed or only changes the date (ask) or it always counts (count, the old way)",
-        "CLOCK_V922__bigJumpDays": "A big jump of world time: at least this many days, forward or back"
+        "CLOCK_V922__bigJumpDays": "A big jump of world time: at least this many days, forward or back",
+        "COMBAT_V923__rangedDefense": "Ranged defense: no dodge, the Combat Pool goes into the resistance test, attack vs resistance successes, a clean miss on the pool's successes alone (book), or a pool dodge, then the soak on its own (dodge, v0.92.2)",
+        "COMBAT_V923__fullDefense": "Full defense: no extra dice and no pool on the melee test, the pool to the resistance test for a clean miss, no initiative cost (book), or + attribute dice and the initiative cost (dice, v0.92.2)",
+        "COMBAT_V923__poolRefresh": "Combat Pool refreshes at the start of each of the character's actions, leftovers lasting until the first action of the next Combat Turn (action, book), or at each new Combat Turn (turn, v0.92.2)",
+        "COMBAT_V923__knockdown": "Knockdown: every damaging hit, Body vs half the Power (melee: the attacker's Strength), beat half the wound or stagger 1 m, none or Deadly is down (book), or Body vs the soak TN when Power beats Body (old)",
+        "COMBAT_V923__blastStaging": "Blasts: each target's resistance successes are compared with the attack's, every 2 net stage the damage either way (book), or the successes only cut the scatter (off)",
+        "COMBAT_V923__scatter": "Scatter per success: standard grenades 2 m, aerodynamic and launchers 4 m, rockets and missiles 2D6 less 4 m a success (missiles also their Intelligence) (book), or 2 m for all, rockets by range band (old)",
+        "COMBAT_V923__shotgun": "Shotguns: a slug unless loaded with shot; shot widens 1, 2, 4, 6… m every choke metres, −1 Power and −1 TN each time, choke 2–10 (book), or every shotgun spreads (old)",
+        "COMBAT_V923__tracers": "Tracers: full auto only, −1 per 3 rounds beyond short range, none with a smartgun, no Power from them (book), or −1 per earlier burst (old)",
+        "COMBAT_V923__reload": "Cylinders and internal magazines: Quickness rounds per Complex Action (book), or the rounds per action set above (old)",
+        "COMBAT_V923__armorPenalty": "Heavy armor: each point of Ballistic over Quickness is a Combat Pool die less (pool, book), or it lowers Quickness (quickness, v0.92.2)",
+        "COMBAT_V923__initiativeTies": "Initiative ties: adjusted Reaction, then natural Reaction (book), or Reaction, then Quickness (quickness, v0.92.2)",
+        "COMBAT_V923__meleeVisibility": "Melee visibility: light, smoke and weather at half, rounded down, except full darkness (half, book), or the ranged values (full, v0.92.2)",
+        "COMBAT_V923__subdueTn": "Subduing in melee: + TN (book 2; v0.92.2: 0)",
+        "COMBAT_V923__meleeTargets": "Several melee targets in one phase: +2 per target already attacked (book), or ranged only (off)",
+        "COMBAT_V923__spreadFire": "Full auto at several targets: +2 per new target engaged, and a smartlinked smartgun wastes no rounds walking the fire (book), or the spread TN above on every burst (old)",
+        "COMBAT_V923__flechette": "Flechette against armor: the higher of double Impact and plain Ballistic (book), or the higher of the two, doubled (double, v0.92.2)",
+        "COMBAT_V923__barriers": "Firing through a barrier: double against flechette and explosive rounds, and a barrier rated above the Power stops the shot (book), or the rating only adds to armor (old)",
+        "COMBAT_V923__shortBurst": "Short bursts: 2 rounds left fire a short burst (+2 Power, no extra level), 1 round a single shot (book), or too few rounds can't fire (off)",
+        "COMBAT_V923__ambush": "Surprise: an ambusher waiting on a delayed action rolls at TN −2 (book), or no change (off)",
+        "COMBAT_V923__delay": "Delayed actions: a delay held at the end of a Combat Turn carries into the next, and using pool dice breaks it (book), or it ends with the Combat Turn (turn, v0.92.2)",
+        "COMBAT_V923__rangedRows": "Attack dialog: offer the book's target running / stationary, attacker in melee, difficult ground and smart goggles rows",
+        "COMBAT_V923__secondFirearm": "A second firearm cancels smartlink, smart goggles and laser sight bonuses (book), or they still count (off)",
+        "COMBAT_V923__aim": "Take Aim: at most half the skill, rounded down, so a skill of 1 can't aim (book), or at least 1 (old)",
+        "COMBAT_V923__calledShot": "Called shots: single shot, semi-auto and burst only, +1 level or a vehicle part (book), or also full auto and the armor gap (old)",
+        "COMBAT_V923__friends": "Friends in melee: both sides counted, −1 per friend more or +1 per friend fewer, at most 4 (book), or only the attacker's friends (old)"
       }
     },
     "Rules": {
@@ -9093,6 +9136,12 @@
         "attackerRunning": {
           "label": "Attacker running"
         },
+        "attackerWalkingRough": {
+          "label": "Attacker walking (difficult ground)"
+        },
+        "attackerRunningRough": {
+          "label": "Attacker running (difficult ground)"
+        },
         "calledShot": {
           "label": "Called shot"
         },
@@ -9102,8 +9151,23 @@
         "fullCover": {
           "label": "Target in full cover (blind fire through the barrier)"
         },
+        "targetRunning": {
+          "label": "Target running"
+        },
+        "targetStationary": {
+          "label": "Target stationary"
+        },
+        "attackerInMelee": {
+          "label": "Attacker in melee (one opponent)"
+        },
+        "attackerInMelee2": {
+          "label": "Attacker in melee (two opponents)"
+        },
         "smartlink": {
           "label": "Smartlink (smartgun + implant)"
+        },
+        "smartGoggles": {
+          "label": "Smart goggles (smartgun)"
         },
         "laserSight": {
           "label": "Laser sight"
@@ -9319,6 +9383,9 @@
           },
           "tracer": {
             "label": "Tracer"
+          },
+          "shot": {
+            "label": "Shotgun shot"
           }
         },
         "grenades": {
@@ -15037,6 +15104,10 @@
         },
         "button": "Reference",
         "buttonFor": "Reference beside {name}'s sheet"
+      },
+      "Combat923": {
+        "declareFullDefense": "Declare full defense: no Combat Pool on your melee tests, pool dice to your resistance tests (a clean miss if they beat the attacker's) until your next action",
+        "fullDefenseDetail": "no Combat Pool on melee tests; pool dice to resistance tests until the next action"
       }
     },
     "Text": {
@@ -16866,6 +16937,9 @@
           "smartgun": "Smartgun",
           "quickDraw": "Quick-draw holster"
         }
+      },
+      "Combat923": {
+        "flechetteVsBallistic": "flechette vs armor: ballistic {best}"
       }
     },
     "Guide": {
@@ -16991,7 +17065,7 @@
             "i4": "The readied weapon (the one you last attacked with, else a pinned one, else the first ready gun) with its mode and rounds left. Click it to attack; Shift-click to attack at once with its remembered choices."
           },
           "b5": "<strong>Your turn</strong>: in a running combat, when it is your character's action phase, the strip says so. Unless the GM's house rule <em>Actions per phase</em> is off, it shows a pip for each action left, and buttons that need more than you have left are greyed out (hover one for why). Warn (the default) lets you click and warns you; block stops the click (the GM can always click). A projecting magician's or an unmaterialized spirit's physical actions are greyed the same way.",
-          "b6": "In Foundry's combat tracker, your own combatants show their pools, and get a shield button for full defense (out of turn it costs initiative) and <strong>Delay</strong> in your action phase (then <strong>Act now</strong> and <strong>Done</strong>), like the sheet's quick buttons.",
+          "b6": "In Foundry's combat tracker, your own combatants show their pools, and get a shield button for full defense (out of turn it costs initiative only under the old full-defense house rule) and <strong>Delay</strong> in your action phase (then <strong>Act now</strong> and <strong>Done</strong>), like the sheet's quick buttons.",
           "b7": "Other choices for yourself in Configure Settings, section <em>Look and layout</em>: <em>Windows: remember size and place</em> (SR2e's sheets and windows open where you left them; dialogs don't) and <em>Notifications: group bursts</em> (several notices at once become one, and a repeat shows ×2, ×3)."
         },
         "rolling": {
@@ -17076,7 +17150,7 @@
           "b1": "The pools are the Combat Pool, Spell Pool, Hacking Pool (Matrix), Control Pool (rigging) and Karma Pool. The <a href=\"#layouts\">status strip</a> shows each as pips; click a pip to set how many are left (clicking the last filled pip takes one die off).",
           "b2": "A test dialog that can take pool dice has a box for them. What you use comes off what is left. The Main tab shows the Combat Pool spent; the Matrix and Rigging tabs show theirs, with a box to correct the spent number.",
           "b3": "An encephalon gives a small <strong>Task Pool</strong> for Intelligence, knowledge and Build/Repair skills: the skill dialog has a box for it (used up only in combat). An adept's Combat Sense adds to the Combat Pool, and a power focus adds its rating to the Spell Pool.",
-          "b4": "The Combat, Spell, Hacking, Control and Task Pools refill when a combat starts and at each new Combat Turn. The GM can also refill them from the GM panel (Party tab: <strong>Refresh pools</strong>). The Karma Pool doesn't refill with them: use the circular arrow beside <strong>Karma Pool left</strong> on the Main tab, or the GM's <strong>Refresh Karma Pools</strong>. A house rule can refill Karma Pools by themselves at the start of each session or when a combat ends.",
+          "b4": "The Combat, Spell, Hacking, Control and Task Pools refill when a combat starts and at each new Combat Turn. The Combat Pool follows the book instead: it refills at the start of each of your actions, and dice left at the end of a Combat Turn last until your first action of the next. The GM can also refill them from the GM panel (Party tab: <strong>Refresh pools</strong>). The Karma Pool doesn't refill with them: use the circular arrow beside <strong>Karma Pool left</strong> on the Main tab, or the GM's <strong>Refresh Karma Pools</strong>. A house rule can refill Karma Pools by themselves at the start of each session or when a combat ends.",
           "b5": "On the Current tab, <strong>Initiative and pools</strong> lists the initiative (and Matrix or rigged initiative) and each pool, read only. Your combatants in the combat tracker show their pools too."
         },
         "shortcuts": {
@@ -17515,7 +17589,7 @@
           "b2": "<strong>NPCs</strong> tab: <strong>Group roll…</strong> (one test, one card), <strong>Damage several…</strong> and <strong>Heal several…</strong> each ask who: the selected tokens, every NPC token on the scene, or the party. <strong>Group for morale</strong> and <strong>Ungroup</strong> work on the selected tokens; each morale group is then listed with a flag (its morale test) and an × (break it up). <strong>On this scene</strong> lists the tokens no player owns (up to 40) with the same quick icons.",
           "b3": "On both tabs, NPC rows show as compact stat cards (attributes, armor, initiative, weapon and damage). The card icon beside the heading switches to plain rows and back; the panel remembers.",
           "b4": "Foundry's combat tracker gets a banner with the Combat Turn, the pass, who is acting and how many are on full defense or delaying. The acting row is highlighted, delaying combatants are listed last under <em>Delaying</em>, and full defense shows as a badge. IC, frames and agents get an act button there.",
-          "b5": "The tracker's header has <strong>Surprise test</strong> (every combatant rolls; hover it for how the result is used) and, when Foundry's own button isn't there, <strong>Roll NPCs</strong>. Rows you own have <strong>Delay</strong>, <strong>Act now</strong> or <strong>Done</strong>, a shield to declare full defense (out of turn it costs initiative), and a line with the pools left."
+          "b5": "The tracker's header has <strong>Surprise test</strong> (every combatant rolls; hover it for how the result is used) and, when Foundry's own button isn't there, <strong>Roll NPCs</strong>. Rows you own have <strong>Delay</strong>, <strong>Act now</strong> or <strong>Done</strong>, a shield to declare full defense (out of turn it costs initiative only under the old full-defense house rule), and a line with the pools left."
         },
         "gmParty": {
           "title": "Party tab",
@@ -17662,6 +17736,21 @@
             "i3": "The whole list opens from the SR2e tools window (Rules interpretations)."
           },
           "b3": "They are interpretations, not rulings: the GM's call always wins."
+        },
+        "rulesV0923Combat": {
+          "title": "Combat rules updated in v0.92.3",
+          "b1": "v0.92.3 brought combat closer to the SR2 core rulebook. The GM can put each change back under the GM's house rules (the <em>v0.92.3</em> rows; the old choice is the second one). Under the Unified Rules Revamp nothing here changes.",
+          "b2": {
+            "i1": "<strong>Gunfire:</strong> you don't dodge. <strong>Defend</strong> puts your Combat Pool dice into the damage resistance test (Body + pool against Power − armor). If the pool dice alone score more successes than the attacker, it is a clean miss. Otherwise the attacker's successes are set against yours: every 2 more on either side moves the damage one level up or down, and a tie does the weapon's base damage.",
+            "i2": "<strong>Staging:</strong> every 2 net successes raise the damage one level, for gunfire, melee and combat spells alike.",
+            "i3": "<strong>Combat Pool:</strong> it refills at the start of each of your actions. Dice left at the end of a Combat Turn last until your first action of the next one.",
+            "i4": "<strong>Melee:</strong> a tie goes to the attacker (base damage). Full defense adds no dice and costs no initiative: no Combat Pool on your melee test, and your pool dice go to the resistance test, a clean miss if their successes beat the attacker's. Light, smoke and weather count half in melee (not full darkness). Subduing is +2 TN, and each further target in the same phase is +2.",
+            "i5": "<strong>Knockdown:</strong> every hit that hurts calls for a Body test against half the Power (gel rounds: the Power; melee: the attacker's Strength). Beat half the wound (Light 1, Moderate 2, Serious 3) to stay put; some successes stagger you 1 m back; none, or a Deadly wound, knocks you down.",
+            "i6": "<strong>Grenades and rockets:</strong> each target's resistance successes are set against the thrower's, as for gunfire. Aerodynamic grenades and launchers lose 4 m of scatter per success; rockets and missiles scatter 2D6 m (a missile also its Intelligence in metres less). Anti-personnel rockets lose 1 Power per half metre.",
+            "i7": "<strong>Firearms:</strong> shotguns fire slugs unless loaded with shot, which follows the flechette rules and widens every choke metres (−1 Power and −1 TN each time). Flechette against armor uses double Impact or plain Ballistic, whichever is higher. Tracers help only full auto beyond short range. Full auto at several targets is +2 per new target, and a smartlinked smartgun wastes no rounds between them. Two rounds left fire a short burst (+2 Power, no extra level). A barrier rated above the Power stops the shot, and counts double against flechette and explosive rounds. Cylinders and internal magazines reload Quickness rounds per Complex Action. A weapon must be readied (a Simple Action) before use.",
+            "i8": "<strong>Attack dialog and armor:</strong> target running (+2), target stationary (−1), attacker in melee (+2 per opponent), difficult ground and smart goggles (−1) are new rows. Heavy armor costs a Combat Pool die per point of Ballistic over your Quickness, instead of Quickness.",
+            "i9": "<strong>Initiative and actions:</strong> ties go to Reaction, then natural Reaction. A wound changes your initiative at the next roll, not mid-turn. A delayed action lasts through the Combat Turn and into the next, but using pool dice while you wait loses it. Ambushers waiting on a delayed action roll the surprise test at TN 2."
+          }
         }
       }
     },

@@ -298,8 +298,11 @@ describe('O23 persona damage on Matrix initiative', () => {
       await fire('updateActor', d, change, options, 'gm1');
       return c.initiative;
     };
-    assert.ok(await run() < 15);
-    assert.equal(await withRule(NR().personaInitiative, 'enabled', false, run), 15);
+    // v0.92.3: INITIATIVE_WOUNDS.midTurn is off by default (Core p. 112); this is the house rule on.
+    await withRule(RULES.INITIATIVE_WOUNDS, 'midTurn', true, async () => {
+      assert.ok(await run() < 15);
+      assert.equal(await withRule(NR().personaInitiative, 'enabled', false, run), 15);
+    });
   });
 });
 

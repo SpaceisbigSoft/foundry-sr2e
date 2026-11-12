@@ -58,9 +58,11 @@ export const RULES = {
   /**
    * v0.54.0: how the attacker's net successes stage damage up. 'afterFirst' (as before): the first net
    * success hits and each further SUCCESSES_PER_STAGE raise a level (2 net: no change, 3: one level).
-   * 'all': every SUCCESSES_PER_STAGE net successes raise a level (2 net: one level). VERIFY in the book.
+   * 'all': every SUCCESSES_PER_STAGE net successes raise a level (2 net: one level).
+   * v0.92.3: 'all' is the book (Core p. 91: 2 net successes take M to S; Core p. 101; Core p. 110) for ranged, melee
+   * and combat spells (was 'afterFirst').
    */
-  ATTACK_STAGING: 'afterFirst' as 'afterFirst' | 'all',
+  ATTACK_STAGING: 'all' as 'afterFirst' | 'all',
   /**
    * Wound modifier (added to all TNs) by boxes marked on a track, as
    * [minBoxes, modifier] pairs, highest first. VERIFY
@@ -233,10 +235,18 @@ export const RULES = {
   SITUATIONAL_MODIFIERS: [
     { id: 'attackerWalking', label: 'Attacker walking', value: 1 },
     { id: 'attackerRunning', label: 'Attacker running', value: 4 },
+    // v0.92.3: the rest of the Ranged Combat Modifiers Table (Core p. 89); COMBAT_V923.rangedRows hides them.
+    { id: 'attackerWalkingRough', label: 'Attacker walking (difficult ground)', value: 2 },
+    { id: 'attackerRunningRough', label: 'Attacker running (difficult ground)', value: 6 },
     { id: 'calledShot', label: 'Called shot', value: 4 },
     { id: 'partialCover', label: 'Target in partial cover', value: 4 },
     { id: 'fullCover', label: 'Target in full cover (blind fire through the barrier)', value: 8 },
+    { id: 'targetRunning', label: 'Target running', value: 2 },
+    { id: 'targetStationary', label: 'Target stationary', value: -1 },
+    { id: 'attackerInMelee', label: 'Attacker in melee (one opponent)', value: 2 },
+    { id: 'attackerInMelee2', label: 'Attacker in melee (two opponents)', value: 4 },
     { id: 'smartlink', label: 'Smartlink (smartgun + implant)', value: -2 },
+    { id: 'smartGoggles', label: 'Smart goggles (smartgun)', value: -1 },
     { id: 'laserSight', label: 'Laser sight', value: -1 },
     { id: 'secondWeapon', label: 'Second weapon (off-hand)', value: 2 },
   ] as ReadonlyArray<{ id: string; label: string; value: number }>,
@@ -954,8 +964,9 @@ export const RULES = {
      * (`tie`): 'none' = nobody is hurt; 'attacker' / 'defender' = that side hits at its base
      * damage. Reach: each point of reach difference moves the defender's TN by `reachTnPerPoint`
      * (+ if the attacker's weapon is longer, − if the defender's is).
+     * v0.92.3: tie 'attacker', the book (Core pp. 100–101: ties go to the attacker, base damage; was 'none').
      */
-    melee: { opposed: true, counterattack: true, tie: 'none' as 'none' | 'defender' | 'attacker', reachTnPerPoint: 1,
+    melee: { opposed: true, counterattack: true, tie: 'attacker' as 'none' | 'defender' | 'attacker', reachTnPerPoint: 1,
       /**
        * v0.47.0: the attribute a melee attack defaults to without the skill: 'linked' = the skill's
        * own attribute (an owned skill's, else guessed from its name: Armed, Edged, Clubs, Unarmed
@@ -1016,6 +1027,8 @@ export const RULES = {
       { id: 'flechette', label: 'Flechette', power: 0, stages: 1, armorMultiplier: 2 },
       { id: 'gel', label: 'Gel', power: -2, stages: 0, armorMultiplier: 1, armorKind: 'impact', damageType: 'stun' },
       { id: 'tracer', label: 'Tracer', power: 0, stages: 0, armorMultiplier: 1 },
+      // v0.92.3: shotgun shot, the flechette rules (Core p. 95); with COMBAT_V923.shotgun 'book' a shotgun spreads only with it.
+      { id: 'shot', label: 'Shotgun shot', power: 0, stages: 1, armorMultiplier: 2 },
     ] as ReadonlyArray<{ id: string; label: string; power: number; stages: number; armorMultiplier: number; armorKind?: 'ballistic' | 'impact'; damageType?: 'physical' | 'stun' }>,
     /** Called shot: +TN (in SITUATIONAL_MODIFIERS) and the attacker picks one effect. */
     calledShot: { damageStages: 1, ignoresArmor: true },
@@ -1050,7 +1063,7 @@ export const RULES = {
       { id: 'flash', label: 'Flash', perMetre: 5, effect: 'blind' }, // v0.77.0 book check: 5L in a 1 m blast (was 1 per metre)
       { id: 'gas', label: 'Gas', perMetre: 1, effect: 'gas' },
       { id: 'heRocket', label: 'Rocket / missile: high explosive', perMetre: 1 },
-      { id: 'apRocket', label: 'Rocket / missile: anti-personnel', perMetre: 0.5 },
+      { id: 'apRocket', label: 'Rocket / missile: anti-personnel', perMetre: 2 }, // v0.92.3: −1 per half metre, Core p. 99 (was 0.5)
       { id: 'avRocket', label: 'Rocket / missile: anti-vehicle', perMetre: 0.25 }, // v0.78.0 owner's default: −1 per 4 m, as the anti-vehicle mortar round (was 4 per metre). VERIFY
       { id: 'demolition', label: 'Demolition charge', perMetre: 1 },
       // v0.61.0: smoke grenades leave a smoke region (COMBAT_V61.smoke: radius and how long it lingers).
@@ -1134,7 +1147,8 @@ export const RULES = {
     /** Rounds loaded per reload action by feed (a clip or belt reloads whole). v0.79.0: under RULES.DOCS_V79.rangedReload 'actions' a non-clip reload is a Complex Action (SRII pp. 81–83); the round counts are still house numbers. VERIFY */
     reloadFeed: { clip: 'all', belt: 'all', cylinder: 2, internal: 2, break: 2 } as Record<string, 'all' | number>,
     /** Drawing a weapon: 'off' (always ready), 'warn' (a note), 'action' (a Simple Action first; a quick-draw holster makes it free). */
-    ready: { rule: 'off' as 'off' | 'warn' | 'action' },
+    // v0.92.3: 'action', Core p. 82: a weapon must be ready before it is used (was 'off').
+    ready: { rule: 'action' as 'off' | 'warn' | 'action' },
     /** Armor against thrown weapons and bows when the weapon says 'auto'. */
     armorFor: { thrown: 'impact' as 'impact' | 'ballistic', bow: 'ballistic' as 'impact' | 'ballistic' },
     /** Shotgun spread: + this TN per metre of spread width at the target (0 = only Power drops). Check the book. */
@@ -1147,7 +1161,8 @@ export const RULES = {
     burning: { enabled: true, amount: 'burning', putOut: 'complex' as 'simple' | 'complex' },
     /** Holds (subduing): attacker Strength vs the target's Body, target Body vs the attacker's Strength; more successes pins (restrained). */
     hold: { status: 'restrain', attackerAttr: 'strength' as 'strength' | 'body', defenderAttr: 'body' as 'strength' | 'body' },
-    demolitions: { skill: 'Demolitions', attribute: 'intelligence' as const, tn: 4, powerPerSuccess: 1, level: 'D' as 'L' | 'M' | 'S' | 'D' },
+    // v0.92.3: tn 2, Core p. 98 (was 4).
+    demolitions: { skill: 'Demolitions', attribute: 'intelligence' as const, tn: 2, powerPerSuccess: 1, level: 'D' as 'L' | 'M' | 'S' | 'D' },
   },
 
   /**
@@ -1655,7 +1670,8 @@ export const RULES = {
    * they can act at any moment (before whoever is acting). With `lostAtPassEnd`, a delayed action
    * not taken by the end of the pass is lost.
    */
-  DELAY: { lostAtPassEnd: true },
+  // v0.92.3: lostAtPassEnd false, the book (Core p. 80: a delayed action lasts through the later phases; was true).
+  DELAY: { lostAtPassEnd: false },
 
   /**
    * Rule of One disasters (v0.35.0): a GM card suggests a consequence by test kind (house text, not the
@@ -2413,7 +2429,8 @@ export const RULES = {
    * v0.54.0: wounds lower Initiative by the wound modifier (Light −1, Moderate −2, Serious −3), on the
    * roll and at once when a wound is taken mid-turn (`midTurn`; healing never raises it). VERIFY
    */
-  INITIATIVE_WOUNDS: { enabled: true, midTurn: true },
+  // v0.92.3: midTurn false, the book (Core p. 112: the wound counts against Reaction when initiative is rolled; was true).
+  INITIATIVE_WOUNDS: { enabled: true, midTurn: false },
   /** Base initiative dice (1d6 before cyberware/magic). */
   BASE_INITIATIVE_DICE: 1,
   /**
@@ -2725,8 +2742,8 @@ export const RULES = {
       ['smg', 'Submachine gun', { cost: 900, skill: 'Firearms', specialization: 'SMGs', damagePower: 6, damageLevel: 'M', modes: 'SA/BF/FA', ammoMax: 32, ammo: 32, recoilComp: 1, range: { short: 10, medium: 40, long: 80, extreme: 150 } }],
       ['assaultRifle', 'Assault rifle', { cost: 1600, skill: 'Firearms', specialization: 'Assault rifles', damagePower: 8, damageLevel: 'M', modes: 'SA/BF/FA', ammoMax: 40, ammo: 40, range: { short: 15, medium: 40, long: 100, extreme: 250 } /* v0.79.0 docs check: SRII Weapon Range Table (was 50/150/350/550) */ }], // v0.77.0 book check: the 1,600¥ M22A2 holds 40 (was 30)
       ['sniperRifle', 'Sniper rifle', { cost: 4000 /* v0.77.0 book check: book sniper rifles 4,000–6,500¥ (was 8,000) */, skill: 'Firearms', specialization: 'Rifles', damagePower: 14, damageLevel: 'S', modes: 'SA', ammoMax: 6, ammo: 6, range: { short: 40, medium: 80, long: 200, extreme: 400 } /* v0.79.0 docs check: SRII Weapon Range Table (was 100/400/800/1300) */ }],
-      ['shotgun', 'Shotgun', { cost: 700, skill: 'Firearms', specialization: 'Shotguns', damagePower: 10, damageLevel: 'S', modes: 'SA', ammoMax: 8, ammo: 8, shotgun: true, choke: 2, range: { short: 10, medium: 20, long: 50, extreme: 100 } }],
-      ['lmg', 'Light machine gun', { cost: 2500, skill: 'Gunnery', damagePower: 7, damageLevel: 'S', modes: 'FA', ammoMax: 50, ammo: 50, heavy: true, range: { short: 20, medium: 40, long: 80, extreme: 150 } /* v0.79.0 docs check: SRII Weapon Range Table (was 40/150/400/800, the HMG row) */ }],
+      ['shotgun', 'Shotgun', { cost: 700, skill: 'Firearms', specialization: 'Shotguns', damagePower: 10, damageLevel: 'S', modes: 'SA', ammoMax: 8, ammo: 8, shotgun: true, heavy: true /* v0.92.3: shotguns double their recoil, Core p. 89 (was not heavy) */, choke: 2, range: { short: 10, medium: 20, long: 50, extreme: 100 } }],
+      ['lmg', 'Light machine gun', { cost: 2500, skill: 'Gunnery', damagePower: 7, damageLevel: 'S', modes: 'FA', ammoMax: 50, ammo: 50, heavy: false /* v0.92.3: only MMG, HMG and shotguns are heavy, Core p. 89 (was heavy) */, range: { short: 20, medium: 40, long: 80, extreme: 150 } /* v0.79.0 docs check: SRII Weapon Range Table (was 40/150/400/800, the HMG row) */ }],
       ['bow', 'Bow', { cost: 300, skill: 'Projectile Weapons', damagePower: 2, damageLevel: 'M', strengthPower: true, strengthCap: 3, strengthRange: true, strengthRangeMultipliers: { short: 1, medium: 10, long: 30, extreme: 60 } /* v0.79.0 docs check: SRII Weapon Range Table (was the default 1/2/3/5) */ }], // v0.77.0 book check: (Str Min + 2)M, a Str Min 3 bow at 300¥ (was +0, cap 6)
       ['throwingKnife', 'Throwing knife', { cost: 20, skill: 'Throwing Weapons', damagePower: 0, damageLevel: 'L', strengthPower: true, strengthRange: true }],
       ['offensiveGrenade', 'Offensive grenade', { cost: 30, skill: 'Throwing Weapons', damagePower: 10, damageLevel: 'S', blast: true, blastKind: 'offensive', blastPerMetre: 1, strengthRange: true, strengthRangeMultipliers: { short: 3, medium: 5, long: 10, extreme: 20 } /* v0.79.0 docs check: SRII Grenade Range Table (was 1/2/3/5) */ }],

@@ -6,6 +6,9 @@ import { RULES, type DamageLevel } from './config.ts';
 import type { TargetNumberModifier } from './dice.ts';
 import { stageUp, stageDown, stageForNetSuccesses } from './damage.ts';
 import { t as tx } from '../helpers/i18n.ts';
+// v0.92.3 (RULES.COMBAT_V923): where the Revamp's switch has the book's procedure, the Book Rules use the same path
+// through their own switch (inert under the Revamp source, so the Revamp behaves as before).
+import * as C923 from './combat923.ts';
 
 const U = () => RULES.URR_V80;
 const num = (x: unknown): number => (Number.isFinite(Number(x)) ? Number(x) : 0);
@@ -14,7 +17,8 @@ const num = (x: unknown): number => (Number.isFinite(Number(x)) ? Number(x) : 0)
 
 /** The tie-break keys in order: the book's RULES.INITIATIVE_TIES, or Reaction then natural Reaction. */
 export function cbtTieKeys(): string[] {
-  return U().cbtTies === 'natural' ? ['reaction', 'naturalReaction'] : [...RULES.INITIATIVE_TIES];
+  // v0.92.3 (COMBAT_V923.initiativeTies 'book', Core p. 79): adjusted Reaction, then natural Reaction.
+  return U().cbtTies === 'natural' || C923.tiesBook() ? ['reaction', 'naturalReaction'] : [...RULES.INITIATIVE_TIES];
 }
 
 /** One tie-break value for an actor's system data: Reaction, natural Reaction ((natural Q + natural I) ÷ 2), or an attribute. */
@@ -39,7 +43,8 @@ export function cbtCleanMissOn(): boolean {
  * Opposed melee, astral, Matrix, ram, flamethrower, elemental, suppressive and blast attacks keep the book path.
  */
 export function cbtCleanMissRanged(a: { astral?: boolean; matrix?: boolean; ram?: unknown; flame?: boolean; elemental?: boolean; suppressive?: boolean; fixedDamage?: boolean; noDodge?: boolean } | null | undefined, opposed: boolean): boolean {
-  if (!cbtCleanMissOn() || !a || opposed) return false;
+  // v0.92.3 (COMBAT_V923.rangedDefense 'book', Core pp. 87, 91): the book's ranged defense is this procedure.
+  if (!(cbtCleanMissOn() || C923.rangedDefenseBook()) || !a || opposed) return false;
   return !(a.astral || a.matrix || a.ram || a.flame || a.elemental || a.suppressive || a.fixedDamage || a.noDodge);
 }
 
@@ -81,17 +86,18 @@ export function cbtMeleeDamage(baseLevel: DamageLevel, winnerSuccesses: number, 
 
 /** Full defense's extra dice: the book's attribute dice, none under the clean-miss flow. */
 export function cbtFullDefenseDice(dice: number): number {
-  return cbtCleanMissOn() ? 0 : dice;
+  // v0.92.3 (COMBAT_V923.fullDefense 'book', Core p. 102): no extra dice.
+  return cbtCleanMissOn() || C923.fullDefenseBook() ? 0 : dice;
 }
 
 /** Combat Pool dice on the melee defense test: none on full defense under the clean-miss flow (they go to the soak). */
 export function cbtMeleeDefensePool(full: boolean, pool: number): number {
-  return cbtCleanMissOn() && full ? 0 : pool;
+  return (cbtCleanMissOn() || C923.fullDefenseBook()) && full ? 0 : pool;
 }
 
 /** The full-defense checkbox's text (attr = the attribute's name). */
 export function cbtFullDefenseText(attr: string, held: boolean): string {
-  if (cbtCleanMissOn()) return held ? tx('SR2E.Text.Urr80Combat.noPoolAlreadyDeclared') : tx('SR2E.Text.Urr80Combat.noPoolUntilNextAction');
+  if (cbtCleanMissOn() || C923.fullDefenseBook()) return held ? tx('SR2E.Text.Urr80Combat.noPoolAlreadyDeclared') : tx('SR2E.Text.Urr80Combat.noPoolUntilNextAction');
   return held ? tx('SR2E.Text.Urr80Combat.diceAlreadyDeclared', { attr }) : tx('SR2E.Text.Urr80Combat.diceAgainstEveryAttack', { attr });
 }
 
@@ -103,26 +109,30 @@ export function cbtDefendPoolLabel(left: number, cleanMiss: boolean): string {
 // ---------------------------------------------------------------- knockdown (URR)
 
 /** The knockdown test's TN: the book's (the soak TN), or half the Power (ranged) / the Power (melee). */
-export function cbtKnockdownTn(o: { power: number; tn: number; melee: boolean }): number {
-  if (U().cbtKnockdown !== 'urr') return o.tn;
+export function cbtKnockdownTn(o: { power: number; tn: number; melee: boolean; gel?: boolean; strength?: number | null }): number {
+  // v0.92.3 (COMBAT_V923.knockdown 'book', Core pp. 92, 102): half the Power, gel the Power, melee the attacker's Strength.
+  if (U().cbtKnockdown !== 'urr') return C923.knockdownBook() ? C923.knockdownTnBook(o) : o.tn;
   const p = Math.max(0, num(o.power));
   return Math.max(RULES.MIN_TARGET_NUMBER, o.melee ? Math.floor(p) : Math.floor(p * num(U().cbtKnockdownRangedFactor)));
 }
 
 /** Whether a hit calls for a knockdown test: `book` (the book's trigger), or any damage dealt. */
 export function cbtKnockdownDue(book: boolean, level: DamageLevel | null): boolean {
-  if (U().cbtKnockdown !== 'urr') return book;
+  // v0.92.3 (COMBAT_V923.knockdown 'book'): every hit that does damage.
+  if (U().cbtKnockdown !== 'urr') return C923.knockdownBook() ? RULES.COMBAT.knockdown.enabled && Boolean(level) : book;
   return RULES.COMBAT.knockdown.enabled && Boolean(level);
 }
 
 /** Extra knockdown-flag fields: the wound level under the Revamp ({} the book way). */
 export function cbtKnockdownFlag(level: DamageLevel | null): { level?: DamageLevel } {
-  return U().cbtKnockdown === 'urr' && level ? { level } : {};
+  return (U().cbtKnockdown === 'urr' || C923.knockdownBook()) && level ? { level } : {};
 }
 
 /** The knockdown test's outcome: down, or staggered back so many metres (the book: down on no successes). */
 export function cbtKnockdownResult(successes: number, level?: DamageLevel | null): { down: boolean; staggerMetres: number } {
   const s = Math.max(0, Math.floor(num(successes)));
+  // v0.92.3 (COMBAT_V923.knockdown 'book'): beat half the wound to stand, else 1 m back; none or Deadly: down.
+  if (U().cbtKnockdown !== 'urr' && C923.knockdownBook() && level) return C923.knockdownResultBook(s, level);
   if (U().cbtKnockdown !== 'urr' || !level) return { down: s <= 0, staggerMetres: 0 };
   if (level === 'D' || s <= 0) return { down: true, staggerMetres: 0 };
   const need = num(U().cbtKnockdownNeed[level]);
@@ -133,6 +143,11 @@ export function cbtKnockdownResult(successes: number, level?: DamageLevel | null
 
 /** Rounds one reload action puts in: `book` (RULES.COMBAT.reloadFeed's), or Quickness rounds (break action: all). */
 export function cbtReloadAmount(book: number, feed: string, ammo: number, ammoMax: number, quickness: number): number {
+  // v0.92.3 (COMBAT_V923.reload 'book', Core p. 95): a cylinder or internal magazine takes Quickness rounds (a break action 2).
+  if (U().cbtReload !== 'quickness' && C923.reloadBook() && ['cylinder', 'internal'].includes(feed)) {
+    const room = Math.max(0, Math.floor(num(ammoMax)) - Math.max(0, Math.floor(num(ammo))));
+    return Math.min(room, Math.max(1, Math.floor(num(quickness))));
+  }
   if (U().cbtReload !== 'quickness' || !['cylinder', 'internal', 'break'].includes(feed)) return book;
   const room = Math.max(0, Math.floor(num(ammoMax)) - Math.max(0, Math.floor(num(ammo))));
   return feed === 'break' ? room : Math.min(room, Math.max(1, Math.floor(num(quickness))));
@@ -150,17 +165,21 @@ export function cbtStrengthRecoil(recoil: number, strength: number, applies: boo
 }
 
 /** Tracer rounds: the TN modifier (`bookTn` the book way) and the Power they don't add. */
-export function cbtTracer(bookTn: number, o: { ammo: string; mode: string; rounds: number; smartgun: boolean }): { tn: number; powerOff: number } {
-  if (U().cbtTracers !== 'urr') return { tn: bookTn, powerOff: 0 };
+export function cbtTracer(bookTn: number, o: { ammo: string; mode: string; rounds: number; smartgun: boolean; range?: string | null }): { tn: number; powerOff: number } {
+  // v0.92.3 (COMBAT_V923.tracers 'book', Fields of Fire): the same, and no TN help at short range.
+  const book = U().cbtTracers !== 'urr' && C923.tracersBook();
+  if (U().cbtTracers !== 'urr' && !book) return { tn: bookTn, powerOff: 0 };
   if (o.ammo !== 'tracer' || o.mode !== 'FA') return { tn: 0, powerOff: 0 };
   const thirds = Math.floor(Math.max(0, num(o.rounds)) / 3);
-  return { tn: o.smartgun ? 0 : -thirds, powerOff: thirds };
+  return { tn: o.smartgun || (book && (o.range ?? 'short') === 'short') ? 0 : -thirds, powerOff: thirds };
 }
 
 // ---------------------------------------------------------------- shotguns (URR)
 
 /** Whether a shotgun shot spreads: always the book way; under the Revamp only with shot ammunition (a slug otherwise). */
 export function cbtShotgunSpreads(ammoId: string | null | undefined): boolean {
+  // v0.92.3 (COMBAT_V923.shotgun 'book', Core p. 95): a slug unless loaded with shot.
+  if (U().cbtShotgun !== 'urr' && C923.shotgunBook()) return String(ammoId ?? '') === U().cbtShotAmmo;
   return U().cbtShotgun !== 'urr' || String(ammoId ?? '') === U().cbtShotAmmo;
 }
 
@@ -171,6 +190,8 @@ function shotSteps(metres: number, choke: number): number {
 
 /** The spread at a distance: its width and the Power lost (`book`: shotgunSpread's; or the doubling cone). */
 export function cbtShotgunSpread(book: { width: number; power: number; loss: number }, metres: number, choke: number, power: number): { width: number; power: number; loss: number } {
+  // v0.92.3 (COMBAT_V923.shotgun 'book', Core p. 95): 1 m, then 2, 4, 6… m; −1 Power per widening.
+  if (U().cbtShotgun !== 'urr' && C923.shotgunBook()) return C923.shotSpreadBook(metres, choke, power);
   if (U().cbtShotgun !== 'urr') return book;
   const steps = shotSteps(metres, choke);
   return { width: 2 ** (steps - 1), power: Math.max(0, num(power) - steps), loss: steps };
@@ -178,6 +199,11 @@ export function cbtShotgunSpread(book: { width: number; power: number; loss: num
 
 /** The spread's TN modifier: `book` (RULES.COMBAT.shotgunTnPerMetre's), or −1 per step of the cone. */
 export function cbtShotgunTn(book: TargetNumberModifier[], metres: number, choke: number): TargetNumberModifier[] {
+  // v0.92.3 (COMBAT_V923.shotgun 'book', Core p. 95): −1 TN per widening.
+  if (U().cbtShotgun !== 'urr' && C923.shotgunBook()) {
+    const loss = C923.shotSpreadBook(metres, choke, 0).loss;
+    return loss ? [{ id: 'shotSpread', label: tx('SR2E.Card.Mod.shotSpread'), value: -loss }] : [];
+  }
   if (U().cbtShotgun !== 'urr') return book;
   return [{ id: 'shotSpread', label: tx('SR2E.Card.Mod.shotSpread'), value: -shotSteps(metres, choke) }];
 }
@@ -186,33 +212,42 @@ export function cbtShotgunTn(book: TargetNumberModifier[], metres: number, choke
 
 /** Extra blast-context fields for the Revamp's rocket and missile scatter ({} the book way). */
 export function cbtScatterExtras(w: { blastKind?: string | null; name?: string | null; guidance?: number }): Record<string, unknown> {
-  if (U().cbtScatter !== 'urr' || !/rocket/i.test(String(w.blastKind ?? ''))) return {};
+  if ((U().cbtScatter !== 'urr' && !C923.scatterBook()) || !/rocket/i.test(String(w.blastKind ?? ''))) return {};
   const missile = /missile/i.test(String(w.name ?? '')) || num(w.guidance) > 0;
   return { rocket80: missile ? 'missile' : 'rocket', guidance80: Math.max(0, Math.floor(num(w.guidance))) };
 }
 
 type ScatterCtx = { scatterType?: string | null; rocket80?: string; guidance80?: number };
 
+/** The scatter numbers in play: the Revamp's, the book's (v0.92.3, COMBAT_V923.scatter 'book', Core pp. 97, 99), or none. */
+function scatterSet(): { perSuccess: Record<string, number>; rocket: { dice: number; perSuccess: number; perIntelligence: number }; missile: { dice: number; perSuccess: number; perIntelligence: number } } | null {
+  if (U().cbtScatter === 'urr') return { perSuccess: U().cbtScatterPerSuccess, rocket: U().cbtScatterRocket, missile: U().cbtScatterMissile };
+  return C923.scatterBook();
+}
+
 /** Scatter dice: rockets and missiles 2D6 under the Revamp; otherwise `base` (the book's dice). */
 export function cbtScatterDice(ctx: ScatterCtx | null | undefined, base: number): number {
-  if (U().cbtScatter !== 'urr' || !ctx?.rocket80) return base;
-  return (ctx.rocket80 === 'missile' ? U().cbtScatterMissile : U().cbtScatterRocket).dice;
+  const set = scatterSet();
+  if (!set || !ctx?.rocket80) return base;
+  return (ctx.rocket80 === 'missile' ? set.missile : set.rocket).dice;
 }
 
 /** Metres off per attack success. */
 export function cbtScatterPerSuccess(ctx: ScatterCtx | null | undefined): number {
-  if (U().cbtScatter === 'urr') {
-    if (ctx?.rocket80) return (ctx.rocket80 === 'missile' ? U().cbtScatterMissile : U().cbtScatterRocket).perSuccess;
-    const t = ctx?.scatterType as keyof typeof RULES.URR_V80.cbtScatterPerSuccess | undefined;
-    if (t && t in U().cbtScatterPerSuccess) return U().cbtScatterPerSuccess[t];
+  const set = scatterSet();
+  if (set) {
+    if (ctx?.rocket80) return (ctx.rocket80 === 'missile' ? set.missile : set.rocket).perSuccess;
+    const t = ctx?.scatterType as string | undefined;
+    if (t && t in set.perSuccess) return num(set.perSuccess[t]);
   }
   return RULES.COMBAT.scatter.metresPerSuccess;
 }
 
 /** How far the blast lands from its point (`book`: scatterMetres'): the dice less the success metres (and a missile's Intelligence). */
 export function cbtScatterMetres(book: number, dice: readonly number[], successes: number, ctx: ScatterCtx | null | undefined): number {
-  if (U().cbtScatter !== 'urr') return book;
-  const g = ctx?.rocket80 ? num(ctx.guidance80) * (ctx.rocket80 === 'missile' ? U().cbtScatterMissile : U().cbtScatterRocket).perIntelligence : 0;
+  const set = scatterSet();
+  if (!set) return book;
+  const g = ctx?.rocket80 ? num(ctx.guidance80) * (ctx.rocket80 === 'missile' ? set.missile : set.rocket).perIntelligence : 0;
   return Math.max(0, dice.reduce((a, b) => a + b, 0) - Math.max(0, num(successes)) * cbtScatterPerSuccess(ctx) - g);
 }
 
@@ -239,7 +274,8 @@ export function cbtChargePower(charging: boolean): number {
 
 /** Armor encumbrance on Quickness: `book` (encumbrancePenalty's), or none when armor costs Combat Pool instead. */
 export function cbtEncumbrance(book: number): number {
-  return U().cbtArmorPool === 'pool' ? 0 : book;
+  // v0.92.3 (COMBAT_V923.armorPenalty 'pool', Dice Pools p. 85): heavy armor costs Combat Pool dice, not Quickness.
+  return U().cbtArmorPool === 'pool' || C923.armorPoolBook() ? 0 : book;
 }
 
 /** The Attack dialog's charging label: the TN (and the Power under the Revamp). */
@@ -252,7 +288,7 @@ export function cbtChargeLabel(): string {
 
 /** Combat Pool dice lost to worn ballistic armor above Quickness (0 the book way). */
 export function cbtArmorPoolPenalty(ballistic: number, quickness: number): number {
-  if (U().cbtArmorPool !== 'pool' || !RULES.COMBAT.encumbrance.enabled) return 0;
+  if ((U().cbtArmorPool !== 'pool' && !C923.armorPoolBook()) || !RULES.COMBAT.encumbrance.enabled) return 0;
   return Math.max(0, Math.floor(num(ballistic)) - Math.max(0, Math.floor(num(quickness))));
 }
 

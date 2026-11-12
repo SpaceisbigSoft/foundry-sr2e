@@ -334,7 +334,11 @@ describe('O5 smoke counts in melee', () => {
     const smoke = { label: 'Smoke', value: 4 };
     const clear = sumOf(a.planAttack(SR2Actor.unarmed(), { sight: {} }).modifiers);
     const smoky = sumOf(a.planAttack(SR2Actor.unarmed(), { sight: { smoke } }).modifiers);
-    assert.equal(smoky - clear, 4);
+    // v0.92.3 (COMBAT_V923.meleeVisibility 'half', Core p. 102): half in melee; the ranged value with the switch at 'full'.
+    assert.equal(smoky - clear, 2);
+    await withRule(RULES.COMBAT_V923, 'meleeVisibility', 'full', () => {
+      assert.equal(sumOf(a.planAttack(SR2Actor.unarmed(), { sight: { smoke } }).modifiers) - clear, 4);
+    });
     await withRule(RULES.COMBAT_V72, 'meleeSmoke', false, () => {
       assert.equal(sumOf(a.planAttack(SR2Actor.unarmed(), { sight: { smoke } }).modifiers), clear);
     });

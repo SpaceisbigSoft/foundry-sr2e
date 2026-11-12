@@ -2,9 +2,11 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { delayValid, fullDefenseCost, fullDefenseActive, canBuySuccess, disasterSuggestion, sessionRefreshDue } from '../flow.ts';
 import { RULES } from '../config.ts';
+import { oldWay } from './oldway.ts';
 
 describe('combat flow (v0.35.0)', () => {
-  test('a delayed action lasts to the end of the pass', () => {
+  test('a delayed action lasts to the end of the pass (DELAY.lostAtPassEnd on, the v0.92.2 default)', (t) => {
+    t.after(oldWay({ 'DELAY.lostAtPassEnd': true }));
     const f = { combatId: 'c', round: 2, pass: 0 };
     assert.equal(delayValid(f, { combatId: 'c', round: 2, pass: 0 }), true);
     assert.equal(delayValid(f, { combatId: 'c', round: 2, pass: 1 }), false);
