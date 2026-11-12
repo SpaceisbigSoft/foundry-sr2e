@@ -43,6 +43,12 @@ export function elementalAidDice(force: number): number {
 /** Projection: the time limit in hours, how far over it the magician is, and the Essence that costs. VERIFY */
 export function projectionOverstay(hoursElapsed: number, essence: number): { limit: number; over: number; essenceLoss: number } {
   const p = X().projection;
+  // v0.92.3 (RULES.SPIRITS_V923.projection 'book', Core pp. 146–147): the body loses 1 Essence for every hour projected,
+  // from the start (full hours). The Revamp's own reading (magProjFullHours) keeps its path below.
+  if (RULES.SPIRITS_V923.projection === 'book' && !RULES.URR_V80.magProjFullHours) {
+    const over = Math.max(0, Number(hoursElapsed) || 0);
+    return { limit: 0, over: Math.round(over * 100) / 100, essenceLoss: Math.floor(over + 1e-9) * p.essenceLossPerHour };
+  }
   const limit = Math.max(0, Math.floor(essence)) * p.hoursPerEssence;
   const over = Math.max(0, hoursElapsed - limit);
   // v0.80.0 (RULES.URR_V80.magProjFullHours, URR): only full hours cost Essence.

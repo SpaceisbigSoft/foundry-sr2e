@@ -3,9 +3,15 @@
  * findings of RV/R2-SEC.md, with the reviewers' own failing inputs (try-R2-DOC r2doc-probe P1/P2, try-R2-SEC Q3/Q6).
  * Each failed before its fix. The harness is v081-doc.test.ts's (the v0.71.0 glue stubs).
  */
-import { test, describe, before, beforeEach } from 'node:test';
+import { test, describe, before, beforeEach, after } from 'node:test';
+import { oldWay } from '../rules/__tests__/oldway.ts';
+import { SPIRITS_V922_WAY } from '../rules/__tests__/spirits922.ts';
 import assert from 'node:assert/strict';
 import { RULES } from '../rules/index.ts';
+// v0.92.3: this file pins the v0.92.2 conjuring, astral and initiation rules (the book way: v0923-spirits.test.ts).
+let spirits922: () => void = () => {};
+before(() => { spirits922 = oldWay(SPIRITS_V922_WAY); });
+after(() => spirits922());
 
 const g = globalThis as any;
 const faces: number[] = [];

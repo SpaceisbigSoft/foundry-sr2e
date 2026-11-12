@@ -1,4 +1,5 @@
 import { test, describe } from 'node:test';
+import { oldWay } from './oldway.ts';
 import assert from 'node:assert/strict';
 import {
   totemHelpsSpirit, totemConjuringDice, controlServices, banishHelp, trueNameOutcome, adeptBudget,
@@ -59,7 +60,8 @@ describe('v0.56.0 controlling, banishing, true names', () => {
     R.MAGIC_V56.control.summonerHelps = false;
     try { assert.equal(banishHelp(3), 0); } finally { R.MAGIC_V56.control.summonerHelps = true; }
   });
-  test('true name binding', () => {
+  test('true name binding (v0.92.2: Karma)', (t) => {
+    t.after(oldWay({ 'SPIRITS_V923.trueName': 'v922' }));
     assert.deepEqual(trueNameOutcome(5, 2, 6), { net: 3, bound: true, services: 3, karma: 6 });
     assert.deepEqual(trueNameOutcome(2, 2, 6), { net: 0, bound: false, services: 0, karma: 0 });
     assert.deepEqual(trueNameOutcome(1, 4, 6), { net: 0, bound: false, services: 0, karma: 0 });

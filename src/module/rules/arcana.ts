@@ -1,3 +1,4 @@
+import { dispelForceAfter } from './spirits923.ts';
 import { RULES } from './config.ts';
 import type { TargetNumberModifier } from './dice.ts';
 import { modifierIs } from './dice.ts';
@@ -212,7 +213,13 @@ export function centeringModifiers(grade: number, techniques: readonly string[],
 }
 
 /** Dispelling: each success removes one of the spell's successes; at 0 it ends. VERIFY */
-export function resolveDispel(spellSuccesses: number, dispelSuccesses: number): { remaining: number; dispelled: boolean } {
+export function resolveDispel(spellSuccesses: number, dispelSuccesses: number, force?: number): { remaining: number; dispelled: boolean; forceLeft?: number } {
+  // v0.92.3 (RULES.SPIRITS_V923.dispelling 'book', Grimoire p. 45): every 2 successes take 1 off the spell's Force; at
+  // 0 it is broken (its successes are left alone until then).
+  if (RULES.SPIRITS_V923.dispelling === 'book' && typeof force === 'number') {
+    const forceLeft = dispelForceAfter(force, dispelSuccesses);
+    return { remaining: forceLeft > 0 ? Math.max(0, spellSuccesses) : 0, dispelled: forceLeft <= 0, forceLeft };
+  }
   const remaining = Math.max(0, spellSuccesses - Math.max(0, dispelSuccesses));
   return { remaining, dispelled: remaining <= 0 };
 }

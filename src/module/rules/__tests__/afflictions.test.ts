@@ -1,4 +1,5 @@
 import { test, describe } from 'node:test';
+import { oldWay } from './oldway.ts';
 import assert from 'node:assert/strict';
 import {
   RULES, newFire, fireTurn, fireIntensity, fuelKind, segmentPointDistance, smokeRadius, smokeOnLine, wallBurn, burnWall, circleTouchesRect, nearestRectPoint,
@@ -215,12 +216,13 @@ describe('v0.48.0 a possessed body\'s skills', () => {
 });
 
 describe('v0.48.0 allies and ordeals', () => {
-  test('ally: grade and Force limits; costs', () => {
+  test('ally: grade and Force limits; costs (v0.92.2 costs)', (t) => {
+    t.after(oldWay({ 'SPIRITS_V923.allyCost': 'v922' }));
     assert.match(allyProblem({ grade: 0, magic: 6, force: 3 }), /grade/);
     assert.match(allyProblem({ grade: 1, magic: 4, force: 5 }), /Magic/);
     assert.equal(allyProblem({ grade: 1, magic: 6, force: 5 }), '');
     withRule(RULES.OCCULT.ally, 'maxForce', 'grade', () => assert.match(allyProblem({ grade: 2, magic: 6, force: 3 }), /grade/));
-    assert.deepEqual(allyCosts(4), { tn: 4, nuyen: 4000, days: 4, karma: 4 });
+    assert.deepEqual(allyCosts(4), { tn: 4, nuyen: 4000, days: 4, karma: 4, magic: 0 });
   });
   test('ordeals: every one has an effect now; meditation and thesis TNs and weeks', () => {
     for (const id of ['deed', 'familiar', 'meditation', 'oath', 'thesis']) assert.equal(ordealById(id)?.effect, id);

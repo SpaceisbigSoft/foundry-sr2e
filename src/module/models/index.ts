@@ -40,6 +40,7 @@ import { magicPoolBase, sorceryRating } from '../rules/docs79-drones-magic.ts';
 import { poolLayers, narrowLeft, sorcerySkillOf } from '../rules/magicpool.ts';
 import { TWEAK_TARGETS, sumTweaks, isCarried } from '../rules/tweaks.ts';
 import * as U80C from '../rules/urr80-combat.ts';
+import { astralCombatPool } from '../rules/spirits923.ts';
 import { armorTotal } from '../rules/gear.ts';
 import { FEEDS } from '../rules/tactics.ts';
 import { ART_ARCHETYPES } from '../rules/tokenart.ts';
@@ -714,7 +715,9 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
     // Initiation raises Magic on top of the Essence-capped rating.
     // Unmet geasa take away the Magic they protect; bioware costs Magic by Body Index.
     const magic = this.magicRating(Math.max(0, initiateMagic(effectiveMagic(sys.magic, essence, sys.essence), sys.initiateGrade ?? 0) - geasaPenalty(sys.geasa ?? [])
-      - (sys.magic > 0 ? bio.magicLoss : 0)));
+      - (sys.magic > 0 ? bio.magicLoss : 0)
+      // v0.92.3 (RULES.SPIRITS_V923.banishBackfire, Core p. 143): Magic lost to a spirit in banishing (back at 1 an hour).
+      - Math.max(0, Number((this as any).parent?.flags?.sr2e?.banishMagic?.lost ?? 0) || 0)));
     // v0.56.0: adept powers past the power-point budget stop working when Magic drops (RULES.CRITTERS_V56.adeptBudget).
     const adeptAll = [...((this as any).parent?.items ?? [])].filter((i: any) => i.type === 'adeptpower');
     const budget = adeptBudget(adeptAll.map((i: any) => ({ id: i.id, cost: Number(i.system.cost ?? 0), active: i.system.active !== false })), magic * RULES.MAGIC.adeptPointsPerMagic);
@@ -856,7 +859,11 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
     // v0.78.0 (RULES.BOOK_V78.powerFocus 'magic'): a power focus adds its rating to the Spell Pool and to the Magic for drain.
     const powerFocus = poolMagic > 0 ? powerFocusRating(foci) : 0;
     // v0.78.0 (RULES.BOOK_V78.combatSense 'pool', Core Rules): an adept's Combat Sense adds its level to the Combat Pool.
-    const combatPool = Math.max(0, Math.max(0, d.combatPool - armorPool80) + threat + (RULES.BOOK_V78.combatSense === 'pool' ? adeptSpecialLevel(adept as any, 'combatSense') * RULES.ADEPT.combatSense.dicePerLevel : 0) + (tw.pools.combat ?? 0));
+    // v0.92.3 (RULES.SPIRITS_V923.astralPool 'book', Core p. 147; Grimoire p. 91): a projecting magician's only pool is the
+    // Astral Combat Pool, (Intelligence + Willpower + Charisma) ÷ 2 + grade; it takes the Combat Pool's place while projecting.
+    const astralPool923 = magic > 0 && sys.tradition !== 'adept' ? astralCombatPool({ intelligence: totals.intelligence, willpower: totals.willpower, charisma: totals.charisma, grade: Number(sys.initiateGrade ?? 0) }) : 0;
+    const projecting923 = RULES.SPIRITS_V923.astralPool === 'book' && astralPool923 > 0 && (sys.astral ?? 'physical') === 'projecting';
+    const combatPool = projecting923 ? astralPool923 : Math.max(0, Math.max(0, d.combatPool - armorPool80) + threat + (RULES.BOOK_V78.combatSense === 'pool' ? adeptSpecialLevel(adept as any, 'combatSense') * RULES.ADEPT.combatSense.dicePerLevel : 0) + (tw.pools.combat ?? 0));
     // v0.92.1 review (N10): a Spell Pool tweak only for someone with a Spell Pool.
     const spellPool = Math.max(0, d.spellPool + powerFocus + (poolMagic > 0 ? (tw.pools.spell ?? 0) : 0));
     sys.derived = {
@@ -919,7 +926,8 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
         : urrMagAstralModeFor(String(sys.tradition ?? ''), sys.astral ?? 'physical'),
       dualNatured,
       painIgnore,
-      astral: astralForm(totals),
+      astral: astralForm(totals, magic > 0 && sys.tradition !== 'adept' ? Number(sys.initiateGrade ?? 0) : 0),
+      astralPool: astralPool923,
       adeptPoints: adeptPowerPoints(adept, magic),
       geasaPenalty: geasaPenalty(sys.geasa ?? []),
       focusAddiction: focusAddiction(foci, magic),

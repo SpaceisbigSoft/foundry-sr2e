@@ -162,6 +162,7 @@ import {
   urrMagRitualProblem, urrMagRitualResistTn, urrMagAstralDamage, urrMagWeaponFocusRating, urrMagTrackingMods, urrMagAstralDrainType,
   urrMagWardDrain, urrMagWardForceProblem, urrMagAstralModeFor,
 } from '../rules/urr80-magic.ts';
+import * as SP923 from '../rules/spirits923.ts';
 import { riggerDumpShock, rcdFlux, castingPoolDice } from '../rules/docs79-drones-magic.ts';
 import { attackPowerTweak, isCarried, accessoryPlan, readAccessories, normalizeTweaks, ACCESSORY_NAME_KEYS, TWEAK_MAX } from '../rules/index.ts';
 import * as U80C from '../rules/urr80-combat.ts';
@@ -474,6 +475,8 @@ export interface AttackState {
   barrierPower?: number;
   /** v0.72.0 (O3): a spirit's or dual-natured critter's attack (immunity doesn't stop it outright). */
   awakenedAttacker?: boolean;
+  /** v0.92.3 (RULES.SPIRITS_V923.conjuringDefense, Core p. 143): a spirit's attack (a magician may resist with Conjuring). */
+  spiritAttacker?: boolean;
   attackerUuid: string;
   targetUuid: string;
   weaponName: string;
@@ -498,6 +501,8 @@ export interface AttackState {
   noDodge?: boolean;
   /** A magical weapon: immunity to normal weapons does not count. */
   ignoreImmunity?: boolean;
+  /** v0.92.3 (RULES.SPIRITS_V923.immunityScope, Core p. 142): a bow or throwing weapon: a manifest spirit's immunity doesn't count. */
+  noSpiritImmunity?: boolean;
   /** Melee: the attacker's weapon reach (opposed melee compares it with the defender's). */
   reach?: number;
   /** Ammunition and called shots: how much armor counts, which kind, or none at all. */
@@ -731,7 +736,9 @@ function armorExtras(a: Partial<AttackState>): Partial<DamageState> {
     ...(a.armorKind ? { armorKind: a.armorKind } : {}),
     ...(a.ignoreArmor ? { ignoreArmor: true } : {}),
     ...(a.ignoreImmunity ? { ignoreImmunity: true } : {}),
+    ...(a.noSpiritImmunity ? { noSpiritImmunity: true } : {}),
     ...(a.awakenedAttacker ? { awakenedAttacker: true } : {}),
+    ...(a.spiritAttacker ? { spiritAttacker: true } : {}),
     ...(a.extraArmor ? { extraArmor: a.extraArmor } : {}),
     ...(a.antiVehicle ? { antiVehicle: true } : {}),
     // v0.80.0 (URR_V80.vehDamage): how a hit on a vehicle came about (weapon base Power, a spell, an impact).
@@ -770,8 +777,12 @@ export interface DamageState {
   black?: boolean;
   elemental?: boolean;
   ignoreImmunity?: boolean;
+  /** v0.92.3 (RULES.SPIRITS_V923.immunityScope): a bow or throwing weapon: no spirit immunity. */
+  noSpiritImmunity?: boolean;
   /** v0.72.0 (O3): the attacker is a spirit or a dual-natured critter: its blow isn't stopped outright by immunity. */
   awakenedAttacker?: boolean;
+  /** v0.92.3 (RULES.SPIRITS_V923.conjuringDefense): a spirit's attack. */
+  spiritAttacker?: boolean;
   armorMultiplier?: number;
   armorKind?: 'ballistic' | 'impact';
   ignoreArmor?: boolean;
@@ -947,9 +958,9 @@ export interface ConjureContext {
   element?: string;
   domain?: string;
   /** v0.48.0: an ally ritual: the Karma to bond it (charged once on success) and the days it took. */
-  ally?: { karma: number; days: number; charged?: boolean };
+  ally?: { karma: number; days: number; charged?: boolean; magic?: number };
   /** v0.71.0 (R20): a timed elemental summoning's drain, resisted when it finishes (`done` once rolled). */
-  drainLater?: { force: number; pool: number; done?: boolean };
+  drainLater?: { force: number; pool: number; done?: boolean; extra?: number };
 }
 
 /** A banishing attempt, carried on its chat card so a Karma re-roll can correct the spirit's Force. */
@@ -966,6 +977,12 @@ export interface BanishContext {
   servicesBefore?: number;
   summonerBefore?: string;
   taken?: boolean;
+  /** v0.92.3 (RULES.SPIRITS_V923.controlContest 'book', Core p. 143): a contest against the spirit's holder (not the spirit). */
+  held?: boolean;
+  /** v0.92.3 (RULES.SPIRITS_V923.banishBackfire, Core p. 143): Magic this card took from the banisher (the spirit won). */
+  magicLost?: number;
+  /** v0.92.3: the holder has resisted Drain for losing the contest (once). */
+  holderDrained?: boolean;
 }
 
 /**
@@ -2511,6 +2528,8 @@ export class SR2Actor extends Actor {
     // Allergies the critter is exposed to (v0.39.0).
     const al = this.type === 'vehicle' ? { value: 0, names: [] as string[] } : allergyTn(this.critterTraits());
     if (al.value && !opts.noPenalties) extra.push({ label: tx('SR2E.Card.Mod.allergy', { alNames: al.names.join(', ') }), value: al.value });
+    // v0.92.3 (RULES.SPIRITS_V923.geasa 'book', Grimoire p. 52): +2 TN per broken geas on magical tests.
+    if (opts.magical) { const gt = SP923.geasaTn(this.sys.geasa ?? []); if (gt) extra.push({ id: 'brokenGeasa', label: tx('SR2E.Card.Mod.brokenGeasa'), value: gt }); }
     // Focus addiction withdrawal: an addict's magic without an active focus (v0.39.0).
     if (opts.magical && this.getFlag?.(SYSTEM_ID, 'focusAddict') && !this.foci().some((f) => f.active)) {
       extra.push({ id: 'focusWithdrawal', label: tx('SR2E.Card.Mod.focusWithdrawal'), value: RULES.MAGIC_V39.addiction.withdrawalTn });
@@ -8000,6 +8019,7 @@ export class SR2Actor extends Actor {
     const extras: Partial<AttackState> = {};
     // v0.72.0 (O3, review): a spirit's or dual-natured critter's natural attack isn't stopped outright by immunity.
     if (this.type === 'spirit' || Boolean(this.sys.derived?.dualNatured)) extras.awakenedAttacker = true;
+    if (this.type === 'spirit') extras.spiritAttacker = true;
     const notes: string[] = opts.note ? [opts.note] : [];
     // v0.55.0: the weapon's own armor kind ('auto': thrown weapons and bows by RULES.COMBAT.armorFor).
     const ownArmor = weaponArmorKind({ armorKind: w.armorKind, melee, thrown: Boolean(w.thrown), skill: w.skill, name: weapon.name });
@@ -8520,6 +8540,7 @@ export class SR2Actor extends Actor {
       attackerUuid: this.uuid as string, targetUuid: h.targetUuid, weaponName: weapon.name, melee, damageType,
       power: h.power ?? Math.max(0, power + (h.powerDelta ?? 0)), level: h.level ?? level,
       ...(magical ? { ignoreImmunity: true } : {}),
+      ...(!melee && !SP923.spiritImmunityApplies({ melee, blast: Boolean(blast), thrown: Boolean(w.thrown), skill: String(w.skill ?? ''), name: String(weapon.name ?? '') }) ? { noSpiritImmunity: true } : {}),
       ...(w.antiVehicle ? { antiVehicle: true } : {}),
       ...(melee ? { reach: ((w.reach as number | undefined) ?? 0) + this.reachBonus } : {}),
       // v0.56.0: a distance strike is dodged like a ranged attack: no counterattack.
@@ -8566,15 +8587,21 @@ export class SR2Actor extends Actor {
       await this.setFlag(SYSTEM_ID, 'adjust', state);
     }
 
+    // v0.92.3 (RULES.SPIRITS_V923.mundaneVsSpirits 'willpower', Core p. 142): a mundane weapon against a manifest spirit
+    // rolls Willpower instead of the combat skill, with no Combat Pool.
+    const spiritFoe: any = attackTargets.length === 1 ? fromUuidSync(attackTargets[0]!.targetUuid) : null;
+    const willOnly = Boolean(spiritFoe) && SP923.mundaneVsSpirit({ attackerType: String(this.type), targetType: String(spiritFoe.type), materialized: spiritFoe.system?.materialized,
+      magical: Boolean(magical), vulnerable: Boolean(extras?.material && typeof spiritFoe.critterTraits === 'function' && vulnerabilityTo(spiritFoe.critterTraits(), String(extras.material))) });
     // v0.79.0 (RULES.DOCS_V79.rangedPoolCap 'skill', SRII p. 83): Combat Pool dice on an attack are at most the skill rolled.
-    const poolAsked = Math.max(0, opts.poolDice ?? 0);
+    const poolAsked = willOnly ? 0 : Math.max(0, opts.poolDice ?? 0);
     const poolUsed = plan.pool === 'combat' ? offensivePoolDice(poolAsked, (plan.sd as any).base ?? plan.sd.dice) : poolAsked;
     if (poolUsed < poolAsked) notes.push(tx('SR2E.Card.Actor.combatPoolAtMostTheSkill', { poolUsed }));
+    if (willOnly) notes.push(tx('SR2E.Card.Actor.willpowerVsSpirit'));
     const measured = opts.measuredMetres != null
       ? `, ${Math.round(opts.measuredMetres * 10) / 10} m${opts.outOfRange ? (melee ? tx('SR2E.Card.Actor.outOfReach') : tx('SR2E.Card.Actor.beyondExtreme')) : ''}`
       : '';
     const title = `${weapon.name}${modeLabel ? ` [${modeLabel}]` : ''} (${base.label}${measured}, ${power}${level}${damageType !== w.damageType ? ` ${damageType}` : ''})${notes.length ? ` [${notes.join(', ')}]` : ''}${blast ? tx('SR2E.Card.Actor.blast2') : ''}${suffix}`;
-    return this.#runTest(title, dice, { targetNumber: base.value, modifiers, poolDice: poolUsed, pool: plan.pool, sightHandled: true, ...(opts.exclude?.length ? { exclude: opts.exclude } : {}), ...(opts.mounted ? { vehicle: true } : {}) }, {
+    return this.#runTest(title, willOnly ? Number(this.sys.attributes?.willpower?.total ?? 0) : dice, { targetNumber: base.value, modifiers, poolDice: poolUsed, pool: plan.pool, sightHandled: true, ...(opts.exclude?.length ? { exclude: opts.exclude } : {}), ...(opts.mounted ? { vehicle: true } : {}) }, {
       kind: 'attack', ...(weapon?.id && typeof weapon.update === 'function' ? { weaponId: weapon.id } : {}),
       ...(attackTargets.length === 1 ? { attack: attackTargets[0] } : {}),
       ...(attackTargets.length > 1 ? { attackTargets } : {}),
@@ -9199,6 +9226,9 @@ export class SR2Actor extends Actor {
   poolFor(attack?: { astral?: boolean; matrix?: boolean }): PoolKind {
     if (attack?.matrix) return 'hacking';
     if (!attack?.astral || this.type === 'spirit') return 'combat';
+    // v0.92.3 (RULES.SPIRITS_V923.astralPool 'book', Core p. 147): a magician fights astrally with the Astral Combat Pool
+    // (the Combat Pool's dice while projecting; models/index.ts).
+    if (RULES.SPIRITS_V923.astralPool === 'book' && String(this.tradition ?? '') !== 'adept') return 'combat';
     // v0.72.0 (O14): adepts use the Combat Pool on the astral plane (MAGIC_V72.adeptAstral.pool); none = their 0 Spell Pool.
     return astralPoolKind({ type: this.type, tradition: String(this.tradition ?? ''), base: RULES.ASTRAL.attackPool }) ?? 'spell';
   }
@@ -9216,7 +9246,7 @@ export class SR2Actor extends Actor {
     if (damage.astral) {
       await this.resistDamage({
         power: damage.power, level: damage.level, type: damage.damageType, armor: 0, poolDice,
-        astral: true,
+        astral: true, ...(damage.spiritAttacker ? { spiritAttacker: true } : {}),
       });
       return;
     }
@@ -9246,7 +9276,10 @@ export class SR2Actor extends Actor {
       if (contact) await this.applyUnresisted({ targetUuid: this.uuid as string, melee: false, damageType: 'physical', power: 0, level: contact });
     }
     const kind = damage.armorKind ?? armorKindFor(damage.melee);
-    const opts = { ignoreImmunity: Boolean(damage.ignoreImmunity), noWorn: Boolean(damage.ignoreArmor), calledLocation: damage.calledLocation ?? '' };
+    // v0.92.3 (RULES.SPIRITS_V923.immunityScope 'book', Core p. 142): a manifest spirit's immunity counts only against
+    // firearms, other ranged weapons and explosions: not melee, bows or throwing weapons.
+    const noSpirit = Boolean(damage.noSpiritImmunity) || (Boolean(damage.melee) && !SP923.spiritImmunityApplies({ melee: true }));
+    const opts = { ignoreImmunity: Boolean(damage.ignoreImmunity), noWorn: Boolean(damage.ignoreArmor), calledLocation: damage.calledLocation ?? '', ...(noSpirit ? { noSpiritImmunity: true } : {}) };
     // v0.72.0 (O3): immunity to normal weapons stops an attack whose Power doesn't exceed it (RULES.COMBAT_V72.immunity).
     if (!damage.elemental && !damage.ignoreImmunity && !damage.awakenedAttacker) {
       const withImm = this.armorRating(kind, opts);
@@ -9265,7 +9298,7 @@ export class SR2Actor extends Actor {
       ? elementalArmor({ ballistic: this.armorRating('ballistic', opts), impact: this.armorRating('impact', opts) })
       : fl79 ? fl79.armor + Math.max(0, damage.extraArmor ?? 0)
       : armorAfterAmmo(this.armorRating(kind, opts), damage.armorMultiplier ?? 1) + Math.max(0, damage.extraArmor ?? 0);
-    await this.resistDamage({ power: damage.power, level: damage.level, type: damage.damageType, armor, poolDice, knockdown: !damage.black, knockdownMelee: damage.melee, ...(damage.cleanMiss80 ? { cleanMiss80: damage.cleanMiss80 } : {}), ...(damage.ignoreArmor || damage.elemental ? {} : { armorKind: kind }), ...(vuln ? { noRegen: true } : {}),
+    await this.resistDamage({ power: damage.power, level: damage.level, type: damage.damageType, armor, poolDice, knockdown: !damage.black, ...(damage.spiritAttacker ? { spiritAttacker: true } : {}), knockdownMelee: damage.melee, ...(damage.cleanMiss80 ? { cleanMiss80: damage.cleanMiss80 } : {}), ...(damage.ignoreArmor || damage.elemental ? {} : { armorKind: kind }), ...(vuln ? { noRegen: true } : {}),
       ...(damage.black ? {} : { cyberCheck: { location: damage.calledLocation ?? '' } }), ...(damage.infection ? { infection: damage.infection } : {}), ...(damage.toxinHit ? { toxinHit: damage.toxinHit } : {}) });
   }
 
@@ -9289,6 +9322,8 @@ export class SR2Actor extends Actor {
     cyberCheck?: { location: string };
     /** v0.48.0: a bite that passes on a disease when it does Physical damage. */
     infection?: InfectionState;
+    /** v0.92.3 (RULES.SPIRITS_V923.conjuringDefense, Core p. 143): a spirit's attack: a magician may resist with Conjuring. */
+    spiritAttacker?: boolean;
   }): Promise<void> {
     const type: DamageType = opts.type ?? 'physical';
     const tn = resistanceTargetNumber(opts.power, opts.armor ?? 0);
@@ -9298,15 +9333,19 @@ export class SR2Actor extends Actor {
     const lacing = opts.astral ? 0 : Math.max(0, Number(this.sys.derived?.cyber?.lacing?.soakDice ?? 0));
     // v0.72.0 (O11): Toughness adds dice to resist damage (not astral).
     const tough = opts.astral ? 0 : toughnessDice(this.sys.derived?.vitals ?? { toughnessDice: 0, toughnessOnStun: false, toughnessOnToxins: false }, type);
+    // v0.92.3 (RULES.SPIRITS_V923.conjuringDefense 'on', Core p. 143): against a spirit's attack a magician resists with
+    // Conjuring in place of the attribute, when that is better.
+    const bodyDice = opts.astral ? Number(this.sys.derived.astral.body) : Number(this.sys.attributes.body.total);
+    const conjDice = opts.spiritAttacker ? SP923.conjuringDefenseDice({ attackerType: 'spirit', conjuring: Number(this.findSkill?.('Conjuring')?.system?.rating ?? 0), attribute: bodyDice, magic: Number(this.sys.derived?.magic ?? 0) }) : 0;
     const result = await successTest({
       // v0.58.0: bone lacing adds to Body for damage resistance only.
-      dice: opts.astral ? this.sys.derived.astral.body : this.sys.attributes.body.total + lacing + tough,
+      dice: conjDice ? conjDice : opts.astral ? this.sys.derived.astral.body : this.sys.attributes.body.total + lacing + tough,
       poolDice,
       targetNumber: tn,
       roll: foundryRoller(rolls),
     });
     if (poolDice > 0) await this.#spendPool(poolType, poolDice);
-    const armorNote = `${opts.armor ? tx('SR2E.Card.Actor.armor', { armor: opts.armor }) : ''}${lacing ? tx('SR2E.Card.Actor.boneLacing', { lacingLabel: this.sys.derived.cyber.lacing.label, lacing }) : ''}${tough ? tx('SR2E.Card.Actor.toughness2', { tough }) : ''}`;
+    const armorNote = `${conjDice ? tx('SR2E.Card.Actor.conjuringVsSpirit', { dice: conjDice }) : ''}${opts.armor ? tx('SR2E.Card.Actor.armor', { armor: opts.armor }) : ''}${!conjDice && lacing ? tx('SR2E.Card.Actor.boneLacing', { lacingLabel: this.sys.derived.cyber.lacing.label, lacing }) : ''}${!conjDice && tough ? tx('SR2E.Card.Actor.toughness2', { tough }) : ''}`;
     await this.#post(this.#snapshot((opts.astral ? tx('SR2E.Card.Actor.resist7WithAstral', { power: opts.power, level: opts.level, type, armorNote }) : tx('SR2E.Card.Actor.resist7Plain', { power: opts.power, level: opts.level, type, armorNote })), result, {
       kind: 'soak',
       soak: {
@@ -9337,14 +9376,14 @@ export class SR2Actor extends Actor {
    * Total armor of one kind: worn armor, adept powers and cyberware, plus a spirit's immunity to normal weapons.
    * `noWorn` (a called shot at a gap) leaves out the parts RULES.COMBAT_V72.calledShotGap.bypasses lists (v0.72.0: worn armor).
    */
-  armorRating(kind: 'ballistic' | 'impact', opts: { ignoreImmunity?: boolean; noWorn?: boolean; calledLocation?: string } = {}): number {
+  armorRating(kind: 'ballistic' | 'impact', opts: { ignoreImmunity?: boolean; noWorn?: boolean; calledLocation?: string; noSpiritImmunity?: boolean } = {}): number {
     // Layering (v0.37.0): only the best piece counts, plus pieces that add to others (RULES.COMBAT.armorLayering).
     const worn = armorTotal([...this.items]
       .filter((i: any) => i.type === 'armor' && i.system.worn && isCarried(i))
       .map((i: any) => ({ ballistic: i.system.ballistic ?? 0, impact: i.system.impact ?? 0, adds: Boolean(i.system.adds), degraded: i.system.degraded ?? 0 })), kind);
     // v0.56.0: a critter's immunity to normal weapons (RULES.CRITTERS_V56.immunity), and armor from spells and powers on it.
     const critterImmune = this.type !== 'spirit' && !opts.ignoreImmunity && this.immunities().normalWeapons ? immunityArmorFromEssence(Number(this.sys.derived?.essence ?? this.sys.essence ?? 0)) : 0;
-    const spiritImmune = this.type === 'spirit' && !opts.ignoreImmunity ? immunityArmor(this.sys.force, Boolean(this.sys.immuneNormalWeapons)) : 0;
+    const spiritImmune = this.type === 'spirit' && !opts.ignoreImmunity && !opts.noSpiritImmunity ? immunityArmor(this.sys.force, Boolean(this.sys.immuneNormalWeapons)) : 0;
     // v0.72.0 (O4): a called shot at a gap (`noWorn`) bypasses only the parts in RULES.COMBAT_V72.calledShotGap.bypasses
     // (worn armor by default; dermal plating, orthoskin and limb armor still count).
     return armorFromParts({
@@ -10187,6 +10226,9 @@ export class SR2Actor extends Actor {
     // v0.80.0 (RULES.URR_V80.magWardMaxForce, URR): a ward's Force is at most 2 × the team's combined Magic.
     const wf = urrMagWardForceProblem(force, [this, ...team].reduce((s: number, m: any) => s + Number(m.system?.derived?.magic ?? 0), 0));
     if (wf) { ui.notifications?.warn?.(wf); return null; }
+    // v0.92.3 (RULES.SPIRITS_V923.wardMaxForcePerMagic, Grimoire p. 92): at most twice the warder's Magic (the Revamp's own cap above wins).
+    const cap923 = RULES.URR_V80.magWardMaxForce > 0 ? Infinity : SP923.wardMaxForce(Number(this.sys.derived?.magic ?? 0));
+    if (force > cap923) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.wardForceOverMagic', { name: escHtml(this.name), cap: cap923 })); return null; }
     const plan = wardPlan(force, 0);
     if (plan.nuyen > 0 && o.payMaterials !== false && !(await this.adjustNuyen(-plan.nuyen, tx('SR2E.Text.Actor.wardMaterialsForce', { force })))) return null;
     const teamDice = team.length ? ritualTeamDice(team.map((m) => m.findSkill?.(W.skill)?.system?.rating ?? 0)) : 0;
@@ -10206,7 +10248,7 @@ export class SR2Actor extends Actor {
     const plan = wardPlan(force, successes);
     // v0.80.0 (RULES.URR_V80.magWardDrain 'urr', URR): Force + successes, always Stun.
     const urr = urrMagWardDrain(force, successes);
-    await this.#drainTest({ label: tx('SR2E.Card.Actor.wardDrain'), attribute: 'willpower', targetNumber: plan.drainTn, level: plan.drainLevel as DamageLevel, type: urr?.type ?? drainDamageType(force, Number(this.sys.derived?.drainMagic ?? this.sys.derived?.magic ?? 0)), poolDice });
+    await this.#drainTest({ label: tx('SR2E.Card.Actor.wardDrain'), attribute: 'willpower', targetNumber: plan.drainTn, level: plan.drainLevel as DamageLevel, type: urr?.type ?? (plan.stun ? 'stun' : undefined) ?? drainDamageType(force, Number(this.sys.derived?.drainMagic ?? this.sys.derived?.magic ?? 0)), poolDice });
   }
 
   async #resolveWard(snap: TestSnapshot): Promise<Resolved> {
@@ -10214,7 +10256,10 @@ export class SR2Actor extends Actor {
     const plan = wardPlan(w.force, snap.successes);
     if (snap.successes <= 0 && w.projectId) return { html: `<p><strong>${tx('SR2E.Card.Actor.theWardFailsToRise')}</strong>${await this.dropProjectOnFailure(w.projectId)}</p>`, flags: {}, snap: { ...snap, ward: { ...w, projectId: undefined } } };
     if (snap.successes <= 0) return { html: `<p><strong>${tx('SR2E.Card.Actor.theWardFailsToRise')}</strong>${w.barrierUuid ? ` <em>${tx('SR2E.Card.Actor.theWardFromAnEarlierRoll')}</em>` : ''}</p>`, flags: {}, snap };
-    const time = `${tx('SR2E.Card.Actor.after')} <strong>${escText(plural(plan.hours ?? 0, 'hour'))}</strong> (${plan.baseHours} ÷ ${snap.successes})`;
+    // v0.92.3 (RULES.SPIRITS_V923.ward 'book'): the full Force hours; it lasts days = successes.
+    const time = plan.days !== undefined
+      ? `${tx('SR2E.Card.Actor.after')} <strong>${escText(plural(plan.hours ?? 0, 'hour'))}</strong>; ${tx('SR2E.Card.Actor.wardLastsDays', { days: plan.days })}`
+      : `${tx('SR2E.Card.Actor.after')} <strong>${escText(plural(plan.hours ?? 0, 'hour'))}</strong> (${plan.baseHours} ÷ ${snap.successes})`;
     if (w.projectId) { await this.retimeProject(w.projectId, Number(plan.hours ?? 0)); return { html: `<p><strong>${escText(w.name)}</strong> ${tx('SR2E.Card.Actor.risesUpkeepTabUnderWay', { time })}</p>`, flags: {}, snap }; }
     if (w.barrierUuid || w.pending) return { html: `<p><strong>${escText(w.name)}</strong> ${tx('SR2E.Card.Actor.rises', { time })}</p>`, flags: {}, snap };
     const data = { name: w.name, type: 'barrier', system: { barrierKind: 'ward', rating: w.force, baseRating: w.force } };
@@ -10241,12 +10286,14 @@ export class SR2Actor extends Actor {
     if (!name) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.hasNoCenteringSkillNamedMagic', { name: escHtml(this.name) })); return null; }
     const skill = this.findSkill(name);
     const d = this.#skillDice(skill, false, null, 'charisma', { skillName: name });
-    return this.#runTest(tx('SR2E.Card.Actor.centering', { name, suffix: d.suffix }), d.dice, { targetNumber: RULES.MAGIC_V56.centering.tn, modifiers: d.modifiers }, { kind: 'centering' });
+    // v0.92.3 (RULES.SPIRITS_V923.centering 'book', Grimoire p. 44): the grade comes off the centering test's TN.
+    const ctn = RULES.SPIRITS_V923.centering === 'book' ? Math.max(RULES.MIN_TARGET_NUMBER, RULES.MAGIC_V56.centering.tn - Math.max(0, this.initiate.grade)) : RULES.MAGIC_V56.centering.tn;
+    return this.#runTest(tx('SR2E.Card.Actor.centering', { name, suffix: d.suffix }), d.dice, { targetNumber: ctn, modifiers: d.modifiers }, { kind: 'centering' });
   }
 
   async #resolveCentering(snap: TestSnapshot): Promise<Resolved> {
     const s = Math.max(0, snap.successes);
-    const cap = Math.max(0, this.initiate.grade) * RULES.MAGIC.centeringPerGrade;
+    const cap = RULES.SPIRITS_V923.centering === 'book' ? Math.floor(s / 2) : Math.max(0, this.initiate.grade) * RULES.MAGIC.centeringPerGrade;
     // A Karma re-roll only changes a centering still unused (a used one isn't given back).
     const cur = this.getFlag?.(SYSTEM_ID, 'centered') as { testId?: string } | undefined;
     const fresh = !(snap.rerolls > 0) && !(snap.retargets ?? 0);
@@ -10288,7 +10335,8 @@ export class SR2Actor extends Actor {
       if (mm.reason) ui.notifications?.warn?.(`${escHtml(this.name)}: ${escHtml(mm.reason)}${mm.block ? '' : tx('SR2E.Notify.Actor.allowedTheHouseRuleOnlyWarns')}`);
       if (mm.block) return false;
     }
-    const grade = (this.sys.initiateGrade as number) + 1;
+    // v0.92.3 (RULES.SPIRITS_V923.gradeZero 'book', Grimoire p. 38): the first initiation makes a Grade 0 initiate.
+    const grade = SP923.nextInitiationGrade(Number(this.sys.initiateGrade ?? 0), Boolean(this.getFlag?.(SYSTEM_ID, 'initiated')));
     // v0.65.0: one initiation at a time (an ordeal under way holds the next grade).
     if (this.projects().some((p) => p.kind === 'initiation')) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.isAlreadyInitiatingUpkeepTabUnder', { name: escHtml(this.name) })); return false; }
     const ordeal = ordealById(o.ordeal ?? null);
@@ -10311,7 +10359,9 @@ export class SR2Actor extends Actor {
     }
     if (ordeal?.effect === 'oath' && io.oath.needsGroup && !group) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.theOathOrdealIsSwornTo')); return false; }
     const attr = ordeal?.effect === 'attribute' ? (o.attribute ?? '') : '';
-    if (ordeal?.effect === 'attribute' && (!ATTRIBUTE_KEYS.includes(attr as AttributeKey) || Number(this.sys.attributes?.[attr]?.base ?? 0) <= 1)) {
+    // v0.92.3 (RULES.SPIRITS_V923.asceticism 'physical', Grimoire p. 40): a Physical attribute only.
+    if (ordeal?.effect === 'attribute' && (!ATTRIBUTE_KEYS.includes(attr as AttributeKey) || Number(this.sys.attributes?.[attr]?.base ?? 0) <= 1
+      || (RULES.SPIRITS_V923.asceticism === 'physical' && !['body', 'quickness', 'strength'].includes(attr)))) {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.asceticismNeedsAnAttributeWithA'));
       return false;
     }
@@ -10381,12 +10431,14 @@ export class SR2Actor extends Actor {
       const weeks = ordealWeeks(ordeal.effect, grade);
       const { 'system.karma.good': k, 'system.ledger': _l, ...rest } = up;
       await this.update({ 'system.karma.good': k, 'system.ledger': this.#ledgerWith({ kind: 'karma', amount: -cost, reason: tx('SR2E.Text.Actor.initiationToGradeOrdealUnderWay', { grade }) }) });
+      if (grade === 0) await this.setFlag(SYSTEM_ID, 'initiated', true);
       if (this.getFlag(SYSTEM_ID, 'pendingInitiation')) { try { await clearFlag(this, 'pendingInitiation'); } catch { /* none */ } }
       await this.startProject({ kind: 'initiation', area: 'magic', label: technique ? tx('SR2E.Text.Actor.initiationToGradeOrdealLearning', { grade, ordeal: ordeal.label.replace(/ \(.*\)$/, ''), technique }) : tx('SR2E.Text.Actor.initiationToGradeOrdeal', { grade, ordeal: ordeal.label.replace(/ \(.*\)$/, '') }), hours: weeks * 168, paid: { karma: cost },
         effect: { actor: Object.entries(rest) }, done: tx('SR2E.Text.Actor.isNowAnInitiateOfGrade', { name: this.name, grade }) });
       return true;
     }
     await this.update(up);
+    if (grade === 0) await this.setFlag(SYSTEM_ID, 'initiated', true);
     if (ordeal?.effect === 'familiar' && familiar?.allyUuid) await this.setFlag(SYSTEM_ID, 'familiar', { ...familiar, usedForGrade: grade });
     if (this.getFlag(SYSTEM_ID, 'pendingInitiation')) { try { await clearFlag(this, 'pendingInitiation'); } catch { /* none */ } }
     const how = [group ? tx('SR2E.Card.Actor.with3', { groupName: group.name }) : '', ordeal ? tx('SR2E.Card.Actor.ordeal', { replace: ordeal.label.replace(/ \(.*\)$/, ''), part: attr ? ` (−1 ${cap(attr)})` : '', part2: ordeal.effect === 'familiar' && familiar?.allyName ? ` (${familiar.allyName})` : '', ordealNote }) : ''].filter(Boolean).join('; ');
@@ -10766,6 +10818,9 @@ export class SR2Actor extends Actor {
     const pool = Math.max(0, Math.min(o.poolDice, narrow ? this.spellPoolFor(narrow) : this.sys.derived.spellPoolLeft as number));
     const rolls: any[] = [];
     const bgi = this.backgroundInfo();
+    // v0.92.3 (RULES.SPIRITS_V923.geasa 'book', Grimoire p. 52): a broken geas's +2 TN counts on Drain resistance too.
+    const gt = o.noBackground || o.noun === 'damage' ? 0 : SP923.geasaTn(this.sys.geasa ?? []);
+    if (gt) o = { ...o, modifiers: [...(o.modifiers ?? []), { id: 'brokenGeasa', label: tx('SR2E.Card.Mod.brokenGeasa'), value: gt }] };
     const bg = o.noBackground || o.noun === 'damage' ? [] : RULES.SPELLCRAFT.backgroundCount.affectsDrain || (bgi.toxic && RULES.MAGIC_V39.background.toxicAffectsDrain)
       ? backgroundCountModifiers(bgi.penalty).map((m) => (bgi.toxic ? { ...m, label: tx('SR2E.Card.Actor.toxicBackgroundCount') } : m)) : [];
     const result = await successTest({
@@ -10784,15 +10839,18 @@ export class SR2Actor extends Actor {
   }
 
   /** Conjuring drain for a spirit of this Force: Charisma vs Force, level from Force vs Charisma. */
-  async #conjuringDrain(force: number, poolDice: number): Promise<void> {
+  async #conjuringDrain(force: number, poolDice: number, extra: number = 0): Promise<void> {
     const attribute = RULES.CONJURING.drainAttribute as AttributeKey;
+    // v0.92.3 (RULES.SPIRITS_V923.conjDrainDice 'on', Core pp. 139–140): the totem's and spirit foci's dice on the summoning help resist its Drain.
+    const add = RULES.SPIRITS_V923.conjDrainDice === 'on' ? Math.max(0, Math.floor(Number(extra) || 0)) : 0;
     await this.#drainTest({
+      ...(add ? { extraDice: add, extraNote: tx('SR2E.Card.Actor.dice5', { extraDice: add }) } : {}),
       label: tx('SR2E.Card.Actor.conjuringDrain'),
       attribute,
       targetNumber: conjuringDrainTargetNumber(force),
       level: conjuringDrainLevel(force, this.sys.attributes[attribute].total),
       type: conjuringDrainType(force, Number(this.sys.derived.drainMagic ?? this.sys.derived.magic ?? 0), this.sys.attributes[attribute].total),
-      ...(RULES.URR_V80.magConjDrain === 'charisma' ? { physicalNote: tx('SR2E.Card.Actor.forceOverCharismaPhysical') } : {}),
+      ...(RULES.URR_V80.magConjDrain === 'charisma' || RULES.SPIRITS_V923.conjDrain === 'book' ? { physicalNote: tx('SR2E.Card.Actor.forceOverCharismaPhysical') } : {}),
       poolDice: RULES.CONJURING.spellPoolAllowed ? poolDice : 0,
     });
   }
@@ -10846,14 +10904,19 @@ export class SR2Actor extends Actor {
       suffix += extra.note + prof.note;
     }
     // v0.80.0 (RULES.URR_V80.magAstralDamage 'urr', URR): unarmed L; a weapon focus adds its rating to the Power at M.
-    const ad = urrMagAstralDamage({ mode: prof.mode, power: spirit ? (this.sys.force as number) : (this.sys.attributes[RULES.ASTRAL.powerAttribute].total as number),
+    const ad0 = urrMagAstralDamage({ mode: prof.mode, power: spirit ? (this.sys.force as number) : (this.sys.attributes[RULES.ASTRAL.powerAttribute].total as number),
       level: prof.damageLevel as DamageLevel, focusRating: spirit ? 0 : urrMagWeaponFocusRating(this.foci() as any[]) });
+    // v0.92.3 (RULES.SPIRITS_V923.astralDamage 'book', Core p. 147): a magician unarmed (Charisma)L; with an active weapon
+    // focus (Charisma + rating ÷ 2)M. The Revamp's own table ('urr') keeps its path.
+    const bk = prof.mode === 'magician' && RULES.URR_V80.magAstralDamage !== 'urr'
+      ? SP923.astralMagicianDamage({ charisma: Number(this.sys.attributes[RULES.ASTRAL.powerAttribute].total), focusRating: urrMagWeaponFocusRating(this.foci() as any[]) }) : null;
+    const ad = bk ? { power: bk.power, level: bk.level, note: bk.focus ? ` [${tx('SR2E.Card.Actor.weaponFocusAstral')}]` : '' } : ad0;
     const power = ad.power;
     const level = ad.level;
     suffix += ad.note;
     const damageType: DamageType = opts.damageType ?? 'physical';
     const attack = targetUuid
-      ? { attackerUuid: this.uuid as string, targetUuid, weaponName: tx('SR2E.Card.Actor.astralAttack'), melee: true, damageType, power, level, astral: true }
+      ? { attackerUuid: this.uuid as string, targetUuid, weaponName: tx('SR2E.Card.Actor.astralAttack'), melee: true, damageType, power, level, astral: true, ...(spirit ? { spiritAttacker: true } : {}) }
       : undefined;
     const base = RULES.ASTRAL.attackBaseTn;
     return this.#runTest((damageType === 'stun' ? tx('SR2E.Card.Actor.astralAttackTnWithStun', { base, power, level, suffix }) : tx('SR2E.Card.Actor.astralAttackTnPlain', { base, power, level, suffix })), dice, {
@@ -10968,6 +11031,12 @@ export class SR2Actor extends Actor {
         bindNote = tx('SR2E.Card.Actor.materialsH', { costNuyen: cost.nuyen, costHours: cost.hours });
       } else bindNote = ` [${cost.hours} h]`;
     }
+    // v0.92.3 (RULES.MAGIC_V39.domains.enforce 'block', Core p. 139): a nature spirit can't be summoned outside its
+    // domain (the scene's environment tags).
+    if (spiritKind === 'nature' && domain && RULES.MAGIC_V39.domains.enforce !== 'off' && outsideDomain(domain, this.environmentHere())) {
+      ui.notifications?.warn?.(tx('SR2E.Notify.Actor.summonOutsideDomain', { name: escHtml(this.name), domain: escHtml(domain) }));
+      if (RULES.MAGIC_V39.domains.enforce === 'block') return null;
+    }
     if (spiritKind === 'nature') {
       const domains = this.summonedSpirits().filter((a: any) => a.system.spiritKind === 'nature' && a.system.services > 0).map((a: any) => a.system.domain ?? '');
       const conflict = domainConflict(domains, domain);
@@ -10984,12 +11053,12 @@ export class SR2Actor extends Actor {
     const what = spiritType || (spiritKind === 'elemental' ? 'elemental' : spiritKind === 'nature' ? 'nature spirit' : 'spirit');
     const pool = RULES.CONJURING.spellPoolAllowed ? opts.poolDice ?? 0 : 0;
     // v0.71.0 (R20): an elemental that takes its hours of ritual is drained when it arrives (or now, if none answers).
-    const drainLater = spiritKind === 'elemental' && RULES.FIXES_V71.conjureDrainAtEnd && this.waitsFor('magic') ? { force, pool: opts.drainPoolDice ?? 0 } : null;
+    const drainLater = spiritKind === 'elemental' && RULES.FIXES_V71.conjureDrainAtEnd && this.waitsFor('magic') ? { force, pool: opts.drainPoolDice ?? 0, ...(extra.dice > 0 ? { extra: extra.dice } : {}) } : null;
     const result = await this.#runTest(tx('SR2E.Card.Actor.summonForceTn', { what, force, extraNote: extra.note, bindNote, part: domain && spiritKind === 'nature' ? tx('SR2E.Card.Actor.domain', { domain }) : '' }), Math.max(0, skill.system.rating + extra.dice),
       { targetNumber: force, poolDice: pool, pool: 'spell', magical: true, ...(opts.exclude?.length ? { exclude: opts.exclude } : {}) },
       { kind: 'conjure', conjure: { force, spiritKind, spiritType, templateUuid: opts.templateUuid ?? SR2Actor.spiritTemplateFor(spiritType)?.uuid ?? null, spiritUuid: null, element: elementIn, domain, ...(hostUuid ? { hostUuid } : {}), ...(drainLater ? { drainLater } : {}) } });
     await this.leaveSignature('summoning', tx('SR2E.Text.Actor.summoning', { name: what }), force);
-    if (!drainLater) await this.#conjuringDrain(force, opts.drainPoolDice ?? 0);
+    if (!drainLater) await this.#conjuringDrain(force, opts.drainPoolDice ?? 0, extra.dice);
     return result;
   }
 
@@ -10998,7 +11067,11 @@ export class SR2Actor extends Actor {
    * library, circle or lodge) vs Force; ritual materials from nuyen; any success creates the ally and
    * bonds it for Good Karma. It counts for the familiar ordeal of the next initiation.
    */
-  async createAlly(opts: { force: number; spiritType?: string; templateUuid?: string | null; poolDice?: number; drainPoolDice?: number; payMaterials?: boolean }): Promise<SuccessTestResult | null> {
+  async createAlly(opts: { force: number; spiritType?: string; templateUuid?: string | null; poolDice?: number; drainPoolDice?: number; payMaterials?: boolean;
+    /** v0.92.3 (RULES.SPIRITS_V923.allyCost 'book', Grimoire pp. 69–70): the design's own Karma (attributes, skills, forms, sense link). */
+    designKarma?: number;
+    /** v0.92.3 (Grimoire p. 40): the ally is the familiar ordeal: no Magic point. */
+    familiar?: boolean }): Promise<SuccessTestResult | null> {
     if (!this.canAct('conjure')) return null;
     const blocked = traditionBlocks(this.tradition, 'conjure') ?? aspectRestriction(this.tradition, 'conjure', { aspectElement: this.sys.aspectElement, spiritKind: 'ally', spiritElement: '' });
     if (blocked) { ui.notifications?.warn?.(`${escHtml(this.name)}: ${escHtml(blocked)}`); return null; }
@@ -11007,7 +11080,8 @@ export class SR2Actor extends Actor {
     const force = Math.max(1, Math.floor(Number(opts.force) || 1));
     const problem = allyProblem({ grade: this.initiate.grade, magic: Number(this.sys.derived?.magic ?? 0), force });
     if (problem) { ui.notifications?.warn?.(`${escHtml(this.name)}: ${problem}`); return null; }
-    const c = allyCosts(force);
+    const c = allyCosts(force, { designKarma: Number(opts.designKarma ?? 0), familiar: Boolean(opts.familiar) });
+    if (c.magic > 0 && Number(this.sys.magic ?? 0) <= c.magic) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.allyNeedsMagicPoint', { name: escHtml(this.name) })); return null; }
     const good = Number(this.sys.karma?.good ?? 0);
     if (good < c.karma) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.bondingAForceAllyCostsGood', { force, karma: c.karma, name: escHtml(this.name), good })); return null; }
     // v0.70.0: the ally's Karma (and materials) wait for the GM when the approval queue is on; the ritual runs on approval.
@@ -11023,8 +11097,13 @@ export class SR2Actor extends Actor {
     const envA = totemEnvironmentDice(this.tradition, this.sys.totem, this.environmentHere());
     const result = await this.#runTest(tx('SR2E.Card.Actor.allyRitualForceTn', { spiritType, force, tn: c.tn, part: site ? tx('SR2E.Card.Actor.site', { site }) : '', part2: envA.dice ? ` [${envA.note}]` : '', plural: plural(c.days, 'day'), part3: opts.payMaterials !== false && c.nuyen ? tx('SR2E.Card.Actor.materials2', { nuyen: c.nuyen }) : '' }), Math.max(0, skill.system.rating + site + envA.dice),
       { targetNumber: c.tn, poolDice: RULES.CONJURING.spellPoolAllowed ? opts.poolDice ?? 0 : 0, pool: 'spell', magical: true },
-      { kind: 'conjure', conjure: { force, spiritKind: 'ally', spiritType, templateUuid: opts.templateUuid ?? SR2Actor.spiritTemplateFor(spiritType)?.uuid ?? null, spiritUuid: null, element: '', domain: '', ally: { karma: c.karma, days: c.days } } });
+      { kind: 'conjure', conjure: { force, spiritKind: 'ally', spiritType, templateUuid: opts.templateUuid ?? SR2Actor.spiritTemplateFor(spiritType)?.uuid ?? null, spiritUuid: null, element: '', domain: '', ally: { karma: c.karma, days: c.days, ...(c.magic ? { magic: c.magic } : {}) } } });
     await this.leaveSignature('summoning', tx('SR2E.Text.Actor.allyRitual', { spiritType }), force);
+    // v0.92.3 (RULES.SPIRITS_V923.allyCost 'book', Grimoire p. 71): each day of the ritual (Force ÷ successes days, the
+    // full Force without one) the magician resists (Force + days so far)L Stun, then the usual conjuring Drain.
+    for (const [i, d] of SP923.allyDailyDrain(force, SP923.allyRitualDays(force, Number(result?.successes ?? 0))).entries()) {
+      await this.#drainTest({ label: tx('SR2E.Card.Actor.allyRitualDay', { day: i + 1 }), attribute: RULES.CONJURING.drainAttribute as AttributeKey, targetNumber: d.tn, level: d.level, type: 'stun', poolDice: 0 });
+    }
     await this.#conjuringDrain(force, opts.drainPoolDice ?? 0);
     return result;
   }
@@ -11060,6 +11139,8 @@ export class SR2Actor extends Actor {
   async #resolveAlly(snap: TestSnapshot): Promise<Resolved> {
     const c = snap.conjure as ConjureContext;
     const al = c.ally!;
+    // v0.92.3 (RULES.SPIRITS_V923.allyCost 'book', Grimoire p. 71): the ritual takes Force ÷ successes days.
+    const aDays = RULES.SPIRITS_V923.allyCost === 'book' ? SP923.allyRitualDays(c.force, snap.successes) : al.days;
     if (c.spiritUuid) return { html: `<p><em>${tx('SR2E.Card.Actor.theAllyAlreadyExistsARe')}</em></p>`, flags: {}, snap };
     // v0.81.1 (D2-3): the GM already created it from an earlier card of this test.
     const madeAlly = SR2Actor.#spiritCreatedFor(snap.testId, this)?.spirit;
@@ -11077,20 +11158,23 @@ export class SR2Actor extends Actor {
       const good = Number(this.sys.karma?.good ?? 0);
       const paid = Math.min(good, al.karma);
       allyPaid = paid;
-      await this.update({ 'system.karma.good': good - paid, 'system.ledger': this.#ledgerWith({ kind: 'karma', amount: -paid, reason: tx('SR2E.Text.Actor.bondingTheAlly', { name: data.name }) }) });
-      karmaNote = tx('SR2E.Card.Actor.bondedForGoodKarma', { paid, part: paid < al.karma ? tx('SR2E.Card.Actor.short', { value: al.karma - paid }) : '' });
+      // v0.92.3 (RULES.SPIRITS_V923.allyCost 'book', Grimoire pp. 67, 71): the creator gives up a Magic point for good.
+      const mag = Math.max(0, Number(al.magic ?? 0));
+      await this.update({ 'system.karma.good': good - paid, 'system.ledger': this.#ledgerWith({ kind: 'karma', amount: -paid, reason: tx('SR2E.Text.Actor.bondingTheAlly', { name: data.name }) }),
+        ...(mag ? { 'system.magic': Math.max(0, Number(this.sys.magic ?? 0) - mag) } : {}) });
+      karmaNote = tx('SR2E.Card.Actor.bondedForGoodKarma', { paid, part: paid < al.karma ? tx('SR2E.Card.Actor.short', { value: al.karma - paid }) : '' }) + (mag ? ` ${tx('SR2E.Card.Actor.allyMagicPoint', { mag })}` : '');
       next = { ...next, conjure: { ...c, ally: { ...al, charged: true } } };
     }
     // v0.65.0: the ally takes shape after its days (the Karma is paid now).
     if (this.waitsFor('magic') && !c.projectId) {
-      const pr = await this.startProject({ kind: 'ally', area: 'magic', label: tx('SR2E.Text.Actor.theAllyRitualFor', { name: data.name }), hours: Number(al.days ?? 0) * 24, paid: { karma: allyPaid }, effect: { call: { method: 'finishAlly', args: [data] } } });
-      return { html: `<p><strong>${escText(data.name)}</strong> ${tx('SR2E.Card.Actor.takesShapeAfterUpkeepTabUnder', { plural: escText(plural(al.days, 'day')), karmaNote })}</p>`, flags: {}, snap: { ...next, conjure: { ...(next.conjure as ConjureContext), projectId: pr.id } } };
+      const pr = await this.startProject({ kind: 'ally', area: 'magic', label: tx('SR2E.Text.Actor.theAllyRitualFor', { name: data.name }), hours: Number(aDays ?? 0) * 24, paid: { karma: allyPaid }, effect: { call: { method: 'finishAlly', args: [data] } } });
+      return { html: `<p><strong>${escText(data.name)}</strong> ${tx('SR2E.Card.Actor.takesShapeAfterUpkeepTabUnder', { plural: escText(plural(aDays, 'day')), karmaNote })}</p>`, flags: {}, snap: { ...next, conjure: { ...(next.conjure as ConjureContext), projectId: pr.id } } };
     }
     if (c.projectId) return { html: `<p><em>${tx('SR2E.Card.Actor.theAllyRitualIsUnderWay')}</em></p>`, flags: {}, snap };
     const canCreate = canCreateActorNow();
     if (!canCreate) {
       return {
-        html: `<p><strong>${escText(data.name)}</strong> ${tx('SR2E.Card.Actor.takesShapeAfter', { plural: escText(plural(al.days, 'day')), karmaNote })} <button type="button" data-sr2e-action="createSpirit">${tx('SR2E.Card.Actor.createSpiritGm')}</button></p>`,
+        html: `<p><strong>${escText(data.name)}</strong> ${tx('SR2E.Card.Actor.takesShapeAfter', { plural: escText(plural(aDays, 'day')), karmaNote })} <button type="button" data-sr2e-action="createSpirit">${tx('SR2E.Card.Actor.createSpiritGm')}</button></p>`,
         flags: { pendingSpirit: data }, snap: next,
       };
     }
@@ -11098,7 +11182,7 @@ export class SR2Actor extends Actor {
     const spirit: any = await cls.create(data);
     await this.setFlag(SYSTEM_ID, 'familiar', { allyUuid: spirit?.uuid ?? '', allyName: data.name, usedForGrade: null });
     return {
-      html: `<p><strong>${escText(data.name)}</strong> ${tx('SR2E.Card.Actor.takesShapeAfterItCountsFor', { plural: escText(plural(al.days, 'day')), karmaNote })}</p>`,
+      html: `<p><strong>${escText(data.name)}</strong> ${tx('SR2E.Card.Actor.takesShapeAfterItCountsFor', { plural: escText(plural(aDays, 'day')), karmaNote })}</p>`,
       flags: {}, snap: { ...next, conjure: { ...(next.conjure as ConjureContext), spiritUuid: spirit?.uuid ?? null } },
     };
   }
@@ -11133,7 +11217,10 @@ export class SR2Actor extends Actor {
     const host: any = c.hostUuid ? fromUuidSync(c.hostUuid) : null;
     const flesh = host && insectForm({ hostUuid: c.hostUuid ?? '' }) === 'flesh'
       ? fleshFormAttributes({ body: Number(host.system?.attributes?.body?.base ?? 0), quickness: Number(host.system?.attributes?.quickness?.base ?? 0), strength: Number(host.system?.attributes?.strength?.base ?? 0) }, c.force, insectRole(typeName)) : null;
-    const offsets = flesh ? { ...(base.system?.offsets ?? {}), body: flesh.body - c.force, quickness: flesh.quickness - c.force, strength: flesh.strength - c.force } : base.system?.offsets;
+    // v0.92.3 (RULES.SPIRITS_V923.spiritTable 'book', Core p. 144): no template: the Spirit Table's offsets for its type.
+    const table = !template && !flesh ? SP923.spiritTableOffsets(typeName, c.element ?? '') : null;
+    const offsets = flesh ? { ...(base.system?.offsets ?? {}), body: flesh.body - c.force, quickness: flesh.quickness - c.force, strength: flesh.strength - c.force }
+      : table ? { body: table.body, quickness: table.quickness, strength: table.strength, charisma: 0, intelligence: 0, willpower: 0 } : base.system?.offsets;
     const name = `${typeName} (F${c.force})${host && flesh ? ` in ${host.name}` : ''}`;
     return {
       ...base,
@@ -11151,6 +11238,7 @@ export class SR2Actor extends Actor {
         element: c.element ?? base.system?.element ?? '',
         domain: c.domain ?? '',
         ...(offsets ? { offsets } : {}),
+        ...(table && table.reactionBonus ? { reactionBonus: table.reactionBonus } : {}),
         ...(flesh ? { hostUuid: c.hostUuid, materialized: true } : {}),
         // v0.56.0: a nature spirit stays only until the next sunrise or sunset (RULES.MAGIC_V56.natureSpirits).
         departsAt: c.spiritKind === 'nature' && RULES.MAGIC_V56.natureSpirits.departs === 'dawnDusk' ? nextDawnOrDusk(sysNow()).at : -1,
@@ -11169,10 +11257,10 @@ export class SR2Actor extends Actor {
     // v0.71.0 (R20): the drain a deferred summoning still owes, rolled now (it failed) and marked done.
     const drainNow = async (): Promise<ConjureContext> => {
       if (!c.drainLater || c.drainLater.done) return c;
-      await this.#conjuringDrain(c.drainLater.force, c.drainLater.pool);
+      await this.#conjuringDrain(c.drainLater.force, c.drainLater.pool, c.drainLater.extra ?? 0);
       return { ...c, drainLater: { ...c.drainLater, done: true } };
     };
-    const owedDrain = c.drainLater && !c.drainLater.done ? { force: c.drainLater.force, pool: c.drainLater.pool } : null;
+    const owedDrain = c.drainLater && !c.drainLater.done ? { force: c.drainLater.force, pool: c.drainLater.pool, ...(c.drainLater.extra ? { extra: c.drainLater.extra } : {}) } : null;
     // v0.65.0: an elemental summoning still under way: a re-roll changes the services it will owe.
     if (c.projectId && services <= 0) {
       // v0.71.0 review (F5): giving the project up rolls its owed drain (its onCancel), so it isn't rolled twice here.
@@ -11260,17 +11348,17 @@ export class SR2Actor extends Actor {
   }
 
   /** v0.71.0 review (F5): a timed elemental summoning given up: its conjuring drain is still resisted. */
-  async giveUpElemental(drain: { force: number; pool: number } | null = null): Promise<boolean> {
-    if (drain && Number(drain.force) > 0) await this.#conjuringDrain(Number(drain.force), Number(drain.pool) || 0);
+  async giveUpElemental(drain: { force: number; pool: number; extra?: number } | null = null): Promise<boolean> {
+    if (drain && Number(drain.force) > 0) await this.#conjuringDrain(Number(drain.force), Number(drain.pool) || 0, Number(drain.extra) || 0);
     return true;
   }
 
   /** v0.65.0: an elemental's summoning time has passed: it arrives (the GM's client makes the actor). */
-  async finishElemental(data: any, drain: { force: number; pool: number } | null = null): Promise<boolean> {
+  async finishElemental(data: any, drain: { force: number; pool: number; extra?: number } | null = null): Promise<boolean> {
     const cls: any = (Actor as any).implementation ?? Actor;
     const spirit: any = await cls.create(data);
     // v0.71.0 (R20): the conjuring drain comes as the ritual ends (RULES.FIXES_V71.conjureDrainAtEnd).
-    if (drain && Number(drain.force) > 0) await this.#conjuringDrain(Number(drain.force), Number(drain.pool) || 0);
+    if (drain && Number(drain.force) > 0) await this.#conjuringDrain(Number(drain.force), Number(drain.pool) || 0, Number(drain.extra) || 0);
     return Boolean(spirit);
   }
 
@@ -11304,14 +11392,25 @@ export class SR2Actor extends Actor {
     const spiritRolls: any[] = [];
     const control = Boolean(opts.control) && RULES.MAGIC_V56.control.enabled;
     if (control && this.selfUuids().includes(String(spirit.system.summonerUuid ?? ''))) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.isAlreadyS', { spiritName: escHtml(spirit.name), name: escHtml(this.name) })); return null; }
-    const resistDice = banishResistDice(force, spirit.system.spiritKind, spirit.system.spiritEnergy ?? 0);
-    const resist = await successTest({ dice: resistDice, targetNumber: magic, roll: foundryRoller(spiritRolls) });
-    const energy = resistDice > force ? tx('SR2E.Card.Actor.spiritEnergy', { value: resistDice - force }) : '';
-    await spirit.#post(spirit.#snapshot(tx('SR2E.Card.Actor.resistForceVsSMagic', { part: control ? tx('SR2E.Card.Actor.beingTakenOver') : tx('SR2E.Card.Actor.banishing'), force, energy, name: this.name, magic }), resist, { kind: 'plain' }), resist, spiritRolls);
-    // v0.56.0: a bound spirit's summoner helps it resist: their conjuring successes vs the banisher's Magic add to its own.
-    let help = 0;
     const summoner: any = spirit.system.summonerUuid ? fromUuidSync(spirit.system.summonerUuid) : null;
-    if (summoner && summoner.uuid !== this.uuid && RULES.MAGIC_V56.control.summonerHelps && typeof summoner.helpResistBanishing === 'function' && (spirit.system.services ?? 0) > 0) {
+    // v0.92.3 (RULES.SPIRITS_V923.controlContest 'book', Core p. 143): taking a controlled spirit is a contest with its
+    // holder (Conjuring vs Force), the challenger rolling against Force + 2; an uncontrolled one resists as when banished.
+    const heldTn = control && summoner && summoner.uuid !== this.uuid && typeof summoner.holdControl === 'function' ? SP923.controlChallengeTn(force, true) : null;
+    let resist: SuccessTestResult;
+    if (heldTn !== null) {
+      resist = await summoner.holdControl(spirit);
+    } else {
+      const resistDice = banishResistDice(force, spirit.system.spiritKind, spirit.system.spiritEnergy ?? 0);
+      resist = await successTest({ dice: resistDice, targetNumber: magic, roll: foundryRoller(spiritRolls) });
+      const energy = resistDice > force ? tx('SR2E.Card.Actor.spiritEnergy', { value: resistDice - force }) : '';
+      await spirit.#post(spirit.#snapshot(tx('SR2E.Card.Actor.resistForceVsSMagic', { part: control ? tx('SR2E.Card.Actor.beingTakenOver') : tx('SR2E.Card.Actor.banishing'), force, energy, name: this.name, magic }), resist, { kind: 'plain' }), resist, spiritRolls);
+    }
+    // v0.56.0: a bound spirit's summoner helps it resist: their conjuring successes vs the banisher's Magic add to its own.
+    // v0.92.3 (RULES.SPIRITS_V923.banishSummoner 'charisma', Core p. 143): no such help; a banisher who summoned the
+    // spirit adds Charisma dice instead.
+    let help = 0;
+    const own923 = RULES.SPIRITS_V923.banishSummoner === 'charisma' && !control && this.selfUuids().includes(String(spirit.system.summonerUuid ?? ''));
+    if (heldTn === null && RULES.SPIRITS_V923.banishSummoner !== 'charisma' && summoner && summoner.uuid !== this.uuid && RULES.MAGIC_V56.control.summonerHelps && typeof summoner.helpResistBanishing === 'function' && (spirit.system.services ?? 0) > 0) {
       help = await summoner.helpResistBanishing(spirit, magic);
     }
 
@@ -11320,12 +11419,15 @@ export class SR2Actor extends Actor {
     // v0.50.0: a shaman's totem environment counts when banishing too.
     const envB = totemEnvironmentDice(this.tradition, this.sys.totem, this.environmentHere());
     if (envB.dice) { extra.dice += envB.dice; extra.note = extra.note ? extra.note.replace(/\]$/, `, ${envB.note}]`) : ` [${envB.note}]`; }
-    const result = await this.#runTest(tx('SR2E.Card.Actor.tnForce', { part: control ? tx('SR2E.Card.Actor.takeControlOf') : tx('SR2E.Card.Actor.banish'), spiritName: spirit.name, force, extraNote: extra.note }), Math.max(0, skill.system.rating + extra.dice),
-      { targetNumber: force, poolDice: pool, pool: 'spell', magical: true, ...(opts.exclude?.length ? { exclude: opts.exclude } : {}) },
+    if (own923) { const cha = Number(this.sys.attributes?.charisma?.total ?? 0); if (cha > 0) { extra.dice += cha; extra.note = extra.note ? extra.note.replace(/\]$/, `, ${tx('SR2E.Card.Actor.charismaOwnSpirit', { cha })}]`) : ` [${tx('SR2E.Card.Actor.charismaOwnSpirit', { cha })}]`; } }
+    const tn = heldTn ?? force;
+    const result = await this.#runTest(tx('SR2E.Card.Actor.tnForce', { part: control ? tx('SR2E.Card.Actor.takeControlOf') : tx('SR2E.Card.Actor.banish'), spiritName: spirit.name, force: tn, extraNote: extra.note }), Math.max(0, skill.system.rating + extra.dice),
+      { targetNumber: tn, poolDice: pool, pool: 'spell', magical: true, ...(opts.exclude?.length ? { exclude: opts.exclude } : {}) },
       { kind: 'banish', banish: { spiritUuid: spirit.uuid, spiritName: spirit.name, spiritSuccesses: resist.successes + help, forceBefore: force,
-        ...(help ? { help } : {}), ...(control ? { control: true, servicesBefore: Number(spirit.system.services ?? 0), summonerBefore: String(spirit.system.summonerUuid ?? '') } : {}) } });
+        ...(help ? { help } : {}), ...(control ? { control: true, servicesBefore: Number(spirit.system.services ?? 0), summonerBefore: String(spirit.system.summonerUuid ?? ''), ...(heldTn !== null ? { held: true } : {}) } : {}) } });
     await this.leaveSignature('banishing', tx('SR2E.Text.Actor.banishing', { name: spirit.name }), force);
-    await this.#conjuringDrain(force, opts.drainPoolDice ?? 0);
+    // v0.92.3 (RULES.SPIRITS_V923.banishDrain 'none', Core p. 143): banishing itself costs no Drain; a control contest does.
+    if (control || RULES.SPIRITS_V923.banishDrain === 'conjuring') await this.#conjuringDrain(force, opts.drainPoolDice ?? 0);
     return result;
   }
 
@@ -11346,17 +11448,30 @@ export class SR2Actor extends Actor {
       if (outcome.force < spirit.system.force) await SR2Actor.gmActorCard(spirit.uuid, { lower: { key: 'force', from: spirit.system.force, to: outcome.force }, by: this.uuid as string }, tx('SR2E.Card.Actor.banishesForce', { name: escText(this.name), spiritName: escText(spirit.name), spiritForce: spirit.system.force, outcomeForce: outcome.force }));
       note = ` <em>${tx('SR2E.Card.Actor.isnTYoursTheGmApplies2', { spiritName: escText(spirit.name), outcomeForce: outcome.force })}</em>`;
     } else if (outcome.force !== spirit.system.force) {
+      const was = Number(spirit.system.force);
       await spirit.update({ 'system.force': outcome.force });
       after = outcome.force;
+      // v0.92.3 (RULES.SPIRITS_V923.banishRecovery 'hourly', Core p. 143): the Force comes back at 1 point an hour.
+      if (outcome.force > 0) await SR2Actor.noteBanishLoss(spirit, 'banishForce', was - outcome.force);
     }
     const lead = tx('SR2E.Card.Actor.vs', { successes: snap.successes, spiritSuccesses: b.spiritSuccesses });
     const sn = escText(b.spiritName);
+    // v0.92.3 (RULES.SPIRITS_V923.banishBackfire 'book', Core p. 143): the spirit winning takes 1 Magic per 2 net successes
+    // from the banisher (back at 1 an hour); at 0 Magic the banisher passes out.
+    const lost = SP923.banishBackfire(snap.successes, b.spiritSuccesses);
+    const delta = lost - (b.magicLost ?? 0);
+    let backfire = '';
+    if (delta !== 0 && canWriteNow(this)) await SR2Actor.noteBanishLoss(this, 'banishMagic', delta);
+    if (lost > 0) {
+      const left = Number(this.sys.derived?.magic ?? 0);
+      backfire = ` ${tx('SR2E.Card.Actor.banishBackfire', { name: escText(this.name), lost })}${left <= 0 ? ` <strong>${tx('SR2E.Card.Actor.banishPassesOut', { name: escText(this.name) })}</strong>` : ''}`;
+    }
     const body = outcome.banished
       ? `<strong>${tx('SR2E.Card.Actor.isBanished', { sn })}</strong> (${lead})`
-      : outcome.netSuccesses > 0
+      : outcome.netSuccesses > 0 && outcome.force < b.forceBefore
         ? `<strong>${tx('SR2E.Card.Actor.weakens', { sn })}</strong> ${tx('SR2E.Card.Actor.force2', { forceBefore: b.forceBefore, outcomeForce: outcome.force, lead })}`
         : `<strong>${tx('SR2E.Card.Actor.holds2', { sn })}</strong> (${lead})`;
-    return { html: `<p>${body}${note}</p>`, flags: {}, snap: { ...snap, banish: { ...b, forceAfter: after } } };
+    return { html: `<p>${body}${backfire}${note}</p>`, flags: {}, snap: { ...snap, banish: { ...b, forceAfter: after, magicLost: lost } } };
   }
 
   /** v0.56.0: a summoner's conjuring test to help their bound spirit resist banishing; returns the successes. */
@@ -11372,11 +11487,67 @@ export class SR2Actor extends Actor {
     return add;
   }
 
+  /**
+   * v0.92.3 (RULES.SPIRITS_V923.controlContest 'book', Core p. 143): the holder of a spirit someone tries to take over
+   * rolls Conjuring vs its Force (no modifiers); returns the result (posted as a card).
+   */
+  async holdControl(spirit: any): Promise<SuccessTestResult> {
+    const skill = this.#conjuringSkill(true);
+    const dice = Number(skill?.system?.rating ?? 0);
+    const force = Number(spirit?.system?.force ?? 1);
+    const rolls: any[] = [];
+    const r = await successTest({ dice: Math.max(0, dice), targetNumber: Math.max(RULES.MIN_TARGET_NUMBER, force), roll: foundryRoller(rolls) });
+    await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), rolls,
+      content: describeResult(tx('SR2E.Card.Actor.holdsControlOf', { name: this.name, spiritName: spirit?.name ?? '', force }), r) });
+    return r;
+  }
+
+  /** v0.92.3: conjuring Drain as if this magician had summoned a spirit of this Force (a lost control contest, Core p. 143). */
+  async resistConjuringDrain(force: number): Promise<void> {
+    await this.#conjuringDrain(Math.max(1, Math.floor(Number(force) || 1)), 0);
+  }
+
+  /**
+   * v0.92.3 (RULES.SPIRITS_V923.banishRecovery, Core p. 143): points of Force (a spirit, `banishForce`) or Magic (the
+   * banisher, `banishMagic`) lost in banishing, kept on a flag; they come back at 1 an hour (magicTicks). `delta` may
+   * be negative (a re-roll giving some back).
+   */
+  static async noteBanishLoss(a: any, key: 'banishForce' | 'banishMagic', delta: number): Promise<void> {
+    const d = Math.trunc(Number(delta) || 0);
+    if (!d || !a?.setFlag) return;
+    if (key === 'banishForce' && RULES.SPIRITS_V923.banishRecovery !== 'hourly') return;
+    const f = (a.getFlag?.(SYSTEM_ID, key) as { lost?: number; at?: number } | undefined) ?? {};
+    const lost = Math.max(0, Number(f.lost ?? 0) + d);
+    if (lost <= 0) { try { await clearFlag(a, key); } catch { /* none */ } return; }
+    await a.setFlag(SYSTEM_ID, key, { lost, at: Number(f.lost ?? 0) > 0 && Number.isFinite(Number(f.at)) ? Number(f.at) : sysNow() });
+  }
+
+  /** v0.92.3: banishing losses coming back at 1 point an hour of world time (RULES.SPIRITS_V923.banishRecovery). */
+  static async #banishRecoveryTick(a: any, time: number): Promise<void> {
+    for (const key of ['banishForce', 'banishMagic'] as const) {
+      const f = a.getFlag?.(SYSTEM_ID, key) as { lost?: number; at?: number } | undefined;
+      if (!f || !(Number(f.lost) > 0)) continue;
+      const back = SP923.banishRecovered(Number(f.lost), (time - Number(f.at ?? time)) / 3600);
+      if (!(back > 0)) continue;
+      const lost = Number(f.lost) - back;
+      if (key === 'banishForce') {
+        if (a.type !== 'spirit' || !(Number(a.system?.force) > 0)) { await clearFlag(a, key); continue; }
+        await a.update({ 'system.force': Number(a.system.force) + back });
+      }
+      if (lost > 0) await a.setFlag(SYSTEM_ID, key, { lost, at: Number(f.at) + back * 3600 });
+      else await clearFlag(a, key);
+      await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: a }), content: `<p>${tx(key === 'banishForce' ? 'SR2E.Card.Actor.banishForceBack' : 'SR2E.Card.Actor.banishMagicBack', { name: escText(a.name), back })}</p>` });
+    }
+  }
+
   /** v0.56.0: taking control of someone else's spirit: with net successes it becomes this magician's (applied once). */
   async #resolveControl(snap: TestSnapshot): Promise<Resolved> {
     const b = snap.banish as BanishContext;
-    const net = Math.max(0, snap.successes - b.spiritSuccesses);
-    const services = controlServices(net, b.servicesBefore ?? 0);
+    // v0.92.3 (RULES.SPIRITS_V923.controlContest 'book', Core p. 143): against a holder the winner keeps the services;
+    // an uncontrolled spirit owes 1 service per 2 net successes.
+    const bk = SP923.controlOutcome({ challenger: snap.successes, defender: b.spiritSuccesses, held: Boolean(b.held), servicesBefore: b.servicesBefore ?? 0 });
+    const net = bk ? (bk.won ? 1 : 0) : Math.max(0, snap.successes - b.spiritSuccesses);
+    const services = bk ? bk.services : controlServices(net, b.servicesBefore ?? 0);
     const spirit: any = await fromUuid(b.spiritUuid);
     const lead = tx('SR2E.Card.Actor.vs2', { successes: snap.successes, spiritSuccesses: b.spiritSuccesses, part: b.help ? tx('SR2E.Card.Actor.itsSummonerAdded', { help: b.help }) : '' });
     if (!spirit) return { html: `<p><em>${tx('SR2E.Card.Actor.theSpiritNoLongerExists')}</em></p>`, flags: {}, snap };
@@ -11390,12 +11561,18 @@ export class SR2Actor extends Actor {
       return { html: `<p><strong>${tx('SR2E.Card.Actor.staysItsOwnMasterS', { spiritName: escText(b.spiritName) })}</strong> (${lead})${back}</p>`, flags: {}, snap: { ...snap, banish: { ...b, taken: false } } };
     }
     let note = '';
+    // v0.92.3 (Core p. 143): a holder who loses the contest resists Drain as if they had summoned the spirit (once).
+    let holderDrained = b.holderDrained;
+    if (bk && b.held && !b.holderDrained && b.summonerBefore) {
+      const holder: any = fromUuidSync(b.summonerBefore);
+      if (holder && typeof holder.resistConjuringDrain === 'function') { await holder.resistConjuringDrain(b.forceBefore); holderDrained = true; }
+    }
     if (b.taken && spirit.system.summonerUuid !== this.uuid) note = ` <em>${tx('SR2E.Card.Actor.changedHandsSinceThisWasRolled', { spiritName: escText(spirit.name) })}</em>`;
     else if (!b.taken || spirit.system.services !== services) {
       const done = await SR2Actor.handSpirit(spirit, this, services, String(b.summonerBefore ?? ''), tx('SR2E.Card.Actor.becomesSOwing', { spiritName: escText(spirit.name), name: escText(this.name), plural: plural(services, 'service') }));
       if (!done) note = ` <em>${tx('SR2E.Card.Actor.theGmAppliesTheChange')}</em>`;
     }
-    return { html: `<p><strong>${tx('SR2E.Card.Actor.takesControlOf', { name: escText(this.name), spiritName: escText(b.spiritName) })}</strong>${tx('SR2E.Card.Actor.itOwes', { plural: escText(plural(services, 'service')), lead, note })}</p>`, flags: {}, snap: { ...snap, banish: { ...b, taken: true } } };
+    return { html: `<p><strong>${tx('SR2E.Card.Actor.takesControlOf', { name: escText(this.name), spiritName: escText(b.spiritName) })}</strong>${tx('SR2E.Card.Actor.itOwes', { plural: escText(plural(services, 'service')), lead, note })}</p>`, flags: {}, snap: { ...snap, banish: { ...b, taken: true, ...(holderDrained ? { holderDrained: true } : {}) } } };
   }
 
   /**
@@ -11414,17 +11591,24 @@ export class SR2Actor extends Actor {
     const skill = this.#conjuringSkill();
     if (!skill) return null;
     const force = Number(spirit.system.force ?? 1);
+    // v0.92.3 (RULES.SPIRITS_V923.trueName 'book', Grimoire pp. 78–79): Conjuring vs Force + Spirit Energy, not opposed;
+    // a single success binds it, and it costs no Karma.
+    const book923 = SP923.trueNameBook();
+    const karma = book923 ? 0 : force * RULES.MAGIC_V56.trueName.karmaPerForce;
     // v0.70.0: the binding's Karma waits for the GM when the approval queue is on; the test runs on approval.
-    if (approvalNeeded(this)) { await fileRequest(this, { kind: 'improve', label: tx('SR2E.Text.Actor.bindByItsTrueName', { name: spirit.name }), karma: force * RULES.MAGIC_V56.trueName.karmaPerForce, data: { method: 'bindByTrueName', args: [spirit.uuid, name, { ...opts }] } }); return null; }
+    if (karma > 0 && approvalNeeded(this)) { await fileRequest(this, { kind: 'improve', label: tx('SR2E.Text.Actor.bindByItsTrueName', { name: spirit.name }), karma, data: { method: 'bindByTrueName', args: [spirit.uuid, name, { ...opts }] } }); return null; }
     const magic = Number(this.sys.derived?.magic ?? 0);
     const rolls: any[] = [];
-    const resistDice = banishResistDice(force, spirit.system.spiritKind, spirit.system.spiritEnergy ?? 0);
-    const resist = await successTest({ dice: resistDice, targetNumber: Math.max(RULES.MIN_TARGET_NUMBER, magic), roll: foundryRoller(rolls) });
-    await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: spirit }), rolls, content: describeResult(tx('SR2E.Card.Actor.resistsTheBindingDiceVsMagic', { spiritName: spirit.name, resistDice, magic }), resist) });
-    const karma = force * RULES.MAGIC_V56.trueName.karmaPerForce;
-    const result = await this.#runTest(tx('SR2E.Card.Actor.bindByItsTrueNameTn', { spiritName: spirit.name, force, karma }), Math.max(0, skill.system.rating),
-      { targetNumber: force, poolDice: RULES.CONJURING.spellPoolAllowed ? opts.poolDice ?? 0 : 0, pool: 'spell', magical: true },
-      { kind: 'bindName', bindName: { spiritUuid: spirit.uuid as string, spiritName: spirit.name as string, force, spiritSuccesses: resist.successes, summonerBefore: String(spirit.system.summonerUuid ?? ''), servicesBefore: Number(spirit.system.services ?? 0) } });
+    let resist: SuccessTestResult | null = null;
+    if (!book923) {
+      const resistDice = banishResistDice(force, spirit.system.spiritKind, spirit.system.spiritEnergy ?? 0);
+      resist = await successTest({ dice: resistDice, targetNumber: Math.max(RULES.MIN_TARGET_NUMBER, magic), roll: foundryRoller(rolls) });
+      await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: spirit }), rolls, content: describeResult(tx('SR2E.Card.Actor.resistsTheBindingDiceVsMagic', { spiritName: spirit.name, resistDice, magic }), resist) });
+    }
+    const bindTn = book923 ? SP923.trueNameTn(force, Number(spirit.system.spiritEnergy ?? 0)) : force;
+    const result = await this.#runTest(tx('SR2E.Card.Actor.bindByItsTrueNameTn', { spiritName: spirit.name, force: bindTn, karma }), Math.max(0, skill.system.rating),
+      { targetNumber: bindTn, poolDice: RULES.CONJURING.spellPoolAllowed ? opts.poolDice ?? 0 : 0, pool: 'spell', magical: true },
+      { kind: 'bindName', bindName: { spiritUuid: spirit.uuid as string, spiritName: spirit.name as string, force, spiritSuccesses: resist?.successes ?? 0, summonerBefore: String(spirit.system.summonerUuid ?? ''), servicesBefore: Number(spirit.system.services ?? 0) } });
     await this.leaveSignature('summoning', tx('SR2E.Text.Actor.binding', { name: spirit.name }), force);
     await this.#conjuringDrain(force, opts.drainPoolDice ?? 0);
     return result;
@@ -11534,6 +11718,9 @@ export class SR2Actor extends Actor {
     const mods = sig ? [...((sig as any).onObject ? [] : freshnessModifier(signatureAgeHours(sig, now))), ...(link?.modifiers ?? []), ...(sig.masking ? [{ id: 'masking', label: tx('SR2E.Card.Mod.masking'), value: sig.masking }] : [])] : [];
     // v0.80.0 (RULES.URR_V80.magTrackRating, URR): −2 / +2 by the Force against the tracker's Sorcery.
     if (sig) mods.push(...urrMagTrackingMods(Number(sig.force ?? 0), Number(this.findSkill('Sorcery')?.system?.rating ?? 0)));
+    // v0.92.3 (RULES.SPIRITS_V923.tracking 'book', Core p. 149): −2 TN when the Force is at most the tracker's Sorcery,
+    // +2 when higher (the Revamp's own switch above gives the same).
+    if (sig && !RULES.URR_V80.magTrackRating) mods.push(...SP923.trackingMods(Number(sig.force ?? 0), Number(this.findSkill('Sorcery')?.system?.rating ?? 0)));
     const label = opts.label ?? (sig ? `${sig.label}, Force ${sig.force}` : 'astral trail');
     const attr = RULES.TRACKING.trackingAttribute as AttributeKey;
     const baseHours = opts.baseHours ?? RULES.TRACKING.baseHours;
@@ -11930,23 +12117,32 @@ export class SR2Actor extends Actor {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.thatSpellIsNoLongerBeing'));
       return null;
     }
+    // v0.92.3 (RULES.SPIRITS_V923.dispelling 'book', Grimoire p. 45): only a spell of Force up to the initiate's grade.
+    const book923 = SP923.dispelBook();
+    if (book923 && Number(entry.force) > this.initiate.grade) {
+      ui.notifications?.warn?.(tx('SR2E.Notify.Actor.dispelForceOverGrade', { name: escHtml(this.name), force: entry.force, grade: this.initiate.grade }));
+      return null;
+    }
+    // TN: the higher of the Force and the Karma that quickened it; Drain as if the dispeller had cast the spell.
+    const dispelTn = book923 ? SP923.dispelTn(entry.force, entry.quickened ? Math.ceil(Number(entry.force) * RULES.MAGIC.quickenKarmaPerForce) : 0) : entry.force;
+    const castItem: any = book923 ? [...(target?.items ?? [])].find((i: any) => i.type === 'spell' && i.name === entry.spellName) : null;
     // Review (R7): the dispelled spell's category and name count for a Dispelling specialization.
     const dispelUse = this.sorceryUseFor('dispel', { category: entry.category, spellName: entry.spellName, skill: sorcery });
     const extra = bonusNote(sorceryFocusDice(this.foci(), { name: entry.spellName, category: entry.category }), 0);
     const dispelRating = narrowRating(sorcery.system, dispelUse);
     // Review (B3): the card says which narrow rating it rolls, and carries its interpretations.
     if (dispelRating > Number(sorcery.system?.rating ?? 0)) extra.note += ` [${tx('SR2E.Card.MagicPool.narrow', { name: dispelUse.spec ? sorcery.system.specialization : sorcery.system.concentration, rating: dispelRating })}]`;
-    const result = await this.#runTest(tx('SR2E.Card.Actor.dispelOnTnForce', { entrySpellName: entry.spellName, targetName: target.name, entryForce: entry.force, extraNote: extra.note }),
+    const result = await this.#runTest(tx('SR2E.Card.Actor.dispelOnTnForce', { entrySpellName: entry.spellName, targetName: target.name, entryForce: dispelTn, extraNote: extra.note }),
       // v0.92.0 (RULES.MAGIC_V920): a Dispelling concentration or specialization rolls its rating and its narrow dice.
       Math.max(0, dispelRating + extra.dice),
-      { targetNumber: entry.force, poolDice: opts.poolDice ?? 0, pool: 'spell', spellUse: dispelUse, magical: true },
+      { targetNumber: dispelTn, poolDice: opts.poolDice ?? 0, pool: 'spell', spellUse: dispelUse, magical: true },
       { kind: 'dispel', dispel: { targetUuid: target.uuid, targetName: target.name, spellName: entry.spellName, force: entry.force, successesBefore: entry.successes ?? 1 },
         ...(dispelUse.conc || dispelUse.spec ? { narrow: { layers: layersOn() && ((dispelUse.conc && Number(this.sys.derived?.spellLayers?.conc ?? 0) > 0) || (dispelUse.spec && Number(this.sys.derived?.spellLayers?.spec ?? 0) > 0)), rating: dispelRating > Number(sorcery.system?.rating ?? 0) } } : {}) });
     await this.leaveSignature('dispelling', tx('SR2E.Text.Actor.dispelling', { name: entry.spellName }), entry.force);
     await this.#drainTest({
       label: tx('SR2E.Card.Actor.dispellingDrain'), attribute: 'willpower',
-      targetNumber: drainTargetNumber(entry.force, RULES.MAGIC.dispelDrainModifier),
-      level: RULES.MAGIC.dispelDrainLevel as DamageLevel,
+      targetNumber: drainTargetNumber(entry.force, castItem ? Number(castItem.system?.drainModifier ?? 0) : RULES.MAGIC.dispelDrainModifier),
+      level: (castItem ? String(castItem.system?.drainLevel ?? 'M') : RULES.MAGIC.dispelDrainLevel) as DamageLevel,
       type: drainDamageType(entry.force, Number(this.sys.derived.drainMagic ?? this.sys.derived.magic ?? 0)),
       // v0.72.0 (O16): Spell Pool dice go to dispelling drain as to casting drain (MAGIC_V72.dispelDrainPool).
       poolDice: dispelDrainPoolDice(opts.drainPoolDice ?? 0, this.spellPoolFor(drainNarrowOn() ? dispelUse : null)),
@@ -11957,7 +12153,7 @@ export class SR2Actor extends Actor {
 
   async #resolveDispel(snap: TestSnapshot): Promise<Resolved> {
     const d = snap.dispel as DispelContext;
-    const outcome = resolveDispel(d.successesBefore, snap.successes);
+    const outcome = resolveDispel(d.successesBefore, snap.successes, d.force);
     const target: any = await fromUuid(d.targetUuid);
     const expected = d.successesAfter ?? d.successesBefore;
     const list: SustainedSpell[] = target?.sustained?.() ?? [];
@@ -11971,6 +12167,14 @@ export class SR2Actor extends Actor {
       // Someone else's spell: an Apply (GM) card (only fewer successes, and only while it still has these).
       if (outcome.remaining < expected) await SR2Actor.gmActorCard(target.uuid, { dispel: { spellName: d.spellName, force: d.force, from: expected, to: outcome.remaining }, by: this.uuid as string }, tx('SR2E.Card.Actor.dispelsOnSuccessEs', { name: escText(this.name), spellName: escText(d.spellName), targetName: escText(target.name), expected, outcomeRemaining: outcome.remaining }));
       note = ` <em>${tx('SR2E.Card.Actor.isnTYoursTheGmApplies4', { targetName: escText(target.name) })}</em>`;
+      // v0.92.3 (RULES.SPIRITS_V923.dispelling 'book'): a Force lowered but not to 0 is set by hand on someone else's spell.
+      if (!outcome.dispelled && typeof outcome.forceLeft === 'number' && outcome.forceLeft < d.force) note += ` <em>${tx('SR2E.Card.Actor.dispelForceByHand', { spellName: escText(d.spellName), force: outcome.forceLeft })}</em>`;
+    } else if (!outcome.dispelled && typeof outcome.forceLeft === 'number') {
+      // v0.92.3 (RULES.SPIRITS_V923.dispelling 'book', Grimoire p. 45): the spell's Force drops (1 per 2 successes).
+      if (outcome.forceLeft < d.force) {
+        list[i] = { ...list[i]!, force: outcome.forceLeft };
+        await target.update({ 'system.sustaining': list });
+      }
     } else if (outcome.remaining !== expected) {
       after = outcome.remaining;
       const entry: any = list[i];
@@ -11983,6 +12187,8 @@ export class SR2Actor extends Actor {
     const spn = escText(d.spellName);
     const body = outcome.dispelled
       ? `<strong>${tx('SR2E.Card.Actor.isDispelled', { spn })}</strong> ${tx('SR2E.Card.Actor.on4', { targetName: escText(d.targetName) })}`
+      : typeof outcome.forceLeft === 'number'
+        ? (outcome.forceLeft < d.force ? `<strong>${tx('SR2E.Card.Actor.weakens2', { spn })}</strong> ${tx('SR2E.Card.Actor.dispelForceLeft', { force: outcome.forceLeft })}` : `<strong>${tx('SR2E.Card.Actor.holds3', { spn })}</strong>`)
       : snap.successes > 0
         ? `<strong>${tx('SR2E.Card.Actor.weakens2', { spn })}</strong> ${tCount(outcome.remaining, 'SR2E.Card.Actor.successesLeft')}`
         : `<strong>${tx('SR2E.Card.Actor.holds3', { spn })}</strong>`;
@@ -12107,6 +12313,13 @@ export class SR2Actor extends Actor {
       : outcome.netSuccesses > 0
         ? `<strong>${tx('SR2E.Card.Actor.weakens3', { bn })}</strong> ${tx('SR2E.Card.Actor.rating3', { ratingBefore: b.ratingBefore, outcomeRating: outcome.rating, lead })}`
         : `<strong>${tx('SR2E.Card.Actor.holds4', { bn })}</strong> (${lead})`;
+    // v0.92.3 (RULES.SPIRITS_V923.barrierBacklash 'book', Core p. 148): a barrier that beats the intruder hurts it:
+    // (rating)L, +1 level per 2 net successes, resisted with astral Body against the rating.
+    const back = SP923.barrierBacklash({ rating: b.ratingBefore, barrierSuccesses: b.barrierSuccesses, attackerSuccesses: snap.successes });
+    if (back) {
+      const damage: DamageState = { targetUuid: this.uuid as string, melee: true, damageType: 'physical', power: back.power, level: back.level, astral: true };
+      return { html: `<p>${body}${note}</p><p>${tx('SR2E.Card.Actor.barrierBacklash', { bn, power: back.power, level: back.level })} <button type="button" data-sr2e-action="resist">${tx('SR2E.Card.Actor.resistDamage')}</button></p>`, flags: { damage }, snap: { ...snap, barrier: { ...b, ratingAfter: after } } };
+    }
     return { html: `<p>${body}${note}</p>`, flags: {}, snap: { ...snap, barrier: { ...b, ratingAfter: after } } };
   }
 
@@ -17222,9 +17435,19 @@ export class SR2Actor extends Actor {
     if (!this.hasCritterPower('regeneration') || !this.sys.monitor) return 0;
     const essence = Number(this.sys.derived?.essence ?? 1);
     if (essence <= 0) return 0;
+    // v0.92.3 (RULES.SPIRITS_V923.regenDeath 'book', Core p. 219): a Deadly wound (a full Physical track) calls for 1D6:
+    // a 1 kills it (1 or 2 when fire or an explosion did it: the GM's call); otherwise the wounds vanish as usual.
+    if (RULES.SPIRITS_V923.regenDeath === 'book' && Number(this.sys.monitor.physical ?? 0) >= RULES.MONITOR_BOXES && !this.getFlag(SYSTEM_ID, 'regenChecked')) {
+      const roll = await new Roll('1d6').evaluate();
+      const die = Number(roll.total ?? 0);
+      await this.setFlag(SYSTEM_ID, 'regenChecked', true);
+      await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), rolls: [roll], content: `<p><strong>${tx('SR2E.Card.Actor.regenDeathCheck', { name: escText(this.name), die })}</strong> ${die <= 1 ? tx('SR2E.Card.Actor.regenDies') : die === 2 ? tx('SR2E.Card.Actor.regenDiesIfFire') : tx('SR2E.Card.Actor.regenLives')}</p>` });
+      if (die <= 1) return 0;
+    }
     const r = regenerate(this.sys.monitor, Number(this.getFlag(SYSTEM_ID, 'noRegen') ?? 0) || 0);
     if (r.healed <= 0) return 0;
     await this.update({ 'system.monitor.physical': r.physical });
+    if (this.getFlag(SYSTEM_ID, 'regenChecked')) { try { await clearFlag(this, 'regenChecked'); } catch { /* none */ } }
     await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p><strong>${tx('SR2E.Card.Actor.regenerates', { name: escText(this.name) })}</strong> ${tx('SR2E.Card.Actor.ofPhysicalDamage', { plural: escText(plural(r.healed, 'box')) })}</p>` });
     return r.healed;
   }
@@ -17243,6 +17466,8 @@ export class SR2Actor extends Actor {
       await SR2Actor.#permanentTicks(a, time);
       // v0.56.0: a nature spirit leaves at sunrise or sunset.
       await SR2Actor.#departureTick(a, time);
+      // v0.92.3: Force and Magic lost in banishing come back (RULES.SPIRITS_V923.banishRecovery).
+      await SR2Actor.#banishRecoveryTick(a, time);
       // Elemental sustaining runs out.
       const list: any[] = [...((a as any).system?.sustaining ?? [])];
       const due = list.filter((e) => e.spiritUuid && typeof e.until === 'number' && e.until >= 0 && e.until <= time);
@@ -18103,6 +18328,8 @@ export class SR2Actor extends Actor {
         return false;
       }
       await a.update({ [`system.${key}`]: to });
+      // v0.92.3 (RULES.SPIRITS_V923.banishRecovery): a spirit's Force lost to banishing comes back at 1 an hour.
+      if (key === 'force' && to > 0) await SR2Actor.noteBanishLoss(a, 'banishForce', from - to);
       return true;
     }
     // v0.81.0 (D2-3): a dispel on a spell this actor sustains: only fewer successes, only when it still has the rolled ones.
@@ -18195,7 +18422,7 @@ export class SR2Actor extends Actor {
       if (ch.dispel && snap.kind === 'dispel' && snap.dispel?.targetUuid === targetUuid) {
         const d = snap.dispel;
         return d.spellName === ch.dispel.spellName && d.force === ch.dispel.force && (d.successesAfter ?? d.successesBefore) === ch.dispel.from
-          && resolveDispel(d.successesBefore, successes).remaining === ch.dispel.to;
+          && resolveDispel(d.successesBefore, successes, d.force).remaining === ch.dispel.to;
       }
       return false;
     });

@@ -70,7 +70,8 @@ describe('v0.45.0 metamagic', () => {
 });
 
 describe('v0.45.0 initiation and design', () => {
-  test('ordeals and group initiation lower the multiplier; the old cost is the self rate', () => {
+  test('ordeals and group initiation lower the multiplier; the old cost is the self rate (v0.92.2)', (t) => {
+    t.after(oldWay({ 'SPIRITS_V923.gradeZero': 'v922', 'SPIRITS_V923.initiationRounding': 'up', 'OCCULT.initiation.ordealReduction': 1 }));
     assert.deepEqual(initiationCost(1), { cost: 21, multiplier: 3 });
     assert.deepEqual(initiationCost(2, { ordeal: true }), { cost: 16, multiplier: 2 });
     assert.deepEqual(initiationCost(2, { group: true, ordeal: true }), { cost: 8, multiplier: 1 });

@@ -1,6 +1,7 @@
 import type { AttackState, DamageState, SpellState, TestSnapshot, PoolKind, BlastContext, Contest } from '../documents/index.ts';
 import { opposedMelee, SR2Actor, serialTicks } from '../documents/index.ts';
 import { settleClock } from './clock.ts';
+import { nextInitiationGrade } from '../rules/spirits923.ts';
 import { sysNow, toSysTime } from '../helpers/clock.ts';
 import { allActors } from '../helpers/actors.ts';
 import { playCue, decorateItemDrags } from './qol.ts';
@@ -2920,7 +2921,7 @@ async function onConfirmDeed(message: any, button: HTMLButtonElement): Promise<v
   if (!d || !a) return ui.notifications.warn(tx('SR2E.Notify.Chat.thatCharacterIsGone'));
   if (message.getFlag(SYSTEM_ID, 'deedDone')) return ui.notifications.warn(tx('SR2E.Notify.Chat.alreadyConfirmed'));
   const p = a.getFlag?.(SYSTEM_ID, 'pendingInitiation');
-  if (!p || p.grade !== (Number(a.system.initiateGrade ?? 0) + 1)) return ui.notifications.warn(tx('SR2E.Notify.Chat.hasNoInitiationWaitingOnThis', { name: escHtml(a.name) }));
+  if (!p || p.grade !== nextInitiationGrade(Number(a.system.initiateGrade ?? 0), Boolean(a.getFlag?.('sr2e', 'initiated')))) return ui.notifications.warn(tx('SR2E.Notify.Chat.hasNoInitiationWaitingOnThis', { name: escHtml(a.name) }));
   // v0.81.0 (SEC1-17): only the initiate's own card (or a GM's), and the GM says yes in a dialog naming it.
   if (!(await gmMay(message, { title: tx('SR2E.Dialog.Chat.confirmADeed'), lines: [tx('SR2E.Dialog.Chat.sDeedIsDoneInitiationTo', { name: a.name, grade: p.grade })], sources: [a.uuid], always: true }))) return;
   await gmLocked(message, button, async () => {

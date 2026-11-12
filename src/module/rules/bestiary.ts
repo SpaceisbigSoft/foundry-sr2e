@@ -55,7 +55,8 @@ export function banishHelp(helperSuccesses: number): number {
 export function trueNameOutcome(binderSuccesses: number, spiritSuccesses: number, force: number): { net: number; bound: boolean; services: number; karma: number } {
   const net = Math.max(0, binderSuccesses - spiritSuccesses);
   const bound = net > 0;
-  return { net, bound, services: net, karma: bound ? force * M().trueName.karmaPerForce : 0 };
+  // v0.92.3 (RULES.SPIRITS_V923.trueName 'book', Grimoire p. 79): binding by the true name costs no Karma.
+  return { net, bound, services: net, karma: bound && RULES.SPIRITS_V923.trueName !== 'book' ? force * M().trueName.karmaPerForce : 0 };
 }
 
 // ---------------------------------------------------------------- Adepts

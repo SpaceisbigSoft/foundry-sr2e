@@ -309,7 +309,7 @@ export const RULES = {
     perceivingTnMod: 2,
     formAttributes: { body: 'willpower', quickness: 'intelligence', strength: 'charisma' },
     reactionAttribute: 'intelligence',
-    initiativeBonus: 20,
+    initiativeBonus: 15, // v0.92.3 book check: astral Reaction + 15, 1D6 (Core p. 147) (was 20)
     initiativeDice: 1,
     attackBaseTn: 4,
     attackSkill: 'Sorcery',
@@ -397,7 +397,7 @@ export const RULES = {
     trackingTn: 4,
     freshness: [[1, 0], [6, 1], [24, 2]] as ReadonlyArray<readonly [number, number]>,
     staleModifier: 4,
-    baseHours: 6,
+    baseHours: 12, // v0.92.3 book check: 12 hours ÷ successes (Core p. 149) (was 6)
   },
 
   /** Geasa: an unmet geas takes away the Magic it protects. VERIFY */
@@ -1787,7 +1787,7 @@ export const RULES = {
     shock: { attribute: 'body' as 'body' | 'willpower', initiativeLoss: 10, stunTurns: 1 },
     corrode: { points: 1 },
     sustainLimit: { hoursPerForce: 1 },
-    domains: { enforce: 'warn' as 'off' | 'warn' | 'block' },
+    domains: { enforce: 'block' as 'off' | 'warn' | 'block' }, // v0.92.3 book check: a nature spirit can't be summoned outside its domain (Core p. 139) (was warn)
     addiction: { attribute: 'willpower' as 'willpower' | 'charisma' | 'intelligence', tnFrom: 'total' as 'total' | 'excess', withdrawalTn: 2 },
     sites: { enforce: 'warn' as 'off' | 'warn' | 'block', elementalCircle: true, elementalLibrary: true, ritualSite: true, nuyenPerRating: 1000 },
     ritualStages: { enabled: true, materialsPerForce: 0, waitForPrep: 'block' as 'off' | 'warn' | 'block' },
@@ -1925,7 +1925,7 @@ export const RULES = {
     },
     initiation: {
       multipliers: { self: 3, group: 2 },
-      ordealReduction: 1,
+      ordealReduction: 0.5, // v0.92.3 book check: an ordeal takes .5 off the multiplier (Grimoire p. 38) (was 1)
       minMultiplier: 1,
       ordeals: [
         { id: 'asceticism', label: 'Asceticism (lose 1 point of an attribute)', effect: 'attribute' },
@@ -2841,7 +2841,9 @@ export const RULES = {
     touch: { skill: 'Unarmed Combat', tn: 4, opposed: true, defense: 'quickness' as 'quickness' | 'reaction' | 'body', reachMetres: 2, distance: 'warn' as 'warn' | 'block' | 'off' },
     learning: { enabled: true, skill: 'Sorcery', daysPerForce: 1, site: 'warn' as 'warn' | 'block' | 'off' },
     permanent: { enabled: true, turnsPerForce: 1, secondsPerTurn: 0, undoHealing: true },
-    ward: { skill: 'Conjuring', hoursPerForce: 1, nuyenPerForce: 0, drainModifier: 0, drainLevel: 'M' as 'L' | 'M' | 'S' | 'D' },
+    // v0.92.3 book check (Grimoire p. 92 and its errata): Sorcery (was Conjuring), 1,000¥ of materials per Force (was 0),
+    // drain at L (was M); the TN and the time are RULES.SPIRITS_V923.ward.
+    ward: { skill: 'Sorcery', hoursPerForce: 1, nuyenPerForce: 1000, drainModifier: 0, drainLevel: 'L' as 'L' | 'M' | 'S' | 'D' },
     manifest: { enabled: true, blocksPhysical: true, alpha: 0.5 },
     detectionRange: { factor: 1, extendedFactor: 10, enforce: 'warn' as 'warn' | 'block' | 'off' },
     assensing: [
