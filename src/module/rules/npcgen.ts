@@ -541,7 +541,8 @@ export function npcActorData(p: NpcPlan): { actor: { name: string; type: string;
   if (rcdTpl && (p.controlRig || droneCount)) {
     // v0.77.0: rating enough for the drones (one port per drone).
     const r = clamp(Math.max(p.controlRig ?? 0, Math.ceil(droneCount / Math.max(1, RULES.RIGGING.remote.dronesPerRating))), 1, NPC_RCD_MAX_RATING);
-    // v0.81.0 (RC-13): cost and weight per rating point from the RCD template (book: Rating × 50,000¥, weight Rating × 2).
+    // v0.81.0 (RC-13): cost per rating point from the RCD template. v0.92.3 (Rigger 2 p. 97): 5,000¥ × Rating, and the weight
+    // is the template's whatever the rating (3).
     const sys = structuredClone(rcdTpl.system) as Record<string, unknown>;
     const base = Math.max(1, Number(sys['rcdRating']) || 1);
     items.push({ name: rcdTpl.name, type: rcdTpl.type, system: { ...sys, rcdRating: r, cost: Math.round((Number(sys['cost']) || 0) / base * r), weight: Number(sys['weight']) || 0 } }); // v0.92.3: Rigger 2 p. 97, 3 kg at any rating

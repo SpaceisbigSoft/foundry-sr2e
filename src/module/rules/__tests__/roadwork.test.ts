@@ -7,12 +7,14 @@ import {
   vehicleCalledShotModifier, vehicleSystemsEffect, maneuverScore, maneuverPosition, positionModifier,
   sensorGunnery, designVehicle, lockTypeOf, bypassTool, bypassPlan,
 } from '../roadwork.ts';
+import { useV922Vehicles } from './v922vehicles.ts';
 
 const R = RULES as any;
 const V = R.VEHICLES_V57;
 const S = R.SECURITY_V57;
 
 describe('v0.57.0 acceleration', () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   test('accelerating is limited to Accel (+ extra)', () => {
     assert.deepEqual(speedChangeLimit({ accel: 10, from: 50, to: 60 }), { allowed: true, max: 10, braking: false, change: 10 });
     assert.equal(speedChangeLimit({ accel: 10, from: 50, to: 61 }).allowed, false);
@@ -179,6 +181,7 @@ describe('v0.57.0 vehicle design', () => {
 });
 
 describe('v0.57.0 maglocks', () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   const base = { rating: 4, lockType: 'keypad', casing: 0, casingOpen: false, skillDice: 3, tools: [], light: null, vision: {} };
   test('lookups', () => {
     assert.equal(lockTypeOf('retina').tn, 3);

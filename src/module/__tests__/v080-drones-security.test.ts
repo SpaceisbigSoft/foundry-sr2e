@@ -8,6 +8,7 @@ import { test, describe, before, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { RULES } from '../rules/index.ts';
 import { urrMode } from '../rules/__tests__/urrmode.ts';
+import { useV922Vehicles } from '../rules/__tests__/v922vehicles.ts';
 
 const g = globalThis as any;
 const faces: number[] = [];
@@ -181,6 +182,7 @@ const tool = (id: string, kind: string, rating: number) => ({ id, type: 'gear', 
 const testTn = () => chat.filter((m) => m.flags?.sr2e?.test).at(-1)?.flags.sr2e.test.targetNumber;
 
 describe('v0.80.0 drones-security: drone-link interception (dsLinkIntercept)', () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   const rcd = (r: number, extra: any = {}) => ({ id: `rcd${r}`, type: 'gear', name: `RCD ${r}`, system: { rcdRating: r, ...extra } });
   const setup = (link: any = null, hackerItems: any[] = [skill('el', 'Electronics', 4, 'intelligence'), rcd(4)]) => {
     const d = vehicle({ name: 'Roto-drone', drone: true, pilot: 3, autonav: 0, ...(link ? { link } : {}) });
@@ -253,6 +255,7 @@ describe('v0.80.0 drones-security: listening in on encrypted radio (dsRadioDecry
 });
 
 describe('v0.80.0 drones-security: maglocks (dsLockCasing, lockTypes, dsPasskey, dsSequencer)', () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   const thief = (items: any[] = []) => who({ name: 'Thief' }, [skill('br', 'Electronics B/R', 3, 'intelligence', { kind: 'buildRepair' }), skill('el', 'Electronics', 3, 'intelligence'), ...items]);
   test('a card reader casing: 3 under the book, doubled under the Revamp', async (t) => {
     faces.push(1, 1, 2);
@@ -337,6 +340,7 @@ describe('v0.80.0 drones-security: weapon detectors (dsMadScan)', () => {
 });
 
 describe('v0.80.0 drones-security: dump shock disorientation (dsDumpDisorient)', () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   const shock = { tn: 6, level: 'S' as const, type: 'stun' as const, kind: 'dump' as const, attribute: 'body' as const };
   test('book: the damage test only', async () => {
     const a = who({ name: 'Rigger' });

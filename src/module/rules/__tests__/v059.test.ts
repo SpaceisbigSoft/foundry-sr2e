@@ -30,7 +30,8 @@ describe('v0.59.0 rules-side integration fixes', () => {
   });
 
   test('jacking in or out, taking controls, jumping in or out, sensor tests and drone commands cost an action', () => {
-    for (const k of ['jackIn', 'jackOut', 'takeControls', 'jumpIn', 'jumpOut', 'sensor']) assert.equal(actionCost(k), 'simple', k);
+    for (const k of ['jackIn', 'jackOut', 'takeControls', 'jumpIn', 'jumpOut']) assert.equal(actionCost(k), 'simple', k);
+    assert.equal(actionCost('sensor'), 'complex'); // v0.92.3 (Rigger 2 p. 58; was simple)
     assert.equal(actionCost('droneCommand'), 'complex'); // v0.77.0 book check
     assert.equal(RULES.COMBAT_TURN_SECONDS, 3);
     assert.equal(RULES.ADEPT.killingHands.magical, true);

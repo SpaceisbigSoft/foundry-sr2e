@@ -356,7 +356,7 @@ Against a target that is invisible to you, the system rolls your test to see thr
 
 Most tests post a card with buttons for what comes next. Only the owner of the character named on the button, or the GM, can use it.
 
-- **Defend**: on an attack card, for the target. It opens the defense dialog with pool dice. Against a melee attack you pick the weapon you fight back with (with a *Counterattack to subdue* box where it applies). Once you have defended, the button is greyed for you, even after a reload; the GM gets an *Already defended* question before a second defense. A vehicle defends with its driver's Combat Pool dice, or the Control Pool of a rigger jumped into it.
+- **Defend**: on an attack card, for the target. It opens the defense dialog with pool dice. Against a melee attack you pick the weapon you fight back with (with a *Counterattack to subdue* box where it applies). Once you have defended, the button is greyed for you, even after a reload; the GM gets an *Already defended* question before a second defense. A vehicle makes no dodge test (the old way, a house rule: its driver's Combat Pool or its rigger's evasive driving); a rigger jumped into it adds Control Pool dice, at most their skill, when it resists the damage.
 - **Resist** (or **Resist damage**): after a hit, the damage resistance test. The condition monitor changes by itself.
 - **Resist** on a spell or power card: the target's resistance test.
 - **Apply (GM)**: your test changed something only the GM may change (a host, a site, a patient you don't own). The GM clicks it to make the change.
@@ -845,7 +845,7 @@ The Rigging tab shows for a character with a control rig or a remote control dec
 
 Jumping in needs a control rig, and a rigger adaptation on the vehicle (drones count as adapted; the rigger adaptation goes in on top of a remote adaptation, under Modifications on the vehicle sheet). Jumping in from outside the vehicle also needs a remote control deck, and a link that is not jammed or spoofed; out of range it warns, or stops you if the house rules say so. Without a control rig you can still drive by hand.
 
-Damage to a vehicle you are jumped into comes back on a card with **Resist feedback** (or **Resist dump shock** when it is destroyed or the link is cut).
+Damage that leaves a vehicle you are jumped into at Serious or Destroyed comes back on a card with **Resist feedback** (6M or 6S Physical, resisted with Body); a remote rigger gets **Resist dump shock** when the vehicle is destroyed or the link is cut.
 
 The **Drone link** quick button (on characters and NPCs, when there are vehicles) intercepts a drone's remote link or spoofs it a command. Intercepting needs a remote control deck or a radio (under the [Unified Rules Revamp](#the-unified-rules-revamp-alternate-rules), a remote control deck, and an encrypted link is decrypted first). Spoofing needs a remote control deck. An intercepted link shows *Link intercepted* on the vehicle sheet until the GM clears it; with the house rule that lets a spoof take the drone over, a spoofed one shows *Link spoofed*. A character with a jammer has a **Jam** quick button.
 

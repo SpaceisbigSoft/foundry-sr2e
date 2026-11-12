@@ -42,9 +42,9 @@ import {
   magicLossOnTreatment, breathHoldTurns, athleticsDistanceUrr, fallingDamageUrr,
   actionCost, spendAction, actionsLeftLabel, compareInitiative, surprised, woundLevel, friendsModifiers, meleeReachMetres, weaponArmorKind, aimCap, multipleTargetModifier, combinedBlastPower, holdOutcome, stimEffect, tranqBoxes, tranqOpposed, antidoteEffect, surgicalTrauma, type AimState,
   attackerReachModifiers, gyroOffset, grenadeKind, blastFalloff, blastLoss, scatterDiceFor,
-  handlingFor, drivingModifiers, applyVehicleDamage, vehicleCategory, type ControlMode,
+  handlingFor, drivingModifiers, applyVehicleDamage, vehicleCategory, type ControlMode, veh923, crashSpeedModifier, vcrTnFactor, ramSelfPower, type DriveKind,
   canFireMount, mountedSkill, sensorTarget, rcdCapacity,
-  veh80PoolCap, veh80GunneryPool, veh80ResistPool, veh80Feedback, veh80Incoming, veh80PassengerDamage, veh80CrashPassengerLevel,
+  veh80PoolCap, veh80GunneryPool, veh80ResistPool, veh80ResistPoolOn, veh80Feedback, veh80Incoming, veh80PassengerDamage, veh80CrashPassengerLevel,
   veh80OccupantArmor, veh80CrashDamage, veh80RamDamage, veh80FireModifiers, veh80HeavyRecoil, veh80RepairTn,
   chaseSpeedModifier, chaseTurn, type FirerRole,
   siteTally, alertAtLeast, detectionTargets, detectionOutcome, bypassOutcome, voiceOutcome, responseDue, hostAlertFor, siteAlertForHost,
@@ -520,7 +520,7 @@ export interface AttackState {
   /** An anti-vehicle weapon: full damage against vehicles. */
   antiVehicle?: boolean;
   /** v0.73.0 (O25): a ram: the rammer's share, offered after the defense. */
-  ram?: { vehicleUuid: string; power: number; level: DamageLevel | null };
+  ram?: { vehicleUuid: string; power: number; level: DamageLevel | null; bodyPerSuccess?: number };
   /** A flamethrower (v0.37.0): a hit can set the target on fire. */
   flame?: boolean;
   /** An elemental manipulation's secondary effect and the spell's Force (v0.39.0). */
@@ -579,6 +579,8 @@ export interface DriveOptions {
   quiet?: boolean;
   /** v0.57.0: a push to this speed (beyond the Combat Turn's Acceleration). */
   push?: number;
+  /** v0.92.3: the kind of vehicle test (rigger 2's tables differ; default by crashTest / push, else a Driving Test). */
+  kind?: DriveKind;
 }
 
 /** Options for SR2Actor.attackWith / planAttack / previewAttack. */
@@ -754,7 +756,7 @@ function armorExtras(a: Partial<AttackState>): Partial<DamageState> {
     ...(a.flame || damageImmunity({ fire: true }, { element: String(a.elementEffect ?? '') }).immune ? { fire: true } : {}),
     // v0.57.0: a called shot at part of a vehicle; an occupant shot through it takes the damage instead.
     ...(a.vehiclePart && a.vehiclePart !== 'occupant' ? { vehiclePart: a.vehiclePart, ...(a.vehicleWeaponId ? { vehicleWeaponId: a.vehicleWeaponId } : {}) } : {}),
-    ...(a.vehiclePart === 'occupant' && a.occupantUuid ? { targetUuid: a.occupantUuid, antiVehicle: undefined, extraArmor: (a.extraArmor ?? 0) + (a.occupantArmor ?? 0) } : {}),
+    ...(a.vehiclePart === 'occupant' && a.occupantUuid ? { targetUuid: a.occupantUuid, antiVehicle: undefined, extraArmor: (a.extraArmor ?? 0) + (a.occupantArmor ?? 0), occupantShot: true } : {}),
   };
 }
 
@@ -814,6 +816,10 @@ export interface DamageState {
   barrierStopped?: boolean;
   /** v0.57.0: a called shot at part of a vehicle (applied when the vehicle takes the damage). */
   vehiclePart?: string; vehicleWeaponId?: string;
+  /** v0.92.3 (Rigger 2 p. 53): the attacker's successes against a vehicle, for a complete miss at its resistance test. */
+  attackHits?: number;
+  /** v0.92.3 (Rigger 2 p. 53): someone shot inside a vehicle (no Combat Pool; a jacked-in rigger +3 TN). */
+  occupantShot?: boolean;
   damageType: DamageType;
   power: number;
   level: DamageLevel;
@@ -878,6 +884,8 @@ export interface SoakContext {
   /** Vehicle damage from a crash (nobody aboard gets the passenger share). */
   crash?: boolean;
   ramSelf?: boolean;
+  /** v0.92.3 (Rigger 2 p. 53): Control Pool dice the rigger used on a vehicle's resistance, and the attacker's successes. */
+  controlUsed?: number; attackHits?: number;
   /** v0.57.0: a called shot at part of the vehicle, and whether its effect was applied. */
   vehiclePart?: string; vehicleWeaponId?: string; partApplied?: boolean;
   /** Worn armor of this kind took the hit (armor degrading, v0.37.0), and whether it has been degraded. */
@@ -1135,7 +1143,7 @@ export interface TestSnapshot {
     /** v0.78.0 (voice): the deception device's rating, the lock's rating, and the lock's own roll (once, kept for re-rolls). */
     deception?: number; lockRating?: number; lockSuccesses?: number; lockType80?: string };
   /** attack: a ram, so a hit also damages the rammer. */
-  ram?: { vehicleUuid: string; power: number; level: DamageLevel | null };
+  ram?: { vehicleUuid: string; power: number; level: DamageLevel | null; bodyPerSuccess?: number };
   /** addiction: a drug's addiction test on a dose, or kicking the habit (v0.42.0). */
   addiction?: { drug: string; mode: 'dose' | 'kick'; applied?: boolean };
   /** disease: resisting infection, or a disease's progress test (v0.42.0); once applied. */
@@ -2803,8 +2811,8 @@ export class SR2Actor extends Actor {
         const lead = s <= 0 ? `<p><em>${tx('SR2E.Card.Actor.noSuccessesButTheDefenderMay')}</em></p>` : '';
         // A ram that connects hurts the rammer too: v0.73.0 (O25) after the target's defense (NETRIG_V73.ram.afterDefense).
         const ram = snap.ram && ramSelfOnAttackCard(s) && snap.ram.level ? snap.ram : null;
-        const ramSelf: DamageState | null = ram ? { targetUuid: ram.vehicleUuid, melee: false, damageType: 'physical', power: ram.power, level: ram.level as DamageLevel, crash: true, ramSelf: true } : null;
-        const ramHtml = ramSelf ? `<p><button type="button" data-sr2e-action="ramSelf">${tx('SR2E.Card.Actor.rammerSDamage', { name: escText(fromUuidSync(ram!.vehicleUuid)?.name ?? tx('SR2E.Card.Actor.vehicle')), ramPower: ram!.power, ramLevel: ram!.level })}</button></p>` : '';
+        const ramSelf: DamageState | null = ram ? { targetUuid: ram.vehicleUuid, melee: false, damageType: 'physical', power: ramSelfPower(ram, s), level: ram.level as DamageLevel, crash: true, ramSelf: true } : null;
+        const ramHtml = ramSelf ? `<p><button type="button" data-sr2e-action="ramSelf">${tx('SR2E.Card.Actor.rammerSDamage', { name: escText(fromUuidSync(ram!.vehicleUuid)?.name ?? tx('SR2E.Card.Actor.vehicle')), ramPower: ramSelf.power, ramLevel: ram!.level })}</button></p>` : '';
         return { html: `${lead}<p>${buttons}</p>${ramHtml}`, flags: { attack, attacks, ...(ramSelf ? { ramSelf } : {}) }, snap };
       }
       case 'spell': {
@@ -2920,11 +2928,12 @@ export class SR2Actor extends Actor {
         if (!outcome.hit || !outcome.level) {
           return { html: `<p>${outcomeWord('missed')} ${tx('SR2E.Card.Actor.attackVsDefense', { attackAttackSuccesses: attack.attackSuccesses, s })}</p>${rs.note ? `<p>${escText(rs.note)}</p>` : ''}`, flags: {}, snap };
         }
-        const ramSelfD: DamageState | null = rs.offer && attack.ram?.level ? { targetUuid: attack.ram.vehicleUuid, melee: false, damageType: 'physical', power: attack.ram.power, level: attack.ram.level as DamageLevel, crash: true, ramSelf: true } : null;
+        const ramSelfD: DamageState | null = rs.offer && attack.ram?.level ? { targetUuid: attack.ram.vehicleUuid, melee: false, damageType: 'physical', power: ramSelfPower(attack.ram, attack.attackSuccesses), level: attack.ram.level as DamageLevel, crash: true, ramSelf: true } : null;
         const ramHtmlD = ramSelfD ? `<p><button type="button" data-sr2e-action="ramSelf">${tx('SR2E.Card.Actor.rammerSDamage2', { name: escText(fromUuidSync(ramSelfD.targetUuid)?.name ?? tx('SR2E.Card.Actor.vehicle')), ramSelfDPower: ramSelfD.power, ramSelfDLevel: ramSelfD.level })}</button></p>` : '';
         const damage: DamageState = {
           targetUuid: this.uuid as string, melee: attack.melee, damageType: attack.damageType, power: outcome.power, level: outcome.level,
           ...(attack.astral ? { astral: true } : {}), ...(attack.elemental ? { elemental: true } : {}), ...armorExtras(attack),
+          ...(this.type === 'vehicle' ? { attackHits: Math.max(0, Number(attack.attackSuccesses) || 0) } : {}),
         };
         const ee = elementEffectExtras(attack, this.uuid as string);
         return {
@@ -9456,7 +9465,12 @@ export class SR2Actor extends Actor {
       ? elementalArmor({ ballistic: this.armorRating('ballistic', opts), impact: this.armorRating('impact', opts) })
       : fl79 ? fl79.armor + Math.max(0, damage.extraArmor ?? 0)
       : armorAfterAmmo(this.armorRating(kind, opts), damage.armorMultiplier ?? 1) + Math.max(0, damage.extraArmor ?? 0);
-    await this.resistDamage({ power: damage.power, level: damage.level, type: damage.damageType, armor, poolDice, knockdown: !damage.black, knockdownMelee: damage.melee, ...(damage.gel ? { knockdownGel: true } : {}), ...(Number(damage.strength ?? 0) > 0 ? { knockdownStrength: Number(damage.strength) } : {}), ...(damage.cleanMiss80 ? { cleanMiss80: damage.cleanMiss80 } : {}), ...(damage.ignoreArmor || damage.elemental ? {} : { armorKind: kind }), ...(vuln ? { noRegen: true } : {}),
+    // v0.92.3 (RULES.VEHICLES_V923.occupant 'book', Rigger 2 p. 53): shot inside a vehicle: no Combat Pool, and a rigger
+    // jacked in (their mind is in the machine) +3 TN.
+    const occ = Boolean(damage.occupantShot) && veh923('occupant') === 'book';
+    const occTn = occ && this.sys.rigging?.jumpedIn ? Math.max(0, Number(RULES.VEHICLES_V923.occupantRiggerTn) || 0) : 0;
+    if (occ) poolDice = 0;
+    await this.resistDamage({ power: damage.power, level: damage.level, type: damage.damageType, armor, poolDice, ...(occTn ? { tnPlus: occTn } : {}), knockdown: !damage.black, knockdownMelee: damage.melee, ...(damage.gel ? { knockdownGel: true } : {}), ...(Number(damage.strength ?? 0) > 0 ? { knockdownStrength: Number(damage.strength) } : {}), ...(damage.cleanMiss80 ? { cleanMiss80: damage.cleanMiss80 } : {}), ...(damage.ignoreArmor || damage.elemental ? {} : { armorKind: kind }), ...(vuln ? { noRegen: true } : {}),
       ...(damage.black ? {} : { cyberCheck: { location: damage.calledLocation ?? '' } }), ...(damage.infection ? { infection: damage.infection } : {}), ...(damage.toxinHit ? { toxinHit: damage.toxinHit } : {}) });
   }
 
@@ -9483,9 +9497,11 @@ export class SR2Actor extends Actor {
     cyberCheck?: { location: string };
     /** v0.48.0: a bite that passes on a disease when it does Physical damage. */
     infection?: InfectionState;
+    /** v0.92.3: added to the resistance TN (a rigger jacked in, shot inside a vehicle). */
+    tnPlus?: number;
   }): Promise<void> {
     const type: DamageType = opts.type ?? 'physical';
-    const tn = resistanceTargetNumber(opts.power, opts.armor ?? 0);
+    const tn = resistanceTargetNumber(opts.power, opts.armor ?? 0) + Math.max(0, Number(opts.tnPlus ?? 0) || 0);
     const rolls: any[] = [];
     const poolType = this.poolFor({ astral: Boolean(opts.astral) });
     const poolDice = Math.max(0, Math.min(opts.poolDice ?? 0, this.sys.derived[`${poolType}PoolLeft`] as number));
@@ -15605,6 +15621,17 @@ export class SR2Actor extends Actor {
     else await this.update({ 'system.rigging.vehicleUuid': '', 'system.rigging.jumpedIn': false });
   }
 
+  /**
+   * v0.92.3 (Rigger 2 pp. 50, 53): this character's skill rating for a vehicle (its category's skill, or the vehicle's own;
+   * the higher of the rating and a specialization), the cap on Control Pool dice on its damage resistance. 0 without one.
+   */
+  vehicleSkillRating(vehicle: any): number {
+    const v = vehicle?.system;
+    const name = String(v?.derived?.skill ?? vehicleCategory(v?.category).skill ?? '');
+    const sk: any = name ? this.findSkill(name) : undefined;
+    return Math.max(0, Number(sk?.system?.rating ?? 0) || 0, Number(sk?.system?.specializationRating ?? 0) || 0);
+  }
+
   /** Dice for a vehicle test: the vehicle skill, a related skill (+2) or Reaction (+4). */
   #vehicleSkillDice(skill: any | undefined, skillName: string, useSpecialization?: boolean, relatedSkillId?: string | null, jumped = false) {
     const def = RULES.VEHICLES.defaultAttribute;
@@ -15637,11 +15664,13 @@ export class SR2Actor extends Actor {
     const { vehicle, v, mode, handling, offroad, mods, dice, suffix } = setup;
     const crashTest = Boolean(opts.crashTest);
     const push = opts.push !== undefined && !crashTest ? Math.max(0, Math.round(Number(opts.push))) : undefined;
-    const pushMods = push !== undefined && RULES.VEHICLES_V57.accel.pushTn ? [{ id: 'pushingTheVehicle', label: tx('SR2E.Card.Mod.pushingTheVehicle'), value: RULES.VEHICLES_V57.accel.pushTn }] : [];
+    // v0.92.3 (RULES.VEHICLES_V923.accel 'book', Rigger 2 p. 45): the Accelerate/Brake Test has no extra TN of its own.
+    const pushTn = veh923('accel') === 'book' ? 0 : RULES.VEHICLES_V57.accel.pushTn;
+    const pushMods = push !== undefined && pushTn ? [{ id: 'pushingTheVehicle', label: tx('SR2E.Card.Mod.pushingTheVehicle'), value: pushTn }] : [];
     const label = (offroad && (v.handlingOffroad ?? 0) > 0 ? tx('SR2E.Card.Actor.handlingWithOffRoad', { vehicleName: vehicle.name, label: opts.label || (crashTest ? tx('SR2E.Card.Actor.crashTest3') : push !== undefined ? tx('SR2E.Card.Actor.pushToSpeed', { push }) : tx('SR2E.Card.Actor.drivingTest')), setupModeLabel: setup.modeLabel, handling, suffix }) : tx('SR2E.Card.Actor.handlingPlain', { vehicleName: vehicle.name, label: opts.label || (crashTest ? tx('SR2E.Card.Actor.crashTest3') : push !== undefined ? tx('SR2E.Card.Actor.pushToSpeed', { push }) : tx('SR2E.Card.Actor.drivingTest')), setupModeLabel: setup.modeLabel, handling, suffix }));
     return this.#runTest(label, dice, {
       targetNumber: handling, modifiers: [...mods, ...pushMods, ...(opts.modifiers ?? [])], vehicle: true, ...(opts.exclude?.length ? { exclude: opts.exclude } : {}),
-      poolDice: mode === 'jumped' ? veh80PoolCap(opts.poolDice ?? 0, dice) : 0, pool: 'control',
+      poolDice: mode === 'jumped' ? veh80PoolCap(opts.poolDice ?? 0, setup.poolCap) : 0, pool: 'control',
     }, { kind: 'drive', drive: { vehicleUuid: vehicle.uuid as string, vehicleName: vehicle.name as string, crashTest, speed: Number(v.currentSpeed ?? 0), ...(push !== undefined ? { push } : {}) } });
   }
 
@@ -15708,6 +15737,8 @@ export class SR2Actor extends Actor {
    */
   #driveSetup(opts: DriveOptions): { delegate: any; vehicle: any } | {
     vehicle: any; v: any; mode: ControlMode; modeLabel: string; handling: number; offroad: boolean; mods: TargetNumberModifier[]; dice: number; suffix: string;
+    /** v0.92.3: the dice the Control Pool cap is measured against (the skill's, without autonav dice). */
+    poolCap: number;
   } | null {
     const warn = (m: string) => { if (!opts.quiet) ui.notifications?.warn?.(escHtml(m)); };
     const isVehicle = this.type === 'vehicle';
@@ -15746,10 +15777,18 @@ export class SR2Actor extends Actor {
     if (RULES.TN_AUTO.rigging.overSpeedAuto && Number(v.currentSpeed ?? 0) > Number(wk.speed ?? 0) && Number(wk.speed ?? 0) > 0) autoIds.add('overSpeed');
     // Poor visibility ticked by hand goes into drivingSight (the worse of it and the weather counts).
     const situational = [...new Set([...(opts.situational ?? []).filter((id) => id !== 'poorVisibility'), ...autoIds])];
+    // v0.92.3: the kind of test picks its own table rows (terrain, the control rig; Rigger 2 pp. 20, 45–48, 52).
+    const kind: DriveKind = opts.kind ?? (opts.crashTest ? 'crash' : opts.push !== undefined ? 'maneuver' : 'driving');
     const mods = drivingModifiers({
       terrain: opts.terrain ?? SR2Actor.sceneTerrain(vehicle.sceneHere()) ?? 'normal', situational, damageBoxes: v.condition ?? 0, mode,
-      vcr: (this.sys.derived?.rigging?.vcr as number | undefined) ?? 0,
+      vcr: (this.sys.derived?.rigging?.vcr as number | undefined) ?? 0, kind,
     });
+    // v0.92.3 (RULES.VEHICLES_V923.crashMods 'book', Rigger 2 p. 52): a Crash Test's speed against the driver's Reaction.
+    if (kind === 'crash' && veh923('crashMods') === 'book') {
+      const reaction = mode === 'autopilot' ? Number(v.derived?.reaction ?? 0) : mode === 'jumped' ? Number(this.sys.derived?.rigging?.reaction ?? this.sys.derived?.reaction ?? 0) : Number(this.sys.derived?.reaction ?? 0);
+      const cs = crashSpeedModifier(Number(v.currentSpeed ?? 0), reaction);
+      if (cs) mods.push(cs);
+    }
     if (remote && RULES.RIGGING.remote.tnMod) mods.push({ id: 'remoteControl', label: tx('SR2E.Card.Mod.remoteControl'), value: RULES.RIGGING.remote.tnMod });
     // v0.48.0: rain, snow, fog and storms make driving harder (v0.50.0: with poor visibility, the worse of the two).
     mods.push(...sight);
@@ -15765,11 +15804,17 @@ export class SR2Actor extends Actor {
     }
     let dice: number;
     let suffix: string;
+    let poolCap = 0;
     if (mode === 'autopilot') {
       dice = v.derived?.autopilotRating ?? 0;
       const what = v.drone ? 'Pilot' : 'Autonav';
       if (!(dice > 0)) {
         warn(tx('SR2E.Card.Actor.hasNoRatingSomeoneHasTo', { vehicleName: vehicle.name, what }));
+        return null;
+      }
+      // v0.92.3 (RULES.VEHICLES_V923.autonavMin 'book', Rigger 2 p. 122): an autonav of rating 1 can't drive by itself.
+      if (!v.drone && dice < 2 && veh923('autonavMin') === 'book') {
+        warn(tx('SR2E.Card.Actor.autonavTooLowToDrive', { vehicleName: vehicle.name }));
         return null;
       }
       const maneuver = autosoftDice(v.autosofts?.maneuver ?? 0, dice);
@@ -15779,11 +15824,19 @@ export class SR2Actor extends Actor {
       const skillName = String(v.derived?.skill ?? vehicleCategory(v.category).skill);
       const sd = this.#vehicleSkillDice(skillName ? this.findSkill(skillName) : undefined, skillName, opts.useSpecialization, opts.relatedSkillId, mode === 'jumped');
       dice = sd.dice;
+      poolCap = sd.dice;
       suffix = sd.suffix;
       mods.push(...sd.modifiers);
+      // v0.92.3 (RULES.VEHICLES_V923.autonavDice 'book', Rigger 2 pp. 20, 51): the autonav's rating in dice on an
+      // ordinary Driving Test and a Crash Test (its collision-avoidance programs), not on the combat maneuvers.
+      const nav = Math.max(0, Math.floor(Number(v.autonav ?? 0)));
+      if (nav > 0 && (kind === 'driving' || kind === 'crash') && veh923('autonavDice') === 'book') {
+        dice += nav;
+        suffix += tx('SR2E.Card.Actor.plusAutonavDice', { nav });
+      }
     }
     const modeLabel = mode === 'jumped' ? (remote ? tx('SR2E.Card.Actor.jumpedInRemote') : tx('SR2E.Card.Actor.jumpedIn')) : mode;
-    return { vehicle, v, mode, modeLabel, handling, offroad, mods, dice, suffix };
+    return { vehicle, v, mode, modeLabel, handling, offroad, mods, dice, suffix, poolCap: poolCap || dice };
   }
 
   /**
@@ -15792,9 +15845,9 @@ export class SR2Actor extends Actor {
    * takes its share. Called on the driver or the vehicle (autopilot).
    */
   async ram(targetUuid: string, opts: DriveOptions = {}): Promise<SuccessTestResult | null> {
-    const setup = this.#driveSetup(opts);
+    const setup = this.#driveSetup({ ...opts, kind: 'ram' });
     if (!setup) return null;
-    if ('delegate' in setup) return setup.delegate.ram(targetUuid, { ...opts, vehicle: setup.vehicle });
+    if ('delegate' in setup) return setup.delegate.ram(targetUuid, { ...opts, vehicle: setup.vehicle, kind: 'ram' });
     const { vehicle, v, mode, handling, mods, dice, suffix } = setup;
     const target: any = await fromUuid(targetUuid);
     if (!target) {
@@ -15803,17 +15856,21 @@ export class SR2Actor extends Actor {
     }
     // v0.80.0 (URR_V80.vehImpact): in a chase between the two, the ramming speed is the difference of their speeds.
     const inChase = target.type === 'vehicle' && (v.chase?.quarryUuid === target.uuid || target.system?.chase?.quarryUuid === vehicle.uuid);
-    const r = veh80RamDamage({ body: v.body ?? 0, armor: v.armor ?? 0, currentSpeed: Number(v.currentSpeed ?? 0), speed: Number(v.derived?.working?.speed ?? v.speed ?? 0), otherSpeed: inChase ? Number(target.system?.currentSpeed ?? 0) : null });
+    // v0.92.3 (RULES.VEHICLES_V923.ram 'book', Rigger 2 pp. 47, 52): against a vehicle always the difference of the speeds;
+    // a pedestrian (anything else) takes the rammer's speed.
+    const bookRam = veh923('ram') === 'book';
+    const r = veh80RamDamage({ body: v.body ?? 0, armor: v.armor ?? 0, currentSpeed: Number(v.currentSpeed ?? 0), speed: Number(v.derived?.working?.speed ?? v.speed ?? 0), otherSpeed: inChase || (bookRam && target.type === 'vehicle') ? Number(target.system?.currentSpeed ?? 0) : null, ...(bookRam && target.type !== 'vehicle' ? { pedestrian: true } : {}) });
     const ramTn = RULES.VEHICLES.ram.tn;
     const attack = {
       attackerUuid: this.uuid as string, targetUuid: target.uuid as string, weaponName: `${vehicle.name} (ram)`, melee: false,
       damageType: 'physical' as DamageType, power: r.power, level: r.level, antiVehicle: true, armorKind: 'impact' as const,
-      ...(RULES.URR_V80.vehDamage.mode === 'urr' ? { vehHit: { impact: true } } : {}),
+      // v0.92.3: under the book a ram is an impact too (armor doesn't count, its passengers are hit; Rigger 2 p. 50).
+      ...(RULES.URR_V80.vehDamage.mode === 'urr' || bookRam ? { vehHit: { impact: true } } : {}),
     };
     return this.#runTest(tx('SR2E.Card.Actor.ramsHandling', { vehicleName: vehicle.name, targetName: target.name, setupModeLabel: setup.modeLabel, handling, power: r.power, level: r.level, suffix }), dice, {
       targetNumber: handling, modifiers: [...mods, ...(ramTn ? [{ id: 'ramming', label: tx('SR2E.Card.Mod.ramming'), value: ramTn }] : []), ...(opts.modifiers ?? [])],
-      poolDice: mode === 'jumped' ? veh80PoolCap(opts.poolDice ?? 0, dice) : 0, pool: 'control',
-    }, { kind: 'attack', attack, ram: { vehicleUuid: vehicle.uuid as string, power: r.selfPower, level: r.selfLevel } });
+      poolDice: mode === 'jumped' ? veh80PoolCap(opts.poolDice ?? 0, setup.poolCap) : 0, pool: 'control',
+    }, { kind: 'attack', attack, ram: { vehicleUuid: vehicle.uuid as string, power: r.selfPower, level: r.selfLevel, ...(r.bodyPerSuccess !== undefined ? { bodyPerSuccess: r.bodyPerSuccess } : {}) } });
   }
 
   /**
@@ -15958,7 +16015,8 @@ export class SR2Actor extends Actor {
     if (rigger && !this.isAboard(rigger)) out.push(...(rigger.remoteLink?.(this)?.check?.modifiers ?? []));
     // v0.54.0: the control rig's TN bonus, as on driving tests.
     const vcr = Number(rigger?.system?.derived?.rigging?.vcr ?? 0);
-    if (vcr > 0 && RULES.RIGGING.vcr.tnPerLevel) out.push({ label: tx('SR2E.Card.Mod.controlRig', { vcr }), value: RULES.RIGGING.vcr.tnPerLevel * vcr });
+    // v0.92.3 (RULES.VEHICLES_V923.vcrTn 'byTest', Rigger 2 p. 28): the sensor test table has no control-rig row.
+    if (vcr > 0 && RULES.RIGGING.vcr.tnPerLevel && vcrTnFactor('sensor')) out.push({ label: tx('SR2E.Card.Mod.controlRig', { vcr }), value: RULES.RIGGING.vcr.tnPerLevel * vcr });
     const vision = this.visionNow();
     try {
       const a = SR2Actor.tokenFor(this), b = SR2Actor.tokenFor(target);
@@ -16189,8 +16247,8 @@ export class SR2Actor extends Actor {
     }
     const ps = Number(this.sys.currentSpeed ?? 0), qs = Number(quarry.system.currentSpeed ?? 0);
     const pm = chaseSpeedModifier(ps, qs), qm = chaseSpeedModifier(qs, ps);
-    const pr = await this.driveTest({ ...(opts.pursuer ?? {}), label: tx('SR2E.Card.Actor.positioningChase'), modifiers: [...(opts.pursuer?.modifiers ?? []), ...(pm ? [{ id: 'faster', label: tx('SR2E.Card.Mod.faster'), value: pm }] : [])] });
-    const qr = await quarry.driveTest({ ...(opts.quarry ?? {}), label: tx('SR2E.Card.Actor.positioningChase'), modifiers: [...(opts.quarry?.modifiers ?? []), ...(qm ? [{ id: 'faster', label: tx('SR2E.Card.Mod.faster'), value: qm }] : [])] });
+    const pr = await this.driveTest({ ...(opts.pursuer ?? {}), kind: 'maneuver', label: tx('SR2E.Card.Actor.positioningChase'), modifiers: [...(opts.pursuer?.modifiers ?? []), ...(pm ? [{ id: 'faster', label: tx('SR2E.Card.Mod.faster'), value: pm }] : [])] });
+    const qr = await quarry.driveTest({ ...(opts.quarry ?? {}), kind: 'maneuver', label: tx('SR2E.Card.Actor.positioningChase'), modifiers: [...(opts.quarry?.modifiers ?? []), ...(qm ? [{ id: 'faster', label: tx('SR2E.Card.Mod.faster'), value: qm }] : [])] });
     const before = Number(c.metres ?? 0);
     // v0.57.0 (Rigger 2 style): maneuver scores from the positioning successes and speed win a firing position.
     const scored = RULES.VEHICLES_V57.maneuver.mode === 'score';
@@ -16234,6 +16292,14 @@ export class SR2Actor extends Actor {
    * (RULES.VEHICLES_V57.evasion: a driving test with Combat Pool dice, or Combat Pool only).
    */
   async #defendVehicle(attack: AttackState, poolDice: number): Promise<void> {
+    // v0.92.3 (RULES.VEHICLES_V923.vehicleDodge 'none', Rigger 2 p. 53): a vehicle makes no dodge test; its rigger's Control
+    // Pool goes on the damage resistance instead (RULES.VEHICLES_V923.cpResist).
+    if (veh923('vehicleDodge') === 'none') {
+      const rolls0: any[] = [];
+      const r0 = await successTest({ dice: 0, poolDice: 0, targetNumber: attack.targetNumber, roll: foundryRoller(rolls0) });
+      await this.#post(this.#snapshot(tx('SR2E.Card.Actor.vehicleNoDodge', { name: this.name }), r0, { kind: 'defend', defendAgainst: attack }), r0, rolls0);
+      return;
+    }
     const ctl: any = this.sys.controlMode === 'jumped' ? this.controller() : null;
     const rigger = ctl?.system?.rigging?.jumpedIn && ctl.system.rigging.vehicleUuid === this.uuid ? ctl : null;
     const ev = RULES.VEHICLES_V57.evasion.manual;
@@ -16245,9 +16311,9 @@ export class SR2Actor extends Actor {
     // v0.71.0 (R5): a jumped-in rigger evades as a driver does: a driving test (vehicle skill, the control rig's help,
     // against Handling) with the Control Pool, not the pool dice alone.
     if (rigger && RULES.FIXES_V71.riggerDodge === 'skill' && !this.sys.derived?.destroyed) {
-      const setup = (rigger as SR2Actor).#driveSetup({ vehicle: this, quiet: true });
+      const setup = (rigger as SR2Actor).#driveSetup({ vehicle: this, quiet: true, kind: 'evasion' });
       if (setup && !('delegate' in setup)) {
-        const cp = veh80PoolCap(pool, setup.dice);
+        const cp = veh80PoolCap(pool, setup.poolCap);
         const r = await successTest({ dice: setup.dice, poolDice: cp, targetNumber: setup.handling, modifiers: (rigger as SR2Actor).#testModifiers({ modifiers: setup.mods, vehicle: true }), roll: foundryRoller(rolls) });
         if (cp > 0) await (rigger as SR2Actor).#spendPool('control', cp);
         await this.#post(this.#snapshot(tx('SR2E.Card.Actor.evasiveDrivingJumpedInHandling', { name: this.name, riggerName: rigger.name, setupHandling: setup.handling, setupSuffix: setup.suffix, part: cp ? tx('SR2E.Card.Actor.controlPool3', { cp }) : '' }), r, { kind: 'defend', defendAgainst: attack }), r, rolls);
@@ -16269,7 +16335,7 @@ export class SR2Actor extends Actor {
     let result: SuccessTestResult;
     let label: string;
     if (ev === 'driving') {
-      const setup = this.#driveSetup({ vehicle, quiet: true });
+      const setup = this.#driveSetup({ vehicle, quiet: true, kind: 'evasion' });
       if (!setup || 'delegate' in setup) {
         result = await successTest({ dice: 0, poolDice: pool, targetNumber: attack.targetNumber, roll: foundryRoller(rolls) });
         label = tx('SR2E.Card.Actor.evasiveDrivingNoDrivingTestPossible', { vehicleName: vehicle.name, name: this.name });
@@ -16292,11 +16358,13 @@ export class SR2Actor extends Actor {
   async resistVehicleDamage(damage: DamageState, poolDice = 0): Promise<void> {
     if (this.type !== 'vehicle') return;
     const v = this.sys;
-    const armor = damage.ignoreArmor ? 0 : armorAfterAmmo(v.armor ?? 0, damage.armorMultiplier ?? 1) + Math.max(0, damage.extraArmor ?? 0);
+    // v0.92.3 (RULES.VEHICLES_V923.ram 'book', Rigger 2 p. 50): a ram is collision damage: no armor, no weapon reduction.
+    const bookImpact = Boolean(damage.vehHit?.impact || damage.ramSelf) && veh923('ram') === 'book';
+    const armor = damage.ignoreArmor || bookImpact ? 0 : armorAfterAmmo(v.armor ?? 0, damage.armorMultiplier ?? 1) + Math.max(0, damage.extraArmor ?? 0);
     // v0.79.0 (RULES.DOCS_V79.rangedFlechette 'armor', SRII p. 93): no armor, so flechette's extra level.
     if (damage.flechette && !(armor > 0)) damage = { ...damage, level: flechetteSoak({ ballistic: 0, impact: 0, level: damage.level }).level };
     const inc = veh80Incoming({
-      power: damage.power, level: damage.level, armor, antiVehicle: Boolean(damage.antiVehicle), crash: Boolean(damage.crash), damageType: damage.damageType,
+      power: damage.power, level: damage.level, armor, antiVehicle: Boolean(damage.antiVehicle), crash: Boolean(damage.crash) || bookImpact, damageType: damage.damageType,
       body: Number(v.body ?? 0), rawArmor: Number(v.armor ?? 0), armorMultiplied: (damage.armorMultiplier ?? 1) < 1, ignoreArmor: Boolean(damage.ignoreArmor), hit: damage.vehHit ?? null,
     });
     const what = damage.crash ? tx('SR2E.Card.Actor.crash2', { power: damage.power, level: damage.level }) : `${damage.power}${damage.level}`;
@@ -16309,15 +16377,25 @@ export class SR2Actor extends Actor {
     }
     const rolls: any[] = [];
     // v0.80.0 (URR_V80.vehCpResist): the jumped-in rigger's Control Pool dice on the vehicle's damage resistance.
-    const cpCtl: any = RULES.URR_V80.vehCpResist && v.controlMode === 'jumped' ? this.controller() : null;
+    // v0.92.3 (RULES.VEHICLES_V923.cpResist 'driving', Rigger 2 pp. 50, 53): the book's way, at most the rigger's skill.
+    const cpCtl: any = veh80ResistPoolOn() && v.controlMode === 'jumped' ? this.controller() : null;
     const cpRigger: any = cpCtl?.system?.rigging?.jumpedIn && cpCtl.system.rigging.vehicleUuid === this.uuid && canWriteNow(cpCtl) ? cpCtl : null;
-    const cp = cpRigger ? veh80ResistPool(poolDice, Number(cpRigger.system.derived?.controlPoolLeft ?? 0)) : 0;
+    const cp = cpRigger ? veh80ResistPool(poolDice, Number(cpRigger.system.derived?.controlPoolLeft ?? 0), (cpRigger as SR2Actor).vehicleSkillRating(this)) : 0;
+    // v0.92.3 (RULES.VEHICLES_V923.body0 'destroyed', Rigger 2 p. 53): a Body 0 vehicle is destroyed by any hit that gets through.
+    if (!(Number(v.body ?? 0) > 0) && veh923('body0') === 'destroyed' && !damage.crash) {
+      const r0 = await successTest({ dice: 0, targetNumber: inc.tn, roll: foundryRoller(rolls) });
+      await this.#post(this.#snapshot(tx('SR2E.Card.Actor.bodyZeroDestroyed', { name: this.name, incPower: inc.power, incLevel: inc.level }), r0, {
+        kind: 'soak', soak: { mode: 'stage', noun: 'damage', level: 'D', type: 'physical', body: 0, before: { physical: 0, stun: 0 }, track: 'vehicle', vehicleBefore: v.condition ?? 0, power: inc.power },
+      }), r0, rolls);
+      return;
+    }
     const result = await successTest({ dice: v.body ?? 0, ...(cp ? { poolDice: cp } : {}), targetNumber: inc.tn, roll: foundryRoller(rolls) });
     if (cp > 0) await (cpRigger as SR2Actor).#spendPool('control', cp);
     const notes = [tx('SR2E.Card.Actor.body2', { body: v.body }), ...(cp ? [tx('SR2E.Card.Actor.controlPool', { cp })] : []), ...(armor && inc.armor ? [tx('SR2E.Card.Actor.armor2', { armor })] : []), ...inc.notes];
     await this.#post(this.#snapshot((damage.crash ? tx('SR2E.Card.Actor.resists3WithCrash2', { name: this.name, incPower: inc.power, incLevel: inc.level, notes: notes.join(', ') }) : tx('SR2E.Card.Actor.resists3Plain', { name: this.name, incPower: inc.power, incLevel: inc.level, notes: notes.join(', ') })), result, {
       kind: 'soak',
       soak: { mode: 'stage', noun: 'damage', level: inc.level, type: 'physical', body: v.body ?? 0, before: { physical: 0, stun: 0 }, track: 'vehicle', vehicleBefore: v.condition ?? 0, power: inc.power, ...(damage.crash ? { crash: true } : {}), ...(damage.ramSelf ? { ramSelf: true } : {}), ...((damage as any).vehHit?.impact ? { vehImpact: true } : {}),
+        ...(cp ? { controlUsed: cp } : {}), ...(damage.attackHits !== undefined ? { attackHits: Math.max(0, Number(damage.attackHits) || 0) } : {}),
         ...(damage.vehiclePart ? { vehiclePart: damage.vehiclePart, ...(damage.vehicleWeaponId ? { vehicleWeaponId: damage.vehicleWeaponId } : {}) } : {}) },
     }), result, rolls);
   }
@@ -16340,7 +16418,12 @@ export class SR2Actor extends Actor {
       if (result.destroyed && current < max) {
         try { await (this as any).toggleStatusEffect?.('dead', { active: true, overlay: true }); } catch { /* no token */ }
         if (rigger) {
-          fu.riggerShock = { riggerUuid: rigger.uuid, riggerName: rigger.name, ...dumpShockFor(rigger, !this.isAboard(rigger)), kind: 'dump' };
+          // v0.92.3 (RULES.VEHICLES_V923.feedback 'book', Rigger 2 p. 49): a rigger jumped in aboard resists 6S Physical when
+          // the vehicle is destroyed (the rigger damage), not dump shock; a remote rigger still takes the deck's dump shock.
+          const fbD = veh923('feedback') === 'book' && this.isAboard(rigger) ? veh80Feedback({ level: 'D', power: ctx.power ?? 0 }) : null;
+          fu.riggerShock = fbD
+            ? { riggerUuid: rigger.uuid, riggerName: rigger.name, tn: fbD.tn, level: fbD.level, type: fbD.type, kind: 'feedback', ...(fbD.attribute ? { attribute: fbD.attribute } : {}) }
+            : { riggerUuid: rigger.uuid, riggerName: rigger.name, ...dumpShockFor(rigger, !this.isAboard(rigger)), kind: 'dump' };
           // v0.81.1 (D3-12): a rigger this client can't unplug (another player's) is left to the GM, and the card says so.
           if (canWriteNow(rigger)) { try { await rigger.update({ 'system.rigging.vehicleUuid': '', 'system.rigging.jumpedIn': false }); } catch (err) { console.warn('sr2e | rigger dumped', err); stuckRigger = String(rigger.name ?? ''); } }
           else stuckRigger = String(rigger.name ?? '');
@@ -16352,8 +16435,11 @@ export class SR2Actor extends Actor {
       }
       // An attack (not a crash) that damages the vehicle carries through to the people aboard.
       // v0.73.0 (O25): the rammer's own share carries through to its passengers too (NETRIG_V73.ram.passengers).
-      if (level && ramPassengersHurt({ crash: ctx.crash, ramSelf: ctx.ramSelf } as any) && ctx.vehicleAfter === undefined) {
-        const pd = veh80PassengerDamage({ power: ctx.power ?? 0, level, vehicleArmor: this.sys.armor ?? 0, impact: Boolean(ctx.ramSelf || (ctx as any).vehImpact) });
+      // v0.92.3 (RULES.VEHICLES_V923.passengers 'targeted', Rigger 2 p. 50): under the book a crash's damage reaches them
+      // after the vehicle's test (at the level it left), as a collision's does.
+      const bookCrash = Boolean(ctx.crash) && !ctx.ramSelf && veh923('passengers') === 'targeted';
+      if (level && (bookCrash || ramPassengersHurt({ crash: ctx.crash, ramSelf: ctx.ramSelf } as any)) && ctx.vehicleAfter === undefined) {
+        const pd = veh80PassengerDamage({ power: ctx.power ?? 0, level, vehicleArmor: this.sys.armor ?? 0, impact: Boolean(ctx.ramSelf || (ctx as any).vehImpact || bookCrash) });
         const aboard = [...(this.sys.occupants ?? [])].filter((u: string) => u && fromUuidSync(u));
         if (this.sys.controllerUuid && this.sys.controlMode === 'manual' && !aboard.includes(this.sys.controllerUuid)) aboard.push(this.sys.controllerUuid);
         if (pd && aboard.length) fu.passengers = aboard.map((u: string) => ({ targetUuid: u, melee: false, damageType: 'physical' as DamageType, power: pd.power, level: pd.level, armorKind: 'impact' as const }));
@@ -16361,8 +16447,10 @@ export class SR2Actor extends Actor {
     } else {
       note = ` <em>${tx('SR2E.Card.Actor.theVehicleSDamageChangedSince', { resultAfter: result.after })}</em>`;
     }
+    // v0.92.3 (Rigger 2 p. 53): no damage, and more Control Pool dice used than the attacker's successes: a complete miss.
+    const cleanMiss = level === null && Number(ctx.controlUsed ?? 0) > 0 && ctx.attackHits !== undefined && Number(ctx.controlUsed) > Number(ctx.attackHits);
     const body = level === null
-      ? outcomeWord('fullyResisted', false)
+      ? outcomeWord('fullyResisted', false) + (cleanMiss ? ` <strong>${tx('SR2E.Card.Actor.vehicleCompleteMiss')}</strong>` : '')
       : takenMark(level, 'vehicle', tx('SR2E.Card.Outcome.takesVehicle', { level: `<strong>${level}</strong>`, plural: escText(plural(result.boxes, 'box')), resultAfter: result.after, max }))
         + (result.destroyed ? ` <strong>${tx('SR2E.Card.Actor.destroyed2')}</strong>` : '') + (stuckRigger ? ` <em>${tx('SR2E.Card.Actor.gmTakeOutOfTheVehicle', { stuckRigger: escText(stuckRigger) })}</em>` : '');
     // v0.57.0: a called shot's effect on the part hit (once), and a crash test after heavy damage.
@@ -16385,7 +16473,14 @@ export class SR2Actor extends Actor {
       } catch { extra += ` <em>${tx('SR2E.Card.Actor.gmApplyTheCalledShotBy')}</em>`; }
     }
     const moving = Number(this.sys.currentSpeed ?? 0) > 0;
-    const crashCall = level && !ctx.crash && ctx.vehicleAfter === undefined && current === expected && ((tiresHit && moving) || crashTestAfterDamage(level, moving, result.destroyed));
+    // v0.92.3 (RULES.VEHICLES_V923.autoCrash 'book', Rigger 2 p. 53): a moving vehicle whose monitor fills crashes, no test.
+    if (level && result.destroyed && current < max && current === expected && moving && !ctx.crash && veh923('autoCrash') === 'book') {
+      extra += `</p><p>${tx('SR2E.Card.Actor.destroyedVehicleCrashes', { name: escText(this.name) })} <button type="button" data-sr2e-action="vehicleCrash">${tx('SR2E.Card.Actor.crashDamagePower', { power: veh80CrashDamage(Number(this.sys.currentSpeed ?? 0)).power })}</button>`;
+      flags = { crash: { vehicleUuid: this.uuid, speed: Number(this.sys.currentSpeed ?? 0) } };
+    }
+    // v0.92.3 (RULES.VEHICLES_V923.ram 'book', Rigger 2 p. 47): any damage from a ram (to either vehicle) calls for a Crash Test.
+    const ramCrash = Boolean(level) && moving && !result.destroyed && Boolean(ctx.ramSelf || (ctx as any).vehImpact) && veh923('ram') === 'book';
+    const crashCall = level && ctx.vehicleAfter === undefined && current === expected && (ramCrash || (!ctx.crash && ((tiresHit && moving) || crashTestAfterDamage(level, moving, result.destroyed))));
     if (crashCall) {
       const tn = tiresHit ? Number(part?.crashTn ?? 0) : 0;
       extra += `</p><p><button type="button" data-sr2e-action="vehicleCrashTest">${tx('SR2E.Card.Actor.crashTest', { name: escText(this.name), part: tn ? tx('SR2E.Card.Actor.forTheTires', { tn }) : '' })}</button>`;
@@ -16486,7 +16581,8 @@ export class SR2Actor extends Actor {
       label: r.kind === 'dump' ? tx('SR2E.Card.Actor.riggerDumpShock') : tx('SR2E.Card.Actor.riggerFeedback'), attribute: r.attribute === 'body' ? 'body' : 'willpower', targetNumber: r.tn,
       level: r.level, type: r.type, poolDice: 0, noun: 'damage', physicalNote: tx('SR2E.Card.Actor.physicalNote'),
     });
-    if (r.kind === 'dump' && RULES.URR_V80.dsDumpDisorient) await this.dsDisorientTest();
+    // v0.92.3 (RULES.VEHICLES_V923.dumpDisorient 'book', Rigger 2 p. 64): the book's disorientation too.
+    if (r.kind === 'dump' && (RULES.URR_V80.dsDumpDisorient || veh923('dumpDisorient') === 'book')) await this.dsDisorientTest();
   }
 
   /**
@@ -16519,13 +16615,16 @@ export class SR2Actor extends Actor {
       targetUuid: this.uuid as string, melee: false, damageType: 'physical', power: c.power, level: c.vehicleLevel, crash: true,
       ...(RULES.VEHICLES.crash.vehicleArmor ? {} : { ignoreArmor: true }),
     }];
-    for (const u of aboard) {
+    // v0.92.3 (RULES.VEHICLES_V923.passengers 'targeted', Rigger 2 p. 50): under the book the people aboard take the crash
+    // after the vehicle's own test, at the level it left (#resolveVehicleSoak); the card says so.
+    const afterVehicle = veh923('passengers') === 'targeted';
+    for (const u of afterVehicle ? [] : aboard) {
       if (u && fromUuidSync(u)) damages.push({ targetUuid: u, melee: false, damageType: 'physical', power: c.power, level: c.passengerLevel, armorKind: 'impact' });
     }
     const rows = damages.map((d, i) => `<li>${escText(fromUuidSync(d.targetUuid)?.name ?? tx('SR2E.Card.Actor.someone'))}: <strong>${d.power}${d.level}</strong>${i === 0 ? '' : tx('SR2E.Card.Actor.impactArmor2')} <button type="button" data-sr2e-action="resist" data-index="${i}">${tx('SR2E.Card.Actor.resist')}</button></li>`).join('');
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor: this }),
-      content: `<div class="sr2e-roll"><h3>${tx('SR2E.Card.Actor.crashesSpeed', { name: escText(this.name), sp })}</h3><p>${tx('SR2E.Card.Actor.powerTheVehicleTakesEveryoneAboard', { power: c.power, vehicleLevel: c.vehicleLevel, part: RULES.VEHICLES.crash.vehicleArmor ? '' : tx('SR2E.Card.Actor.armorDoesNotCount'), passengerLevel: c.passengerLevel })}</p></div><ul class="sr2e-blast">${rows}</ul>`,
+      content: `<div class="sr2e-roll"><h3>${tx('SR2E.Card.Actor.crashesSpeed', { name: escText(this.name), sp })}</h3><p>${afterVehicle ? tx('SR2E.Card.Actor.powerTheVehicleTakesThenAboard', { power: c.power, vehicleLevel: c.vehicleLevel, part: RULES.VEHICLES.crash.vehicleArmor ? '' : tx('SR2E.Card.Actor.armorDoesNotCount') }) : tx('SR2E.Card.Actor.powerTheVehicleTakesEveryoneAboard', { power: c.power, vehicleLevel: c.vehicleLevel, part: RULES.VEHICLES.crash.vehicleArmor ? '' : tx('SR2E.Card.Actor.armorDoesNotCount'), passengerLevel: c.passengerLevel })}</p></div><ul class="sr2e-blast">${rows}</ul>`,
       flags: { [SYSTEM_ID]: { damages, damage: damages[0] } },
     });
   }
@@ -16787,13 +16886,16 @@ export class SR2Actor extends Actor {
     const L = RULES.DRONES_V73.link;
     const drone: any = await fromUuid(targetUuid);
     if (!L.enabled || !drone || drone.type !== 'vehicle') { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.pickADroneOrVehicleTo')); return null; }
-    if (!linkGearOk(L.intercept.gear, this.#linkGear())) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.needsToInterceptADroneS', { name: escHtml(this.name), linkGearLabel: linkGearLabel(L.intercept.gear) })); return null; }
+    // v0.92.3 (RULES.VEHICLES_V923.interception 'book', Rigger 2 p. 68): the interceptor's own deck rolls the test, so it needs one.
+    const bookIntercept = veh923('interception') === 'book';
+    const gear = bookIntercept ? 'rcd' : L.intercept.gear;
+    if (!linkGearOk(gear, this.#linkGear())) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.needsToInterceptADroneS', { name: escHtml(this.name), linkGearLabel: linkGearLabel(gear) })); return null; }
     const f = this.#droneLinkFacts(drone);
     const skillName = String(L.skill);
     const sd = this.#skillDice(this.findSkill(skillName), false, null, L.attribute as AttributeKey, { skillName });
     const t = droneInterceptTest({ dice: sd.dice, encryption: f.encryption, signal: f.signal, eccm: Number(drone.system.eccm ?? 0), linked: f.kind.linked });
     if (!t.allowed) { ui.notifications?.warn?.(`${escHtml(drone.name)}: ${escHtml(f.kind.note)}.`); return null; }
-    if (RULES.URR_V80.dsLinkIntercept === 'rcd') return this.#dsInterceptDroneLink(drone, f, opts);
+    if (RULES.URR_V80.dsLinkIntercept === 'rcd' || bookIntercept) return this.#dsInterceptDroneLink(drone, f, opts);
     const rolls: any[] = [];
     const r = await successTest({ dice: t.dice, targetNumber: t.baseTn, modifiers: [...sd.modifiers, ...t.modifiers, ...(opts.modifiers ?? [])], roll: foundryRoller(rolls) });
     const ok = r.successes > 0;
@@ -19135,7 +19237,7 @@ export class SR2Actor extends Actor {
       const w = dsDeviceStepWords(String(d.lockType ?? ''));
       return this.#runTest(`${w.verb} ${d.name} (${site.name}, ${w.what} ${d.rating}) [${p.tool}]`, p.dice, {
         targetNumber: p.tn, modifiers: [...(opts.modifiers ?? [])], poolDice: 0,
-      }, { kind: 'bypass', bypass: { siteUuid: site.uuid as string, deviceId, deviceName: d.name as string, kind: d.kind as string, tamper: Number(d.tamper ?? 0), skillRating: p.skillRating, step: 'voice' as const, deception: p.dice, lockRating: Number(d.rating ?? 0), ...(RULES.URR_V80.dsSequencer === 'opposed' ? { lockType80: String(d.lockType ?? '') } : {}) } });
+      }, { kind: 'bypass', bypass: { siteUuid: site.uuid as string, deviceId, deviceName: d.name as string, kind: d.kind as string, tamper: Number(d.tamper ?? 0), skillRating: p.skillRating, step: 'voice' as const, deception: p.dice, lockRating: Number(d.rating ?? 0), ...(RULES.URR_V80.dsSequencer === 'opposed' || veh923('sequencer') === 'book' ? { lockType80: String(d.lockType ?? '') } : {}) } });
     }
     // v0.78.0 (RULES.BOOK_V78.tamper 'tn'): the step that carries the anti-tamper alarm says so.
     const tamperNote = d.tamper && (RULES.BOOK_V78.tamper.mode === 'tn' ? p.tamperOnStep : p.step !== 'casing') ? tx('SR2E.Card.Actor.tamperAlarm', { tamper: d.tamper }) : '';
@@ -19170,7 +19272,7 @@ export class SR2Actor extends Actor {
   /** A bypass test's outcome; the site change follows the card (also after a Karma re-roll, once each way). */
   async #resolveBypass(snap: TestSnapshot, fu: FollowUps): Promise<Resolved> {
     const bp = snap.bypass!;
-    const o = bypassOutcome(snap.successes, snap.botch);
+    const o = bypassOutcome(snap.successes, snap.botch, bp.step === 'casing' ? 'casing' : bp.step === 'voice' ? 'voice' : 'circuit');
     const site: any = fromUuidSync(bp.siteUuid);
     const next = { ...bp };
     // v0.78.0 (RULES.BOOK_V78.voiceLocks 'deception'): the lock rolls its rating vs the device's (once; a re-roll keeps it).
@@ -19192,7 +19294,9 @@ export class SR2Actor extends Actor {
         next.opened = true;
       } else if (site && v === 'hold' && !bp.failApplied && !bp.opened) {
         // Review fix: a rejected voice counts as a failed bypass whatever the device rolled (a disaster still alerts).
-        fu.siteChange = { site, change: { add: Math.max(Number(o.tally ?? 0), Number(RULES.SECURITY.bypass.failTally ?? 0)), ...(o.minAlert ? { minAlert: o.minAlert } : {}) }, label: `${bp.deviceName} doesn't accept ${this.name}'s ${ww.noun}` };
+        // v0.92.3 (RULES.VEHICLES_V923.sequencer 'book', CSH p. 100): a keypad that beats the sequencer trips a passive alert.
+        const seqAlert = ww.noun === 'code' && veh923('sequencer') === 'book' && !o.minAlert ? 'passive' : o.minAlert;
+        fu.siteChange = { site, change: { add: Math.max(Number(o.tally ?? 0), Number(RULES.SECURITY.bypass.failTally ?? 0)), ...(seqAlert ? { minAlert: seqAlert } : {}) }, label: `${bp.deviceName} doesn't accept ${this.name}'s ${ww.noun}` };
         next.failApplied = true;
       }
       const secs = ww.noun === 'code' ? dsSequencerSeconds(snap.successes - lockS) : 0;

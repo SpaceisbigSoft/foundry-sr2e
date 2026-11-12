@@ -5,6 +5,9 @@ import { socialDesiredRows, socialDesiredPick } from './docs79-social-core.ts';
 import { own } from './util.ts';
 import { t as tx } from '../helpers/i18n.ts';
 
+/** v0.92.3: the Driving Test rows in force (rules/vehicles.ts drivingRows; inline here to keep the imports one way). */
+const drivingRowsNow = () => (RULES.URR_V80.active || RULES.VEHICLES_V923.drivingRows !== 'old' ? RULES.VEHICLES.drivingModifiers : RULES.VEHICLES_V923.oldDrivingRows);
+
 /**
  * v0.50.0: target-number automation. Pure rules for the modifiers the system reads from the canvas,
  * the scene and the actors by itself (RULES.TN_AUTO).
@@ -163,7 +166,7 @@ export function attitudeFor(stored: string | null | undefined, disposition: numb
  */
 export function drivingVisibility(o: { light?: LightLevel | null; vision?: Vision; smoke?: boolean; weather?: TargetNumberModifier | null; manual?: boolean }): TargetNumberModifier[] {
   const r = A().rigging;
-  const poor = RULES.VEHICLES.drivingModifiers.find((m) => m.id === 'poorVisibility');
+  const poor = drivingRowsNow().find((m) => m.id === 'poorVisibility');
   const dark = o.light ? visibilityModifier(o.light, o.vision ?? {}).value >= r.poorVisibilityFrom : false;
   const smoky = Boolean(o.smoke) && r.smokeIsPoorVisibility;
   const why = dark ? LIGHT_LABELS[o.light!].toLowerCase() : smoky ? tx('SR2E.Card.Situation.smoke2') : '';
@@ -220,7 +223,7 @@ export function tnCandidates(kind: string): Array<{ group: string; rows: TargetN
     add(tx('SR2E.Card.Situation.magic'), [...sustain, { id: 'astralPerception', label: tx('SR2E.Card.Mod.astralPerception'), value: RULES.ASTRAL.perceivingTnMod }, ...blinded]);
     if (A().magic.environment !== 'off') { add(tx('SR2E.Card.Situation.visibility'), vis); add(tx('SR2E.Card.Situation.smoke'), smoke); add(tx('SR2E.Card.Situation.weather'), weather); }
   } else if (kind === 'drive' || kind === 'sensor' || kind === 'install') {
-    add(tx('SR2E.Card.Situation.driving'), RULES.VEHICLES.drivingModifiers);
+    add(tx('SR2E.Card.Situation.driving'), drivingRowsNow());
     add(tx('SR2E.Card.Situation.terrain'), RULES.VEHICLES.terrain);
     add(tx('SR2E.Card.Situation.weatherDriving'), RULES.HEALTH.weather.filter((w) => w.driving).map((w) => ({ label: tx('SR2E.Card.Mod.driving', { label: w.label }), value: w.driving })));
   } else if (kind === 'perceive' || kind === 'sneak') {

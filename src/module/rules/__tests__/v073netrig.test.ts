@@ -10,6 +10,7 @@ import {
   sensorLockStamp, sensorLockLapse, sweepSensorLocks,
 } from '../gridwork.ts';
 import { midTurnWoundDrop } from '../initiative.ts';
+import { useV922Vehicles } from './v922vehicles.ts';
 
 const N = NETRIG_V73 as any;
 /** Set a dotted path on an object for the length of fn. */
@@ -141,6 +142,7 @@ describe('v0.73.0 O25: ramming', () => {
 });
 
 describe('v0.73.0 O26: the control rig on gunnery and evasion', () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   test('a jumped-in rigger with a rig gets it', () => {
     assert.deepEqual(controlRigTn({ test: 'gunnery', vcr: 2, jumpedIn: true }), [{ label: 'Control rig 2', value: 2 * RULES.RIGGING.vcr.tnPerLevel }]);
     assert.equal(controlRigTn({ test: 'evasion', vcr: 1, jumpedIn: true }).length, 1);
