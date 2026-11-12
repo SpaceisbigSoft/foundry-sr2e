@@ -50,6 +50,7 @@ import { registerLookSettings, registerLook, applyLook, findAllPortraits, applyP
 import { registerDefaultArtSettings, registerDefaultArt, applyDefaultArt, defaultArtForAll, defaultArtOf } from "./applications/tokenart.ts";
 import { registerInterfaceSettings, registerInterface } from "./applications/interface.ts";
 import { importCharacter, pasteCatalogueRows, sortCatalogueWithNotice } from "./applications/catalogue.ts";
+import { registerQuenchBatches } from "../quench/sr2e-quench.ts";
 
 export class SR2System {
   constructor() {
@@ -164,6 +165,8 @@ export class SR2System {
     // v0.68.0: layouts, the status strip, roll dialogs, steppers, grouped notifications, window memory, settings sections.
     registerInterfaceSettings();
     registerInterface();
+    // v0.92.2: in-Foundry test batches, only when the Quench module is active (src/quench).
+    registerQuenchBatches();
 
     CONFIG.Actor.documentClass = SR2Actor;
     CONFIG.Item.documentClass = SR2Item;
