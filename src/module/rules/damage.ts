@@ -1,5 +1,6 @@
 import { RULES, type DamageLevel } from './config.ts';
 import { DAMAGE_LEVELS as LEVELS } from './util.ts';
+import { deathPastBody } from './health923.ts';
 
 export type DamageType = 'physical' | 'stun';
 
@@ -29,7 +30,7 @@ export function stageDown(level: DamageLevel, steps: number): DamageLevel | null
 
 /**
  * Attacker's net successes stage the damage level up one step per RULES.SUCCESSES_PER_STAGE: counted beyond the
- * first ('afterFirst') or from the first (RULES.ATTACK_STAGING 'all', v0.54.0).
+ * first ('afterFirst') or from the first (RULES.ATTACK_STAGING 'all', v0.54.0; the default since v0.92.3, Core p. 91).
  */
 export function stageForNetSuccesses(level: DamageLevel, netSuccesses: number): DamageLevel {
   // The first success hits; each further SUCCESSES_PER_STAGE successes raise the level one step
@@ -57,13 +58,14 @@ export type Status = 'ok' | 'unconscious' | 'dying' | 'dead';
 
 /**
  * The condition a monitor puts a character in: dead once Physical overflow (boxes past a full track) reaches
- * Body (passes it with RULES.URR_V80.hsDeathPastOverflow); dying with a full Physical track; unconscious with a
+ * Body (passes it with RULES.URR_V80.hsDeathPastOverflow, or by the book with RULES.HEALTH_V923.death); dying with a full Physical track; unconscious with a
  * full Stun track; else ok.
  */
 export function monitorStatus(m: Monitor, body: number): Status {
   const overflow = m.physical - RULES.MONITOR_BOXES;
   // v0.80.0 (RULES.URR_V80.hsDeathPastOverflow, the URR): dead only with MORE damage than 10 + Body.
-  if (overflow >= body + (RULES.URR_V80.hsDeathPastOverflow ? 1 : 0) && m.physical > RULES.MONITOR_BOXES) return 'dead';
+  // v0.92.3 (RULES.HEALTH_V923.death 'natural', Core p. 111): the book's way under the Book Rules too.
+  if (overflow >= body + (deathPastBody() ? 1 : 0) && m.physical > RULES.MONITOR_BOXES) return 'dead';
   if (m.physical >= RULES.MONITOR_BOXES) return 'dying';
   if (m.stun >= RULES.MONITOR_BOXES) return 'unconscious';
   return 'ok';

@@ -4,14 +4,16 @@ import {
   RULES, aimCap, multipleTargetModifier, reloadAmount, weaponArmorKind, shotgunTnModifier,
   combinedBlastPower, holdOutcome, stimEffect, tranqBoxes, antidoteEffect, surgicalTrauma,
 } from '../index.ts';
+import { oldWay } from './oldway.ts';
 
 const R = RULES as any;
 
 describe('v0.55.0 Take Aim', () => {
-  test('the cap is half the skill, at least 1', () => {
+  test('the cap is half the skill (v0.92.3: rounded down, Core p. 82; the old way at least 1)', () => {
     assert.equal(aimCap(6), 3);
-    assert.equal(aimCap(1), 1);
-    assert.equal(aimCap(0), 1);
+    assert.equal(aimCap(1), 0);
+    R.COMBAT_V923.aim = 'old';
+    try { assert.equal(aimCap(1), 1); assert.equal(aimCap(0), 1); } finally { R.COMBAT_V923.aim = 'book'; }
     R.COMBAT.aim.max = 2;
     try { assert.equal(aimCap(8), 2); } finally { R.COMBAT.aim.max = 0; }
   });
@@ -75,8 +77,10 @@ describe('v0.55.0 slap patches and surgical trauma', () => {
     assert.equal(tranqBoxes(3, 5), 0);
     assert.deepEqual(antidoteEffect(4), { dice: 4, hours: 4 });
   });
-  test('surgical trauma by size, off by default', () => {
+  test('surgical trauma by size, off by default', (t) => {
     assert.equal(surgicalTrauma(2), null);
+    // v0.92.3: the old table (the book's bands: v0923-health.test.ts).
+    t.after(oldWay({ 'HEALTH_V923.surgeryBands': 'table' }));
     R.BIOWARE.surgery.trauma.enabled = true;
     try {
       assert.deepEqual(surgicalTrauma(0.3), { level: 'L', type: 'physical' });

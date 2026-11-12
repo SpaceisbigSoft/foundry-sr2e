@@ -36,7 +36,9 @@ describe('v0.79.0 attitude (STREET.social.attitudes, plain value)', () => {
 });
 
 describe('v0.79.0 social influence tests (DOCS_V79.socialInfluence)', () => {
-  test('Etiquette, Leadership and Negotiation are one-sided; negotiating pay and the other skills stay opposed', () => {
+  test('Etiquette, Leadership and Negotiation are one-sided; negotiating pay and the other skills stay opposed', (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.interrogation': 'old' }));
     assert.equal(socialOneSided('Etiquette'), true);
     assert.equal(socialOneSided('leadership'), true);
     assert.equal(socialOneSided('Negotiation (Bribe)'), true);

@@ -186,7 +186,8 @@ export function gmApplyShapeOk(action: string, flags: Record<string, any>): bool
       if (f.masterDied !== undefined && typeof f.masterDied !== 'boolean') return false;
       if (f.by !== undefined && !safeStr(f.by, 400)) return false;
       if (f.lower !== undefined && !(onlyKeys(f.lower, ['key', 'from', 'to']) && ['force', 'rating'].includes(f.lower.key) && intIn(f.lower.from, 0, 1000) && intIn(f.lower.to, 0, 1000))) return false;
-      if (f.dispel !== undefined && !(onlyKeys(f.dispel, ['spellName', 'force', 'from', 'to']) && typeof f.dispel.spellName === 'string' && intIn(f.dispel.force, 0, 100) && intIn(f.dispel.from, 0, 1000) && intIn(f.dispel.to, 0, 1000))) return false;
+      // v0.92.3: `mode: 'force'` (RULES.SORCERY_V923.dispelling 'book'): from/to are the spell's Force.
+      if (f.dispel !== undefined && !(onlyKeys(f.dispel, ['spellName', 'force', 'from', 'to', 'mode']) && (f.dispel.mode === undefined || f.dispel.mode === 'force') && typeof f.dispel.spellName === 'string' && intIn(f.dispel.force, 0, 100) && intIn(f.dispel.from, 0, 1000) && intIn(f.dispel.to, 0, 1000))) return false;
       if (f.handSpirit !== undefined && !(onlyKeys(f.handSpirit, ['toUuid', 'services', 'oldSummonerUuid']) && typeof f.handSpirit.toUuid === 'string'
         && typeof f.handSpirit.oldSummonerUuid === 'string' && intIn(f.handSpirit.services, 0, 99))) return false;
       return f.monitor !== undefined || f.nuyen !== undefined || f.remove === true || f.masterDied === true || f.handSpirit !== undefined || f.lower !== undefined || f.dispel !== undefined;
@@ -515,7 +516,9 @@ export function describeGmChange(action: string, flags: Record<string, any>, nam
       if (f.masterDied) out.push(tx('SR2E.Text.Trust.masterDead', { who }));
       if (f.handSpirit) out.push(tCount(Number(f.handSpirit.services), 'SR2E.Text.Trust.changesHands', { who, to: nm(f.handSpirit.toUuid) }));
       if (f.lower) out.push(`${who}: ${String(f.lower.key)} ${Number(f.lower.from)} → ${Number(f.lower.to)}`);
-      if (f.dispel) out.push(tx('SR2E.Text.Trust.dispelled', { who, spell: String(f.dispel.spellName), force: Number(f.dispel.force), from: Number(f.dispel.from), to: Number(f.dispel.to) }));
+      if (f.dispel) out.push(f.dispel.mode === 'force'
+        ? tx('SR2E.Text.Trust.dispelledForce', { who, spell: String(f.dispel.spellName), from: Number(f.dispel.from), to: Number(f.dispel.to) })
+        : tx('SR2E.Text.Trust.dispelled', { who, spell: String(f.dispel.spellName), force: Number(f.dispel.force), from: Number(f.dispel.from), to: Number(f.dispel.to) }));
       if (f.by) out.push(tx('SR2E.Text.Trust.fromName', { name: nm(f.by) }));
       break;
     }

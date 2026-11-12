@@ -14,6 +14,12 @@ import {
   type HoldingIc, type Maneuver,
 } from '../datawar.ts';
 import type { SheafStep } from '../matrix.ts';
+// v0.92.3: these tests pin the v0.92.2 Matrix rules (the book's defaults: v0923-matrix.test.ts).
+import { before as before922, after as after922 } from 'node:test';
+import { matrix922 } from '../../__tests__/helpers/matrix922.ts';
+let undo922: () => void = () => {};
+before922(() => { undo922 = matrix922(); });
+after922(() => undo922());
 
 const V = (RULES as any).MATRIX_V57;
 

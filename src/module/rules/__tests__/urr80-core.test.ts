@@ -136,9 +136,10 @@ describe('v0.80.0 core: attributes', () => {
   });
 
   test('the patch: attribute × 1.5, past the maximum allowed, the Skill Web unlimited', (t) => {
-    assert.equal(RULES.UPKEEP.karma.attributeMultiplier, 2);
+    // v0.92.3 (book alignment): the book's own values are now × 1 (Core p. 190) and no step cap (Core p. 68).
+    assert.equal(RULES.UPKEEP.karma.attributeMultiplier, 1);
     assert.equal(RULES.CHARACTERS_V73.qualities.karmaAboveRacial.enabled, false);
-    assert.equal(RULES.SKILLS.web.maxSteps, 3);
+    assert.equal(RULES.SKILLS.web.maxSteps, 99);
     t.after(urrMode());
     assert.equal(RULES.UPKEEP.karma.attributeMultiplier, 1.5);
     assert.equal(RULES.CHARACTERS_V73.qualities.karmaAboveRacial.enabled, true);
@@ -161,6 +162,8 @@ describe('v0.80.0 core: skills and the Skill Web', () => {
   });
 
   test('the attribute traced through the web (Revamp); the flat TN in the book', (t) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    t.after(oldWay({ 'CORE_V923.attributeDefault': 'flat' }));
     const links: WebLink[] = [{ a: 'Quickness', b: 'Firearms', steps: 2 }];
     assert.deepEqual(urrCoreAttributeTn(links, 'Firearms', 'quickness'), {});
     const plain = { rating: 0, attributeRating: 4 };

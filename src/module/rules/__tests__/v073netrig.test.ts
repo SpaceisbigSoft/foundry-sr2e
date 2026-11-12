@@ -2,6 +2,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { NETRIG_V73 } from '../config73/netrig.ts';
 import { RULES } from '../config.ts';
+import { oldWay } from './oldway.ts';
 import {
   logoffHoldCheck, personaInitiativePenalty, jackedInInitiativeMinus, initiativeWoundScore,
   hostKnowledge, learnHost, hostEntryKnowledge, hostTag, hostChoices,
@@ -9,6 +10,7 @@ import {
   sensorLockStamp, sensorLockLapse, sweepSensorLocks,
 } from '../gridwork.ts';
 import { midTurnWoundDrop } from '../initiative.ts';
+import { useV922Vehicles } from './v922vehicles.ts';
 
 const N = NETRIG_V73 as any;
 /** Set a dotted path on an object for the length of fn. */
@@ -60,7 +62,9 @@ describe('v0.73.0 O23: persona damage on Matrix initiative', () => {
     withPath(RULES, 'MATRIX_V57.wounds.enabled', false, () => assert.equal(jackedInInitiativeMinus(2, 6), 2));
     withPath(RULES, 'INITIATIVE_WOUNDS.enabled', false, () => assert.equal(personaInitiativePenalty(6), 0));
   });
-  test('the mid-turn score: persona damage taken while jacked in drops the score', () => {
+  test('the mid-turn score: persona damage taken while jacked in drops the score', (t) => {
+    // v0.92.3: INITIATIVE_WOUNDS.midTurn is off by default (Core p. 112); this is the house rule on.
+    t.after(oldWay({ 'INITIATIVE_WOUNDS.midTurn': true }));
     const before = initiativeWoundScore({ woundModifier: 1, jackedIn: true, matrixBoxes: 0 });
     const after = initiativeWoundScore({ woundModifier: 1, jackedIn: true, matrixBoxes: 3 });
     assert.equal(midTurnWoundDrop(before, after), 2);
@@ -138,6 +142,7 @@ describe('v0.73.0 O25: ramming', () => {
 });
 
 describe('v0.73.0 O26: the control rig on gunnery and evasion', () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   test('a jumped-in rigger with a rig gets it', () => {
     assert.deepEqual(controlRigTn({ test: 'gunnery', vcr: 2, jumpedIn: true }), [{ label: 'Control rig 2', value: 2 * RULES.RIGGING.vcr.tnPerLevel }]);
     assert.equal(controlRigTn({ test: 'evasion', vcr: 1, jumpedIn: true }).length, 1);

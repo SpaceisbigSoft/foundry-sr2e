@@ -17,6 +17,14 @@ import { SHOP_V91, SHOP_V915, SHOP_V916, FORMULA_V918 } from './config91.ts';
 import { MAGIC_V920, SHEET_V921, CLOCK_V922 } from './config92.ts';
 import { DOCS_V79 } from './config79.ts';
 import { URR_V80 } from './config80.ts';
+import { CORE_V923 } from './config923/core.ts';
+import { COMBAT_V923 } from './config923/combat.ts';
+import { HEALTH_V923 } from './config923/health.ts';
+import { SORCERY_V923 } from './config923/sorcery.ts';
+import { SPIRITS_V923 } from './config923/spirits.ts';
+import { MATRIX_V923 } from './config923/matrix.ts';
+import { VEHICLES_V923 } from './config923/vehicles.ts';
+import { GEAR_V923 } from './config923/gear.ts';
 
 /**
  * SR2e rules constants.
@@ -50,9 +58,11 @@ export const RULES = {
   /**
    * v0.54.0: how the attacker's net successes stage damage up. 'afterFirst' (as before): the first net
    * success hits and each further SUCCESSES_PER_STAGE raise a level (2 net: no change, 3: one level).
-   * 'all': every SUCCESSES_PER_STAGE net successes raise a level (2 net: one level). VERIFY in the book.
+   * 'all': every SUCCESSES_PER_STAGE net successes raise a level (2 net: one level).
+   * v0.92.3: 'all' is the book (Core p. 91: 2 net successes take M to S; Core p. 101; Core p. 110) for ranged, melee
+   * and combat spells (was 'afterFirst').
    */
-  ATTACK_STAGING: 'afterFirst' as 'afterFirst' | 'all',
+  ATTACK_STAGING: 'all' as 'afterFirst' | 'all',
   /**
    * Wound modifier (added to all TNs) by boxes marked on a track, as
    * [minBoxes, modifier] pairs, highest first. VERIFY
@@ -64,8 +74,11 @@ export const RULES = {
   ] as ReadonlyArray<readonly [number, number]>,
   /** If true, Physical and Stun wound modifiers add together; if false, the worse one applies. VERIFY */
   WOUNDS_CUMULATIVE: true,
-  /** Stun boxes beyond a full Stun track convert to Physical at this many stun boxes per 1 physical box. VERIFY */
-  STUN_OVERFLOW_PER_PHYSICAL_BOX: 2,
+  /**
+   * Stun boxes beyond a full Stun track convert to Physical at this many stun boxes per 1 physical box.
+   * v0.92.3: 1, box for box (Core p. 111: Serious Stun on 6 boxes fills 4 Stun and 2 Physical); was 2.
+   */
+  STUN_OVERFLOW_PER_PHYSICAL_BOX: 1,
 
   /**
    * Essence cost multiplier by cyberware grade (standard, alpha, beta, delta). VERIFY
@@ -225,10 +238,18 @@ export const RULES = {
   SITUATIONAL_MODIFIERS: [
     { id: 'attackerWalking', label: 'Attacker walking', value: 1 },
     { id: 'attackerRunning', label: 'Attacker running', value: 4 },
+    // v0.92.3: the rest of the Ranged Combat Modifiers Table (Core p. 89); COMBAT_V923.rangedRows hides them.
+    { id: 'attackerWalkingRough', label: 'Attacker walking (difficult ground)', value: 2 },
+    { id: 'attackerRunningRough', label: 'Attacker running (difficult ground)', value: 6 },
     { id: 'calledShot', label: 'Called shot', value: 4 },
     { id: 'partialCover', label: 'Target in partial cover', value: 4 },
     { id: 'fullCover', label: 'Target in full cover (blind fire through the barrier)', value: 8 },
+    { id: 'targetRunning', label: 'Target running', value: 2 },
+    { id: 'targetStationary', label: 'Target stationary', value: -1 },
+    { id: 'attackerInMelee', label: 'Attacker in melee (one opponent)', value: 2 },
+    { id: 'attackerInMelee2', label: 'Attacker in melee (two opponents)', value: 4 },
     { id: 'smartlink', label: 'Smartlink (smartgun + implant)', value: -2 },
+    { id: 'smartGoggles', label: 'Smart goggles (smartgun)', value: -1 },
     { id: 'laserSight', label: 'Laser sight', value: -1 },
     { id: 'secondWeapon', label: 'Second weapon (off-hand)', value: 2 },
   ] as ReadonlyArray<{ id: string; label: string; value: number }>,
@@ -254,7 +275,8 @@ export const RULES = {
      */
     buyCost: 1, buyPermanent: true, buyNeedsSuccess: true,
     /** When Karma Pools refill on their own: 'manual', 'session' (the GM's first login on a new day), 'combat' (when a combat ends). */
-    refresh: 'manual' as 'manual' | 'session' | 'combat',
+    // v0.92.3 (book alignment): the pool is full again with the next encounter (Core p. 191): when a combat ends (was 'manual').
+    refresh: 'combat' as 'manual' | 'session' | 'combat',
   },
 
   /**
@@ -301,7 +323,7 @@ export const RULES = {
     perceivingTnMod: 2,
     formAttributes: { body: 'willpower', quickness: 'intelligence', strength: 'charisma' },
     reactionAttribute: 'intelligence',
-    initiativeBonus: 20,
+    initiativeBonus: 15, // v0.92.3 book check: astral Reaction + 15, 1D6 (Core p. 147) (was 20)
     initiativeDice: 1,
     attackBaseTn: 4,
     attackSkill: 'Sorcery',
@@ -389,7 +411,7 @@ export const RULES = {
     trackingTn: 4,
     freshness: [[1, 0], [6, 1], [24, 2]] as ReadonlyArray<readonly [number, number]>,
     staleModifier: 4,
-    baseHours: 6,
+    baseHours: 12, // v0.92.3 book check: 12 hours ÷ successes (Core p. 149) (was 6)
   },
 
   /** Geasa: an unmet geas takes away the Magic it protects. VERIFY */
@@ -420,8 +442,9 @@ export const RULES = {
 
   /**
    * Magic loss: when a magician's Physical damage reaches Deadly (a full track), they roll
-   * `dice`d6; if the total is below their (natural) Magic they lose `loss` point(s). VERIFY:
-   * the book's trigger and comparison may differ.
+   * `dice`d6; if the total is below their (natural) Magic they lose `loss` point(s).
+   * v0.92.3: at or below it by the book (RULES.HEALTH_V923.magicLoss, Core p. 115); treatment without the magician +2
+   * and drastic surgery call for the test too (HEALTH_V923.magicLossUntreated, surgeryMagicLoss).
    */
   MAGIC_LOSS: { enabled: true, dice: 2, loss: 1, compareTo: 'magic' as 'magic' | 'fixed', fixed: 7 },
 
@@ -545,8 +568,8 @@ export const RULES = {
     dumpShockTn: 6,
     subsystems: ['access', 'control', 'index', 'files', 'slave'] as ReadonlyArray<'access' | 'control' | 'index' | 'files' | 'slave'>,
     securityCodes: ['blue', 'green', 'orange', 'red', 'black'] as ReadonlyArray<'blue' | 'green' | 'orange' | 'red' | 'black'>,
-    /** Default IC initiative dice by the host's security code (IC initiative = rating + Nd6). */
-    icInitiativeDice: { blue: 1, green: 1, orange: 2, red: 2, black: 3 } as Record<string, number>,
+    /** Default IC initiative dice by the host's security code (IC initiative = rating + Nd6). v0.92.3: VR2 p. 120 (was 1/1/2/2/3; RULES.MATRIX_V923.icInitiative). */
+    icInitiativeDice: { blue: 1, green: 2, orange: 3, red: 4, black: 4 } as Record<string, number>,
     /** Alert levels, in order; a sheaf step can raise the host to one of them. */
     alerts: ['none', 'passive', 'active', 'shutdown'] as ReadonlyArray<'none' | 'passive' | 'active' | 'shutdown'>,
 
@@ -558,7 +581,8 @@ export const RULES = {
      * attacker's). `ic`: 'none' = IC never defend (as v0.17.0); 'rating' = IC roll their rating
      * against the decker's attack TN.
      */
-    defense: { persona: 'pool' as 'pool' | 'none', ic: 'none' as 'none' | 'rating' },
+    // v0.92.3: VR2 has no dodge (pp. 121–123: parry, Shield, resistance): persona 'none' (was 'pool').
+    defense: { persona: 'none' as 'pool' | 'none', ic: 'none' as 'none' | 'rating' },
     /**
      * What each IC does (the IC's `behavior`), and the TN its attack rolls against:
      * 'evasion' (the persona's Evasion), 'attribute' (the persona program it targets),
@@ -581,7 +605,8 @@ export const RULES = {
       probe: 'detectionFactor', scout: 'detectionFactor',
       tarBaby: 'utility', tarPit: 'utility', crippler: 'attribute', ripper: 'attribute',
     } as Record<string, 'evasion' | 'attribute' | 'utility' | 'detectionFactor' | 'masking'>,
-    attributeDamage: { successesPerPoint: 2, minOnHit: 1 },
+    // v0.92.3: VR2 p. 41 (1 net success does nothing): minOnHit 0 (was 1).
+    attributeDamage: { successesPerPoint: 2, minOnHit: 0 },
     tar: { tarBabyDerezzes: true },
     trace: { baseTurns: 10, secondsPerTurn: 3, burnMpcp: true },
     /** Blaster and sparky crashes: the IC rolls its rating vs TN = MPCP; each `successesPerPoint` successes = 1 MPCP damage. */
@@ -608,10 +633,14 @@ export const RULES = {
       attack: { L: 2, M: 3, S: 4, D: 5 } as Record<string, number>,
       kinds: {
         sleaze: 3, deception: 2, analyze: 3, browse: 1, decrypt: 1, evaluate: 2, 'read/write': 2, relocate: 2,
-        medic: 4, mirrors: 3, shield: 4, smoke: 1, spoof: 3, validate: 4, track: 8, armor: 3, cloak: 3, 'lock-on': 3, other: 0,
+        // v0.92.3: smoke 2 (Core p. 175; was 1).
+        medic: 4, mirrors: 3, shield: 4, smoke: 2, spoof: 3, validate: 4, track: 8, armor: 3, cloak: 3, 'lock-on': 3, other: 0,
         // v0.57.0 (VERIFY)
         slow: 4, restore: 3,
-        frame: 3, 'smart-frame': 5, agent: 6,
+        // v0.92.3: frame cores: dumb 2, smart 3 (VR2 p. 105; were 3 and 5).
+        frame: 2, 'smart-frame': 3, agent: 6,
+        // v0.92.3: utilities of VR2 p. 161 the operations table uses.
+        camo: 3, crash: 3, commlink: 1, scanner: 3, defuse: 2,
       } as Record<string, number>,
     },
     /**
@@ -620,38 +649,44 @@ export const RULES = {
      * instead of the subsystem's. Add or change rows freely; 'custom' does nothing automatic.
      */
     operations: [
-      { id: 'analyzeHost', label: 'Analyze host', subsystem: 'control', utility: 'analyze', action: 'simple', effect: 'analyzeHost' },
-      { id: 'analyzeIc', label: 'Analyze IC', subsystem: 'control', utility: 'analyze', action: 'simple', effect: 'analyzeIc' },
+      // v0.92.3: tests, utilities and actions from the VR2 System Operations Table (p. 161); the old values are in
+      // RULES.MATRIX_V923.oldOperations (switch RULES.MATRIX_V923.operations).
+      { id: 'analyzeHost', label: 'Analyze host', subsystem: 'control', utility: 'analyze', action: 'complex', effect: 'analyzeHost' },
+      { id: 'analyzeIc', label: 'Analyze IC', subsystem: 'control', utility: 'analyze', action: 'free', effect: 'analyzeIc' },
       { id: 'analyzeSecurity', label: 'Analyze security', subsystem: 'control', utility: 'analyze', action: 'simple', effect: 'analyzeSecurity' },
-      { id: 'redirectDatatrail', label: 'Redirect datatrail', subsystem: 'control', utility: 'relocate', action: 'complex', effect: 'redirectTrace' },
-      { id: 'crashHost', label: 'Crash host', subsystem: 'control', utility: '', action: 'complex', effect: 'crashHost' },
-      { id: 'invalidatePasscode', label: 'Invalidate passcode', subsystem: 'control', utility: '', action: 'complex', effect: 'invalidate' },
+      { id: 'redirectDatatrail', label: 'Redirect datatrail', subsystem: 'control', utility: 'camo', action: 'complex', effect: 'redirectTrace' },
+      { id: 'relocateTrace', label: 'Relocate (spoof a trace)', subsystem: 'control', utility: 'relocate', action: 'simple', effect: 'relocateTrace' },
+      { id: 'crashHost', label: 'Crash host', subsystem: 'control', utility: 'crash', action: 'complex', effect: 'crashHost' },
+      { id: 'invalidatePasscode', label: 'Invalidate passcode', subsystem: 'control', utility: 'validate', action: 'complex', effect: 'invalidate' },
       // v0.57.0 (VERIFY): passcodes, data bombs and comcalls.
-      { id: 'validatePasscode', label: 'Validate passcode', subsystem: 'access', utility: 'validate', action: 'complex', effect: 'validate' },
+      { id: 'validatePasscode', label: 'Validate passcode', subsystem: 'control', utility: 'validate', action: 'complex', effect: 'validate' },
       { id: 'scanFile', label: 'Scan file (data bombs)', subsystem: 'files', utility: 'analyze', action: 'simple', effect: 'scanFile' },
       { id: 'defuseBomb', label: 'Defuse data bomb', subsystem: 'files', utility: 'decrypt', action: 'complex', effect: 'defuseBomb', tn: 'target' },
-      { id: 'makeComcall', label: 'Make comcall (LTG)', subsystem: 'slave', utility: '', action: 'complex', effect: 'makeCall' },
-      { id: 'tapComcall', label: 'Tap comcall (LTG)', subsystem: 'slave', utility: 'spoof', action: 'complex', effect: 'tapCall' },
+      { id: 'makeComcall', label: 'Make comcall (LTG)', subsystem: 'files', utility: 'commlink', action: 'complex', effect: 'makeCall' },
+      { id: 'tapComcall', label: 'Tap comcall (LTG)', subsystem: 'slave', utility: 'commlink', action: 'complex', effect: 'tapCall' },
       { id: 'rerouteComcall', label: 'Reroute comcall (LTG)', subsystem: 'control', utility: 'relocate', action: 'complex', effect: 'rerouteCall' },
-      { id: 'decryptAccess', label: 'Decrypt access (barrier IC)', subsystem: 'access', utility: 'decrypt', action: 'complex', effect: 'decryptGuard', tn: 'target' },
-      { id: 'gracefulLogoff', label: 'Graceful logoff', subsystem: 'access', utility: 'deception', action: 'simple', effect: 'logoff' },
+      { id: 'decryptAccess', label: 'Decrypt access (barrier IC)', subsystem: 'access', utility: 'decrypt', action: 'simple', effect: 'decryptGuard', tn: 'target' },
+      { id: 'gracefulLogoff', label: 'Graceful logoff', subsystem: 'access', utility: 'deception', action: 'complex', effect: 'logoff' },
       { id: 'locateFile', label: 'Locate file', subsystem: 'index', utility: 'browse', action: 'complex', effect: 'locateFile' },
       { id: 'locatePaydata', label: 'Locate paydata', subsystem: 'index', utility: 'evaluate', action: 'complex', effect: 'locatePaydata' },
       { id: 'locateNumber', label: 'Locate LTG number', subsystem: 'index', utility: 'browse', action: 'complex', effect: 'locateNumber' },
-      { id: 'locateSlave', label: 'Locate slave', subsystem: 'index', utility: 'browse', action: 'complex', effect: 'locateSlave' },
-      { id: 'downloadData', label: 'Download data', subsystem: 'files', utility: 'read/write', action: 'complex', effect: 'download' },
-      { id: 'uploadData', label: 'Upload data', subsystem: 'files', utility: 'read/write', action: 'complex', effect: 'upload' },
-      { id: 'editFile', label: 'Edit file', subsystem: 'files', utility: 'read/write', action: 'complex', effect: 'editFile' },
-      { id: 'decryptFile', label: 'Decrypt file', subsystem: 'files', utility: 'decrypt', action: 'complex', effect: 'decryptFile', tn: 'target' },
+      { id: 'locateSlave', label: 'Locate slave', subsystem: 'index', utility: 'analyze', action: 'complex', effect: 'locateSlave' },
+      { id: 'downloadData', label: 'Download data', subsystem: 'files', utility: 'read/write', action: 'simple', effect: 'download' },
+      { id: 'uploadData', label: 'Upload data', subsystem: 'files', utility: 'read/write', action: 'simple', effect: 'upload' },
+      { id: 'editFile', label: 'Edit file', subsystem: 'files', utility: 'read/write', action: 'simple', effect: 'editFile' },
+      { id: 'decryptFile', label: 'Decrypt file', subsystem: 'files', utility: 'decrypt', action: 'simple', effect: 'decryptFile', tn: 'target' },
       { id: 'controlSlave', label: 'Control slave', subsystem: 'slave', utility: 'spoof', action: 'complex', effect: 'controlSlave' },
       { id: 'editSlave', label: 'Edit slave', subsystem: 'slave', utility: 'spoof', action: 'complex', effect: 'controlSlave' },
       { id: 'monitorSlave', label: 'Monitor slave', subsystem: 'slave', utility: 'spoof', action: 'simple', effect: 'monitorSlave' },
-      { id: 'decryptSlave', label: 'Decrypt slave (barrier IC)', subsystem: 'slave', utility: 'decrypt', action: 'complex', effect: 'decryptGuard', tn: 'target' },
+      { id: 'decryptSlave', label: 'Decrypt slave (barrier IC)', subsystem: 'slave', utility: 'decrypt', action: 'simple', effect: 'decryptGuard', tn: 'target' },
       { id: 'logon', label: 'Log on (host, LTG or RTG)', subsystem: 'access', utility: 'deception', action: 'complex', effect: 'logon' },
-      { id: 'nullOperation', label: 'Null operation', subsystem: 'access', utility: '', action: 'simple', effect: 'none' },
-    ] as ReadonlyArray<{ id: string; label: string; subsystem: 'access' | 'control' | 'index' | 'files' | 'slave'; utility: string; action: 'simple' | 'complex'; effect: string; tn?: 'subsystem' | 'target' }>,
-    /** Downloading: Combat Turns = file size ÷ (I/O speed × `ioPerTurn`), rounded up (shown only). */
-    download: { ioPerTurn: 1 },
+      { id: 'nullOperation', label: 'Null operation', subsystem: 'control', utility: 'deception', action: 'complex', effect: 'none' },
+    ] as ReadonlyArray<{ id: string; label: string; subsystem: 'access' | 'control' | 'index' | 'files' | 'slave'; utility: string; action: 'free' | 'simple' | 'complex'; effect: string; tn?: 'subsystem' | 'target' }>,
+    /**
+     * Downloading: Combat Turns = file size ÷ (I/O speed × `ioPerTurn`), rounded up (shown only). v0.92.3: I/O speed is
+     * Mp per second (VR2 pp. 86, 110), 3 seconds a turn: 3 (was 1); loading a utility at the I/O speed uses it too.
+     */
+    download: { ioPerTurn: 3 },
     /**
      * Paydata generated by security code: `points` = Nd6 + mod files; each is `sizeDice`d6 ×
      * `sizeMultiplier` Mp, worth `valuePerMp` nuyen per Mp. Defenses on 1d6: up to `plainUpTo`
@@ -687,8 +722,9 @@ export const RULES = {
      * (off by default; a house rule), black IC that would do Physical damage do Stun.
      */
     sim: {
-      hot: { initiativeDice: 1, dumpShockType: 'physical' as 'physical' | 'stun', overloadAt: 'S' as 'L' | 'M' | 'S' | 'D', overloadLevel: 'L' as 'L' | 'M' | 'S' | 'D' },
-      cold: { coldBlackIcStun: false },
+      // v0.92.3: dump shock is Stun (VR2 p. 124; was 'physical'); lethal black IC acts as non-lethal on a cool deck (VR2 p. 48; was false).
+      hot: { initiativeDice: 1, dumpShockType: 'stun' as 'physical' | 'stun', overloadAt: 'S' as 'L' | 'M' | 'S' | 'D', overloadLevel: 'L' as 'L' | 'M' | 'S' | 'D' },
+      cold: { coldBlackIcStun: true },
     },
     /**
      * Frames: programs a decker launches into a host to run system operations by themselves. A
@@ -697,7 +733,8 @@ export const RULES = {
      * detection roll is against the owner's Detection Factor. Its initiative is rating + 1d6.
      * Frames are IC actors with kind 'frame'; deckers can crash them in cybercombat. The owner must be jacked in.
      */
-    frames: { smartPoolPerRating: 0.5, initiativeDice: 1 },
+    // v0.92.3: no pool dice for smart frames (VR2 p. 104; was 0.5).
+    frames: { smartPoolPerRating: 0, initiativeDice: 1 },
     /**
      * How the decker connects: a TN modifier on every Matrix test, and whether being aboard a
      * moving vehicle adds `movingVehicle` more.
@@ -708,6 +745,11 @@ export const RULES = {
       { id: 'satellite', label: 'Satellite uplink', tn: 2 },
       { id: 'vehicle', label: "A vehicle's comm system", tn: 1 },
       { id: 'remote', label: 'Remote deck (relayed)', tn: 2 },
+      // v0.92.3: VR2's other jackpoints (Grids and Hosts p. 28); their Access and Trace modifiers are in RULES.MATRIX_V923.jackpoints.
+      { id: 'legal', label: 'Legal jackpoint (registered line)', tn: 0 },
+      { id: 'workstation', label: 'Workstation', tn: 0 },
+      { id: 'device', label: 'Remote device (slaved to the host)', tn: 0 },
+      { id: 'console', label: 'Console access', tn: 0 },
     ] as ReadonlyArray<{ id: string; label: string; tn: number }>,
     movingVehicle: 1,
 
@@ -726,7 +768,7 @@ export const RULES = {
       kinds: ['cyberphobia', 'frenzy', 'judas', 'conditioning'] as ReadonlyArray<'cyberphobia' | 'frenzy' | 'judas' | 'conditioning'>,
       resist: 'willpower' as 'willpower' | 'intelligence',
       successesNeeded: 1,
-      shieldDice: true,
+      shieldDice: false, // v0.92.3: VR2 p. 49 (was true)
       daysPerRating: 1,
       cyberphobiaTn: 2,
       judasAlert: 'passive' as 'none' | 'passive' | 'active',
@@ -747,7 +789,8 @@ export const RULES = {
       armor: { degradesPerHit: 1 },
       shield: { degradesPerHit: 1 },
       mirrors: { tnPerRating: 0.5 },
-      smoke: { tnPerRating: 0.5, turnsPerRating: 1, secondsPerTurn: 3 },
+      // v0.92.3: + the rating to every TN (Core p. 175; was 0.5).
+      smoke: { tnPerRating: 1, turnsPerRating: 1, secondsPerTurn: 3 },
     },
     /**
      * Frames and agents carrying utilities. A frame or agent takes copies of the owner's loaded
@@ -767,7 +810,8 @@ export const RULES = {
      * to a host from its own grid, and jacking in at a jackpoint, take no travel. While travelling,
      * the decker's tests in the new node are refused (`blockInTransit`), or warned.
      */
-    travel: { turnsPerHop: 1, secondsPerTurn: 3, blockInTransit: true },
+    // v0.92.3: Matrix movement is all but instant (Core p. 177; VR2 has only log-on operations): 0 (was 1).
+    travel: { turnsPerHop: 0, secondsPerTurn: 3, blockInTransit: true },
     /**
      * Security deckers: characters the GM lists on a host. Their own system tests there have no
      * detection roll (`noDetection`). Security actions roll Computer + Hacking Pool:
@@ -788,7 +832,8 @@ export const RULES = {
      * Construct IC: one IC that can also act as any of its `construct` behaviors, at its own
      * rating (the GM picks the behavior each time), at most `maxComponents` behaviors in all.
      */
-    party: { sharedInitiative: true },
+    // v0.92.3: each program of a party rolls its own initiative (VR2 p. 120; was true).
+    party: { sharedInitiative: false },
     construct: { maxComponents: 4 },
     /**
      * LTG numbers: a host, LTG or RTG can have a number. A decker who dials a node's number logs on
@@ -808,7 +853,8 @@ export const RULES = {
      * program. The new program arrives unloaded.
      */
     programming: {
-      skill: 'Computer', concentration: 'Programming', tnMod: 0, daysPerMp: 1,
+      // v0.92.3: base time = size × 2 days (VR2 p. 100; was 1).
+      skill: 'Computer', concentration: 'Programming', tnMod: 0, daysPerMp: 2,
       /**
        * v0.49.0 (Virtual Realities, VERIFY): a programming suite (gear with a suite rating) adds its
        * rating as dice ('dice') or takes it off the TN ('tn') on programming tests, capped at the
@@ -865,7 +911,8 @@ export const RULES = {
      * Physical damage do Stun (`blackIcStun`), and + rating × `dicePerRating` dice to resist black
      * IC, dump shock, sparky biofeedback and simsense overload.
      */
-    iccm: { blackIcStun: true, dicePerRating: 1 },
+    // v0.92.3: an ICCM resists with the better of Body or Willpower and doesn't add dice (VR2 p. 86; were true and 1).
+    iccm: { blackIcStun: false, dicePerRating: 0 },
     /**
      * Otaku (optional, off): a cyberdeck item ticked "Living persona" takes its ratings from the
      * otaku's attributes: MPCP = the sum of `mpcp` ÷ `divisor` (rounded down), each persona program
@@ -946,8 +993,9 @@ export const RULES = {
      * (`tie`): 'none' = nobody is hurt; 'attacker' / 'defender' = that side hits at its base
      * damage. Reach: each point of reach difference moves the defender's TN by `reachTnPerPoint`
      * (+ if the attacker's weapon is longer, − if the defender's is).
+     * v0.92.3: tie 'attacker', the book (Core pp. 100–101: ties go to the attacker, base damage; was 'none').
      */
-    melee: { opposed: true, counterattack: true, tie: 'none' as 'none' | 'defender' | 'attacker', reachTnPerPoint: 1,
+    melee: { opposed: true, counterattack: true, tie: 'attacker' as 'none' | 'defender' | 'attacker', reachTnPerPoint: 1,
       /**
        * v0.47.0: the attribute a melee attack defaults to without the skill: 'linked' = the skill's
        * own attribute (an owned skill's, else guessed from its name: Armed, Edged, Clubs, Unarmed
@@ -1008,6 +1056,8 @@ export const RULES = {
       { id: 'flechette', label: 'Flechette', power: 0, stages: 1, armorMultiplier: 2 },
       { id: 'gel', label: 'Gel', power: -2, stages: 0, armorMultiplier: 1, armorKind: 'impact', damageType: 'stun' },
       { id: 'tracer', label: 'Tracer', power: 0, stages: 0, armorMultiplier: 1 },
+      // v0.92.3: shotgun shot, the flechette rules (Core p. 95); with COMBAT_V923.shotgun 'book' a shotgun spreads only with it.
+      { id: 'shot', label: 'Shotgun shot', power: 0, stages: 1, armorMultiplier: 2 },
     ] as ReadonlyArray<{ id: string; label: string; power: number; stages: number; armorMultiplier: number; armorKind?: 'ballistic' | 'impact'; damageType?: 'physical' | 'stun' }>,
     /** Called shot: +TN (in SITUATIONAL_MODIFIERS) and the attacker picks one effect. */
     calledShot: { damageStages: 1, ignoresArmor: true },
@@ -1042,7 +1092,7 @@ export const RULES = {
       { id: 'flash', label: 'Flash', perMetre: 5, effect: 'blind' }, // v0.77.0 book check: 5L in a 1 m blast (was 1 per metre)
       { id: 'gas', label: 'Gas', perMetre: 1, effect: 'gas' },
       { id: 'heRocket', label: 'Rocket / missile: high explosive', perMetre: 1 },
-      { id: 'apRocket', label: 'Rocket / missile: anti-personnel', perMetre: 0.5 },
+      { id: 'apRocket', label: 'Rocket / missile: anti-personnel', perMetre: 2 }, // v0.92.3: −1 per half metre, Core p. 99 (was 0.5)
       { id: 'avRocket', label: 'Rocket / missile: anti-vehicle', perMetre: 0.25 }, // v0.78.0 owner's default: −1 per 4 m, as the anti-vehicle mortar round (was 4 per metre). VERIFY
       { id: 'demolition', label: 'Demolition charge', perMetre: 1 },
       // v0.61.0: smoke grenades leave a smoke region (COMBAT_V61.smoke: radius and how long it lingers).
@@ -1126,7 +1176,8 @@ export const RULES = {
     /** Rounds loaded per reload action by feed (a clip or belt reloads whole). v0.79.0: under RULES.DOCS_V79.rangedReload 'actions' a non-clip reload is a Complex Action (SRII pp. 81–83); the round counts are still house numbers. VERIFY */
     reloadFeed: { clip: 'all', belt: 'all', cylinder: 2, internal: 2, break: 2 } as Record<string, 'all' | number>,
     /** Drawing a weapon: 'off' (always ready), 'warn' (a note), 'action' (a Simple Action first; a quick-draw holster makes it free). */
-    ready: { rule: 'off' as 'off' | 'warn' | 'action' },
+    // v0.92.3: 'action', Core p. 82: a weapon must be ready before it is used (was 'off').
+    ready: { rule: 'action' as 'off' | 'warn' | 'action' },
     /** Armor against thrown weapons and bows when the weapon says 'auto'. */
     armorFor: { thrown: 'impact' as 'impact' | 'ballistic', bow: 'ballistic' as 'impact' | 'ballistic' },
     /** Shotgun spread: + this TN per metre of spread width at the target (0 = only Power drops). Check the book. */
@@ -1139,7 +1190,8 @@ export const RULES = {
     burning: { enabled: true, amount: 'burning', putOut: 'complex' as 'simple' | 'complex' },
     /** Holds (subduing): attacker Strength vs the target's Body, target Body vs the attacker's Strength; more successes pins (restrained). */
     hold: { status: 'restrain', attackerAttr: 'strength' as 'strength' | 'body', defenderAttr: 'body' as 'strength' | 'body' },
-    demolitions: { skill: 'Demolitions', attribute: 'intelligence' as const, tn: 4, powerPerSuccess: 1, level: 'D' as 'L' | 'M' | 'S' | 'D' },
+    // v0.92.3: tn 2, Core p. 98 (was 4).
+    demolitions: { skill: 'Demolitions', attribute: 'intelligence' as const, tn: 2, powerPerSuccess: 1, level: 'D' as 'L' | 'M' | 'S' | 'D' },
   },
 
   /**
@@ -1159,7 +1211,8 @@ export const RULES = {
       elf: { label: 'Elf', mods: { quickness: 1, charisma: 2 }, vision: { lowLight: true }, reach: 0, dermal: 0, toxinDice: 0, run: 3 },
       dwarf: { label: 'Dwarf', mods: { body: 1, strength: 2, willpower: 1 }, vision: { thermographic: true }, reach: 0, dermal: 0, toxinDice: 2, run: 2 },
       ork: { label: 'Ork', mods: { body: 3, strength: 2, charisma: -1, intelligence: -1 }, vision: { lowLight: true }, reach: 0, dermal: 0, toxinDice: 0, run: 3 },
-      troll: { label: 'Troll', mods: { body: 5, quickness: -1, strength: 4, charisma: -2, intelligence: -2 }, vision: { thermographic: true }, reach: 1, dermal: 1, toxinDice: 0, run: 3 },
+      // v0.92.3 (book alignment): running × 2 (Core p. 83, Running Table; was × 3). The Revamp's patch sets 2 as well.
+      troll: { label: 'Troll', mods: { body: 5, quickness: -1, strength: 4, charisma: -2, intelligence: -2 }, vision: { thermographic: true }, reach: 1, dermal: 1, toxinDice: 0, run: 2 },
     } as Record<string, { label: string; mods: Partial<Record<'body' | 'quickness' | 'strength' | 'charisma' | 'intelligence' | 'willpower', number>>; vision: { lowLight?: boolean; thermographic?: boolean }; reach: number; dermal: number; toxinDice: number; run: number }>,
   },
 
@@ -1409,7 +1462,8 @@ export const RULES = {
       /** v0.47.0: a laser sight only helps out to this range (metres; 0 = any); a scope's vision mode (low-light, thermographic) counts for its weapon. */
       laserRangeMetres: 50, scopeVision: true,
     },
-    spellsVsVehicles: { manaAffects: false, objectResistance: 8, combatArmor: false, antiVehicle: true },
+    // v0.92.3 (Rigger 2 p. 54): a combat spell loses half the vehicle's armor, as anti-vehicle fire (combatArmor was false).
+    spellsVsVehicles: { manaAffects: false, objectResistance: 8, combatArmor: true, antiVehicle: true },
     /** v0.47.0 `ranged`: 'dice' adds a worn shield's Parry rating as dodge dice against ranged attacks too; 'off' melee only. */
     shields: { parryAs: 'dice' as 'dice' | 'tn', ranged: 'dice' as 'dice' | 'off' },
     /**
@@ -1486,11 +1540,13 @@ export const RULES = {
        * v0.49.0: edges and flaws after creation (Companion, VERIFY): gaining an edge costs its points ×
        * `edgePerPoint` Good Karma; buying off a flaw costs its points × `flawPerPoint`.
        */
-      karma: { edgePerPoint: 2, flawPerPoint: 2 },
+      // v0.92.3 (book alignment): eliminating a flaw costs 10 × its points (Companion p. 22; was 2).
+      karma: { edgePerPoint: 2, flawPerPoint: 10 },
     },
     athletics: {
       skill: 'Athletics', attribute: 'body' as 'body' | 'quickness' | 'strength',
-      climb: [{ id: 'easy', label: 'Easy (ladder, rope with knots)', tn: 2 }, { id: 'rough', label: 'Rough wall or tree', tn: 4 }, { id: 'smooth', label: 'Smooth wall', tn: 6 }, { id: 'sheer', label: 'Sheer or slick', tn: 8 }] as ReadonlyArray<{ id: string; label: string; tn: number }>,
+      // v0.92.3 (book alignment): the Climbing Table, 3 / 5 / 8 / 14 (Fields of Fire p. 75; was 2 / 4 / 6 / 8).
+      climb: [{ id: 'easy', label: 'Easily climbable (chain-link fence)', tn: 3 }, { id: 'rough', label: 'Broken surface (debris, tree, loose stone wall)', tn: 5 }, { id: 'smooth', label: 'Flat surface (brick wall)', tn: 8 }, { id: 'sheer', label: 'Sheer surface (metal wall, seamless stone)', tn: 14 }] as ReadonlyArray<{ id: string; label: string; tn: number }>,
       swim: [{ id: 'calm', label: 'Calm water', tn: 3 }, { id: 'choppy', label: 'Choppy', tn: 5 }, { id: 'rough', label: 'Rough', tn: 7 }, { id: 'storm', label: 'Storm or rapids', tn: 9 }] as ReadonlyArray<{ id: string; label: string; tn: number }>,
       metresPerSuccess: 2,
       jump: { tn: 4, metresPerSuccess: 1, runningMultiplier: 2 },
@@ -1601,9 +1657,12 @@ export const RULES = {
       { id: 'luxury', label: 'Luxury', cost: 100000 },
     ] as ReadonlyArray<{ id: string; label: string; cost: number }>,
     karma: {
-      poolEvery: { human: 10, metahuman: 20 },
+      // v0.92.3 (book alignment): 10 points to Good Karma, then the next one to the pool, for everyone (Companion p. 76;
+      // Core p. 190 has no metahuman rate). Was human 10, metahuman 20.
+      poolEvery: { human: 11, metahuman: 11 },
       diverts: true,
-      attributeMultiplier: 2,
+      // v0.92.3 (book alignment): new rating × 1 (Core p. 190: Strength 5 → 6 costs 6). Was 2. The Revamp's patch sets 1.5.
+      attributeMultiplier: 1,
       skills: {
         active: [{ upTo: 1, multiplier: 1.5 }, { upTo: 1.5, multiplier: 2 }, { upTo: 99, multiplier: 2.5 }],
         knowledge: [{ upTo: 1, multiplier: 1 }, { upTo: 1.5, multiplier: 1.5 }, { upTo: 99, multiplier: 2 }],
@@ -1647,7 +1706,8 @@ export const RULES = {
    * they can act at any moment (before whoever is acting). With `lostAtPassEnd`, a delayed action
    * not taken by the end of the pass is lost.
    */
-  DELAY: { lostAtPassEnd: true },
+  // v0.92.3: lostAtPassEnd false, the book (Core p. 80: a delayed action lasts through the later phases; was true).
+  DELAY: { lostAtPassEnd: false },
 
   /**
    * Rule of One disasters (v0.35.0): a GM card suggests a consequence by test kind (house text, not the
@@ -1714,7 +1774,8 @@ export const RULES = {
    */
   SKILLS: {
     concentrationFraction: 0.75,
-    web: { perStep: 2, maxSteps: 3, unlinked: 'attribute' as 'flat' | 'attribute' },
+    // v0.92.3 (book alignment): no step cap (Core p. 68: any path may be traced; was 3). The Revamp's patch sets 99 too.
+    web: { perStep: 2, maxSteps: 99, unlinked: 'attribute' as 'flat' | 'attribute' },
     parry: false, parrySkill: 'Parry',
     vehicleRepair: { skills: ['Car B/R', 'Bike B/R', 'Aircraft B/R', 'Boat B/R', 'Drone B/R', 'Vehicle B/R'] as readonly string[], tn: 4, boxesPerSuccess: 1, hoursPerBox: 1 },
   },
@@ -1779,7 +1840,7 @@ export const RULES = {
     shock: { attribute: 'body' as 'body' | 'willpower', initiativeLoss: 10, stunTurns: 1 },
     corrode: { points: 1 },
     sustainLimit: { hoursPerForce: 1 },
-    domains: { enforce: 'warn' as 'off' | 'warn' | 'block' },
+    domains: { enforce: 'block' as 'off' | 'warn' | 'block' }, // v0.92.3 book check: a nature spirit can't be summoned outside its domain (Core p. 139) (was warn)
     addiction: { attribute: 'willpower' as 'willpower' | 'charisma' | 'intelligence', tnFrom: 'total' as 'total' | 'excess', withdrawalTn: 2 },
     sites: { enforce: 'warn' as 'off' | 'warn' | 'block', elementalCircle: true, elementalLibrary: true, ritualSite: true, nuyenPerRating: 1000 },
     ritualStages: { enabled: true, materialsPerForce: 0, waitForPrep: 'block' as 'off' | 'warn' | 'block' },
@@ -1917,7 +1978,7 @@ export const RULES = {
     },
     initiation: {
       multipliers: { self: 3, group: 2 },
-      ordealReduction: 1,
+      ordealReduction: 0.5, // v0.92.3 book check: an ordeal takes .5 off the multiplier (Grimoire p. 38) (was 1)
       minMultiplier: 1,
       ordeals: [
         { id: 'asceticism', label: 'Asceticism (lose 1 point of an attribute)', effect: 'attribute' },
@@ -2072,7 +2133,8 @@ export const RULES = {
       melee: 'complex', throw: 'simple', reload: 'simple', 'reload:clip': 'complex', 'reload:complex': 'complex', cast: 'complex', summon: 'complex', banish: 'complex',
       power: 'complex', astral: 'complex', assense: 'simple', dispel: 'complex', firstAid: 'complex', skill: 'complex',
       drive: 'complex', stand: 'simple', drug: 'simple', perceive: 'simple', social: 'complex', clearJam: 'simple', fullDefense: 'complex',
-      'matrix:simple': 'simple', 'matrix:complex': 'complex', matrixAttack: 'complex', medic: 'complex',
+      // v0.92.3: matrixAttack and matrixManeuver are Simple under RULES.MATRIX_V923.actions 'book' (VR2 pp. 121, 123); these are the 'v922' costs.
+      'matrix:simple': 'simple', 'matrix:complex': 'complex', matrixAttack: 'complex', matrixManeuver: 'complex', medic: 'complex',
       shapeshift: 'complex', cleanSignature: 'complex',
       // v0.43.0
       setUpWeapon: 'complex', search: 'complex', scan: 'simple',
@@ -2081,7 +2143,7 @@ export const RULES = {
       // v0.55.0
       aim: 'simple', draw: 'simple', patch: 'simple', putOutFire: 'complex', hold: 'complex', breakFree: 'complex', suppress: 'complex',
       // v0.59.0: jacking in or out, taking the controls, jumping in or out, a sensor test, a command to drones. VERIFY
-      jackIn: 'simple', jackOut: 'simple', takeControls: 'simple', jumpIn: 'simple', jumpOut: 'simple', sensor: 'simple', droneCommand: 'complex' /* v0.77.0 book check: a Complex Action (was simple) */,
+      jackIn: 'simple', jackOut: 'simple', takeControls: 'simple', jumpIn: 'simple', jumpOut: 'simple', sensor: 'complex' /* v0.92.3 (Rigger 2 p. 58): a sensor test is a Complex Action (was simple) */, droneCommand: 'complex' /* v0.77.0 book check: a Complex Action (was simple) */,
       // v0.71.0 (R19): switching to astral perception, or leaving the body to project (RULES.FIXES_V71.astralSwitchCost). VERIFY
       astralPerceive: 'simple', astralProject: 'complex',
     } as Record<string, 'free' | 'simple' | 'complex'>,
@@ -2128,15 +2190,23 @@ export const RULES = {
       { id: 'tight', label: 'Tight terrain', value: 3 },
     ] as ReadonlyArray<{ id: string; label: string; value: number }>,
     /** Situational driving modifiers, picked in the Driving test dialog. Add rows freely. */
+    // v0.92.3: the Rigger 2 p. 20 Driving Test table: non-stressful −1, stressful +3 (was "hard" +2), large / very large
+    // vehicle +2 / +3, during combat +2, non-rigger by datajack −1 (new rows). The v0.92.2 rows: RULES.VEHICLES_V923
+    // .oldDrivingRows (switch VEHICLES_V923.drivingRows). The weather rows are RULES.HEALTH.weather's driving column.
     drivingModifiers: [
-      { id: 'easy', label: 'Easy maneuver', value: -1 },
-      { id: 'hard', label: 'Hard maneuver', value: 2 },
+      { id: 'easy', label: 'Non-stressful situation', value: -1 },
+      { id: 'hard', label: 'Stressful situation', value: 3 },
       // v0.79.0 docs check: +1 over the Speed rating (was +2). Rigger 2 Positioning / Accelerate-Brake / Ramming tables.
       { id: 'overSpeed', label: 'Above the vehicle\'s Speed', value: 1 },
       { id: 'unfamiliar', label: 'Unfamiliar vehicle', value: 1 },
       { id: 'poorVisibility', label: 'Poor visibility', value: 2 },
+      { id: 'large', label: 'Large vehicle of its type', value: 2 },
+      { id: 'veryLarge', label: 'Very large vehicle of its type', value: 3 },
+      { id: 'inCombat', label: 'Driving during combat', value: 2 },
+      { id: 'datajack', label: 'Non-rigger driving by datajack', value: -1 },
     ] as ReadonlyArray<{ id: string; label: string; value: number }>,
-    damage: { armorStops: true, normalWeapons: { powerMultiplier: 0.5, levelDrop: 1 } },
+    // v0.92.3 (Rigger 2 pp. 23, 53; Core p. 108): a normal weapon's Power isn't halved against a vehicle, only the level drops (was 0.5).
+    damage: { armorStops: true, normalWeapons: { powerMultiplier: 1, levelDrop: 1 } },
     crash: { speedPerPower: 10, minPower: 2, vehicleLevel: 'S' as 'L' | 'M' | 'S' | 'D', passengerLevel: 'M' as 'L' | 'M' | 'S' | 'D', vehicleArmor: false },
     autopilot: { reactionPerRating: 2, initiativeDice: 1 },
     /**
@@ -2172,7 +2242,8 @@ export const RULES = {
      *   the scanner's ECCM. Any success = detected, and a sensor lock for gunnery.
      * - ECD: a target with ECD rolls its rating vs `ecdTn`; a success means it notices the scan.
      */
-    sensors: { personSignature: 6, ecdTn: 4, controlPool: true },
+    // v0.92.3 (Rigger 2 p. 16): the Control Pool may not be used on sensor tests (was true).
+    sensors: { personSignature: 6, ecdTn: 4, controlPool: false },
     /**
      * Chases (v0.25.0). All VERIFY. Each chase turn the gap changes by (quarry's current speed −
      * pursuer's) × `metresPerSpeed`, then both drivers make a positioning test (driving test);
@@ -2211,7 +2282,8 @@ export const RULES = {
      * v0.49.0: cargo by volume too: a vehicle's Cargo Factor (CF, 0 = not tracked) against its items'
      * CF plus `personCf` per person aboard. Over either limit is overloaded.
      */
-    cargo: { personKg: 100, overloadTn: 2, personCf: 4 },
+    // v0.92.3 (Rigger 2 p. 24): Load does not include passengers (personKg was 100).
+    cargo: { personKg: 0, overloadTn: 2, personCf: 4 },
     /**
      * Drone autosofts (Rigger rules): rating dice added to the vehicle's own tests when its
      * autopilot rolls (maneuver: driving tests; targeting: its mounted weapons; clearsight: sensor
@@ -2405,7 +2477,8 @@ export const RULES = {
    * v0.54.0: wounds lower Initiative by the wound modifier (Light −1, Moderate −2, Serious −3), on the
    * roll and at once when a wound is taken mid-turn (`midTurn`; healing never raises it). VERIFY
    */
-  INITIATIVE_WOUNDS: { enabled: true, midTurn: true },
+  // v0.92.3: midTurn false, the book (Core p. 112: the wound counts against Reaction when initiative is rolled; was true).
+  INITIATIVE_WOUNDS: { enabled: true, midTurn: false },
   /** Base initiative dice (1d6 before cyberware/magic). */
   BASE_INITIATIVE_DICE: 1,
   /**
@@ -2711,30 +2784,30 @@ export const RULES = {
   },
   ITEM_TEMPLATES: [
     ...([
-      ['holdout', 'Hold-out pistol', { cost: 100, skill: 'Firearms', specialization: 'Pistols', damagePower: 4, damageLevel: 'L', modes: 'SS', ammoMax: 6, ammo: 6, range: { short: 5, medium: 15, long: 30, extreme: 50 } }],
-      ['lightPistol', 'Light pistol', { cost: 350, skill: 'Firearms', specialization: 'Pistols', damagePower: 6, damageLevel: 'L', modes: 'SA', ammoMax: 12, ammo: 12, range: { short: 5, medium: 15, long: 30, extreme: 50 } }],
-      ['heavyPistol', 'Heavy pistol', { cost: 450, skill: 'Firearms', specialization: 'Pistols', damagePower: 9, damageLevel: 'M', modes: 'SA', ammoMax: 10, ammo: 10, range: { short: 5, medium: 20, long: 40, extreme: 60 } }],
+      ['holdout', 'Hold-out pistol', { cost: 100, skill: 'Firearms', specialization: 'Pistols', damagePower: 4, damageLevel: 'L', modes: 'SS', ammoMax: 6, ammo: 6, range: { short: 5, medium: 15, long: 30, extreme: 50 }, concealability: 8, weight: 0.5, availability: '2/12 hrs', streetIndex: 0.75 /* v0.92.3: Streetline Special (FoF stats) */ }],
+      ['lightPistol', 'Light pistol', { cost: 350, skill: 'Firearms', specialization: 'Pistols', damagePower: 6, damageLevel: 'L', modes: 'SA', ammoMax: 12, ammo: 12, range: { short: 5, medium: 15, long: 30, extreme: 50 }, concealability: 5, weight: 1, availability: '3/12 hrs', streetIndex: 0.8 /* v0.92.3: Beretta 101T (FoF p. 89) */ }],
+      ['heavyPistol', 'Heavy pistol', { cost: 450, skill: 'Firearms', specialization: 'Pistols', damagePower: 9, damageLevel: 'M', modes: 'SA', ammoMax: 10, ammo: 10, range: { short: 5, medium: 20, long: 40, extreme: 60 }, concealability: 6, weight: 2, availability: '3/24 hrs', streetIndex: 1 /* v0.92.3: Browning Max-Power (FoF p. 89) */ }],
       ['smg', 'Submachine gun', { cost: 900, skill: 'Firearms', specialization: 'SMGs', damagePower: 6, damageLevel: 'M', modes: 'SA/BF/FA', ammoMax: 32, ammo: 32, recoilComp: 1, range: { short: 10, medium: 40, long: 80, extreme: 150 } }],
-      ['assaultRifle', 'Assault rifle', { cost: 1600, skill: 'Firearms', specialization: 'Assault rifles', damagePower: 8, damageLevel: 'M', modes: 'SA/BF/FA', ammoMax: 40, ammo: 40, range: { short: 15, medium: 40, long: 100, extreme: 250 } /* v0.79.0 docs check: SRII Weapon Range Table (was 50/150/350/550) */ }], // v0.77.0 book check: the 1,600¥ M22A2 holds 40 (was 30)
-      ['sniperRifle', 'Sniper rifle', { cost: 4000 /* v0.77.0 book check: book sniper rifles 4,000–6,500¥ (was 8,000) */, skill: 'Firearms', specialization: 'Rifles', damagePower: 14, damageLevel: 'S', modes: 'SA', ammoMax: 6, ammo: 6, range: { short: 40, medium: 80, long: 200, extreme: 400 } /* v0.79.0 docs check: SRII Weapon Range Table (was 100/400/800/1300) */ }],
-      ['shotgun', 'Shotgun', { cost: 700, skill: 'Firearms', specialization: 'Shotguns', damagePower: 10, damageLevel: 'S', modes: 'SA', ammoMax: 8, ammo: 8, shotgun: true, choke: 2, range: { short: 10, medium: 20, long: 50, extreme: 100 } }],
-      ['lmg', 'Light machine gun', { cost: 2500, skill: 'Gunnery', damagePower: 7, damageLevel: 'S', modes: 'FA', ammoMax: 50, ammo: 50, heavy: true, range: { short: 20, medium: 40, long: 80, extreme: 150 } /* v0.79.0 docs check: SRII Weapon Range Table (was 40/150/400/800, the HMG row) */ }],
-      ['bow', 'Bow', { cost: 300, skill: 'Projectile Weapons', damagePower: 2, damageLevel: 'M', strengthPower: true, strengthCap: 3, strengthRange: true, strengthRangeMultipliers: { short: 1, medium: 10, long: 30, extreme: 60 } /* v0.79.0 docs check: SRII Weapon Range Table (was the default 1/2/3/5) */ }], // v0.77.0 book check: (Str Min + 2)M, a Str Min 3 bow at 300¥ (was +0, cap 6)
-      ['throwingKnife', 'Throwing knife', { cost: 20, skill: 'Throwing Weapons', damagePower: 0, damageLevel: 'L', strengthPower: true, strengthRange: true }],
-      ['offensiveGrenade', 'Offensive grenade', { cost: 30, skill: 'Throwing Weapons', damagePower: 10, damageLevel: 'S', blast: true, blastKind: 'offensive', blastPerMetre: 1, strengthRange: true, strengthRangeMultipliers: { short: 3, medium: 5, long: 10, extreme: 20 } /* v0.79.0 docs check: SRII Grenade Range Table (was 1/2/3/5) */ }],
-      ['flashGrenade', 'Flash grenade', { cost: 40, skill: 'Throwing Weapons', damagePower: 5, damageLevel: 'L', blast: true, blastKind: 'flash', blastPerMetre: 5, strengthRange: true, strengthRangeMultipliers: { short: 3, medium: 5, long: 10, extreme: 20 } /* v0.79.0 docs check: SRII Grenade Range Table (was 1/2/3/5) */ }], // v0.77.0 book check: 5L in a 1 m blast, 40¥ (was 1L stun, 30¥)
-      ['missileLauncher', 'Missile launcher', { cost: 8000, skill: 'Launch Weapons', damagePower: 16, damageLevel: 'D', modes: 'SS', ammoMax: 4, ammo: 4, blast: true, blastKind: 'heRocket', blastPerMetre: 1, guidance: 3 /* v0.77.0 book check: an HE missile (guidance 3, not anti-vehicle; was 4 + AV) */, antiVehicle: false, minRange: 20, range: { short: 70, medium: 150, long: 450, extreme: 1500 } /* v0.79.0 docs check: SRII Weapon Range Table, minimum 20 m (was 150/450/1200/3000, no minimum) */ }],
+      ['assaultRifle', 'Assault rifle', { cost: 1600, skill: 'Firearms', specialization: 'Assault rifles', damagePower: 8, damageLevel: 'M', modes: 'SA/BF/FA', ammoMax: 40, ammo: 40, range: { short: 15, medium: 40, long: 100, extreme: 250 } /* v0.79.0 docs check: SRII Weapon Range Table (was 50/150/350/550) */, concealability: 3, weight: 4.75, availability: '4/3 days', streetIndex: 2 /* v0.92.3: Colt M22A2, SSC p. 50 */ }], // v0.77.0 book check: the 1,600¥ M22A2 holds 40 (was 30)
+      ['sniperRifle', 'Sniper rifle', { cost: 4000 /* v0.77.0 book check: book sniper rifles 4,000–6,500¥ (was 8,000) */, skill: 'Firearms', specialization: 'Rifles', damagePower: 14, damageLevel: 'S', modes: 'SA', ammoMax: 6, ammo: 6, range: { short: 40, medium: 80, long: 200, extreme: 400 } /* v0.79.0 docs check: SRII Weapon Range Table (was 100/400/800/1300) */, weight: 4, availability: '12/7 days', streetIndex: 4 /* v0.92.3: Ranger SM-3 (FoF stats; no Concealability) */ }],
+      ['shotgun', 'Shotgun', { cost: 700, skill: 'Firearms', specialization: 'Shotguns', damagePower: 10, damageLevel: 'S', modes: 'SA', ammoMax: 8, ammo: 8, shotgun: true, heavy: true /* v0.92.3: shotguns double their recoil, Core p. 89 (was not heavy) */, choke: 2, range: { short: 10, medium: 20, long: 50, extreme: 100 } }],
+      ['lmg', 'Light machine gun', { cost: 2500, skill: 'Gunnery', damagePower: 7, damageLevel: 'S', modes: 'FA', ammoMax: 50, ammo: 50, heavy: false /* v0.92.3: only MMG, HMG and shotguns are heavy, Core p. 89 (was heavy) */, range: { short: 20, medium: 40, long: 80, extreme: 150 } /* v0.79.0 docs check: SRII Weapon Range Table (was 40/150/400/800, the HMG row) */ }],
+      ['bow', 'Bow', { cost: 300, skill: 'Projectile Weapons', damagePower: 2, damageLevel: 'M', strengthPower: true, strengthCap: 3, strengthRange: true, strengthRangeMultipliers: { short: 1, medium: 10, long: 30, extreme: 60 } /* v0.79.0 docs check: SRII Weapon Range Table (was the default 1/2/3/5) */, concealability: 2, weight: 1, availability: '3/36 hrs', streetIndex: 1 /* v0.92.3: standard bow (FoF p. 88) */ }], // v0.77.0 book check: (Str Min + 2)M, a Str Min 3 bow at 300¥ (was +0, cap 6)
+      ['throwingKnife', 'Throwing knife', { cost: 20, skill: 'Throwing Weapons', damagePower: 0, damageLevel: 'L', strengthPower: true, strengthRange: true, concealability: 9, weight: 0.25, availability: '2/24 hrs', streetIndex: 1 /* v0.92.3: FoF p. 89 */ }],
+      ['offensiveGrenade', 'Offensive grenade', { cost: 30, skill: 'Throwing Weapons', damagePower: 10, damageLevel: 'S', blast: true, blastKind: 'offensive', blastPerMetre: 1, strengthRange: true, strengthRangeMultipliers: { short: 3, medium: 5, long: 10, extreme: 20 } /* v0.79.0 docs check: SRII Grenade Range Table (was 1/2/3/5) */, concealability: 6, weight: 0.25, availability: '4/4 days', streetIndex: 2 /* v0.92.3: Core p. 256 table */ }],
+      ['flashGrenade', 'Flash grenade', { cost: 40, skill: 'Throwing Weapons', damagePower: 5, damageLevel: 'L', blast: true, blastKind: 'flash', blastPerMetre: 5, strengthRange: true, strengthRangeMultipliers: { short: 3, medium: 5, long: 10, extreme: 20 } /* v0.79.0 docs check: SRII Grenade Range Table (was 1/2/3/5) */, concealability: 6, weight: 0.25, availability: '4/48 hrs', streetIndex: 1 /* v0.92.3: FoF grenades */ }], // v0.77.0 book check: 5L in a 1 m blast, 40¥ (was 1L stun, 30¥)
+      ['missileLauncher', 'Missile launcher', { cost: 8000, skill: 'Launch Weapons', damagePower: 16, damageLevel: 'D', modes: 'SS', ammoMax: 4, ammo: 4, blast: true, blastKind: 'heRocket', blastPerMetre: 1, guidance: 3 /* v0.77.0 book check: an HE missile (guidance 3, not anti-vehicle; was 4 + AV) */, antiVehicle: false, minRange: 20, range: { short: 70, medium: 150, long: 450, extreme: 1500 } /* v0.79.0 docs check: SRII Weapon Range Table, minimum 20 m (was 150/450/1200/3000, no minimum) */, weight: 8, availability: '12/14 days', streetIndex: 2 /* v0.92.3: Multi-Launcher (no Concealability) */ }],
       ['flamethrower', 'Flamethrower', { cost: 1600, skill: 'Gunnery', damagePower: 8, damageLevel: 'S', modes: 'SS', ammoMax: 10, ammo: 10, areaKind: 'flame', range: { short: 5, medium: 10, long: 20, extreme: 30 } }],
-      ['knife', 'Knife', { cost: 30, skill: 'Edged Weapons', melee: true, damagePower: 0, damageLevel: 'L', strengthPower: true }],
-      ['sword', 'Sword', { cost: 500, skill: 'Edged Weapons', melee: true, reach: 1, damagePower: 2 /* v0.77.0 book check: (STR+2)M (was +3) */, damageLevel: 'M', strengthPower: true }],
-      ['club', 'Club', { cost: 10, skill: 'Clubs', melee: true, reach: 1 /* v0.77.0 book check */, damagePower: 1, damageLevel: 'M', damageType: 'stun', strengthPower: true }],
-      ['polearm', 'Pole arm', { cost: 500, skill: 'Polearms/Staffs', melee: true, reach: 2, damagePower: 0 /* v0.77.0 book check: (STR)S (was +3) */, damageLevel: 'S', strengthPower: true }],
-      ['stunBaton', 'Stun baton', { cost: 750, skill: 'Clubs', melee: true, reach: 1, damagePower: 6, damageLevel: 'S', damageType: 'stun', stunWeapon: true, ammoMax: 10, ammo: 10 }],
+      ['knife', 'Knife', { cost: 30, skill: 'Edged Weapons', melee: true, damagePower: 0, damageLevel: 'L', strengthPower: true, concealability: 8, weight: 0.5, availability: '2/4 hrs', streetIndex: 0.75 /* v0.92.3: FoF melee weapons */ }],
+      ['sword', 'Sword', { cost: 500, skill: 'Edged Weapons', melee: true, reach: 1, damagePower: 2 /* v0.77.0 book check: (STR+2)M (was +3) */, damageLevel: 'M', strengthPower: true, concealability: 4, weight: 1, availability: '3/24 hrs', streetIndex: 1 /* v0.92.3: FoF melee weapons */ }],
+      ['club', 'Club', { cost: 10, skill: 'Clubs', melee: true, reach: 1 /* v0.77.0 book check */, damagePower: 1, damageLevel: 'M', damageType: 'stun', strengthPower: true, concealability: 5, weight: 1, availability: '2/6 hrs', streetIndex: 1 /* v0.92.3: FoF melee weapons */ }],
+      ['polearm', 'Pole arm', { cost: 500, skill: 'Polearms/Staffs', melee: true, reach: 2, damagePower: 0 /* v0.77.0 book check: (STR)S (was +3) */, damageLevel: 'S', strengthPower: true, concealability: 2, weight: 4, availability: '4/48 hrs', streetIndex: 2 /* v0.92.3: FoF melee weapons */ }],
+      ['stunBaton', 'Stun baton', { cost: 750, skill: 'Clubs', melee: true, reach: 1, damagePower: 6, damageLevel: 'S', damageType: 'stun', stunWeapon: true, ammoMax: 10, ammo: 10, concealability: 4, weight: 1, availability: '3/36 hrs', streetIndex: 1 /* v0.92.3: FoF melee weapons */ }],
       // v0.61.0 (VERIFY)
-      ['monowhip', 'Monofilament whip', { cost: 3000, skill: 'Whips', melee: true, reach: 2, damagePower: 10, damageLevel: 'S', selfHit: true }],
-      ['grenadeLauncher', 'Grenade launcher', { cost: 1600 /* v0.77.0 book check: six-shot SA launcher 1,600¥ (was 2,000) */, skill: 'Launch Weapons', damagePower: 10, damageLevel: 'S', modes: 'SA', ammoMax: 6, ammo: 6, blast: true, blastKind: 'offensive', blastPerMetre: 1, minRange: 5, range: { short: 50, medium: 100, long: 150, extreme: 300 } }],
-      ['smokeGrenade', 'Smoke grenade', { cost: 30, skill: 'Throwing Weapons', damagePower: 0, damageLevel: 'L', damageType: 'stun', blast: true, blastKind: 'smoke', blastPerMetre: 1, strengthRange: true, strengthRangeMultipliers: { short: 3, medium: 5, long: 10, extreme: 20 } /* v0.79.0 docs check: SRII Grenade Range Table (was 1/2/3/5) */ }],
-      ['taser', 'Taser', { cost: 1000, skill: 'Firearms', damagePower: 10, damageLevel: 'S', damageType: 'stun', stunWeapon: true, modes: 'SA', ammoMax: 4, /* v0.77.0 book check: 10S, SA (was 10M, SS) */ ammo: 4, range: { short: 5, medium: 10, long: 12, extreme: 15 } /* v0.79.0 docs check: SRII Weapon Range Table (was 5/10/15/20) */ }],
+      ['monowhip', 'Monofilament whip', { cost: 3000, skill: 'Whips', melee: true, reach: 2, damagePower: 10, damageLevel: 'S', selfHit: true, concealability: 10, availability: '24/14 days', streetIndex: 3 /* v0.92.3: FoF melee weapons */ }],
+      ['grenadeLauncher', 'Grenade launcher', { cost: 1600 /* v0.77.0 book check: six-shot SA launcher 1,600¥ (was 2,000) */, skill: 'Launch Weapons', damagePower: 10, damageLevel: 'S', modes: 'SA', ammoMax: 6, ammo: 6, blast: true, blastKind: 'offensive', blastPerMetre: 1, minRange: 5, range: { short: 50, medium: 100, long: 150, extreme: 300 }, concealability: 6, weight: 2.5, availability: '6/36 hrs', streetIndex: 3 /* v0.92.3: Armtech MGL-6 */ }],
+      ['smokeGrenade', 'Smoke grenade', { cost: 30, skill: 'Throwing Weapons', damagePower: 0, damageLevel: 'L', damageType: 'stun', blast: true, blastKind: 'smoke', blastPerMetre: 1, strengthRange: true, strengthRangeMultipliers: { short: 3, medium: 5, long: 10, extreme: 20 } /* v0.79.0 docs check: SRII Grenade Range Table (was 1/2/3/5) */, concealability: 6, weight: 0.25, availability: '3/24 hrs', streetIndex: 2 /* v0.92.3: FoF grenades */ }],
+      ['taser', 'Taser', { cost: 1000, skill: 'Firearms', damagePower: 10, damageLevel: 'S', damageType: 'stun', stunWeapon: true, modes: 'SA', ammoMax: 4, /* v0.77.0 book check: 10S, SA (was 10M, SS) */ ammo: 4, range: { short: 5, medium: 10, long: 12, extreme: 15 } /* v0.79.0 docs check: SRII Weapon Range Table (was 5/10/15/20) */, concealability: 4, weight: 2, availability: '5/24 hrs', streetIndex: 1 /* v0.92.3: Defiance Super Shock */ }],
     ] as Array<[string, string, Record<string, unknown>]>).map(([id, name, s]) => ({
       id, type: 'weapon', name,
       // Every layout flag is spelled out, so applying a template to another kind of weapon resets it.
@@ -2745,36 +2818,40 @@ export const RULES = {
         strengthRangeMultipliers: { short: 1, medium: 2, long: 3, extreme: 5 }, ...s,
       },
     })),
-    { id: 'armorJacket', type: 'armor', name: 'Armor jacket', system: { cost: 900, ballistic: 5, impact: 3, worn: true, adds: false } },
-    { id: 'armorVest', type: 'armor', name: 'Armor vest', system: { cost: 200, ballistic: 2, impact: 1, worn: true, adds: false } },
-    { id: 'armorClothing', type: 'armor', name: 'Armored clothing', system: { cost: 500, ballistic: 3, impact: 0, worn: true, adds: false } },
-    { id: 'helmet', type: 'armor', name: 'Helmet', system: { cost: 200, ballistic: 1, impact: 1, worn: true, adds: true } },
-    { id: 'formFitting', type: 'armor', name: 'Form-fitting body armor', system: { cost: 500, ballistic: 4, impact: 1, worn: true, adds: false } }, // v0.77.0 book check: full suit 4/1, not worn with other body armor (was 3/1, adds)
+    { id: 'armorJacket', type: 'armor', name: 'Armor jacket', system: { cost: 900, ballistic: 5, impact: 3, worn: true, adds: false, concealability: 6, weight: 2, availability: '3/36 hrs', streetIndex: 0.75 } }, // v0.92.3: FoF p. 93 (Concealability, weight, Availability, Street Index)
+    { id: 'armorVest', type: 'armor', name: 'Armor vest', system: { cost: 200, ballistic: 2, impact: 1, worn: true, adds: false, concealability: 12, weight: 1, availability: '2/36 hrs', streetIndex: 0.8 } }, // v0.92.3: FoF armor
+    { id: 'armorClothing', type: 'armor', name: 'Armored clothing', system: { cost: 500, ballistic: 3, impact: 0, worn: true, adds: false, concealability: 10, weight: 2, availability: '2/36 hrs', streetIndex: 1 } }, // v0.92.3: FoF armor
+    { id: 'helmet', type: 'armor', name: 'Helmet', system: { cost: 200, ballistic: 1, impact: 1, worn: true, adds: true, availability: '12/14 days', streetIndex: 1.5 } }, // v0.92.3: FoF armor (no Concealability)
+    { id: 'formFitting', type: 'armor', name: 'Form-fitting body armor', system: { cost: 500, ballistic: 4, impact: 1, worn: true, adds: false, concealability: 12, weight: 1.75, availability: '4/48 hrs', streetIndex: 1 } }, // v0.92.3: level 3, SSC p. 40 // v0.77.0 book check: full suit 4/1, not worn with other body armor (was 3/1, adds)
     // v0.43.0
-    { id: 'riotShield', type: 'armor', name: 'Riot shield', system: { cost: 1500, ballistic: 1, impact: 0, worn: true, adds: true, parry: 0, weight: 2 } }, // v0.77.0 book check: small shield +1 ballistic, 2 kg (was 0/2, 4 kg); v0.78.0 owner: no parry bonus (was parry 1)
-    { id: 'datajack', type: 'cyberware', name: 'Datajack', system: { cost: 1000, kind: 'datajack', essenceCost: 0.2, installed: true, bioware: false } },
-    { id: 'smartlink', type: 'cyberware', name: 'Smartlink', system: { cost: 2500, kind: 'other', essenceCost: 0.5, installed: true, smartlink: true, smartlinkLevel: 1, bioware: false } },
+    { id: 'riotShield', type: 'armor', name: 'Riot shield', system: { cost: 1500, ballistic: 1, impact: 0, worn: true, adds: true, parry: 0, weight: 2, availability: '8/14 days', streetIndex: 2 } }, // v0.92.3: small riot shield's Availability and Street Index // v0.77.0 book check: small shield +1 ballistic, 2 kg (was 0/2, 4 kg); v0.78.0 owner: no parry bonus (was parry 1)
+    // v0.92.3: the lined coat (Core p. 242: 4/2, Concealability 8, 1 kg, 2/24 hrs, 700¥, Street Index .75).
+    { id: 'linedCoat', type: 'armor', name: 'Lined coat', system: { cost: 700, ballistic: 4, impact: 2, worn: true, adds: false, concealability: 8, weight: 1, availability: '2/24 hrs', streetIndex: 0.75 } },
+    { id: 'datajack', type: 'cyberware', name: 'Datajack', system: { cost: 1000, kind: 'datajack', essenceCost: 0.2, installed: true, bioware: false, availability: 'Always', streetIndex: 0.9 } }, // v0.92.3: Core p. 246
+    { id: 'smartlink', type: 'cyberware', name: 'Smartlink', system: { cost: 2500, kind: 'other', essenceCost: 0.5, installed: true, smartlink: true, smartlinkLevel: 1, bioware: false, availability: '3/36 hrs', streetIndex: 1 } }, // v0.92.3: FoF p. 102
     { id: 'cybereyes', type: 'cyberware', name: 'Cybereyes (low-light)', system: { cost: 8000, kind: 'eyes', essenceCost: 0.2, installed: true, lowLight: true, bioware: false } }, // v0.78.0 book check: eyes 0.2 / 5,000¥ + low-light 3,000¥ (its 0.2 Essence free inside cybereyes) (was 0.3 / 5,000¥)
-    { id: 'wired1', type: 'cyberware', name: 'Wired reflexes 1', system: { cost: 55000, kind: 'reflexes', reflexes: 'wired', rating: 1, essenceCost: 2, installed: true, reaction: 2, initiativeDice: 1, bioware: false } },
-    { id: 'dermalPlating1', type: 'cyberware', name: 'Dermal plating 1', system: { cost: 6000, kind: 'other', essenceCost: 0.5, installed: true, armorBallistic: 1, armorImpact: 1, bioware: false } },
+    { id: 'wired1', type: 'cyberware', name: 'Wired reflexes 1', system: { cost: 55000, kind: 'reflexes', reflexes: 'wired', rating: 1, essenceCost: 2, installed: true, reaction: 2, initiativeDice: 1, bioware: false, availability: '4/8 days', streetIndex: 1 } }, // v0.92.3: Core p. 249
+    // v0.92.3 (RULES.GEAR_V923.dermal 'body', Core p. 248): its rating adds to Body; the armor fields stay for the 'armor' switch.
+    { id: 'dermalPlating1', type: 'cyberware', name: 'Dermal plating 1', system: { cost: 6000, kind: 'other', rating: 1, essenceCost: 0.5, installed: true, armorBallistic: 1, armorImpact: 1, bioware: false, availability: '4/12 days', streetIndex: 1 } },
     { id: 'combatSpell', type: 'spell', name: 'Combat spell (mana)', system: { category: 'combat', spellType: 'mana', learnedForce: 4, damageLevel: 'S', damageType: 'physical', duration: 'instant', area: false, drainModifier: 0, drainLevel: 'S' } }, // v0.77.0 book check: the book's Mana Bolt is S, drain (F/2)S (was M)
     { id: 'detectionSpell', type: 'spell', name: 'Detection spell', system: { category: 'detection', spellType: 'mana', learnedForce: 4, targetNumber: 4, duration: 'sustained', area: false, drainModifier: 0, drainLevel: 'L' } },
     { id: 'attackUtility', type: 'program', name: 'Attack utility', system: { kind: 'attack', rating: 4, damageLevel: 'M', loaded: true } },
     { id: 'sleaze', type: 'program', name: 'Sleaze', system: { kind: 'sleaze', rating: 4, loaded: true } },
-    { id: 'medkit', type: 'gear', name: 'Medkit', system: { cost: 200, quantity: 1, medkitRating: 3 } },
-    { id: 'weaponScanner', type: 'gear', name: 'Weapon detector (hand-held)', system: { cost: 1000, quantity: 1, scanner: { kind: 'weapon', rating: 4 } } },
-    { id: 'cyberScanner', type: 'gear', name: 'Cyberware scanner (hand-held)', system: { cost: 1500, quantity: 1, scanner: { kind: 'cyber', rating: 4 } } },
+    { id: 'medkit', type: 'gear', name: 'Medkit', system: { cost: 200, quantity: 1, medkitRating: 3, weight: 3, availability: '2/24 hrs', streetIndex: 1.5 } }, // v0.92.3: FoF p. 106
+    // v0.92.3: a MAD wand at 5,000¥ per rating point (NAGRL pp. 92–93; was 1,000¥); the Lone Star portable scanner, Rating 3, 5,000¥ (Lone Star p. 122; was R4, 1,500¥).
+    { id: 'weaponScanner', type: 'gear', name: 'Weapon detector (hand-held)', system: { cost: 20000, quantity: 1, scanner: { kind: 'weapon', rating: 4 } } },
+    { id: 'cyberScanner', type: 'gear', name: 'Cyberware scanner (hand-held)', system: { cost: 5000, quantity: 1, scanner: { kind: 'cyber', rating: 3 } } },
     { id: 'sniffer', type: 'gear', name: 'Explosive sniffer', system: { cost: 2000, quantity: 1, scanner: { kind: 'explosive', rating: 4 } } },
     { id: 'powerFocus', type: 'focus', name: 'Power focus', system: { focusType: 'power', rating: 1, active: true, bonded: false } },
     // v0.46.0
     // v0.78.0 owner's decision: SR2 core 10,000¥ × Rating (Corporate Security says × Rating²: VERIFY).
     { id: 'passkey', type: 'gear', name: 'Maglock passkey', system: { cost: 40000, quantity: 1, bypassTool: { kind: 'passkey', rating: 4 } } },
-    { id: 'rcd', type: 'gear', name: 'Remote control deck', system: { cost: 100000, quantity: 1, rcdRating: 2, signal: 4, weight: 4 } }, // v0.77.0 book check: Rating × 50,000¥, weight Rating × 2 (was 5,000¥)
-    { id: 'jammer', type: 'gear', name: 'Jammer', system: { cost: 4000, quantity: 1, jammer: 4 } },
+    { id: 'rcd', type: 'gear', name: 'Remote control deck', system: { cost: 10000, quantity: 1, rcdRating: 2, signal: 2, weight: 3, availability: '4/72 hrs', streetIndex: 2 } }, // v0.92.3: Rigger 2 p. 97 first: 5,000¥ × Rating, 3 kg (was the core 50,000¥ × Rating, Rating × 2 kg)
+    { id: 'jammer', type: 'gear', name: 'Jammer', system: { cost: 4000, quantity: 1, jammer: 4, concealability: 2, weight: 5, availability: '4/72 hrs', streetIndex: 1.5 } }, // v0.92.3: Rating/72 hrs, Concealability 2, 5 kg
     { id: 'chameleonSuit', type: 'gear', name: 'Chameleon suit', system: { cost: 8000, quantity: 1, stealth: { kind: 'chameleon', rating: 4, worn: true } } },
     { id: 'iccm', type: 'cyberware', name: 'ICCM biofeedback filter', system: { cost: 10000, kind: 'iccm', rating: 1, essenceCost: 0.2, installed: true, bioware: false } },
     // v0.61.0 (VERIFY)
-    { id: 'climbingGear', type: 'gear', name: 'Climbing gear', system: { cost: 250 /* v0.77.0 book check: the ascent/descent kit (was 200) */, quantity: 1, skillMods: [{ skill: 'Athletics', dice: 2, tn: 0 }] } },
+    { id: 'climbingGear', type: 'gear', name: 'Climbing gear', system: { cost: 250 /* v0.77.0 book check: the ascent/descent kit (was 200) */, weight: 2, availability: 'Always', streetIndex: 1 /* v0.92.3 */, quantity: 1, skillMods: [{ skill: 'Athletics', dice: 2, tn: 0 }] } },
     { id: 'cyberears', type: 'cyberware', name: 'Cyberears (amplification 1, damper)', system: { cost: 11000, kind: 'ears', essenceCost: 0.4, installed: true, hearingAmp: 1, dampener: true, bioware: false } }, // v0.78.0 book check: ears 0.3 / 4,000¥ + amplification 0.2 / 3,500¥ (free: the one feature) + damper 0.1 / 3,500¥ (was 0.3 / 4,000¥)
     { id: 'radio', type: 'gear', name: 'Headset radio', system: { cost: 500, quantity: 1, radio: { rating: 4, encryption: 0 } } },
     { id: 'fakeSin', type: 'gear', name: 'Fake SIN', system: { cost: 4000, quantity: 1, identity: { kind: 'sin', rating: 4, fake: true, covers: '' } } },
@@ -2829,11 +2906,13 @@ export const RULES = {
    */
   MAGIC_V56: {
     spellEffects: { reflexesExclusive: true, step: 1, capAtForce: true },
-    healing: { woundLevels: [[1, 'L'], [3, 'M'], [6, 'S'], [10, 'D']] as ReadonlyArray<readonly [number, 'L' | 'M' | 'S' | 'D']>, treatHours: 1, treatBlock: false },
+    healing: { woundLevels: [[1, 'L'], [3, 'M'], [6, 'S'], [10, 'D']] as ReadonlyArray<readonly [number, 'L' | 'M' | 'S' | 'D']>, treatHours: 1, /* v0.92.3: Treat "must" be within one hour (Core p. 155): true (was false, a warning) */ treatBlock: true },
     touch: { skill: 'Unarmed Combat', tn: 4, opposed: true, defense: 'quickness' as 'quickness' | 'reaction' | 'body', reachMetres: 2, distance: 'warn' as 'warn' | 'block' | 'off' },
     learning: { enabled: true, skill: 'Sorcery', daysPerForce: 1, site: 'warn' as 'warn' | 'block' | 'off' },
     permanent: { enabled: true, turnsPerForce: 1, secondsPerTurn: 0, undoHealing: true },
-    ward: { skill: 'Conjuring', hoursPerForce: 1, nuyenPerForce: 0, drainModifier: 0, drainLevel: 'M' as 'L' | 'M' | 'S' | 'D' },
+    // v0.92.3 (Grimoire p. 92): ward materials 1,000¥ per Force (was 0); the Revamp's patch keeps its 100. The skill,
+    // the drain and the time follow RULES.SORCERY_V923.ward ('book': Sorcery, (Force × successes)L Stun, Force hours).
+    ward: { skill: 'Conjuring', hoursPerForce: 1, nuyenPerForce: 1000, drainModifier: 0, drainLevel: 'M' as 'L' | 'M' | 'S' | 'D' },
     manifest: { enabled: true, blocksPhysical: true, alpha: 0.5 },
     detectionRange: { factor: 1, extendedFactor: 10, enforce: 'warn' as 'warn' | 'block' | 'off' },
     assensing: [
@@ -2941,9 +3020,11 @@ export const RULES = {
     wounds: { enabled: true, ic: true },
     blackIcHold: { enabled: true, attribute: 'willpower' as 'willpower' | 'intelligence', pool: true, successes: 1 },
     shutdown: { enabled: true, turns: 3, secondsPerTurn: 3 },
-    dumpShock: { levelBy: 'fixed' as 'fixed' | 'code', byCode: { blue: 'L', green: 'M', orange: 'S', red: 'D', black: 'D' } as Record<string, 'L' | 'M' | 'S' | 'D'> },
+    // v0.92.3: by code (VR2 p. 124; was 'fixed').
+    dumpShock: { levelBy: 'code' as 'fixed' | 'code', byCode: { blue: 'L', green: 'M', orange: 'S', red: 'D', black: 'D' } as Record<string, 'L' | 'M' | 'S' | 'D'> },
     icInitiative: { from: 'rating' as 'rating' | 'securityValue', diceByCode: { blue: 1, green: 2, orange: 3, red: 4, black: 4 } as Record<string, number> },
-    icAttackDice: 'rating' as 'rating' | 'securityValue',
+    // v0.92.3: the host's Security Value (VR2 p. 40; was 'rating').
+    icAttackDice: 'securityValue' as 'rating' | 'securityValue',
     perception: { dice: 'sensors' as 'sensors' | 'computer', pool: true, analyze: [
       { successes: 1, reveals: ['kind'] },
       { successes: 2, reveals: ['rating', 'state'] },
@@ -2953,7 +3034,8 @@ export const RULES = {
     utilities: {
       slow: { initiativePerNet: 3 },
       restore: { tn: 4, pool: true, deckDamage: false, degrades: true },
-      validate: { dfBonus: 2 },
+      // v0.92.3: a validated passcode doesn't affect System Tests (VR2 p. 123; was 2).
+      validate: { dfBonus: 0 },
     },
     bombs: { level: 'M' as 'L' | 'M' | 'S' | 'D', alert: 'passive' as 'none' | 'passive' | 'active' | 'shutdown' },
     comcalls: { needsLtg: true },
@@ -3131,7 +3213,8 @@ export const RULES = {
       ] as ReadonlyArray<{ id: string; label: string }>,
       perStepTn: 2,
       noneTn: 4,
-      none: 'tn' as 'tn' | 'block',
+      // v0.92.3 (book alignment): without the tools a Build/Repair job is usually not allowed (Core p. 183; was 'tn', +4).
+      none: 'block' as 'tn' | 'block',
       gearRepair: { tn: 4, baseHours: 2, needs: 'kit', skillSuffix: ' B/R', fallbackSkill: 'Electronics B/R', fallbackAttribute: 'intelligence' },
     },
     creation: {
@@ -3305,6 +3388,22 @@ export const RULES = {
   /** v0.92.1: the flexible record sheet (custom tweaks, Carried, accessories from the description, the advising wizard; rules/config92.ts). */
   SHEET_V921,
   CLOCK_V922,
+  /** v0.92.3: book alignment, Core mechanics and characters (rules/config923/core.ts). */
+  CORE_V923,
+  /** v0.92.3: book alignment, Combat (rules/config923/combat.ts). */
+  COMBAT_V923,
+  /** v0.92.3: book alignment, Damage, health and hazards (rules/config923/health.ts). */
+  HEALTH_V923,
+  /** v0.92.3: book alignment, Sorcery (rules/config923/sorcery.ts). */
+  SORCERY_V923,
+  /** v0.92.3: book alignment, Conjuring, spirits, astral, initiation, adepts, allies and critters (rules/config923/spirits.ts). */
+  SPIRITS_V923,
+  /** v0.92.3: book alignment, The Matrix (rules/config923/matrix.ts). */
+  MATRIX_V923,
+  /** v0.92.3: book alignment, Vehicles, rigging and building security (rules/config923/vehicles.ts). */
+  VEHICLES_V923,
+  /** v0.92.3: book alignment, Gear, cyberware and bioware (rules/config923/gear.ts). */
+  GEAR_V923,
 } as const;
 
 export type RangeBand = keyof typeof RULES.RANGE_TN;

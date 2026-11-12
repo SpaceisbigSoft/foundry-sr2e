@@ -192,7 +192,8 @@ describe('characterImportPlan: street samurai', () => {
     assert.equal(u['system.attributes.quickness.base'], 5);
     assert.equal(u['system.attributes.quickness.mod'], 0);
     assert.equal(u['system.attributes.strength.mod'], 0);
-    assert.equal(u['system.attributes.body.mod'], 0);
+    // v0.92.3 (GEAR_V923.dermal 'body'): Dermal Plating 1 adds +1 Body, which the shown Body 8 already holds.
+    assert.equal(u['system.attributes.body.mod'], -1);
   });
   test('values for after the items exist', () => {
     assert.deepEqual(plan.after, { essenceShown: 0.85, reactionShown: 8, initiativeDice: 3, lifestyleMonths: 2, lifestyleSeconds: 2 * RULES.UPKEEP.monthDays * 86400 });

@@ -39,6 +39,17 @@ export function inCreation(actor: any): boolean {
   return actor?.type === 'character' && !creationRecordOf(actor) && Boolean(actor?.flags?.[SYSTEM.id]?.[DRAFT_FLAG]);
 }
 
+/**
+ * v0.92.3 review fix: the priority table (RULES.CORE_V923.priorities) a character's creation draft was started with:
+ * the draft's own `table`, or 'old' for a draft saved before v0.92.3 (it was begun under the v0.92.2 table); null when
+ * there is no draft (the switch as set applies). Pass it to rules/core923.ts withPriorityTable.
+ */
+export function draftTable(actor: any): 'book' | 'old' | null {
+  if (!inCreation(actor)) return null;
+  const t = actor?.flags?.[SYSTEM.id]?.[DRAFT_FLAG]?.table;
+  return t === 'book' || t === 'old' ? t : 'old';
+}
+
 // ---- The approval context: while the GM runs an approved request, the action passes the gate and the
 // advancement log credits the player (and the GM who approved).
 

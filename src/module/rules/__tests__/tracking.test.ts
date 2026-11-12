@@ -1,4 +1,5 @@
 import { test, describe } from 'node:test';
+import { oldWay } from './oldway.ts';
 import assert from 'node:assert/strict';
 import {
   signatureAgeHours, signatureLifeHours, signatureHoursLeft, pruneSignatures, freshnessModifier, trackingHours,
@@ -26,7 +27,8 @@ describe('astral signatures and tracking', () => {
     assert.equal(freshnessModifier(12)[0]?.value, 2);
     assert.equal(freshnessModifier(48)[0]?.value, 4);
   });
-  test('tracking time is base / successes', () => {
+  test('tracking time is base / successes (v0.92.2 base 6 h)', (t) => {
+    t.after(oldWay({ 'TRACKING.baseHours': 6 }));
     assert.equal(trackingHours(3), 2);
     assert.equal(trackingHours(0), null);
     assert.equal(trackingHours(4, 10), 2.5);
@@ -39,7 +41,9 @@ describe('geasa', () => {
     { text: 'Only at night', magic: 2, met: false, checkOnCast: true },
     { text: 'Fasting', magic: 1, met: false, checkOnCast: false },
   ];
-  test('unmet geasa take away the Magic they protect', () => {
+  test('unmet geasa take away the Magic they protect', (t) => {
+    // v0.92.3: the v0.92.2 rule (RULES.SORCERY_V923).
+    t.after(oldWay({ 'SORCERY_V923.geasa': 'v922' }));
     assert.equal(geasaPenalty(g), 3);
     assert.equal(geasaPenalty([]), 0);
   });

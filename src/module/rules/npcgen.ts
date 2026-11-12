@@ -11,6 +11,7 @@ import { parseStatBlock, statBlockItems, statBlockWarningCode, type StatBlockWar
 import * as D from './npcdata.ts';
 import { generateSheaf } from './sheafgen.ts';
 import { npcRatings } from './charfix.ts';
+import { racialModsOf } from './core923.ts';
 import { escHtml } from './html.ts';
 import { own } from './util.ts';
 import { t as tx, tCount } from '../helpers/i18n.ts';
@@ -314,7 +315,8 @@ export function generateNpc(opts: NpcOptions, r: Rng): NpcPlan {
   const maxAttr = Math.max(1, Math.floor(Number(RULES.NPCGEN.maxAttribute) || 6));
   const maxSkill = Math.max(1, Math.floor(Number(RULES.NPCGEN.maxSkill) || 8));
   // Racial modifiers are added on the sheet: keep every total at 1 or more (a troll's Charisma).
-  const racial = (k: AttributeKey) => Number((RULES.METATYPES.types[metatype]?.mods as Record<string, number> | undefined)?.[k] ?? 0);
+  // v0.92.3 (RULES.CORE_V923.racialMods): with the book's dwarf Q −1 and troll W −1.
+  const racial = (k: AttributeKey) => Number((racialModsOf(metatype) as Record<string, number>)[k] ?? 0);
   const attributes = Object.fromEntries(ATTRS.map((k) => [k, clamp(Math.round(row.attribute + (arch.attrs[k] ?? 0)) + int(r, -spread, spread), Math.max(1, 1 - racial(k)), Math.max(maxAttr, 1 - racial(k)))])) as Record<AttributeKey, number>;
 
   // Magic: the archetype's, or a chance for anyone who could be Awakened.
@@ -466,7 +468,7 @@ export function vehicleActorData(v: PlanVehicle): { name: string; type: 'vehicle
 
 /** The plan as an SR2-style stat block (what the preview shows; the importer reads it back). */
 export function statBlockText(p: NpcPlan): string {
-  const mods = RULES.METATYPES.types[p.metatype]?.mods ?? {};
+  const mods = RULES.METATYPES.types[p.metatype] ? racialModsOf(p.metatype) : {};
   const total = (k: AttributeKey) => p.attributes[k] + ((mods as any)[k] ?? 0);
   const head = ['B', 'Q', 'S', 'C', 'I', 'W', ...(p.magic ? ['M'] : [])];
   const vals = [...ATTRS.map((k) => String(total(k))), ...(p.magic ? [String(p.magic)] : [])];
@@ -541,10 +543,11 @@ export function npcActorData(p: NpcPlan): { actor: { name: string; type: string;
   if (rcdTpl && (p.controlRig || droneCount)) {
     // v0.77.0: rating enough for the drones (one port per drone).
     const r = clamp(Math.max(p.controlRig ?? 0, Math.ceil(droneCount / Math.max(1, RULES.RIGGING.remote.dronesPerRating))), 1, NPC_RCD_MAX_RATING);
-    // v0.81.0 (RC-13): cost and weight per rating point from the RCD template (book: Rating × 50,000¥, weight Rating × 2).
+    // v0.81.0 (RC-13): cost per rating point from the RCD template. v0.92.3 (Rigger 2 p. 97): 5,000¥ × Rating, and the weight
+    // is the template's whatever the rating (3).
     const sys = structuredClone(rcdTpl.system) as Record<string, unknown>;
     const base = Math.max(1, Number(sys['rcdRating']) || 1);
-    items.push({ name: rcdTpl.name, type: rcdTpl.type, system: { ...sys, rcdRating: r, cost: Math.round((Number(sys['cost']) || 0) / base * r), weight: ((Number(sys['weight']) || 0) / base) * r } });
+    items.push({ name: rcdTpl.name, type: rcdTpl.type, system: { ...sys, rcdRating: r, cost: Math.round((Number(sys['cost']) || 0) / base * r), weight: Number(sys['weight']) || 0 } }); // v0.92.3: Rigger 2 p. 97, 3 kg at any rating
   }
   // Cyberware, spells and powers in the importer's words.
   const block = ['B Q S C I W', '1 1 1 1 1 1',

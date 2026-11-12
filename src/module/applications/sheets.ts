@@ -1,5 +1,6 @@
 import { importIntoCharacter } from './catalogue.ts';
 import { sysNow } from '../helpers/clock.ts';
+import { nextInitiationGrade } from '../rules/sorcery923.ts';
 import { askFindThrough } from './through.ts';
 import { learnFromFormulaDialog, learnFromTeacherDialog } from './formulas.ts';
 import { teachersOn } from '../rules/formulas.ts';
@@ -23,7 +24,7 @@ import {
   type CalledShotEffect, parseStatBlock, parseFiringModes, specializationMatches, RULES,
   maxBoundElementals, SPIRIT_KINDS, UTILITY_KINDS, IC_CATEGORIES, IC_BEHAVIORS, IC_BEHAVIOR_LABELS, TRACE_MODES, PERSONA_ATTRIBUTES, icActionKind, programSize, behaviorFromName, smartlinkModifier, cyberCost, wareCost, bioEffect, ASTRAL_MODES, TRADITIONS, METAMAGIC, questStatus, FOCUS_TYPES, availableSustainingFocus, sorceryFocusDice, totemDice, POWER_DICE_SOURCES, POWER_TN_SOURCES, POWER_RESIST,
   personaWarnings, areaRadius, bindingCost, spellKarmaCost, MATERIAL_KINDS, blastRadius, blastFalloff,
-  handlingFor, overSpeed, crashDamage, vehicleCategory, canFireMount, rcdCapacity, ramDamage,
+  handlingFor, overSpeed, crashDamage, vehicleCategory, canFireMount, rcdCapacity, ramDamage, drivingRows, veh923,
   type RangeBand, type FiringMode,
   itemPrice, getSkillWeb, relatedDefaultTn, buildCheck, BUILD_COLUMNS, PRIORITY_LETTERS, type BuildColumn, type Priority, type BuildInput,
   siteRaiseCost, gradedAvailability, optionalTraditionOn, isShamanic, initiationCost, designDrain,
@@ -42,8 +43,9 @@ import {
   activeManeuvers, designVehicle, lockTypeOf, icInitiative,
 } from "../rules/index.ts";
 import { legworkDifficulties, legworkLevelDice, encephalonFits } from "../rules/index.ts";
-import { doctoringCareOptions } from "../rules/index.ts";
+import { doctoringCareOptions, veh80GunneryPool } from "../rules/index.ts";
 import { buysByFinding } from "../rules/index.ts";
+import { addictWho, addictionBook, addictionRatingNow, firstAidOnStun, firstAidByLevelOn, fallingBook, drowningBoxes, stunRecoveryBaseTn } from "../rules/health923.ts";
 import { REFERENCE_DRAG_TYPE } from "../rules/index.ts";
 import { dropReferenceEntry } from "./reference.ts";
 import { isCarried, tweakKeyChoices, normalizeTweaks, tweakText, TWEAK_TARGETS, TWEAK_TARGET_KEYS, ACCESSORY_FIELD_KEYS, TWEAK_KEYS, TWEAK_VALUE_MAX, TWEAK_MAX, essenceLoss as wareEssenceLoss, type TweakTarget } from "../rules/index.ts";
@@ -51,13 +53,17 @@ import { toolsModifier, gearRepairPlan, surveillanceKind, recognitionTn, readWri
 import { bioKindsV72, bioVitals, smokeCounts, ammoChoices, findAmmo, isKnownAmmo, canFireIndirect, metamagicChoices, BARRIER_KINDS, allySpellKarma, barrierBlocks, hostChoices, droneLinkOf, mountPointFor, skillRollMemoryFields, negotiationAttribute, outrightPurchase, lifestyleStatusText, metatypeOptions } from "../rules/index.ts";
 import { sheafFor } from "../rules/sheafgen.ts";
 import * as U80C from "../rules/urr80-combat.ts";
-import { urrCoreTnPresetRow, urrCoreKarmaDiceRow, urrCoreInstructorRule } from "../rules/urr80-core.ts";
+import * as C923 from "../rules/combat923.ts";
+import { urrCoreTnPresetRow, urrCoreInstructorRule } from "../rules/urr80-core.ts";
+// v0.92.3 book alignment, core mechanics and characters (RULES.CORE_V923).
+import * as CO923 from "../rules/core923.ts";
 import { sensorTableRows, sensorTableModifiers, segRows, segConditionModifiers } from "../rules/docs79-vehicles.ts";
 import { modKey, modIn, type TargetNumberModifier } from "../rules/dice.ts";
 import { quickRollArmed } from "./hotkeys.ts";
 import { visibilityV79, perceptionSightRows, perceptionSightModifiers } from "../rules/docs79-melee-vision.ts";
 import { superiorPositionModifiers, parseSkillMods, skillModsText, spellPointCheck, spellPointAllowance, lifestyleOutright, leftoverCash, starterSkillsMissing, buildPlan, icFromStep } from "../rules/index.ts";
 import { monitorView, trackView } from "../rules/index.ts";
+import { matrixOperations, PSYCHE_UNTIL_RECOVERED } from "../rules/matrix923.ts";
 import { socialDesiredPick, socialDesiredRows, socialDesiredModifiers, socialOneSided } from "../rules/index.ts";
 import { socialExtraRows, deathBoxExtra } from "../rules/index.ts";
 import { promptPoolDice } from "./chat.ts";
@@ -75,8 +81,9 @@ import { underwayRows, PROJECT_SHEET_ACTIONS } from "./projects.ts";
 import { recordCreation, reopenCreation, addAdvancementNote, deleteAdvancementLine, refuseLockedRaises } from "./advancement.ts";
 import { refusePermitTick, permitRowFor, vehiclePermitPayer } from "./permits.ts";
 import { timeLabel } from "../rules/waiting.ts";
-import { dropRequest, approvalNeeded, inCreation as inCreationNow, creationRecordOf } from "./approvals.ts";
+import { dropRequest, approvalNeeded, inCreation as inCreationNow, creationRecordOf, draftTable } from "./approvals.ts";
 import { escHtml } from "../rules/html.ts";
+import { gearBook } from "../rules/gear923.ts";
 import { requestGm, onRelay, type RelayOp } from "./socket.ts";
 import { openHelp } from "./help.ts";
 import { artSheetContext, useDefaultArt } from "./tokenart.ts";
@@ -515,8 +522,10 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       cyberWeapons: (actor.cyberWeapons?.() ?? []).map((w: any) => weaponRow(actor, w)),
       softSkills: actor.softSkills?.() ?? [],
       addictions: (actor.system.addictions ?? []).map((a: any, index: number) => {
-        const st = withdrawalState(a, sysNow());
-        return { ...a, index, withdrawal: a.addicted && st.withdrawal, daysClean: st.daysClean, canKick: a.addicted && st.canKick, recentCount: (a.recent ?? []).length };
+        // v0.92.3 (RULES.HEALTH_V923.addiction 'book'): withdrawal by the addict's Body or Willpower; kicking at any time.
+        const st = withdrawalState(a, sysNow(), addictWho(actor.system));
+        return { ...a, index, withdrawal: a.addicted && st.withdrawal, daysClean: st.daysClean, canKick: a.addicted && st.canKick, recentCount: (a.recent ?? []).length,
+          ...(addictionBook() ? { rating: addictionRatingNow(a, sysNow()), recoveringNow: Boolean(st.recovering) } : {}) };
       }),
       diseases: (actor.system.diseases ?? []).map((d: any, index: number) => ({ ...d, index,
         due: d.pending ? tx('SR2E.App.Sheets.dueNow') : tx('SR2E.App.Sheets.nextInHours', { hours: Math.max(0, Math.round((d.nextAt - sysNow()) / 3600)) }),
@@ -655,7 +664,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const choice = await foundry.applications.api.DialogV2.prompt({
       window: { title: tx('SR2E.Dialog.Sheet.groupCommandSDrones', { actorName: actor.name }) },
       content: `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.terrain')}</label><select name="terrain">${RULES.VEHICLES.terrain.map((t) => `<option value="${escHtml(t.id)}" ${t.id === ((SR2Actor as any).sceneTerrain?.() ?? "normal") ? "selected" : ""}>${escHtml(t.label)} (${t.value >= 0 ? "+" : ""}${t.value})</option>`).join("")}</select></div>
-        ${RULES.VEHICLES.drivingModifiers.map((m) => `<label class="sr2e-check"><input type="checkbox" name="sit" value="${escHtml(m.id)}"> ${escHtml(m.label)} (${m.value >= 0 ? "+" : ""}${m.value})</label>`).join("")}
+        ${drivingRows().map((m) => `<label class="sr2e-check"><input type="checkbox" name="sit" value="${escHtml(m.id)}"> ${escHtml(m.label)} (${m.value >= 0 ? "+" : ""}${m.value})</label>`).join("")}
         <label class="sr2e-check"><input type="checkbox" name="crash"> ${tx('SR2E.Dialog.Sheet.crashTest')}</label>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.label')}</label><input name="label" type="text" placeholder="${tx('SR2E.Dialog.Sheet.eGCloseInOnThe')}"></div>
         <p class="hint">${tx('SR2E.Dialog.Sheet.eachSubscribedDroneRollsItsOwn')}</p>`,
@@ -723,7 +732,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
 
   static async #onAdvanceInitiation(this: SR2CharacterSheet) {
     const actor: any = this.document;
-    const grade = (actor.system.initiateGrade ?? 0) + 1;
+    // v0.92.3 (RULES.SORCERY_V923.initiation 'book', Grimoire p. 38): the first initiation is to Grade 0.
+    const grade = nextInitiationGrade(Number(actor.system.initiateGrade ?? 0), Boolean(actor.getFlag?.("sr2e", "initiated")));
     // v0.72.0 (O15): adepts and aspected magicians see only the techniques they can learn (MAGIC_V72.metamagicLimits).
     const unknown = metamagicChoices(String(actor.tradition ?? actor.system.tradition ?? ""), METAMAGIC.filter((k) => !actor.system.metamagic?.[k]));
     const groups = (actor.myGroups?.() ?? []) as any[];
@@ -732,7 +742,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const content = `<p>${tx('SR2E.Dialog.Sheet.grade', { grade: escHtml(grade) })} <strong data-cost>${costOf(false, false).cost}</strong> ${tx('SR2E.Dialog.Sheet.goodKarmaAvailable', { karmaGood: escHtml(actor.system.karma.good) })}</p>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.learnMetamagic')}</label><select name="tech"><option value="">${tx('SR2E.Dialog.Sheet.none')}</option>${unknown.map((k) => `<option value="${escHtml(k)}">${escHtml(cap(k))}</option>`).join("")}</select></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.ordeal')}</label><select name="ordeal"><option value="">${tx('SR2E.Dialog.Sheet.none')}</option>${ordeals.map((o) => `<option value="${escHtml(o.id)}">${escHtml(o.label)}</option>`).join("")}</select></div>
-        <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.asceticismLower')}</label><select name="attr">${ATTRIBUTE_KEYS.map((k) => `<option value="${k}">${escHtml(cap(k))} (${escHtml(actor.system.attributes[k].base)})</option>`).join("")}</select></div>
+        <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.asceticismLower')}</label><select name="attr">${ATTRIBUTE_KEYS.filter((k) => RULES.SPIRITS_V923.asceticism !== "physical" || ["body", "quickness", "strength"].includes(k)).map((k) => `<option value="${k}">${escHtml(cap(k))} (${escHtml(actor.system.attributes[k].base)})</option>`).join("")}</select></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.geasOrOathTheWords')}</label><input name="geas" type="text" placeholder="${tx('SR2E.Dialog.Sheet.eGMustSpeakOnlyTruth')}"></div>
         <p class="hint" data-ordeal></p>
         ${groups.length ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.withAGroup')}</label><select name="group"><option value="">${tx('SR2E.Dialog.Sheet.alone')}</option>${groups.map((g) => `<option value="${escHtml(g.id)}">${escHtml(g.name)}</option>`).join("")}</select></div>` : ""}
@@ -824,10 +834,10 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         <label class="sr2e-check"><input type="checkbox" name="restricted"> ${tx('SR2E.Dialog.Sheet.veryRestrictedTargetOneMetatypeOne')}</label>
         <label class="sr2e-check"><input type="checkbox" name="extendedRange"> ${tx('SR2E.Dialog.Sheet.detectionExtendedRange')}</label>
         <label class="sr2e-check"><input type="checkbox" name="singleSense"> ${tx('SR2E.Dialog.Sheet.illusionOneSenseOnly')}</label>
-        <label class="sr2e-check"><input type="checkbox" name="exclusive"> ${tx('SR2E.Dialog.Sheet.exclusiveDrainWhenCast', { spellcraftExclusiveDrainMod: RULES.SPELLCRAFT.exclusiveDrainMod })}</label>
-        <label class="sr2e-check"><input type="checkbox" name="fetish"> ${tx('SR2E.Dialog.Sheet.fetishLimitedDrainWhenCast', { spellcraftFetishDrainMod: RULES.SPELLCRAFT.fetishDrainMod })}</label>
+        <label class="sr2e-check"><input type="checkbox" name="exclusive"> ${RULES.SORCERY_V923.restrictedSpells === "book" ? tx('SR2E.Dialog.Sheet.exclusiveForceWhenCast', { force: RULES.SORCERY_V923.restrictedForce.exclusive }) : tx('SR2E.Dialog.Sheet.exclusiveDrainWhenCast', { spellcraftExclusiveDrainMod: RULES.SPELLCRAFT.exclusiveDrainMod })}</label>
+        <label class="sr2e-check"><input type="checkbox" name="fetish"> ${RULES.SORCERY_V923.restrictedSpells === "book" ? tx('SR2E.Dialog.Sheet.fetishForceWhenCast', { force: RULES.SORCERY_V923.restrictedForce.fetishReusable, expendable: RULES.SORCERY_V923.restrictedForce.fetishExpendable }) : tx('SR2E.Dialog.Sheet.fetishLimitedDrainWhenCast', { spellcraftFetishDrainMod: RULES.SPELLCRAFT.fetishDrainMod })}</label>
         <p class="hint" data-drain></p>
-        <p class="hint">${tx('SR2E.Dialog.Sheet.vsForceALibraryHermeticOr', { designSkill: RULES.OCCULT.design.skill })}</p>`,
+        <p class="hint">${RULES.SORCERY_V923.design === "book" ? tx('SR2E.Dialog.Sheet.designBookHint') : tx('SR2E.Dialog.Sheet.vsForceALibraryHermeticOr', { designSkill: RULES.OCCULT.design.skill })}</p>`,
       render: (_e: Event, dialog: any) => {
         const form: HTMLFormElement | null = dialog.element?.querySelector?.("form") ?? null;
         const upd = () => {
@@ -1021,7 +1031,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     // v0.57.0: black IC holding the decker: breaking free is a test (Hacking Pool may help).
     const held: any = actor.blackIcHold?.();
     if (held) {
-      const pool = RULES.MATRIX_V57.blackIcHold.pool ? await promptPoolDice(actor, tx('SR2E.Dialog.Sheet.breakFreeOf', { heldName: held.name, actorName: actor.name }), "hacking") : 0;
+      // v0.92.3 review fix: the book's black IC takes no Hacking Pool (RULES.MATRIX_V923.blackIc): nothing to ask then.
+      const pool = RULES.MATRIX_V57.blackIcHold.pool && RULES.MATRIX_V923.blackIc === 'v922' ? await promptPoolDice(actor, tx('SR2E.Dialog.Sheet.breakFreeOf', { heldName: held.name, actorName: actor.name }), "hacking") : 0;
       if (pool === null) return;
       return void (await actor.jackOut({ poolDice: pool }));
     }
@@ -1071,7 +1082,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
           : `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.howObvious')}</label><select name="obv">${n.obviousness.map((o) => `<option value="${escHtml(o.id)}" ${o.id === "normal" ? "selected" : ""}>${escHtml(o.label)}${o.value ? ` (${o.value > 0 ? "+" : ""}${o.value})` : ""}</option>`).join("")}</select></div>`}
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.by')}</label><select name="sense"><option value="sight">${tx('SR2E.Dialog.Sheet.sightLightSmokeAndWeatherCount')}</option><option value="hearing">${tx('SR2E.Dialog.Sheet.hearingTheyDonT')}</option></select></div>
         ${targeted?.actor ? `<label class="sr2e-check"><input type="checkbox" name="at" checked> ${tx('SR2E.Dialog.Sheet.atItsLightWallsAndDistance', { targetedName: escHtml(targeted.name) })}</label>` : ""}
-        ${tableChecks(RULES.STREET.perception, "per")}
+        ${tableChecks(CO923.perceptionRows(), "per")}
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.otherTnModifier')}</label><input name="mod" type="number" value="0"></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.searchingTakesOptional')}</label><input name="time" type="number" min="0" step="0.5" value="0"> <select name="unit">${units.map((u) => `<option value="${escHtml(u.id)}" ${u.id === "minutes" ? "selected" : ""}>${escHtml(u.label)}</option>`).join("")}</select></div>
         <label class="sr2e-check"><input type="checkbox" name="whisper" ${game.user?.isGM ? "checked" : ""}> ${tx('SR2E.Dialog.Sheet.whisperTheResultToTheGm')}</label>
@@ -1082,7 +1093,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         const obv = n.obviousness.find((o) => o.id === el.obv?.value);
         // v0.79.0: the book's sight rows stack (RULES.DOCS_V79.perceptionSightBook).
         const sightRows = perceptionSightModifiers(perceptionSightRows().filter((o) => el[`obv-${o.id}`]?.checked).map((o) => o.id));
-        const manual = [...(sightRows ?? (obv?.value ? [{ label: tx('SR2E.Card.Mod.obviousness', { obvLabel: obv.label }), value: obv.value }] : [])), ...tableModifiers(RULES.STREET.perception, checkedIds(form, "per")), ...(Number(el.mod?.value) ? [{ id: 'other', label: tx('SR2E.Card.Mod.other'), value: Number(el.mod.value) }] : [])];
+        const manual = [...(sightRows ?? (obv?.value ? [{ label: tx('SR2E.Card.Mod.obviousness', { obvLabel: obv.label }), value: obv.value }] : [])), ...tableModifiers(CO923.perceptionRows(), checkedIds(form, "per")), ...(Number(el.mod?.value) ? [{ id: 'other', label: tx('SR2E.Card.Mod.other'), value: Number(el.mod.value) }] : [])];
         const auto = [...actor.noticeModifiers({ sense: el.sense?.value === "hearing" ? "hearing" : "sight", targetUuid: el.at?.checked ? targeted?.actor?.uuid ?? null : null }), ...actor.previewModifiers({ sightHandled: true })];
         return tnPreviewHtml({ base: n.baseTn, baseLabel: tx('SR2E.Dialog.Sheet.perception'), auto, manual, excluded });
       }),
@@ -1092,7 +1103,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     if (!r) return;
     if (!(await actor.useAction("perceive", tx('SR2E.Card.Sheet.aPerceptionTest')))) return;
     await actor.notice({ obviousness: r.obv, sense: r.sense, what: r.what, targetUuid: r.at ? targeted?.actor?.uuid ?? null : null, whisper: r.whisper, exclude: r.exclude,
-      modifiers: [...tableModifiers(RULES.STREET.perception, r.per), ...(r.mod ? [{ id: 'other', label: tx('SR2E.Card.Mod.other'), value: r.mod }] : [])], ...(r.time > 0 ? { baseTime: { value: r.time, unit: r.unit } } : {}) });
+      modifiers: [...tableModifiers(CO923.perceptionRows(), r.per), ...(r.mod ? [{ id: 'other', label: tx('SR2E.Card.Mod.other'), value: r.mod }] : [])], ...(r.time > 0 ? { baseTime: { value: r.time, unit: r.unit } } : {}) });
   }
 
   /** v0.58.0: negotiate a job's pay with Mr. Johnson (an opposed Negotiation test moves the fee). */
@@ -1125,11 +1136,13 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const picked = await foundry.applications.api.DialogV2.prompt({
       window: { title: tx('SR2E.Dialog.Sheet.recognised', { actorName: actor.name }) },
       content: `<fieldset class="sr2e-situational"><legend>${tx('SR2E.Dialog.Sheet.whoMightRecogniseThem')}</legend>${near.map((t: any) => `<label class="sr2e-check"><input type="checkbox" name="who" value="${escHtml(t.actor.uuid)}" ${!targeted.length || targeted.includes(t.actor.uuid) ? "checked" : ""}> ${escHtml(t.name)}</label>`).join("")}</fieldset>
-        <p class="hint">${tx('SR2E.Dialog.Sheet.vsPublicAwarenessWhisperedToThe', { recognitionAttribute: escHtml(cap(RULES.CHARACTERS_V58.recognition.attribute)), recognitionTn: recognitionTn(Number(actor.system.reputation?.publicAwareness ?? 0)), recognitionBaseTn: RULES.CHARACTERS_V58.recognition.baseTn })}</p>`,
-      ok: { label: tx('SR2E.Dialog.Sheet.roll'), callback: (_e: Event, b: any) => Array.from(b.form.querySelectorAll('input[name="who"]:checked')).map((i: any) => i.value as string) },
+        ${CO923.recognitionBook() ? `<div class="form-group"><label>${tx('SR2E.Dialog.Core923.publicRep')}</label><input name="publicRep" type="number" min="0" placeholder="${Number(actor.system.karma?.career ?? 0)}"></div>
+        <p class="hint">${tx('SR2E.Dialog.Core923.recognitionHint', { rep: Number(actor.system.karma?.career ?? 0), tn: CO923.recognitionTnBook(Number(actor.system.karma?.career ?? 0)) })}</p>`
+        : `<p class="hint">${tx('SR2E.Dialog.Sheet.vsPublicAwarenessWhisperedToThe', { recognitionAttribute: escHtml(cap(RULES.CHARACTERS_V58.recognition.attribute)), recognitionTn: recognitionTn(Number(actor.system.reputation?.publicAwareness ?? 0)), recognitionBaseTn: RULES.CHARACTERS_V58.recognition.baseTn })}</p>`}`,
+      ok: { label: tx('SR2E.Dialog.Sheet.roll'), callback: (_e: Event, b: any) => ({ who: Array.from(b.form.querySelectorAll('input[name="who"]:checked')).map((i: any) => i.value as string), rep: String(b.form.elements.publicRep?.value ?? '').trim() }) },
       rejectClose: false,
-    }) as string[] | null;
-    if (picked?.length) await actor.recognitionCheck(picked);
+    }) as { who: string[]; rep: string } | null;
+    if (picked?.who?.length) await actor.recognitionCheck(picked.who, { publicRep: picked.rep === '' ? null : Number(picked.rep) });
   }
 
   /** v0.58.0: repair a broken weapon or piece of gear (its B/R skill, tools as needed). */
@@ -1224,19 +1237,21 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
   static async #onPerceive(this: SR2CharacterSheet) {
     const actor: any = this.document;
     const r = await SR2CharacterSheet.#pickPerson(actor, tx('SR2E.Dialog.Sheet.perceive', { actorName: actor.name }), `<label class="sr2e-check"><input type="checkbox" name="whisper" ${game.user?.isGM ? "checked" : ""}> ${tx('SR2E.Dialog.Sheet.whisperTheResultToTheGm')}</label>
-      ${tableChecks(RULES.STREET.perception, "per")}
-      <p class="hint">${tx('SR2E.Dialog.Sheet.sOrVsTheirStealthTheir', { actorName: escHtml(actor.name), perceptionSkill: escHtml(cap(RULES.PERCEPTION.skill)), perceptionAttribute: escHtml(cap(RULES.PERCEPTION.attribute)) })}</p>`,
+      ${tableChecks(CO923.perceptionRows(), "per")}
+      <p class="hint">${CO923.perceptionMode() === 'opposed' ? tx('SR2E.Dialog.Sheet.sOrVsTheirStealthTheir', { actorName: escHtml(actor.name), perceptionSkill: escHtml(cap(RULES.PERCEPTION.skill)), perceptionAttribute: escHtml(cap(RULES.PERCEPTION.attribute)) })
+        : CO923.perceptionMode() === 'companion' ? tx('SR2E.Dialog.Core923.perceiveCompanion', { actorName: escHtml(actor.name), tn: CO923.bookPerceptionTargets({}).observerTn, stealth: escHtml(RULES.PERCEPTION.stealthSkill) })
+        : tx('SR2E.Dialog.Core923.perceiveBook', { actorName: escHtml(actor.name), tn: CO923.bookPerceptionTargets({}).observerTn })}</p>`,
       (who, form, excluded) => {
         const pv = actor.perceptionPreview(who);
         const mod = Number((form.elements as any).mod?.value) || 0;
-        const manual = [...tableModifiers(RULES.STREET.perception, checkedIds(form, "per")), ...(mod ? [{ id: 'other', label: tx('SR2E.Card.Mod.other'), value: mod }] : [])];
-        return tnPreviewHtml({ title: actor.name, auto: pv.observer, manual, excluded, ...(pv.blocked ? { warn: tx('SR2E.App.Sheets.cantNoticeThem', { why: pv.why }) } : {}) })
-          + (who ? tnPreviewHtml({ title: who.name, auto: pv.sneaker, excluded, key: "theirs§" }) : "");
+        const manual = [...tableModifiers(CO923.perceptionRows(), checkedIds(form, "per")), ...(mod ? [{ id: 'other', label: tx('SR2E.Card.Mod.other'), value: mod }] : [])];
+        return tnPreviewHtml({ title: actor.name, ...(CO923.perceptionMode() !== 'opposed' ? { base: CO923.bookPerceptionTargets({}).observerTn, baseLabel: tx('SR2E.Dialog.Sheet.targetNumber') } : {}), auto: pv.observer, manual, excluded, ...(pv.blocked ? { warn: tx('SR2E.App.Sheets.cantNoticeThem', { why: pv.why }) } : {}) })
+          + (who && CO923.perceptionMode() !== 'book' ? tnPreviewHtml({ title: who.name, auto: pv.sneaker, excluded, key: "theirs§" }) : "");
       });
     if (!r) return;
     if (!(await actor.useAction("perceive", tx('SR2E.Card.Sheet.aPerceptionTest')))) return;
     const mod = Number(r.form.mod) || 0;
-    await actor.perceive(r.uuid, { exclude: r.exclude, excludeTheirs: r.excludeTheirs, whisper: Boolean(r.form.whisper), modifiers: [...tableModifiers(RULES.STREET.perception, checkedIds(r.form, "per")), ...(mod ? [{ id: 'other', label: tx('SR2E.Card.Mod.other'), value: mod }] : [])] });
+    await actor.perceive(r.uuid, { exclude: r.exclude, excludeTheirs: r.excludeTheirs, whisper: Boolean(r.form.whisper), modifiers: [...tableModifiers(CO923.perceptionRows(), checkedIds(r.form, "per")), ...(mod ? [{ id: 'other', label: tx('SR2E.Card.Mod.other'), value: mod }] : [])] });
   }
 
   /** v0.50.0: the social skill a plain skill roll handed over to the social test. */
@@ -1290,9 +1305,11 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const r = await foundry.applications.api.DialogV2.prompt({
       window: { title: tx('SR2E.Dialog.Sheet.sneak2', { actorName: actor.name }) },
       content: `<fieldset class="sr2e-situational"><legend>${tx('SR2E.Dialog.Sheet.pastWhom')}</legend>${near.map((t: any) => `<label class="sr2e-check"><input type="checkbox" name="who" value="${escHtml(t.actor.uuid)}" ${targeted.has(t.actor.uuid) || !targeted.size ? "checked" : ""}> ${escHtml(t.name)}</label>`).join("")}</fieldset>
-        ${tableChecks(RULES.STREET.perception, "per")}${spec}
+        ${tableChecks(CO923.perceptionRows(), "per")}${spec}
         <label class="sr2e-check"><input type="checkbox" name="whisper" ${game.user?.isGM ? "checked" : ""}> ${tx('SR2E.Dialog.Sheet.whisperTheResultToTheGm')}</label>
-        <p class="hint">${tx('SR2E.Dialog.Sheet.onceAgainstTheSharpestEachObserver', { perceptionStealthSkill: RULES.PERCEPTION.stealthSkill, perceptionAttribute: escHtml(cap(RULES.PERCEPTION.attribute)), perceptionSkill: escHtml(cap(RULES.PERCEPTION.skill)) })}</p>`,
+        <p class="hint">${CO923.perceptionMode() === 'opposed' ? tx('SR2E.Dialog.Sheet.onceAgainstTheSharpestEachObserver', { perceptionStealthSkill: RULES.PERCEPTION.stealthSkill, perceptionAttribute: escHtml(cap(RULES.PERCEPTION.attribute)), perceptionSkill: escHtml(cap(RULES.PERCEPTION.skill)) })
+          : CO923.perceptionMode() === 'companion' ? tx('SR2E.Dialog.Core923.sneakCompanion', { tn: CO923.bookPerceptionTargets({}).observerTn, stealth: escHtml(RULES.PERCEPTION.stealthSkill) })
+          : tx('SR2E.Dialog.Core923.sneakBook', { tn: CO923.bookPerceptionTargets({}).observerTn })}</p>`,
       ok: { label: tx('SR2E.Dialog.Sheet.sneak'), callback: (_e: Event, b: any) => ({ who: Array.from(b.form.querySelectorAll('input[name="who"]:checked')).map((i: any) => i.value as string), per: checkedIds(b.form, "per"), whisper: Boolean(b.form.elements.whisper.checked), spec: Boolean(b.form.elements.spec?.checked) }) },
       rejectClose: false,
     }) as { who: string[]; per: string[]; whisper: boolean; spec: boolean } | null;
@@ -1301,7 +1318,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     if (!actor.canAct?.("sneak")) return;
     if (!(await actor.useAction("perceive", tx('SR2E.Card.Sheet.sneaking')))) return;
     // v0.50.0: the observers' conditions go on each observer's own TN (as in Perceive).
-    const mods = tableModifiers(RULES.STREET.perception, r.per).map((m) => ({ label: tx('SR2E.Card.Mod.observers', { label: m.label }), value: m.value }));
+    const mods = tableModifiers(CO923.perceptionRows(), r.per).map((m) => ({ label: tx('SR2E.Card.Mod.observers', { label: m.label }), value: m.value }));
     await actor.sneakPast(r.who, { observerModifiers: mods, whisper: r.whisper, useSpecialization: r.spec });
   }
 
@@ -1331,14 +1348,16 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       content: `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.what')}</label><select name="kind"><option value="climb">${tx('SR2E.Dialog.Sheet.climb')}</option><option value="swim">${tx('SR2E.Dialog.Sheet.swim')}</option><option value="jump">${tx('SR2E.Dialog.Sheet.jump')}</option></select></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.climbing')}</label><select name="climb">${a.climb.map((c) => `<option value="${escHtml(c.id)}" ${c.id === "rough" ? "selected" : ""}>${tx('SR2E.Dialog.Sheet.tn2', { label: escHtml(c.label), tn: c.tn })}</option>`).join("")}</select></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.swimming')}</label><select name="swim">${a.swim.map((c) => `<option value="${escHtml(c.id)}" ${c.id === "choppy" ? "selected" : ""}>${tx('SR2E.Dialog.Sheet.tn2', { label: escHtml(c.label), tn: c.tn })}</option>`).join("")}</select></div>
+        ${CO923.climbModifierRows().length ? tableChecks(CO923.climbModifierRows(), "clm") : ""}
         <label class="sr2e-check"><input type="checkbox" name="running"> ${tx('SR2E.Dialog.Sheet.aRunningJump', { jumpRunningMultiplier: a.jump.runningMultiplier })}</label>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.otherTnModifier')}</label><input name="mod" type="number" value="0"></div>
-        <p class="hint">${tx('SR2E.Dialog.Sheet.orMPerSuccessClimbingOr', { skill: a.skill, attribute: escHtml(cap(a.attribute)), attributeDefaultTnMod: RULES.ATTRIBUTE_DEFAULT_TN_MOD, metresPerSuccess: a.metresPerSuccess, jumpMetresPerSuccess: a.jump.metresPerSuccess, walk: escHtml(actor.movementNow?.()?.walk ?? actor.system.derived?.movement?.walk ?? "?"), run: escHtml(actor.movementNow?.()?.run ?? actor.system.derived?.movement?.run ?? "?"), part: (actor.movementNow?.()?.factor ?? 1) !== 1 ? tx('SR2E.Dialog.Sheet.weatherDistancesToo', { factor: escHtml(actor.movementNow().factor) }) : "" })}</p>`,
-      ok: { label: tx('SR2E.Dialog.Sheet.roll'), callback: (_e: Event, b: any) => { const e = b.form.elements; const kind = String(e.kind.value); return { kind, condition: kind === "climb" ? String(e.climb.value) : kind === "swim" ? String(e.swim.value) : "", running: Boolean(e.running.checked), mod: Number(e.mod.value) || 0 }; } },
+        ${RULES.CORE_V923.athletics === 'book' && RULES.URR_V80.hsAthletics !== 'urr' ? `<p class="hint">${tx('SR2E.Dialog.Core923.athleticsHint', { skill: a.skill, attribute: escHtml(cap(a.attribute)), attributeDefaultTnMod: RULES.ATTRIBUTE_DEFAULT_TN_MOD, jumpMetresPerSuccess: a.jump.metresPerSuccess })}</p>` : `<p class="hint">${tx('SR2E.Dialog.Sheet.orMPerSuccessClimbingOr', { skill: a.skill, attribute: escHtml(cap(a.attribute)), attributeDefaultTnMod: RULES.ATTRIBUTE_DEFAULT_TN_MOD, metresPerSuccess: a.metresPerSuccess, jumpMetresPerSuccess: a.jump.metresPerSuccess, walk: escHtml(actor.movementNow?.()?.walk ?? actor.system.derived?.movement?.walk ?? "?"), run: escHtml(actor.movementNow?.()?.run ?? actor.system.derived?.movement?.run ?? "?"), part: (actor.movementNow?.()?.factor ?? 1) !== 1 ? tx('SR2E.Dialog.Sheet.weatherDistancesToo', { factor: escHtml(actor.movementNow().factor) }) : "" })}</p>`}`,
+      ok: { label: tx('SR2E.Dialog.Sheet.roll'), callback: (_e: Event, b: any) => { const e = b.form.elements; const kind = String(e.kind.value); return { kind, condition: kind === "climb" ? String(e.climb.value) : kind === "swim" ? String(e.swim.value) : "", running: Boolean(e.running.checked), mod: Number(e.mod.value) || 0, clm: kind === "climb" ? checkedIds(b.form, "clm") : [] }; } },
       rejectClose: false,
-    }) as { kind: string; condition: string; running: boolean; mod: number } | null;
+    }) as { kind: string; condition: string; running: boolean; mod: number; clm: string[] } | null;
     if (!r) return;
-    await actor.athleticsTest(r.kind, { condition: r.condition, running: r.running, modifiers: r.mod ? [{ id: 'other', label: tx('SR2E.Card.Mod.other'), value: r.mod }] : [] });
+    // v0.92.3 (RULES.CORE_V923.athletics 'book', Fields of Fire p. 75): the Climbing Table's height and surface modifiers.
+    await actor.athleticsTest(r.kind, { condition: r.condition, running: r.running, modifiers: [...tableModifiers(CO923.climbModifierRows(), r.clm ?? []), ...(r.mod ? [{ id: 'other', label: tx('SR2E.Card.Mod.other'), value: r.mod }] : [])] });
   }
 
   static async #onMoraleTest(this: SR2CharacterSheet) {
@@ -1362,7 +1381,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     });
     if (!ok) return;
     const saved = (actor.getFlag(SYSTEM.id, "build") ?? null) as Partial<Record<BuildColumn, Priority>> | null;
-    await recordCreation(actor, { how: "asIs", priorities: saved ?? {}, checks: saved && Object.values(saved).some((v) => v) ? buildCheck(buildInputFor(actor, saved)) : [] });
+    await recordCreation(actor, { how: "asIs", priorities: saved ?? {}, checks: saved && Object.values(saved).some((v) => v) ? CO923.withPriorityTable(draftTable(actor), () => buildCheck(buildInputFor(actor, saved))) : [] });
   }
 
   /** v0.64.0 (GM): take the record away so creation can be done again. */
@@ -1421,6 +1440,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       const attributes = Object.fromEntries(ATTRIBUTE_KEYS.map((k) => [k, Math.max(0, Math.floor(Number(el[`attr-${k}`]?.value) || 0))]));
       return { priorities, metatype: String(el.metatype?.value || base.metatype), magic: String(el.magicKind?.value || base.magic) as BuildInput["magic"], attributes, outright: Boolean(el.outright?.checked), ...lists(el) };
     };
+    // v0.92.3 review fix: a creation draft is checked against the priority table it was started with.
+    const dt = draftTable(actor);
     const render = (c: { priorities: Partial<Record<BuildColumn, Priority>>; metatype: string; magic: BuildInput["magic"]; attributes: Record<string, number>; skills?: any[]; gear?: { items: any[]; total: number }; warnings?: string[]; outright?: boolean }) => {
       const input = { ...buildInputFor(actor, c.priorities), metatype: c.metatype, magic: c.magic, attributes: c.attributes, intelligence: c.attributes["intelligence"] ?? base.intelligence };
       // The lists replace sheet skills of the same name, and add their gear's price.
@@ -1429,16 +1450,16 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       input.activeSkills = [...input.activeSkills.filter((s) => !named.has(s.name.toLowerCase())), ...listed.filter((s: any) => s.kind === "active" || s.kind === "buildRepair").map((s: any) => ({ name: s.name, rating: s.rating }))];
       input.knowledgeSkills = [...input.knowledgeSkills.filter((s) => !named.has(s.name.toLowerCase())), ...listed.filter((s: any) => s.kind === "knowledge" || s.kind === "language").map((s: any) => ({ name: s.name, rating: s.rating }))];
       input.gearCost += c.gear?.total ?? 0;
-      const rows = buildCheck(input).map((r) => `<tr class="${r.ok ? "" : "sr2e-warning"}"><td>${r.ok ? "✓" : "✗"} ${escHtml(r.label)}</td><td>${escHtml(r.used)}</td><td>${escHtml(r.allowed)}</td><td>${escHtml(r.note ?? "")}</td></tr>`);
+      const rows = CO923.withPriorityTable(dt, () => buildCheck(input)).map((r) => `<tr class="${r.ok ? "" : "sr2e-warning"}"><td>${r.ok ? "✓" : "✗"} ${escHtml(r.label)}</td><td>${escHtml(r.used)}</td><td>${escHtml(r.allowed)}</td><td>${escHtml(r.note ?? "")}</td></tr>`);
       // v0.61.0: a magician's starting spell points, the lifestyle bought outright, and what happens to leftover cash.
       if (c.magic !== "none") {
         const spells = [...(actor.items ?? [])].filter((i: any) => i.type === "spell").map((i: any) => ({ learnedForce: Number(i.system?.learnedForce ?? 0), force: Number(i.system?.force ?? 0) }));
         // v0.71.0 (R21): bonded foci take their bonding Karma from the spell points (RULES.FIXES_V71.creationFoci).
         const foci = [...(actor.items ?? [])].filter((i: any) => i.type === "focus").map((i: any) => ({ name: i.name, focusType: String(i.system?.focusType ?? ""), rating: Number(i.system?.rating ?? 0), bonded: Boolean(i.system?.bonded), target: String(i.system?.target ?? ""), category: String(i.system?.category ?? ""), size: String(i.system?.size ?? "") }));
-        const sp = spellPointCheck({ allowance: spellPointAllowance({ priority: String(c.priorities.magic ?? ""), adept: c.magic === "adept" }), spells, ...(c.magic === "adept" ? {} : { foci }) });
+        const sp = CO923.withPriorityTable(dt, () => spellPointCheck({ allowance: spellPointAllowance({ priority: String(c.priorities.magic ?? ""), adept: c.magic === "adept", resources: String(c.priorities.resources ?? "") }), spells, ...(c.magic === "adept" ? {} : { foci }) }));
         if (sp.allowance > 0 || sp.used > 0) rows.push(`<tr class="${sp.ok ? "" : "sr2e-warning"}"><td>${tx('SR2E.Dialog.Sheet.spellPoints', { mark: sp.ok ? "✓" : "✗" })}</td><td>${sp.used}</td><td>${sp.allowance}</td><td>${escHtml(sp.note)}</td></tr>`);
       }
-      const plan = buildPlan({ resources: c.priorities.resources, magic: c.magic, gearCost: input.gearCost });
+      const plan = CO923.withPriorityTable(dt, () => buildPlan({ resources: c.priorities.resources, magic: c.magic, gearCost: input.gearCost }));
       const want = c.outright ? lifestyleOutright({ lifestyle: plan.lifestyle }) : null;
       const extra = want ? Math.max(0, want.cost - (plan.lifestyleCost ?? 0)) : 0;
       const out = want && extra <= plan.nuyen ? want : null;
@@ -1944,6 +1965,9 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const H = RULES.HAZARDS;
     // v0.72.0 (O12): heat and electricity (RULES.HEALTH_V72.hazards).
     const H72: any = RULES.HEALTH_V72.hazards;
+    // v0.92.3 (RULES.HEALTH_V923.falling, drowning): the book's falling and drowning, ahead of the older summary.
+    const lines923 = [fallingBook(0, 0) ? tx('SR2E.Dialog.Sheet.hazardFallingBook923') : "", drowningBoxes(0) !== null ? tx('SR2E.Dialog.Sheet.hazardDrowningBook923') : ""].filter(Boolean);
+    const hint923 = lines923.length ? `<p class="hint">${lines923.join(" ")}</p>` : "";
     const choice = await foundry.applications.api.DialogV2.prompt({
       window: { title: tx('SR2E.Dialog.Sheet.hazard2', { actorName: actor.name }) },
       content: `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.hazard')}</label><select name="kind"><option value="falling">${tx('SR2E.Dialog.Sheet.falling')}</option><option value="fire">${tx('SR2E.Dialog.Sheet.fire__hazard')}</option><option value="drowning">${tx('SR2E.Dialog.Sheet.drowning')}</option><option value="cold">${tx('SR2E.Dialog.Sheet.coldExposure')}</option><option value="fatigue">${tx('SR2E.Dialog.Sheet.fatigue')}</option><option value="radiation">${tx('SR2E.Dialog.Sheet.radiation')}</option><option value="suffocation">${tx('SR2E.Dialog.Sheet.suffocation')}</option>${H72.heat.enabled ? `<option value="heat">${tx('SR2E.Dialog.Sheet.heatExposure')}</option>` : ""}${H72.electricity.enabled ? `<option value="electricity">${tx('SR2E.Dialog.Sheet.electricShock')}</option>` : ""}</select></div>
@@ -1957,6 +1981,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         ${H72.heat.enabled ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.heat')}</label><select name="heat">${H72.heat.severities.map((x: any) => `<option value="${escHtml(x.id)}">${tx('SR2E.Dialog.Sheet.tn2', { label: escHtml(x.label), tn: escHtml(x.tn) })}</option>`).join("")}</select></div>` : ""}
         ${H72.electricity.enabled ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.electricity')}</label><select name="shock">${H72.electricity.sources.map((x: any) => `<option value="${escHtml(x.id)}">${escHtml(x.label)} (${escHtml(x.power)}${escHtml(x.level)} ${escHtml(x.type)})</option>`).join("")}</select></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.electricityInsulationRating')}</label><input name="insulation" type="number" value="0" min="0"></div>` : ""}
+        ${hint923}
         <p class="hint">${tx('SR2E.Dialog.Sheet.fallingPowerPerMetreHalfImpact', { fallingPowerPerMetre: H.falling.powerPerMetre, fallingLevel: H.falling.level, drowningLevel: H.drowning.level, coldLevel: H.cold.level, fatigueLevel: H.fatigue.level, radiationLevel: RULES.HEALTH.radiation.level, suffocationTn: RULES.HEALTH.suffocation.tn, suffocationTnPerTurn: RULES.HEALTH.suffocation.tnPerTurn, suffocationLevel: RULES.HEALTH.suffocation.level, part: H72.heat.enabled ? tx('SR2E.Dialog.Sheet.heatBodyVsATnLike') : "", part2: H72.electricity.enabled ? tx('SR2E.Dialog.Sheet.electricityPartOfImpactArmorInsulation') : "" })}</p>`,
       ok: {
         label: tx('SR2E.Dialog.Sheet.roll'),
@@ -2036,6 +2061,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.formOrType')}</label><input name="type" type="text" placeholder="${tx('SR2E.Dialog.Sheet.eGRavenAllyFamiliar')}"></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.copyFrom')}</label><select name="template"><option value="">${tx('SR2E.Dialog.Sheet.aBlankSpirit')}</option>${templates.map((t: any) => `<option value="${escHtml(t.uuid)}">${escHtml(t.name)}</option>`).join("")}</select></div>
         <label class="sr2e-check"><input type="checkbox" name="pay" checked> ${tx('SR2E.Dialog.Sheet.payForTheRitualMaterials')}</label>
+        ${RULES.SPIRITS_V923.allyCost === "book" ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.allyDesignKarma')}</label><input name="design" type="number" value="0" min="0"></div>
+        <label class="sr2e-check"><input type="checkbox" name="familiar"> ${tx('SR2E.Dialog.Sheet.allyForFamiliarOrdeal')}</label>` : ""}
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.spellPoolDiceForDrainLeft', { left })}</label><input name="drainPool" type="number" value="0" min="0" max="${left}"></div>
         <p class="hint" data-ally></p>`,
       render: (_e: Event, dialog: any) => {
@@ -2045,9 +2072,12 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
           const out = form?.querySelector("[data-ally]");
           if (!el || !out) return;
           const f = Math.max(1, Math.floor(Number(el.force.value) || 1));
-          const c = allyCosts(f);
+          const c = allyCosts(f, { designKarma: Math.max(0, Math.floor(Number(el.design?.value) || 0)), familiar: Boolean(el.familiar?.checked) });
           const p = allyProblem({ grade, magic, force: f });
-          out.textContent = p || tx('SR2E.Dialog.Sheet.conjuringVsTnDaySMaterials', { tn: c.tn, days: c.days, nuyen: c.nuyen, karma: c.karma });
+          // v0.92.3 (RULES.SPIRITS_V923.allyCost 'book', Grimoire pp. 70–71): days ÷ successes, a Magic point, daily fatigue.
+          out.textContent = p || (RULES.SPIRITS_V923.allyCost === "book"
+            ? tx('SR2E.Dialog.Sheet.allyBookPlan', { tn: c.tn, days: c.days, nuyen: c.nuyen, karma: c.karma, magic: c.magic })
+            : tx('SR2E.Dialog.Sheet.conjuringVsTnDaySMaterials', { tn: c.tn, days: c.days, nuyen: c.nuyen, karma: c.karma }));
         };
         form?.addEventListener("input", upd);
         upd();
@@ -2055,7 +2085,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       ok: { label: tx('SR2E.Dialog.Sheet.beginTheRitual'), callback: (_e: Event, b: any) => {
         const el: any = b.form.elements;
         return { force: Math.max(1, Math.floor(Number(el.force.value) || 1)), spiritType: String(el.type.value ?? "").trim(), templateUuid: (el.template.value as string) || null,
-          payMaterials: Boolean(el.pay.checked), drainPoolDice: Math.max(0, Math.min(left, Math.floor(Number(el.drainPool.value) || 0))) };
+          payMaterials: Boolean(el.pay.checked), drainPoolDice: Math.max(0, Math.min(left, Math.floor(Number(el.drainPool.value) || 0))),
+          ...(el.design ? { designKarma: Math.max(0, Math.floor(Number(el.design.value) || 0)) } : {}), ...(el.familiar?.checked ? { familiar: true } : {}) };
       } },
       rejectClose: false,
     });
@@ -2116,12 +2147,12 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.opponent')}</label><select name="target">${targets.map((t: any) => `<option value="${escHtml(t.uuid)}" ${(t.uuid === targeted?.uuid || t.uuid === held?.uuid) ? "selected" : ""}>${escHtml(t.name)}${t.type === "ic" ? tx('SR2E.Dialog.Sheet.rating3', { rating: escHtml(t.system.rating) }) : tx('SR2E.Dialog.Sheet.persona')}</option>`).join("")}</select></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.otherTnModifier')}</label><input name="mod" type="number" value="0"></div>
         ${left > 0 ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.hackingPoolDiceLeft', { left })}</label><input name="pool" type="number" value="0" min="0" max="${left}"></div>` : ""}
-        <p class="hint">${tx('SR2E.Dialog.Sheet.opposedYourEvasionCloakLowersThe', { maneuversMaxTn: RULES.MATRIX_V57.maneuvers.maxTn })}</p>`,
+        <p class="hint">${RULES.MATRIX_V923.cybercombat !== "v922" ? tx('SR2E.Dialog.Sheet.opposedManeuver923', { maneuversMaxTn: RULES.MATRIX_V57.maneuvers.maxTn }) : tx('SR2E.Dialog.Sheet.opposedYourEvasionCloakLowersThe', { maneuversMaxTn: RULES.MATRIX_V57.maneuvers.maxTn })}</p>`,
       ok: { label: tx('SR2E.Dialog.Sheet.roll'), callback: (_e: Event, b: any) => { const el = b.form.elements; return { kind: String(el.kind.value), target: String(el.target.value), mod: Number(el.mod.value) || 0, pool: Math.max(0, Math.min(left, Math.floor(Number(el.pool?.value) || 0))) }; } },
       rejectClose: false,
     } as any) as any;
     if (!choice) return;
-    if (!(await actor.useAction("matrix:complex", tx('SR2E.Card.Sheet.aCybercombatManeuver')))) return;
+    if (!(await actor.useAction("matrixManeuver", tx('SR2E.Card.Sheet.aCybercombatManeuver')))) return;
     await actor.matrixManeuver(choice.kind, choice.target, { poolDice: choice.pool, modifiers: choice.mod ? [{ id: 'other', label: tx('SR2E.Card.Mod.other'), value: choice.mod }] : [] });
   }
 
@@ -2197,7 +2228,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const files: any[] = host ? cls.foundFiles(host, actor.uuid) : [];
     const ics: any[] = host ? cls.hostIc(host).filter((i: any) => !i.system.derived?.crashed && i.uuid !== frameUuid) : [];
     const devices: any[] = host ? cls.slaveDevices(host) : [];
-    const ops = host ? RULES.MATRIX.operations : RULES.MATRIX.operations.filter((o) => o.effect === "logon");
+    const ops = host ? matrixOperations() : matrixOperations().filter((o) => o.effect === "logon");
     const subRating = (k: string) => host?.system?.subsystems?.[k] ?? "?";
     const deckFiles = frame ? [] : actor.items.filter((i: any) => i.type === "cyberdeck").flatMap((d: any) => (d.system.files ?? []).map((f: any, index: number) => ({ deck: d, f, index })));
     const known: string[] = actor.system.matrix?.numbers ?? [];
@@ -2250,7 +2281,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       rejectClose: false,
     } as any) as any;
     if (!choice) return;
-    const op = choice.opId ? RULES.MATRIX.operations.find((o) => o.id === choice.opId) : null;
+    const op = choice.opId ? matrixOperations().find((o) => o.id === choice.opId) : null;
     if (!frame && !(await actor.useAction(`matrix:${op?.action ?? "complex"}`, op?.label ?? (choice.op || tx('SR2E.Card.Sheet.aSystemOperation'))))) return;
     const [kind, ref] = [choice.target.split(":")[0], choice.target.slice(choice.target.indexOf(":") + 1)];
     const [siteUuid, deviceId] = kind === "dev" ? ref.split("|") : [null, null];
@@ -2288,7 +2319,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         ${rememberMarker(`cyber|${actor.uuid}`, ["prog", "pool"])}
         ${targeted && !targets.some((t: any) => t.uuid === targeted.uuid) ? `<p class="sr2e-warn">${tx('SR2E.Dialog.Sheet.targetedIsNotInSHost', { targetedName: escHtml(targeted.name), actorName: escHtml(actor.name) })}</p>` : ""}
         <div class="sr2e-preview" aria-live="polite"></div>
-        <p class="hint">${RULES.MATRIX.defense.ic === "rating" ? tx('SR2E.Dialog.Sheet.vsTheIcSRatingIcDefend', { matrixSkill: RULES.MATRIX.skill, part: RULES.MATRIX.defense.persona === "pool" ? tx('SR2E.Dialog.Sheet.personasDefendWithHackingPoolDice') : tx('SR2E.Dialog.Sheet.personasDoNotDefend') }) : tx('SR2E.Dialog.Sheet.vsTheIcSRatingIcNoDefend', { matrixSkill: RULES.MATRIX.skill, part: RULES.MATRIX.defense.persona === "pool" ? tx('SR2E.Dialog.Sheet.personasDefendWithHackingPoolDice') : tx('SR2E.Dialog.Sheet.personasDoNotDefend') })}</p>`,
+        <p class="hint">${RULES.MATRIX_V923.cybercombat !== "v922" ? tx('SR2E.Dialog.Sheet.attackHint923', { part: RULES.MATRIX.defense.persona === "pool" ? tx('SR2E.Dialog.Sheet.personasDefendWithHackingPoolDice') : tx('SR2E.Dialog.Sheet.personasDoNotDefend') }) : RULES.MATRIX.defense.ic === "rating" ? tx('SR2E.Dialog.Sheet.vsTheIcSRatingIcDefend', { matrixSkill: RULES.MATRIX.skill, part: RULES.MATRIX.defense.persona === "pool" ? tx('SR2E.Dialog.Sheet.personasDefendWithHackingPoolDice') : tx('SR2E.Dialog.Sheet.personasDoNotDefend') }) : tx('SR2E.Dialog.Sheet.vsTheIcSRatingIcNoDefend', { matrixSkill: RULES.MATRIX.skill, part: RULES.MATRIX.defense.persona === "pool" ? tx('SR2E.Dialog.Sheet.personasDefendWithHackingPoolDice') : tx('SR2E.Dialog.Sheet.personasDoNotDefend') })}</p>`,
       ok: {
         label: tx('SR2E.Dialog.Sheet.attack'),
         callback: (_e: Event, b: any) => {
@@ -2778,7 +2809,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       content: `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.spell')}</label><select name="spell">${options.join("")}</select></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.spellPoolDiceLeft', { spellLeft })}</label><input name="pool" type="number" value="0" min="0" max="${spellLeft}"></div>
         ${RULES.MAGIC_V72.dispelDrainPool ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.spellPoolDiceForDrain')}</label><input name="drainPool" type="number" value="0" min="0" max="${spellLeft}"></div>` : ""}
-        <p class="hint">${tx('SR2E.Dialog.Sheet.sorceryVsTnTheSpellS', { magicDispelDrainLevel: RULES.MAGIC.dispelDrainLevel })}</p>`,
+        <p class="hint">${RULES.SORCERY_V923.dispelling === "book" ? tx('SR2E.Dialog.Sheet.dispelBookHint') : tx('SR2E.Dialog.Sheet.sorceryVsTnTheSpellS', { magicDispelDrainLevel: RULES.MAGIC.dispelDrainLevel })}</p>`,
       ok: { label: tx('SR2E.Dialog.Sheet.dispel'), callback: (_e: Event, button: any) => ({ spell: String(button.form.elements.spell.value), pool: Number(button.form.elements.pool?.value) || 0, drainPool: Number(button.form.elements.drainPool?.value) || 0 }) },
       rejectClose: false,
     });
@@ -2981,7 +3012,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       window: { title: tx('SR2E.Dialog.Sheet.bindByTrueName', { actorName: actor.name }) },
       content: `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.freeSpirit')}</label><select name="spirit">${spirits.map((s: any) => `<option value="${escHtml(s.uuid)}">${tx('SR2E.Dialog.Sheet.force2', { name: escHtml(s.name), force: escHtml(s.system.force) })}</option>`).join("")}</select></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.itsTrueName')}</label><input type="text" name="trueName" autocomplete="off"></div>
-        <p class="hint">${tx('SR2E.Dialog.Sheet.conjuringVsItsForceOpposedBy', { trueNameKarmaPerForce: RULES.MAGIC_V56.trueName.karmaPerForce })}</p>`,
+        <p class="hint">${(RULES.SPIRITS_V923.trueName === "book" ? tx('SR2E.Dialog.Sheet.trueNameBookHint') : tx('SR2E.Dialog.Sheet.conjuringVsItsForceOpposedBy', { trueNameKarmaPerForce: RULES.MAGIC_V56.trueName.karmaPerForce }))}</p>`,
       ok: { label: tx('SR2E.Dialog.Sheet.bind'), callback: (_e: Event, button: any) => ({ uuid: String(button.form.elements.spirit.value), name: String(button.form.elements.trueName.value ?? "") }) },
       rejectClose: false,
     } as any) as any;
@@ -3037,7 +3068,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const c2 = await foundry.applications.api.DialogV2.prompt({
       window: { title: tx('SR2E.Dialog.Sheet.roll2', { key: cap(key) }) },
       content: `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.targetNumber')}</label><input name="tn" type="number" value="4" min="2" autofocus></div>
-        ${urrCoreTnPresetRow()}${urrCoreKarmaDiceRow(Number(actor.system?.derived?.karmaPoolLeft ?? 0))}
+        ${urrCoreTnPresetRow()}${CO923.karmaDiceRow(Number(actor.system?.derived?.karmaPoolLeft ?? 0), true, Number(actor.system?.attributes?.[key]?.total ?? 0))}
         <label class="sr2e-check"><input type="checkbox" name="open"> ${tx('SR2E.Dialog.Sheet.openTestNoTnTheHighest')}</label>
         <div class="sr2e-preview" aria-live="polite"></div>`,
       render: (_e: Event, dialog: any) => {
@@ -3081,16 +3112,20 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const isLang = item.system?.kind === "language";
     const toolsBest = isBR ? actor.toolsFor?.(item.name) ?? "none" : "none";
     const levelOpts = (sel: string) => c58.tools.levels.map((l) => `<option value="${escHtml(l.id)}" ${l.id === sel ? "selected" : ""}>${escHtml(l.label)}</option>`).join("");
+    // v0.92.3 (RULES.CORE_V923.languageTns 'book', Core p. 184): the Language Skills Table and the dialect's +2.
+    const langTable = CO923.languageTable();
+    const langDefault = (langTable.find((x) => x.tn === 4) ?? langTable[0])?.id ?? "";
+    const dialectMod = isLang ? CO923.dialectModifier() : null;
     const extra58 = `${isBR ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.theJobNeeds')}</label><select name="toolsNeed">${levelOpts("kit")}</select></div><div class="form-group"><label>${tx('SR2E.Dialog.Sheet.toolsAtHand')}</label><select name="toolsHave">${levelOpts(toolsBest)}</select></div>` : ""}
-        ${isLang ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.language')}</label><select name="langMode"><option value="speak">${tx('SR2E.Dialog.Sheet.speakingListening')}</option><option value="rw">${tx('SR2E.Dialog.Sheet.readingWritingRating', { readWriteRating: readWriteRating(Number(item.system?.rating ?? 0)) })}</option></select></div><div class="form-group"><label>${tx('SR2E.Dialog.Sheet.howComplex')}</label><select name="langCx">${c58.languages.complexity.map((x) => `<option value="${escHtml(x.id)}" data-tn="${x.tn}" ${x.id === "everyday" ? "selected" : ""}>${tx('SR2E.Dialog.Sheet.tn2', { label: escHtml(x.label), tn: x.tn })}</option>`).join("")}</select></div>` : ""}
+        ${isLang ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.language')}</label><select name="langMode"><option value="speak">${tx('SR2E.Dialog.Sheet.speakingListening')}</option><option value="rw">${tx('SR2E.Dialog.Sheet.readingWritingRating', { readWriteRating: readWriteRating(Number(item.system?.rating ?? 0)) })}</option></select></div><div class="form-group"><label>${tx('SR2E.Dialog.Sheet.howComplex')}</label><select name="langCx">${langTable.map((x) => `<option value="${escHtml(x.id)}" data-tn="${x.tn}" ${x.id === langDefault ? "selected" : ""}>${tx('SR2E.Dialog.Sheet.tn2', { label: escHtml(x.label), tn: x.tn })}</option>`).join("")}</select></div>${dialectMod ? `<label class="sr2e-check"><input type="checkbox" name="dialect"> ${escHtml(dialectMod.label)} +${dialectMod.value}</label>` : ""}` : ""}
         <div class="form-group"><label title="${tx('SR2E.Dialog.Sheet.timeSuccessesIsShownOnThe')}">${tx('SR2E.Dialog.Sheet.baseTimeOptional')}</label><input name="baseTime" type="number" min="0" step="0.5" value="0"> <select name="baseUnit">${c58.time.units.map((u) => `<option value="${escHtml(u.id)}" ${u.id === "hours" ? "selected" : ""}>${escHtml(u.label)}</option>`).join("")}</select></div>`;
     // v0.78.0 (RULES.BOOK_V78.encephalon 'shadowtech'): an encephalon's Task Pool on the skills it helps.
     const taskLeft = encephalonFits({ attribute: String(item.system?.attribute ?? ""), kind: String(item.system?.kind ?? "active") }) ? Number(actor.system?.derived?.taskPoolLeft ?? 0) : 0;
     const taskRow = taskLeft > 0 ? `<div class="form-group"><label title="${tx('SR2E.Dialog.Sheet.refreshesEachCombatTurnNotUsed')}">${tx('SR2E.Dialog.Sheet.taskPoolDiceEncephalonLeft', { taskLeft })}</label><input name="taskPool" type="number" min="0" max="${taskLeft}" value="0"></div>` : "";
     const choice = await foundry.applications.api.DialogV2.prompt({
       window: { title: tx('SR2E.Dialog.Sheet.roll3', { itemName: item.name }) },
-      content: `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.targetNumber')}</label><input name="tn" type="number" value="${isLang ? (c58.languages.complexity.find((x) => x.id === "everyday")?.tn ?? 4) : 4}" min="2" autofocus></div>
-        ${urrCoreTnPresetRow(String(item.system?.kind ?? ""))}${extra58}${taskRow}${urrCoreKarmaDiceRow(Number(actor.system?.derived?.karmaPoolLeft ?? 0), Number(item.system?.rating ?? 0) > 0)}
+      content: `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.targetNumber')}</label><input name="tn" type="number" value="${isLang ? (langTable.find((x) => x.id === langDefault)?.tn ?? 4) : 4}" min="2" autofocus></div>
+        ${urrCoreTnPresetRow(String(item.system?.kind ?? ""))}${extra58}${taskRow}${CO923.karmaDiceRow(Number(actor.system?.derived?.karmaPoolLeft ?? 0), Number(item.system?.rating ?? 0) > 0 || !RULES.URR_V80.coreKarmaDice, Number(item.system?.rating ?? 0) > 0 ? Number(item.system?.rating ?? 0) : Number(actor.system?.attributes?.[String(item.system?.attribute ?? '')]?.total ?? 0))}
         ${skillChoiceRows(this.document, item, false)}
         <label class="sr2e-check"><input type="checkbox" name="open"> ${tx('SR2E.Dialog.Sheet.openTestNoTnTheHighest')}</label>
         ${others.length ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.complementarySkill1DiePerSuccesses', { complementarySuccessesPerDie: RULES.STREET.tests.complementary.successesPerDie })}</label><select name="comp"><option value="">${tx('SR2E.Dialog.Sheet.none')}</option>${others.map((o: any) => `<option value="${escHtml(o.id)}">${escHtml(o.name)} ${escHtml(o.system.rating)}</option>`).join("")}</select></div>` : ""}
@@ -3106,7 +3141,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         livePreview(dialog, (form, excluded) => {
           const el: any = form.elements;
           const t = el.toolsNeed ? toolsModifier(String(el.toolsNeed.value), String(el.toolsHave?.value ?? "none")) : null;
-          return tnPreviewHtml({ base: Number(el.tn?.value) || 4, baseLabel: tx('SR2E.Dialog.Sheet.targetNumber'), auto: actor.previewModifiers(), manual: t?.modifier ? [t.modifier] : [], excluded, note: tx('SR2E.Dialog.Sheet.edgesFlawsAndDefaultingAreAdded'), ...(t?.blocked ? { warn: tx('SR2E.Dialog.Sheet.canTDoItWithoutTools') } : {}) });
+          const dm = dialectMod && el.dialect?.checked ? [dialectMod] : [];
+          return tnPreviewHtml({ base: Number(el.tn?.value) || 4, baseLabel: tx('SR2E.Dialog.Sheet.targetNumber'), auto: actor.previewModifiers(), manual: [...(t?.modifier ? [t.modifier] : []), ...dm], excluded, note: tx('SR2E.Dialog.Sheet.edgesFlawsAndDefaultingAreAdded'), ...(t?.blocked ? { warn: tx('SR2E.Dialog.Sheet.canTDoItWithoutTools') } : {}) });
         });
       },
       ok: {
@@ -3115,7 +3151,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
           return { tn: Number(el.tn.value) || 4, useSpec: Boolean(el.useSpec?.checked), useConc: Boolean(el.useConc?.checked), related: (el.related?.value as string) || null,
             open: Boolean(el.open?.checked), comp: (el.comp?.value as string) || null, helpers: Array.from(button.form.querySelectorAll('input[name="helper"]:checked')).map((i: any) => i.value as string), exclude: excludedOf(button.form),
             baseTime: Number(el.baseTime?.value) || 0, baseUnit: String(el.baseUnit?.value ?? "hours"), toolsNeed: el.toolsNeed ? String(el.toolsNeed.value) : null, toolsHave: el.toolsHave ? String(el.toolsHave.value) : null,
-            lang: el.langMode ? { readWrite: el.langMode.value === "rw", complexity: String(el.langCx?.value ?? "everyday") } : null,
+            lang: el.langMode ? { readWrite: el.langMode.value === "rw", complexity: String(el.langCx?.value ?? langDefault) } : null,
+            dialect: Boolean(el.dialect?.checked),
             taskPool: el.taskPool ? Math.max(0, Math.floor(Number(el.taskPool.value) || 0)) : 0,
             karmaDice: el.karmaDice ? Math.max(0, Math.floor(Number(el.karmaDice.value) || 0)) : 0 };
         },
@@ -3128,6 +3165,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       ...(choice.baseTime > 0 ? { baseTime: { value: choice.baseTime, unit: choice.baseUnit } } : {}),
       ...(choice.toolsNeed ? { tools: { need: choice.toolsNeed, have: choice.toolsHave ?? "none" } } : {}),
       ...(choice.lang ? { language: choice.lang } : {}),
+      ...(choice.dialect && dialectMod ? { modifiers: [dialectMod] } : {}),
       ...(choice.taskPool > 0 ? { pool: "task", poolDice: choice.taskPool } : {}),
       ...(choice.karmaDice > 0 ? { karmaDice: choice.karmaDice } : {}) });
   }
@@ -3216,6 +3254,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         cover, light, barrierArmor: barrierArmor(barriers), barrierCount: barriers.length, smoke, conceal,
         targetProne: isProne(targetActor), attackerProne: isProne(actor),
         friends: melee && fromToken && to ? friendsInMelee(fromToken, to, reachM) : 0,
+        // v0.92.3 (COMBAT_V923.friends 'book', Core p. 102): the target's friends in the same fight count against the attacker.
+        foes: melee && fromToken && to && C923.friendsNetBook() ? friendsInMelee(to, fromToken, reachM) : 0,
         targetReach: Math.max(0, ...[...(targetActor?.items ?? [])].filter((i: any) => i.type === "weapon" && i.system.melee).map((i: any) => i.system.reach ?? 0)) + (targetActor?.reachBonus ?? 0),
       };
     };
@@ -3299,7 +3339,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const laserReady = laserReadyFor(latest);
     // v0.50.0: walking/running are ticked by themselves for ranged attacks (and melee if RULES.TN_AUTO.attack.movementInMelee).
     const moveTicks = !melee || RULES.TN_AUTO.attack.movementInMelee;
-    const situationalRows = RULES.SITUATIONAL_MODIFIERS.filter((m) => m.id !== "calledShot").map((m) => {
+    // v0.92.3 (COMBAT_V923.rangedRows): the book's extra rows can be hidden.
+    const situationalRows = RULES.SITUATIONAL_MODIFIERS.filter((m) => m.id !== "calledShot" && C923.rangedRowShown(m.id)).map((m) => {
       const checked = (m.id === "smartlink" && smartReady) || (m.id === "partialCover" && here.cover?.cover === "partial")
         || (m.id === "laserSight" && laserReady)
         || (moveTicks && m.id === "attackerWalking" && movement === "walking") || (moveTicks && m.id === "attackerRunning" && movement === "running");
@@ -3312,7 +3353,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const meleeRows = melee ? `
         <label class="sr2e-check"><input type="checkbox" name="charging" ${movement === "running" ? "checked" : ""}> ${tx('SR2E.Dialog.Sheet.charging', { cbtChargeLabel: U80C.cbtChargeLabel() })}</label>
         <label class="sr2e-check"><input type="checkbox" name="subdue"> ${tx('SR2E.Dialog.Sheet.subdueDamage', { subdueDamageType: RULES.COMBAT.subdue.damageType })}</label>
-        <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.friendsInMeleeWithTheTarget', { friendsInMeleeTnPerFriend: RULES.COMBAT.friendsInMelee.tnPerFriend })}</label><input name="friends" type="number" value="${here.friends}" min="0"></div>${RULES.COMBAT_V61.superiorPosition.enabled ? `
+        <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.friendsInMeleeWithTheTarget', { friendsInMeleeTnPerFriend: RULES.COMBAT.friendsInMelee.tnPerFriend })}</label><input name="friends" type="number" value="${here.friends}" min="0"></div>${C923.friendsNetBook() ? `
+        <div class="form-group"><label>${tx('SR2E.Dialog.Combat923.foesInMelee')}</label><input name="foes" type="number" value="${here.foes}" min="0"></div>` : ""}${RULES.COMBAT_V61.superiorPosition.enabled ? `
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.superiorPositionHigherGroundABetter')}</label><select name="superior"><option value="">${tx('SR2E.Dialog.Sheet.neither')}</option><option value="attacker">${tx('SR2E.Dialog.Sheet.holdsIt', { actorName: escHtml(actor.name), superiorPositionHolder: RULES.COMBAT_V61.superiorPosition.holder })}</option><option value="defender">${tx('SR2E.Dialog.Sheet.theTargetHoldsIt', { part: RULES.COMBAT_V61.superiorPosition.against ? ` (+${escHtml(RULES.COMBAT_V61.superiorPosition.against)})` : "" })}</option></select></div>` : ""}` : "";
     // Cyberarms (their own Strength) and vision magnification (v0.29.0).
     // v0.43.0: any weapon can be used with a cyberarm (its Quickness when defaulting; its Strength for Strength-based attacks).
@@ -3356,7 +3398,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       `<option value="${escHtml(v.id)}" ${v.id === visFor(here) ? "selected" : ""}>${escHtml(v.label)}${v.value ? ` (+${v.value}${v.using ? `, ${escHtml(v.using)}` : ""})` : v.using ? ` (${escHtml(v.using)})` : ""}</option>`).join("")}</select></div>
       <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.smoke')}</label><select name="smoke">${smokeOptions.map((v) => `<option value="${escHtml(v.id)}" ${v.id === (here.smoke?.kind ?? "none") ? "selected" : ""}>${escHtml(v.label)}${v.value ? ` (+${v.value})` : v.using && v.id !== "none" ? ` (${escHtml(v.using)}: +0)` : ""}</option>`).join("")}</select></div>`;
     const calledRow = `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.calledShot', { value: sit("calledShot")?.value ?? 4 })}</label><select name="calledShot">
-        <option value="none">${tx('SR2E.Dialog.Sheet.no')}</option><option value="damage">${tx('SR2E.Dialog.Sheet.forDamage1Level')}</option><option value="armor">${tx('SR2E.Dialog.Sheet.atAGapNoArmor')}</option></select></div>
+        <option value="none">${tx('SR2E.Dialog.Sheet.no')}</option><option value="damage">${tx('SR2E.Dialog.Sheet.forDamage1Level')}</option>${C923.calledShotGap() ? `<option value="armor">${tx('SR2E.Dialog.Sheet.atAGapNoArmor')}</option>` : ""}</select></div>
       <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.calledShotAt')}</label><select name="calledAt"><option value="">${tx('SR2E.Dialog.Sheet.theBody')}</option>${RULES.CYBERWARE.limbs.locations.filter((k) => k !== "other").map((k) => `<option value="${escHtml(k)}">${escHtml(LIMB_LABELS[k] ?? k)}</option>`).join("")}</select></div>
       ${vehiclePartRow()}`;
     // Grenades (v0.43.0): a bounced throw needs no line of sight; a throw can land off the target in a chosen direction.
@@ -3393,6 +3435,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       if (el.barrier) el.barrier.value = h.barrierArmor;
       if (el.targetProne) el.targetProne.checked = h.targetProne;
       if (el.friends) el.friends.value = h.friends;
+      if (el.foes) el.foes.value = h.foes;
     };
 
     // Reading the form (the dialog's OK, the live preview and Shift-click all use this).
@@ -3414,6 +3457,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         targetProne: Boolean(el.targetProne?.checked), attackerProne: Boolean(el.attackerProne?.checked),
         charging: Boolean(el.charging?.checked), subdue: Boolean(el.subdue?.checked), unaware: Boolean(el.unaware?.checked),
         friends: Math.max(0, Math.floor(Number(el.friends?.value) || 0)),
+        foes: Math.max(0, Math.floor(Number(el.foes?.value) || 0)),
         superior: ((el.superior?.value as string) || "") as "" | "attacker" | "defender",
         mod: Number(el.mod?.value) || 0,
         pool: Math.max(0, Math.min(left, Math.floor(Number(el.pool?.value) || 0))),
@@ -3439,7 +3483,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     // Modifiers the dialog works out: visibility (light and vision), smoke, prone, allies, charging.
     const visMod = (v: string) => {
       const o = visOptions.find((x) => x.id === v);
-      return o && o.value ? [{ label: `${o.label}${o.using ? ` (${o.using})` : ""}`, value: o.value }] : [];
+      // v0.92.3 (COMBAT_V923.meleeVisibility): full darkness is marked (melee halves every other row).
+      return o && o.value ? [{ ...(v === "darkness" ? { id: "fullDarkness" } : {}), label: `${o.label}${o.using ? ` (${o.using})` : ""}`, value: o.value }] : [];
     };
     // v0.50.0: the visibility group goes to planAttack as `sight`, so Blinded, blind fire and weather count once.
     const smokeMod = (id: string) => {
@@ -3455,7 +3500,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const buildOpts = (c: Choice) => {
       const positionMods = (targetProne: boolean) => [
         ...proneModifiers({ melee, targetProne, attackerProne: c.attackerProne }),
-        ...(melee ? [...friendsModifiers(c.friends), ...chargeModifiers(c.charging), ...superiorPositionModifiers(c.superior, "attacker"), ...U80C.cbtSubdueMods(c.subdue)] : []),
+        ...(melee ? [...(C923.friendsNet(c.friends, c.foes ?? 0) ?? friendsModifiers(c.friends)), ...chargeModifiers(c.charging), ...superiorPositionModifiers(c.superior, "attacker"), ...U80C.cbtSubdueMods(c.subdue), ...C923.subdueMods(c.subdue)] : []),
       ];
       const tail = [...(c.mod ? [{ id: 'other', label: tx('SR2E.Card.Mod.other'), value: c.mod }] : [])];
       // A bounced throw replaces blind fire (it needs no line of sight).
@@ -3524,7 +3569,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       if (sm) set.add(`${sm.label}${sm.using ? ` (${sm.using})` : ""}`);
       if (here.targetProne) { set.add("#targetProne"); set.add(tx('SR2E.Card.Mod.targetProne')); }
       if (here.attackerProne) { set.add("#attackerProne"); set.add(tx('SR2E.Card.Mod.attackerProne')); }
-      if (here.friends) set.add(tx('SR2E.Card.Mod.friendsInMelee', { n: Math.min(RULES.COMBAT.friendsInMelee.max, here.friends) }));
+      if (here.friends && !C923.friendsNetBook()) set.add(tx('SR2E.Card.Mod.friendsInMelee', { n: Math.min(RULES.COMBAT.friendsInMelee.max, here.friends) }));
+      for (const m of (C923.friendsNet(here.friends, here.foes ?? 0) ?? [])) set.add(m.label);
       if (movement === "running" && melee) { set.add("#charging"); set.add(tx('SR2E.Card.Mod.charging')); }
       return set;
     };
@@ -3687,10 +3733,11 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     // Shotguns: everyone in the cone (or circle) out to the target, Power reduced by the spread at their distance.
     if (shotgun && U80C.cbtShotgunSpreads(choice.ammoType ?? w.ammoType) && choice.targetUuid && latest.metres != null) {
       const to = targetTokens.get(choice.targetUuid);
-      const choke = w.choke ?? 1;
+      // v0.92.3 (COMBAT_V923.shotgun 'book', Core p. 95): the choke is set from 2 to 10.
+      const choke = C923.shotgunChoke(w.choke ?? 1);
       const atTarget = U80C.cbtShotgunSpread(shotgunSpread(latest.metres, choke, 0), latest.metres, choke, 0);
       const inSpread = !to ? [] : RULES.COMBAT.shotgun.shape === "cone" && fromToken
-        ? tokensInCone(fromToken, to, choke, RULES.URR_V80.cbtShotgun === "urr" ? (m: number) => U80C.cbtShotgunSpread(shotgunSpread(m, choke, 0), m, choke, 0).width : undefined)
+        ? tokensInCone(fromToken, to, choke, RULES.URR_V80.cbtShotgun === "urr" || C923.shotgunBook() ? (m: number) => U80C.cbtShotgunSpread(shotgunSpread(m, choke, 0), m, choke, 0).width : undefined)
         : tokensNear(to.center, atTarget.width / 2).filter((c) => c.token !== fromToken).map((c) => ({ token: c.token, metres: latest.metres as number }));
       const hits = [{ targetUuid: choice.targetUuid, powerDelta: -atTarget.loss },
         ...inSpread.filter((c) => c.token.actor?.uuid !== choice.targetUuid).map((c) => ({ targetUuid: c.token.actor.uuid as string, powerDelta: -U80C.cbtShotgunSpread(shotgunSpread(c.metres, choke, 0), c.metres, choke, 0).loss }))];
@@ -3718,7 +3765,10 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         const a = targetTokens.get(all[i]!), b = targetTokens.get(u);
         return a && b ? measureTokens(a, b)?.metres ?? 0 : 0;
       });
-      const waste = wastedRounds(gaps);
+      // v0.92.3 (COMBAT_V923.spreadFire 'book', Core p. 93): a smartgun with a smartlink wastes no rounds.
+      const smart923 = Boolean(w.smartgun && actor.system?.derived?.smartlink);
+      const wasteBetween = (g: number[]) => C923.walkingWaste(wastedRounds(g), smart923);
+      const waste = wasteBetween(gaps);
       if (rounds - waste < all.length) {
         ui.notifications?.warn?.(tx('SR2E.Notify.Sheet.walkingFireBetweenThoseTargetsWastes', { weaponName: escHtml(weapon.name), waste, rounds }));
         return;
@@ -3737,14 +3787,14 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
           sight = sightFor(visFor(h), h.smoke?.kind ?? "none", h);
         }
         await actor.attackWith(weapon, {
-          ...common, sight, ...(i > 0 && c.band ? { range: c.band } : {}), situational, targetUuid: all[i], rounds: split[i], spreadExtraTargets: all.length - 1, earlierRoundsThisPhase: earlier,
+          ...common, sight, ...(i > 0 && c.band ? { range: c.band } : {}), situational, targetUuid: all[i], rounds: split[i], spreadExtraTargets: all.length - 1, spreadIndex: i, earlierRoundsThisPhase: earlier,
           barrierArmor: i === 0 ? choice.barrier : h.barrierArmor,
           ...(c.metres != null ? { measuredMetres: c.metres } : {}),
           // Rounds wasted walking the fire to the next target: ammo and recoil, no damage.
-          ...(i > 0 ? { wastedRounds: wastedRounds([gaps[i - 1] ?? 0]) } : {}),
+          ...(i > 0 ? { wastedRounds: wasteBetween([gaps[i - 1] ?? 0]) } : {}),
           modifiers: [...positionMods(i === 0 ? choice.targetProne : h.targetProne), ...tail],
         });
-        earlier += split[i]! + (i > 0 ? wastedRounds([gaps[i - 1] ?? 0]) : 0);
+        earlier += split[i]! + (i > 0 ? wasteBetween([gaps[i - 1] ?? 0]) : 0);
       }
       return;
     }
@@ -3783,13 +3833,13 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       window: { title: tx('SR2E.Dialog.Sheet.firstAidBy', { actorName: actor.name }) },
       position: { width: 440 },
       content: `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.patient')}</label><select name="patient">${patients.map(row).join("")}</select></div>
-        <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.track2__monitor')}</label><select name="track"><option value="physical">${tx('SR2E.Dialog.Sheet.physical')}</option><option value="stun">${tx('SR2E.Dialog.Sheet.stun')}</option></select></div>
+        <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.track2__monitor')}</label><select name="track"><option value="physical">${tx('SR2E.Dialog.Sheet.physical')}</option>${firstAidOnStun() ? `<option value="stun">${tx('SR2E.Dialog.Sheet.stun')}</option>` : ""}</select></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.medkit')}</label><select name="kit"><option value="">${tx('SR2E.Dialog.Sheet.none3')}</option>${kits.map((k: any) => `<option value="${escHtml(k.id)}">${tx('SR2E.Dialog.Sheet.rating6', { name: escHtml(k.name), medkitRating: escHtml(k.system.medkitRating) })}</option>`).join("")}</select></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.combatPoolDiceLeft2', { derivedCombatPoolLeft: escHtml(actor.system.derived.combatPoolLeft) })}</label><input name="pool" type="number" value="0" min="0"></div>
         ${RULES.DOCS_V79.firstAidMods === "table" ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.conditions')}</label><select name="conditions"><option value="normal">${tx('SR2E.Dialog.Sheet.normal')}</option><option value="bad">${tx('SR2E.Dialog.Sheet.bad1')}</option><option value="terrible">${tx('SR2E.Dialog.Sheet.terrible3')}</option></select></div>
         <label class="sr2e-check"><input type="checkbox" name="magician" checked> ${tx('SR2E.Dialog.Sheet.allow2IfThePatientIs')}</label>` : ""}
         <label class="sr2e-check"><input type="checkbox" name="late"> ${tx('SR2E.Dialog.Sheet.moreThanHAfterTheInjury', { windowHours: f.windowHours })}</label>
-        <p class="hint">${tx('SR2E.Dialog.Sheet.orAt4VsTnBy', { skill: f.skill, fallbackAttribute: f.fallbackAttribute, tnByLevel: f.tnByLevel.L, tnByLevelM: f.tnByLevel.M, tnByLevelS: f.tnByLevel.S, tnByLevelD: f.tnByLevel.D, part: RULES.DOCS_V79.firstAidMods === "table" ? tx('SR2E.Dialog.Sheet.noMedkit4PatientIsA') : tx('SR2E.Dialog.Sheet.theMedkitSRatingAsDice') })}</p>`,
+        <p class="hint">${firstAidByLevelOn() ? tx('SR2E.Dialog.Sheet.orAt4VsTnByLevel923', { skill: f.skill, fallbackAttribute: f.fallbackAttribute, tnByLevel: f.tnByLevel.L, tnByLevelM: f.tnByLevel.M, tnByLevelS: f.tnByLevel.S, tnByLevelD: f.tnByLevel.D, part: RULES.DOCS_V79.firstAidMods === "table" ? tx('SR2E.Dialog.Sheet.noMedkit4PatientIsA') : tx('SR2E.Dialog.Sheet.theMedkitSRatingAsDice') }) : tx('SR2E.Dialog.Sheet.orAt4VsTnBy', { skill: f.skill, fallbackAttribute: f.fallbackAttribute, tnByLevel: f.tnByLevel.L, tnByLevelM: f.tnByLevel.M, tnByLevelS: f.tnByLevel.S, tnByLevelD: f.tnByLevel.D, part: RULES.DOCS_V79.firstAidMods === "table" ? tx('SR2E.Dialog.Sheet.noMedkit4PatientIsA') : tx('SR2E.Dialog.Sheet.theMedkitSRatingAsDice') })}</p>`,
       ok: { label: tx('SR2E.Dialog.Sheet.treat'), callback: (_e: Event, b: any) => ({ patient: b.form.elements.patient.value as string, track: b.form.elements.track.value as "physical" | "stun", kit: (b.form.elements.kit.value as string) || null, pool: Math.max(0, Math.floor(Number(b.form.elements.pool.value) || 0)), late: Boolean(b.form.elements.late.checked), conditions: (b.form.elements.conditions?.value ?? "normal") as "normal" | "bad" | "terrible", applyMagician: b.form.elements.magician ? Boolean(b.form.elements.magician.checked) : true }) },
       rejectClose: false,
     });
@@ -3827,7 +3877,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.payForHospitalCare')}</label><input name="pay" type="checkbox" checked></div>
         ${homes.length ? `<p class="hint">${tx('SR2E.Dialog.Sheet.restingAtHomeCountsWhenIt', { homes: homes.map((h: any) => `${escHtml(h.name)} (${escHtml(h.comfort)}${h.medical ? `, medical ${escHtml(h.medical)}` : ""})`).join(", "), lifestyleLevel: escHtml(actor.system.lifestyle?.level ?? tx('SR2E.Dialog.Sheet.low')) })}</p>` : ""}
         <p class="hint">${RULES.DOCS_V79.healing === "stages"
-          ? tx('SR2E.Dialog.Sheet.stunVsTnByTheWound', { attribute: escHtml(cap(n.attribute)), tnByLevel: n.tnByLevel.L, tnByLevelD: n.tnByLevel.D, periodHoursStun: n.periodHours.stun, healingStagesTnByLevel: RULES.DOCS_V79.healingStages.tnByLevel.L, tnByLevelM: RULES.DOCS_V79.healingStages.tnByLevel.M, tnByLevelS: RULES.DOCS_V79.healingStages.tnByLevel.S, tnByLevelD2: RULES.DOCS_V79.healingStages.tnByLevel.D, part: RULES.DOCS_V79.doctoring === "table" ? tx('SR2E.Dialog.Sheet.theDoctoringTableWithADoctor') : "" })
+          ? (stunRecoveryBaseTn() !== null ? tx('SR2E.Dialog.Sheet.stunVsTnByTheWoundBook923', { stunTn: stunRecoveryBaseTn() ?? 2, periodHoursStun: n.periodHours.stun, healingStagesTnByLevel: RULES.DOCS_V79.healingStages.tnByLevel.L, tnByLevelM: RULES.DOCS_V79.healingStages.tnByLevel.M, tnByLevelS: RULES.DOCS_V79.healingStages.tnByLevel.S, tnByLevelD2: RULES.DOCS_V79.healingStages.tnByLevel.D, part: RULES.DOCS_V79.doctoring === "table" ? tx('SR2E.Dialog.Sheet.theDoctoringTableWithADoctor') : "" }) : tx('SR2E.Dialog.Sheet.stunVsTnByTheWound', { attribute: escHtml(cap(n.attribute)), tnByLevel: n.tnByLevel.L, tnByLevelD: n.tnByLevel.D, periodHoursStun: n.periodHours.stun, healingStagesTnByLevel: RULES.DOCS_V79.healingStages.tnByLevel.L, tnByLevelM: RULES.DOCS_V79.healingStages.tnByLevel.M, tnByLevelS: RULES.DOCS_V79.healingStages.tnByLevel.S, tnByLevelD2: RULES.DOCS_V79.healingStages.tnByLevel.D, part: RULES.DOCS_V79.doctoring === "table" ? tx('SR2E.Dialog.Sheet.theDoctoringTableWithADoctor') : "" }))
           : tx('SR2E.Dialog.Sheet.vsTnByTheWoundLight', { attribute: escHtml(cap(n.attribute)), tnByLevel: n.tnByLevel.L, tnByLevelD: n.tnByLevel.D, periodHoursStun: n.periodHours.stun, periodHoursPhysical: n.periodHours.physical })}</p>`,
       ok: { label: tx('SR2E.Dialog.Sheet.rest'), callback: (_e: Event, b: any) => ({ track: b.form.elements.track.value as "physical" | "stun", hours: Math.max(0, Number(b.form.elements.hours.value) || 0), care: (b.form.elements.track.value === "physical" && b.form.elements.carePhysical ? b.form.elements.carePhysical.value : b.form.elements.care.value) as string, pay: Boolean(b.form.elements.pay.checked) }) },
       rejectClose: false,
@@ -4192,7 +4242,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
             // v0.78.0 (RULES.BOOK_V78.focusKarma): the book's bonding costs.
             const B = RULES.BOOK_V78.focusKarma;
             const cost = B.mode !== "book" ? tx('SR2E.Dialog.Sheet.karmaPerRating', { karma: RULES.ENCHANTING.focusKarma[k] ?? 1 })
-              : k === "spell" ? tx('SR2E.Dialog.Sheet.spellFocusCost', { specificSpell: B.specificSpell, spellCategory: B.spellCategory }) : k === "sustaining" ? tx('SR2E.Dialog.Sheet.karmaFlat', { karma: B.spellLockFlat }) : k === "weapon" ? tx('SR2E.Dialog.Sheet.weaponFocusCost', { weaponSmall: B.weaponSmall, weaponLarge: B.weaponLarge }) : tx('SR2E.Dialog.Sheet.karmaPerRating', { karma: escHtml((B as any)[k] ?? 1) });
+              : k === "spell" ? tx('SR2E.Dialog.Sheet.spellFocusCost', { specificSpell: B.specificSpell, spellCategory: B.spellCategory }) : k === "sustaining" ? tx('SR2E.Dialog.Sheet.karmaFlat', { karma: B.spellLockFlat }) : k === "weapon" ? (Number(RULES.SORCERY_V923.weaponFocusKarma) > 0 ? tx('SR2E.Dialog.Sheet.karmaPerRating', { karma: Number(RULES.SORCERY_V923.weaponFocusKarma) }) : tx('SR2E.Dialog.Sheet.weaponFocusCost', { weaponSmall: B.weaponSmall, weaponLarge: B.weaponLarge })) : tx('SR2E.Dialog.Sheet.karmaPerRating', { karma: escHtml((B as any)[k] ?? 1) });
             return `<option value="${k}">${escHtml(cap(k))} (${cost})</option>`;
           }).join("")}</select></div>
           <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.weaponFocusSize')}</label><select name="fsize"><option value="small">${tx('SR2E.Dialog.Sheet.smallNoReach')}</option><option value="large">${tx('SR2E.Dialog.Sheet.largeReach')}</option></select></div>
@@ -4411,7 +4461,8 @@ function occultContext(actor: any) {
     familiar: (() => { const f = actor.getFlag?.("sr2e", "familiar"); return f?.allyUuid ? { name: f.allyName ?? tx('SR2E.App.Sheets.anAlly'), ready: familiarReady(f) } : null; })(),
     possessedSkills: actor.getFlag?.("sr2e", "possessedBy")?.skills ? RULES.OCCULT.metamagic.possessing.skills : "",
     pendingDeed: actor.getFlag?.("sr2e", "pendingInitiation")?.grade ?? 0,
-    rejectionDue: Boolean(bi?.over) && RULES.BIOWARE.rejection.enabled,
+    // v0.92.3 (RULES.GEAR_V923.overBodyIndex 'shock'): system shock instead of the rejection test.
+    rejectionDue: Boolean(bi?.over) && RULES.BIOWARE.rejection.enabled && !gearBook('overBodyIndex'),
   };
 }
 
@@ -4452,7 +4503,7 @@ export async function frameAttackDialog(frame: any): Promise<void> {
     content: `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.target')}</label><select name="target">${targets.map((t: any) => `<option value="${escHtml(t.uuid)}" ${isTargeted(t) ? "selected" : ""}>${escHtml(t.name)}${t.type === "ic" ? ` (${escHtml(t.system.kind === "ic" ? tx('SR2E.Dialog.Sheet.ic') : t.system.kind)} ${escHtml(t.system.rating)})` : tx('SR2E.Dialog.Sheet.persona')}</option>`).join("")}</select></div>
       <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.attackUtility')}</label><select name="prog">${attacks.map((p: any) => `<option value="${escHtml(p.id)}">${escHtml(p.name)} (${escHtml(p.system.rating)}${escHtml(p.system.damageLevel)})</option>`).join("")}</select></div>
       <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.otherTnModifier')}</label><input name="mod" type="number" value="0"></div>
-      <p class="hint">${tx('SR2E.Dialog.Sheet.rollsItsVsTheTargetS', { frameName: escHtml(frame.name), fd: escHtml(fd) })}</p>`,
+      <p class="hint">${RULES.MATRIX_V923.cybercombat !== "v922" ? tx('SR2E.Dialog.Sheet.frameAttackHint923', { frameName: escHtml(frame.name), fd: escHtml(fd) }) : tx('SR2E.Dialog.Sheet.rollsItsVsTheTargetS', { frameName: escHtml(frame.name), fd: escHtml(fd) })}</p>`,
     ok: { label: tx('SR2E.Dialog.Sheet.attack'), callback: (_e: Event, b: any) => ({ target: String(b.form.elements.target.value), prog: String(b.form.elements.prog.value), mod: Number(b.form.elements.mod.value) || 0 }) },
     rejectClose: false,
   });
@@ -4546,7 +4597,7 @@ function matrixContext(actor: any) {
     })(),
     psyche: (actor.system.matrix?.psyche ?? []).map((e: any, index: number) => ({ index, label: (PSYCHOTROPIC_LABELS as any)[e.kind] ?? e.kind, icName: e.icName,
       active: e.until < 0 || e.until > sysNow(),
-      when: e.until < 0 ? tx('SR2E.App.Sheets.untilYouJackOut') : tCount(Math.max(0, Math.ceil((e.until - sysNow()) / 86400)), 'SR2E.App.Sheets.daysLeft') })),
+      when: e.until < 0 ? tx('SR2E.App.Sheets.untilYouJackOut') : e.until >= PSYCHE_UNTIL_RECOVERED ? tx('SR2E.App.Sheets.untilRecovered923') : tCount(Math.max(0, Math.ceil((e.until - sysNow()) / 86400)), 'SR2E.App.Sheets.daysLeft') })),
     transit: (() => {
       const t = actor.transitLeft?.();
       return t ? (t.turns != null ? tCount(t.turns, 'SR2E.App.Sheets.onTheWayToCombatTurnsLeft', { host: t.hostName }) : tx('SR2E.App.Sheets.onTheWayToSecondsLeft', { host: t.hostName, seconds: t.seconds })) : "";
@@ -4569,7 +4620,7 @@ function matrixContext(actor: any) {
     })(),
     numbers: (actor.system.matrix?.numbers ?? []).map((n: string, index: number) => ({ index, number: n,
       name: allActors().find((a: any) => a.type === "host" && String(a.system.ltgNumber ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "") === n.toUpperCase().replace(/[^A-Z0-9]/g, ""))?.name ?? "" })),
-    kindNote: actor.system.derived.matrix?.tortoise ? tx('SR2E.App.Sheets.aTortoiseMeatSpeed', { pct: Math.round(RULES.MATRIX.tortoise.hackingPool * 100), extras: `${RULES.MATRIX.tortoise.coldOnly ? tx('SR2E.App.Sheets.tortoiseColdSimOnly') : ""}${RULES.MATRIX.tortoise.immuneToBlackIc ? tx('SR2E.App.Sheets.tortoiseBlackIcCantReach') : ""}${RULES.MATRIX.tortoise.dumpShock ? "" : tx('SR2E.App.Sheets.tortoiseNoDumpShock')}` })
+    kindNote: actor.system.derived.matrix?.tortoise ? (RULES.MATRIX_V923.initiative !== "v922" ? tx('SR2E.App.Sheets.aTortoiseHalfReaction923', { pct: Math.round(RULES.MATRIX.tortoise.hackingPool * 100), extras: `${RULES.MATRIX.tortoise.coldOnly ? tx('SR2E.App.Sheets.tortoiseColdSimOnly') : ""}${RULES.MATRIX.tortoise.immuneToBlackIc ? tx('SR2E.App.Sheets.tortoiseBlackIcCantReach') : ""}${RULES.MATRIX.tortoise.dumpShock ? "" : tx('SR2E.App.Sheets.tortoiseNoDumpShock')}` }) : tx('SR2E.App.Sheets.aTortoiseMeatSpeed', { pct: Math.round(RULES.MATRIX.tortoise.hackingPool * 100), extras: `${RULES.MATRIX.tortoise.coldOnly ? tx('SR2E.App.Sheets.tortoiseColdSimOnly') : ""}${RULES.MATRIX.tortoise.immuneToBlackIc ? tx('SR2E.App.Sheets.tortoiseBlackIcCantReach') : ""}${RULES.MATRIX.tortoise.dumpShock ? "" : tx('SR2E.App.Sheets.tortoiseNoDumpShock')}` }))
       : actor.system.derived.matrix?.living ? tx('SR2E.App.Sheets.livingPersonaOtaku') : "",
     // v0.49.0: an otaku's channels, a jammed link, a programming suite.
     channels: actor.system.derived.matrix?.living ? RULES.MATRIX.subsystems.map((k) => ({ key: k, label: cap(k), value: actor.otakuChannel?.(k) ?? 0,
@@ -5189,22 +5240,28 @@ function icBehaviorHint(sys: any): string {
   const b = sys.behavior ?? "killer";
   const r = sys.rating;
   const defend = RULES.MATRIX.defense.persona === "pool" ? tx('SR2E.App.Sheets.icPersonaMayDefend') : "";
+  // v0.92.3: the book's cybercombat (RULES.MATRIX_V923): Security Value dice vs the code's TN, and so on.
+  const book = RULES.MATRIX_V923.cybercombat !== "v922";
   switch (icActionKind(b)) {
     case "damage": {
+      if (b === "psychotropic" && RULES.MATRIX_V923.psychotropic !== "v922") return tx('SR2E.App.Sheets.icPsychotropic923', { payload: (PSYCHOTROPIC_LABELS as any)[sys.payload] ?? tx('SR2E.App.Sheets.fromItsName'), rating: r });
       if (b === "psychotropic") return tx('SR2E.App.Sheets.icPsychotropic', { payload: (PSYCHOTROPIC_LABELS as any)[sys.payload] ?? tx('SR2E.App.Sheets.fromItsName'), rating: r, track: sys.damageType, resist: cap(RULES.MATRIX.psychotropic.resist), defend });
-      const resist = sys.category === "black" ? tx('SR2E.App.Sheets.icBlackResists', { attribute: cap(RULES.MATRIX.blackIcResist), track: sys.damageType }) : tx('SR2E.App.Sheets.icPersonaResists');
+      const resist = sys.category === "black" ? (RULES.MATRIX_V923.blackIc !== "v922" ? tx('SR2E.App.Sheets.icBlackResists923') : tx('SR2E.App.Sheets.icBlackResists', { attribute: cap(RULES.MATRIX.blackIcResist), track: sys.damageType }))
+        : RULES.MATRIX_V923.iconHardening !== "hardening" ? tx('SR2E.App.Sheets.icPersonaResists923') : tx('SR2E.App.Sheets.icPersonaResists');
       const crash = b === "blaster" ? tx('SR2E.App.Sheets.icCrashDamagesMpcp') : b === "sparky" ? tx('SR2E.App.Sheets.icCrashDamagesMpcpBiofeedback') : "";
-      return tx('SR2E.App.Sheets.icDamage', { rating: r, resist, crash, defend });
+      return book ? tx('SR2E.App.Sheets.icDamage923', { rating: r, resist, crash, defend }) : tx('SR2E.App.Sheets.icDamage', { rating: r, resist, crash, defend });
     }
     case "tally": return tx('SR2E.App.Sheets.icTally', { rating: r });
-    case "attribute": return b === "ripper"
+    case "attribute": if (book) return b === "ripper" ? tx('SR2E.App.Sheets.icAttributeDeck923', { rating: r, successes: RULES.MATRIX.attributeDamage.successesPerPoint }) : tx('SR2E.App.Sheets.icAttributePersona923', { rating: r, successes: RULES.MATRIX.attributeDamage.successesPerPoint });
+      return b === "ripper"
       ? tx('SR2E.App.Sheets.icAttributeDeck', { rating: r, successes: RULES.MATRIX.attributeDamage.successesPerPoint, defend })
       : tx('SR2E.App.Sheets.icAttributePersona', { rating: r, successes: RULES.MATRIX.attributeDamage.successesPerPoint, defend });
     case "utility": return b === "tarPit" ? tx('SR2E.App.Sheets.icUtilityTarPit', { rating: r, defend })
       : RULES.MATRIX.tar.tarBabyDerezzes ? tx('SR2E.App.Sheets.icUtilityTarBaby', { rating: r, defend }) : tx('SR2E.App.Sheets.icUtility', { rating: r, defend });
-    case "trace": return tx('SR2E.App.Sheets.icTrace', { rating: r, turns: RULES.MATRIX.trace.baseTurns, mode: sys.traceMode, defend });
+    case "trace": if (RULES.MATRIX_V923.trace !== "v922") return tx('SR2E.App.Sheets.icTrace923', { turns: RULES.MATRIX.trace.baseTurns });
+      return tx('SR2E.App.Sheets.icTrace', { rating: r, turns: RULES.MATRIX.trace.baseTurns, mode: sys.traceMode, defend });
     case "passive": return b === "barrier" ? tx('SR2E.App.Sheets.icGuardsSubsystem', { subsystem: sys.guards ? cap(sys.guards) : tx('SR2E.App.Sheets.pickOne'), rating: r }) : tx('SR2E.App.Sheets.icGuardsFile');
-    default: return tx('SR2E.App.Sheets.icDefault', { rating: r, defend });
+    default: return book ? tx('SR2E.App.Sheets.icDefault923', { defend }) : tx('SR2E.App.Sheets.icDefault', { rating: r, defend });
   }
 }
 
@@ -6103,6 +6160,9 @@ function summaryContext(actor: any): any {
   const sustained = (sys.sustaining ?? []).filter((x: any) => !x.focusId && !x.quickened && !x.spiritUuid).length;
   if (sustained) chips.push(tx('SR2E.App.Sheets.sustaining', { count: sustained }));
   if (d.encumbrance) chips.push(tx('SR2E.App.Sheets.encumbered', { value: d.encumbrance }));
+  // v0.92.3 (RULES.GEAR_V923.load 'book', Core p. 185): the load's fatigue, or passing out.
+  if (d.load?.passOut) chips.push(tx('SR2E.App.Sheets.loadPassOut'));
+  else if (d.load?.level) chips.push(tx('SR2E.App.Sheets.loadFatigue', { level: d.load.level }));
   if (actor.fullDefenseUp?.()) chips.push(tx('SR2E.App.Sheets.fullDefense2'));
   if (actor.isDelaying?.()) chips.push(tx('SR2E.App.Sheets.delaying'));
   if (actor.actingNow?.()) chips.push(tx('SR2E.App.Sheets.actingDelayed'));
@@ -6126,7 +6186,7 @@ function quickActions(actor: any, items: any[]): Array<{ action: string; label: 
   out.push({ action: "firstAid", label: tx('SR2E.App.Sheets.firstAid'), icon: "fa-solid fa-kit-medical", title: tx('SR2E.App.Sheets.firstAidOnYourselfOr') });
   out.push({ action: "naturalHeal", label: tx('SR2E.App.Sheets.rest'), icon: "fa-solid fa-bed", title: tx('SR2E.App.Sheets.restAndHeal') });
   if (game.combat?.started) out.push(actor.fullDefenseUp?.() ? { action: "fullDefense", label: tx('SR2E.App.Sheets.onFullDefense'), icon: "fa-solid fa-shield-halved", title: tx('SR2E.App.Sheets.alreadyOnFullDefenseUntil') }
-    : { action: "fullDefense", label: tx('SR2E.App.Sheets.fullDefense'), icon: "fa-solid fa-shield-halved", title: tx('SR2E.App.Sheets.declareFullDefense', { attribute: RULES.COMBAT.fullDefense.attribute, cost: RULES.COMBAT.fullDefense.initiativeCost }) });
+    : { action: "fullDefense", label: tx('SR2E.App.Sheets.fullDefense'), icon: "fa-solid fa-shield-halved", title: C923.fullDefenseBook() ? tx('SR2E.App.Combat923.declareFullDefense') : tx('SR2E.App.Sheets.declareFullDefense', { attribute: RULES.COMBAT.fullDefense.attribute, cost: RULES.COMBAT.fullDefense.initiativeCost }) });
   if (actor.isDelaying?.()) out.push({ action: "actNow", label: tx('SR2E.App.Sheets.actNow'), icon: "fa-solid fa-forward", title: tx('SR2E.App.Sheets.takeYourDelayedActionNow') });
   else if (actor.actingNow?.()) out.push({ action: "endDelayed", label: tx('SR2E.App.Sheets.done'), icon: "fa-solid fa-check", title: tx('SR2E.App.Sheets.finishYourDelayedAction') });
   else if (actor.isActing?.() && game.combat?.started) out.push({ action: "delayAction", label: tx('SR2E.App.Sheets.delay'), icon: "fa-solid fa-hourglass-half", title: tx('SR2E.App.Sheets.holdYourActionUntilLater') });
@@ -6400,7 +6460,7 @@ async function driveDialog(driver: any | null, vehicle: any): Promise<any | null
     content: `<p class="hint">${tx('SR2E.Dialog.Sheet.vsHandling', { who: escHtml(who), handling: escHtml(v.handling), part: v.handlingOffroad > 0 ? tx('SR2E.Dialog.Sheet.offRoad', { handlingOffroad: escHtml(v.handlingOffroad) }) : "", part2: v.derived?.damageModifier ? tx('SR2E.Dialog.Sheet.vehicleDamage', { derivedDamageModifier: escHtml(v.derived.damageModifier) }) : "" })}</p>
       <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.terrain')}</label><select name="terrain">${RULES.VEHICLES.terrain.map((t) => `<option value="${escHtml(t.id)}" ${t.id === sceneTerrain ? "selected" : ""}>${escHtml(t.label)} (${t.value >= 0 ? "+" : ""}${t.value})</option>`).join("")}</select></div>
       ${v.handlingOffroad > 0 ? `<label class="sr2e-check"><input type="checkbox" name="offroad" ${v.offroad ? "checked" : ""}> ${tx('SR2E.Dialog.Sheet.offRoadHandling', { handlingOffroad: escHtml(v.handlingOffroad) })}</label>` : ""}
-      ${RULES.VEHICLES.drivingModifiers.map((m) => `<label class="sr2e-check"><input type="checkbox" name="sit" value="${escHtml(m.id)}" ${m.id === "overSpeed" && over ? "checked" : ""}> ${escHtml(m.label)} (${m.value >= 0 ? "+" : ""}${m.value})${m.id === "overSpeed" && over ? ` <em>${tx('SR2E.Dialog.Sheet.auto')}</em>` : ""}</label>`).join("")}
+      ${drivingRows().map((m) => `<label class="sr2e-check"><input type="checkbox" name="sit" value="${escHtml(m.id)}" ${m.id === "overSpeed" && over ? "checked" : ""}> ${escHtml(m.label)} (${m.value >= 0 ? "+" : ""}${m.value})${m.id === "overSpeed" && over ? ` <em>${tx('SR2E.Dialog.Sheet.auto')}</em>` : ""}</label>`).join("")}
       <label class="sr2e-check"><input type="checkbox" name="crash"> ${tx('SR2E.Dialog.Sheet.crashTestNoSuccessesMeansA', { currentSpeed: escHtml(v.currentSpeed), power: crashDamage(Number(v.currentSpeed ?? 0)).power })}</label>
       ${weatherRow}
       ${skillRows}
@@ -6415,7 +6475,7 @@ async function driveDialog(driver: any | null, vehicle: any): Promise<any | null
       const c = readDrive(f);
       const pv = (driver ?? vehicle).previewDrive?.({ ...c, vehicle });
       if (!pv) return "";
-      const picked = new Set<string>([...c.situational.map((id: string) => RULES.VEHICLES.drivingModifiers.find((d) => d.id === id)?.label ?? ""), ...RULES.VEHICLES.terrain.map((t) => t.label)]);
+      const picked = new Set<string>([...c.situational.map((id: string) => drivingRows().find((d) => d.id === id)?.label ?? ""), ...RULES.VEHICLES.terrain.map((t) => t.label)]);
       const manual = pv.modifiers.filter((m: any) => picked.has(m.label) || c.modifiers.some((x: any) => x === m || x.label === m.label));
       return tnPreviewHtml({ base: pv.base, baseLabel: tx('SR2E.Dialog.Sheet.handling'), auto: pv.modifiers.filter((m: any) => !manual.includes(m)), manual: [...manual, ...c.modifiers], excluded });
     }),
@@ -6531,7 +6591,8 @@ export class SR2VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       handlingNow: handlingFor(sys.derived?.working ?? sys, Boolean(sys.offroad)),
       systemsNotes: sys.derived?.working?.notes ?? [],
       speedWindow: actor.speedWindow?.() ?? { limited: false },
-      pushTn: RULES.VEHICLES_V57.accel.pushTn,
+      // v0.92.3 (RULES.VEHICLES_V923.accel 'book', Rigger 2 p. 45): no extra TN on the acceleration test.
+      pushTn: veh923('accel') === 'book' ? 0 : RULES.VEHICLES_V57.accel.pushTn,
       position: (() => {
         const p = sys.position;
         if (!p?.winnerUuid || !(p.tn > 0)) return "";
@@ -6591,7 +6652,7 @@ export class SR2VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       window: { title: tx('SR2E.Dialog.Sheet.push2', { name: v.name }) },
       content: `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.speedWanted')}</label><input name="to" type="number" value="${escHtml(win.max + Number(v.system.accel ?? 0))}" min="0" autofocus></div>
         ${game.user?.isGM ? `<label class="sr2e-check"><input type="checkbox" name="outright"> ${tx('SR2E.Dialog.Sheet.gmSetItOutrightNoTest')}</label>` : ""}
-        <p class="hint">${tx('SR2E.Dialog.Sheet.thisCombatTurnItMayGo', { winMin: escHtml(win.min), winMax: escHtml(win.max), accelPushTn: RULES.VEHICLES_V57.accel.pushTn, value: Number(v.system.accel ?? 0) * RULES.VEHICLES_V57.accel.perSuccess })}</p>`,
+        <p class="hint">${tx('SR2E.Dialog.Sheet.thisCombatTurnItMayGo', { winMin: escHtml(win.min), winMax: escHtml(win.max), accelPushTn: veh923('accel') === 'book' ? 0 : RULES.VEHICLES_V57.accel.pushTn, value: Number(v.system.accel ?? 0) * RULES.VEHICLES_V57.accel.perSuccess })}</p>`,
       ok: { label: tx('SR2E.Dialog.Sheet.push'), callback: (_e: Event, b: any) => ({ to: Math.max(0, Math.floor(Number(b.form.elements.to.value) || 0)), outright: Boolean(b.form.elements.outright?.checked) }) },
       rejectClose: false,
     }) as any;
@@ -6979,9 +7040,11 @@ async function mountedFireDialog(vehicle: any, weapon: any): Promise<void> {
     if (mount === "none") return ui.notifications.warn(tx('SR2E.Notify.Sheet.isNotMountedSetItsMount', { weaponName: escHtml(weapon.name) }));
     const firers: Array<{ uuid: string; label: string; pool: string; left: number }> = [];
     const ctl: any = vehicle.controller?.() ?? null;
+    // v0.92.3 review fix: the pool shown is the one the attack spends (veh80GunneryPool: the book fires with Combat Pool).
+    const poolShown = (a: any, k: "control" | "combat") => ({ pool: k === "control" ? tx('SR2E.App.Sheets.control') : tx('SR2E.App.Sheets.combat'), left: k === "control" ? a.system.derived?.controlPoolLeft ?? 0 : a.system.derived?.combatPoolLeft ?? 0 });
     if (ctl && ctl.isOwner && canFireMount(mount, "driver")) {
       const jumped = vehicle.system.controlMode === "jumped";
-      firers.push({ uuid: ctl.uuid, label: jumped ? tx('SR2E.App.Sheets.firerDriverJumpedIn', { name: ctl.name }) : tx('SR2E.App.Sheets.firerDriver', { name: ctl.name }), pool: jumped ? tx('SR2E.App.Sheets.control') : tx('SR2E.App.Sheets.combat'), left: jumped ? ctl.system.derived?.controlPoolLeft ?? 0 : ctl.system.derived?.combatPoolLeft ?? 0 });
+      firers.push({ uuid: ctl.uuid, label: jumped ? tx('SR2E.App.Sheets.firerDriverJumpedIn', { name: ctl.name }) : tx('SR2E.App.Sheets.firerDriver', { name: ctl.name }), ...poolShown(ctl, veh80GunneryPool(jumped ? "control" : "combat", "driver")) });
     }
     if (canFireMount(mount, "gunner")) {
       for (const u of vehicle.system.occupants ?? []) {
@@ -6991,7 +7054,7 @@ async function mountedFireDialog(vehicle: any, weapon: any): Promise<void> {
     }
     const secSite: any = SR2Actor.securitySiteFor(vehicle);
     const secRigger: any = secSite?.securityRigger?.() ?? null;
-    if (secRigger && secRigger.isOwner && canFireMount(mount, "security")) firers.push({ uuid: secRigger.uuid, label: tx('SR2E.App.Sheets.firerSecurityRigger', { name: secRigger.name, site: secSite.name }), pool: tx('SR2E.App.Sheets.control'), left: secRigger.system.derived?.controlPoolLeft ?? 0 });
+    if (secRigger && secRigger.isOwner && canFireMount(mount, "security")) firers.push({ uuid: secRigger.uuid, label: tx('SR2E.App.Sheets.firerSecurityRigger', { name: secRigger.name, site: secSite.name }), ...poolShown(secRigger, veh80GunneryPool("control", "security")) });
     if (canFireMount(mount, "autopilot") && (vehicle.system.derived?.autopilotRating ?? 0) > 0) firers.push({ uuid: vehicle.uuid, label: vehicle.system.drone ? tx('SR2E.App.Sheets.firerAutopilotPilot', { rating: vehicle.system.derived.autopilotRating }) : tx('SR2E.App.Sheets.firerAutopilotAutonav', { rating: vehicle.system.derived.autopilotRating }), pool: "", left: 0 });
     if (!firers.length) return ui.notifications.warn(tx('SR2E.Notify.Sheet.nobodyCanFireMount', { weaponName: escHtml(weapon.name), mount: escHtml(mount), part: mount === "pintle" || mount === "ring" ? tx('SR2E.Notify.Sheet.putAGunnerAboard') : tx('SR2E.Notify.Sheet.putADriverAtTheControls') }));
     const fromToken = attackerToken(vehicle);
@@ -7404,14 +7467,14 @@ export class SR2SiteSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const r = await foundry.applications.api.DialogV2.prompt({
       window: { title: tx('SR2E.Dialog.Sheet.guardsLook', { siteName: site.name }) },
       content: `<fieldset class="sr2e-situational"><legend>${tx('SR2E.Dialog.Sheet.whoMightTheySee')}</legend>${near.map((t: any) => `<label class="sr2e-check"><input type="checkbox" name="who" value="${escHtml(t.actor.uuid)}" ${targeted.has(t.actor.uuid) || (!targeted.size && t.actor.hasPlayerOwner) ? "checked" : ""}> ${escHtml(t.name)}</label>`).join("")}</fieldset>
-        ${tableChecks(RULES.STREET.perception, "per")}
+        ${tableChecks(CO923.perceptionRows(), "per")}
         <p class="hint">${RULES.SECURITY.guards.alert ? tx('SR2E.Dialog.Sheet.eachIntruderSOnceAgainstEveryAlert', { perceptionStealthSkill: RULES.PERCEPTION.stealthSkill, perceptionSkill: RULES.PERCEPTION.skill, guardsTallyPerGuard: RULES.SECURITY.guards.tallyPerGuard, guardsAlert: RULES.SECURITY.guards.alert }) : tx('SR2E.Dialog.Sheet.eachIntruderSOnceAgainstEvery', { perceptionStealthSkill: RULES.PERCEPTION.stealthSkill, perceptionSkill: RULES.PERCEPTION.skill, guardsTallyPerGuard: RULES.SECURITY.guards.tallyPerGuard })}</p>`,
       ok: { label: tx('SR2E.Dialog.Sheet.look'), callback: (_e2: Event, b: any) => ({ who: Array.from(b.form.querySelectorAll('input[name="who"]:checked')).map((i: any) => i.value as string), per: checkedIds(b.form, "per") }) },
       rejectClose: false,
     }) as { who: string[]; per: string[] } | null;
     if (!r?.who.length) return;
     // v0.50.0: the guards' conditions go on the guards' own TN (as in Perceive).
-    const mods = tableModifiers(RULES.STREET.perception, r.per).map((m) => ({ label: tx('SR2E.Card.Mod.guards', { label: m.label }), value: m.value }));
+    const mods = tableModifiers(CO923.perceptionRows(), r.per).map((m) => ({ label: tx('SR2E.Card.Mod.guards', { label: m.label }), value: m.value }));
     await site.guardsWatch(r.who, { observerModifiers: mods });
   }
 

@@ -5,6 +5,7 @@
  */
 import { test, describe, before, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { oldWay } from '../rules/__tests__/oldway.ts';
 import { RULES } from '../rules/index.ts';
 
 const g = globalThis as any;
@@ -211,7 +212,8 @@ describe('v0.92.1 custom tweaks in the derived data', () => {
 });
 
 describe('v0.92.1 Carried', () => {
-  test('left behind: no weight, armor doesn\'t count, a search doesn\'t find it', () => {
+  test('left behind: no weight, armor doesn\'t count, a search doesn\'t find it', (t) => {
+    t.after(oldWay({ 'GEAR_V923.load': 'old', 'GEAR_V923.armorEncumbrance': 'old' })); // v0.92.3: the old Quickness penalties show it
     const heavy = (carried: boolean) => who({}, [{ id: 'g1', type: 'gear', name: 'ZZ Anvil', system: { quantity: 1, weight: 200, carried } }]);
     assert.ok(heavy(true).system.derived.load.penalty > 0);
     assert.equal(heavy(false).system.derived.load.penalty, 0);
@@ -226,6 +228,23 @@ describe('v0.92.1 Carried', () => {
     const r = await a.attackWith(a.items.get('gun'), {});
     assert.equal(r, null);
     assert.ok(warnings.some((w) => /isn.t carried/.test(w)), warnings.join(' | '));
+  });
+  test('v0.92.3 review fix: a carried weapon saved holstered is drawn by the attack (a Simple Action), not refused', async () => {
+    assert.equal(RULES.COMBAT.ready.rule, 'action');
+    const a = who({}, [GUN({ ready: false })]);
+    const used: string[] = [];
+    a.useAction = async (kind: string) => { used.push(kind); return true; };
+    for (let i = 0; i < 20; i++) faces.push(4);
+    const r = await a.attackWith(a.items.get('gun'), {});
+    assert.notEqual(r, null);
+    assert.deepEqual(used, ['draw']);
+    assert.equal(a.items.get('gun').system.ready, true);
+    assert.ok(!warnings.some((w) => /holstered/.test(w)), warnings.join(' | '));
+    // When the action rules refuse the draw, the attack is refused too.
+    const b = who({}, [GUN({ ready: false })]);
+    b.useAction = async () => false;
+    assert.equal(await b.attackWith(b.items.get('gun'), {}), null);
+    assert.equal(b.items.get('gun').system.ready, false);
   });
   test('leaving it behind takes armor off and holsters a weapon; wearing or drawing it brings it along', () => {
     const ch1: any = { carried: false };

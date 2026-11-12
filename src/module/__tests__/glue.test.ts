@@ -5,9 +5,20 @@
  */
 import { test, describe, before, after, afterEach } from "node:test";
 import { oldWay } from '../rules/__tests__/oldway.ts';
+import { SPIRITS_V922_WAY } from '../rules/__tests__/spirits922.ts';
+import { matrix922 } from "./helpers/matrix922.ts";
+import { SORCERY_V922 } from '../rules/__tests__/sorcery922.ts';
 import assert from "node:assert/strict";
 import { RULES } from "../rules/index.ts";
 import { shown } from "./helpers/shown.ts";
+import { useV922Vehicles } from '../rules/__tests__/v922vehicles.ts';
+import { combat922 } from '../rules/__tests__/combat922.ts';
+
+// v0.92.3: these tests pin the v0.92.2 combat flow (COMBAT_V923 at its old choices, the moved defaults put back);
+// the book alignment is tested in v0923-combat.test.ts.
+let undo922: () => void = () => {};
+before(() => { undo922 = combat922(); });
+after(() => undo922());
 
 const g = globalThis as any;
 const faces: number[] = [];
@@ -48,6 +59,8 @@ let SpiritDataModel: any;
 let CharacterDataModel: any, SR2Actor: any, SR2Combatant: any, SR2Combat: any;
 
 before(async () => {
+  // v0.92.3: these tests pin the v0.92.2 conjuring, astral and initiation rules; the book way is v0923-spirits.test.ts's.
+  oldWay(SPIRITS_V922_WAY);
   // The disaster GM card (v0.35.0) would be the last message after every all-ones roll; its own test turns it on.
   (RULES.DISASTERS as any).prompt = false;
   // v0.39.0 rules that add steps or warnings are switched on only in their own tests.
@@ -64,6 +77,8 @@ before(async () => {
   (RULES.CHARACTERS_V58.training as any).mode = 'instant';
   // v0.71.0 (R17): rigger adaptation is needed by default now; these older tests jump into unadapted cars (v071.test.ts covers it).
   (RULES.RIGGING as any).needsAdaptation = false;
+  // v0.92.3: these older tests pin the v0.92.2 sorcery rules (RULES.SORCERY_V923); the book's way is in v0923-sorcery.test.ts.
+  oldWay(SORCERY_V922);
   g.foundry = {
     abstract: { TypeDataModel: class {} },
     data: { fields: new Proxy({}, { get: () => class { constructor(..._a: any[]) {} } }) },
@@ -711,6 +726,18 @@ Gear: Heavy pistol [9M], Stun baton [6S Stun]`;
     assert.equal(a.system.reactionBonus, 1);           // 4 natural + 2 cyber + 1
     assert.equal(a.system.initiativeDiceBonus, 0);     // 1 base + 1 cyber = 2 already
     assert.equal(a.system.derived.essence, 5.2);       // base stored as 6.2, minus 1
+  });
+
+  test("v0.92.3 review fix: a cybered magician's shown Magic is stored with its Essence loss back (not taken off twice)", async (t) => {
+    t.after(oldWay({ "SORCERY_V923.magicFromEssence": "book" })); // this file runs the v0.92.2 sorcery rules; this is the book's
+    const a = fresh([{ id: "c1", type: "cyberware", name: "Reflexes", system: {
+      essenceCost: 1.2, grade: "standard", installed: true, reaction: 0, initiativeDice: 0,
+      attributes: { body: 0, quickness: 0, strength: 0, charisma: 0, intelligence: 0, willpower: 0 } } }]);
+    a.system.tradition = "hermetic";
+    await a.applyStatBlock(parseStatBlock(BLOCK.replace("4 5 4 2 3 3 5.2 - 5 (7) 5/3", "4 5 4 2 3 3 4.8 4 5 (7) 5/3")));
+    assert.equal(a.system.derived.essence, 4.8);
+    assert.equal(a.system.magic, 6);                   // 4 shown + 2 (1.2 Essence lost: two points or part)
+    assert.equal(a.system.derived.magic, 4);
   });
 
   test("re-importing updates instead of duplicating", async () => {
@@ -2087,6 +2114,8 @@ describe("spellcraft: resisted spells, healing, background count, spell options,
     faces.push(1, 1, 1, 1);                                   // Body 4: no successes vs 9S -> 6 boxes -> 13
     await a.resistDamage({ power: 9, level: "S" });
     assert.match(chat.at(-2).content, /Resist 9S/);
+    // v0.92.3 (RULES.HEALTH_V923.permanentDamage, Core p. 114): the damage card also offers the permanent damage test.
+    assert.match(chat.at(-2).content, /data-sr2e-action="permanentDamage923"/);
     assert.match(chat.at(-1).content, /data-sr2e-action="magicLoss"/);
     faces.push(1, 2);                                         // 2d6 = 3 < Magic 6
     const out = await a.rollMagicLoss();
@@ -2153,6 +2182,8 @@ describe("spellcraft: resisted spells, healing, background count, spell options,
 });
 
 describe("the Matrix: decks, hosts, system tests, cybercombat, dump shock", () => {
+  // v0.92.3: these pin the v0.92.2 Matrix rules (the book's defaults: v0923-matrix tests).
+  let undo922 = () => {}; before(() => { undo922 = matrix922(); }); after(() => undo922());
   // v0.79.0: these fixtures count dice for the old Spell Pool, (Int + Wil + Magic) / 3 (RULES.DOCS_V79.magicPool.size).
   let undoPool79 = () => {}; before(() => { undoPool79 = oldWay({ "DOCS_V79.magicPool.size": "attributes" }); }); after(() => undoPool79());
   let HostDataModel: any, IcDataModel: any;
@@ -2731,7 +2762,8 @@ describe("v0.20.0 combat additions", () => {
     assert.match(chat.at(-1).content, /knocked down/);
   });
 
-  test("cyberware armor, smartlink and vision; bioware costs Body Index and Magic, not Essence", () => {
+  test("cyberware armor, smartlink and vision; bioware costs Body Index and Magic, not Essence", (t) => {
+    t.after(oldWay({ "GEAR_V923.dermal": "armor", "GEAR_V923.awakenedBioware": "magic" })); // v0.92.3: the old way (v0.92.2); __tests__/v0923-gear.test.ts has the book's
     const sys = Object.create(CharacterDataModel.prototype);
     sys.attributes = Object.fromEntries(Object.entries(A).map(([k, v]) => [k, { base: v, mod: 0 }]));
     Object.assign(sys, { essence: 6, magic: 5, reactionBonus: 0, initiativeDiceBonus: 0, poolSpent: { combat: 0, spell: 0 }, monitor: { physical: 0, stun: 0 } });
@@ -2790,7 +2822,8 @@ describe("v0.21.0 combat fixes", () => {
     assert.equal(r.targetNumber, 4 + 4 - 3);                   // heavy recoil 4, gyro −3
   });
 
-  test("armor heavier than Quickness lowers Quickness and the Combat Pool", () => {
+  test("armor heavier than Quickness lowers Quickness and the Combat Pool", (t) => {
+    t.after(oldWay({ "GEAR_V923.armorEncumbrance": "old" })); // v0.92.3: the old way (v0.92.2); __tests__/v0923-gear.test.ts has the book's
     const sys = Object.create(CharacterDataModel.prototype);
     sys.attributes = Object.fromEntries(Object.entries(A).map(([k, v]) => [k, { base: v, mod: 0 }]));
     Object.assign(sys, { essence: 6, magic: 0, reactionBonus: 0, initiativeDiceBonus: 0, poolSpent: { combat: 0, spell: 0 }, monitor: { physical: 0, stun: 0 } });
@@ -2846,7 +2879,9 @@ describe("v0.22.0 core rules", () => {
     return sys;
   };
 
-  test("metatypes: racial modifiers, vision, reach, dermal armor and limit warnings", () => {
+  test("metatypes: racial modifiers, vision, reach, dermal armor and limit warnings", (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.trollDermal': 'armor', 'CORE_V923.racialMods': 'old' }));
     const sys = troll();
     assert.equal(sys.attributes.body.total, 11);
     assert.equal(sys.attributes.charisma.total, 1);   // v0.73.0 (O34): base 2 − 2 floors at 1, with a warning
@@ -2865,7 +2900,8 @@ describe("v0.22.0 core rules", () => {
   });
 
   test("first aid: Biotech vs the wound's TN, capped at half, once per wound, stabilises the dying", async (t) => {
-    t.after(oldWay({ 'HEALING.firstAid.tnByLevel': { L: 2, M: 4, S: 6, D: 8 }, 'DOCS_V79.firstAidMods': 'medkitDice' }));
+    // v0.92.3: the old first aid too (boxes, once per wound, no self-stabilisation; the book's: v0923-health.test.ts).
+    t.after(oldWay({ 'HEALING.firstAid.tnByLevel': { L: 2, M: 4, S: 6, D: 8 }, 'DOCS_V79.firstAidMods': 'medkitDice', 'HEALTH_V923.firstAid': 'boxes', 'HEALTH_V923.firstAidRetry': 'once', 'HEALTH_V923.selfStabilise': 'none' }));
     chat.length = 0;
     const medic = makeActor(A);
     medic.items = [{ id: "s1", type: "skill", name: "Biotech", system: { rating: 4, attribute: "intelligence" } }, { id: "k1", type: "gear", name: "Medkit", system: { medkitRating: 2 } }];
@@ -2993,6 +3029,7 @@ describe("v0.23.0 sheets and prompts", () => {
 });
 
 describe("v0.24.0 vehicles and rigging", () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   let VehicleDataModel: any;
   const R = { body: 4, quickness: 5, strength: 3, charisma: 3, intelligence: 5, willpower: 5 };
   const withGet = (list: any[]) => Object.assign(list, { get(id: string) { return list.find((i: any) => i.id === id); } });
@@ -3226,6 +3263,7 @@ describe("v0.24.0 vehicles and rigging", () => {
 });
 
 describe("v0.25.0 vehicle combat, sensors, remote decks, chases", () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   let VehicleDataModel: any;
   const R = { body: 4, quickness: 5, strength: 3, charisma: 3, intelligence: 5, willpower: 5 };
   const withGet = (list: any[]) => Object.assign(list, { get(id: string) { return list.find((i: any) => i.id === id); } });
@@ -3409,6 +3447,7 @@ describe("v0.25.0 vehicle combat, sensors, remote decks, chases", () => {
 });
 
 describe("v0.26.0 building security and security rigging", () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   let SiteDataModel: any, VehicleDataModel: any, HostDataModel: any;
   const R = { body: 4, quickness: 5, strength: 3, charisma: 3, intelligence: 5, willpower: 5 };
   const withGet = (list: any[]) => Object.assign(list, { get(id: string) { return list.find((i: any) => i.id === id); } });
@@ -3579,6 +3618,8 @@ describe("v0.26.0 building security and security rigging", () => {
 });
 
 describe("v0.27.0 Matrix depth: IC behaviors, defense, operations, paydata, Medic, deck damage", () => {
+  // v0.92.3: these pin the v0.92.2 Matrix rules (the book's defaults: v0923-matrix tests).
+  let undo922 = () => {}; before(() => { undo922 = matrix922(); }); after(() => undo922());
   let HostDataModel: any, IcDataModel: any;
   const D = { body: 4, quickness: 5, strength: 3, charisma: 3, intelligence: 6, willpower: 5 };
   const withGet = (list: any[]) => Object.assign(list, { get(id: string) { return list.find((i: any) => i.id === id); } });
@@ -3886,6 +3927,8 @@ describe("v0.27.0 Matrix depth: IC behaviors, defense, operations, paydata, Medi
 });
 
 describe("v0.28.0 the grid, hot and cold sim, frames, connections", () => {
+  // v0.92.3: these pin the v0.92.2 Matrix rules (the book's defaults: v0923-matrix tests).
+  let undo922 = () => {}; before(() => { undo922 = matrix922(); }); after(() => undo922());
   let HostDataModel: any, IcDataModel: any;
   const D = { body: 4, quickness: 5, strength: 3, charisma: 3, intelligence: 6, willpower: 5 };
   const withGet = (list: any[]) => Object.assign(list, { get(id: string) { return list.find((i: any) => i.id === id); } });
@@ -4068,7 +4111,8 @@ describe("v0.29.0 cyberware depth", () => {
     assert.equal(await a.repairCyberware("w"), null);            // not damaged now
   });
 
-  test("cyberlimbs: housed cyberware costs capacity instead of Essence; attacks with the arm use its Strength; cyberweapons attack and parry", async () => {
+  test("cyberlimbs: housed cyberware costs capacity instead of Essence; attacks with the arm use its Strength; cyberweapons attack and parry", async (t) => {
+    t.after(oldWay({ "GEAR_V923.limbHoused": "capacity", "GEAR_V923.limbPairs": "off" })); // v0.92.3: the old way (v0.92.2); __tests__/v0923-gear.test.ts has the book's
     const a = sam([
       cw("arm", "Cyberarm", { essenceCost: 1, kind: "cyberlimb", limb: { location: "rightArm", strength: 7, quickness: 5, capacity: 0.5 } }),
       cw("spur", "Spur", { essenceCost: 0.3, kind: "cyberweapon", housedIn: "arm", weapon: { skill: "Armed Combat", strengthPower: true, damagePower: 0, damageLevel: "M", damageType: "physical", reach: 0 } }),
@@ -4166,7 +4210,8 @@ describe("v0.30.0 bioware depth", () => {
     g.game.time = { worldTime: 0 };
   });
 
-  test("bioware kinds add their effects; synaptic accelerators don't stack with wired reflexes; cultured and conflict warnings", () => {
+  test("bioware kinds add their effects; synaptic accelerators don't stack with wired reflexes; cultured and conflict warnings", (t) => {
+    t.after(oldWay({ "GEAR_V923.bioware": "old", "GEAR_V923.cultured": "old", "GEAR_V923.dermal": "armor" })); // v0.92.3: the old way (v0.92.2); __tests__/v0923-gear.test.ts has the book's
     const a = person([
       bw("mus", "Muscle Augmentation 2", { bioKind: "muscleAugmentation", rating: 2, bodyIndex: 0.8 }),
       bw("cb", "Cerebral Booster 1", { bioKind: "cerebralBooster", rating: 1, bodyIndex: 0.4 }),
@@ -4204,16 +4249,22 @@ describe("v0.30.0 bioware depth", () => {
     assert.equal(a.system.derived.toxinDice, 3 - 0);             // Body Index 1.4 × 0.5 → −0 dice
   });
 
-  test("Body Index raises the patient's healing TNs", async () => {
+  test("Body Index raises the patient's healing TNs", async (t) => {
     chat.length = 0;
     const a = person([bw("big", "Lots of bioware", { bodyIndex: 4 })]);
     await a.update({ "system.monitor.stun": 2 });
+    // v0.92.3 (RULES.HEALTH_V923.bodyIndexHealing 'magical', Shadowtech bionetics): only magical healing by the book.
+    faces.push(1, 1, 1, 1, 1, 1);
+    const b = await a.naturalHeal({ track: "stun", hours: 1 });
+    assert.ok(!b.modifiers.some((m: any) => /^Body Index/.test(String(m.label))));
+    t.after(oldWay({ 'HEALTH_V923.bodyIndexHealing': 'natural' }));
     faces.push(1, 1, 1, 1, 1, 1);
     const r = await a.naturalHeal({ track: "stun", hours: 1 });
     assert.ok(r.modifiers.some((m: any) => m.label === "Body Index 4" && m.value === 2));
   });
 
-  test("adrenal pumps: bonuses while active, a Stun crash when switched off", async () => {
+  test("adrenal pumps: bonuses while active, a Stun crash when switched off", async (t) => {
+    t.after(oldWay({ "GEAR_V923.bioware": "old", "GEAR_V923.adrenalCrash": "old" })); // v0.92.3: the old way (v0.92.2); __tests__/v0923-gear.test.ts has the book's
     chat.length = 0;
     const a = person([bw("ap", "Adrenal Pump 1", { bioKind: "adrenalPump", rating: 1, bodyIndex: 1.25 })]);
     assert.equal(a.system.attributes.quickness.total, 4);
@@ -4228,7 +4279,8 @@ describe("v0.30.0 bioware depth", () => {
     assert.equal(a.system.monitor.stun, 3);
   });
 
-  test("surgery installs the item and sets recovery; no successes means complications", async () => {
+  test("surgery installs the item and sets recovery; no successes means complications", async (t) => {
+    t.after(oldWay({ "GEAR_V923.surgery": "old" })); // v0.92.3: the old way (v0.92.2); __tests__/v0923-gear.test.ts has the book's
     chat.length = 0;
     const doc = person([{ id: "bt", type: "skill", name: "Biotech", system: { rating: 5, attribute: "intelligence" } }]);
     const patient = person([{ id: "ww", type: "cyberware", name: "Wired Reflexes 1", system: { essenceCost: 2, grade: "alpha", installed: false, attributes: {}, reaction: 2, initiativeDice: 1 } }]);
@@ -4268,6 +4320,7 @@ describe("v0.31.0 toxins, drugs, hazards, stun weapons, statuses", () => {
 
   test("toxins: an Expose card, then Body + toxin dice (inhalant dice when inhaled) vs Power, staged, no armor", async (t) => {
     t.after(oldWay({"BOOK_V78.toxinBioware": "dice"})); // v0.78.0: the old rule (a house rule)
+    t.after(oldWay({ 'HEALTH_V923.dwarfResistance': 'both' })); // v0.92.3: the old dwarf dice vs toxins (the book: disease only)
     chat.length = 0;
     const gm = person();
     const dwarf = person([{ id: "tf", type: "cyberware", name: "Tracheal Filter 2", system: { bioware: true, bodyIndex: 0.4, bioKind: "trachealFilter", rating: 2, installed: true, essenceCost: 0, grade: "standard", attributes: {} } }], { metatype: "dwarf", name: "Dwarf" });
@@ -4323,7 +4376,9 @@ describe("v0.31.0 toxins, drugs, hazards, stun weapons, statuses", () => {
     assert.match(chat.at(-1).content, /no longer blind/);
   });
 
-  test("stun weapons do Stun against half impact armor; hazards: falling, fire, drowning", async () => {
+  test("stun weapons do Stun against half impact armor; hazards: falling, fire, drowning", async (t) => {
+    // v0.92.3: the old falling and drowning (the book's: v0923-health glue tests).
+    t.after(oldWay({ 'HEALTH_V923.falling': 'old', 'HEALTH_V923.drowning': 'test', 'HEALTH_V923.breathHold': 'none' }));
     chat.length = 0;
     const a = person([{ id: "arm", type: "armor", name: "Vest", system: { worn: true, ballistic: 4, impact: 4 } }]);
     const taser = { id: "t", name: "Taser", system: { melee: false, skill: "Firearms", damagePower: 10, damageLevel: "S", damageType: "physical", modes: "SS", ammo: 4, ammoMax: 4, recoilComp: 0, stunWeapon: true } };
@@ -4365,7 +4420,9 @@ describe("v0.32.0 perception, social tests, grunt groups, morale", () => {
     delete g.game.combat;
   });
 
-  test("perception: Perception vs the sneaker's Stealth, opposed by Stealth vs the observer's Intelligence", async () => {
+  test("perception: Perception vs the sneaker's Stealth, opposed by Stealth vs the observer's Intelligence", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.perception': 'opposed' }));
     chat.length = 0;
     const guard = person([skill("p", "Perception", 3)], { name: "Guard" });
     const ninja = person([skill("s", "Stealth", 5)], { name: "Ninja" });
@@ -4407,7 +4464,9 @@ describe("v0.32.0 perception, social tests, grunt groups, morale", () => {
     assert.match(chat.at(-1).content, /No luck: Mark isn/);
   });
 
-  test("grunt groups: when the front grunt goes down the next steps in; the group attacks with every grunt; morale", async () => {
+  test("grunt groups: when the front grunt goes down the next steps in; the group attacks with every grunt; morale", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.morale': 'old' }));
     chat.length = 0;
     const g4 = person([], { name: "Lone Star", type: "npc", professionalRating: 2, grunts: { size: 3, down: 0 }, care: { dyingSince: -1, stabilised: false } });
     g4.system.monitor.physical = 10; g4.system.prepareDerivedData();
@@ -4453,7 +4512,9 @@ describe("v0.33.0 upkeep: Karma, nuyen, lifestyle, contacts, buying", () => {
     delete g.game.combat;
   });
 
-  test("Karma awards feed the Karma Pool every 10 earned; the ledger records it", async () => {
+  test("Karma awards feed the Karma Pool every 10 earned; the ledger records it", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'UPKEEP.karma.poolEvery.human': 10, 'UPKEEP.karma.poolEvery.metahuman': 20 }));
     const a = person([], { karma: { good: 2, pool: 3, poolSpent: 0, career: 8 } });
     assert.deepEqual(await a.awardKarma(5, "The run"), { good: 4, pool: 1 });
     assert.deepEqual({ g: a.system.karma.good, p: a.system.karma.pool, c: a.system.karma.career }, { g: 6, p: 4, c: 13 });
@@ -4475,7 +4536,9 @@ describe("v0.33.0 upkeep: Karma, nuyen, lifestyle, contacts, buying", () => {
     assert.equal(await a.payLifestyle(1), false);              // ¥500 left
   });
 
-  test("raising attributes and skills with Good Karma", async () => {
+  test("raising attributes and skills with Good Karma", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'UPKEEP.karma.attributeMultiplier': 2, 'CORE_V923.skillKarma': 'old', 'CORE_V923.newSkill': 'old', 'CORE_V923.aboveMax': 'refuse' }));
     chat.length = 0;
     const a = person([{ id: "f", type: "skill", name: "Firearms", system: { rating: 4, attribute: "quickness", specialization: "Pistols", specializationRating: 5, kind: "active" } }], { karma: { good: 20, pool: 1, poolSpent: 0, career: 20 } });
     assert.deepEqual(a.improveCost({ attribute: "body" }), { cost: 10, ok: true, reason: "", from: 4, to: 5, label: "Body" });
@@ -4732,7 +4795,8 @@ describe("v0.37.0 gear and combat leftovers", () => {
     delete g.game.combat;
   });
 
-  test("armor layering, degrading under a heavy hit, and carried weight", async () => {
+  test("armor layering, degrading under a heavy hit, and carried weight", async (t) => {
+    t.after(oldWay({ "GEAR_V923.load": "old", "GEAR_V923.armorEncumbrance": "old" })); // v0.92.3: the old way (v0.92.2); __tests__/v0923-gear.test.ts has the book's
     chat.length = 0;
     const a = person([armor("Jacket", 5, 3), armor("Vest", 4, 1), armor("Helmet", 1, 1, { adds: true })]);
     assert.equal(a.armorRating("ballistic"), 6);
@@ -4786,6 +4850,7 @@ describe("v0.37.0 gear and combat leftovers", () => {
 });
 
 describe("v0.38.0 skills: concentrations, the Skill Web, martial arts, parry, repairs", () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   const P = { body: 4, quickness: 5, strength: 4, charisma: 3, intelligence: 4, willpower: 4 };
   const withGet = (list: any[]) => Object.assign(list, { get(id: string) { return list.find((i: any) => i.id === id); } });
   const person = (items: any[] = [], extra: any = {}) => {
@@ -5075,6 +5140,8 @@ describe("v0.39.0 magic and critters", () => {
 });
 
 describe("v0.40.0 Matrix leftovers: psychotropic IC, defensive utilities, frames and agents, grid travel, security deckers", () => {
+  // v0.92.3: these pin the v0.92.2 Matrix rules (the book's defaults: v0923-matrix tests).
+  let undo922 = () => {}; before(() => { undo922 = matrix922(); }); after(() => undo922());
   let HostDataModel: any, IcDataModel: any;
   const D = { body: 4, quickness: 5, strength: 3, charisma: 3, intelligence: 6, willpower: 5 };
   const withGet = (list: any[]) => Object.assign(list, { get(id: string) { return list.find((i: any) => i.id === id); } });
@@ -5436,7 +5503,8 @@ describe("v0.42.0 health and environment", () => {
     delete g.game.combat;
   });
 
-  test("addiction: a dose tests Willpower; an addict goes into withdrawal, builds tolerance, and can kick it after two weeks clean", async () => {
+  test("addiction: a dose tests Willpower; an addict goes into withdrawal, builds tolerance, and can kick it after two weeks clean", async (t) => {
+    t.after(oldWay({ 'HEALTH_V923.addiction': 'old' })); // v0.92.3: the old model (Shadowtech's: v0923-health glue tests)
     chat.length = 0;
     g.game.time.worldTime = 0;
     const a = person([tox("j", "Jazz", { kind: "drug", reaction: 2, initiativeDice: 1, durationMinutes: 10, addiction: 4, addictionType: "mental" })]);
@@ -5503,7 +5571,9 @@ describe("v0.42.0 health and environment", () => {
     assert.equal(a.system.diseases.length, 0);
   });
 
-  test("protection: a worn gas mask stops a gas, a respirator adds dice; radiation and suffocation", async () => {
+  test("protection: a worn gas mask stops a gas, a respirator adds dice; radiation and suffocation", async (t) => {
+    // v0.92.3: the old respirator and suffocation (the book's: v0923-health glue tests).
+    t.after(oldWay({ 'HEALTH_V923.respirator': 'dice', 'HEALTH_V923.drowning': 'test', 'HEALTH_V923.breathHold': 'none' }));
     chat.length = 0;
     const mask = { id: "m", type: "gear", name: "Gas mask", system: { quantity: 1, protection: { kind: "gasMask", rating: 0, worn: true } } };
     const resp = { id: "r", type: "gear", name: "Respirator", system: { quantity: 1, protection: { kind: "respirator", rating: 2, worn: true } } };
@@ -5528,7 +5598,8 @@ describe("v0.42.0 health and environment", () => {
     assert.equal(c.system.monitor.stun, 3);
   });
 
-  test("hospital care costs nuyen per day; resting at home uses the lifestyle", async () => {
+  test("hospital care costs nuyen per day; resting at home uses the lifestyle", async (t) => {
+    t.after(oldWay({ 'HEALTH_V923.stunRecovery': 'old' })); // v0.92.3: by the book no care helps Stun (and costs nothing)
     chat.length = 0;
     const a = person([], { nuyen: 1500, monitor: { physical: 0, stun: 3 } });
     faces.push(1, 1, 1, 1);
@@ -5562,6 +5633,7 @@ describe("v0.42.0 health and environment", () => {
 });
 
 describe("v0.43.0 gear and combat", () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   let VehicleDataModel: any;
   const P = { body: 4, quickness: 5, strength: 3, charisma: 3, intelligence: 4, willpower: 4 };
   const withGet = (list: any[]) => Object.assign(list, { get(id: string) { return list.find((i: any) => i.id === id); } });
@@ -5621,7 +5693,8 @@ describe("v0.43.0 gear and combat", () => {
     assert.equal(a.armorRating("impact", { calledLocation: "rightLeg" }), 0);
   });
 
-  test("a Deadly physical hit offers a cyberware damage check; a called shot's cyberlimb is likelier to break", async () => {
+  test("a Deadly physical hit offers a cyberware damage check; a called shot's cyberlimb is likelier to break", async (t) => {
+    t.after(oldWay({ "GEAR_V923.cyberDamage": "old" })); // v0.92.3: the old way (v0.92.2); __tests__/v0923-gear.test.ts has the book's
     chat.length = 0;
     const a = person([ware("arm", "Cyberarm", { kind: "cyberlimb", limb: { location: "leftArm", strength: 6, quickness: 6, capacity: 1 }, armorBallistic: 2 }), ware("eye", "Cybereyes")]);
     faces.push(1, 1, 1, 1);                                               // Body 4 vs 10 − 2: no successes
@@ -5629,7 +5702,7 @@ describe("v0.43.0 gear and combat", () => {
     const card = chat.at(-1);
     assert.match(card.content, /armor 2/);
     assert.match(card.content, /data-sr2e-action="cyberDamage"/);
-    assert.deepEqual(card.flags.sr2e.cyberDamage, { actorUuid: a.uuid, location: "leftArm" });
+    assert.deepEqual(card.flags.sr2e.cyberDamage, { actorUuid: a.uuid, location: "leftArm", level: "D" }); // v0.92.3: the wound's level rides along
     faces.push(3, 2);                                                     // the arm on 1–3, the eyes on 1
     assert.deepEqual(await a.cyberDamageCheck("leftArm"), ["Cyberarm"]);
     assert.equal(a.items.get("arm").system.damaged, true);
@@ -5798,7 +5871,9 @@ describe("v0.44.0 characters and the street", () => {
     delete g.game.combat;
   });
 
-  test("Fill the sheet: metatype, attributes, Magic, cash after gear, lifestyle and free contacts", async () => {
+  test("Fill the sheet: metatype, attributes, Magic, cash after gear, lifestyle and free contacts", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.priorities': 'old', 'CORE_V923.leftoverCash': 'old', 'CORE_V923.racialMods': 'old' }));
     chat.length = 0;
     const a = person([{ id: "g", type: "gear", name: "Medkit", system: { cost: 500, quantity: 2 } }]);
     const r = await a.applyBuild({ priorities: { race: "D", magic: "B", attributes: "A", skills: "C", resources: "E" }, metatype: "ork", magic: "adept", attributes: { body: 6, quickness: 5, strength: 5, charisma: 2, intelligence: 4, willpower: 4 }, gearCost: 1000 });
@@ -5834,7 +5909,9 @@ describe("v0.44.0 characters and the street", () => {
     } finally { (RULES.STREET.qualities as any).enabled = false; }
   });
 
-  test("athletics: distance by successes; movement rates by metatype; Threat Rating adds Combat Pool dice", async () => {
+  test("athletics: distance by successes; movement rates by metatype; Threat Rating adds Combat Pool dice", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.athletics': 'old', 'CORE_V923.threat': 'pool', 'METATYPES.types.troll.run': 3 }));
     chat.length = 0;
     const a = person([skill("at", "Athletics", 3, "body")]);
     faces.push(5, 5, 1);
@@ -5848,7 +5925,9 @@ describe("v0.44.0 characters and the street", () => {
     assert.equal(n.system.derived.combatPool, plain.system.derived.combatPool + 3);
   });
 
-  test("one sneaker against several observers; morale breaks a group and Leadership rallies it", async () => {
+  test("one sneaker against several observers; morale breaks a group and Leadership rallies it", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.perception': 'opposed', 'CORE_V923.morale': 'old' }));
     chat.length = 0;
     const s = person([skill("st", "Stealth", 4)], { name: "Sneak" });
     const o1 = person([], { name: "Guard A" });
@@ -5869,7 +5948,9 @@ describe("v0.44.0 characters and the street", () => {
     assert.equal(grunts.isBroken(), false);
   });
 
-  test("contacts: the fee and paid dice; haggling posts a new price; fencing sells for a share", async () => {
+  test("contacts: the fee and paid dice; haggling posts a new price; fencing sells for a share", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.fence': 'old', 'CORE_V923.haggle': 'old' }));
     chat.length = 0;
     const a = person([skill("et", "Etiquette", 3, "charisma"), skill("ng", "Negotiation", 4, "charisma"),
       { id: "gun", type: "weapon", name: "Pistol", system: { cost: 1000, streetIndex: 1 } }],
@@ -6067,7 +6148,8 @@ describe("v0.45.0 magic and critters", () => {
     assert.equal(gh.getFlag("sr2e", "essenceLossAt"), 8 * 86400);
   });
 
-  test("surgery: the ware works after recovery; bioware over the limit risks rejection", async () => {
+  test("surgery: the ware works after recovery; bioware over the limit risks rejection", async (t) => {
+    t.after(oldWay({ "GEAR_V923.overBodyIndex": "rejection", "GEAR_V923.surgery": "old" })); // v0.92.3: the old way (v0.92.2); __tests__/v0923-gear.test.ts has the book's
     chat.length = 0;
     const ware = { id: "mus", name: "Muscle augmentation", type: "cyberware", sort: 0, system: { installed: false, bioware: true, bodyIndex: 5, bioKind: "muscleAugmentation", rating: 2, grade: "standard", cultured: false, essenceCost: 0, attributes: {} } };
     const old = { id: "old", name: "Old filter", type: "cyberware", sort: 5, system: { installed: true, bioware: true, bodyIndex: 0, bioKind: "other", rating: 0, grade: "standard", cultured: false, essenceCost: 0, attributes: {} } };
@@ -6092,6 +6174,7 @@ describe("v0.45.0 magic and critters", () => {
   });
 
   test("encephalons add dice; chips beyond the jacks don't run; bioware kinds", async (t) => {
+    t.after(oldWay({ "GEAR_V923.bioware": "old", "GEAR_V923.cultured": "old" })); // v0.92.3: the old way (v0.92.2); __tests__/v0923-gear.test.ts has the book's
     t.after(oldWay({"BOOK_V78.encephalon.mode": "dice"})); // v0.78.0: the old rule (a house rule)
     chat.length = 0;
     const a = who({}, [
@@ -6116,7 +6199,8 @@ describe("v0.45.0 magic and critters", () => {
     assert.equal(a.system.derived.woundModifier, 0);
   });
 
-  test("graded Availability and price when finding cyberware", async () => {
+  test("graded Availability and price when finding cyberware", async (t) => {
+    t.after(oldWay({ "GEAR_V923.grades": "old" })); // v0.92.3: the old way (v0.92.2); __tests__/v0923-gear.test.ts has the book's
     chat.length = 0;
     const a = who({}, [skill("et", "Etiquette", 3, "charisma"), { id: "cw", name: "Wired reflexes", type: "cyberware", system: { installed: false, grade: "beta", cost: 1000, availability: "4/48hrs", streetIndex: 1, essenceCost: 2, attributes: {} } }]);
     faces.push(6, 6, 1, 1, 1);                                // vs 9 (beta): 6+1 = 7 each, no success
@@ -6147,6 +6231,9 @@ describe("v0.45.0 magic and critters", () => {
 });
 
 describe("v0.46.0 Matrix and rigging", () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
+  // v0.92.3: these pin the v0.92.2 Matrix rules (the book's defaults: v0923-matrix tests).
+  let undo922 = () => {}; before(() => { undo922 = matrix922(); }); after(() => undo922());
   let HostDataModel: any, IcDataModel: any, VehicleDataModel: any, SiteDataModel: any;
   const D = { body: 4, quickness: 5, strength: 3, charisma: 3, intelligence: 6, willpower: 5 };
   const withGet = (list: any[]) => Object.assign(list, { get(id: string) { return list.find((i: any) => i.id === id); } });
@@ -6957,7 +7044,9 @@ describe("v0.48.0 health, magic and critters", () => {
     assert.equal(a.system.radiation.dose, 23);
   });
 
-  test("weather: athletics distances and movement shrink in a storm", async () => {
+  test("weather: athletics distances and movement shrink in a storm", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.athletics': 'old' }));
     chat.length = 0;
     scene.flags.weather = "storm";
     const a = who({ name: "Climber" }, [skill("ath", "Athletics", 4, "body")]);
@@ -6970,7 +7059,8 @@ describe("v0.48.0 health, magic and critters", () => {
     assert.equal((await a.athleticsTest("climb", { condition: "easy", weather: false })).metres, 8);
   });
 
-  test("surgery: care stretches or shortens recovery and is paid for; changing it rescales the days left", async () => {
+  test("surgery: care stretches or shortens recovery and is paid for; changing it rescales the days left", async (t) => {
+    t.after(oldWay({ "GEAR_V923.surgery": "old" })); // v0.92.3: the old way (v0.92.2); __tests__/v0923-gear.test.ts has the book's
     chat.length = 0;
     const patient = who({ name: "Patient", nuyen: 5000 }, [{ id: "cw", type: "cyberware", name: "Wired reflexes", system: { installed: false, bioware: false, essenceCost: 2, grade: "standard", kind: "other" } }]);
     const doc2 = who({ name: "Doc" }, [skill("bt", "Biotech", 4, "intelligence")]);
@@ -7135,6 +7225,8 @@ describe("v0.48.0 health, magic and critters", () => {
 });
 
 describe("v0.49.0 street, Matrix, rigging and security leftovers", () => {
+  // v0.92.3: these pin the v0.92.2 Matrix rules (the book's defaults: v0923-matrix tests).
+  let undo922 = () => {}; before(() => { undo922 = matrix922(); }); after(() => undo922());
   let HostDataModel: any, VehicleDataModel: any, SiteDataModel: any, R: any;
   const P = { body: 4, quickness: 5, strength: 3, charisma: 4, intelligence: 6, willpower: 5 };
   const withGet = (list: any[]) => Object.assign(list, { get(id: string) { return list.find((i: any) => i.id === id); } });
@@ -7199,7 +7291,9 @@ describe("v0.49.0 street, Matrix, rigging and security leftovers", () => {
   });
   afterEach(() => { delete g.game.actors; delete g.game.scenes; g.game.time = { worldTime: 0 }; delete g.canvas; faces.length = 0; });
 
-  test("Fill the sheet with listed skills (re-rating one already there) and gear from the templates", async () => {
+  test("Fill the sheet with listed skills (re-rating one already there) and gear from the templates", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.priorities': 'old', 'CORE_V923.leftoverCash': 'old' }));
     chat.length = 0;
     const a = person([{ id: "s1", type: "skill", name: "Firearms", system: { rating: 2, attribute: "quickness", kind: "active" } }]);
     const gear = R.parseGearList("Heavy pistol, Medkit ×2, Fake SIN ¥5000", RULES.ITEM_TEMPLATES);
@@ -7218,7 +7312,9 @@ describe("v0.49.0 street, Matrix, rigging and security leftovers", () => {
     assert.match(chat.at(-1).content, /2 skills, 3 pieces of gear/);
   });
 
-  test("an edge gained and a flaw bought off with Karma; too little Karma is refused", async () => {
+  test("an edge gained and a flaw bought off with Karma; too little Karma is refused", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'STREET.qualities.karma.flawPerPoint': 2 }));
     chat.length = 0; warnings.length = 0;
     const a = person([], { karma: { good: 10, pool: 0, poolSpent: 0, career: 10 }, qualities: [{ id: "f", name: "Bad rep", kind: "flaw", points: 3, target: "", tn: 0, notes: "" }] });
     assert.equal(await a.gainEdge({ name: "Lucky", points: 2 }), true);
@@ -7291,7 +7387,9 @@ describe("v0.49.0 street, Matrix, rigging and security leftovers", () => {
     assert.equal(a.system.nuyen, 200);
   });
 
-  test("a mixed group tests morale once on its highest standing rating and breaks together; rallying clears it", async () => {
+  test("a mixed group tests morale once on its highest standing rating and breaks together; rallying clears it", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.morale': 'old' }));
     chat.length = 0;
     const scene: any = { tokens: [] };
     const npc = (name: string, pr: number, extra: any = {}) => {
@@ -7455,6 +7553,8 @@ describe("v0.49.0 street, Matrix, rigging and security leftovers", () => {
   });
 
   test("security: the guards look (each who notices raises the tally), smashed devices, forced doors and masking spells", async (t) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    t.after(oldWay({ 'CORE_V923.perception': 'opposed' }));
     t.after(oldWay({"BOOK_V78.barriers.mode": "subtract"})); // v0.78.0: the old rule (a house rule)
     chat.length = 0;
     const g1 = person([skill("pe", "Perception", 3, "intelligence")], { name: "Guard 1", type: "npc" });
@@ -7489,6 +7589,8 @@ describe("v0.49.0 street, Matrix, rigging and security leftovers", () => {
   });
 
   test("review fixes: a guard counts once, a door trips once (when breached), smashing is once, a one-NPC group doesn't count its fallen twice", async (tc) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tc.after(oldWay({ 'CORE_V923.perception': 'opposed', 'CORE_V923.morale': 'old' }));
     tc.after(oldWay({"BOOK_V78.barriers.mode": "subtract"})); // v0.78.0: the old rule (a house rule)
     chat.length = 0;
     const g1 = person([skill("pe", "Perception", 3, "intelligence")], { name: "Guard A", type: "npc" });
@@ -7620,7 +7722,9 @@ describe("v0.50.0 target-number automation, switching modifiers off, the GM's re
   // v0.81.1 (SEC1-1): a card has an author (here the GM's), as every Foundry message does: retarget re-runs it as them.
   const asMessage = (d: any) => ({ author: { id: "gm1", isGM: true }, ...d, getFlag: (s: string, k: string) => d.flags?.[s]?.[k], async update(u: any) { for (const [k, v] of Object.entries(u)) setPath(d, k.replace(/^flags\.sr2e\./, "flags.sr2e."), v); } });
 
-  test("perception reads light and distance by itself; walls mean by ear; 'block' means no roll", async () => {
+  test("perception reads light and distance by itself; walls mean by ear; 'block' means no roll", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.perception': 'opposed' }));
     chat.length = 0;
     const guard = person([skill("p", "Perception", 3)], { name: "Guard" });
     const ninja = person([skill("s", "Stealth", 4)], { name: "Ninja" });
@@ -7646,7 +7750,9 @@ describe("v0.50.0 target-number automation, switching modifiers off, the GM's re
     } finally { (RULES.TN_AUTO.perception as any).noSight = old; }
   });
 
-  test("perception: the target's chameleon suit and the sneaker's own penalties count", async () => {
+  test("perception: the target's chameleon suit and the sneaker's own penalties count", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.perception': 'opposed' }));
     chat.length = 0;
     const guard = person([skill("p", "Perception", 3)], { name: "Guard" });
     const ninja = person([skill("s", "Stealth", 4), { id: "suit", type: "gear", name: "Suit", system: { stealth: { kind: "chameleon", rating: 3, worn: true } } }], { name: "Ninja", monitor: { physical: 3, stun: 0 } });
@@ -7657,7 +7763,9 @@ describe("v0.50.0 target-number automation, switching modifiers off, the GM's re
     assert.match(chat.at(-1).content, /Ninja: Stealth 4.*?Moderate wound|Ninja: Stealth 4[\s\S]*?\+2/);
   });
 
-  test("sneaking: the observers' conditions go on the observers' TN, not the sneaker's", async () => {
+  test("sneaking: the observers' conditions go on the observers' TN, not the sneaker's", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.perception': 'opposed' }));
     chat.length = 0;
     const ninja = person([skill("s", "Stealth", 4)], { name: "Ninja" });
     const guard = person([skill("p", "Perception", 3)], { name: "Guard" });
@@ -7728,7 +7836,9 @@ describe("v0.50.0 target-number automation, switching modifiers off, the GM's re
     assert.ok(pv2.modifiers.some((m: any) => m.label === "Partial light"));
   });
 
-  test("searching: a frisk takes no weather; looking someone over takes the light and weather", async () => {
+  test("searching: a frisk takes no weather; looking someone over takes the light and weather", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.perception': 'opposed' }));
     chat.length = 0;
     const cop = person([skill("p", "Perception", 3)], { name: "Cop" });
     const runner = person([{ id: "h", type: "weapon", name: "Hold-out", system: { concealability: 6 } }], { name: "Runner" });
@@ -8209,11 +8319,10 @@ describe("v0.56.0 magic and critters", () => {
     const p = who({ name: "Old wound", monitor: { physical: 3, stun: 0 } });
     await p.setFlag("sr2e", "damagedAt", { physical: 0 });
     g.game.time.worldTime = 3 * 3600;
-    (RULES.MAGIC_V56.healing as any).treatBlock = true;
-    try {
-      assert.equal(await a.castSpell(a.items.get("tr"), { targetUuid: p.uuid }), null);
-      assert.match(warnings.at(-1) ?? "", /Treat only works within 1 hour of the wound \(it was 3 hours ago\)/);
-    } finally { (RULES.MAGIC_V56.healing as any).treatBlock = false; }
+    // v0.92.3: refused is the default now (Core p. 155: Treat "must" be within one hour).
+    assert.equal(RULES.MAGIC_V56.healing.treatBlock, true);
+    assert.equal(await a.castSpell(a.items.get("tr"), { targetUuid: p.uuid }), null);
+    assert.match(warnings.at(-1) ?? "", /Treat only works within 1 hour of the wound \(it was 3 hours ago\)/);
   });
 
   test("a touch spell: an unwilling target is touched first", async () => {
@@ -8379,7 +8488,7 @@ describe("v0.56.0 magic and critters", () => {
     faces.push(...Array(8).fill(1));                          // Willpower 6 + 2 dice
     await ad.resistSpell({ casterUuid: "x", targetUuid: ad.uuid, spellName: "Bolt", force: 4, resistAttribute: "willpower", level: "M", damageType: "stun", casterSuccesses: 0, effectOnly: true }, 0);
     assert.match(chat.at(-1).content, /\+ 2 spell resistance/);
-    faces.push(...Array(5).fill(1));                          // Body 4 + 1 die
+    faces.push(...Array(7).fill(1));                          // v0.92.3 (Core p. 112): Willpower 6 (higher than Body 4) + 1 die
     await ad.naturalHeal({ track: "stun", hours: 1 });
     assert.match(chat.at(-1).content, /rapid healing \+1/);
     const t = who({ name: "Far target" });
@@ -8533,6 +8642,9 @@ describe("v0.56.0 magic and critters", () => {
 });
 
 describe("v0.57.0 Matrix, vehicles and security", () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
+  // v0.92.3: these pin the v0.92.2 Matrix rules (the book's defaults: v0923-matrix tests).
+  let undo922 = () => {}; before(() => { undo922 = matrix922(); }); after(() => undo922());
   let HostDataModel: any, IcDataModel: any, VehicleDataModel: any, SiteDataModel: any;
   const D = { body: 4, quickness: 5, strength: 3, charisma: 3, intelligence: 6, willpower: 5 };
   const R = RULES as any;
@@ -9223,7 +9335,9 @@ describe("v0.58.0 characters, gear and integration", () => {
     assert.match(chat.at(-1).content, /Time taken: <strong>1 hours/);
   });
 
-  test("training time: the Karma goes at once, an instructor shortens it, the rating rises when it is done", async () => {
+  test("training time: the Karma goes at once, an instructor shortens it, the rating rises when it is done", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.trainingTime': 'rating', 'UPKEEP.karma.attributeMultiplier': 2 }));
     chat.length = 0;
     R.CHARACTERS_V58.training.mode = "timed";
     const a = person("Student", [{ id: "fa", type: "skill", name: "Firearms", system: { rating: 2, attribute: "quickness", kind: "active", specializationRating: 0, concentrationRating: 0 } }]);
@@ -9255,7 +9369,9 @@ describe("v0.58.0 characters, gear and integration", () => {
     assert.match(chat.at(-1).content, /finishes training/);
   });
 
-  test("training whose rating was reached another way gives its Karma back at the time step", async () => {
+  test("training whose rating was reached another way gives its Karma back at the time step", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.trainingTime': 'rating', 'UPKEEP.karma.attributeMultiplier': 2 }));
     R.CHARACTERS_V58.training.mode = "timed";
     const a = person("Overtaken", [{ id: "fa", type: "skill", name: "Firearms", system: { rating: 2, attribute: "quickness", kind: "active", specializationRating: 0, concentrationRating: 0 } }]);
     const before = a.system.karma.good;
@@ -9267,13 +9383,26 @@ describe("v0.58.0 characters, gear and integration", () => {
     assert.equal(a.items.get("fa").system.rating, 3);
   });
 
-  test("a cyberlimb's housed ware costs Essence once the limb is out", () => {
+  test("a cyberlimb's housed ware costs Essence once the limb is out", (t) => {
+    t.after(oldWay({ "GEAR_V923.limbHoused": "capacity", "GEAR_V923.limbPairs": "off" })); // v0.92.3: the old way (v0.92.2); __tests__/v0923-gear.test.ts has the book's
     const a = person("Armed", [
       { id: "arm", type: "cyberware", name: "Cyberarm", system: { essenceCost: 1, grade: "standard", installed: true, bioware: false, attributes: {}, kind: "cyberlimb", limb: { location: "rightArm", strength: 4, quickness: 4, capacity: 1 } } },
       { id: "sl", type: "cyberware", name: "Smartlink", system: { essenceCost: 0.5, grade: "standard", installed: true, bioware: false, attributes: {}, kind: "other", housedIn: "arm" } },
     ]);
     assert.equal(SR2Actor.housedEssence(a.items.get("arm")), 0.5);
     assert.equal(SR2Actor.essenceOf(a.items.get("sl")), 0);
+  });
+
+  test("v0.92.3 review fix: the book's housed ware already costs Essence, so a limb in or out moves only the difference", () => {
+    // Cybertechnology p. 49: a smartlink in a cyberlimb costs .25 (0.5 outside); other ware its full cost.
+    const a = person("Armed (book)", [
+      { id: "arm", type: "cyberware", name: "Cyberarm", system: { essenceCost: 1, grade: "standard", installed: true, bioware: false, attributes: {}, kind: "cyberlimb", limb: { location: "rightArm", strength: 4, quickness: 4, capacity: 1 } } },
+      { id: "sl", type: "cyberware", name: "Smartlink", system: { essenceCost: 0.5, grade: "standard", installed: true, bioware: false, attributes: {}, kind: "other", housedIn: "arm" } },
+      { id: "dc", type: "cyberware", name: "Datajack", system: { essenceCost: 0.2, grade: "standard", installed: true, bioware: false, attributes: {}, kind: "other", housedIn: "arm" } },
+    ]);
+    assert.equal(SR2Actor.essenceOf(a.items.get("sl")), 0.25);
+    assert.equal(SR2Actor.essenceOf(a.items.get("dc")), 0.2);
+    assert.equal(SR2Actor.housedEssence(a.items.get("arm")), 0.25, "only the smartlink's saving; the datajack costs the same either way");
   });
 
   test("giving training up gives the Karma back", async () => {
@@ -9316,7 +9445,8 @@ describe("v0.58.0 characters, gear and integration", () => {
     R.GEAR_V58.essenceHoles.enabled = true;
   });
 
-  test("filtration adds dice against its vector; bone lacing adds to Body for resistance and to unarmed Power", async () => {
+  test("filtration adds dice against its vector; bone lacing adds to Body for resistance and to unarmed Power", async (t) => {
+    t.after(oldWay({ "GEAR_V923.boneLacing": "dice" })); // v0.92.3: the old way (v0.92.2); __tests__/v0923-gear.test.ts has the book's
     chat.length = 0;
     const a = person("Laced", [
       { id: "f", type: "cyberware", name: "Air filtration", system: { essenceCost: 0.1, grade: "standard", installed: true, bioware: false, attributes: {}, kind: "filtration", filterKind: "air", rating: 3 } },
@@ -9372,7 +9502,9 @@ describe("v0.58.0 characters, gear and integration", () => {
     assert.match(notes[1], /fine ¥5,000/);
   });
 
-  test("Karma awards with the breakdown: team rows for all, individual rows each", async () => {
+  test("Karma awards with the breakdown: team rows for all, individual rows each", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.awards': 'old' }));
     chat.length = 0;
     const a = person("One");
     const b = person("Two");
@@ -9386,7 +9518,9 @@ describe("v0.58.0 characters, gear and integration", () => {
     assert.match(chat.at(-1).content, /Karma awarded: The run/);
   });
 
-  test("Notoriety comes off Street Cred; recognition rolls Intelligence vs 10 − Public Awareness", async () => {
+  test("Notoriety comes off Street Cred; recognition rolls Intelligence vs 10 − Public Awareness", async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.recognition': 'old' }));
     chat.length = 0;
     const a = person("Famous", [], { reputation: { streetCred: 4, notoriety: 1, publicAwareness: 4 } });
     const was = R.STREET.reputation.autoCred;

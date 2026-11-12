@@ -7,16 +7,19 @@
 import { RULES, type DamageLevel } from './config.ts';
 import type { TargetNumberModifier } from './dice.ts';
 import { own } from './util.ts';
+import { aimFloor } from './combat923.ts';
 import { t as tx } from '../helpers/i18n.ts';
+import { surgeryBandLevel } from './health923.ts';
 
 const C = () => RULES.COMBAT;
 
 // ---------------------------------------------------------------- Take Aim
 
-/** The most Take Aim can give with a skill of this rating (at least 1 when allowed at all). */
+/** The most Take Aim can give with a skill of this rating (v0.92.2: at least 1 when allowed at all; see COMBAT_V923.aim). */
 export function aimCap(skillRating: number): number {
   const a = C().aim;
-  const fromSkill = a.maxFromSkill > 0 ? Math.max(1, Math.floor(Math.max(0, skillRating) * a.maxFromSkill)) : Infinity;
+  // v0.92.3 (COMBAT_V923.aim 'book', Core p. 82): half the skill, rounded down, even 0 (v0.92.2: at least 1).
+  const fromSkill = a.maxFromSkill > 0 ? Math.max(aimFloor(), Math.floor(Math.max(0, skillRating) * a.maxFromSkill)) : Infinity;
   const fixed = a.max > 0 ? a.max : Infinity;
   const cap = Math.min(fromSkill, fixed);
   return Number.isFinite(cap) ? cap : 99;
@@ -114,10 +117,16 @@ export function antidoteEffect(rating: number): { dice: number; hours: number } 
 
 // ---------------------------------------------------------------- Surgical trauma
 
-/** The wound a surgery leaves by its size (Essence or Body Index points), when the house rule is on. */
-export function surgicalTrauma(points: number): { level: DamageLevel; type: 'physical' | 'stun' } | null {
+/**
+ * The wound a surgery leaves by its size (Essence or Body Index points), when the house rule is on.
+ * v0.92.3 (RULES.HEALTH_V923.surgeryBands 'book'): the book's bands, cyberware by Essence (Core p. 114), bioware by
+ * Body Index (Shadowtech bionetics); 'table' uses `levels`.
+ */
+export function surgicalTrauma(points: number, bioware = false): { level: DamageLevel; type: 'physical' | 'stun' } | null {
   const t = RULES.BIOWARE.surgery.trauma;
   if (!t.enabled || !(points > 0)) return null;
+  const band = surgeryBandLevel(points, bioware);
+  if (band) return { level: band, type: t.type };
   const row = t.levels.find((l) => points <= l.upTo) ?? t.levels[t.levels.length - 1];
   return row ? { level: row.level, type: t.type } : null;
 }

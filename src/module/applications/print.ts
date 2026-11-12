@@ -64,7 +64,8 @@ export async function printModel(actor: any, opts: { secrets?: boolean } = {}): 
   if (sys.professionalRating) facts.push([tx('SR2E.App.Print.professionalRating'), num(sys.professionalRating)]);
   if (sys.threatRating) facts.push([tx('SR2E.App.Print.threatRating'), num(sys.threatRating)]);
   if (sys.totem?.name) facts.push([tx('SR2E.App.Print.totem'), String(sys.totem.name)]);
-  if (Number(sys.initiateGrade ?? 0) > 0) facts.push([tx('SR2E.App.Print.initiateGrade'), num(sys.initiateGrade)]);
+  // v0.92.3 review fix: a Grade 0 initiate (RULES.SORCERY_V923.initiation 'book', the `initiated` flag) prints too.
+  if (Number(sys.initiateGrade ?? 0) > 0 || actor.getFlag?.('sr2e', 'initiated') || actor.flags?.sr2e?.initiated) facts.push([tx('SR2E.App.Print.initiateGrade'), num(sys.initiateGrade)]);
 
   const attributes = ATTRIBUTE_KEYS.map((k) => {
     const a = sys.attributes?.[k] ?? {};

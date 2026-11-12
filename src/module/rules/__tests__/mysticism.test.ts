@@ -21,7 +21,8 @@ describe('magic leftovers (v0.39.0)', () => {
     assert.deepEqual(shockOutcome(0), { stunned: true, initiativeLoss: 10 });
     assert.deepEqual(shockOutcome(2), { stunned: false, initiativeLoss: 0 });
   });
-  test('sustain limit, domains, addiction', () => {
+  test('sustain limit, domains, addiction (v0.92.2 sustain hours)', (t) => {
+    t.after(oldWay({ 'SPIRITS_V923.elementalSustain': 'v922' }));
     assert.equal(elementalSustainUntil(100, 4), 100 + 4 * 3600);
     (RULES.MAGIC_V39.sustainLimit as any).hoursPerForce = 0;
     try { assert.equal(elementalSustainUntil(100, 4), -1); } finally { (RULES.MAGIC_V39.sustainLimit as any).hoursPerForce = 1; }
@@ -34,7 +35,9 @@ describe('magic leftovers (v0.39.0)', () => {
     (RULES.MAGIC_V39.addiction as any).tnFrom = 'excess';
     try { assert.equal(addictionTn(8, 6), 2); assert.equal(addictionTn(11, 6), 5); } finally { (RULES.MAGIC_V39.addiction as any).tnFrom = 'total'; }
   });
-  test('libraries, circles and lodges', () => {
+  test('libraries, circles and lodges', (t) => {
+    // v0.92.3: the v0.92.2 rule (RULES.SORCERY_V923).
+    t.after(oldWay({ 'SORCERY_V923.ritualTeam': 'v922' }));
     const sites = [
       { name: 'Conjuring library', kind: 'library' as const, rating: 6, tag: 'conjuring' },
       { name: 'Fire circle', kind: 'circle' as const, rating: 4, tag: 'fire' },
@@ -49,7 +52,9 @@ describe('magic leftovers (v0.39.0)', () => {
     assert.deepEqual(missingSites('ritual', 'shamanic', sites, { force: 5, totem: 'Bear' }), []);
     assert.equal(missingSites('ritual', 'hermetic', sites, { force: 3 })[0], 'a sorcery library');
   });
-  test('ritual stages and signature cleaning', () => {
+  test('ritual stages and signature cleaning', (t) => {
+    // v0.92.3: the v0.92.2 rule (RULES.SORCERY_V923).
+    t.after(oldWay({ 'SORCERY_V923.ritualMaterials': 'v922' }));
     assert.equal(ritualMaterialsCost(5), 0);
     (RULES.MAGIC_V39.ritualStages as any).materialsPerForce = 500;
     try { assert.equal(ritualMaterialsCost(5), 2500); } finally { (RULES.MAGIC_V39.ritualStages as any).materialsPerForce = 0; }

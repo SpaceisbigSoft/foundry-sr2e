@@ -23,6 +23,508 @@ These values were written from memory of SR2 and have unit tests that confirm th
 | Initiative passes | -10 per pass | `INITIATIVE_PASS_DECREMENT` |
 
 
+## Checked against the books (v0.92.3, 12 Nov 2026)
+
+v0.92.3 compared the default rules with the SR2 books themselves (Core Rulebook, Companion, Grimoire, Awakenings, Virtual Realities 2.0, Rigger 2, Shadowtech, Cybertechnology, Fields of Fire, the Corporate Security Handbook and the others cited) and made the book's way the default. **Where a row below disagrees with an older section of this file, this section is the current rule.** Official FASA errata and Ka-Ge Q&A override the books. Every behaviour change has a house-rule switch (`RULES.<AREA>_V923`, `rules/config923/*.ts`) whose other choice puts the v0.92.2 way back; values moved in place can be set back in the house-rules window. Under the "Unified Rules Revamp" rules source a rule the Revamp changes itself keeps the Revamp's behaviour; a book fix the Revamp has no rule for applies there too. On the first load after the update the lead GM gets one card listing the actors whose numbers change, by reason, with the switch that restores each (`notice923.ts`).
+
+### Core mechanics and characters
+
+Switches in `RULES.CORE_V923` (`rules/config923/core.ts`, pure functions in `rules/core923.ts`); the first choice of each is the book's way (the default), the other puts the v0.92.2 behaviour back. Values moved in place are house-rule (or shared) values: the GM can set them back.
+
+| Rule | Was | Now (book) | Source | Switch |
+| --- | --- | --- | --- | --- |
+| Attribute points by priority | 30 / 27 / 24 / 21 / 18 | 30 / 24 / 20 / 17 / 15 | Core p. 46–47 | `CORE_V923.priorities` |
+| Skill points by priority | 50 / 40 / 34 / 30 / 27 | 40 / 30 / 24 / 20 / 17 | Core p. 46–47 | `CORE_V923.priorities` |
+| Resources by priority | 1,000,000 / 400,000 / 90,000 / 20,000 / 5,000¥ | 1,000,000 / 400,000 / 90,000 / 5,000 / 500¥ | Core p. 47 | `CORE_V923.priorities` |
+| Race priority | human any, elf and troll C, dwarf and ork D | any metahuman A (More Metahumans, optional: C) | Core p. 45–46 | `CORE_V923.priorities`, `.moreMetahumans` |
+| Magic priority | A full magician, B adept or aspected, for any race | human: A magician, B adept; metahuman: B magician, C adept (More Metahumans: A / B for all) | Core p. 45 | `CORE_V923.priorities` |
+| Spell (Force) Points at creation | by Magic priority: A 25, B 25, else 0 | by Resources priority: 50 / 35 / 25 / 15 / 5, magicians only; foci bonded from them | Core p. 47 | `CORE_V923.priorities` |
+| Dwarf modifiers | B+1 S+2 W+1 | also Q−1 (natural maximum 5) | Core p. 43, 45 | `CORE_V923.racialMods` (the Revamp's own maximum table keeps the old modifiers) |
+| Troll modifiers | B+5 Q−1 S+4 C−2 I−2 | also W−1 (natural maximum 5) | Core p. 43, 45 | `CORE_V923.racialMods` |
+| Troll dermal armor | 1 ballistic and 1 impact armor | +1 Body die on damage resistance | Core p. 45 | `CORE_V923.trollDermal` |
+| Troll running | × 3 | × 2 | Core p. 83 | `METATYPES.types.troll.run` 3 → 2 (the Revamp's patch sets 2 too) |
+| Native language | free at Intelligence | free at Intelligence + 2 | Core p. 46 | `CORE_V923.nativeLanguage` |
+| Street dialect | none | a Street lifestyle's dialect (City Speak, Tunnel Talk) free at half Intelligence (build check) | Core p. 46 | `CORE_V923.streetDialect` |
+| Leftover Resources | kept whole | kept at 10:1 | Core p. 47 | `CORE_V923.leftoverCash`, `.cashRatio` |
+| Starting cash | none | + 3D6 × 1,000¥ when the wizard finishes | Core p. 47 | `CORE_V923.startingCash` |
+| Starting Karma Pool | 1 for everyone | metahuman 2, human 1 (1 with More Metahumans) | Core p. 47 | `CORE_V923.startPool` |
+| Attribute Karma | new rating × 2 | new rating × 1 | Core p. 190 | `UPKEEP.karma.attributeMultiplier` 2 → 1 (the Revamp's patch sets 1.5) |
+| Past the natural maximum | refused | with the GM's leave, double Karma, up to the augmented maximum | Core p. 190 | `CORE_V923.aboveMax` (the house rule `karmaAboveRacial`, on under the Revamp, wins) |
+| Karma Pool growth | every 10 career Karma (metahumans 20) | 10 to Good Karma, the next point to the pool (every 11th), everyone (Core p. 190 splits 90/10 rounding in favour of Good Karma; its "one-tenth, round up" in the Karma Pool section disagrees, and the Companion's clarification settles it as every 11th) | Companion p. 76; Core p. 190 | `UPKEEP.karma.poolEvery` human 10 → 11, metahuman 20 → 11 |
+| Karma Pool dice | Revamp only | 1 point a die, up to the test's own skill/attribute/rating dice | Core p. 191 | `CORE_V923.karmaDice` (the Revamp's no-cap rule wins when on) |
+| After avoiding a disaster | re-roll and buy buttons stay | no more Karma on that test | Core p. 191 | `CORE_V923.afterOops` |
+| Karma Pool refresh | by hand | full again when a combat ends (the next encounter) | Core p. 191 | `KARMA.refresh` 'manual' → 'combat' |
+| Language and knowledge Karma | Intelligence bands × 1 / 1.5 / 2 | language × 1; knowledge a general skill × 2 (conc. × 1.5, spec. × 1) | Core p. 190 | `CORE_V923.skillKarma` (the Revamp's language × 1 wins when set) |
+| A new skill | its rating-1 price | 1 Good Karma | Core p. 190 | `CORE_V923.newSkill` |
+| Training days (timed training) | new rating × days by kind | Karma spent × 7 (active, B/R, social, attributes), × 15 (knowledge, language) | Companion pp. 50, 53 | `CORE_V923.trainingTime` |
+| Individual Karma awards | 5 rows of 1 | roleplaying 1–2, guts 1–2, smarts, right place, surprise, humor, drama | Core p. 199 | `CORE_V923.awards` |
+| Time ÷ successes | rounded up to 0.1 unit | to the nearest whole unit (at least 1) | Core p. 68 | `CORE_V923.timeRounding` |
+| Attribute defaulting | flat +4 | +2 per Skill Web circle from the attribute when the web links it | Core p. 68 | `CORE_V923.attributeDefault` |
+| Skill Web paths | both ways, at most 3 steps | "A > B" links one-way (the arrows), no step cap | Core p. 68 | `CORE_V923.webArrows`; `SKILLS.web.maxSteps` 3 → 99 (the Revamp's patch sets 99) |
+| Perceiving someone | opposed: Perception (else Int) vs Stealth; Stealth vs Int | Intelligence vs 4 + modifiers, one success; the sneaker doesn't roll | Core p. 185 | `CORE_V923.perception` 'book' / 'companion' (Stealth (4), +1 TN a success, Companion p. 90) / 'opposed' |
+| Sound, smell, touch, taste rows | Revamp only | in the Perceive, Notice and Sneak dialogs and the GM's TN checklist | Core p. 185 | `CORE_V923.perceptionSounds`, `.senseRows` |
+| Language TNs | 3 / 4 / 6 / 8 | 2 / 4 / 6 / 9 / 11, dialect +2 | Core p. 184 | `CORE_V923.languageTns`, `.languageTable` |
+| Build/Repair without tools | +4 TN | not allowed | Core p. 183 | `CHARACTERS_V58.tools.none` 'tn' → 'block' |
+| Climbing TNs | 2 / 4 / 6 / 8 | 3 / 5 / 8 / 14 | Fields of Fire p. 75 | `STREET.athletics.climb` (the Revamp's patch sets the same) |
+| Climbing and swimming distance | 2 m per success | climb ¼ × ((Q + S) ÷ 2 + 2 per success); height/wet modifiers; swim (Q + successes) × run ÷ 5 | Fields of Fire p. 75; Cyberpirates | `CORE_V923.athletics`, `.climbModifiers` (the Revamp's hsAthletics wins) |
+| Threat Rating | + Combat Pool dice | + dice on every test (attacks, defence, damage resistance, tests through the test path), never spent, counted as Combat Pool dice for a clean miss (Core p. 86); no Dice Pools (Combat, Spell, Hacking, Control, Task) | Core pp. 86, 187 | `CORE_V923.threat` |
+| Morale | PR dice vs 4 + casualties | withdraws at the PR's wound (1 L, 2 M, 3 S, 4 never); Willpower (4) to stay | Core p. 187 | `CORE_V923.morale`, `.moraleWound` |
+| Recognition | Intelligence vs 10 − Public Awareness | the NPC's Etiquette vs (1,000 − rep) ÷ 50 (rep: career Karma, or a public rep) | Core p. 199 | `CORE_V923.recognition` |
+| Haggling | the seller vs TN 4 | the seller vs the buyer's Willpower (cap kept, see below) | Core p. 184 | `CORE_V923.haggle` |
+| Fencing | both vs 4, share 0–50% | each vs the other's Willpower + 2, share 10–50% | Core p. 188 | `CORE_V923.fence` |
+| Interrogation | opposed | one-sided: vs the subject's Willpower | Core p. 73 | `CORE_V923.interrogation` |
+| Edges and flaws at creation | ≤ 5 each, edges ≤ flaws | must come to 0 | Companion p. 21 | `CORE_V923.qualities` |
+| Eliminating a flaw | 2 Karma a point | 10 × its value | Companion p. 22 | `STREET.qualities.karma.flawPerPoint` 2 → 10 |
+
+Kept (the owner's decisions)
+
+- Timed training (`CHARACTERS_V58.training.mode` 'timed', the decision of 22 Oct 2026); the book's default is instant (training is the Companion's optional rule, p. 50). Only the days now follow the Companion's table.
+- Availability tests in the shop (`SHOP_V91` finding before buying): the book has the source (fixer) roll its skill or Etiquette + 2 vs the Availability TN (Core p. 184).
+
+Not built
+
+- Team Karma Pool (Core p. 191, p. 47): a world pool the members feed from their own (for good), starting at 2, drawn on by vote, half lost when a member leaves. Needs a world store, a GM view and a "from the team pool" choice on every Karma button.
+- Racism and Charisma (Core p. 182): 2D6−6 racism points against one or two races, added to social TNs, offset by a secret Charisma (2 × racism) test. Needs an NPC field, a GM roll, and an extra test before the social test; the attitude row "Prejudiced" and the metatype prejudice table (`TN_AUTO.social.prejudice`) stand in.
+- The training self-test (Companion p. 50: skill vs new rating + 2 divides the time, none × 1.5) and the instructor's 2-successes-per-success help (p. 52).
+- Gang/tribe and followers at creation (Core p. 44), a street dialect named automatically, group perception (Core p. 185), a group of NPCs' averaged ratings (Core p. 180), jumping by Strength and Body (Fields of Fire p. 76 with errata), swimming TNs (Cyberpirates), missed lifestyle payments (1D6 vs months missed, Core p. 190), selling a permanent lifestyle, contact fees, contact upkeep (Companion, optional), arranging a meet (Core p. 200).
+
+Not changed
+
+- Creation contact prices (`CHARACTERS_V58.creation.contactCost`, Level 3 ¥200,000): the Core has no Level 3 price (¥200,000 is the Followers price); the Companion reaches Level 3 only by paying upkeep (+3,000 and +7,000¥, p. 62, optional). Left as it is, with the other contact numbers.
+- The haggling cap (`STREET.haggle.maxPercent` 25%): the book has none (Core p. 184), but the cap also bounds the price a chat card may claim when buying (without it a forged card could buy for 0).
+- Street Cred and Notoriety (`STREET.reputation`, off by default): not SR2 (SR2's reputation is the Karma rep, now used by recognition).
+- The Athletics default path: the Skill Web is the GM's; with `attributeDefault` 'web' a link "Quickness - Athletics: 1" gives the Companion's +2.
+
+Existing worlds (migration 0.92.3, `src/module/notice923.ts`): on the first load after the update the lead GM gets one
+whispered card, changing no data, that lists by reason the actors whose numbers change with the new defaults (racial
+modifiers; Magic from Essence; Essence of housed ware, Awakened bioware and beta grade; condition status; Sensitive
+System's Body Index; carrying; Threat-rated NPCs; Karma Pool growth; characters still in the creation wizard; weapons
+saved holstered; shotguns not loaded with shot), each with the house rule that restores v0.92.2. A creation draft keeps
+the priority table it was started with (a draft saved before v0.92.3 keeps the old table).
+
+### Combat
+
+Every switch is in `RULES.COMBAT_V923` (`src/module/rules/config923/combat.ts`; logic in `rules/combat923.ts`); its first
+choice is the book's way, the second puts v0.92.2 back. Under the Unified Rules Revamp (`URR_V80.active`) a switch for
+a rule the Revamp changes itself (`REVAMP_COMBAT_RULES`: rangedDefense, fullDefense, knockdown, blastStaging, scatter,
+shotgun, tracers, reload, initiativeTies, subdueTn, spreadFire, delay, rangedRows) answers the v0.92.2 way, so the
+Revamp's own rule decides as before; the other switches are book corrections the Revamp is silent on and act under
+either source. Where the Revamp already had the book's procedure (`urr80-combat.ts`), the Book Rules go through the
+same code.
+
+| Rule | Was | Now (book) | Source | Switch |
+|---|---|---|---|---|
+| Attacker's staging | 'afterFirst': (net − 1) ÷ 2 | every 2 net successes one level (ranged, melee, combat spells) | Core pp. 91, 101, 110 | `ATTACK_STAGING` 'afterFirst' → 'all' |
+| Ranged defense | a Combat Pool dodge vs the attack's TN, then the soak on its own | no dodge; pool dice in the resistance test (Body + pool vs Power − armor); attack vs resistance successes, 2 net either way = 1 level, tie = base; clean miss when the pool's successes alone beat the attack's | Core pp. 87, 91; Dice Pools p. 84; Ka-Ge 7 Q4 | `COMBAT_V923.rangedDefense` 'book' / 'dodge' |
+| Melee tie | nobody hurt | the attacker, base damage | Core pp. 100–101 | `COMBAT.melee.tie` 'none' → 'attacker' |
+| Full defense | + Quickness dice, pool on the melee test, −10 initiative out of turn | no extra dice, no pool on the melee test, pool to the resistance test, clean miss on the pool's successes alone; no initiative cost | Core p. 102 | `COMBAT_V923.fullDefense` 'book' / 'dice' |
+| Combat Pool refresh | each Combat Turn | at the start of each of the character's actions; leftovers last until the first action of the next Combat Turn (other pools: still each Combat Turn) | Core pp. 78, 84 | `COMBAT_V923.poolRefresh` 'action' / 'turn' |
+| Knockdown | Power > Body; Body vs the soak TN; 0 = prone | every damaging hit; Body vs ½ Power (gel: Power; melee: the attacker's Strength); more than L 1 / M 2 / S 3 stays up, some successes stagger 1 m, none or Deadly = down | Core pp. 92, 102 | `COMBAT_V923.knockdown` 'book' / 'old' |
+| Blast staging | successes only cut the scatter | each target's resistance successes vs the attack's, 2 net either way = 1 level | Core p. 97 | `COMBAT_V923.blastStaging` 'book' / 'off' |
+| Scatter per success | 2 m for all; rockets by range band | standard 2 m, aerodynamic and launcher 4 m; rockets and missiles 2D6, as a launcher (4 m), missiles also − Intelligence m | Core pp. 97, 99 | `COMBAT_V923.scatter` 'book' / 'old' |
+| AP rocket falloff | −0.5 per m | −1 per ½ m | Core p. 99 | `COMBAT.grenades` apRocket perMetre 0.5 → 2 |
+| Shotguns | every shotgun spreads; width distance ÷ choke, −1 Power per metre | slug unless loaded with shot ('shot' ammo, flechette rules); 1 m, then 2, 4, 6… m every choke metres, −1 Power and −1 TN per widening; choke 2–10; shot: smartlink −1, no goggles or laser | Core p. 95 | `COMBAT_V923.shotgun` 'book' / 'old' |
+| Tracers | −1 per earlier burst, to −3 | full auto only, −1 per 3 rounds beyond short range, none for a smartgun user, no Power from them | Fields of Fire | `COMBAT_V923.tracers` 'book' / 'old' |
+| Cylinder / internal magazine reload | 2 rounds per action | Quickness rounds per Complex Action (break action 2) | Core p. 95 | `COMBAT_V923.reload` 'book' / 'old' |
+| Initiative ties | Reaction, then Quickness | adjusted Reaction, then natural Reaction | Core p. 79 | `COMBAT_V923.initiativeTies` 'book' / 'quickness' |
+| Wounds and initiative | also a mid-turn drop | at the roll only | Core p. 112 | `INITIATIVE_WOUNDS.midTurn` true → false |
+| Delayed action | lost at the end of the pass | lasts through the Combat Turn and into the next; pool dice used while delaying break it | Core pp. 80, 84 | `DELAY.lostAtPassEnd` true → false; `COMBAT_V923.delay` 'book' / 'turn' |
+| Surprise | — | an ambusher waiting on a delayed action rolls at TN − 2 | Core p. 86 | `COMBAT_V923.ambush` 'book' / 'off' |
+| Ranged modifiers | not in the Book list | target running +2, stationary −1, attacker in melee +2 per opponent, walking / running on difficult ground +2 / +6, smart goggles −1 | Core p. 89 | `SITUATIONAL_MODIFIERS` rows; `COMBAT_V923.rangedRows` |
+| Melee visibility | full ranged values | half, rounded down, except full darkness | Core p. 102 | `COMBAT_V923.meleeVisibility` 'half' / 'full' |
+| Subduing | no TN change | +2 TN | Core p. 103 | `COMBAT_V923.subdueTn` 0 → 2 |
+| Several melee targets | ranged only | +2 per other target this phase | Core p. 102 | `COMBAT_V923.meleeTargets` 'book' / 'off' |
+| Friends in melee | attacker's friends −1 each | both sides counted: more −1 per friend more (max −4), fewer +1 per friend fewer (max +4) | Core p. 102 | `COMBAT_V923.friends` 'book' / 'old' |
+| Full auto at several targets | extra-target TN 0; rounds wasted with any gun | +2 per new target (2nd +2, 3rd +4); a smartlinked smartgun wastes no rounds | Core p. 93 | `COMBAT_V923.spreadFire` 'book' / 'old' |
+| Flechette vs armor | higher of B and I, doubled | higher of 2 × Impact and Ballistic | Core p. 93 | `COMBAT_V923.flechette` 'book' / 'double' |
+| Firing through a barrier | rating adds to armor | also: double vs flechette and explosive; rated above the Power stops the shot | Core pp. 93, 98 | `COMBAT_V923.barriers` 'book' / 'old' |
+| Short bursts | too few rounds can't fire | 2 rounds: +2 Power, no level (2 rounds' recoil); 1 round: a single shot | Core p. 92 | `COMBAT_V923.shortBurst` 'book' / 'off' |
+| Second firearm | smartlink, goggles, laser still count | they don't | Core p. 90 | `COMBAT_V923.secondFirearm` 'book' / 'off' |
+| Called shots | any mode; armor-gap option | SS/SA/BF only; +1 level or a vehicle part | Core p. 92 | `COMBAT_V923.calledShot` 'book' / 'old' |
+| Take Aim cap | half the skill, at least 1 | half the skill, rounded down | Core p. 82 | `COMBAT_V923.aim` 'book' / 'old' |
+| Demolitions | Demolitions vs 4 | vs 2 | Core p. 98 | `COMBAT.demolitions.tn` 4 → 2 |
+| Readying a weapon | always ready | a Simple Action first | Core p. 82 | `COMBAT.ready.rule` 'off' → 'action' |
+| Heavy weapon templates | LMG heavy, shotgun not | shotgun heavy, LMG not (MMG, HMG, shotguns) | Core p. 89 | weapon templates `heavy` |
+
+Kept (the owner's decisions):
+- Anti-vehicle rocket falloff −1 per 4 m (`COMBAT.grenades` avRocket perMetre 0.25); the book's table says −8 per metre (Core p. 99).
+- Grenade long-range TN stays 6 (the owner's decision, 12 Nov 2026): the Core prints 8, which a FASA staff ruling calls a misprint for 6.
+
+Not built:
+- Interception (Core p. 83): a free melee attack on anyone passing within 1 m; needs movement tracking.
+- Stray shots (Core p. 93, optional).
+- Suppressive fire as in Fields of Fire (rounds per metre for 10 phases, rounds-fired dice vs 4 + cover).
+- Laser sight cancelled by mist, smoke, fog or rain (Core p. 90); the Attack dialog's tick can be cleared.
+- A second firearm's shared recoil (Core p. 90); a multi-phase aim lost to pool dice (Core p. 82).
+- Explosive-round misfire on all ones (Core p. 93).
+- Shotgun shot: +1 resistance die per other target in front (Core p. 95).
+- Subduing: Stun weapons only, the maintenance test (Core p. 103).
+- Knockback into a wall (+2 TN until free, Core p. 102).
+- Blast in a confined space: the rebounding wave's Power in full per target (Core p. 98); the nearest-wall approximation stays.
+- Quick draw as a Reaction (4) test (Core p. 82); surprise: no actions at all for 10 phases when out-rolled by everyone (Core p. 86).
+- Reaction 0 or less from wounds means no actions (Core p. 112).
+- The other Dice Pools at each action (Core p. 84 refreshes all of them at the start of each action): only the Combat
+  Pool follows `COMBAT_V923.poolRefresh`; the Spell, Hacking, Control and Task Pools still refresh each Combat Turn
+  (Rigger 2 keeps the Control Pool per Combat Turn; per-action Spell Pool would also wipe allotted spell defense dice).
+
+Readying a weapon (`COMBAT.ready.rule` 'action'): an attack with a weapon not yet drawn spends the Simple Action to
+draw it itself instead of refusing, so weapons saved holstered by a v0.92.2 world still fire.
+
+### Damage, health and hazards
+
+Switches in `RULES.HEALTH_V923` (`rules/config923/health.ts`, helpers in `rules/health923.ts`); the first choice is the book's way (the default), the other puts the v0.92.2 behaviour back. Where the Unified Rules Revamp already had the same rule as a switch (`URR_V80.hs…`, `magLossLe`), the Revamp's switch still decides under the Revamp source; the `HEALTH_V923` switch gives the Book Rules the book's way.
+
+| Rule | Was | Now (book) | Source | Switch |
+| --- | --- | --- | --- | --- |
+| Stun overflow | 2 Stun boxes to a Physical box | box for box | Core p. 111 | `STUN_OVERFLOW_PER_PHYSICAL_BOX` 2 → 1 |
+| Death | dead when the Overflow reaches the total (augmented) Body | dead only when the Overflow is more than the natural Body (Will to Live still adds boxes); the sheet's Overflow row follows | Core p. 111 | `HEALTH_V923.death` 'natural' / 'total' |
+| Natural healing Body | the augmented Body | the natural Body only (cyberware doesn't help) for the Physical healing test | Core p. 112 | `HEALTH_V923.healingBody` 'natural' / 'total' |
+| Bleeding out | 1 box every (Body) Combat Turns | 1 box every 10 minutes unattended | Core pp. 111, 115 | `HEALTH_V923.bleed` 'tenMinutes' / 'bodyTurns' (`bleedMinutes` 10) |
+| Stun recovery | Body vs 2/4/6/8 by wound, care rows, home lifestyle, hospital fee | the higher of Body and Willpower vs 2 + the injury modifiers (Stun and Physical); no care, no fee | Core p. 112 | `HEALTH_V923.stunRecovery` 'book' / 'old' (`stunRecoveryTn` 2) |
+| First aid effect | 1 box per success, at most half | any success lowers the wound one level (to the next level's lowest box; Light clears); a Deadly wound only stabilised | Core p. 115 | `HEALTH_V923.firstAid` 'level' / 'boxes' |
+| First aid on Stun | allowed | Physical only (the dialog offers Physical only) | Core p. 115 | `HEALTH_V923.firstAidStun` 'physical' / 'both' |
+| First aid time | not shown | the card gives 10/20/30 minutes ÷ successes | Core p. 115 | `HEALTH_V923.firstAidTime` 'shown' / 'hidden' |
+| Self-stabilisation | none | failed first aid on the dying: natural Body vs 10 | Core p. 115 | `HEALTH_V923.selfStabilise` 'test' / 'none' |
+| Professional help | once per wound | a healer with a higher Biotech may try again | Core p. 115 | `HEALTH_V923.firstAidRetry` 'better' / 'once' |
+| Trauma patch | stabilises outright | natural Body vs 4 + dermal armor / blood filter rating | Core p. 115 | `HEALTH_V923.traumaPatch` 'bodyTest' / 'stabilise' |
+| Permanent damage | none | a Deadly wound: Body (4) test (dermal armor adds dice, +2 after a trauma patch); 0 successes an attribute point (1D6), 1 a limb or eye (1D6); the damage card has the button, the GM applies the loss | Core p. 114 | `HEALTH_V923.permanentDamage` 'test' / 'none' |
+| Magic loss roll | 2D6 below Magic | 2D6 at or below Magic | Core p. 115 | `HEALTH_V923.magicLoss` 'atOrBelow' / 'below' |
+| Magic loss triggers | a Deadly wound | also treatment without the magician +2 (twice for a Deadly wound) | Core p. 115 | `HEALTH_V923.magicLossUntreated` 'test' / 'none' |
+| Magic loss after surgery | none | drastic invasive surgery (1+ Essence; bioware over 1.5 Body Index) posts a Magic loss card for after healing | Core p. 114; Shadowtech pp. 5–13 | `HEALTH_V923.surgeryMagicLoss` 'drastic' / 'none' |
+| Surgery wound bands (rule off by default) | ≤0.5 L, 1.5 M, 3 S, more D | cyberware: ≤0.4 Essence M, under 1 S, 1+ D; bioware: ≤0.25 Body Index L, 0.75 M, 1.5 S, more D (Book Rules only; the Revamp keeps its patched table) | Core p. 114; Shadowtech pp. 5–13 | `HEALTH_V923.surgeryBands` 'book' / 'table' |
+| Treat TN | 10 − Essence | 8 − Essence (Heal stays 10 − Essence) | Core p. 155; SRII errata | `HEALTH_V923.treatTn` 'book' / 'same' |
+| Treat after an hour | a warning | refused | Core p. 155 | `MAGIC_V56.healing.treatBlock` false → true |
+| Body Index and healing | +½ Body Index on first aid and natural healing, not on spells | on magical healing only | Shadowtech pp. 5–13; Ka-Ge 12 Q2 | `HEALTH_V923.bodyIndexHealing` 'magical' / 'natural' |
+| Healing spells on Stun | a heal spell may target Stun | refused | Core p. 112 | `HEALTH_V923.spellsHealStun` 'no' / 'yes' |
+| Falling | Power = metres, Serious, ½ impact | Deadly, Power ½ the metres, ½ impact; an Athletics test vs the metres takes 1 Power per success | Fields of Fire p. 76 | `HEALTH_V923.falling` 'book' / 'old' |
+| Holding breath | none | 30 s per point of Body before drowning or suffocation counts | Fields of Fire p. 76 | `HEALTH_V923.breathHold` 'body' / 'none' (`breathSecondsPerBody` 30) |
+| Drowning, suffocation | Body vs 4 +1 a turn, Moderate Stun | 1 unresisted Stun box an action phase (the passes from the combat's initiative, else 1), past the track onto Physical | Cyberpirates (drowning) | `HEALTH_V923.drowning` 'boxes' / 'test' |
+| Burning clothes | the "on fire" hazard (6M) each turn | 6M at the end of the first turn, +2 Power each turn after | Grimoire p. 113 | `HEALTH_V923.burning` 'rising' / 'flat' |
+| Shock weapons | Stun vs ½ impact only | the hit also disorients: Body or Willpower (higher) vs 4; +2 to every TN for Power − ½ impact − successes Combat Turns (an effect on the target) | Core p. 103 | `HEALTH_V923.shock` 'disorient' / 'none' |
+| Low Pain Tolerance | +1 box on each damaged track | the wound counts one level higher (at most Serious) | Shadowrun Companion | `HEALTH_V923.lowPainTolerance` 'level' / 'boxes' |
+| Sensitive System | Body Index × 1; rejection tests always | Body Index × 2; no rejection rule of its own | Shadowrun Companion | `HEALTH_V72.qualities.sensitiveSystem.bodyIndexMultiplier` 1 → 2 (now in the window), `rejectionAlways` true → false |
+| Dwarf resistance | +2 dice vs toxins and disease | vs disease only | Core Racial Modifications Table | `HEALTH_V923.dwarfResistance` 'disease' / 'both' |
+| Respirator | + rating dice vs inhaled toxins | its own air: immune | Core p. 244 | `HEALTH_V923.respirator` 'immune' / 'dice' |
+| Toxins: still exposed | resisted once | the exposure card has a GM button to resist again (a fresh card, onset from now) | Core p. 186 | (a GM button) |
+| Addiction: dose interval | withdrawal after 24 h | Body × 4 h (physical), Willpower × 4 h (mental) | Shadowtech p. 87 | `HEALTH_V923.addiction` 'book' / 'old' |
+| Addiction: withdrawal | +2 to every test | forced +3 (+6 on magical tests) and the pain of a persistent Moderate Stun wound (its +2 when the Stun track's own is less) | Shadowtech p. 88 | `HEALTH_V923.addiction` |
+| Addiction: kicking it | after 14 days clean, Willpower vs the rating | any time (the GM's call): Willpower vs the rating +1 (mental) / +3 (physical); then recovery at +2 (+4 magical) while the rating falls 1 every 3 days; over at the base rating; a dose meanwhile is a relapse (+1) | Shadowtech p. 88 | `HEALTH_V923.addiction` |
+| Addiction: ratings | +1 TN per dose in the last 7 days; tolerance −1 bonus per 5 doses | every Strength-rating doses +1 to the character's Addiction and Tolerance; −1 per (30 − Strength) clean days; a Tolerance test (Body vs the Tolerance rating) after a dose, no successes = immune for good. Drugs have new Tolerance and Strength fields (0 = none) | Shadowtech pp. 87–88 | `HEALTH_V923.addiction` |
+
+Kept (the owner's decisions): the allergy severity levels (Moderate counts as Mild; not changed here).
+
+Not built:
+- Reaction cut to 0 by wounds = no actions that turn (Core p. 112): a hook in the initiative roll and the turn's actions.
+- Interrupted Stun rest (re-test, never better than the first roll; Core p. 112): a rest-in-progress clock.
+- The minimum lifestyle while healing (Core p. 113; the penalties are the GM's): a lifestyle check in the Rest dialog.
+- Paramedic and doctor fees (Medical Costs Table): who treats, and billing first aid and rest.
+- Replacement parts (Core p. 114) and the stabilization unit (Core gear): body part items, grades and failure chances.
+- The healing spells' sustained time and the split of successes between boxes and time (Core p. 155).
+- The antidote as professional attention on a Deadly toxin wound; dermal armor and blood filtration against patches other than the trauma patch (Core p. 250); the stim patch's Magic test (Awakenings).
+- The nephritic screen's −1 Power against blood-borne toxins and pathogens; the trauma damper moving a Physical box to Stun; the pain editor's −1 Intelligence and Stun that can't knock out (Shadowtech).
+- Addiction: the tests after the effects wear off (rolled at the dose), a drug both physically and mentally addictive, the rest period after recovery, the 24-hour fall during forced withdrawal, and the weekly loss of ½ Essence and a box of each track (Shadowtech pp. 87–88).
+- Radiation by rads (Bug City pp. 134–135): a Body test every 100 rads vs rads ÷ 50, sickness by peak rads as Stun with seven clean days in a row, direct burns each Combat Turn; needs the dose kept in rads, a new sickness model and the burn test.
+- Treading water and floating (Cyberpirates); the Companion's optional sprint fatigue; over-damage (Fields of Fire, Companion); DocWagon's response time roll (Neo-Anarchist's Guide p. 95), HTR and extended-care discounts (Core p. 250); the medkit's advice and antidote making; Neuro-stun's hour of disorientation.
+
+### Sorcery
+
+v0.92.3 book alignment. Switches in `RULES.SORCERY_V923` (`src/module/rules/config923/sorcery.ts`); pure functions in
+`src/module/rules/sorcery923.ts`. Each switch's first choice (`book`, or the number shown) is the default; `v922` (or 0)
+puts the v0.92.2 behaviour back. Where the Unified Rules Revamp has its own switch for the same rule, its source patch
+already gives the book's way, so the Revamp's results are unchanged; where the Revamp's own rule differs from the book
+(`URR_V80.coreEssenceFloor`, `magWardDrain`, `magWardMaxForce`, the Revamp's exclusive/fetish rows) the Revamp's rule
+still wins while it is on. This section is the one place for initiation, ordeals, centering, shielding, dispelling,
+geasa and wards (the spirits alignment built the same rules; they were merged here). Elementals' aid is here; their
+sustaining is in the spirits section (`SPIRITS_V923.elementalSustain`).
+
+| Rule | Was | Now (book) | Source | Switch |
+|---|---|---|---|---|
+| Magic after Essence loss | Magic capped at Essence rounded up | Magic falls by every point or part of Essence lost (Essence 3.75 → Magic 3; a datajack on Magic 1 → 0) | Core p. 47; Ka-Ge 7 Q21 | `SORCERY_V923.magicFromEssence` |
+| Tie on a resisted spell | no effect | the caster wins at the spell's minimum effect (base Damage Level); spells with no minimum effect still need a net success | Core p. 131 | `SORCERY_V923.spellTie` |
+| All ones on the casting test | no Drain effect | Drain TN +2 | Core p. 131 | `SORCERY_V923.ruleOfOneDrain` (2; 0 = old) |
+| Exclusive and fetish spells | Drain TN −2 / −1 | effect at Force +2 (exclusive), +1 (reusable fetish), +2 (expendable fetish, new spell field `fetishExpendable`); Drain at the normal Force, no TN change; no exclusive spell of any duration while others are sustained | Core pp. 128, 133; Grimoire p. 111 | `SORCERY_V923.restrictedSpells` |
+| Spells sustained at once | no limit | at most the Sorcery rating (foci, quickened and elemental-held spells don't count) | Core p. 128 | `SORCERY_V923.sustainCap` |
+| Sustaining while projecting | allowed | a sustained spell can't be cast while projecting; the magician's own sustained spells drop when projection starts | Core p. 128 | `SORCERY_V923.sustainProjecting` |
+| Visibility and cover on spells | visibility on elemental spells only, no cover | visibility on every spell (`TN_AUTO.magic.environment` 'elemental' read as 'all') and partial cover; touch spells only injury | Core pp. 129–131 | `SORCERY_V923.spellSituation` |
+| Area spell test | one test vs the highest target's TN | one roll; the card rolls at the lowest target's TN and each target's Resist counts the dice against its own TN | Core p. 130 | `SORCERY_V923.areaTargets` |
+| Ranged damaging manipulation TN | the spell item's TN | base TN 4 (+ situation modifiers) | Core p. 130; Grimoire p. 112 | `SORCERY_V923.elementalTn` (4; 0 = old) |
+| Learning test | Sorcery vs Force | Sorcery + Magical Theory vs 2 × Force | Core p. 132 | `SORCERY_V923.learning` |
+| Learning from a formula with no teacher | no penalty | +2 TN | Grimoire p. 114 | `SORCERY_V923.formulaAloneTn` (2; 0 = old) |
+| Spell design test | Sorcery + site dice vs Force, Force days ÷ successes | Magical Theory (at most the library/lodge rating, + 1 die per 2 points it is higher, +50% time) vs 2 × Force − Magic + drain modifiers; base time L 6 / M 18 / S 30 / D 60 days ÷ successes | Grimoire p. 115 | `SORCERY_V923.design` |
+| Spell design drain | detection base L; area +1 TN; sustained 0; touch −1 TN | detection base M; area +1 level; touch −1 TN and −1 level; sustained detection/health/illusion +1 TN | Grimoire pp. 117–121 | `SORCERY_V923.design` |
+| Spell focus dice | casting only | specific focus: casting and Drain; category focus: casting, Drain and resisting that category | Core p. 137 | `SORCERY_V923.spellFocus` |
+| Spell lock | holds Force ≤ its rating | holds one spell of any Force | Core p. 138 | `SORCERY_V923.spellLock` |
+| Weapon focus bonding | 4 (small) / 5 (large) × rating | 6 × rating | Grimoire p. 27 (supersedes Core p. 137) | `SORCERY_V923.weaponFocusKarma` (6; 0 = old) |
+| Focus addiction | Willpower vs total; fail = +2 TN withdrawal | Magic vs total; failed, 2D6 ≤ Magic loses 1 Magic (not at Magic 1); 2 lost → the focus geas (+2 TN without a focus) | Awakenings p. 103 | `SORCERY_V923.focusAddiction` |
+| Making a focus | TN 5, 7 days | TN specific spell 4, category 6, spirit 6, power 8, weapon 6, + rating; spell lock 5; 30 days ÷ successes | Grimoire pp. 25–26 | `SORCERY_V923.enchanting`, `enchantTn`, `enchantDays` |
+| Ritual team dice | leader + ½ each member's Sorcery | the other members' Magic Pools join the leader's (not the spotter's) | Core p. 135 | `SORCERY_V923.ritualPool` |
+| Ritual team limits | none | no combat spells; at most the lowest Sorcery in members; a mage needs a hermetic circle | Core p. 135 | `SORCERY_V923.ritualTeam` |
+| Ritual materials | none (per-Force row 0) | detection and illusion 100¥, health 500¥, manipulation 1,000¥ × Force | Core p. 135 | `SORCERY_V923.ritualMaterials` |
+| Ritual resistance TN | Force | the higher of Force and the leader's Sorcery | Core p. 136 | `SORCERY_V923.ritualResist` |
+| Ritual spotter | no Drain | resists Drain | Core p. 135 | `SORCERY_V923.ritualSpotter` |
+| Wards | Conjuring vs Force, Force h ÷ successes, Drain F/2 M | Sorcery vs Force, Force hours, lasting days = successes (shown on the card), Drain (Force × successes) L Stun, never Physical, Force ≤ 2 × the magician's Magic | Grimoire p. 92; Grimoire II errata | `SORCERY_V923.ward` |
+| Ward materials | 0¥ | 1,000¥ per Force | Grimoire p. 92 | `MAGIC_V56.ward.nuyenPerForce` 0 → 1000 |
+| Libraries and circles | price × rating, a day per rating | library rating² × its price, a circle an hour per rating | Core pp. 123–124 | `SORCERY_V923.siteCost` |
+| Initiation grades | the first initiation is grade 1 (+1 Magic, (6 + 1) × 3), Karma rounded up | the first is Grade 0 (stored as grade 0 with the `initiated` flag): (6 + 0) × 3 = 18 Karma, Karma always rounded down, no Magic; the next is Grade 1. A stored grade keeps its meaning: a character initiated before v0.92.3 keeps its grade and Magic | Grimoire pp. 37–38 | `SORCERY_V923.initiation` |
+| Initiation ordeal | −1 off the multiplier | −0.5 | Grimoire p. 38 | `OCCULT.initiation.ordealReduction` 1 → 0.5 |
+| Dispelling | Sorcery vs Force; −1 spell success per success; Drain M at F/2 | only Force ≤ grade; TN the higher of Force and quickening Karma; −1 Force per 2 successes (0 = broken); Drain as the spell's own drain code | Grimoire p. 45 | `SORCERY_V923.dispelling` |
+| Shielding | + grade dice | a shielding initiate's spell defense (and grade) dice also raise the caster's TN by as many | Grimoire p. 45 | `SORCERY_V923.shielding` |
+| Centering | automatic: grade points off penalties | always a test at the TN less the grade; every 2 successes take 1 off the penalties, no grade cap | Grimoire pp. 43–44 | `SORCERY_V923.centering` |
+| Geasa | an unmet geas takes away the Magic it protects | a broken geas adds +2 TN per geas to non-astral magical tests and to every Drain test (spells, conjuring, wards, dispelling); no Magic lost | Grimoire p. 52 | `SORCERY_V923.geasa` |
+| Elemental aid | + full Force every cast, a service each time | an auxiliary pool of Force dice: each die used lowers what is left; one service when it starts; at 0 it vanishes | Core p. 141 | `SORCERY_V923.elementalAid` |
+| Detection spell range | Magic × Force metres | a separate Force test vs 4 (+ injury): successes × Magic metres | Core p. 128 | `SORCERY_V923.detectionRange` |
+| Increase Reflexes and cyber | the better of spell and ware counts | no effect on anyone with cybernetic initiative dice | Core p. 155 | `SORCERY_V923.increaseReflexes` |
+
+Kept (the owner's decisions)
+- Spellcasting dice: the test rolls the Sorcery skill's (or concentration's / specialization's) rating (`MAGIC_V920`); the book rolls the spell's Force + Magic Pool (Core pp. 128–131).
+- The layered Magic Pool (`MAGIC_V920.poolLayers`); the book resizes the whole pool to the rating in use for the action (Awakenings p. 95).
+- Spell formulas and teachers (`FORMULA_V918`): the teacher's fee (`feePerForce`; the book: typically 1,000¥ × Force + living expenses, Core p. 132), the teacher's help (successes as dice; the book: Teaching vs Force − the pupil's Intelligence, min 2, successes lower the pupil's TN), the formula price (`nuyenPerForce`, `combatFactor`; the book: L 50 / M 100 / S 500 / D 1,000¥ × Force) and the other tradition's penalty (`foreign`; the book: +2 on translating the formula, Grimoire p. 115). The learning test itself (2 × Force, Magical Theory, +2 with a formula and no teacher) follows the book on top of these.
+
+Not built
+- Defaulting magical skills (Awakenings p. 93); circle/lodge +1 TN per 2 rating for spells cast inside another's circle or lodge (needs circles placed on the map); shaping an area by withheld dice, splitting Force over targets, spell stacking (Core pp. 129–130); noticing spellcasting (Core p. 132); elemental secondary effects in full (Grimoire pp. 113–114); the active foci limit (Intelligence); Heal/Treat successes split with time; the Armor spell's ½ successes; a Drain-code table for the importer; an elemental bound to a spell for days (sustaining by Combat Turns is the spirits section's); quickening's sustain test, second Drain and extra Karma; anchoring's Karma and test; masking's success threshold; the ritual's link and sending times; totem dice as Magic Pool dice; a ward ending when its days run out (the card states them); the geas due for every 2 Magic lost; centering for spellcasting or Drain.
+
+### Conjuring, spirits, astral, initiation, adepts, allies and critters (v0.92.3)
+
+Switches in `RULES.SPIRITS_V923` (`rules/config923/spirits.ts`, house-rules window: Magic and critters); the pure functions are `rules/spirits923.ts`. Initiation (Grade 0, the ordeal's 0.5, the Karma rounding), centering, shielding, dispelling, geasa and wards are one rule each in the Sorcery section (`RULES.SORCERY_V923`); `rules/__tests__/spirits922.ts` puts those back too. The first choice is the book's way (the default); the other puts v0.92.2 back. `rules/__tests__/spirits922.ts` lists every v0.92.2 value.
+
+| Rule | Was | Now (book) | Source | Switch |
+|---|---|---|---|---|
+| Conjuring Drain level | L ≤ ½ Cha, M ≤ Cha, S ≤ 1.5 × Cha, else D | L < ½ Cha, M ≤ Cha, S > Cha, D > 2 × Cha | Core p. 140 | `SPIRITS_V923.conjDrain` |
+| Conjuring Drain type | Physical when Force > Magic | Physical when Force > Charisma (S and D) | Core p. 140 | `SPIRITS_V923.conjDrain` |
+| Totem and spirit-focus dice on conjuring Drain | not added | added to Charisma | Core pp. 139–140 | `SPIRITS_V923.conjDrainDice` |
+| Nature spirit outside its domain | warned | refused (also checked when summoning) | Core p. 139 | `MAGIC_V39.domains.enforce` warn → block |
+| A manifest spirit's immunity | every non-magical attack | firearms, other ranged weapons, crossbows, explosions; not melee, bows, thrown weapons | Core p. 142 | `SPIRITS_V923.immunityScope` |
+| A mundane weapon against a manifest spirit | skill + Combat Pool | Willpower, no Combat Pool (not with a focus, killing hands or a vulnerability) | Core p. 142 | `SPIRITS_V923.mundaneVsSpirits` |
+| Resisting a spirit's attack | Body | Conjuring instead, when higher | Core p. 143 | `SPIRITS_V923.conjuringDefense` |
+| Banishing: Force lost | 1 per net success | 1 per 2 net successes | Core p. 143 | `SPIRITS_V923.banishPerPoint` 1 → 2 |
+| Banishing: the spirit wins | nothing | banisher −1 Magic per 2 net successes (flag `banishMagic`) | Core p. 143 | `SPIRITS_V923.banishBackfire` |
+| Banishing Drain | conjuring Drain at Force | none (a control contest keeps its Drain) | Core p. 143 | `SPIRITS_V923.banishDrain` |
+| Lost Force and Magic | for good | back at 1 point an hour (world time) | Core p. 143 | `SPIRITS_V923.banishRecovery` |
+| Summoner and banishing | another's summoner adds Conjuring successes | your own spirit: + Charisma dice; no summoner help | Core p. 143 | `SPIRITS_V923.banishSummoner` |
+| Control contest | banishing-style, net = services | challenger vs Force + 2 against the holder's Conjuring vs Force, services kept, the losing holder drains; uncontrolled: 2 net = 1 service | Core p. 143 | `SPIRITS_V923.controlContest` |
+| Binding by a true name | opposed, net = services, Force × Karma | Conjuring vs Force + Spirit Energy, 1 success binds, no Karma | Grimoire pp. 78–79 | `SPIRITS_V923.trueName` |
+| Spirit attributes | Force + typed offsets | the Spirit Table's offsets and Reaction for a spirit with no template | Core p. 144 | `SPIRITS_V923.spiritTable` |
+| Elemental sustaining a spell | Force hours | Force Combat Turns | Core p. 142 | `SPIRITS_V923.elementalSustain` |
+| Projection | 2 × Essence hours free, then 1 Essence per hour or part | 1 Essence every full hour from the start, a temporary loss (back at 1 a minute after the return; below 0 the magician dies; nothing is written to the character) | Core pp. 146–147 | `SPIRITS_V923.projection` |
+| Projecting initiative | astral Reaction + 20 | astral Reaction + 15 | Core p. 147 | `ASTRAL.initiativeBonus` 20 → 15 |
+| Initiates in astral space | nothing | + grade to astral Reaction and to the Astral Combat Pool | Grimoire pp. 38, 91 | `SPIRITS_V923.astralGrade` |
+| Astral dice pool | Spell Pool | Astral Combat Pool (I + W + C) ÷ 2 (the Combat Pool's dice while projecting; a magician who only perceives fights astrally with the physical Combat Pool, as before) | Core p. 147 | `SPIRITS_V923.astralPool` |
+| A magician's astral damage | (Cha)M, a focus adds dice | unarmed (Cha)L; weapon focus (Cha + rating ÷ 2)M | Core p. 147 | `SPIRITS_V923.astralDamage` |
+| A barrier that wins | nothing | (rating)L, +1 level per 2 net successes, astral Body | Core p. 148 | `SPIRITS_V923.barrierBacklash` |
+| Reading an aura | 1: health, mood, foci; 2: compare; 3: exact Essence and Magic | basics at a glance; 2: emotions; 4: cyberware; never exact numbers | Core p. 145; Grimoire p. 90 | `SPIRITS_V923.assensing` |
+| Astral tracking | 6 h ÷ successes, no Force modifier | 12 h ÷ successes; −2 TN Force ≤ Sorcery, +2 over | Core p. 149 | `TRACKING.baseHours` 6 → 12; `SPIRITS_V923.tracking` |
+| Asceticism | any attribute | a Physical attribute | Grimoire p. 40 | `SPIRITS_V923.asceticism` |
+| Ally cost | Force × 1 Good Karma | 5 × the current Force per point above 1 + the design's Karma; 1 Magic point (none for the familiar ordeal); Force ÷ successes days; (Force + day)L Stun each day | Grimoire pp. 40, 67–71 | `SPIRITS_V923.allyCost` |
+| Regeneration | always heals | a Deadly wound calls for 1D6, a 1 kills (2 from fire or explosions: the GM's call) | Core p. 219 | `SPIRITS_V923.regenDeath` |
+
+**Kept (the owner's decisions):** none in this area. Killing Hands (L/M/S/D at .5/1/2/4) already matches Core p. 126.
+
+**Not built:** an elemental's day of waiting costing a service (Core p. 141); Aid Sorcery as a non-refreshing pool split over tests and spell defense (Core p. 141); an elemental bound to a spell for Force days (Core p. 142); tech melee enhancements doing only base damage against spirits (Awakenings p. 101); spirit against spirit, Force vs Force (Core p. 143); disruption for 28 − Force days (Grimoire p. 64); only a true-name holder banishing a free spirit (Grimoire p. 77); watchers summoned for hours, Force from successes, (Force × hours)L Drain (Grimoire p. 73); the ally design test (Grimoire pp. 70–71); invoking a great form by astral quest (Grimoire p. 64); Unarmed or Armed Combat in place of Sorcery in astral combat (Core p. 147); repeated assensing at +2 TN (Grimoire p. 90); masking by successes (Grimoire p. 46); quickening's sustaining test and second Drain (Grimoire p. 45); reflecting by shielding dice (Awakenings p. 99); cleansing limits and Drain (Awakenings p. 100); meditation's three tests, thesis as a formula, oath, familiar and geas-shedding details (Grimoire pp. 38–41); Distance Strike's double cost with Killing Hands (Awakenings p. 116); adept power costs by band in the importer (Core pp. 125–126); Confusion, Fear, Engulf as opposed tests (Predator and Prey); Essence drain as a feeding process (Core pp. 217–218); critter stat lines.
+
+### The Matrix
+
+Virtual Realities 2.0 (VR2) replaces the Core Rulebook's Matrix rules; the Core is used only where VR2 has no rule
+(smoke, Matrix movement). Switches: `RULES.MATRIX_V923` (`rules/config923/matrix.ts`), logic in `rules/matrix923.ts`;
+each switch's first choice is the book's way, the other puts v0.92.2 back. Values marked "(window)" are rows of the
+house-rules window whose default moved.
+
+| Rule | Was | Now (book) | Source | Switch |
+|---|---|---|---|---|
+| System test outcome | 1+ successes succeed | opposed: more successes than the host's Security Value roll (the host's successes still go on the tally) | VR2 p. 19 | `MATRIX_V923.systemTests` |
+| Locate Paydata | a point per success | a point per net success | VR2 p. 115 | `MATRIX_V923.systemTests` |
+| Locate File | a file per success | an interrogation: net successes add up, a file every 5 | VR2 p. 110 | `MATRIX_V923.operations`, `locateFileSuccesses` |
+| Operations table | Analyze Host Simple; Analyze IC Simple; Decrypt ×3, Download, Upload, Edit File Complex; Graceful Logoff Simple; Validate on Access; Invalidate and Crash Host with no utility; Redirect with Relocate; Locate Slave with Browse; Null op Access/Simple; Make Comcall Slave; Tap Comcall Spoof | the System Operations Table (Analyze Host Complex, Analyze IC Free, Decrypt/Download/Upload/Edit Simple, Logoff Complex, Validate and Invalidate Control/Validate, Crash Host Control/Crash, Redirect Control/Camo, Locate Slave Index/Analyze, Null op Control/Deception Complex, Make Comcall Files/Commlink, Tap Comcall Commlink); new Relocate (spoof a trace) operation; new utility kinds camo, crash, commlink, scanner, defuse | VR2 p. 161 | `MATRIX_V923.operations` (`oldOperations`) |
+| Passive alert | no effect | +2 to every subsystem rating (from passive on) | VR2 p. 61 | `MATRIX_V923.passiveAlert` 2 (0 = old) |
+| Crashing IC | no tally | + the IC's rating on the attacker's tally (half as the book's option) | VR2 p. 40 | `MATRIX_V923.crashTally` |
+| Host shutdown | 3 Combat Turns | 1D6 per 2 points (or part) of the Security Value | VR2 p. 53 | `MATRIX_V923.shutdown` |
+| Matrix Reaction | Intelligence + 2/RI | the decker's own Reaction (no cyber/magic Reaction boosts) + 2/RI | VR2 p. 120 | `MATRIX_V923.initiative` |
+| Response Increase cap | 3 | 3 and at most MPCP ÷ 4 (round down); warning on the deck | VR2 p. 87 | `MATRIX_V923.initiative` |
+| Hot sim | +1 initiative die | one more RI level: +2 Reaction and +1D6 | VR2 p. 85 | `MATRIX_V923.initiative` |
+| Tortoise speed | the user's own Reaction and dice | Reaction halved (min 1), RI gives only its dice | VR2 p. 85 | `MATRIX_V923.initiative` |
+| IC initiative dice | 1/1/2/2/3 (Blue … Black) | 1/2/3/4 D6 Blue … Red (black as Red) | VR2 p. 120 | `MATRIX_V923.icInitiative` (`oldIcInitiativeDice`) |
+| Party IC initiative | the best member's | each its own | VR2 p. 120 | `MATRIX.party.sharedInitiative` false (window) |
+| Decker's attack dice | Computer + Hacking Pool | the offensive utility's rating + Hacking Pool | VR2 p. 123 | `MATRIX_V923.cybercombat` |
+| Cybercombat TN | the IC's rating / the persona's Evasion | by code and status: Intruding 6/5/4/3, Legitimate 3/4/5/6 (IC, security deckers and validated passcodes are Legitimate) | VR2 p. 123 | `MATRIX_V923.cybercombat`, `attackTn` |
+| IC attack dice | the rating | the host's Security Value | VR2 p. 40 | `MATRIX_V57.icAttackDice` 'securityValue' (window) |
+| IC damage resistance | the rating | the host's Security Value | VR2 p. 40 | `MATRIX_V923.cybercombat` |
+| IC maneuvers | the rating | the host's Security Value | VR2 p. 121 | `MATRIX_V923.cybercombat` |
+| Party IC TN | none | + members on the party's attacks and on attacks on a member | VR2 p. 52 | `MATRIX_V923.cybercombat` |
+| Crippler/ripper | rating vs the attribute, at least 1 on a hit | attack test (SV, code TN) opposed by the persona attribute vs the IC's rating; 1 point per 2 net; never below 1 | VR2 p. 41 | `MATRIX_V923.cybercombat`; `MATRIX.attributeDamage.minOnHit` 1 → 0 (new row) |
+| Persona dodge | Hacking Pool dice | none | VR2 pp. 121–123 | `MATRIX.defense.persona` 'pool' → 'none' (window) |
+| Attack and maneuver actions | Complex | Simple | VR2 pp. 121, 123 | `MATRIX_V923.actions` (`ACTIONS.costs.matrixAttack`, `matrixManeuver` keep the old costs) |
+| IC damage level | the IC's own | by code: Blue/Green M, Orange/Red S | VR2 p. 123 | `MATRIX_V923.icDamageLevel` |
+| Persona damage resistance | Bod vs Power − Hardening − Armor | Bod vs Power − Armor | VR2 p. 123 | `MATRIX_V923.iconHardening` |
+| Simsense overload | Serious+, Willpower vs the Power | any white/gray IC damage on a hot deck: Willpower vs L 2/M 3/S 5, +2 DNI, −2 ICCM | VR2 p. 124 | `MATRIX_V923.overload` |
+| Dump shock level | fixed M | by code: Blue L … Red D | VR2 p. 124 | `MATRIX_V57.dumpShock.levelBy` 'code' (window) |
+| Dump shock type | Physical on hot sim | Stun | VR2 p. 124 | `MATRIX.sim.hot.dumpShockType` 'stun' (window) |
+| Dump shock reductions | ICCM dice | a cool deck and an ICCM each −2 Power and −1 level | VR2 p. 124 | `MATRIX_V923.dumpShock` |
+| Jacking out | free | without a Graceful Logoff it risks dump shock | VR2 p. 124 | `MATRIX_V923.dumpShock` |
+| Black IC resistance | Willpower + Hacking Pool vs Power | Body (lethal) or Willpower (non-lethal) vs Power − Hardening, no Hacking Pool; the icon resists the same damage with its Bod (second button) | VR2 pp. 17, 47–48 | `MATRIX_V923.blackIc` |
+| Cool deck vs lethal black IC | no change | acts as non-lethal (Stun) | VR2 p. 48 | `MATRIX.sim.cold.coldBlackIcStun` true (window) |
+| Black IC hold | after any attack; Willpower + Hacking Pool vs rating | after a hit; Complex Action, Willpower vs rating, no Hacking Pool, ICCM −2 TN; the IC gets one more attack (noted) | VR2 pp. 47, 86 | `MATRIX_V923.blackIc` |
+| ICCM | black IC → Stun, + rating dice | resists black IC with the better of Body or Willpower, no dice; jack-out −2 TN; dump shock and overload as above | VR2 p. 86 | `MATRIX.iccm.blackIcStun` false, `dicePerRating` 0 (window); `MATRIX_V923.blackIc` |
+| Psychotropic IC | a test on every hit (+ Shield dice), rating days, cyberphobia +2 | the hit marks the decker; one Willpower (rating) test at jack-out or dump, −2 TN cool, no Hacking Pool; cyberphobia + the IC's rating; lasts until recovered (the GM clears it) | VR2 pp. 49–50 | `MATRIX_V923.psychotropic`; `MATRIX.psychotropic.shieldDice` false (window) |
+| Blaster/Sparky Test | rating vs MPCP | vs MPCP + Hardening (sparky + 2) | VR2 pp. 43–44 | `MATRIX_V923.grayIc` |
+| Sparky damage | Willpower vs rating, M Physical | Body vs rating − Hardening, M staged up a level per 2 Sparky successes | VR2 p. 44 | `MATRIX_V923.grayIc` |
+| Deck repair | a repair test | gray IC damage is permanent: rebuild the part (its damage clears) | VR2 p. 43 | `MATRIX_V923.grayIc` |
+| Probe IC | rolls when the GM acts | reactive: a Probe (rating) Test vs DF with every System Test | VR2 p. 42 | `MATRIX_V923.probe` |
+| Trace hunt TN | Evasion | Trace Factor: Evasion − rating + Camo + redirects + jackpoint | VR2 p. 45 | `MATRIX_V923.trace` |
+| Trace time | 10 ÷ net, round up | 10 ÷ successes, round down (min 1) | VR2 p. 46 | `MATRIX_V923.trace` |
+| Trace outcome | dump / report / burn | report; the host's proactive IC −1 TN and +1 on each tally increase for the run | VR2 p. 46 | `MATRIX_V923.trace` |
+| Trace vs jack-out | ends it | the datatrail stays 1D6 − 1 turns (min 1); a Graceful Logoff (TN + trace rating) stops it | VR2 pp. 46–47 | `MATRIX_V923.trace` |
+| Redirect Datatrail | ends the trace | +1 Trace Factor per redirect for the run (the Trace IC formula and example add it) | VR2 pp. 45, 117 | `MATRIX_V923.trace` |
+| Graceful Logoff | to the parent grid | leaves the Matrix, no dump shock, stops a trace | VR2 p. 114 | `MATRIX_V923.logoff` |
+| Jackpoint | connection TN on every Matrix test | Access tests only: legal −2, illegal 0, satellite +2 (−2 Reaction), workstation −4, remote device +4, console halves Access and SV; Trace Factor modifiers | VR2 Grids and Hosts pp. 28–30 | `MATRIX_V923.connections`, `jackpoints` |
+| Validated passcode | +2 to the host's detection TN | no effect on System Tests; Legitimate status in cybercombat | VR2 p. 123 | `MATRIX_V57.utilities.validate.dfBonus` 0 (window) |
+| Grid travel | 1 Combat Turn a hop | instant | Core p. 177 | `MATRIX.travel.turnsPerHop` 0 (window) |
+| I/O speed | Mp per Combat Turn | Mp per second (× 3 a turn; loading too) | VR2 pp. 86, 110 | `MATRIX.download.ioPerTurn` 1 → 3 (new row) |
+| Armor utility wear | every hit it soaks | only when it fails to absorb the whole hit | VR2 p. 99 | `MATRIX_V923.armorWear` |
+| Shield utility | soaks black IC damage | a parry: Shield rating vs the attacker's skill, −1 per use; adds to the opposed roll vs cripplers | VR2 p. 100 | `MATRIX_V923.shield` |
+| Mirrors | + ½ rating to attacks on Evasion | no TN effect under the book's cybercombat (VR2: the Decoy operation) | VR2 p. 161 | `MATRIX_V923.cybercombat` |
+| Smoke | + ½ rating TN, size × 1 | + rating TN, size × 2 | Core p. 175 | `MATRIX.utilities.smoke.tnPerRating` 1 (window), `MATRIX.utilitySize.kinds.smoke` 2 (new row) |
+| Frame core size | dumb 3, smart 5 | dumb 2, smart 3 | VR2 p. 105 | `MATRIX.utilitySize.kinds.frame`, `.smart-frame` (new rows) |
+| Frame dice | rating (+ ½ rating pool if smart) | dumb: the owner's Computer; smart: its rating | VR2 p. 104 | `MATRIX_V923.frames`; `MATRIX.frames.smartPoolPerRating` 0 (window) |
+| Frame utilities | a count ≤ rating | combined ratings ≤ rating | VR2 p. 105 | `MATRIX_V923.frames` |
+| Programming time | size × 1 day | size × 2 days | VR2 p. 100 | `MATRIX.programming.daysPerMp` 2 (window) |
+| Deck part sizes | MPCP 2 × r², persona 2 × r, Hardening 4 × r, RI 7 × r | MPCP r² × 8; Bod/Evasion r² × 3; Masking/Sensors r² × 2; Hardening MPCP² × r (TN MPCP); RI MPCP² × 2r (TN 2r) | VR2 pp. 83–87 | `MATRIX_V923.deckBuilding` |
+| Otaku | MPCP round down, Masking C, no Hardening, deck Reaction | MPCP and Masking round up, Hardening W ÷ 2, Reaction (I + W) ÷ 2 with 3D6 | VR2 p. 145; otaku errata 1998 | `MATRIX_V923.otaku` |
+| Paydata | 2D6 × 5…25 Mp, 50–200¥ per Mp; 4–5 encrypted, 6 scramble | a 5,000¥ point per file; 2D6 × 20/15/10/5 Mp; defenses by code (bomb, scramble, both) | VR2 p. 65 | `MATRIX_V923.paydata` |
+| Book check: "IC TNs (crippler/ripper target a persona program)" | listed as confirmed | correction: the persona attribute is the decker's opposing roll vs the IC's rating, not the IC's TN | VR2 p. 41 | (doc) |
+| Book check: "Matrix initiative — Shadowtech" | confirmed | correction: the dice are right; the base is the decker's Reaction, not Intelligence | VR2 p. 120 | (doc) |
+
+**Kept (the owner's decisions):** none in this area.
+
+**Not built:** suppressing IC (−1 Detection Factor per suppressed IC); Black IC's blaster shot at the MPCP after a kill
+and the data wipe; improvised attacks; non-combat actions per turn; Analyze Host revealing one item per success;
+the missing operations (Analyze Subsystem, Crash Application, Decoy, Disinfect, Dump Log, Locate Decker/Frame/IC as
+system operations, Retrain, Scan Icon); Validate Passcode's duration and superuser/supervisor modifiers; the parry
+lasting until the opponent's next attack, position as +Power or backfiring, and the evade re-find timing; the ripper's
+per-success chip damage; tar baby/tar pit opposed tests and tar pit's corruption test; scramble IC's poison test; the
+data bomb's tally and Defuse utility; Slow's and Restore's VR2 tests; construct initiative from the lowest rating;
+reality filters as +1 RI; psychotropic recovery tests (weekly/daily; the GM clears the effect); paydata losing a point a
+day unsold; deck part cook and install times; otaku channels as skills and complex forms' programming; the otaku's free
+Armor; Interrogation query modifiers and "not there" after 3 tries; the keyboard/cool-mode initiative penalty.
+
+### Vehicles, rigging and building security
+
+Rigger 2 first (its vehicle rules replace the core book's, Rigger 2 p. 20); the core book only where Rigger 2 is silent;
+building security from the Corporate Security Handbook (CSH). Switches in `RULES.VEHICLES_V923`
+(`rules/config923/vehicles.ts`); each one's first choice is the book's way and the other puts v0.92.2 back. Under the
+"SR2E Unified Rules Revamp" source a `VEHICLES_V923` switch for a rule the Revamp changes itself
+(`REVAMP_VEHICLE_RULES`) reads its v0.92.2 choice (`veh923()` in `rules/vehicles.ts`), so the Revamp's own rule decides
+as before; the book corrections the Revamp is silent on (vcrTn, autonavDice, autonavMin, damageInit, accel,
+circuitFail, autoCrash) apply under either source.
+
+| Rule | Was | Now (book) | Source | Switch |
+|---|---|---|---|---|
+| Anti-vehicle weapons vs vehicle armor | full Armor off the Power; armor ≥ Power stops them | half the Armor (round down), no level drop, never stopped | Rigger 2 p. 53; Core p. 108 | `VEHICLES_V923.avArmor` half / full |
+| Normal weapons vs vehicles: Power | × 0.5 | not halved (× 1); one level lower; Power − Armor; armor still a barrier | Rigger 2 pp. 23, 53 | `VEHICLES.damage.normalWeapons.powerMultiplier` 0.5 → 1 |
+| Control Pool on the vehicle's damage resistance (weapons, rams, crashes) | none | the jumped-in rigger's pool, at most their skill in the vehicle; no damage and more pool dice than the attacker's successes: a complete miss (card note) | Rigger 2 pp. 50, 53 | `VEHICLES_V923.cpResist` driving / none |
+| A vehicle's defence | rigger's evasive driving (Car + pool vs Handling) or a manual driver's evasion | no dodge test (the pool goes on the resistance) | Rigger 2 p. 53 | `VEHICLES_V923.vehicleDodge` none / old |
+| Pool on mounted weapons (jumped-in driver, security rigger) | Control Pool | Combat Pool (at most Gunnery) | Rigger 2 pp. 16, 78 | `VEHICLES_V923.gunneryPool` combat / control |
+| Control Pool on a driving test | any dice | at most the skill rated (autonav dice don't count toward the cap) | Rigger 2 pp. 16, 20, 51 | `VEHICLES_V923.cpCap` skill / none |
+| Control Pool on sensor tests | allowed | not allowed | Rigger 2 p. 16 | `VEHICLES.sensors.controlPool` true → false (now a house-rule row) |
+| Rigger feedback | every hit: Willpower vs Power, the vehicle's level, Stun | only a hit the vehicle sustains at Serious (6M Physical) or Deadly, or one that destroys it (6S Physical), Body (the hit's level, not the condition it leaves); a rigger aboard a destroyed vehicle takes the 6S instead of dump shock | Rigger 2 p. 49 | `VEHICLES_V923.feedback` book / old |
+| Control rig TN | −1 × level on every jumped-in test (driving, crash, gunnery, sensors, evasion) | −2 × level on a Driving Test, −1 × level on accelerate/brake, positioning, ramming; none on crash tests, gunnery, sensor tests | Rigger 2 pp. 20, 45–48, 52, 57–58, 28 | `VEHICLES_V923.vcrTn` byTest / flat |
+| Autonav dice | none | + Autonav rating in dice on an ordinary Driving Test and a Crash Test (not the combat maneuvers) | Rigger 2 pp. 20, 51 | `VEHICLES_V923.autonavDice` book / none |
+| Autonav rating 1 | drives by itself | can't drive by itself (drones' Pilot unaffected) | Rigger 2 p. 122 | `VEHICLES_V923.autonavMin` book / any |
+| Vehicle damage → driver's Initiative | none | −1 / −2 / −3 (Light / Moderate / Serious+), on the vehicle, its jumped-in rigger and a manual driver | Rigger 2 p. 49; Core p. 109 | `VEHICLES_V923.damageInit` book / none |
+| Vehicle damage → Speed | none (Revamp only) | Moderate −25 %, Serious −50 % | Rigger 2 p. 49 | `VEHICLES_V923.damageSpeed` book / none |
+| Crash Power | speed ÷ 10 round down, min 2 | speed ÷ 10 round up, no minimum | Rigger 2 p. 50 | `VEHICLES_V923.crashPower` up / down |
+| Crash Test modifiers | the driving terrain row | terrain −1 / 0 / +2 / +4; speed vs driver's Reaction: < ×20 0, < ×30 +1, < ×40 +2, more +4 | Rigger 2 p. 52 | `VEHICLES_V923.crashMods` book / old (`crashTerrain`, `crashSpeed`) |
+| People aboard a vehicle that is hit | every hit carries through at Power − Armor, a level lower; crash passengers at M on the crash card | weapon hits don't reach them (only when targeted); collisions and crashes reach them at the damage the vehicle resists, even when its test leaves it unharmed, with no Combat Pool (the rigger's Crash Test Control Pool dice carrying over: not built) | Rigger 2 pp. 50, 53 | `VEHICLES_V923.passengers` targeted / old |
+| Shooting someone inside | the vehicle's Armor | the higher of Armor or Body; no Combat Pool; a jacked-in rigger +3 TN | Rigger 2 p. 53 | `VEHICLES_V923.occupant` book / old; `occupantRiggerTn` 3 |
+| Ramming | Body + speed ÷ 10, level by the rammer's speed, the rammer half | Power and level by the difference in speed (÷ 10 round up); the rammer less Body × its test's successes (TN at least 2); collision damage (no armor); any damage calls a Crash Test; ramming terrain −1 / 0 / +1 / +2 | Rigger 2 pp. 47–48, 50 | `VEHICLES_V923.ram` book / old (`ramTerrain`) |
+| Vehicle vs pedestrian | as a ram | speed ÷ 10 at one level higher (a Destroyed-level hit + half the Power); the vehicle one level lower | Rigger 2 p. 52 | `VEHICLES_V923.ram` |
+| Braking | Accel × 2 per Combat Turn; push test +2 TN | safe braking Accel × 4; no extra TN on the acceleration test | Rigger 2 pp. 22, 45 | `VEHICLES_V923.accel` book / old; `brakeMultiplier` 4 |
+| Manual gunnery from/at a vehicle | moving +1 (fast +2), target moving +1 | relative speed 0 / +2 / +4 / +6 (speeds under 5 count as 5), target size by vehicle kind, a weapon fired from a vehicle out of a mount +2 | Rigger 2 p. 57 | `VEHICLES_V923.gunneryMods` book / old (`gunnerySpeed`) |
+| Driving Test rows | easy −1, hard +2 | non-stressful −1, stressful +3, large +2, very large +3, during combat +2, non-rigger by datajack −1 | Rigger 2 p. 20 | `VEHICLES_V923.drivingRows` book / old (`oldDrivingRows`) |
+| Vehicle repair TN | flat 4 | boxes repaired + 2 | Rigger 2 p. 26 | `VEHICLES_V923.repairTn` boxes / flat |
+| A Body 0 vehicle | resists with no dice | destroyed by any hit that gets through | Rigger 2 p. 53 | `VEHICLES_V923.body0` destroyed / old |
+| A vehicle whose monitor fills | nothing more | crashes automatically (Crash button) | Rigger 2 p. 53 | `VEHICLES_V923.autoCrash` book / old |
+| Combat spells vs vehicle armor | armor ignored | half the armor (anti-vehicle), no level drop | Rigger 2 p. 54 | `GEAR.spellsVsVehicles.combatArmor` false → true |
+| Sensor test | Simple Action | Complex Action | Rigger 2 p. 58 | `ACTIONS.costs.sensor` simple → complex (now a house-rule row) |
+| Missile lock | not needed | a sensor lock is needed | Rigger 2 p. 59 | `DRONES_V73.missiles.needsLock` false → true |
+| Load and passengers | 100 kg per person aboard | Load leaves out passengers | Rigger 2 p. 24 | `VEHICLES.cargo.personKg` 100 → 0 |
+| Remote control deck (template) | 50,000¥ × Rating, weight Rating × 2, signal 4 | 5,000¥ × Rating, weight 3, Flux 2 | Rigger 2 p. 97 (= SRII p. 253) | template data |
+| Drone-link interception | link skill vs the radio TN | own deck rating vs target deck + 3, decryption first (EW vs encryption + 4, ⌈deck ÷ 2⌉ successes; +2 per failure) | Rigger 2 p. 68 | `VEHICLES_V923.interception` book / old |
+| Dump shock disorientation | none | +2 TN for 10 Combat Turns ÷ Willpower (4) successes | Rigger 2 p. 64 | `VEHICLES_V923.dumpDisorient` book / none |
+| Card reader casing | casing rating | twice the rating | CSH p. 100 | `VEHICLES_V923.cardCasing` double / single |
+| Circuit bypass with no successes | +2 tally | + a passive alert | CSH p. 100 | `VEHICLES_V923.circuitFail` passive / tally |
+| Passkey | rating replaces the skill dice, full TN, after the casing | rating vs the reader's rating, casing left shut | CSH p. 100 | `VEHICLES_V923.passkey` book / old |
+| Sequencer | rating replaces the skill dice | opposed with the keypad; tie nothing; keypad wins: passive alert | CSH p. 100 | `VEHICLES_V923.sequencer` book / old |
+
+**Kept (the owner's decisions):** voice locks need a voice-deception device (CSH p. 101: opposed, ties repeat; as the
+system); the remote / rigger adaptation costs (the rules text: remote 2,500¥ × Body, rigger 2,800¥); the passkey at
+10,000¥ × Rating (CSH p. 100 prints × Rating²; Core p. 243 × Rating); the anti-vehicle rocket falloff −1 per 4 m (the
+Core Rocket/Missile table: −8 per metre).
+
+**Not built:** off-road halving the Speed (needs an off-road suspension flag); rigger defaulting at +1 per dot; autonav
+active in combat maneuvers (+rating TN); cerebral boosters, encephalons and move-by-wire on the rig; the ram range check
+(distance < Acceleration); vehicles against walls (Barrier × 20); Stress and exceeding Speed (1.5 ×); the Maneuver
+Score chase system with Hiding / Relocating and the passenger-action limit; the relative-motion ±1 and Maneuver-score ±1
+gunnery rows; the opposed ECM test and ED; sensor result levels; missile timing; shared mount-point budget; network
+drones acting in the rigger's phase; Comprehension Tests; captain's chair vs primary drone; flux modifiers; MIJI
+jamming / spoofing with Signal Monitors; datajack +1 Reaction; modification prices and install tests per item; repair
+parts (5 % per box); the design tables; passenger safety gear in crashes (seat belt, crash cage, APPS) and a Deadly
+passenger hit's Light to the vehicle; called-shot damage thresholds; CCSS device limits, rigger perception table,
+rigger combat and decking a rigged system; the rigger's decking penalty (Matrix); motion / vibration sensor tests; the
+security ratings table.
+
+### Gear, cyberware and bioware
+
+v0.92.3 book alignment (RULES.GEAR_V923, rules/config923/gear.ts; the rules in rules/gear923.ts). Each switch's first
+choice is the book's way and the default; the other puts the v0.92.2 behaviour back. Under the Unified Rules Revamp
+source only `armorEncumbrance` (the Revamp's own `URR_V80.cbtArmorPool`) reads as its old choice; the other switches
+are book corrections the Revamp is silent on and apply under either source.
+
+| Rule | Was | Now (book) | Source | Switch |
+|---|---|---|---|---|
+| Grade Essence, beta | ×0.7 | ×0.6 | SSC Custom Cyberware; Cybertechnology p. 44 | `GEAR_V923.grades` |
+| Grade nuyen | alpha ×2, beta ×4, delta ×8 | ×3, ×7, ×10 | SSC; Cybertechnology p. 44 | `GEAR_V923.grades` |
+| Graded Essence rounding | to the hundredth | rounded up, never below .05 | SSC; Cybertechnology p. 44 | `GEAR_V923.grades` |
+| Essence 0 | dead | only below 0 kills | Core p. 246 | `GEAR_V923.essenceZero` |
+| Dermal plating | ballistic and impact armor = rating | + rating to Body; stops flechette's extra level | Core pp. 93, 248 | `GEAR_V923.dermal` |
+| Pairs of cyberlimbs | nothing | each full pair (arms, legs) +1 Body as dermal armor | Core p. 249; Cybertechnology p. 49 | `GEAR_V923.limbPairs` |
+| Ware housed in a cyberlimb | no Essence (limb capacity) | full Essence except fingertip compartment, spurs, razors 0; smartlink, orientation system .25; tactical computer −25% | Cybertechnology p. 49 | `GEAR_V923.limbHoused` |
+| Bone lacing | +1/+2/+3 Body dice on damage resistance | plastic +1 Body; aluminum +1 Body, +1 impact; titanium +2 Body, +1 impact, +1 ballistic; 3 cyber replacements −1 armor, more none | Shadowtech p. 42; Cybertechnology pp. 49–50 | `GEAR_V923.boneLacing` |
+| Muscle augmentation | +R Strength | +R Quickness and Strength (Quickness raises Reaction) | Shadowtech p. 35 | `GEAR_V923.bioware` |
+| Adrenal pump | +R Qui/Str/Wil | also +2R Reaction; its Quickness doesn't raise Reaction | Shadowtech p. 19 | `GEAR_V923.bioware` |
+| Cerebral booster 2 | +2 Int | also a Task Pool die | Shadowtech p. 23 | `GEAR_V923.bioware` |
+| Orthoskin | impact R, ballistic R/2 | +1/0, +1/+1, +2/+1 | Shadowtech p. 17 | `GEAR_V923.bioware` |
+| Enhanced articulation | +1 die on Body/Qui/Str skills | +1 die on every Active Skill, +1 Reaction | Shadowtech p. 34 | `GEAR_V923.bioware` |
+| Pain editor | +1 Wil, +1 Perception TN | +1 Wil, −1 Int (the +4 is for tactile Perception only, not modelled) | Shadowtech p. 26 | `GEAR_V923.bioware` |
+| Importer Essence / Body Cost guesses | boosted reflexes +1/+2/+3 Reaction; cyberhand .25; skillwires .2R; ingested filter R/10; encephalon .75/1.5; magnification .1/level; muscle aug .2R; cerebral .2/.4; synaptic .4/1; adrenal .25/.75; orthoskin .25/.5/.75; suprathyroid .7; mnemonic .1R; extended volume .2R; pheromones cyberware | —/+1/+2; .35 (forearm .65); .1/.2/.3 × R by band; R/5; .5/.75/1.5/1.75; .2 optical / .1 electronic flat; .8/level; .4/.8; .3/1.6; 1.25/2.5; .5/1/1.5; 1.4; .2R; .2/.3/.4; bioware, Body Cost .4/.6 | SSC p. 87; Cybertechnology p. 98; Core p. 249; FoF pp. 100–104; Shadowtech | `GEAR_V923.wareTables` |
+| Bioware for the Awakened | Magic −floor(Body Index × .5) | Essence = Body Cost (Magic follows Essence) | Shadowtech p. 5 | `GEAR_V923.awakenedBioware` |
+| Over the Body Index | rejection test | system shock: +1 TN per point (or part) over on Body tests | Shadowtech p. 6 | `GEAR_V923.overBodyIndex` |
+| Cultured bioware | ×4 price only; neural ware warned and charged ×4 | Body Cost × .75; neural ware always cultured, price and Body Cost already count it | Shadowtech p. 6 | `GEAR_V923.cultured` |
+| Adrenal pump crash | Body vs 6, M (R1) / S (R2) Stun | runs 1D6 turns per level; then Deadly Stun, Power = half the turns | Shadowtech p. 19 | `GEAR_V923.adrenalCrash` |
+| Carrying | Str × 10 kg free, −1 Qui per Str × 5 kg over | Str × 5 kg free; to × 10 Light, × 15 Moderate (no running, ½ movement), × 20 Serious (¼ movement), more: passes out | Core p. 185 | `GEAR_V923.load` |
+| Armor encumbrance | any armor over Quickness: −Quickness | heavy armor only (by name): −1 Combat Pool die per Ballistic point over Quickness | Core p. 84 | `GEAR_V923.armorEncumbrance` |
+| Cybersurgery | Biotech vs 4 + grade; no successes: complications | Biotech vs 10 − Essence left; successes change the Essence cost +15% … −20%; always installs; a cost that would leave the patient below 0 Essence stops at 0 (the patient survives at Essence 0) | Cybertechnology pp. 53–54 | `GEAR_V923.surgery` |
+| Cyberware damage | Deadly only, 1d6 per item | Serious or Deadly: 1D6 − 4 / − 2 systems at random; 1D6 damage each (Moderate+ stops it, 7 destroyed); graded ware 5 dice vs 5/6, 4/5, 3/4, one success ignores it | Shadowtech p. 36; Cybertechnology p. 44 | `GEAR_V923.cyberDamage` |
+| Filtration systems | + rating dice against the toxin | the toxin opposes the rating; a winning filter stops it, a failing one adds nothing | Core p. 248 | `GEAR_V923.filtration` |
+| Templates | no Concealability, weight, Availability, Street Index | armor jacket, vest, clothing, helmet, form-fitting, riot shield, the named pistols, rifles, bow, knives, grenades, launchers, melee weapons, taser, datajack, smartlink, wired reflexes, dermal plating (rated 1), medkit, jammer, climbing gear: book numbers | FoF pp. 88–106; Core p. 256; SSC p. 50 | (data) |
+| Lined coat | no template | 4/2, Conceal 8, 1 kg, 2/24 hrs, 700¥, SI .75 | Core p. 242 | (data) |
+| Remote control deck | 50,000¥ × Rating, Rating × 2 kg | 5,000¥ × Rating, 3 kg, 4/72 hrs, SI 2 | Rigger 2 p. 97 | (data) |
+| Weapon detector / cyberware scanner | 1,000¥ R4 / 1,500¥ R4 | 5,000¥ per rating (MAD) / Lone Star portable R3, 5,000¥ | NAGRL pp. 92–93; Lone Star p. 122 | (data) |
+
+**Kept (the owner's decisions)**
+- The shop and the street (`SHOP_V91`, `SHOP_V915`, `SHOP_V916`): who rolls Availability (book: the source's skill or Etiquette +2 dice, Core p. 184); the optional +1 TN per 2 rating points (Core p. 184); the street and gray market −2 TN and paying 25% more for −1 TN and −20% time (Shadowtech pp. 101–102); haggling (book: opposed Negotiation vs Willpower, 5% per net success, no cap).
+- Legality, permits and fines (`GEAR_V58.legality`, `SHOP_V915`): book: number-plus-category codes (e.g. 6P-CC), permits at Availability +2 TN for 5% (possess) or 10% (possess and transport) of the price, annual; fines by category and charge (Shadowtech pp. 101–105).
+- The riot shield's parry 0; the cybereye and cyberear Essence allowance; Carried and the custom tweaks (`SHEET_V921`).
+
+**Not built**
+- Shadow clinic search for alpha/beta/delta grades (a contact's Etiquette (Street) vs 12/15, corporate 11/17; SSC): needs a clinic-finding step; the graded Availability TN stays as the stand-in.
+- Graded clinic fees (alpha/beta ×50, delta ×200 of the medical rates, Cybertechnology p. 44): needs a surgeon's fee in the surgery flow.
+- Removal test (lower of Biotech/Cybernetics vs 10 − Essence, SSC p. 97); repair by damage level (TN 2/3/4/8, ×2 alpha, ×3 beta; time 2 × Essence hours × level): needs ware damage levels (the system keeps damaged / not damaged; Light damage's half efficiency and the Serious/Deadly TN penalties aren't modelled).
+- Boosted reflexes forbidding wired reflexes and a control rig (SSC p. 87); smartlink II extras and smart goggles (FoF pp. 84–85; Core); cyberlimb base Strength 3 (troll 8) and enhancement Essence (Cybertechnology pp. 49–51); skillwires capping the total of active softs and a chip replacing the skill (Core pp. 247–249); the Skill Memory Table (Core p. 248); bioware recovery ×3 (cultured ×2) of the normal healing time (Shadowtech p. 6); the trauma damper's Physical-to-Stun shift; orthoskin and dermal plating refused together (the better still counts); the lined coat's +2 Concealability for weapons under it; NAGRL's search table and the chemical sniffer's base TN 10 by explosive carried; the police check against legality (Shadowtech p. 103).
+
+Note: switching `GEAR_V923.surgery` back to 'old' doesn't undo an Essence cost the book's surgery already wrote on an
+item (its cost before surgery stays in the item's flag `surgeryEssence`; set the cost back by hand if needed).
+The remote control deck's Flux (signal) Rating is 2 (Rigger 2 p. 30, Flux Rating Table; p. 97); the examples' higher
+Flux comes from vehicle and amplifier boosts.
+
 ## Verified fixes to the official SR2 rules (v0.79.0, 23 Oct 2026)
 
 v0.79.0 rechecked every rule here against the official SR2 rules: about 610 rows, 230 confirmed, 224 different. A rule changed in v0.79.0 only when **it differs from the system and an official source backs it** (a book table, or an SR2 core / Rigger 2 page). Everything else that differed (rules without an official source, rewrites from other editions, house rules) is kept for the GM-selected alternate ruleset (the Unified Rules Revamp, v0.80.0) and does **not** change the default rules. Where a row further down or in the book-check section below describes a rule changed here, this section is the current one; the older row is what the old way does.

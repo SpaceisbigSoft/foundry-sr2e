@@ -11,6 +11,7 @@ const bio = (bioKind: string, rating: number, extra: Partial<BioItem> = {}): Bio
 
 describe('bioware depth (v0.30.0)', () => {
   test('each kind does its thing at its rating', (t) => {
+    t.after(oldWay({ "GEAR_V923.bioware": "old" })); // v0.92.3: the old (v0.92.2) way; rules/__tests__/v0923-gear.test.ts has the book's
     t.after(oldWay({"BOOK_V78.toxinBioware": "dice"})); // v0.78.0: the old rule (a house rule)
     assert.deepEqual(bioEffect(bio('muscleAugmentation', 3)).attributes, { strength: 3 });
     assert.deepEqual(bioEffect(bio('cerebralBooster', 2)).attributes, { intelligence: 2 });
@@ -41,7 +42,8 @@ describe('bioware depth (v0.30.0)', () => {
     assert.equal(sumBonuses(stackAugmentations([wired, syn], []).cyber).initiativeDice, 2);
   });
 
-  test('cultured bioware, conflicts with cyberware, and armor that does not stack', () => {
+  test('cultured bioware, conflicts with cyberware, and armor that does not stack', (t) => {
+    t.after(oldWay({ "GEAR_V923.cultured": "old" })); // v0.92.3: the old (v0.92.2) way; rules/__tests__/v0923-gear.test.ts has the book's
     assert.deepEqual(culturedWarnings([bio('cerebralBooster', 1), bio('cerebralBooster', 1, { cultured: true }), bio('muscleAugmentation', 2)]), ['cerebralBooster should be cultured bioware']);
     assert.equal(bioCost(10000, true), 40000);
     assert.equal(bioCost(10000, false), 10000);

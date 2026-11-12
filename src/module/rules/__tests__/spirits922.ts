@@ -1,0 +1,41 @@
+/**
+ * v0.92.3: the v0.92.2 values of everything the spirits book alignment moved (RULES.SPIRITS_V923 and the defaults it
+ * changed in place). Older test files that pin the v0.92.2 behaviour lay this patch with oldWay().
+ */
+export const SPIRITS_V922_WAY: Record<string, unknown> = {
+  'SPIRITS_V923.conjDrain': 'v922',
+  'SPIRITS_V923.conjDrainDice': 'off',
+  'SPIRITS_V923.immunityScope': 'v922',
+  'SPIRITS_V923.mundaneVsSpirits': 'v922',
+  'SPIRITS_V923.conjuringDefense': 'off',
+  'SPIRITS_V923.banishPerPoint': 1,
+  'SPIRITS_V923.banishBackfire': 'v922',
+  'SPIRITS_V923.banishDrain': 'conjuring',
+  'SPIRITS_V923.banishRecovery': 'v922',
+  'SPIRITS_V923.controlContest': 'v922',
+  'SPIRITS_V923.banishSummoner': 'v922',
+  'SPIRITS_V923.trueName': 'v922',
+  'SPIRITS_V923.spiritTable': 'v922',
+  'SPIRITS_V923.elementalSustain': 'v922',
+  'SPIRITS_V923.projection': 'v922',
+  'SPIRITS_V923.astralPool': 'v922',
+  'SPIRITS_V923.astralGrade': 'v922',
+  'SPIRITS_V923.astralDamage': 'v922',
+  'SPIRITS_V923.assensing': 'v922',
+  'SPIRITS_V923.tracking': 'v922',
+  'SPIRITS_V923.barrierBacklash': 'v922',
+  'SPIRITS_V923.asceticism': 'any',
+  'SPIRITS_V923.allyCost': 'v922',
+  'SPIRITS_V923.regenDeath': 'v922',
+  // The rules both the spirits and the sorcery alignment touched live in RULES.SORCERY_V923 (one switch each).
+  'SORCERY_V923.initiation': 'v922',
+  'SORCERY_V923.ward': 'v922',
+  'SORCERY_V923.geasa': 'v922',
+  'SORCERY_V923.centering': 'v922',
+  'SORCERY_V923.dispelling': 'v922',
+  'ASTRAL.initiativeBonus': 20,
+  'TRACKING.baseHours': 6,
+  'OCCULT.initiation.ordealReduction': 1,
+  'MAGIC_V39.domains.enforce': 'warn',
+  'MAGIC_V56.ward.nuyenPerForce': 0,
+};

@@ -5,6 +5,7 @@ import type { Monitor } from './damage.ts';
 import { overdoseStats } from './urr80-health-social.ts';
 import { DAMAGE_LEVELS as LEVELS, sameCombatRound } from './util.ts';
 import { t as tx, tCount } from '../helpers/i18n.ts';
+import { lowPainBoxes, lowPainByLevel } from './health923.ts';
 
 /**
  * v0.72.0 health, cyberware and bioware (REVIEW-v0.69 O8–O12). Pure rules, no Foundry. Values in
@@ -269,9 +270,13 @@ export function overflowBody(body: number, v: Pick<QualityVitals, 'overflowBoxes
  * damage compensator), and Low Pain Tolerance boxes added to each track that has any damage.
  */
 export function painToleranceMonitor(m: Monitor, v: Pick<QualityVitals, 'painIgnoreBoxes' | 'painExtraBoxes'>): Monitor {
+  // v0.92.3 (RULES.HEALTH_V923.lowPainTolerance 'level', Companion): Low Pain Tolerance counts the wound one level higher.
+  const byLevel = v.painExtraBoxes > 0 && lowPainByLevel();
   const t = (n: number) => {
     const b = Math.max(0, Number(n) || 0);
-    return b > 0 ? Math.max(0, b + Math.max(0, v.painExtraBoxes) - Math.max(0, v.painIgnoreBoxes)) : 0;
+    if (!(b > 0)) return 0;
+    if (byLevel) return lowPainBoxes(Math.max(0, b - Math.max(0, v.painIgnoreBoxes)));
+    return Math.max(0, b + Math.max(0, v.painExtraBoxes) - Math.max(0, v.painIgnoreBoxes));
   };
   return { physical: t(m.physical), stun: t(m.stun) };
 }

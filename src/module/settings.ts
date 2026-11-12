@@ -1,3 +1,11 @@
+import { HOUSE_CORE_V923 } from "./rules/config923/core.ts";
+import { HOUSE_COMBAT_V923 } from "./rules/config923/combat.ts";
+import { HOUSE_HEALTH_V923 } from "./rules/config923/health.ts";
+import { HOUSE_SORCERY_V923 } from "./rules/config923/sorcery.ts";
+import { HOUSE_SPIRITS_V923 } from "./rules/config923/spirits.ts";
+import { HOUSE_MATRIX_V923 } from "./rules/config923/matrix.ts";
+import { HOUSE_VEHICLES_V923 } from "./rules/config923/vehicles.ts";
+import { HOUSE_GEAR_V923 } from "./rules/config923/gear.ts";
 import { SYSTEM } from "./config/system.ts";
 import { RULES, parseSkillWeb, setSkillWeb, PRIVACY_GROUPS, PRIVACY_MODES, SOUND_EVENTS, settingMatches, URR_V80_PATCH, RULES_SOURCES, SHOP_LIST_MODES } from "./rules/index.ts";
 import type { RulesSource } from "./rules/index.ts";
@@ -1049,6 +1057,15 @@ export const HOUSE_RULES: HouseRuleDef[] = [
   { section: "unifiedRulesRevampMagic", path: "URR_V80.magShamanistNoTotem", type: "boolean" },
   { section: "unifiedRulesRevampMagic", path: "URR_V80.magAdeptFoci", type: "boolean" },
   { section: "unifiedRulesRevampMagic", path: "URR_V80.magLossLe", type: "boolean" },
+  // v0.92.3: book alignment (rules/config923/*.ts).
+  ...HOUSE_CORE_V923,
+  ...HOUSE_COMBAT_V923,
+  ...HOUSE_HEALTH_V923,
+  ...HOUSE_SORCERY_V923,
+  ...HOUSE_SPIRITS_V923,
+  ...HOUSE_MATRIX_V923,
+  ...HOUSE_VEHICLES_V923,
+  ...HOUSE_GEAR_V923,
 ];
 
 /**

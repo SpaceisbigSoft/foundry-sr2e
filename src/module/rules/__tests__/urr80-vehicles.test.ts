@@ -12,8 +12,10 @@ import {
   veh80PassengerDamage, veh80CrashPassengerLevel, veh80OccupantArmor, veh80CrashDamage, veh80BodyArmorFactor, veh80RamDamage,
   veh80DamagedSpeed, veh80SpeedDifference, veh80TargetSize, veh80FireModifiers, veh80HeavyRecoil, veh80RepairTn,
 } from '../urr80-vehicles.ts';
+import { useV922Vehicles } from './v922vehicles.ts';
 
 describe('v0.80.0 vehicles: shipped values are the book way', () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   test('switches ship off', () => {
     const u = RULES.URR_V80;
     assert.equal(u.vehCpCap, 'none');

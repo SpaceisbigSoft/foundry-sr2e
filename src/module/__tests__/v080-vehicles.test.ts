@@ -8,6 +8,7 @@ import { test, describe, before, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { RULES } from '../rules/index.ts';
 import { urrMode } from '../rules/__tests__/urrmode.ts';
+import { useV922Vehicles } from '../rules/__tests__/v922vehicles.ts';
 
 const g = globalThis as any;
 const faces: number[] = [];
@@ -190,6 +191,7 @@ async function diceUsed(fn: () => Promise<unknown>, face = 5): Promise<number> {
 }
 
 describe('v0.80.0 vehicles: Control Pool', () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   test('a driving test: any Control Pool dice (book); at most the skill (Revamp)', async (t) => {
     let { a } = await jumped();
     assert.equal(await diceUsed(() => a.driveTest({ poolDice: 8 })), 13);
@@ -223,6 +225,7 @@ describe('v0.80.0 vehicles: Control Pool', () => {
 });
 
 describe('v0.80.0 vehicles: damage', () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   const hit = (v: any, extra: any = {}) => ({ targetUuid: v.uuid, melee: false, damageType: 'physical', power: 10, level: 'S', ...extra });
 
   test('a normal weapon: half Power, a level down (book); Power − Body − Armor, staged by Body (Revamp)', async (t) => {
@@ -303,6 +306,7 @@ describe('v0.80.0 vehicles: damage', () => {
 });
 
 describe('v0.80.0 vehicles: gunnery and repair', () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   test('a drone firing at a moving car: moving modifiers (book); speed difference and size (Revamp)', async (t) => {
     const target = vehicle({ name: 'Target car', currentSpeed: 40 });
     const drone = () => vehicle({ name: 'Drone', drone: true, pilot: 3, autonav: 0, currentSpeed: 30, condition: 3, items: [mg('turret')] });

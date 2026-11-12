@@ -1,5 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import { oldWay } from './oldway.ts';
 import {
   RULES, searchTargets, searchFinds, accessoryRecoil, attackMagnification, laserAndSmartlink, spellVsVehicle, shieldParry,
   blastScatterDice, fusedScatter, canThrowBack, stopsAtWalls, aimOffMetres, wallRepair, cyberDamageDue, cyberDamageChances, limbArmorFor,
@@ -107,7 +108,8 @@ describe('v0.43.0 grenades and walls', () => {
 });
 
 describe('v0.43.0 cyberware damage and cyberlimbs', () => {
-  test('a check only for heavy Physical damage', () => {
+  test('a check only for heavy Physical damage', (t) => {
+    t.after(oldWay({ "GEAR_V923.cyberDamage": "old" })); // v0.92.3: the old (v0.92.2) way; rules/__tests__/v0923-gear.test.ts has the book's
     assert.equal(cyberDamageDue('D', 'physical'), true);
     assert.equal(cyberDamageDue('S', 'physical'), false);
     assert.equal(cyberDamageDue('D', 'stun'), false);

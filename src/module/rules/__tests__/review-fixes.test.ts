@@ -5,10 +5,13 @@ import { RULES, stageForNetSuccesses, initiativeWoundPenalty, midTurnWoundDrop, 
 const R = RULES as any;
 
 describe('v0.54.0 damage staging house rule', () => {
-  test("'afterFirst' (default) keeps the old behaviour", () => {
-    assert.equal(RULES.ATTACK_STAGING, 'afterFirst');
-    assert.equal(stageForNetSuccesses('M', 2), 'M');
-    assert.equal(stageForNetSuccesses('M', 3), 'S');
+  test("'afterFirst' (the v0.92.2 default) keeps the old behaviour", () => {
+    assert.equal(RULES.ATTACK_STAGING, 'all');                         // v0.92.3: the book's way is the default (Core p. 91)
+    R.ATTACK_STAGING = 'afterFirst';
+    try {
+      assert.equal(stageForNetSuccesses('M', 2), 'M');
+      assert.equal(stageForNetSuccesses('M', 3), 'S');
+    } finally { R.ATTACK_STAGING = 'all'; }
   });
   test("'all': every 2 net successes stage up", () => {
     R.ATTACK_STAGING = 'all';
@@ -17,7 +20,7 @@ describe('v0.54.0 damage staging house rule', () => {
       assert.equal(stageForNetSuccesses('M', 2), 'S');
       assert.equal(stageForNetSuccesses('M', 4), 'D');
       assert.equal(stageForNetSuccesses('L', 3), 'M');
-    } finally { R.ATTACK_STAGING = 'afterFirst'; }
+    } finally { R.ATTACK_STAGING = 'all'; }
   });
 });
 
@@ -28,11 +31,12 @@ describe('v0.54.0 wounds lower Initiative', () => {
     assert.equal(initiativeWoundPenalty(-1), 0);
   });
   test('mid-turn: only a rise lowers the score; off switches', () => {
+    R.INITIATIVE_WOUNDS.midTurn = true;                                // v0.92.3: off by default (Core p. 112); the house rule on
     assert.equal(midTurnWoundDrop(1, 3), 2);
     assert.equal(midTurnWoundDrop(3, 1), 0);
     assert.equal(midTurnWoundDrop(2, 2), 0);
     R.INITIATIVE_WOUNDS.midTurn = false;
-    try { assert.equal(midTurnWoundDrop(0, 3), 0); } finally { R.INITIATIVE_WOUNDS.midTurn = true; }
+    try { assert.equal(midTurnWoundDrop(0, 3), 0); } finally { R.INITIATIVE_WOUNDS.midTurn = false; }
     R.INITIATIVE_WOUNDS.enabled = false;
     try { assert.equal(initiativeWoundPenalty(3), 0); assert.equal(midTurnWoundDrop(0, 3), 0); } finally { R.INITIATIVE_WOUNDS.enabled = true; }
   });

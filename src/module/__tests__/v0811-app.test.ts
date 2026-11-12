@@ -198,6 +198,27 @@ describe('design 2 (SEC1-3, A-1, D1-8, D3-8, RB2-1): the routine rule trusts onl
     assert.equal(confirms.length, 5);
   });
 
+  test('v0.92.3 review fix: the adrenal crash reads the pump\'s own rating and turns, not the card\'s', async () => {
+    await setup();
+    const calls: any[] = [];
+    const pump = { id: 'ap1', type: 'cyberware', system: { bioKind: 'adrenalPump', rating: 2 }, getFlag: (_s: string, k: string) => (k === 'adrenalTurns' ? 9 : undefined) };
+    actor('pumped', ['p1'], { items: Object.assign([pump], { get: (id: string) => (id === 'ap1' ? pump : null) }), rollAdrenalCrash: async (...a: any[]) => { calls.push(a); } });
+    resetUser();
+    press(message(GM, { adrenalCrash: { actorUuid: 'Actor.pumped', itemId: 'ap1', rating: 10, turns: 0 } }), 'adrenalCrash'); await tick();
+    assert.deepEqual(calls, [[2, 9]]);
+  });
+
+  test('v0.92.3 review fix: a lost control contest\'s Resist Drain card rolls the holder\'s Drain once', async () => {
+    await setup();
+    const calls: number[] = [];
+    actor('holderD', ['p1'], { resistConjuringDrain: async (f: number) => { calls.push(f); } });
+    resetUser();
+    const m = message(GM, { conjuringDrain923: { actorUuid: 'Actor.holderD', force: 99 } });
+    press(m, 'conjuringDrain923'); await tick();
+    press(m, 'conjuringDrain923'); await tick();
+    assert.deepEqual(calls, [30], 'bounded, and once');
+  });
+
   test('a Defend from P1\'s attack card (its attacker is P1\'s) still goes ahead on P2\'s client with no confirm', async () => {
     await setup();
     actor('atkD', ['p1']);
@@ -1051,7 +1072,8 @@ describe('round 2: I (V-REST)', () => {
       assert.equal(cw.cyberCost(1000, k), 1000, k);
       assert.equal(sec.hostAlertFor(k), 'none', k);
     }
-    for (const f of ['arcana', 'cyberware', 'matrix', 'security', 'situation', 'spellcraft', 'statblock', 'bioware', 'critters', 'docs79-health', 'everyday', 'fieldsfire', 'npcgen']) {
+    // v0.92.3: cyberware's grade tables are read in gear923.ts now (RULES.GEAR_V923.grades).
+    for (const f of ['arcana', 'gear923', 'matrix', 'security', 'situation', 'spellcraft', 'statblock', 'bioware', 'critters', 'docs79-health', 'everyday', 'fieldsfire', 'npcgen']) {
       assert.match(SRC(`rules/${f}.ts`), /\bown\(/, f);
     }
   });

@@ -20,7 +20,7 @@ sr2e started from the project setup of **SRA2**, the community Shadowrun Anarchy
 
 ## Made with AI
 
-This system's code, tests, documentation, default token art and scene backdrops were written by an AI model (Anthropic's Claude) under the direction of the project's human owner, Spaceisbig. The cover painting was made with another AI (OpenAI's ChatGPT image generation; see "Cover picture"). Its game numbers were recalled by the AI from memory and have not all been checked against the books (see "No rulebook content").
+This system's code, tests, documentation, default token art and scene backdrops were written by an AI model (Anthropic's Claude) under the direction of the project's human owner, Spaceisbig. The cover painting was made with another AI (OpenAI's ChatGPT image generation; see "Cover picture"). Its game numbers were first recalled by the AI from memory; in v0.92.3 the AI checked the default rules against the books and corrected them, which a human has not yet re-checked (see "No rulebook content").
 
 ## Unofficial; trademarks
 
@@ -30,7 +30,7 @@ Shadowrun and Matrix are registered trademarks and/or trademarks of The Topps Co
 
 ## No rulebook content
 
-sr2e contains no text or art from the Shadowrun rulebooks or sourcebooks and no compendium of book items, spells or critters. You need your own copy of the Shadowrun Second Edition rulebook to play. To run the mechanics the code holds game numbers (rule constants, about fifty starter item templates with stats and prices, a totem modifier table), written from memory and listed for checking in `docs/VERIFY.md` in the project's source (not in the installed system folder).
+sr2e contains no text or art from the Shadowrun rulebooks or sourcebooks and no compendium of book items, spells or critters. You need your own copy of the Shadowrun Second Edition rulebook to play. To run the mechanics the code holds game numbers (rule constants, about fifty starter item templates with stats and prices, a totem modifier table), written from memory, checked against the books by the AI in v0.92.3, and listed for checking in `docs/VERIFY.md` in the project's source (not in the installed system folder).
 
 ## Default token art
 

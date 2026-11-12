@@ -1,11 +1,13 @@
 import { test, describe } from 'node:test';
+import { oldWay } from './oldway.ts';
 import assert from 'node:assert/strict';
 import { essenceLoss, totalEssenceLoss, currentEssence, effectiveMagic, sumBonuses, type Augmentation } from '../cyberware.ts';
 
 const aug = (over: Partial<Augmentation> = {}): Augmentation => ({ essenceCost: 1, grade: 'standard', installed: true, ...over });
 
 describe('essence', () => {
-  test('grade multipliers reduce the cost', () => {
+  test('grade multipliers reduce the cost', (t) => {
+    t.after(oldWay({ "GEAR_V923.grades": "old" })); // v0.92.3: the old (v0.92.2) way; rules/__tests__/v0923-gear.test.ts has the book's
     assert.equal(essenceLoss({ essenceCost: 2, grade: 'standard' }), 2);
     assert.equal(essenceLoss({ essenceCost: 2, grade: 'alpha' }), 1.6);
     assert.equal(essenceLoss({ essenceCost: 2, grade: 'beta' }), 1.4);
@@ -26,7 +28,9 @@ describe('essence', () => {
 });
 
 describe('magic', () => {
-  test('capped by current Essence rounded up', () => {
+  test('capped by current Essence rounded up', (t) => {
+    // v0.92.3: the v0.92.2 rule (RULES.SORCERY_V923.magicFromEssence); the book's way is in v0923-sorcery.test.ts.
+    t.after(oldWay({ 'SORCERY_V923.magicFromEssence': 'v922' }));
     assert.equal(effectiveMagic(6, 6), 6);
     assert.equal(effectiveMagic(6, 5.4), 6);   // ceil(5.4) = 6
     assert.equal(effectiveMagic(6, 4.9), 5);

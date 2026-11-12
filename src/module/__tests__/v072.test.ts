@@ -6,10 +6,16 @@
  * not that Foundry behaves as the stubs do.
  */
 import { test, describe, before, beforeEach, after } from 'node:test';
+import { SORCERY_V922 } from '../rules/__tests__/sorcery922.ts';
 import { oldWay } from '../rules/__tests__/oldway.ts';
+import { SPIRITS_V922_WAY } from '../rules/__tests__/spirits922.ts';
 import assert from 'node:assert/strict';
 import { RULES, initiativeWoundPenalty } from '../rules/index.ts';
 import { initiativeFormula } from '../helpers/initiative.ts';
+// v0.92.3: this file pins the v0.92.2 conjuring, astral and initiation rules (the book way: v0923-spirits.test.ts).
+let spirits922: () => void = () => {};
+before(() => { spirits922 = oldWay(SPIRITS_V922_WAY); });
+after(() => spirits922());
 
 const g = globalThis as any;
 const faces: number[] = [];
@@ -308,7 +314,8 @@ describe('O4 a called shot at a gap bypasses worn armor only', () => {
     { id: 'dp', type: 'cyberware', name: 'Dermal plating 2', system: { installed: true, essenceCost: 1, grade: 'standard', attributes: {}, reaction: 0, initiativeDice: 0, armorBallistic: 2, armorImpact: 2 } },
   ]);
 
-  test('noWorn keeps the dermal plating; without noWorn the total is unchanged', async () => {
+  test('noWorn keeps the dermal plating; without noWorn the total is unchanged', async (t) => {
+    t.after(oldWay({ 'GEAR_V923.dermal': 'armor' })); // v0.92.3: dermal plating as armor (the old way); the book's adds to Body
     const a = sam();
     assert.equal(a.armorRating('ballistic'), 7);
     assert.equal(a.armorRating('impact'), 5);
@@ -319,7 +326,8 @@ describe('O4 a called shot at a gap bypasses worn armor only', () => {
     assert.equal(plain.armorRating('ballistic', { noWorn: true }), 0);
   });
 
-  test('the old bypass list (worn, adept, cyber, limb) is a house rule away', async () => {
+  test('the old bypass list (worn, adept, cyber, limb) is a house rule away', async (t) => {
+    t.after(oldWay({ 'GEAR_V923.dermal': 'armor' })); // v0.92.3: dermal plating as armor (the old way); the book's adds to Body
     const a = sam();
     await withRule(RULES.COMBAT_V72.calledShotGap, 'bypasses', ['worn', 'adept', 'cyber', 'limb'], () => {
       assert.equal(a.armorRating('ballistic', { noWorn: true }), 0);
@@ -334,7 +342,11 @@ describe('O5 smoke counts in melee', () => {
     const smoke = { label: 'Smoke', value: 4 };
     const clear = sumOf(a.planAttack(SR2Actor.unarmed(), { sight: {} }).modifiers);
     const smoky = sumOf(a.planAttack(SR2Actor.unarmed(), { sight: { smoke } }).modifiers);
-    assert.equal(smoky - clear, 4);
+    // v0.92.3 (COMBAT_V923.meleeVisibility 'half', Core p. 102): half in melee; the ranged value with the switch at 'full'.
+    assert.equal(smoky - clear, 2);
+    await withRule(RULES.COMBAT_V923, 'meleeVisibility', 'full', () => {
+      assert.equal(sumOf(a.planAttack(SR2Actor.unarmed(), { sight: { smoke } }).modifiers) - clear, 4);
+    });
     await withRule(RULES.COMBAT_V72, 'meleeSmoke', false, () => {
       assert.equal(sumOf(a.planAttack(SR2Actor.unarmed(), { sight: { smoke } }).modifiers), clear);
     });
@@ -460,6 +472,7 @@ describe('O8 drug doses and overdoses', () => {
 describe('O9 Shadowtech bioware: symbiotes, nephritic screen, extended-volume lungs', () => {
   test('natural healing: + symbiotes dice', async (t) => {
     t.after(oldWay({"BOOK_V78.symbiotes.mode": "dice"})); // v0.78.0: the old rule (a house rule)
+    t.after(oldWay({ 'HEALTH_V923.stunRecovery': 'old' })); // v0.92.3: Body, not the higher of Body and Willpower
     const a = who({ name: 'Patient', monitor: { physical: 0, stun: 3 } }, [bio('sy', 'Symbiotes 2', 'symbiotes', 2, 0.7)]);
     assert.equal(a.system.derived.bio.vitals.healingDice, 2);
     faces.push(1, 1, 1, 1, 1, 1);                                        // Body 4 + 2
@@ -488,7 +501,8 @@ describe('O9 Shadowtech bioware: symbiotes, nephritic screen, extended-volume lu
     assert.match(chat.at(-1).content, /4 dice vs TN/);
   });
 
-  test('resistHazard drowning: extended-volume lungs hold the breath; past them the remaining turns count', async () => {
+  test('resistHazard drowning: extended-volume lungs hold the breath; past them the remaining turns count', async (t) => {
+    t.after(oldWay({ 'HEALTH_V923.drowning': 'test', 'HEALTH_V923.breathHold': 'none' })); // v0.92.3: the old drowning test
     const a = who({ name: 'Diver' }, [bio('ev', 'Extended volume 1', 'extendedVolume', 1, 0.2)]);
     await a.resistHazard('drowning', 6);
     assert.match(chat.at(-1).content, /still holds their breath \(extended-volume lungs, 15 Combat Turns\)/); // v0.77.0: 45 s per level
@@ -570,7 +584,9 @@ describe('O11 Companion health edges and flaws', () => {
     });
   });
 
-  test('Sensitive System: cyberware Essence doubled; bioware within the Body Index still calls for a rejection test', async () => {
+  test('Sensitive System: cyberware Essence doubled; bioware within the Body Index still calls for a rejection test', async (t) => {
+    // v0.92.3: the old rejection rule (the Companion has none for Sensitive System).
+    t.after(oldWay({ 'HEALTH_V72.qualities.sensitiveSystem.rejectionAlways': true }));
     const items = [
       { id: 'cy', type: 'cyberware', name: 'Datajack', system: { installed: true, essenceCost: 0.5, grade: 'standard', attributes: {}, reaction: 0, initiativeDice: 0 } },
       bio('bw', 'Enhanced articulation', 'other', 1, 0.3),
@@ -718,7 +734,9 @@ describe('O16 Spell Pool dice for dispelling drain', () => {
     return { caster, d };
   };
 
-  test('drainPoolDice are spent and rolled on the drain; switched off none are', async () => {
+  test('drainPoolDice are spent and rolled on the drain; switched off none are', async (t) => {
+    // v0.92.3: 'the book' here is the v0.92.2 reading (RULES.SORCERY_V923 at its old way); the book's way is in v0923-sorcery.test.ts.
+    t.after(oldWay(SORCERY_V922));
     const { caster, d } = setup();
     const left = d.system.derived.spellPoolLeft;
     assert.ok(left >= 2, `spell pool ${left}`);

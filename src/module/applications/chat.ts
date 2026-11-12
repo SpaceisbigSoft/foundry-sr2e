@@ -1,14 +1,17 @@
+import { individualAwardRows } from '../rules/core923.ts';
 import type { AttackState, DamageState, SpellState, TestSnapshot, PoolKind, BlastContext, Contest } from '../documents/index.ts';
 import { opposedMelee, SR2Actor, serialTicks } from '../documents/index.ts';
 import { settleClock } from './clock.ts';
+import { nextInitiationGrade } from '../rules/sorcery923.ts';
 import { sysNow, toSysTime } from '../helpers/clock.ts';
 import { allActors } from '../helpers/actors.ts';
 import { playCue, decorateItemDrags } from './qol.ts';
 import { SYSTEM_ID } from '../config/system.ts';
 import { pxPerMetre } from './canvas.ts';
-import { retargetGroupsV73, sessionRefreshDue, localDateKey } from '../rules/index.ts';
+import { retargetGroupsV73, sessionRefreshDue, localDateKey, veh80ResistPoolOn, veh923 } from '../rules/index.ts';
 import { scatterDiceV79 } from '../rules/docs79-ranged.ts';
 import * as U80C from '../rules/urr80-combat.ts';
+import * as C923 from '../rules/combat923.ts';
 import { blastThroughWalls, crossingFraction, indirectScatterDice, indirectScatterMetres, barrierSpellRadius } from '../rules/index.ts';
 import { tokensNear, scatterPoint, blastBlocked, wallDistances, wallsBetweenPoints, sightBlockedBetweenPoints, wallsNear, scatterStop, tokenOf, drawArea, placeWardRegion } from './canvas.ts';
 import { escHtml } from '../rules/html.ts';
@@ -165,8 +168,10 @@ function listFlag<T = any>(v: unknown): T[] { return Array.isArray(v) ? v as T[]
 const POOL_LABELS = (): Record<PoolKind, string> => ({ combat: tx('SR2E.App.Chat.combatPool'), spell: tx('SR2E.App.Chat.spellPool'), hacking: tx('SR2E.App.Chat.hackingPool'), control: tx('SR2E.App.Chat.controlPool'), task: tx('SR2E.App.Chat.taskPool') });
 
 /** Ask how many pool dice to spend. Returns null if the dialog was cancelled. */
-export async function promptPoolDice(actor: any, title: string, pool: PoolKind = 'combat'): Promise<number | null> {
-  const left = (actor.system.derived?.[`${pool}PoolLeft`] as number | undefined) ?? 0;
+export async function promptPoolDice(actor: any, title: string, pool: PoolKind = 'combat', cap?: number): Promise<number | null> {
+  // v0.92.3 review fix: `cap`, the most the test takes (e.g. the rigger's skill for Control Pool on a vehicle's resistance).
+  const all = (actor.system.derived?.[`${pool}PoolLeft`] as number | undefined) ?? 0;
+  const left = cap === undefined ? all : Math.max(0, Math.min(all, Math.floor(Number(cap) || 0)));
   if (!(left > 0)) return 0;
   const result = await foundry.applications.api.DialogV2.prompt({
     window: { title },
@@ -230,13 +235,15 @@ async function onDefend(message: any, button: HTMLButtonElement): Promise<void> 
     const ctl: any = defender.system.controlMode === 'jumped' ? defender.controller?.() : null;
     const rigger = ctl?.system?.rigging?.jumpedIn ? ctl : null;
     let pool = 0;
+    // v0.92.3 (RULES.VEHICLES_V923.vehicleDodge 'none', Rigger 2 p. 53): no dodge test, so no pool dice to ask for.
+    const noDodge = veh923('vehicleDodge') === 'none';
     if (wheel) {
       if (!wheel.isOwner) return ui.notifications.warn(tx('SR2E.Notify.Chat.onlySOwnerOrTheGm2', { wheelName: escHtml(wheel.name) }));
       if (!defender.isOwner && !message.isOwner) rememberOn = wheel;
-      const p = await promptPoolDice(wheel, tx('SR2E.Dialog.Chat.evasiveDriving', { defenderName: defender.name, wheelName: wheel.name }), 'combat');
+      const p = noDodge ? 0 : await promptPoolDice(wheel, tx('SR2E.Dialog.Chat.evasiveDriving', { defenderName: defender.name, wheelName: wheel.name }), 'combat');
       if (p === null) return;
       pool = p;
-    } else if (rigger) {
+    } else if (rigger && !noDodge) {
       if (!rigger.isOwner) return ui.notifications.warn(tx('SR2E.Notify.Chat.onlySOwnerOrTheGm3', { riggerName: escHtml(rigger.name) }));
       const p = await promptPoolDice(rigger, tx('SR2E.Dialog.Chat.evasiveDriving2', { defenderName: defender.name }), 'control');
       if (p === null) return;
@@ -259,7 +266,7 @@ async function onDefend(message: any, button: HTMLButtonElement): Promise<void> 
         <div class="form-group"><label>${tx('SR2E.Dialog.Chat.combatPoolDiceLeft', { left })}</label><input name="pool" type="number" value="0" min="0" max="${left}"></div>
         ${fullDefenseRow(defender)}
         ${RULES.COMBAT.melee.counterattack && RULES.FIXES_V71.counterWeaponExtras ? `<label class="sr2e-check"><input type="checkbox" name="subdue"> ${tx('SR2E.Dialog.Chat.counterattackToSubdueDamage', { subdueDamageType: RULES.COMBAT.subdue.damageType })}</label>` : ''}
-        <p class="hint">${tx('SR2E.Dialog.Chat.opposedTestWhoeverScoresMoreSuccesses', { part: RULES.COMBAT.melee.counterattack ? tx('SR2E.Dialog.Chat.soWinningLetsYouCounterattack') : '', part2: RULES.URR_V80.cbtDefense === 'cleanMiss' ? tx('SR2E.Dialog.Chat.onFullDefenseLeaveThePool') : '' })}</p>`,
+        <p class="hint">${tx('SR2E.Dialog.Chat.opposedTestWhoeverScoresMoreSuccesses', { part: RULES.COMBAT.melee.counterattack ? tx('SR2E.Dialog.Chat.soWinningLetsYouCounterattack') : '', part2: RULES.URR_V80.cbtDefense === 'cleanMiss' || C923.fullDefenseBook() ? tx('SR2E.Dialog.Chat.onFullDefenseLeaveThePool') : '' })}</p>`,
       ok: { label: tx('SR2E.Dialog.Chat.defend'), callback: (_e: Event, b: any) => ({ weapon: b.form.elements.weapon.value as string, pool: Math.max(0, Math.min(left, Math.floor(Number(b.form.elements.pool.value) || 0))), full: Boolean(b.form.elements.full?.checked), subdue: Boolean(b.form.elements.subdue?.checked) }) },
       rejectClose: false,
     });
@@ -303,7 +310,7 @@ function fullDefenseRow(defender?: any): string {
   // Already declared (v0.35.0): it applies to every attack until their next action, at no further cost.
   if (defender?.fullDefenseUp?.()) return `<label class="sr2e-check"><input type="checkbox" name="full" checked disabled> ${tx('SR2E.Dialog.Chat.onFullDefense', { cbtFullDefenseText: escHtml(U80C.cbtFullDefenseText(attr, true)) })}</label>`;
   const own = defender?.isActing?.();
-  return `<label class="sr2e-check"><input type="checkbox" name="full"> ${tx('SR2E.Dialog.Chat.fullDefense', { cbtFullDefenseText: escHtml(U80C.cbtFullDefenseText(attr, false)), part: own ? tx('SR2E.Dialog.Chat.usesYourAction') : tx('SR2E.Dialog.Chat.initiative', { initiativeCost: f.initiativeCost }) })}</label>`;
+  return `<label class="sr2e-check"><input type="checkbox" name="full"> ${tx('SR2E.Dialog.Chat.fullDefense', { cbtFullDefenseText: escHtml(U80C.cbtFullDefenseText(attr, false)), part: own ? tx('SR2E.Dialog.Chat.usesYourAction') : C923.fullDefenseInitiativeCost() ? tx('SR2E.Dialog.Chat.initiative', { initiativeCost: C923.fullDefenseInitiativeCost() }) : tx('SR2E.Card.Combat923.noInitiativeCost') })}</label>`;
 }
 
 /** Knockdown test after a heavy hit. */
@@ -677,14 +684,15 @@ async function markCardDone(message: any, actor: any, key: string): Promise<void
 
 /** A heavy hit's cyberware damage check (v0.43.0): once per card. */
 async function onCyberDamage(message: any, button: HTMLButtonElement): Promise<void> {
-  const f = message.getFlag(SYSTEM_ID, 'cyberDamage') as { actorUuid: string; location: string } | undefined;
+  const f = message.getFlag(SYSTEM_ID, 'cyberDamage') as { actorUuid: string; location: string; level?: string } | undefined;
   const actor: any = f ? await fromUuid(f.actorUuid) : null;
   if (!f || !actor) return;
   if (!actor.isOwner) return ui.notifications.warn(tx('SR2E.Notify.Chat.onlySOwnerOrTheGm4', { actorName: escHtml(actor.name) }));
   if (!(await playerMay(message, actor, origin(message), tx('SR2E.Card.Chat.rollsACyberwareDamageCheckInstalled', { actorName: actor.name, slice: String(f.location ?? '').slice(0, 60) })))) return;
   if (cardDone(message, actor, 'cyberDamageRolled')) return ui.notifications.warn(tx('SR2E.Notify.Chat.theCyberwareCheckHasAlreadyBeen'));
   button.disabled = true;
-  await actor.cyberDamageCheck(String(f.location ?? '').slice(0, 60));
+  // v0.92.3: the wound's level (RULES.GEAR_V923.cyberDamage 'book' counts the systems hit by it).
+  await actor.cyberDamageCheck(String(f.location ?? '').slice(0, 60), ['L', 'M', 'S', 'D'].includes(String(f.level ?? '')) ? String(f.level) : '');
   await markCardDone(message, actor, 'cyberDamageRolled');
   if (message.isOwner) {
     // A Karma re-roll of this card must not roll it again.
@@ -842,11 +850,17 @@ async function onResist(message: any, button: HTMLButtonElement): Promise<void> 
   if (!(await playerMay(message, target, origin(message), tx('SR2E.Card.Chat.resistsDamage', { targetName: target.name, damagePower: damage.power, damageLevel: damage.level, boundType: boundType(damage.damageType) }), { routine: damageSources(message, damage) }))) return;
 
   // v0.80.0 (URR_V80.vehCpResist): a vehicle's jumped-in rigger may add Control Pool dice to its damage resistance.
-  const cpCtl: any = target.type === 'vehicle' && RULES.URR_V80.vehCpResist && target.system.controlMode === 'jumped' ? target.controller?.() : null;
+  // v0.92.3 (RULES.VEHICLES_V923.cpResist 'driving', Rigger 2 pp. 50, 53): the book's way too (capped at the rigger's skill).
+  const cpCtl: any = target.type === 'vehicle' && veh80ResistPoolOn() && target.system.controlMode === 'jumped' ? target.controller?.() : null;
   // Review #3: only the rigger's owner (or the GM) can spend their Control Pool; anyone else resists with no pool.
   const cpRigger: any = cpCtl?.system?.rigging?.jumpedIn && cpCtl.system.rigging.vehicleUuid === target.uuid && cpCtl.isOwner ? cpCtl : null;
-  const pool = cpRigger
-    ? await promptPoolDice(cpRigger, tx('SR2E.Dialog.Chat.resistDamage', { targetName: target.name }), 'control')
+  // v0.92.3 review fix: no pool to ask for when the test takes none (shot inside a vehicle, Rigger 2 p. 53; aboard in a
+  // collision or crash, Rigger 2 p. 50).
+  const noPool = (Boolean(damage.occupantShot) && veh923('occupant') === 'book') || Boolean(damage.noPool)
+    // and black IC's damage to a decker (RULES.MATRIX_V923.blackIc: no Hacking Pool, VR2 p. 47).
+    || (Boolean((damage as any).black) && target.type !== 'ic' && RULES.MATRIX_V923.blackIc !== 'v922');
+  const pool = noPool ? 0 : cpRigger
+    ? await promptPoolDice(cpRigger, tx('SR2E.Dialog.Chat.resistDamage', { targetName: target.name }), 'control', RULES.URR_V80.vehCpResist ? undefined : cpRigger.vehicleSkillRating?.(target))
     : await promptPoolDice(target, tx('SR2E.Dialog.Chat.resistDamage', { targetName: target.name }), target.poolFor?.(damage) ?? 'combat');
   if (pool === null) return;
   if (resistedOn(message, target).includes(index) && !game.user?.isGM) return ui.notifications.warn(tx('SR2E.Notify.Chat.thatTargetHasAlreadyResistedThis'));
@@ -1103,6 +1117,19 @@ async function onMagicLoss(message: any, button: HTMLButtonElement): Promise<voi
   await markCardDone(message, actor, 'magicLossRolled');
 }
 
+/** v0.92.3 (RULES.HEALTH_V923.permanentDamage, Core p. 114): roll the Deadly wound's permanent damage test (owner or GM). */
+async function onPermanentDamage923(message: any, button: HTMLButtonElement): Promise<void> {
+  const uuid = message.getFlag(SYSTEM_ID, 'permanentDamageFor') as string | undefined;
+  const actor: any = uuid ? await fromUuid(uuid) : null;
+  if (!actor) return ui.notifications.warn(tx('SR2E.Notify.Chat.thatCharacterNoLongerExists'));
+  if (!actor.isOwner) return ui.notifications.warn(tx('SR2E.Notify.Chat.onlySOwnerOrTheGm4', { actorName: escHtml(actor.name) }));
+  if (!(await playerMay(message, actor, origin(message), tx('SR2E.Card.Chat.rollsPermanentDamage923', { actorName: actor.name })))) return;
+  if (cardDone(message, actor, 'permanentDamageRolled')) return ui.notifications.warn(tx('SR2E.Notify.Chat.alreadyRolled'));
+  button.disabled = true;
+  await actor.rollPermanentDamage?.();
+  await markCardDone(message, actor, 'permanentDamageRolled');
+}
+
 /** Use a repeating power again on the same targets. */
 async function onRepeatPower(message: any): Promise<void> {
   const repeat = message.getFlag(SYSTEM_ID, 'repeat') as { powerUuid: string; targetUuids: string[]; modifiers?: any[]; exclude?: string[] } | undefined;
@@ -1292,7 +1319,10 @@ async function vehicleCrashTest(message: any, button: HTMLButtonElement, c: { ve
   if (!vehicle.isOwner && !driver?.isOwner) { button.disabled = false; return ui.notifications.warn(tx('SR2E.Notify.Chat.onlySDriverOrTheGm', { vehicleName: escHtml(vehicle.name) })); }
   if (!(await playerMay(message, driver?.isOwner ? driver : vehicle, origin(message, vehicle.uuid), tx('SR2E.Card.Chat.aCrashTestTn', { vehicleName: vehicle.name, tn: safeInt(c.tn, 2, 30, 4) })))) { button.disabled = false; return; }
   if (cardDone(message, driver?.isOwner ? driver : vehicle, 'crashTestRolled')) return ui.notifications.warn(tx('SR2E.Notify.Chat.theCrashTestHasAlreadyBeen'));
-  await vehicle.crashTestFor({ tn: safeInt(c.tn, 2, 30, 4), why: String(c.why ?? '').slice(0, 200) });
+  const rolled = await vehicle.crashTestFor({ tn: safeInt(c.tn, 2, 30, 4), why: String(c.why ?? '').slice(0, 200) });
+  // v0.92.3 review fix: no test was rolled (no one can drive): an autonav too weak to drive crashes; anything else
+  // leaves the card open (the warning said why) instead of losing the crash.
+  if (!rolled && !(await vehicle.crashUndriven?.())) { button.disabled = false; return; }
   await markCardDone(message, driver?.isOwner ? driver : vehicle, 'crashTestRolled');
 }
 
@@ -1480,14 +1510,15 @@ async function onRiggerShock(message: any, button: HTMLButtonElement): Promise<v
 
 /** Deck damage after a blaster or sparky crash, or a trace and burn: the IC rolls its rating vs the MPCP. */
 async function onDeckDamage(message: any, button: HTMLButtonElement): Promise<void> {
-  const d = message.getFlag(SYSTEM_ID, 'deckDamage') as { deckerUuid: string; icName: string; rating: number; reason: string } | undefined;
+  const d = message.getFlag(SYSTEM_ID, 'deckDamage') as { deckerUuid: string; icName: string; rating: number; reason: string; sparky?: boolean } | undefined;
   const decker: any = d ? await fromUuid(d.deckerUuid) : null;
   if (!d || !decker) return ui.notifications.warn(tx('SR2E.Notify.Chat.thatDeckerNoLongerExists'));
   if (!decker.isOwner) return ui.notifications.warn(tx('SR2E.Notify.Chat.onlySOwnerOrTheGm17', { deckerName: escHtml(decker.name) }));
   if (!(await playerMay(message, decker, origin(message), tx('SR2E.Card.Chat.sDeckTakesDamageFromRating', { deckerName: decker.name, slice: String(d.icName ?? 'IC').slice(0, 120), rating: safeInt(d.rating, 0, 20, 0) })))) return;
   if (cardDone(message, decker, 'deckDamageRolled')) return ui.notifications.warn(tx('SR2E.Notify.Chat.deckDamageHasAlreadyBeenRolled'));
   button.disabled = true;
-  await decker.takeDeckDamage(String(d.icName ?? 'IC').slice(0, 120), safeInt(d.rating, 0, 20, 0), String(d.reason ?? '').slice(0, 200));
+  // v0.92.3: a sparky crash's test has its own TN and is followed by its damage (VR2 p. 44).
+  await decker.takeDeckDamage(String(d.icName ?? 'IC').slice(0, 120), safeInt(d.rating, 0, 20, 0), String(d.reason ?? '').slice(0, 200), { sparky: d.sparky === true });
   await markCardDone(message, decker, 'deckDamageRolled');
 }
 
@@ -1503,7 +1534,8 @@ async function onPsychotropic(message: any, button: HTMLButtonElement): Promise<
   const payload = { icName: String(p.icName ?? 'IC').slice(0, 120), rating: safeInt(p.rating, 0, 20, 0), kind: String(p.kind), ...(safeStr(p.hostUuid, 400) ? { hostUuid: String(p.hostUuid) } : {}) };
   if (!(await playerMay(message, decker, origin(message), tx('SR2E.Card.Chat.resistsSPayloadRatingItCan', { deckerName: decker.name, payloadIcName: payload.icName, payloadKind: payload.kind, payloadRating: payload.rating })))) return;
   if (cardDone(message, decker, 'psychotropicRolled')) return ui.notifications.warn(tx('SR2E.Notify.Chat.thePsychotropicTestHasAlreadyBeen'));
-  const pool = await promptPoolDice(decker, tx('SR2E.Dialog.Chat.resistThePayload', { deckerName: decker.name }), 'hacking');
+  // v0.92.3: no Hacking Pool on this Willpower test (VR2 p. 17; RULES.MATRIX_V923.psychotropic).
+  const pool = RULES.MATRIX_V923.psychotropic !== 'v922' ? 0 : await promptPoolDice(decker, tx('SR2E.Dialog.Chat.resistThePayload', { deckerName: decker.name }), 'hacking');
   if (pool === null) return;
   button.disabled = true;
   await decker.resistPsychotropic(payload, pool);
@@ -1528,14 +1560,15 @@ async function onDiseaseTick(message: any, button: HTMLButtonElement): Promise<v
 
 /** Sparky biofeedback: the decker resists the IC's rating. */
 async function onBiofeedback(message: any, button: HTMLButtonElement): Promise<void> {
-  const b = message.getFlag(SYSTEM_ID, 'biofeedback') as { deckerUuid: string; tn: number } | undefined;
+  const b = message.getFlag(SYSTEM_ID, 'biofeedback') as { deckerUuid: string; tn: number; level?: string } | undefined;
   const decker: any = b ? await fromUuid(b.deckerUuid) : null;
   if (!b || !decker) return ui.notifications.warn(tx('SR2E.Notify.Chat.thatDeckerNoLongerExists'));
   if (!decker.isOwner) return ui.notifications.warn(tx('SR2E.Notify.Chat.onlySOwnerOrTheGm17', { deckerName: escHtml(decker.name) }));
   if (!(await playerMay(message, decker, origin(message), tx('SR2E.Card.Chat.resistsBiofeedbackTn', { deckerName: decker.name, tn: safeInt(b.tn, 2, 30, 4) })))) return;
   if (cardDone(message, decker, 'biofeedbackRolled')) return ui.notifications.warn(tx('SR2E.Notify.Chat.biofeedbackHasAlreadyBeenRolled'));
   button.disabled = true;
-  await decker.rollBiofeedback(safeInt(b.tn, 2, 30, 4));
+  // v0.92.3: the level the Sparky Test staged it to (VR2 p. 44), one of L/M/S/D.
+  await decker.rollBiofeedback(safeInt(b.tn, 2, 30, 4), ['L', 'M', 'S', 'D'].includes(String(b.level)) ? String(b.level) : null);
   await markCardDone(message, decker, 'biofeedbackRolled');
 }
 
@@ -1905,7 +1938,7 @@ function registerDelayButtons(): void {
           fd.type = 'button';
           fd.className = 'sr2e-fulldef';
           fd.innerHTML = '<i class="fa-solid fa-shield-halved"></i>';
-          fd.title = tx('SR2E.Card.Chat.fullDefense', { name: a.name, part: combat.combatant?.id === c.id ? tx('SR2E.Card.Chat.thisAction') : tx('SR2E.Card.Chat.outOfTurnInitiative', { fullDefenseInitiativeCost: RULES.COMBAT.fullDefense.initiativeCost }) });
+          fd.title = tx('SR2E.Card.Chat.fullDefense', { name: a.name, part: combat.combatant?.id === c.id ? tx('SR2E.Card.Chat.thisAction') : (C923.fullDefenseInitiativeCost() ? tx('SR2E.Card.Chat.outOfTurnInitiative', { fullDefenseInitiativeCost: C923.fullDefenseInitiativeCost() }) : tx('SR2E.Card.Combat923.noInitiativeCost')) });
           fd.addEventListener('click', async (ev) => { ev.preventDefault(); ev.stopPropagation(); fd.disabled = true; await a.declareFullDefense(); ui.combat?.render?.(); });
           (li.querySelector('.combatant-controls, .token-initiative') ?? li).prepend(fd);
         }
@@ -1999,6 +2032,22 @@ async function onResistToxin(message: any, button: HTMLButtonElement): Promise<v
   button.disabled = true;
   await markCardDone(message, actor, key);
   await actor.resistToxin(t);
+}
+
+/**
+ * v0.92.3 (Core p. 186): still in contact with the toxin when its speed period passes: everyone on the card resists
+ * again (the GM). A fresh card, with the toxin's onset counted from now.
+ */
+async function onReexposeToxin923(message: any): Promise<void> {
+  if (!game.user?.isGM) return ui.notifications.warn(tx('SR2E.Notify.Chat.onlyTheGmCanDoThat'));
+  const list = listFlag(message.getFlag(SYSTEM_ID, 'toxins')).filter((t: any) => t && typeof t === 'object').map((t: any) => boundToxin(t));
+  const first: any = list[0];
+  if (!first || first.kind === 'disease') return;
+  const targets = list.map((t: any) => String(t.targetUuid ?? '')).filter(Boolean);
+  const by: any = (first.sourceUuid ? await fromUuid(first.sourceUuid) : null) ?? (targets[0] ? await fromUuid(targets[0]) : null);
+  if (!by?.exposeToxinState) return;
+  const { targetUuid: _t, onsetAt: _o, sourceUuid: _s, ...tox } = first;
+  await by.exposeToxinState({ ...tox, kind: tox.kind || 'toxin', speed: tox.speed ?? 'immediate', needsWound: false }, targets, tx('SR2E.Card.Chat.stillExposed923', { name: String(tox.name ?? '') }));
 }
 
 /** v0.55.0: put out the flames (the burning actor's owner or the GM). */
@@ -2104,15 +2153,36 @@ async function onDrugCrash(message: any, button: HTMLButtonElement): Promise<voi
 
 /** An adrenal pump's crash: the wearer resists. */
 async function onAdrenalCrash(message: any, button: HTMLButtonElement): Promise<void> {
-  const c = message.getFlag(SYSTEM_ID, 'adrenalCrash') as { actorUuid: string; rating: number } | undefined;
+  const c = message.getFlag(SYSTEM_ID, 'adrenalCrash') as { actorUuid: string; itemId?: string; rating: number; turns?: number } | undefined;
   const actor: any = c ? await fromUuid(c.actorUuid) : null;
   if (!c || !actor) return ui.notifications.warn(tx('SR2E.Notify.Chat.thatCharacterNoLongerExists'));
   if (!actor.isOwner) return ui.notifications.warn(tx('SR2E.Notify.Chat.onlySOwnerOrTheGm4', { actorName: escHtml(actor.name) }));
   if (!(await playerMay(message, actor, origin(message), tx('SR2E.Card.Chat.resistsAnAdrenalPumpCrashRating', { actorName: actor.name, rating: safeInt(c.rating, 0, 10, 0) })))) return;
   if (cardDone(message, actor, 'adrenalRolled')) return ui.notifications.warn(tx('SR2E.Notify.Chat.theCrashHasAlreadyBeenRolled'));
+  // v0.92.3 review fix: the rating and the turns it ran come from the pump itself (the card's numbers are only its text):
+  // the card's item, else the wearer's adrenal pump.
+  const pumps = Array.from((actor.items ?? []) as Iterable<any>).filter((i: any) => i.type === 'cyberware' && i.system?.bioKind === 'adrenalPump');
+  const pump: any = pumps.find((i: any) => i.id === c.itemId) ?? pumps[0];
+  if (!pump) return ui.notifications.warn(tx('SR2E.Notify.Chat.thatCharacterNoLongerExists'));
   button.disabled = true;
-  await actor.rollAdrenalCrash(safeInt(c.rating, 0, 10, 0));
+  // v0.92.3 (RULES.GEAR_V923.adrenalCrash 'book'): the turns it ran set the crash's Power.
+  const ran = Number(pump.getFlag?.(SYSTEM_ID, 'adrenalTurns'));
+  await actor.rollAdrenalCrash(safeInt(pump.system?.rating, 0, 10, 1), Number.isFinite(ran) ? safeInt(ran, 0, 12, 0) : c.turns === undefined ? undefined : 0);
   await markCardDone(message, actor, 'adrenalRolled');
+}
+
+/** v0.92.3 review fix: a holder who lost a spirit's control contest resists Drain as if they had summoned it (Core p. 143). */
+async function onConjuringDrain923(message: any, button: HTMLButtonElement): Promise<void> {
+  const c = message.getFlag(SYSTEM_ID, 'conjuringDrain923') as { actorUuid: string; force: number } | undefined;
+  const actor: any = c ? await fromUuid(c.actorUuid) : null;
+  if (!c || !actor) return ui.notifications.warn(tx('SR2E.Notify.Chat.thatCharacterNoLongerExists'));
+  if (!actor.isOwner) return ui.notifications.warn(tx('SR2E.Notify.Chat.onlySOwnerOrTheGm4', { actorName: escHtml(actor.name) }));
+  const force = safeInt(c.force, 1, 30, 1);
+  if (!(await playerMay(message, actor, origin(message), tx('SR2E.Card.Chat.resistsConjuringDrain923', { actorName: actor.name, force })))) return;
+  if (cardDone(message, actor, 'conjuringDrainRolled')) return ui.notifications.warn(tx('SR2E.Notify.Chat.drainAlreadyRolled923'));
+  button.disabled = true;
+  await actor.resistConjuringDrain(force);
+  await markCardDone(message, actor, 'conjuringDrainRolled');
 }
 
 /** Simsense overload (hot sim): the decker resists. */
@@ -2243,7 +2313,7 @@ export async function openAwardDialog(): Promise<void> {
         <p class="hint">${tx('SR2E.Dialog.Chat.teamAwardsGoToEveryoneTicked')}</p>
         ${RULES.CHARACTERS_V58.karmaAward.team.map((t) => `<div class="form-group"><label>${escHtml(t.label)} (0–${t.max})</label><input name="team-${escHtml(t.id)}" type="number" min="0" max="${t.max}" value="${t.value}"></div>`).join('')}
         <table class="sr2e-award-table"><thead><tr><th></th>${chars.map((a: any) => `<th>${escHtml(a.name)}</th>`).join('')}</tr></thead><tbody>
-          ${RULES.CHARACTERS_V58.karmaAward.individual.map((row) => `<tr><td>${escHtml(row.label)} (+${row.value})</td>${chars.map((a: any) => `<td><input type="checkbox" name="ind-${escHtml(row.id)}" value="${escHtml(a.uuid)}"></td>`).join('')}</tr>`).join('')}
+          ${individualAwardRows().map((row) => `<tr><td>${escHtml(row.label)} (+${row.value})</td>${chars.map((a: any) => `<td><input type="checkbox" name="ind-${escHtml(row.id)}" value="${escHtml(a.uuid)}"></td>`).join('')}</tr>`).join('')}
         </tbody></table>
       </details>`,
     ok: {
@@ -2252,7 +2322,7 @@ export async function openAwardDialog(): Promise<void> {
         const f = b.form;
         const team = Object.fromEntries(RULES.CHARACTERS_V58.karmaAward.team.map((t) => [t.id, Number(f.elements[`team-${t.id}`]?.value) || 0]));
         const ind: Record<string, Record<string, boolean>> = {};
-        for (const row of RULES.CHARACTERS_V58.karmaAward.individual) {
+        for (const row of individualAwardRows()) {
           for (const i of [...f.querySelectorAll(`input[name="ind-${row.id}"]:checked`)] as any[]) (ind[String(i.value)] ??= {})[row.id] = true;
         }
         return {
@@ -2920,7 +2990,7 @@ async function onConfirmDeed(message: any, button: HTMLButtonElement): Promise<v
   if (!d || !a) return ui.notifications.warn(tx('SR2E.Notify.Chat.thatCharacterIsGone'));
   if (message.getFlag(SYSTEM_ID, 'deedDone')) return ui.notifications.warn(tx('SR2E.Notify.Chat.alreadyConfirmed'));
   const p = a.getFlag?.(SYSTEM_ID, 'pendingInitiation');
-  if (!p || p.grade !== (Number(a.system.initiateGrade ?? 0) + 1)) return ui.notifications.warn(tx('SR2E.Notify.Chat.hasNoInitiationWaitingOnThis', { name: escHtml(a.name) }));
+  if (!p || p.grade !== nextInitiationGrade(Number(a.system.initiateGrade ?? 0), Boolean(a.getFlag?.('sr2e', 'initiated')))) return ui.notifications.warn(tx('SR2E.Notify.Chat.hasNoInitiationWaitingOnThis', { name: escHtml(a.name) }));
   // v0.81.0 (SEC1-17): only the initiate's own card (or a GM's), and the GM says yes in a dialog naming it.
   if (!(await gmMay(message, { title: tx('SR2E.Dialog.Chat.confirmADeed'), lines: [tx('SR2E.Dialog.Chat.sDeedIsDoneInitiationTo', { name: a.name, grade: p.grade })], sources: [a.uuid], always: true }))) return;
   await gmLocked(message, button, async () => {
@@ -3243,6 +3313,7 @@ function dispatch(message: any, button: HTMLButtonElement, action: string): Prom
   else if (action === 'createSpirit') return onCreateSpirit(message, button);
   else if (action === 'repeatPower') return onRepeatPower(message);
   else if (action === 'magicLoss') return onMagicLoss(message, button);
+  else if (action === 'permanentDamage923') return onPermanentDamage923(message, button);
   else if (action === 'dumpShock') return onDumpShock(message, button);
   else if (action === 'applyTally') return onApplyTally(message, button);
   else if (action === 'knockdown') return onKnockdown(message, button);
@@ -3264,7 +3335,9 @@ function dispatch(message: any, button: HTMLButtonElement, action: string): Prom
   else if (action === 'diseaseTick') return onDiseaseTick(message, button);
   else if (action === 'overload') return onOverload(message, button);
   else if (action === 'adrenalCrash') return onAdrenalCrash(message, button);
+  else if (action === 'conjuringDrain923') return onConjuringDrain923(message, button);
   else if (action === 'resistToxin') return onResistToxin(message, button);
+  else if (action === 'reexposeToxin923') return onReexposeToxin923(message);
   else if (action === 'morale') return onMorale(message, button);
   else if (action === 'buyItem') return onBuyItem(message, button);
   else if (action === 'haggle') return onHaggle(message, button);

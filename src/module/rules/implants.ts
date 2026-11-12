@@ -3,6 +3,7 @@
  * encephalons, how many chips run at once, and Availability by grade (and cultured bioware).
  * Pure rules; no Foundry. Values in RULES.BIOWARE and RULES.CYBERWARE.
  */
+import { gearBook } from './gear923.ts';
 import { RULES } from './config.ts';
 import { parseAvailability } from './upkeep.ts';
 import type { Monitor } from './damage.ts';
@@ -30,6 +31,8 @@ export function physicalSkill(attribute: string): boolean {
 export function rejectionTn(bodyIndex: number, limit: number): number | null {
   const r = RULES.BIOWARE.rejection;
   const over = Math.max(0, bodyIndex) - Math.max(0, limit);
+  // v0.92.3 (RULES.GEAR_V923.overBodyIndex 'shock', Shadowtech p. 6): system shock (a TN on Body tests) instead.
+  if (gearBook('overBodyIndex')) return null;
   if (!r.enabled || !(over > 0)) return null;
   return Math.max(2, r.tn + Math.ceil(over * r.tnPerPointOver));
 }

@@ -15,7 +15,9 @@ describe('spellcraft', () => {
     assert.equal(boxesHealed(3, 5), 3);
     assert.equal(boxesHealed(4, 2), 2);
   });
-  test('exclusive and fetish lower drain TN', () => {
+  test('exclusive and fetish lower drain TN', (t) => {
+    // v0.92.3: the v0.92.2 rule (RULES.SORCERY_V923).
+    t.after(oldWay({ 'SORCERY_V923.restrictedSpells': 'v922' }));
     assert.deepEqual(spellOptionDrainMods({ exclusive: true, fetish: true }), [{ label: 'Exclusive', value: -2 }, { label: 'Fetish', value: -1 }]);
     assert.deepEqual(spellOptionDrainMods({}), []);
   });
@@ -27,10 +29,14 @@ describe('spellcraft', () => {
     assert.equal(ritualTeamDice([4, 5, 1]), 2 + 2 + 0);
     assert.equal(ritualHours(6), 6);
   });
-  test('magic loss when Deadly and the roll is under Magic', () => {
+  test('magic loss when Deadly and the roll is under Magic', (t) => {
     assert.equal(reachedDeadly(10), true);
     assert.equal(reachedDeadly(9), false);
     assert.deepEqual(magicLossOutcome(5, 6), { lost: 1, threshold: 6 });
+    // v0.92.3: at or below Magic by the book (Core p. 115); the old way only below it.
+    assert.deepEqual(magicLossOutcome(6, 6), { lost: 1, threshold: 6 });
+    assert.deepEqual(magicLossOutcome(7, 6), { lost: 0, threshold: 6 });
+    t.after(oldWay({ 'HEALTH_V923.magicLoss': 'below' }));
     assert.deepEqual(magicLossOutcome(6, 6), { lost: 0, threshold: 6 });
   });
   test('enchanting time and focus Karma', (t) => {

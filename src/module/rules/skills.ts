@@ -1,3 +1,4 @@
+import { webArrowsBlock } from './core923.ts';
 import { RULES } from './config.ts';
 import type { TargetNumberModifier } from './dice.ts';
 import { t as tx } from '../helpers/i18n.ts';
@@ -106,7 +107,8 @@ export function webDistance(links: readonly WebLink[], from: string, to: string)
       const next = x === cur ? y : y === cur ? x : null;
       if (!next) continue;
       // v0.80.0 (RULES.URR_V80.coreWebArrows): "A > B" defaults from A to B only (the search runs from the needed skill back).
-      if (l.oneWay && x === cur && RULES.URR_V80.coreWebArrows) continue;
+      // v0.92.3 (RULES.CORE_V923.webArrows 'book', Core p. 68): the book's arrows block a path too.
+      if (l.oneWay && x === cur && (RULES.URR_V80.coreWebArrows || webArrowsBlock())) continue;
       const nd = d + Math.max(1, l.steps);
       if (nd > max) continue;
       if (nd < (best.get(next) ?? Infinity)) { best.set(next, nd); queue.push(next); }

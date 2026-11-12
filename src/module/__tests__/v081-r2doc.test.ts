@@ -3,9 +3,16 @@
  * findings of RV/R2-SEC.md, with the reviewers' own failing inputs (try-R2-DOC r2doc-probe P1/P2, try-R2-SEC Q3/Q6).
  * Each failed before its fix. The harness is v081-doc.test.ts's (the v0.71.0 glue stubs).
  */
-import { test, describe, before, beforeEach } from 'node:test';
+import { test, describe, before, beforeEach, after } from 'node:test';
+import { oldWay } from '../rules/__tests__/oldway.ts';
+import { SPIRITS_V922_WAY } from '../rules/__tests__/spirits922.ts';
+import { SORCERY_V922 } from '../rules/__tests__/sorcery922.ts';
 import assert from 'node:assert/strict';
 import { RULES } from '../rules/index.ts';
+// v0.92.3: this file pins the v0.92.2 conjuring, astral and initiation rules (the book way: v0923-spirits.test.ts).
+let spirits922: () => void = () => {};
+before(() => { spirits922 = oldWay(SPIRITS_V922_WAY); });
+after(() => spirits922());
 
 const g = globalThis as any;
 const faces: number[] = [];
@@ -271,7 +278,9 @@ describe('R2-DOC 3 (D1-7): sneaking is a physical act', () => {
 });
 
 describe('R2-DOC 4 (D2-2): a ritual member\'s drain', () => {
-  test('a drain that fails after posting its card is not asked for again; the card for another\'s member gives TN and level', async () => {
+  test('a drain that fails after posting its card is not asked for again; the card for another\'s member gives TN and level', async (t) => {
+    // v0.92.3: 'the book' here is the v0.92.2 reading (RULES.SORCERY_V923 at its old way); the book's way is in v0923-sorcery.test.ts.
+    t.after(oldWay(SORCERY_V922));
     const leader = who({ name: 'Leader', magic: 6, nuyen: 100000 }, [skill('cj', RULES.MAGIC_V56.ward.skill, 6, 'charisma')]);
     const mine = who({ name: 'Mine', magic: 5 }, [skill('cj2', RULES.MAGIC_V56.ward.skill, 4, 'charisma')]);
     mine.wardDrain = async function (this: any, ...args: any[]) { await SR2Actor.prototype.wardDrain.apply(this, args); throw new Error('a later update failed'); };
@@ -334,13 +343,14 @@ describe('R2-DOC 6 (D2-3): lower and dispel from a player\'s card need a test ca
   test('a dispel: only what the dispelling card works out', async () => {
     const p = PLAYER();
     g.game.users = Object.assign([GM(), p], { activeGM: { id: 'gm1', isSelf: true }, get(this: any[], id: string) { return this.find((u: any) => u.id === id); } });
-    const mage = ownedBy(who({ name: 'Mage' }), 'p1');
+    // v0.92.3 review fix: the Apply also checks the dispeller knows dispelling (and the book's grade limit).
+    const mage = ownedBy(who({ name: 'Mage', metamagic: { dispelling: true }, initiateGrade: 5 }), 'p1');
     const boss = who({ name: 'Boss', sustaining: [{ spellName: 'Armor', force: 5, successes: 4 }] });
     const ch = { uuid: boss.uuid, dispel: { spellName: 'Armor', force: 5, from: 4, to: 0 }, by: mage.uuid };
     assert.equal(await SR2Actor.applyActorUpdate(ch, { author: p }), false);
     const { resolveDispel } = await import('../rules/index.ts');
     const remaining = resolveDispel(4, 2).remaining;
-    g.game.messages = { contents: [testCard(p, { kind: 'dispel', successes: 2, dispel: { targetUuid: boss.uuid, targetName: 'Boss', spellName: 'Armor', force: 5, successesBefore: 4, successesAfter: 4 } })] };
+    g.game.messages = { contents: [testCard(p, { kind: 'dispel', actorUuid: mage.uuid, successes: 2, dispel: { targetUuid: boss.uuid, targetName: 'Boss', spellName: 'Armor', force: 5, successesBefore: 4, successesAfter: 4 } })] };
     assert.equal(await SR2Actor.applyActorUpdate({ ...ch, dispel: { ...ch.dispel, to: remaining } }, { author: p }), true);
     assert.equal(remaining <= 0 ? boss.system.sustaining.length : boss.system.sustaining[0].successes, remaining <= 0 ? 0 : remaining);
     // The GM's own Apply needs no test card.

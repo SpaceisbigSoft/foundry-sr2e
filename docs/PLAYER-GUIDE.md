@@ -11,6 +11,7 @@ How to use the unofficial Shadowrun 2nd Edition system for Foundry VTT: what the
 - [Getting started](#getting-started)
 - [All the tools](#all-the-tools)
 - [Rules updated in v0.79.0](#rules-updated-in-v0790)
+- [Combat rules updated in v0.92.3](#combat-rules-updated-in-v0923)
 - [The Unified Rules Revamp (alternate rules)](#the-unified-rules-revamp-alternate-rules)
 - [Edit mode, Play mode and the toolbar](#edit-mode-play-mode-and-the-toolbar)
 - [The summary bar](#the-summary-bar)
@@ -147,6 +148,20 @@ v0.79.0 corrected rules to follow the official SR2 rulebooks (the core rules and
 - **Vehicles:** driving over the Speed rating is +1. Crashes and rams hurt by speed (up to 20 m/turn Light, 60 Moderate, 200 Serious, faster Destroyed). Fixed mounts and turrets halve recoil; a pintle compensates 2, the new ring mount 6. The Sensor dialog has the Rigger 2 rows (line of sight, terrain, a concealing spirit), and sensor-enhanced gunnery rolls Gunnery + half the Sensor against the target's Signature. A repair fixes all the damage in 16 hours per box ÷ successes.
 - **Rigging:** dumped from a remote control deck (your drone destroyed, or your link jammed), you resist (deck rating + 4)S Stun with Body. Radio ranges follow the Rigger 2 flux table (250 m at 0, up to 25 km at 9); a deck with no signal of its own has flux 2.
 
+## Combat rules updated in v0.92.3
+
+v0.92.3 brought combat closer to the SR2 core rulebook. The GM can put each change back under the GM's house rules (the *v0.92.3* rows; the old choice is the second one). Under the Unified Rules Revamp nothing here changes.
+
+- **Gunfire:** you don't dodge. **Defend** puts your Combat Pool dice into the damage resistance test (Body + pool against Power − armor). If the pool dice alone score more successes than the attacker, it is a clean miss. Otherwise the attacker's successes are set against yours: every 2 more on either side moves the damage one level up or down, and a tie does the weapon's base damage.
+- **Staging:** every 2 net successes raise the damage one level, for gunfire, melee and combat spells alike.
+- **Combat Pool:** it refills at the start of each of your actions. Dice left at the end of a Combat Turn last until your first action of the next one.
+- **Melee:** a tie goes to the attacker (base damage). Full defense adds no dice and costs no initiative: no Combat Pool on your melee test, and your pool dice go to the resistance test, a clean miss if their successes beat the attacker's. Light, smoke and weather count half in melee (not full darkness). Subduing is +2 TN, and each further target in the same phase is +2.
+- **Knockdown:** every hit that hurts calls for a Body test against half the Power (gel rounds: the Power; melee: the attacker's Strength). Beat half the wound (Light 1, Moderate 2, Serious 3) to stay put; some successes stagger you 1 m back; none, or a Deadly wound, knocks you down.
+- **Grenades and rockets:** each target's resistance successes are set against the thrower's, as for gunfire. Aerodynamic grenades and launchers lose 4 m of scatter per success; rockets and missiles scatter 2D6 m (a missile also its Intelligence in metres less). Anti-personnel rockets lose 1 Power per half metre.
+- **Firearms:** shotguns fire slugs unless loaded with shot, which follows the flechette rules and widens every choke metres (−1 Power and −1 TN each time). Flechette against armor uses double Impact or plain Ballistic, whichever is higher. Tracers help only full auto beyond short range. Full auto at several targets is +2 per new target, and a smartlinked smartgun wastes no rounds between them. Two rounds left fire a short burst (+2 Power, no extra level). A barrier rated above the Power stops the shot, and counts double against flechette and explosive rounds. Cylinders and internal magazines reload Quickness rounds per Complex Action. A weapon must be readied (a Simple Action) before use.
+- **Attack dialog and armor:** target running (+2), target stationary (−1), attacker in melee (+2 per opponent), difficult ground and smart goggles (−1) are new rows. Heavy armor costs a Combat Pool die per point of Ballistic over your Quickness, instead of Quickness.
+- **Initiative and actions:** ties go to Reaction, then natural Reaction. A wound changes your initiative at the next roll, not mid-turn. A delayed action lasts through the Combat Turn and into the next, but using pool dice while you wait loses it. Ambushers waiting on a delayed action roll the surprise test at TN 2.
+
 ## The Unified Rules Revamp (alternate rules)
 
 The GM chooses the world's **Rules source** (Configure Settings, or the GM panel's Setup tab). **SR2E Book Rules** is the default and is not changed by any of this. **SR2E Unified Rules Revamp** is the GM's alternate ruleset: the Unified Rules Revamp follows the community document *Shadowrun Classic: Unified Rule Revamp* (v1.2), with a few house rules where it is silent. The GM's own house rules still win over it, and the house rules window marks every row it changes (search for "revamp"). A switch reaches every player at once.
@@ -157,7 +172,7 @@ Using the Unified Rules Revamp changes these:
 - **Combat:** you don't dodge gunfire: Defend puts your Combat Pool dice into the resistance test, and if their successes beat the attacker's it is a clean miss. Damage stages on the resistance test (the attack's successes against yours, 2 either way per level). Full defense in melee adds no dice. A hit that hurts calls for a knockdown test. Initiative ties go to Reaction, then natural Reaction. Shotguns fire slugs unless loaded with shot. Strong shooters take less recoil; tracers only help full auto. Heavy armor costs Combat Pool dice; a second layer adds half. Charging is +1 Power; graded cover, running and sprinting targets and more are in the Attack dialog.
 - **Health:** Stun past a full track goes onto Physical box for box. Bleeding is a box every 10 minutes, and death comes one box past Overflow. First aid lowers a wound one level (Deadly: stabilise only) and shows the treatment time; a better healer can try again. A trauma patch needs a Body test. Stun recovery is the better of Body and Willpower vs 2. A Deadly wound heals only in intensive care; a magician treated without the +2 makes a Magic loss test. Climbing, jumping, swimming and falling use Fitness; trolls run at Quickness × 2.
 - **Social and perception:** the Perceive and Sneak dialogs list sound, smell, touch and taste rows; Negotiation is against Intelligence; haggling moves the price 10% per net success, and the seller rolls against your Intelligence; visible armor in a luxury setting is +2.
-- **Magic:** you roll the spell's Force (plus Spell Pool) to cast; you sustain at most your Sorcery rating in spells; a disaster on casting is +2 drain TN; exclusive spells hit as if 2 Force higher, fetish ones 1. Summoning above your Charisma gives Physical drain; one nature spirit at a time. Astral initiative is 2 × Intelligence + 15 + 1D6. Wards use Sorcery. The Magic loss test also loses a point on a roll equal to your Magic.
+- **Magic:** you roll the spell's Force (plus Spell Pool) to cast. Summoning above your Charisma gives Physical drain; one nature spirit at a time. Astral initiative is 2 × Intelligence + 15 + 1D6. Ward drain is Force + successes.
 - **Vehicles and rigging:** Control Pool dice on a driving test are capped at your skill, and don't go on gunnery or sensor tests (shoot with the Combat Pool), but do help your vehicle resist damage. Rigger feedback comes only from Serious (6M) or Deadly (6S) hits, resisted with Body. Small arms lose Power by Body + Armor. Passengers are hurt only when shot at, or in a crash or ram. A damaged vehicle is slower. A sensor lock is a Complex Action.
 - **Drones and security:** intercepting a drone link needs a remote control deck (break the encryption first); card-reader casings are twice as hard; a passkey and a sequencer roll against the lock; a weapon detector finds everything no better than its highest die; dump shock leaves you disoriented (+2 TN) for a few turns.
 
@@ -219,7 +234,7 @@ The **status strip** stays at the top of the sheet with the tabs while you scrol
 
 **Your turn**: in a running combat, when it is your character's action phase, the strip says so. Unless the GM's house rule *Actions per phase* is off, it shows a pip for each action left, and buttons that need more than you have left are greyed out (hover one for why). Warn (the default) lets you click and warns you; block stops the click (the GM can always click). A projecting magician's or an unmaterialized spirit's physical actions are greyed the same way.
 
-In Foundry's combat tracker, your own combatants show their pools, and get a shield button for full defense (out of turn it costs initiative) and **Delay** in your action phase (then **Act now** and **Done**), like the sheet's quick buttons.
+In Foundry's combat tracker, your own combatants show their pools, and get a shield button for full defense (out of turn it costs initiative only under the old full-defense house rule) and **Delay** in your action phase (then **Act now** and **Done**), like the sheet's quick buttons.
 
 Other choices for yourself in Configure Settings, section *Look and layout*: *Windows: remember size and place* (SR2e's sheets and windows open where you left them; dialogs don't) and *Notifications: group bursts* (several notices at once become one, and a repeat shows ×2, ×3).
 
@@ -299,7 +314,7 @@ They are interpretations, not rulings: the GM's call always wins.
 
 ## Credits and licence
 
-**Built with AI.** This system was written by an AI model, Anthropic's Claude, under the direction of its human owner: the code, the rules numbers and this guide. The numbers came from the AI's memory of the books; many have since been checked against the books, and the rest are listed in `docs/VERIFY.md`. Check anything that looks off against your rulebook and tell your GM; the GM can correct values in the house rules. It has not yet been play-tested at a real table.
+**Built with AI.** This system was written by an AI model, Anthropic's Claude, under the direction of its human owner: the code, the rules numbers and this guide. The numbers first came from the AI's memory of the books; in v0.92.3 the AI checked the default rules against the books and corrected them (a person has not re-checked that yet), and every number is listed with its source in `docs/VERIFY.md`. Check anything that looks off against your rulebook and tell your GM; the GM can correct values in the house rules. It has not yet been play-tested at a real table.
 
 This is an **unofficial** fan system for Shadowrun, Second Edition. It is not affiliated with or endorsed by The Topps Company, Catalyst Game Labs or Black Book Editions. Shadowrun and Matrix are registered trademarks and/or trademarks of The Topps Company, Inc.
 
@@ -341,7 +356,7 @@ Against a target that is invisible to you, the system rolls your test to see thr
 
 Most tests post a card with buttons for what comes next. Only the owner of the character named on the button, or the GM, can use it.
 
-- **Defend**: on an attack card, for the target. It opens the defense dialog with pool dice. Against a melee attack you pick the weapon you fight back with (with a *Counterattack to subdue* box where it applies). Once you have defended, the button is greyed for you, even after a reload; the GM gets an *Already defended* question before a second defense. A vehicle defends with its driver's Combat Pool dice, or the Control Pool of a rigger jumped into it.
+- **Defend**: on an attack card, for the target. It opens the defense dialog with pool dice. Against a melee attack you pick the weapon you fight back with (with a *Counterattack to subdue* box where it applies). Once you have defended, the button is greyed for you, even after a reload; the GM gets an *Already defended* question before a second defense. A vehicle makes no dodge test (the old way, a house rule: its driver's Combat Pool or its rigger's evasive driving); a rigger jumped into it adds Control Pool dice, at most their skill, when it resists the damage.
 - **Resist** (or **Resist damage**): after a hit, the damage resistance test. The condition monitor changes by itself.
 - **Resist** on a spell or power card: the target's resistance test.
 - **Apply (GM)**: your test changed something only the GM may change (a host, a site, a patient you don't own). The GM clicks it to make the change.
@@ -377,7 +392,7 @@ The strip at the top of a card is coloured by the kind of test: red for combat, 
 If the character has a Karma Pool, their test cards get Karma buttons:
 
 - **Re-roll N failures (Karma X)**: rolls the failed dice again. Each re-roll of the same test costs more.
-- **Avoid disaster**: on a roll where every die shows 1.
+- **Avoid disaster**: on a roll where every die shows 1. After it no more Karma can be spent on that test.
 - **Buy a success**: when the test has at least one success. The label says *permanent* when the point is gone for good rather than back at the next refresh.
 
 On an attack, use Karma before the target defends: once they have, the attack card's Karma buttons refuse.
@@ -392,11 +407,11 @@ Karma Pool left shows under **Derived** on the Main tab. The circular arrow besi
 
 The pools are the Combat Pool, Spell Pool, Hacking Pool (Matrix), Control Pool (rigging) and Karma Pool. The [status strip](#layouts-the-status-strip-and-your-turn) shows each as pips; click a pip to set how many are left (clicking the last filled pip takes one die off).
 
-A test dialog that can take pool dice has a box for them. What you use comes off what is left. The Main tab shows the Combat Pool spent; the Matrix and Rigging tabs show theirs, with a box to correct the spent number.
+A test dialog that can take pool dice has a box for them. What you use comes off what is left. The Main tab shows the Combat Pool spent; the Matrix and Rigging tabs show theirs, with a box to correct the spent number. Skill and attribute dialogs also have a box for **Karma Pool dice**: one point a die, up to the test's own dice.
 
 An encephalon gives a small **Task Pool** for Intelligence, knowledge and Build/Repair skills: the skill dialog has a box for it (used up only in combat). An adept's Combat Sense adds to the Combat Pool, and a power focus adds its rating to the Spell Pool.
 
-The Combat, Spell, Hacking, Control and Task Pools refill when a combat starts and at each new Combat Turn. The GM can also refill them from the GM panel (Party tab: **Refresh pools**). The Karma Pool doesn't refill with them: use the circular arrow beside **Karma Pool left** on the Main tab, or the GM's **Refresh Karma Pools**. A house rule can refill Karma Pools by themselves at the start of each session or when a combat ends.
+The Combat, Spell, Hacking, Control and Task Pools refill when a combat starts and at each new Combat Turn. The GM can also refill them from the GM panel (Party tab: **Refresh pools**). The Karma Pool refills by itself when a combat ends; between other scenes use the circular arrow beside **Karma Pool left** on the Main tab, or the GM's **Refresh Karma Pools**. A house rule can refill Karma Pools at the start of each session instead, or only by hand.
 
 On the Current tab, **Initiative and pools** lists the initiative (and Matrix or rigged initiative) and each pool, read only. Your combatants in the combat tracker show their pools too.
 
@@ -556,7 +571,7 @@ Each weapon, armor and gear row has a suitcase: click it to leave the thing behi
 
 Cyberware and bioware, each with an *Installed* tick box. Ticking it by hand skips the surgery: use it for ware fitted before play. Ware that isn't installed has a **Surgery** button: pick who operates, the care while recovering, and whether to pay for a hospital. Recovery shows under the list with the days left; the bed icon changes the care (the GM's × ends it). Damaged ware has **Repair**; the burst or wrench icon marks it damaged or repaired. An adrenal pump has **Activate** and **Switch off**.
 
-Lines under the list show the Body Index and other notes, and a **Rejection test** button when over the limit.
+Lines under the list show the Body Index and other notes. Over the limit the character is in system shock (+1 TN per point over on Body tests); under the old house rule a **Rejection test** button shows instead.
 
 A grade changes the Essence and the price. The item's Essence field keeps the standard cost; its sheet shows **At this grade** with the Essence and price the grade gives. Hover over the Essence line on the Main tab to see which ware makes up the loss.
 
@@ -653,11 +668,11 @@ On a new character, the Creation tab (and the Bio tab) has **Create character…
 - Priorities: pick a letter, A to E, for each of Race, Magic, Attributes, Skills and Resources. Picking a letter another one holds swaps the two.
 - Metatype: choices the Race priority doesn't allow are greyed out.
 - Attributes: base ratings, with points used and allowed.
-- Magic: mundane, full magician, adept or aspected, as the priority allows; tradition and totem; spells or adept powers through the Add window. A magician's foci bought in creation arrive bonded and count against the spell points.
+- Magic: mundane, full magician, adept or aspected, as the priority allows (a metahuman magician needs Magic B, a metahuman adept C); tradition and totem; spells or adept powers through the Add window. A magician's foci bought in creation arrive bonded and count against the Force Points, which come from the Resources priority.
 - Skills: the + for each kind opens the skill picker (free in creation). Set ratings and specializations here; a specialization taken here lowers the skill as the trade works, and a check flags a trade that doesn't. Common skills you haven't taken are listed: click one to add it at 1.
 - Resources: the lifestyle, months paid ahead or bought outright, and the **Shopping** buttons, which open the Add window. Free and bought items both come out of the Resources nuyen.
 - Contacts: **Add a contact**, then its name, level (1 to 3) and role. The first ones are free; more cost nuyen.
-- Finish: every build check with ✓ or ✗; click a check to go to its step. You can finish with checks unmet; the record notes it. Finishing pays the lifestyle and keeps the cash left, as the hint says.
+- Finish: every build check with ✓ or ✗; click a check to go to its step. You can finish with checks unmet; the record notes it. Finishing pays the lifestyle, keeps a tenth of the cash left, adds 3D6 × ¥1,000 starting cash and gives a metahuman a Karma Pool of 2, as the hint says.
 
 The **Totals** panel keeps the build checks in view at every step. Closing the wizard keeps the draft: **Continue creation…** opens it again. **Finish creation** freezes the [creation record](#creation-record-and-advancement-log).
 
@@ -732,7 +747,7 @@ The Magic tab's **Magic** section is for magically active characters.
 - The scene environment and background count here (the GM sets them with the pencils), and a running quest with **Next stage** and × to end it. While projecting, the hours out of the body show against the limit.
 - Initiate grade and metamagic tick boxes. Adepts initiate too: they see **Initiate**, their grade and only the techniques an adept can learn (centering and the others the house rules allow), but not **Quest**, **Ward…** or **Geasa**. A centering initiate fills in **Centering skill** (for example Singing); **Center** then rolls it before a magical test.
 - Shamans fill in the totem: its bonuses, its environment and the dice in and away from it, *Berserk*, *Daylight TN* and which spirits its conjuring dice help. An elementalist picks an **Element**.
-- **Geasa**: the + adds one; click one to change its words. Untick *Met* when a geas is broken; the heading shows the Magic lost.
+- **Geasa**: the + adds one; click one to change its words. Untick *Met* when a geas is broken: each broken geas adds +2 to your magical tests (by the book; the house rules can make it cost Magic instead, shown in the heading).
 - **Sustaining**: spells you hold and the TN they add. The × drops one. **Quicken** or **Elemental** where allowed.
 - **Anchored**: **Release**, or × to discard.
 - **Foci**: tick Active; the rating is a box. **Bond** an unbonded focus for Good Karma. An addiction risk shows with an **Addiction test** button (the GM's × clears an addiction).
@@ -783,7 +798,7 @@ The + opens the [Add window](#the-shop-the-add-window) at Spells. Learning a spe
 
 ## Spell formulas and teachers
 
-Out of character creation a magician learns a new spell only from a **spell formula** they hold, from a **teacher** who knows it, from their magical group's **grimoire**, or from a spell they **designed** themselves. The learning test and the Good Karma are the same in every case.
+Out of character creation a magician learns a new spell only from a **spell formula** they hold, from a **teacher** who knows it, from their magical group's **grimoire**, or from a spell they **designed** themselves. The learning test (Sorcery + Magical Theory vs 2 × Force) and the Good Karma are the same in every case, but learning from a formula with no teacher is at +2 TN.
 
 - **Buying a formula**: in the shop or the Add window, the scroll on a spell's row opens **Buy a formula…**. Pick the Force (you can learn the spell at up to it) and the tradition (hermetic or shamanic). A formula is gear: it is found, haggled, bought, sent to the GM's approval queue and delivered like anything else, and it can be given, traded or sold.
 - **Learning from it**: open the formula on your sheet and press **Learn this spell…**, or use Learn in the Add window: a formula you hold is used by itself. A spell you know at a lower Force is raised; raising a Force needs a formula of the new Force.
@@ -815,9 +830,9 @@ The Matrix tab shows when the character owns a cyberdeck or a program.
 - A security decker of the host gets **Security**. An otaku sees their **Channels** (the + raises one for Karma) and **Complex form…** beside Write….
 - On a wireless connection, type the distance to the relay to check the signal. The section also lists LTG numbers you know (× forgets one), defenses loaded, maneuvers in force and who rides your hitcher jacks (others ride along with the **Hitch** quick button).
 
-Warnings (traced, held, crippled, a damaged deck with **Repair**, psychotropic IC effects, smoke, time on the way to a host) show in red with what you can do about them; the GM has an × or eraser to clear them.
+Warnings (traced, held, crippled, a damaged deck, psychotropic IC effects, smoke, time on the way to a host) show in red with what you can do about them; the GM has an × or eraser to clear them. Gray IC damage to a deck is permanent: build the damaged part again to replace its chip (**Repair** works only under the GM's house rule).
 
-Cards from IC and jacking out carry the follow-up buttons: **Resist dump shock**, **Deck damage**, **Resist biofeedback**, a psychotropic **Resist**, **Resist overload**. On an NPC sheet the Matrix is a section, not a tab.
+Cards from IC and jacking out carry the follow-up buttons: **Resist dump shock**, **Deck damage**, **Resist biofeedback**, a psychotropic **Resist**, **Resist overload**, and against black IC a second **Resist** for your icon. Jacking out without a Graceful Logoff risks dump shock, and psychotropic IC that hit you test your mind when you jack out. On an NPC sheet the Matrix is a section, not a tab.
 
 ## Rigging
 
@@ -830,7 +845,7 @@ The Rigging tab shows for a character with a control rig or a remote control dec
 
 Jumping in needs a control rig, and a rigger adaptation on the vehicle (drones count as adapted; the rigger adaptation goes in on top of a remote adaptation, under Modifications on the vehicle sheet). Jumping in from outside the vehicle also needs a remote control deck, and a link that is not jammed or spoofed; out of range it warns, or stops you if the house rules say so. Without a control rig you can still drive by hand.
 
-Damage to a vehicle you are jumped into comes back on a card with **Resist feedback** (or **Resist dump shock** when it is destroyed or the link is cut).
+A Serious or Deadly hit on a vehicle you are jumped into, or one that destroys it, comes back on a card with **Resist feedback** (6M, or 6S for a Deadly or destroying hit, Physical, resisted with Body); a remote rigger gets **Resist dump shock** when the vehicle is destroyed or the link is cut.
 
 The **Drone link** quick button (on characters and NPCs, when there are vehicles) intercepts a drone's remote link or spoofs it a command. Intercepting needs a remote control deck or a radio (under the [Unified Rules Revamp](#the-unified-rules-revamp-alternate-rules), a remote control deck, and an encrypted link is decrypted first). Spoofing needs a remote control deck. An intercepted link shows *Link intercepted* on the vehicle sheet until the GM clears it; with the house rule that lets a spoof take the drone over, a spoofed one shows *Link spoofed*. A character with a jammer has a **Jam** quick button.
 
@@ -901,7 +916,7 @@ On both tabs, NPC rows show as compact stat cards (attributes, armor, initiative
 
 Foundry's combat tracker gets a banner with the Combat Turn, the pass, who is acting and how many are on full defense or delaying. The acting row is highlighted, delaying combatants are listed last under *Delaying*, and full defense shows as a badge. IC, frames and agents get an act button there.
 
-The tracker's header has **Surprise test** (every combatant rolls; hover it for how the result is used) and, when Foundry's own button isn't there, **Roll NPCs**. Rows you own have **Delay**, **Act now** or **Done**, a shield to declare full defense (out of turn it costs initiative), and a line with the pools left.
+The tracker's header has **Surprise test** (every combatant rolls; hover it for how the result is used) and, when Foundry's own button isn't there, **Roll NPCs**. Rows you own have **Delay**, **Act now** or **Done**, a shield to declare full defense (out of turn it costs initiative only under the old full-defense house rule), and a line with the pools left.
 
 ## Party tab
 
@@ -1007,4 +1022,4 @@ Configure Settings itself is in sections:
 - *Other*: *Rules source* (see [the Unified Rules Revamp](#the-unified-rules-revamp-alternate-rules)), *Apply players' GM-only changes by themselves* and each player's *Dice So Nice: SR2e colours*.
 - *Look and layout*: each player's own look (see [Your look](#your-look-theme-colours-and-text-size)).
 
-Many values were entered from memory and need checking against your SR2 rulebook: the list is `docs/VERIFY.md` in the project's source.
+Many values were first entered from memory; in v0.92.3 the defaults were checked against the SR2 books. Every value and its source is listed in `docs/VERIFY.md` in the project's source, for checking against your rulebook.

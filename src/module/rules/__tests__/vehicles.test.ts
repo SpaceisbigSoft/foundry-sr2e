@@ -5,8 +5,10 @@ import {
   handlingFor, drivingModifiers, vehicleIncomingDamage, applyVehicleDamage, crashDamage, riggerFeedback, overSpeed,
 } from '../vehicles.ts';
 import { RULES } from '../config.ts';
+import { useV922Vehicles } from './v922vehicles.ts';
 
 describe('vehicles and rigging (v0.24.0)', () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   test('categories name their default skill; unknown falls back to other', () => {
     assert.equal(vehicleCategory('rotor').skill, 'Rotor Aircraft');
     assert.equal(vehicleCategory('nope').id, 'other');
@@ -107,6 +109,7 @@ import {
 } from '../vehicles.ts';
 
 describe('vehicle combat, sensors, remote decks, chases (v0.25.0)', () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   test('who may fire which mount', () => {
     assert.deepEqual(['driver', 'gunner', 'autopilot'].map((r) => canFireMount('fixed', r as any)), [true, false, true]);
     assert.deepEqual(['driver', 'gunner', 'autopilot'].map((r) => canFireMount('turret', r as any)), [true, true, true]);

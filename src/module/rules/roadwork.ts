@@ -4,6 +4,7 @@ import type { LightLevel, Vision } from './weapons.ts';
 import { lightModifier } from './situation.ts';
 import { dsCasingModifiers, dsLockToolStep } from './urr80-drones-security.ts';
 import { finiteNum, levelIndex, sameCombatRound } from './util.ts';
+import { veh923 } from './vehicles.ts';
 import { t as tx } from '../helpers/i18n.ts';
 
 /**
@@ -25,7 +26,9 @@ export function speedChangeLimit(o: { accel: number; from: number; to: number; e
   const change = n(o.to) - n(o.from);
   const braking = change < 0;
   const base = Math.max(0, n(o.accel)) + Math.max(0, n(o.extra));
-  const max = braking ? base * a.brakeMultiplier : base;
+  // v0.92.3 (RULES.VEHICLES_V923.accel 'book', Rigger 2 p. 22): safe braking up to Acceleration × 4 in a Combat Turn.
+  const mult = veh923('accel') === 'book' ? n(RULES.VEHICLES_V923.brakeMultiplier) : a.brakeMultiplier;
+  const max = braking ? base * mult : base;
   return { allowed: Math.abs(change) <= max, max, braking, change };
 }
 
@@ -243,6 +246,11 @@ export function bypassPlan(o: { rating: number; lockType: string; casing: number
   const T = RULES.BOOK_V78.tamper;
   const tamper = T.mode === 'tn' ? Math.max(0, n(o.tamper)) : 0;
   const tamperRow = tamper > 0 ? [{ label: tx('SR2E.Card.Mod.antiTamperAlarm', { tamper }), value: tamper }] : [];
+  // v0.92.3 (RULES.VEHICLES_V923.passkey 'book', CSH p. 100): a passkey goes in the reader's slot, so the casing stays shut.
+  if (o.lockType === 'card' && veh923('passkey') === 'book') {
+    const key = dsLockToolStep({ lockType: o.lockType, rating: n(o.rating), skillDice: skill, tools: o.tools ?? [] });
+    if (key && key.tool.kind === 'passkey') return { ...key, tamperOnStep: false };
+  }
   if (n(o.casing) > 0 && !o.casingOpen) {
     // v0.80.0 (RULES.URR_V80.dsLockCasing 'byType', URR): a card reader's casing counts double, a print or retinal scanner's +2.
     return { step: 'casing', tn: Math.max(RULES.MIN_TARGET_NUMBER, n(o.casing)), dice: skill, modifiers: [...dsCasingModifiers(o.lockType, o.casing), ...(light ? [light] : []), ...tamperRow], tool: null, note: tx('SR2E.Text.Roadwork.openTheCasingFirst', { casing: o.casing }), tamperOnStep: tamper > 0 };

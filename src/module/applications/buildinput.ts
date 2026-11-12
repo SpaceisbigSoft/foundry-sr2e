@@ -5,7 +5,8 @@
 import { SYSTEM } from '../config/system.ts';
 import { ATTRIBUTE_KEYS } from '../models/index.ts';
 import { buildCheck, wareCost, type BuildColumn, type Priority, type BuildInput } from '../rules/index.ts';
-import { inCreation } from './approvals.ts';
+import { inCreation, draftTable } from './approvals.ts';
+import { withPriorityTable } from '../rules/core923.ts';
 
 /** v0.63.0: the saved build's checks (none until Build… has saved priorities). */
 export function buildRowsFor(actor: any): Array<{ label: string; used: any; allowed: any; ok: boolean; note?: string }> {
@@ -13,7 +14,8 @@ export function buildRowsFor(actor: any): Array<{ label: string; used: any; allo
   const saved = (actor.getFlag?.(SYSTEM.id, "build") ?? null) as Partial<Record<BuildColumn, Priority>> | null;
   // v0.75.0: a build whose columns are all null (cleared on an unlinked token, or written empty) counts as none.
   if (!saved || !Object.values(saved).some((v) => v)) return [];
-  try { return buildCheck({ ...buildInputFor(actor, saved), inCreation: inCreation(actor) }) as any; } catch { return []; }
+  // v0.92.3 review fix: a draft keeps the priority table it was started with.
+  try { return withPriorityTable(draftTable(actor), () => buildCheck({ ...buildInputFor(actor, saved), inCreation: inCreation(actor) })) as any; } catch { return []; }
 }
 
 export function buildInputFor(actor: any, priorities: Partial<Record<BuildColumn, Priority>>): BuildInput {

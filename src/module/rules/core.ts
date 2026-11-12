@@ -2,6 +2,7 @@ import { RULES, type DamageLevel } from './config.ts';
 import type { TargetNumberModifier } from './dice.ts';
 import type { Status } from './damage.ts';
 import { urrCoreMaxAdjust } from './urr80-core.ts';
+import { racialExtra } from './core923.ts';
 import { firstAidLevelBoxes, bleedTurnsPerBox } from './urr80-health-social.ts';
 import { own } from './util.ts';
 import { t as tx } from '../helpers/i18n.ts';
@@ -17,7 +18,10 @@ export function metatype(id: string | null | undefined) {
 
 /** The racial modifier for one attribute. */
 export function racialModifier(id: string | null | undefined, key: AttrKey): number {
-  return own(metatype(id).mods as Record<string, number | undefined>, key) ?? 0;
+  // v0.92.3 (RULES.CORE_V923.racialMods 'book', Core p. 45): the dwarf's Quickness −1 and the troll's Willpower −1.
+  const t = RULES.METATYPES.types;
+  const extra = own(t, id ?? 'human') ? racialExtra(id, key) : 0;
+  return (own(metatype(id).mods as Record<string, number | undefined>, key) ?? 0) + extra;
 }
 
 /**
@@ -130,6 +134,13 @@ export function dyingTick(roundsSince: number, body: number): boolean {
 export type ActionCost = 'free' | 'simple' | 'complex';
 
 export function actionCost(kind: string): ActionCost {
+  // v0.92.3: cybercombat attacks and maneuvers are Simple Actions (VR2 pp. 121, 123; RULES.MATRIX_V923.actions).
+  if (kind === 'matrixAttack' || kind === 'matrixManeuver') {
+    if (RULES.MATRIX_V923.actions !== 'v922') return 'simple';
+    return own(RULES.ACTIONS.costs, kind) ?? 'complex';
+  }
+  // v0.92.3: a Free system operation (VR2 p. 161).
+  if (kind.startsWith('matrix') && kind.endsWith(':free')) return 'free';
   return own(RULES.ACTIONS.costs, kind) ?? 'simple';
 }
 

@@ -13,6 +13,7 @@ import { initiativeWoundPenalty } from './initiative.ts';
 import { numberMatches } from './netrig.ts';
 import { NETRIG_V73 } from './config73/netrig.ts';
 import { combatStamp, sameCombatRound } from './util.ts';
+import { vcrTnFactor } from './vehicles.ts';
 import { t as tx, tCount } from '../helpers/i18n.ts';
 
 type Cfg = typeof NETRIG_V73;
@@ -176,6 +177,8 @@ export function controlRigTn(o: { test: 'gunnery' | 'evasion'; vcr: number; jump
   const per = Number(RULES.RIGGING.vcr.tnPerLevel) || 0;
   const vcr = whole(o.vcr);
   if (!o.jumpedIn || vcr <= 0 || !per || !V().controlRig[o.test]) return [];
+  // v0.92.3 (RULES.VEHICLES_V923.vcrTn 'byTest', Rigger 2 pp. 57–58): no control-rig row on the gunnery tables (nor evasion).
+  if (!vcrTnFactor(o.test)) return [];
   return [{ label: tx('SR2E.Card.Mod.controlRig', { vcr }), value: per * vcr }];
 }
 

@@ -1,3 +1,4 @@
+import { nativeBonusBook, roundTime, individualAwardRows } from './core923.ts';
 import { RULES } from './config.ts';
 import type { TargetNumberModifier } from './dice.ts';
 import { lifestyleOf } from './upkeep.ts';
@@ -56,7 +57,8 @@ export function timeTaken(base: number, unit: string, successes: number): { ok: 
   if (s <= 0) return { ok: false, value: 0, unit: u.id, label: tx('SR2E.Card.Mod.notDoneNoSuccesses'), seconds: 0 };
   const step = num(C().time.roundTo);
   const raw = b / s;
-  const value = step > 0 ? clean(Math.ceil(clean(raw / step)) * step) : clean(raw);
+  // v0.92.3 (RULES.CORE_V923.timeRounding 'nearest', Core p. 68): to the nearest whole unit (2.66 → 3).
+  const value = roundTime(raw) ?? (step > 0 ? clean(Math.ceil(clean(raw / step)) * step) : clean(raw));
   return { ok: true, value, unit: u.id, label: tx('SR2E.Text.Everyday.timeTakenLabel', { value, unit: u.label, base: clean(b), successes: s }), seconds: clean(value * u.seconds) };
 }
 
@@ -138,7 +140,8 @@ export function lifestyleCost(lifestyleId: string, months: number): number {
 /** v0.58.0: the native language's rating: Intelligence when nativeAtIntelligence, else 0. */
 export function nativeLanguageRating(intelligence: number): number {
   // v0.80.0 (RULES.URR_V80.coreNativeBonus): Intelligence + 2 under the Revamp (+0 in the book).
-  return C().languages.nativeAtIntelligence ? Math.max(0, Math.floor(num(intelligence))) + urrCoreNativeBonus() : 0;
+  // v0.92.3 (RULES.CORE_V923.nativeLanguage 'book', Core p. 46): Intelligence + 2 in the book too (the Revamp's bonus wins when set).
+  return C().languages.nativeAtIntelligence ? Math.max(0, Math.floor(num(intelligence))) + (urrCoreNativeBonus() || nativeBonusBook()) : 0;
 }
 
 /** v0.58.0: the Read/Write rating of a language: half rounded up ('half') or the same. */
@@ -208,7 +211,8 @@ export function karmaAwardTotal(o: { team: Record<string, number>; individual: R
     const v = clamp(o.team[r.id]!, r.max);
     if (v) { team += v; lines.push(`${r.label} +${v}`); }
   }
-  for (const r of k.individual) {
+  // v0.92.3 (RULES.CORE_V923.awards 'book', Core p. 199): the book's individual awards.
+  for (const r of individualAwardRows()) {
     const x = (o.individual ?? {})[r.id];
     const v = x === true ? clamp(r.value, r.max) : typeof x === 'number' ? clamp(x, r.max) : 0;
     if (v) { individual += v; lines.push(`${r.label} +${v}`); }

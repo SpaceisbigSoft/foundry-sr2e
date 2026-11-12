@@ -5,13 +5,20 @@
  * dice, a chat log of message objects with getFlag, warnings). These check OUR wiring, not that Foundry behaves
  * as the stubs do.
  */
-import { test, describe, before, beforeEach } from 'node:test';
+import { test, describe, before, beforeEach, after } from 'node:test';
+import { SORCERY_V922 } from '../rules/__tests__/sorcery922.ts';
 import { oldWay } from '../rules/__tests__/oldway.ts';
+import { SPIRITS_V922_WAY } from '../rules/__tests__/spirits922.ts';
 import assert from 'node:assert/strict';
 import { RULES, haggledPrice, hotFencePrice, icInitiative, initiativeWoundPenalty } from '../rules/index.ts';
 import { buttonCost } from '../rules/interface.ts';
 import { vehicleRepairPlan } from '../rules/roadwork.ts';
 import { initiativeFormula } from '../helpers/initiative.ts';
+import { useV922Vehicles } from '../rules/__tests__/v922vehicles.ts';
+// v0.92.3: this file pins the v0.92.2 conjuring, astral and initiation rules (the book way: v0923-spirits.test.ts).
+let spirits922: () => void = () => {};
+before(() => { spirits922 = oldWay(SPIRITS_V922_WAY); });
+after(() => spirits922());
 
 const g = globalThis as any;
 const faces: number[] = [];
@@ -283,7 +290,9 @@ describe('R1 Karma Pool on contest and street cards', () => {
     assert.match(again.content, /Found in/);
   });
 
-  test('fence: the offer on the card flag; a share the heat eats whole: the fence passes, no Sell flag', async () => {
+  test('fence: the offer on the card flag; a share the heat eats whole: the fence passes, no Sell flag', async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.fence': 'old' }));
     const loot = (heat: number) => ({ id: 'loot', type: 'gear', name: 'Loot', system: { cost: 1000, streetIndex: 1, quantity: 1, heat, heatAt: 0 } });
     const a = dealer(3, [loot(0)]);
     faces.push(5, 5, 1, 1, 2, 2, 2, 2);
@@ -343,7 +352,9 @@ describe('R2 contests through the shared skill-dice path', () => {
     await withRule(RULES.FIXES_V71, 'contestSkillDice', false, () => { assert.equal(a.stealthSide().dice, 3); });
   });
 
-  test('perceptionDice: Perception + gear dice; the old raw rating with the switch off; no skill: Intelligence', async () => {
+  test('perceptionDice: Perception + gear dice; the old raw rating with the switch off; no skill: Intelligence', async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.perception': 'opposed' }));
     const a = sneaky();
     const p = a.perceptionDice();
     assert.equal(p.dice, 5);                                             // 4 + suit 1
@@ -355,6 +366,7 @@ describe('R2 contests through the shared skill-dice path', () => {
 });
 
 describe('R5 a jumped-in rigger dodges with a driving test', () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   const atk = (v: any) => ({ attackerUuid: 'x', targetUuid: v.uuid, weaponName: 'Gun', melee: false, damageType: 'physical', power: 8, level: 'M', attackSuccesses: 2, targetNumber: 4, antiVehicle: true });
 
   test("riggerDodge 'skill': Car skill + Control Pool against Handling; 'pool': the pool alone", async () => {
@@ -425,7 +437,9 @@ describe('R11 a partial dispel shrinks the spell\'s effect', () => {
     return { subj, oldSubj, caster, d, oldFx };
   };
 
-  test('2 of 3 successes dispelled: the subject\'s effect is rebuilt at 1; an old entry (no spec) is left with a note', async () => {
+  test('2 of 3 successes dispelled: the subject\'s effect is rebuilt at 1; an old entry (no spec) is left with a note', async (t) => {
+    // v0.92.3: 'the book' here is the v0.92.2 reading (RULES.SORCERY_V923 at its old way); the book's way is in v0923-sorcery.test.ts.
+    t.after(oldWay(SORCERY_V922));
     const { subj, oldSubj, caster, d, oldFx } = setup();
     assert.equal(subj.getFlag('sr2e', 'powerEffects')[0].ballistic, 3);
     faces.push(5, 5, 1, 1, ...Array(12).fill(5));                        // 2 successes; drain
@@ -439,7 +453,9 @@ describe('R11 a partial dispel shrinks the spell\'s effect', () => {
     assert.ok(chat.some((m) => /predates v0\.71\.0/.test(m.content) && /Old subject/.test(m.content)));
   });
 
-  test('switched off: the effect keeps its size', async () => {
+  test('switched off: the effect keeps its size', async (t) => {
+    // v0.92.3: 'the book' here is the v0.92.2 reading (RULES.SORCERY_V923 at its old way); the book's way is in v0923-sorcery.test.ts.
+    t.after(oldWay(SORCERY_V922));
     const { subj, caster, d } = setup();
     faces.push(5, 5, 1, 1, ...Array(12).fill(5));
     await withRule(RULES.FIXES_V71, 'dispelShrinks', false, () => d.dispel(caster, 0));
@@ -543,7 +559,7 @@ describe('R14 the your-turn helper knows every button that costs an action', () 
     assert.equal(buttonCost('ramVehicle'), c.drive);
     assert.equal(buttonCost('pushSpeed'), c.drive);
     assert.deepEqual(['matrixPerceive', 'useUtility', 'sneak', 'sensorTest', 'ramVehicle', 'pushSpeed'].map((b) => buttonCost(b)),
-      ['simple', 'complex', 'simple', 'simple', 'complex', 'complex']);
+      ['simple', 'complex', 'simple', 'complex', 'complex', 'complex']); // v0.92.3: a sensor test is Complex (Rigger 2 p. 58)
   });
 });
 
@@ -609,6 +625,7 @@ describe('R17 rigger adaptation', () => {
 });
 
 describe('R18 vehicle repair', () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   const plan = (o: any) => vehicleRepairPlan({ successes: 0, condition: 0, systems: {}, destroyed: false, boxesPerSuccess: 1, hoursPerBox: 1, partsFirst: true, rebuild: true, rebuildFactor: 2, ...o });
 
   test('vehicleRepairPlan: parts first, then boxes; boxes first; a rebuild', () => {
@@ -625,6 +642,8 @@ describe('R18 vehicle repair', () => {
   const easier = [{ label: 'Easy job', value: -4 }];
 
   test('no tools: + the no-tools TN; the success fixes the shot-out tires first, then a box', async (t) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    t.after(oldWay({ 'CHARACTERS_V58.tools.none': 'tn' }));
     t.after(oldWay({ 'DOCS_V79.vehRepair.mode': 'perSuccess' })); // v0.79.0: the old rule (a house rule)
     const m = mechanic();
     const v = vehicle({ condition: 2, systems: { tires: true, engine: false, sensors: false } });
@@ -644,7 +663,9 @@ describe('R18 vehicle repair', () => {
     assert.equal(faces.length, 0);
   });
 
-  test('a destroyed vehicle needs a success to start a rebuild; then everything is fixed', async () => {
+  test('a destroyed vehicle needs a success to start a rebuild; then everything is fixed', async (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CHARACTERS_V58.tools.none': 'tn' }));
     const m = mechanic();
     const v = vehicle({ condition: RULES.VEHICLES.conditionBoxes, systems: { tires: true, engine: true, sensors: false } });
     assert.equal(v.system.derived.destroyed, true);

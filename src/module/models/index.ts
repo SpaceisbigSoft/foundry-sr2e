@@ -33,17 +33,23 @@ import {
 } from '../rules/index.ts';
 // v0.71.0 (R7): MPCP caps on loaded programs.
 import { programsOverMpcp, mpcpProgramWarnings, mpcpCapsOn, programRunRating } from '../rules/matrix.ts';
+import { personaSpeed, jackpointMods, otakuPersona923 } from '../rules/matrix923.ts';
 import { sysNow } from '../helpers/clock.ts';
 import { urrMagAstralModeFor, urrMagAdeptFoci } from '../rules/urr80-magic.ts';
 import { bleedEveryText } from '../rules/urr80-health-social.ts';
+import { deathBody, dwarfDiceAgainst } from '../rules/health923.ts';
 import { magicPoolBase, sorceryRating } from '../rules/docs79-drones-magic.ts';
 import { poolLayers, narrowLeft, sorcerySkillOf } from '../rules/magicpool.ts';
 import { TWEAK_TARGETS, sumTweaks, isCarried } from '../rules/tweaks.ts';
 import * as U80C from '../rules/urr80-combat.ts';
+import { astralCombatPool } from '../rules/spirits923.ts';
+import { dermalArmor, threatBook } from '../rules/core923.ts';
 import { armorTotal } from '../rules/gear.ts';
 import { FEEDS } from '../rules/tactics.ts';
 import { ART_ARCHETYPES } from '../rules/tokenart.ts';
 import { t as tx, tCount } from '../helpers/i18n.ts';
+import { gearBook, isDermalPlating, dermalRating, limbPairsBody, housedEssenceCost, boneLacingBook, cyberReplacements, awakenedBioEssence, culturedBodyCost, essenceKills, bookLoad, heavyArmorPoolPenalty } from '../rules/gear923.ts';
+import { round2 } from '../rules/util.ts';
 
 const f = () => foundry.data.fields;
 /** World time now (0 outside Foundry). */
@@ -162,6 +168,10 @@ export function augmentationsOf(actor: any): Augmentation[] {
   const limbs = new Set(items.filter((i) => i.type === 'cyberware' && i.system.kind === 'cyberlimb' && i.system.installed).map((i) => i.id));
   // v0.72.0 (O11): Sensitive System makes cyberware cost more Essence (RULES.HEALTH_V72.qualities).
   const qv = qualityVitals(actor?.system?.qualities ?? [], RULES.STREET.qualities.enabled);
+  // v0.92.3 (RULES.GEAR_V923.awakenedBioware 'essence', Shadowtech p. 5): magicians and adepts pay Essence for bioware.
+  const awakened = Number(actor?.system?.magic ?? 0) > 0;
+  // v0.92.3 (RULES.GEAR_V923.boneLacing 'book'): cyber replacements weaken bone lacing (Cybertechnology pp. 49–50).
+  const replacements = cyberReplacements(items.filter((i) => i.type === 'cyberware' && i.system.installed && !i.system.bioware).map((i) => ({ name: i.name, kind: i.system.kind })));
   return items
     .filter((i) => i.type === 'cyberware')
     .map((i) => {
@@ -169,10 +179,18 @@ export function augmentationsOf(actor: any): Augmentation[] {
       const e = i.system.bioware ? bioEffect(bioItemOf(i, healing)) : null;
       const attributes = { ...(i.system.attributes ?? {}) };
       if (e) for (const [k, v] of Object.entries(e.attributes)) attributes[k] = (attributes[k] ?? 0) + v;
+      // v0.92.3 (RULES.GEAR_V923.dermal 'body', Core p. 248): dermal plating adds its rating to Body (not armor).
+      if (gearBook('dermal') && isDermalPlating({ name: i.name, bioware: i.system.bioware, kind: i.system.kind })) attributes['body'] = (attributes['body'] ?? 0) + dermalRating(i.system);
+      // v0.92.3 (RULES.GEAR_V923.boneLacing 'book', Shadowtech p. 42): bone lacing adds to Body.
+      if (i.system.kind === 'boneLacing') attributes['body'] = (attributes['body'] ?? 0) + boneLacingBook(String(i.system.lacing ?? ''), replacements).body;
+      const housed = Boolean(i.system.housedIn && limbs.has(i.system.housedIn));
+      // v0.92.3 (RULES.GEAR_V923.limbHoused 'book', Cybertechnology p. 49): only listed ware costs less in a cyberlimb.
+      const housedCost = housed ? housedEssenceCost({ name: i.name, essenceCost: i.system.essenceCost }) : null;
       return {
         // Bioware costs Body Index instead of Essence; cyberware housed in a cyberlimb uses its capacity.
-        essenceCost: i.system.bioware || (i.system.housedIn && limbs.has(i.system.housedIn)) ? 0 : sensitiveEssence(i.system.essenceCost, qv),
-        grade: i.system.grade,
+        essenceCost: i.system.bioware ? awakenedBioEssence(culturedBodyCost(i.system.bodyIndex ?? 0, Boolean(i.system.cultured), String(i.system.bioKind ?? ''), String(i.name ?? '')), awakened)
+          : housed ? (housedCost === null ? 0 : sensitiveEssence(housedCost, qv)) : sensitiveEssence(i.system.essenceCost, qv),
+        grade: i.system.bioware ? 'standard' : i.system.grade,
         installed: i.system.installed && !healing.has(i.id),
         // v0.54.0: Essence goes at implant, even while the item heals in (it works only after).
         essenceCounted: Boolean(i.system.installed),
@@ -186,9 +204,15 @@ export function augmentationsOf(actor: any): Augmentation[] {
     });
 }
 
+/** v0.92.3 (RULES.GEAR_V923.load 'book', Core p. 185): a heavy load counts as this many Stun boxes for wound modifiers. */
+export function loadStunBoxes(load: any): number {
+  return Math.max(0, Number(load?.boxes ?? 0) || 0);
+}
+
 /** Body Index used by installed bioware. */
 function bio_index_used(ware: any[]): number {
-  return ware.filter((i: any) => i.system.bioware && i.system.installed).reduce((n: number, i: any) => n + Math.max(0, i.system.bodyIndex ?? 0), 0);
+  // v0.92.3 (RULES.GEAR_V923.cultured 'book'): cultured bioware's Body Cost × .75.
+  return ware.filter((i: any) => i.system.bioware && i.system.installed).reduce((n: number, i: any) => n + culturedBodyCost(Math.max(0, i.system.bodyIndex ?? 0), Boolean(i.system.cultured), String(i.system.bioKind ?? ''), String(i.name ?? '')), 0);
 }
 
 /** A bioware item as the rules engine sees it. */
@@ -212,6 +236,11 @@ function bioDerived(ware: any[], dermal: { ballistic: number; impact: number }, 
     toxinPowerOff: effects.reduce((acc: Record<string, number>, e) => { for (const [k, v] of Object.entries(e.powerOff ?? {})) acc[k] = (acc[k] ?? 0) + v; return acc; }, {}),
     // v0.45.0: enhanced articulation, trauma dampers, pain editors.
     physicalSkillDice: sum('physicalSkillDice'), stunBoxesOff: sum('stunBoxesOff'), perceptionTn: sum('perceptionTn'),
+    // v0.92.3 (RULES.GEAR_V923.bioware 'book'): enhanced articulation's dice on every Active Skill, a cerebral booster's
+    // Task Pool, and an adrenal pump's Quickness that doesn't raise Reaction (Shadowtech pp. 19, 23, 34).
+    allActiveDice: effects.reduce((n, e) => n + Number(e.allActiveDice ?? 0), 0),
+    taskPool: effects.reduce((n, e) => n + Number(e.taskPool ?? 0), 0),
+    quicknessNoReaction: effects.reduce((n, e) => n + Number(e.quicknessNoReaction ?? 0), 0),
     ignoreStunWounds: effects.some((e) => e.ignoreStunWounds),
     warnings: [...culturedWarnings(bio), ...conflicts.warnings],
     adrenalActive: bio.some((b) => b.bioKind === 'adrenalPump' && b.active && b.installed),
@@ -263,8 +292,12 @@ function cyberDerived(actor: any, ware: any[]) {
     optics: gearOptics,
     /** v0.58.0: working filtration systems (kind, rating) and the best bone lacing. */
     filters: live.filter((i: any) => i.system.kind === 'filtration' && i.system.filterKind).map((i: any) => ({ kind: i.system.filterKind, rating: Math.max(0, i.system.rating ?? 0), name: i.name })),
-    lacing: boneLacingTotals(live.filter((i: any) => i.system.kind === 'boneLacing').map((i: any) => ({ kind: i.system.lacing || '' }))),
+    // v0.92.3 (RULES.GEAR_V923.boneLacing 'book'): lacing adds to Body itself (augmentationsOf), not soak dice.
+    lacing: ((l) => (gearBook('boneLacing') ? { ...l, soakDice: 0 } : l))(boneLacingTotals(live.filter((i: any) => i.system.kind === 'boneLacing').map((i: any) => ({ kind: i.system.lacing || '' })))),
     ultrasound: live.some((i: any) => i.system.ultrasound),
+    /** v0.92.3 (RULES.GEAR_V923.dermal 'body', limbPairs 'body'): dermal armor's Body (plating and pairs of cyberlimbs). */
+    dermal: (gearBook('dermal') ? live.filter((i: any) => isDermalPlating({ name: i.name, bioware: i.system.bioware, kind: i.system.kind })).reduce((n: number, i: any) => n + dermalRating(i.system), 0) : 0)
+      + limbPairsBody(live.filter((i: any) => i.system.kind === 'cyberlimb' && !i.system.bioware).map((i: any) => ({ name: i.name, location: i.system.limb?.location ?? 'other' }))),
     pheromones: max((i) => i.system.pheromones),
     datajack, chipjack, skillwires, limbs, softs,
     encephalon, chipjacks, memoryMp,
@@ -348,7 +381,7 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
         pool: new fields.NumberField({ required: true, integer: true, min: 0, max: SANE_MAX, initial: 1 }),
         /** Karma Pool points used since the last refresh. */
         poolSpent: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
-        /** Karma earned over the career (v0.33.0): every 10 (20 for metahumans) puts a point in the pool. */
+        /** Karma earned over the career (v0.33.0): every RULES.UPKEEP.karma.poolEvery (v0.92.3: 11) puts a point in the pool. */
         career: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
       }),
       /** Upkeep (v0.33.0): lifestyle and when it is paid until (world time; -1 never), contacts, a ledger. */
@@ -499,6 +532,15 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
         addicted: new fields.BooleanField({ required: true, initial: false }),
         dosesAddicted: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
         withdrawalNoted: new fields.BooleanField({ required: true, initial: false }),
+        /** v0.92.3 (RULES.HEALTH_V923.addiction 'book', Shadowtech pp. 87–89): the character's rise over the drug's ratings,
+         * doses taken, the drug's Strength and Tolerance ratings, immunity, and the recovery under way (−1 = none). */
+        rise: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
+        doses: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
+        strength: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
+        tolerance: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
+        immune: new fields.BooleanField({ required: true, initial: false }),
+        recovering: new fields.NumberField({ required: true, initial: -1 }),
+        riseAtKick: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
       })),
       diseases: new fields.ArrayField(new fields.SchemaField({
         name: new fields.StringField({ required: true, initial: '' }),
@@ -585,6 +627,8 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
         focusId: new fields.StringField({ required: true, initial: '' }),
         successes: new fields.NumberField({ required: true, integer: true, min: 0, initial: 1 }),
         quickened: new fields.BooleanField({ required: true, initial: false }),
+        /** v0.92.3 review fix: the Good Karma quickening took (0 = not recorded: Force × the per-Force cost). */
+        quickenKarma: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
         /** An elemental sustaining it for the magician. */
         spiritUuid: new fields.StringField({ required: true, initial: '' }),
         /** World time when the elemental lets it drop (v0.39.0; -1 = no limit). */
@@ -710,11 +754,14 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
     const essence = RULES.GEAR_V58.essenceHoles.enabled && Number(sys.essenceHole ?? 0) > 0
       ? essenceWithHole(Math.max(0, sys.essence + (sys.essenceShift ?? 0)), totalEssenceLoss(augs), Number(sys.essenceHole))
       : currentEssence(Math.max(0, sys.essence + (sys.essenceShift ?? 0)), augs);
-    const bio = bodyIndex(ware.map((i: any) => (i.system.bioware ? { ...i.system, bodyIndex: sensitiveBodyIndex(i.system.bodyIndex ?? 0, qv) } : i.system)), { body: sys.attributes.body.base, essence });
+    const bio = bodyIndex(ware.map((i: any) => (i.system.bioware ? { ...i.system, bodyIndex: sensitiveBodyIndex(culturedBodyCost(i.system.bodyIndex ?? 0, Boolean(i.system.cultured), String(i.system.bioKind ?? ''), String(i.name ?? '')), qv) } : i.system)), { body: sys.attributes.body.base, essence });
     // Initiation raises Magic on top of the Essence-capped rating.
     // Unmet geasa take away the Magic they protect; bioware costs Magic by Body Index.
     const magic = this.magicRating(Math.max(0, initiateMagic(effectiveMagic(sys.magic, essence, sys.essence), sys.initiateGrade ?? 0) - geasaPenalty(sys.geasa ?? [])
-      - (sys.magic > 0 ? bio.magicLoss : 0)));
+      // v0.92.3 (RULES.GEAR_V923.awakenedBioware 'essence'): the bioware's Essence lowers Magic instead.
+      - (sys.magic > 0 && !gearBook('awakenedBioware') ? bio.magicLoss : 0)
+      // v0.92.3 (RULES.SPIRITS_V923.banishBackfire, Core p. 143): Magic lost to a spirit in banishing (back at 1 an hour).
+      - Math.max(0, Number((this as any).parent?.flags?.sr2e?.banishMagic?.lost ?? 0) || 0)));
     // v0.56.0: adept powers past the power-point budget stop working when Magic drops (RULES.CRITTERS_V56.adeptBudget).
     const adeptAll = [...((this as any).parent?.items ?? [])].filter((i: any) => i.type === 'adeptpower');
     const budget = adeptBudget(adeptAll.map((i: any) => ({ id: i.id, cost: Number(i.system.cost ?? 0), active: i.system.active !== false })), magic * RULES.MAGIC.adeptPointsPerMagic);
@@ -743,7 +790,11 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
     const reflexNotes: string[] = [];
     let dropFxReflexes = false;
     if (reflexFx.length > 1) reflexNotes.push(tx('SR2E.App.Models.onlyTheBestReflexSpellCounts'));
-    if (RULES.MAGIC_V56.spellEffects.reflexesExclusive && fxReflexes > 0 && otherReflexes > 0) {
+    // v0.92.3 (RULES.SORCERY_V923.increaseReflexes 'book', Core p. 155): no spell boosts someone with cybernetic
+    // initiative dice, whichever is better.
+    const cyberReflexes = stacked.cyber.some((a: any) => a.installed !== false && !a.damaged && (a.initiativeDice ?? 0) > 0);
+    if (RULES.SORCERY_V923.increaseReflexes === 'book' && fxReflexes > 0 && cyberReflexes) { dropFxReflexes = true; reflexNotes.push(tx('SR2E.App.Models.reflexSpellNoCyber')); }
+    else if (RULES.MAGIC_V56.spellEffects.reflexesExclusive && fxReflexes > 0 && otherReflexes > 0) {
       if (otherReflexes >= fxReflexes) { dropFxReflexes = true; reflexNotes.push(tx('SR2E.App.Models.magicalReflexesDoNotStack')); }
       else {
         stacked.cyber = stacked.cyber.map((a) => (isOtherReflex(a, false) ? { ...a, initiativeDice: 0, reaction: 0 } : a));
@@ -761,6 +812,9 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
       return { essenceCost: 0, grade: 'standard', installed: true, attributes: own.attributes, reaction: reflex && !counts ? 0 : Number(p.reaction ?? 0), initiativeDice: counts ? Number(p.initiativeDice ?? 0) : 0, name: p.name };
     });
     const bonus = sumBonuses([...stacked.cyber, ...stacked.adept, ...drugAugs, ...powerAugs]);
+    // v0.92.3 (RULES.GEAR_V923.limbPairs 'body', Core p. 249): each pair of full cyberlimbs is a level of dermal armor (+1 Body).
+    const wareLive = ware.filter((i: any) => i.system.installed && !i.system.damaged && !recoveringItemIds(sys.recovering ?? [], worldNow()).includes(i.id));
+    bonus.attributes.body += limbPairsBody(wareLive.filter((i: any) => i.system.kind === 'cyberlimb' && !i.system.bioware).map((i: any) => ({ name: i.name, location: i.system.limb?.location ?? 'other' })));
     // Adept pain resistance ignores boxes for wound modifiers (v0.39.0).
     const painIgnore = adeptSpecialLevel(adept as any, 'painResistance') * RULES.ADEPT.painResistance.boxesPerLevel;
     const dualNatured = [...((this as any).parent?.items ?? [])].some((i: any) => i.type === 'power' && i.system?.special === 'dualNatured');
@@ -775,12 +829,16 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
     if (tw.skillMods.length) cyber.skillMods = [...cyber.skillMods, ...tw.skillMods];
     const initDice = capInitiativeDice(Math.max(1, RULES.BASE_INITIATIVE_DICE + sys.initiativeDiceBonus + bonus.initiativeDice + tw.initiativeDice));
     const limbOver = cyber.limbs.filter((l: any) => l.capacity.over).map((l: any) => tx('SR2E.App.Models.capacityOfUsed', { name: l.name, used: l.capacity.used, capacity: l.capacity.capacity }));
-    // Cyber armor (not bioware) for orthoskin's conflict with dermal plating.
-    const cyberOnly = installed.filter((i: any) => !i.system.bioware);
+    // Cyber armor (not bioware) for orthoskin's conflict with dermal plating. v0.92.3 review fix (RULES.GEAR_V923.dermal
+    // 'body'): plating is Body, not armor, so its armor fields don't take orthoskin's armor away (the two being
+    // incompatible, Shadowtech p. 17, stays a warning).
+    const cyberOnly = installed.filter((i: any) => !i.system.bioware && !(gearBook('dermal') && isDermalPlating({ name: i.name, bioware: i.system.bioware, kind: i.system.kind })));
     const bw = bioDerived(ware, {
       ballistic: Math.max(0, ...cyberOnly.map((i: any) => i.system.armorBallistic ?? 0)),
       impact: Math.max(0, ...cyberOnly.map((i: any) => i.system.armorImpact ?? 0)),
     }, healing);
+    const dermalBody = gearBook('dermal');
+    const lacingArmor = boneLacingBook(String(installed.filter((i: any) => i.system.kind === 'boneLacing').map((i: any) => String(i.system.lacing ?? '')).sort((a: string, b: string) => boneLacingBook(b).impact + boneLacingBook(b).ballistic - boneLacingBook(a).impact - boneLacingBook(a).ballistic)[0] ?? ''), cyberReplacements(installed.filter((i: any) => !i.system.bioware).map((i: any) => ({ name: i.name, kind: i.system.kind }))));
     const cyberWarnings = [...stacked.notes, ...reflexNotes, ...(initDice.capped ? [tx('SR2E.App.Models.initiativeDiceCappedAt', { dice: initDice.dice })] : []), ...limbOver, ...bw.warnings];
 
     const totals = {} as Attributes;
@@ -813,12 +871,17 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
     }
     // Armor encumbrance: worn armor heavier than Quickness slows the wearer.
     const worn = [...((this as any).parent?.items ?? [])].filter((i: any) => i.type === 'armor' && i.system.worn && isCarried(i));
-    const encumbrance = U80C.cbtEncumbrance(encumbrancePenalty(
+    // v0.92.3 (RULES.GEAR_V923.armorEncumbrance 'book', Core p. 84): only heavy armor, and it costs Combat Pool dice (below).
+    const heavyBook = gearBook('armorEncumbrance');
+    const encumbrance = heavyBook ? 0 : U80C.cbtEncumbrance(encumbrancePenalty(
       worn.reduce((n: number, i: any) => n + (i.system.ballistic ?? 0), 0),
       worn.reduce((n: number, i: any) => n + (i.system.impact ?? 0), 0),
       totals.quickness,
     ));
+    // Not on top of the Revamp's own pool rule (URR_V80.cbtArmorPool 'pool').
+    const heavyPool = heavyBook && RULES.COMBAT.encumbrance.enabled && RULES.URR_V80.cbtArmorPool !== 'pool' ? heavyArmorPoolPenalty(worn.map((i: any) => ({ name: String(i.name ?? ''), ballistic: Math.max(0, Number(i.system.ballistic ?? 0) - Number(i.system.degraded ?? 0)), adds: Boolean(i.system.adds) })), totals.quickness) : 0;
     // v0.80.0 (URR_V80.cbtArmorPool 'pool', house rule for the Revamp, not in the URR): each point of ballistic armor above Quickness is a Combat Pool die less.
+    // (The book's heavy-armor rule is heavyPool above, GEAR_V923.armorEncumbrance; never both.)
     // Review #6: the layered ballistic rating (the same pieces as armorRating), not the raw sum.
     const armorPool80 = U80C.cbtArmorPoolPenalty(RULES.URR_V80.cbtArmorPool === 'pool' ? armorTotal(worn.map((i: any) => ({ ballistic: i.system.ballistic ?? 0, impact: i.system.impact ?? 0, adds: Boolean(i.system.adds), degraded: i.system.degraded ?? 0 })), 'ballistic') : 0, totals.quickness);
     if (encumbrance > 0) {
@@ -830,7 +893,8 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
     const carried0 = [...((this as any).parent?.items ?? [])].filter((i: any) => isCarried(i)).reduce((n: number, i: any) => n + Math.max(0, Number(i.system?.weight ?? 0)) * Math.max(0, Number(i.system?.quantity ?? 1)), 0);
     // v0.58.0: bone lacing is carried too.
     const carried = carried0 + Number(cyber.lacing.weight ?? 0);
-    const load = carriedLoad(carried, totals.strength);
+    // v0.92.3 (RULES.GEAR_V923.load 'book', Core p. 185): Strength × 5 kg free, then fatigue as a Stun wound.
+    const load = gearBook('load') ? (RULES.COMBAT.load.enabled ? bookLoad(carried, totals.strength) : { ...bookLoad(0, totals.strength), kg: bookLoad(carried, totals.strength).kg }) : carriedLoad(carried, totals.strength);
     if (load.penalty > 0) {
       sys.attributes.quickness.total = Math.max(0, sys.attributes.quickness.total - load.penalty);
       totals.quickness = sys.attributes.quickness.total;
@@ -839,7 +903,10 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
     const senses = improvedSenses(adept as any);
     // v0.54.0: physical adepts get no Spell Pool (RULES.ADEPT.spellPool).
     const poolMagic = sys.tradition === 'adept' && !RULES.ADEPT.spellPool ? 0 : magic;
-    const d0 = deriveStats(totals, { magic: poolMagic, reactionBonus: sys.reactionBonus + bonus.reaction + tw.reaction });
+    // v0.92.3 (RULES.GEAR_V923.bioware 'book', Shadowtech p. 19): an adrenal pump's Quickness doesn't raise Reaction.
+    const qNoReact = Math.max(0, Math.min(totals.quickness, Number(bw.quicknessNoReaction ?? 0)));
+    const reactOff = qNoReact ? Math.floor((totals.quickness + totals.intelligence) / 2) - Math.floor((totals.quickness - qNoReact + totals.intelligence) / 2) : 0;
+    const d0 = deriveStats(totals, { magic: poolMagic, reactionBonus: sys.reactionBonus + bonus.reaction + tw.reaction - reactOff });
     // v0.92.1 review (B3): a negative tweak never takes Reaction below 0.
     if (tw.reaction < 0) d0.reaction = Math.max(0, d0.reaction);
     // v0.79.0 (RULES.DOCS_V79.magicPool.size 'sorcery', SR2 p85): the Spell (Magic) Pool is the Sorcery rating (a power
@@ -849,19 +916,29 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
     const adeptPool = sys.tradition === 'adept' && RULES.ADEPT.spellPool;
     const d = { ...d0, spellPool: adeptPool ? d0.spellPool : magicPoolBase({ sorcery: sorceryRating((this as any).parent?.items), intelligence: totals.intelligence, willpower: totals.willpower, magic: poolMagic }) };
     // An NPC's Threat Rating adds Combat Pool dice (v0.44.0).
-    const threat = (this as any).parent?.type === 'npc' && RULES.STREET.threat.addsToPool ? Math.max(0, Math.floor(sys.threatRating ?? 0)) : 0;
-    const bodyStatus = monitorStatus(sys.monitor, overflowBody(totals.body, qv)) as Status;
+    // v0.92.3 (RULES.CORE_V923.threat 'book', Core p. 187): Threat dice go on every test instead, and replace the pools.
+    const threatNpc = (this as any).parent?.type === 'npc' && Math.max(0, Math.floor(sys.threatRating ?? 0)) > 0;
+    const threat = !threatBook() && (this as any).parent?.type === 'npc' && RULES.STREET.threat.addsToPool ? Math.max(0, Math.floor(sys.threatRating ?? 0)) : 0;
+    const noPools = threatBook() && threatNpc;
+    // v0.92.3 (RULES.HEALTH_V923.death 'natural', Core p. 111): the natural Body counts for death, not cyber or magic.
+    const deathBodyNow = deathBody(totals.body, sys.attributes?.body?.natural);
+    const bodyStatus = monitorStatus(sys.monitor, overflowBody(deathBodyNow, qv)) as Status;
     // v0.81.0 (RB-11): shared values, computed once so the paired derived fields stay in step.
     const foci = fociOf((this as any).parent, String(sys.tradition ?? ''));
     // v0.78.0 (RULES.BOOK_V78.powerFocus 'magic'): a power focus adds its rating to the Spell Pool and to the Magic for drain.
     const powerFocus = poolMagic > 0 ? powerFocusRating(foci) : 0;
     // v0.78.0 (RULES.BOOK_V78.combatSense 'pool', Core Rules): an adept's Combat Sense adds its level to the Combat Pool.
-    const combatPool = Math.max(0, Math.max(0, d.combatPool - armorPool80) + threat + (RULES.BOOK_V78.combatSense === 'pool' ? adeptSpecialLevel(adept as any, 'combatSense') * RULES.ADEPT.combatSense.dicePerLevel : 0) + (tw.pools.combat ?? 0));
+    // v0.92.3 (RULES.SPIRITS_V923.astralPool 'book', Core p. 147; Grimoire p. 91): a projecting magician's only pool is the
+    // Astral Combat Pool, (Intelligence + Willpower + Charisma) ÷ 2 + grade; it takes the Combat Pool's place while projecting.
+    const astralPool923 = magic > 0 && sys.tradition !== 'adept' ? astralCombatPool({ intelligence: totals.intelligence, willpower: totals.willpower, charisma: totals.charisma, grade: Number(sys.initiateGrade ?? 0) }) : 0;
+    const projecting923 = RULES.SPIRITS_V923.astralPool === 'book' && astralPool923 > 0 && (sys.astral ?? 'physical') === 'projecting';
+    const combatPool = projecting923 ? astralPool923 : noPools ? 0 : Math.max(0, Math.max(0, d.combatPool - armorPool80 - heavyPool) + threat + (RULES.BOOK_V78.combatSense === 'pool' ? adeptSpecialLevel(adept as any, 'combatSense') * RULES.ADEPT.combatSense.dicePerLevel : 0) + (tw.pools.combat ?? 0));
     // v0.92.1 review (N10): a Spell Pool tweak only for someone with a Spell Pool.
-    const spellPool = Math.max(0, d.spellPool + powerFocus + (poolMagic > 0 ? (tw.pools.spell ?? 0) : 0));
+    // Review fix (Core p. 187: "do not use standard Dice Pools" for a Threat-rated NPC): no Spell Pool either.
+    const spellPool = noPools ? 0 : Math.max(0, d.spellPool + powerFocus + (poolMagic > 0 ? (tw.pools.spell ?? 0) : 0));
     sys.derived = {
       // v0.72.0: health edges and flaws, and Shadowtech bioware vitals (rules/vitals.ts).
-      vitals: { ...qv, overflowBody: overflowBody(totals.body, qv) },
+      vitals: { ...qv, overflowBody: overflowBody(deathBodyNow, qv) },
       reaction: d.reaction,
       initiativeDice: initDice.dice,
       combatPool,
@@ -869,18 +946,20 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
       drainMagic: magic + powerFocus,
       combatPoolLeft: Math.max(0, combatPool - sys.poolSpent.combat),
       // v0.78.0: an encephalon's Task Pool (Shadowtech; RULES.BOOK_V78.encephalon) for the skills it helps.
-      taskPool: Math.max(0, encephalonTaskPool(Number(cyber.encephalon ?? 0)) + (tw.pools.task ?? 0)),
-      taskPoolLeft: Math.max(0, encephalonTaskPool(Number(cyber.encephalon ?? 0)) + (tw.pools.task ?? 0) - Number(sys.poolSpent.task ?? 0)),
+      // v0.92.3: a cerebral booster 2's Task Pool die adds (RULES.GEAR_V923.bioware 'book', Shadowtech p. 23).
+      taskPool: Math.max(0, encephalonTaskPool(Number(cyber.encephalon ?? 0)) + Number(bw.taskPool ?? 0) + (tw.pools.task ?? 0)),
+      taskPoolLeft: Math.max(0, encephalonTaskPool(Number(cyber.encephalon ?? 0)) + Number(bw.taskPool ?? 0) + (tw.pools.task ?? 0) - Number(sys.poolSpent.task ?? 0)),
       // v0.44.0: walking and running rates, and Street Cred.
       // v0.56.0: a Movement power (or spell) multiplies or divides it.
-      movement: movementWithFactor(movementRates(totals.quickness, this.usesMetatype() ? race.run : RULES.COMBAT.movement.run), fxSum.movementFactor),
+      // v0.92.3 (RULES.GEAR_V923.load 'book', Core p. 185): a heavy load halves or quarters movement and stops running.
+      movement: ((m, l: any) => ('move' in l ? { walk: Math.floor(m.walk * l.move), run: l.run ? Math.floor(m.run * l.move) : Math.floor(m.walk * l.move) } : m))(movementWithFactor(movementRates(totals.quickness, this.usesMetatype() ? race.run : RULES.COMBAT.movement.run), fxSum.movementFactor), load),
       // v0.58.0: Notoriety comes off it (RULES.CHARACTERS_V58.notoriety).
       streetCred: streetCred({ career: sys.karma?.career ?? 0, manual: sys.reputation?.streetCred ?? 0, notoriety: sys.reputation?.notoriety ?? 0 }),
       spellPoolLeft: Math.max(0, spellPool - sys.poolSpent.spell - (sys.spellDefense ?? 0)),
       // v0.92.0 (RULES.MAGIC_V920.poolLayers): the Spell Pool's narrow layers (Sorcery's concentration and
       // specialization; rules/magicpool.ts), for a Sorcery-sized pool only.
       spellLayers: (() => {
-        const sk: any = poolMagic > 0 && !adeptPool && RULES.DOCS_V79.magicPool.size === 'sorcery' ? sorcerySkillOf((this as any).parent?.items) : null;
+        const sk: any = !noPools && poolMagic > 0 && !adeptPool && RULES.DOCS_V79.magicPool.size === 'sorcery' ? sorcerySkillOf((this as any).parent?.items) : null;
         const l = poolLayers(sk?.system ?? null);
         const left = narrowLeft(l, { conc: sys.poolSpent.spellConc, spec: sys.poolSpent.spellSpec });
         return { ...l, concLeft: left.conc, specLeft: left.spec };
@@ -888,7 +967,7 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
       karmaPoolLeft: Math.max(0, (sys.karma?.pool ?? 0) - (sys.karma?.poolSpent ?? 0)),
       // Damage compensators ignore the first boxes on each track (v0.30.0).
       // v0.72.0 (O20): 'neither' (MAGIC_V72.astralWounds): a projecting magician's wounds count on nothing (strip, tests, Initiative agree).
-      woundModifier: drugFx.ignoreWounds || ((sys.astral ?? 'physical') === 'projecting' && magic > 0 && sys.tradition !== 'adept' && !astralWoundRules().tests) ? 0 : woundModifier(compensatedMonitor(painToleranceMonitor((() => { const m = painEditedMonitor(sys.monitor, bw.ignoreStunWounds); return { ...m, stun: Math.max(0, m.stun - drugFx.stunIgnoreBoxes) }; })(), qv), bw.ignoreBoxes + painIgnore)),
+      woundModifier: drugFx.ignoreWounds || ((sys.astral ?? 'physical') === 'projecting' && magic > 0 && sys.tradition !== 'adept' && !astralWoundRules().tests) ? 0 : woundModifier(compensatedMonitor(painToleranceMonitor((() => { const m = painEditedMonitor(sys.monitor, bw.ignoreStunWounds); return { ...m, stun: Math.max(loadStunBoxes(load), Math.max(0, m.stun - drugFx.stunIgnoreBoxes)) }; })(), qv), bw.ignoreBoxes + painIgnore)),
       possessedBy: possessor?.name ? String(possessor.name) : '',
       powerEffects: powerFx.map((p: any) => ({ id: p.id, name: p.name, fromName: p.fromName, fromUuid: p.fromUuid, attributes: p.attributes, kind: p.kind ?? 'power', permanent: Boolean(p.permanent), summary: describeBundle(p) })),
       // v0.56.0: armor and TN changes from spells and powers on this actor (EffectBundle sums).
@@ -898,7 +977,8 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
       adeptOverOff: overIds.size > 0,
       bio: bw,
       // Essence reaching zero is fatal whatever the condition monitor says.
-      status: (essence <= 0 ? 'dead' : bodyStatus) as Status,
+      // v0.92.3 (RULES.GEAR_V923.essenceZero 'survive', Core p. 246): only Essence below 0 kills.
+      status: (essenceKills(round2(Math.max(0, sys.essence + (sys.essenceShift ?? 0)) - totalEssenceLoss(augs) - (RULES.GEAR_V58.essenceHoles.enabled ? Math.max(0, Number(sys.essenceHole ?? 0)) : 0))) ? 'dead' : bodyStatus) as Status,
       // v0.82.0: shown on the sheet (dying line, Karma tooltip) so the text follows the rules in force.
       bleedEvery: bleedEveryText(Number(sys.attributes?.body?.total ?? sys.attributes?.body?.value ?? 1)),
       karmaPoolEvery: Number((RULES.UPKEEP.karma.poolEvery as any)?.[String(sys.metatype ?? 'human') === 'human' ? 'human' : 'metahuman'] ?? 10),
@@ -919,7 +999,8 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
         : urrMagAstralModeFor(String(sys.tradition ?? ''), sys.astral ?? 'physical'),
       dualNatured,
       painIgnore,
-      astral: astralForm(totals),
+      astral: astralForm(totals, magic > 0 && sys.tradition !== 'adept' ? Number(sys.initiateGrade ?? 0) : 0),
+      astralPool: astralPool923,
       adeptPoints: adeptPowerPoints(adept, magic),
       geasaPenalty: geasaPenalty(sys.geasa ?? []),
       focusAddiction: focusAddiction(foci, magic),
@@ -930,7 +1011,12 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
       attributeWarnings: [...limits.warnings, ...racialFloorWarnings(sys.metatype, Object.fromEntries(ATTRIBUTE_KEYS.map((k) => [k, this.attributeBase(k)])) as any, applyRace)],
       reachBonus: this.usesMetatype() ? race.reach : 0,
       // Dwarves, toxin extractors; Body Index takes some off.
-      toxinDice: (this.usesMetatype() ? race.toxinDice : 0) + bw.toxinDice - bodyIndexToxinPenalty(bio_index_used(ware)),
+      // v0.92.3 (RULES.HEALTH_V923.dwarfResistance 'disease', Core Racial Modifications Table): the racial dice count
+      // against disease only (raceDiseaseDice); 'both' puts them back on toxins.
+      toxinDice: (this.usesMetatype() && dwarfDiceAgainst('toxin') ? race.toxinDice : 0) + bw.toxinDice - bodyIndexToxinPenalty(bio_index_used(ware)),
+      raceDiseaseDice: this.usesMetatype() && !dwarfDiceAgainst('toxin') ? Math.max(0, Number(race.toxinDice) || 0) : 0,
+      // v0.92.3 (RULES.CORE_V923.trollDermal 'body', Core p. 45): dermal armor as extra Body dice for damage resistance.
+      racialDermal: this.usesMetatype() ? race.dermal : 0,
       // Token bars (v0.36.0): boxes left on each track.
       // v0.60.0: and the Matrix condition monitor (a persona's boxes left).
       bars: { ...monitorBars(sys.monitor), matrix: trackBar(sys.matrix?.monitor ?? 0, RULES.MATRIX.monitorBoxes) ?? { value: 0, max: 0 } },
@@ -953,12 +1039,16 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
       // Cyberware armor, plus a troll's natural dermal armor.
       cyberArmor: {
         // Cyberlimbs' own armor is added per hit (armorRating, v0.43.0).
-        ballistic: installed.filter((i: any) => i.system.kind !== 'cyberlimb').reduce((n: number, i: any) => n + (i.system.armorBallistic ?? 0), 0) + (this.usesMetatype() ? race.dermal : 0) + bw.ballistic + tw.armor.ballistic,
-        impact: installed.filter((i: any) => i.system.kind !== 'cyberlimb').reduce((n: number, i: any) => n + (i.system.armorImpact ?? 0), 0) + (this.usesMetatype() ? race.dermal : 0) + bw.impact + tw.armor.impact,
+        // v0.92.3 (RULES.GEAR_V923.dermal 'body'): dermal plating is Body, not armor; (boneLacing 'book') lacing's armor adds.
+        ballistic: installed.filter((i: any) => i.system.kind !== 'cyberlimb' && !(dermalBody && isDermalPlating({ name: i.name, bioware: i.system.bioware, kind: i.system.kind }))).reduce((n: number, i: any) => n + (i.system.armorBallistic ?? 0), 0) + (this.usesMetatype() ? dermalArmor(race.dermal) : 0) + bw.ballistic + tw.armor.ballistic + lacingArmor.ballistic,
+        impact: installed.filter((i: any) => i.system.kind !== 'cyberlimb' && !(dermalBody && isDermalPlating({ name: i.name, bioware: i.system.bioware, kind: i.system.kind }))).reduce((n: number, i: any) => n + (i.system.armorImpact ?? 0), 0) + (this.usesMetatype() ? dermalArmor(race.dermal) : 0) + bw.impact + tw.armor.impact + lacingArmor.impact,
       },
     };
-    Object.assign(sys.derived, deckerDerived((this as any).parent, sys, totals.intelligence, totals as unknown as Record<string, number>, tw.pools.hacking ?? 0));
+    // v0.92.3: the decker's own Reaction (no cyber or magic Reaction boosts) for the persona (VR2 p. 120).
+    Object.assign(sys.derived, deckerDerived((this as any).parent, sys, totals.intelligence, totals as unknown as Record<string, number>, tw.pools.hacking ?? 0, d.reaction - bonus.reaction));
     Object.assign(sys.derived, riggerDerived(sys, installed, d.reaction, bonus, [...((this as any).parent?.items ?? [])], tw.pools.control ?? 0));
+    // Review fix (RULES.CORE_V923.threat 'book', Core p. 187): a Threat-rated NPC uses no standard Dice Pool at all.
+    if (noPools) Object.assign(sys.derived, { taskPool: 0, taskPoolLeft: 0, hackingPool: 0, hackingPoolLeft: 0, controlPool: 0, controlPoolLeft: 0 });
   }
 }
 
@@ -989,14 +1079,15 @@ export function activeDeckOf(actor: any): any | null {
 }
 
 /** Decker values: Hacking Pool, Matrix Reaction/initiative, persona and Detection Factor (none without a deck). */
-function deckerDerived(actor: any, sys: any, intelligence: number, totals: Record<string, number> = {}, tweakPool = 0) {
+function deckerDerived(actor: any, sys: any, intelligence: number, totals: Record<string, number> = {}, tweakPool = 0, ownReaction: number = sys.derived?.reaction ?? 0) {
   const item = activeDeckOf(actor);
   const spent = sys.poolSpent?.hacking ?? 0;
   if (!item) return { hackingPool: 0, hackingPoolLeft: 0, matrix: null };
   // v0.46.0: an otaku's living persona takes its ratings from their attributes; a tortoise has no ASIST.
   const living = Boolean(item.system.living) && RULES.MATRIX.otaku.enabled;
   const tortoise = Boolean(item.system.tortoise) && !living;
-  const base = living ? { ...item.system, ...otakuPersona({ intelligence, ...totals }) } : item.system;
+  // v0.92.3: the book's otaku values (VR2 p. 145; RULES.MATRIX_V923.otaku).
+  const base = living ? { ...item.system, ...otakuPersona({ intelligence, ...totals }), ...(otakuPersona923({ intelligence, ...totals }) ?? {}) } : item.system;
   // Damage to the deck (blaster, ripper, trace and burn) and crippler IC lower the working persona.
   const d = effectivePersona(base, base.damage ?? {}, sys.matrix?.crippled ?? {});
   const programs = [...(actor?.items ?? [])].filter((i: any) => i.type === 'program').map((i: any) => ({ id: i.id, name: i.name, ...i.system }));
@@ -1025,6 +1116,10 @@ function deckerDerived(actor: any, sys: any, intelligence: number, totals: Recor
       .map((k) => (capsOn ? tx('SR2E.App.Models.runsAtTheWorkingMpcp', { attribute: k.charAt(0).toUpperCase() + k.slice(1), value: rawPersona(k), mpcp: d.mpcp }) : tx('SR2E.App.Models.isAboveTheWorkingMpcp', { attribute: k.charAt(0).toUpperCase() + k.slice(1), value: rawPersona(k), mpcp: d.mpcp }))),
     ...mpcpProgramWarnings(overMpcp, d.mpcp),
   ];
+  // v0.92.3 (RULES.MATRIX_V923.initiative): the book's persona speed; null keeps the v0.92.2 formulas below.
+  const speed = personaSpeed({ reaction: ownReaction, responseIncrease: d.responseIncrease, mpcp: d.mpcp, sim, tortoise, otaku: living ? { intelligence, willpower: Number(totals.willpower ?? 0) } : null });
+  // A satellite uplink's signal lag: −2 Reaction (VR2 p. 30; RULES.MATRIX_V923.connections).
+  const lag = RULES.MATRIX_V923.connections !== 'v922' ? jackpointMods(sys.matrix?.connection ?? 'jackpoint').reaction : 0;
   return {
     hackingPool: pool,
     hackingPoolLeft: Math.max(0, pool - spent),
@@ -1032,9 +1127,9 @@ function deckerDerived(actor: any, sys: any, intelligence: number, totals: Recor
       deckId: item.id,
       deckName: item.name,
       // A tortoise works at meat speed: the user's own Reaction and initiative dice.
-      reaction: tortoise ? (sys.derived?.reaction ?? 0) : matrixReaction(intelligence, d.responseIncrease) + filter.reaction,
+      reaction: Math.max(0, (speed ? speed.reaction + (tortoise ? 0 : filter.reaction) : tortoise ? (sys.derived?.reaction ?? 0) : matrixReaction(intelligence, d.responseIncrease) + filter.reaction) + lag),
       filterModifiers: filter.modifiers,
-      initiativeDice: tortoise ? (sys.derived?.initiativeDice ?? 1)
+      initiativeDice: speed ? speed.dice + (living && RULES.MATRIX_V923.otaku === 'v922' ? RULES.MATRIX.otaku.initiativeDice : 0) : tortoise ? (sys.derived?.initiativeDice ?? 1)
         : matrixInitiativeDice(d.responseIncrease) + simInitiativeDice(sim) + (living ? RULES.MATRIX.otaku.initiativeDice : 0),
       sim,
       tortoise, living, signal: Number(item.system.signal ?? 0),
@@ -1407,6 +1502,9 @@ export class GearDataModel extends foundry.abstract.TypeDataModel {
         addiction: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
         /** v0.42.0: physical or mental addiction; a disease's incubation, interval between tests and recoveries needed. */
         addictionType: new fields.StringField({ required: true, initial: 'mental', choices: ['physical', 'mental'] }),
+        /** v0.92.3 (Shadowtech p. 87): a drug's Tolerance and Strength ratings (0 = none). */
+        tolerance: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
+        strength: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
         incubationHours: new fields.NumberField({ required: true, min: 0, initial: 24 }),
         intervalHours: new fields.NumberField({ required: true, min: 1, initial: 24 }),
         recoveries: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
@@ -1646,6 +1744,8 @@ export class SpellDataModel extends foundry.abstract.TypeDataModel {
       /** Spell options that lower the drain TN. */
       exclusive: new fields.BooleanField({ required: true, initial: false }),
       fetish: new fields.BooleanField({ required: true, initial: false }),
+      /** v0.92.3: the fetish is expendable (used up each cast): Force +2 instead of +1 (Core p. 133). */
+      fetishExpendable: new fields.BooleanField({ required: true, initial: false }),
       /** Elemental manipulation (Fireball...): handled like a ranged attack with Power = Force. */
       elemental: new fields.BooleanField({ required: true, initial: false }),
       /** The spell's element, for elemental aid and sustaining and elementalists. */

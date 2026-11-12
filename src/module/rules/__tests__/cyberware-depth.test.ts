@@ -1,4 +1,5 @@
 import { test, describe } from 'node:test';
+import { oldWay } from './oldway.ts';
 import assert from 'node:assert/strict';
 import {
   reflexTypeOf, stackAugmentations, capInitiativeDice, smartlinkModifier, magnifiedRange, pheromoneDice, datajackCheck,
@@ -56,7 +57,8 @@ describe('cyberware depth (v0.29.0)', () => {
     assert.deepEqual(smokeModifier('smoke', { thermographic: true, ultrasound: true }), { value: 0, using: 'thermographic' });
   });
 
-  test('pheromones help social skills; datajack checks; limb capacity; grade cost', () => {
+  test('pheromones help social skills; datajack checks; limb capacity; grade cost', (t) => {
+    t.after(oldWay({ "GEAR_V923.grades": "old" })); // v0.92.3: the old (v0.92.2) way; rules/__tests__/v0923-gear.test.ts has the book's
     assert.equal(pheromoneDice('Negotiation', 2), 2);
     assert.equal(pheromoneDice('Etiquette (Street)', 1), 1);
     assert.equal(pheromoneDice('Firearms', 2), 0);
@@ -79,7 +81,9 @@ describe('cyberware depth (v0.29.0)', () => {
     assert.equal(softRating({ ...japanese, slotted: false }, { skillwires: 0, chipjack: true, datajack: true }).rating, 0);
   });
 
-  test('Magic and Essence: capped (default) or reduced by every point of Essence lost', () => {
+  test('Magic and Essence: capped (default) or reduced by every point of Essence lost', (t) => {
+    // v0.92.3: the v0.92.2 rule (RULES.SORCERY_V923).
+    t.after(oldWay({ 'SORCERY_V923.magicFromEssence': 'v922' }));
     assert.equal(effectiveMagic(6, 5.5), 6);
     assert.equal(effectiveMagic(4, 5.5), 4);
     (RULES as any).MAGIC_ESSENCE_MODE = 'reduce';

@@ -2,6 +2,7 @@ import { RULES } from './config.ts';
 import { qualityCheck, type Quality } from './street.ts';
 import { contactsCost, lifestyleCost, freeLanguagePoints } from './everyday.ts';
 import { racialFloorRow, surplusFlawBonus } from './charfix.ts';
+import { priorityRow, raceNeed, magicTier, streetDialectRating } from './core923.ts';
 import { t as tx, tCount } from '../helpers/i18n.ts';
 
 /** Character creation (v0.38.0): the priority table and a build check. No Foundry dependency. */
@@ -106,6 +107,8 @@ export function paidSkillRating(s: SkillRatings, ratio: number = RULES.FIXES_V71
 export interface BuildRow { label: string; used: string; allowed: string; ok: boolean; note?: string; step?: string }
 
 const rank = (p: Priority) => PRIORITY_LETTERS.indexOf(p);
+/** v0.92.3: a street dialect's name (City Speak, Tunnel Talk, a dialect), for the free one a Street lifestyle brings. */
+const DIALECT_NAME = /\b(?:city ?speak|tunnel ?talk|dialect|street ?(?:speak|talk|slang)|cityspeak|slang)\b/i;
 
 /** Check a character against the priority table; one row per check. */
 export function buildCheck(b: BuildInput): BuildRow[] {
@@ -116,11 +119,12 @@ export function buildCheck(b: BuildInput): BuildRow[] {
   const dupes = letters.filter((l, i) => letters.indexOf(l) !== i);
   rows.push({ step: 'priorities', label: tx('SR2E.Text.Creation.priorities'), used: BUILD_COLUMNS.map((k) => `${k} ${p[k] ?? '–'}`).join(', '), allowed: tx('SR2E.Text.Creation.eachLetterOnce'), ok: letters.length === 5 && !dupes.length, ...(dupes.length ? { note: tx('SR2E.Text.Creation.usedTwice', { list: [...new Set(dupes)].join(', ') }) } : letters.length < 5 ? { note: tx('SR2E.Text.Creation.pickALetter') } : {}) });
   // Race
-  const need = c.race[b.metatype] ?? 'E';
+  // v0.92.3 (RULES.CORE_V923.priorities 'book', Core p. 45): a metahuman needs Race A; the Magic tier depends on the race.
+  const need = raceNeed(b.metatype);
   if (p.race) rows.push({ step: 'metatype', label: tx('SR2E.Text.Creation.race'), used: `${b.metatype} (${p.race})`, allowed: tx('SR2E.Text.Creation.orBetter', { need }), ok: rank(p.race) <= rank(need) });
   // Magic
   if (p.magic) {
-    const m = c.priorities[p.magic].magic;
+    const m = magicTier(p.magic, b.metatype);
     const ok = b.magic === 'none' || (b.magic === 'full' ? m === 'full' : m === 'full' || m === 'adept');
     rows.push({ step: 'magic', label: tx('SR2E.Text.Creation.magic'), used: b.magic === 'none' ? tx('SR2E.Text.Creation.mundane') : b.magic, allowed: m === 'full' ? tx('SR2E.Text.Creation.fullMagicianOrLess') : m === 'adept' ? tx('SR2E.Text.Creation.adeptOrAspected') : tx('SR2E.Text.Creation.noMagic'), ok });
   }
@@ -131,7 +135,7 @@ export function buildCheck(b: BuildInput): BuildRow[] {
     const vals = Object.values(b.attributes);
     const total = vals.reduce((n, v) => n + Math.max(0, v), 0);
     const bad = Object.entries(b.attributes).filter(([, v]) => v < 1 || v > c.attributeMax).map(([k]) => k);
-    const attrAllowed = c.priorities[p.attributes].attributes + fb.attributes;
+    const attrAllowed = priorityRow(p.attributes).attributes + fb.attributes;
     rows.push({ step: 'attributes', label: tx('SR2E.Text.Creation.attributes'), used: tx('SR2E.Text.Creation.points', { count: total }), allowed: `${attrAllowed}`, ok: total <= attrAllowed && !bad.length, ...(bad.length ? { note: tx('SR2E.Text.Creation.outOfRange', { max: c.attributeMax, list: bad.join(', ') }) } : total < attrAllowed ? { note: tx('SR2E.Text.Creation.unspent', { count: attrAllowed - total }) } : {}) });
   }
   // v0.73.0 (O34): an attribute below the minimum after racial modifiers (RULES.CHARACTERS_V73.racialFloor).
@@ -147,11 +151,14 @@ export function buildCheck(b: BuildInput): BuildRow[] {
     const active = b.activeSkills.reduce((n, s) => n + Math.max(0, paidOf(s)), 0);
     const nativeRating = Math.max(0, Math.floor(Number(b.nativeLanguage?.rating) || 0));
     const nativeFree = b.nativeLanguage ? freeLanguagePoints(b.intelligence, nativeRating) : 0;
-    const knowledge = b.knowledgeSkills.reduce((n, s) => n + Math.max(0, paidOf(s)), 0) + (nativeRating - nativeFree);
+    // v0.92.3 (RULES.CORE_V923.streetDialect, Core p. 46): a Street lifestyle's dialect at half Intelligence is free.
+    const dialect = b.knowledgeSkills.find((s) => DIALECT_NAME.test(String(s.name ?? '')));
+    const dialectFree = dialect ? Math.min(streetDialectRating(b.intelligence, b.lifestyle), Math.max(0, paidOf(dialect))) : 0;
+    const knowledge = b.knowledgeSkills.reduce((n, s) => n + Math.max(0, paidOf(s)), 0) - dialectFree + (nativeRating - nativeFree);
     const free = Math.max(0, b.intelligence) * c.knowledgePerInt;
     const fromPool = active + Math.max(0, knowledge - free);
     const over = [...b.activeSkills, ...b.knowledgeSkills].filter((s) => paidOf(s) > c.skillMax).map((s) => s.name);
-    const allowed = c.priorities[p.skills].skills + fb.skills;
+    const allowed = priorityRow(p.skills).skills + fb.skills;
     const knowFree = Math.min(knowledge, free);
     const used = free
       ? (nativeFree ? tx('SR2E.Text.Creation.pointsFreeKnowledgeNative', { count: fromPool, knowledge: knowFree, native: nativeFree }) : tx('SR2E.Text.Creation.pointsFreeKnowledge', { count: fromPool, knowledge: knowFree }))
@@ -169,7 +176,7 @@ export function buildCheck(b: BuildInput): BuildRow[] {
     const life = b.lifestyle ? lifestyleCost(b.lifestyle, b.lifestyleMonths ?? RULES.STREET.builder.lifestyleMonths) : 0;
     const contactsNuyen = contactCost?.cost ?? 0;
     const spent = Math.max(0, b.gearCost) + contactsNuyen + life + Math.max(0, b.nuyen);
-    const allowed = c.priorities[p.resources].resources + fb.nuyen;
+    const allowed = priorityRow(p.resources).resources + fb.nuyen;
     const parts = [tx('SR2E.Text.Creation.gearNuyen', { amount: Math.round(b.gearCost).toLocaleString() }), contactsNuyen ? tx('SR2E.Text.Creation.contactsNuyen', { amount: contactsNuyen.toLocaleString() }) : '', life ? tx('SR2E.Text.Creation.lifestyleNuyen', { amount: life.toLocaleString() }) : '', tx('SR2E.Text.Creation.cashNuyen', { amount: b.nuyen.toLocaleString() })].filter(Boolean);
     rows.push({ step: 'resources', label: tx('SR2E.Text.Creation.resources'), used: `¥${spent.toLocaleString()} (${parts.join(' + ')})`, allowed: `¥${allowed.toLocaleString()}`, ok: spent <= allowed });
   }

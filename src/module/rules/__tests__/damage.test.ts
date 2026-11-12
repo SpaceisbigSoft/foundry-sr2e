@@ -4,6 +4,7 @@ import {
   parseDamageCode, stageUp, stageDown, stageForNetSuccesses,
   resistanceTargetNumber, resolveResistance, applyDamageToMonitor, monitorStatus, woundModifier, heal,
 } from '../damage.ts';
+import { oldWay } from './oldway.ts';
 
 describe('damage codes', () => {
   test('parses and formats', () => {
@@ -27,11 +28,11 @@ describe('staging', () => {
     assert.equal(stageDown('L', 1), null);
     assert.equal(stageDown('D', 2), 'M');
   });
-  test('attacker staging: first success hits, then every 2 more raise a level', () => {
+  test('attacker staging: every 2 net successes raise a level (v0.92.3 default, Core p. 91)', () => {
     assert.equal(stageForNetSuccesses('M', 1), 'M');
-    assert.equal(stageForNetSuccesses('M', 2), 'M');
+    assert.equal(stageForNetSuccesses('M', 2), 'S');
     assert.equal(stageForNetSuccesses('M', 3), 'S');
-    assert.equal(stageForNetSuccesses('M', 5), 'D');
+    assert.equal(stageForNetSuccesses('M', 4), 'D');
   });
   test('defender staging: every 2 successes lower a level', () => {
     assert.equal(resolveResistance('S', 0), 'S');
@@ -66,12 +67,17 @@ describe('condition monitor', () => {
     assert.equal(r.monitor.stun, 10);
     assert.equal(r.status, 'unconscious');
   });
-  test('stun overflow converts to physical', () => {
-    // stun 8 + Serious(6) = 14 -> clamp 10, 4 overflow -> 2 physical (default 2:1)
+  test('stun overflow converts to physical', (t) => {
+    // v0.92.3: box for box by the book (Core p. 111): stun 8 + Serious(6) = 14 -> clamp 10, 4 overflow -> 4 physical
+    assert.deepEqual(applyDamageToMonitor({ physical: 0, stun: 8 }, 'stun', 'S', 6).monitor, { physical: 4, stun: 10 });
+    // the old 2:1
+    t.after(oldWay({ STUN_OVERFLOW_PER_PHYSICAL_BOX: 2 }));
     const r = applyDamageToMonitor({ physical: 0, stun: 8 }, 'stun', 'S', 6);
     assert.deepEqual(r.monitor, { physical: 2, stun: 10 });
   });
-  test('full physical track means dying, then dead at overflow equal to Body', () => {
+  test('full physical track means dying, then dead at overflow equal to Body', (t) => {
+    // v0.92.3: the old way (the book's one box past Body: v0923-health.test.ts).
+    t.after(oldWay({ 'HEALTH_V923.death': 'total' }));
     assert.equal(monitorStatus({ physical: 10, stun: 0 }, 5), 'dying');
     assert.equal(monitorStatus({ physical: 14, stun: 0 }, 5), 'dying');
     assert.equal(monitorStatus({ physical: 15, stun: 0 }, 5), 'dead');

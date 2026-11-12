@@ -19,7 +19,8 @@ import {
   creationLifestylePatch,
 } from '../rules/index.ts';
 import { buildInputFor } from './buildinput.ts';
-import { creationRecordOf, inCreation, queueOn, DRAFT_FLAG } from './approvals.ts';
+import { priorityRow, racialModsOf, startingCashRoll, withPriorityTable } from '../rules/core923.ts';
+import { creationRecordOf, inCreation, queueOn, DRAFT_FLAG, draftTable } from './approvals.ts';
 import { recordCreation } from './advancement.ts';
 import { SR2AddWindow, openSkillPicker } from './adding.ts';
 import { runSheetAction } from './tokens.ts';
@@ -31,19 +32,31 @@ const cap = (s: string) => String(s ?? '').charAt(0).toUpperCase() + String(s ??
 /** A-15: the shared escape helper (rules/html.ts). */
 const esc = escHtml;
 
-interface Draft { step: WizardStep; startedAt: string; by: string; months: number; outright: boolean }
+/** v0.92.3 review fix: `table`, the priority table (RULES.CORE_V923.priorities) the draft was started with. */
+interface Draft { step: WizardStep; startedAt: string; by: string; months: number; outright: boolean; table?: 'book' | 'old' }
 
 export function draftOf(actor: any): Draft | null {
   const d = actor?.flags?.[SYSTEM.id]?.[DRAFT_FLAG];
   if (!d || typeof d !== 'object') return null;
   return { step: (WIZARD_STEPS.some((s) => s.id === d.step) ? d.step : 'priorities') as WizardStep, startedAt: String(d.startedAt ?? ''), by: String(d.by ?? ''),
-    months: Math.max(1, Math.floor(Number(d.months) || RULES.STREET.builder.lifestyleMonths || 1)), outright: Boolean(d.outright) };
+    months: Math.max(1, Math.floor(Number(d.months) || RULES.STREET.builder.lifestyleMonths || 1)), outright: Boolean(d.outright),
+    // A draft saved before v0.92.3 was begun under the old table (draftTable).
+    table: d.table === 'book' || d.table === 'old' ? d.table : 'old' };
 }
 
 const prioritiesOf = (actor: any): Partial<Record<BuildColumn, Priority>> => Object.fromEntries(Object.entries((actor.getFlag?.(SYSTEM.id, 'build') ?? {}) as Record<string, unknown>).filter(([, v]) => typeof v === 'string' && v)) as any;
 
-/** The build check as the wizard sees it (its lifestyle months), plus the spell points row. */
-export function wizardChecks(actor: any): { rows: BuildRow[]; cash: number | null; life: number; contacts: number; gearCost: number; extraSpell: number; allowance: number; spells: ReturnType<typeof spellPointCheck> | null } {
+type WizardChecks = { rows: BuildRow[]; cash: number | null; life: number; contacts: number; gearCost: number; extraSpell: number; allowance: number; spells: ReturnType<typeof spellPointCheck> | null };
+
+/**
+ * The build check as the wizard sees it (its lifestyle months), plus the spell points row. v0.92.3 review fix: against
+ * the priority table the draft was started with.
+ */
+export function wizardChecks(actor: any): WizardChecks {
+  return withPriorityTable(draftTable(actor), () => wizardChecksNow(actor));
+}
+
+function wizardChecksNow(actor: any): WizardChecks {
   const pr = prioritiesOf(actor);
   const d = draftOf(actor);
   const input = buildInputFor(actor, pr);
@@ -58,7 +71,7 @@ export function wizardChecks(actor: any): { rows: BuildRow[]; cash: number | nul
     const list = [...actor.items].filter((i: any) => i.type === 'spell').map((i: any) => ({ learnedForce: Number(i.system?.learnedForce ?? 0), force: Number(i.system?.force ?? 0) }));
     // v0.71.0 (R21): bonded foci take their bonding Karma from the spell points (RULES.FIXES_V71.creationFoci).
     const foci = [...actor.items].filter((i: any) => i.type === 'focus').map((i: any) => ({ name: i.name, focusType: String(i.system?.focusType ?? ''), rating: Number(i.system?.rating ?? 0), bonded: Boolean(i.system?.bonded), target: String(i.system?.target ?? ''), category: String(i.system?.category ?? ''), size: String(i.system?.size ?? '') }));
-    spells = spellPointCheck({ allowance: spellPointAllowance({ priority: String(pr.magic ?? ''), tradition: String(actor.system.tradition ?? 'none') }), spells: list, foci });
+    spells = spellPointCheck({ allowance: spellPointAllowance({ priority: String(pr.magic ?? ''), tradition: String(actor.system.tradition ?? 'none'), resources: String(pr.resources ?? '') }), spells: list, foci });
     if (spells.allowance > 0 || spells.used > 0) rows.push({ step: 'magic', label: tx('SR2E.App.Creation.spellPoints'), used: spells.foci ? tx('SR2E.App.Creation.foci', { used: spells.used, foci: spells.foci }) : `${spells.used}`, allowed: `${spells.allowance}`, ok: spells.ok, ...(spells.note ? { note: spells.note } : {}) });
   }
   if (kind === 'adept') {
@@ -69,7 +82,7 @@ export function wizardChecks(actor: any): { rows: BuildRow[]; cash: number | nul
   const life = lifestyleCost(level, months);
   const contacts = contactsCost(input.contacts ?? []).cost;
   const extraSpell = spells?.extraNuyen ?? 0;
-  const allowance = pr.resources ? RULES.CREATION.priorities[pr.resources].resources : 0;
+  const allowance = pr.resources ? priorityRow(pr.resources).resources : 0;
   const cash = pr.resources ? Math.max(0, Math.floor(allowance - input.gearCost - life - contacts - extraSpell)) : null;
   return { rows, cash, life, contacts, gearCost: input.gearCost, extraSpell, allowance, spells };
 }
@@ -110,7 +123,7 @@ export class SR2CreationWizard extends HandlebarsApplicationMixin(ApplicationV2)
         ui.notifications?.warn?.(tx('SR2E.Notify.Creation.hasEarnedKarmaAlreadyAskThe', { actorName: escHtml(actor.name) }));
         return null;
       }
-      const draft: Draft = { step: 'priorities', startedAt: new Date().toISOString(), by: String(game.user?.name ?? ''), months: RULES.STREET.builder.lifestyleMonths || 1, outright: false };
+      const draft: Draft = { step: 'priorities', startedAt: new Date().toISOString(), by: String(game.user?.name ?? ''), months: RULES.STREET.builder.lifestyleMonths || 1, outright: false, table: RULES.CORE_V923.priorities === 'old' ? 'old' : 'book' };
       await actor.setFlag(SYSTEM.id, DRAFT_FLAG, draft);
     }
     if (!SR2CreationWizard.#hooked) {
@@ -163,6 +176,11 @@ export class SR2CreationWizard extends HandlebarsApplicationMixin(ApplicationV2)
   }
 
   async _prepareContext(_o: any): Promise<any> {
+    // v0.92.3 review fix: the steps show the priority table the draft was started with.
+    return withPriorityTable(draftTable(this.actor), () => this.#contextNow());
+  }
+
+  #contextNow(): any {
     const a = this.actor;
     if (!a) return {};
     const d = draftOf(a) ?? { step: 'priorities' as WizardStep, startedAt: '', by: '', months: 1, outright: false };
@@ -201,7 +219,7 @@ export class SR2CreationWizard extends HandlebarsApplicationMixin(ApplicationV2)
       prioritiesDone: prioritiesComplete(pr),
       // Metatype
       metatypes: metatypeChoices(pr.race, mtypes).map((m) => ({ ...m, selected: m.key === String(sys.metatype ?? 'human'),
-        mods: Object.entries(mtypes[m.key]?.mods ?? {}).map(([k, v]) => `${cap(k)} ${Number(v) > 0 ? '+' : ''}${v}`).join(', ') || 'no modifiers' })),
+        mods: Object.entries(racialModsOf(m.key)).filter(([, v]) => Number(v)).map(([k, v]) => `${cap(k)} ${Number(v) > 0 ? '+' : ''}${v}`).join(', ') || 'no modifiers' })),
       // Attributes
       attributes: ATTRIBUTE_KEYS.map((k) => ({ key: k, label: cap(k), base: Number(sys.attributes?.[k]?.base ?? 1), racial: Number(sys.attributes?.[k]?.racial ?? 0), natural: Number(sys.attributes?.[k]?.natural ?? 0), over: Number(sys.attributes?.[k]?.base ?? 1) > RULES.CREATION.attributeMax })),
       // v0.92.1 (RULES.SHEET_V921.wizard): 'advise' warns (the build check's rows) but never refuses; 'block' is the old way.
@@ -209,7 +227,7 @@ export class SR2CreationWizard extends HandlebarsApplicationMixin(ApplicationV2)
       attributeMax: RULES.CREATION.attributeMax,
       points: attributePoints(Object.fromEntries(ATTRIBUTE_KEYS.map((k) => [k, Number(sys.attributes?.[k]?.base ?? 0)])), pr.attributes),
       // Magic
-      magicKinds: magicChoices(pr.magic).map((m) => ({ ...m, selected: m.key === kind })),
+      magicKinds: magicChoices(pr.magic, String(sys.metatype ?? 'human')).map((m) => ({ ...m, selected: m.key === kind })),
       magicKind: kind,
       traditions: (KIND_TRADITIONS[kind] ?? []).map((t) => ({ key: t, label: cap(t), selected: t === String(sys.tradition) })),
       showTraditions: (KIND_TRADITIONS[kind] ?? []).length > 1,
@@ -389,9 +407,20 @@ export class SR2CreationWizard extends HandlebarsApplicationMixin(ApplicationV2)
       // v0.73.0 (O31): outright = owned for good (RULES.CHARACTERS_V73.lifestyle.outrightPermanent; off: the months ahead).
       const up: Record<string, unknown> = creationLifestylePatch({ outright: Boolean(out), months: d.months, now } as any);
       if (lc) up['system.nuyen'] = lc.kept;
+      // v0.92.3 (RULES.CORE_V923.startingCash 'roll', Core p. 47): every character also starts with 3D6 × 1,000¥.
+      const sc = startingCashRoll();
+      let cashLine = '';
+      const cashRolls: any[] = [];
+      if (sc) {
+        const roll = await new (globalThis as any).Roll(sc.formula).evaluate();
+        cashRolls.push(roll);
+        const extra = Math.max(0, Math.floor(Number(roll.total) || 0)) * sc.per;
+        up['system.nuyen'] = Math.max(0, Math.floor(Number(lc ? lc.kept : a.system.nuyen ?? 0) || 0)) + extra;
+        cashLine = `<p>${tx('SR2E.Card.Creation.startingCash', { formula: esc(sc.formula.toUpperCase()), per: sc.per.toLocaleString(), total: Number(roll.total) || 0, nuyen: extra.toLocaleString() })}</p>`;
+      }
       await a.update(up);
       await recordCreation(a, { how: 'wizard', priorities: prioritiesOf(a), checks: chk.rows });
-      await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: a }), content: `<p><strong>${esc(a.name)}</strong> ${tx('SR2E.Card.Creation.isCreatedCash', { part: failed.length ? tCount(failed.length, 'SR2E.Card.Creation.buildChecksNotMet') : '', label: esc(RULES.METATYPES.types[String(a.system.metatype)]?.label ?? a.system.metatype), part2: esc(magicKindOf(String(a.system.tradition), Number(a.system.magic)) === 'none' ? tx('SR2E.Card.Creation.mundane') : cap(String(a.system.tradition))), nuyen: Number(a.system.nuyen ?? 0).toLocaleString() })}</p>` });
+      await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: a }), content: `<p><strong>${esc(a.name)}</strong> ${tx('SR2E.Card.Creation.isCreatedCash', { part: failed.length ? tCount(failed.length, 'SR2E.Card.Creation.buildChecksNotMet') : '', label: esc(RULES.METATYPES.types[String(a.system.metatype)]?.label ?? a.system.metatype), part2: esc(magicKindOf(String(a.system.tradition), Number(a.system.magic)) === 'none' ? tx('SR2E.Card.Creation.mundane') : cap(String(a.system.tradition))), nuyen: Number(a.system.nuyen ?? 0).toLocaleString() })}</p>${cashLine}`, ...(cashRolls.length ? { rolls: cashRolls } : {}) });
       await this.close();
       const sheet: any = a.sheet;
       if (sheet) { sheet.tabGroups = { ...(sheet.tabGroups ?? {}), primary: 'creation' }; void sheet.render(true); }

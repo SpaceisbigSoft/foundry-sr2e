@@ -50,7 +50,9 @@ describe('resolveAttack', () => {
       { hit: true, netSuccesses: 1, power: 9, level: 'M' });
   });
   test('net successes stage the damage up', () => {
-    assert.equal(resolveAttack({ attackSuccesses: 4, defenseSuccesses: 0, power: 9, level: 'M' }).level, 'S');
+    // v0.92.3: every 2 net successes stage one level (ATTACK_STAGING 'all', Core p. 91): 4 net take M to D.
+    assert.equal(resolveAttack({ attackSuccesses: 2, defenseSuccesses: 0, power: 9, level: 'M' }).level, 'S');
+    assert.equal(resolveAttack({ attackSuccesses: 4, defenseSuccesses: 0, power: 9, level: 'M' }).level, 'D');
     assert.equal(resolveAttack({ attackSuccesses: 9, defenseSuccesses: 0, power: 9, level: 'M' }).level, 'D');
   });
   test('power passes through unchanged', () => {

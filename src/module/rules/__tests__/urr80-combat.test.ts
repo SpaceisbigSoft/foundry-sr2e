@@ -2,12 +2,19 @@
  * v0.80.0, the "SR2E Unified Rules Revamp" rules source (area: combat): the pure functions in rules/urr80-combat.ts,
  * each under the shipped (book) values and under the Revamp (urrMode()).
  */
-import { test, describe } from 'node:test';
+import { test, describe, before, after } from 'node:test';
 import assert from '../../__tests__/helpers/assert-rows.ts';
 import { RULES } from '../config.ts';
 import { URR80_PATCH_COMBAT, URR_V80_COMBAT } from '../config80-combat.ts';
 import * as C from '../urr80-combat.ts';
 import { urrMode } from './urrmode.ts';
+import { combat922 } from './combat922.ts';
+
+// v0.92.3: this file's "book" is the v0.92.2 Book Rules (COMBAT_V923 at its old choices); the book alignment is
+// tested in v0923-combat.test.ts.
+let undo922: () => void = () => {};
+before(() => { undo922 = combat922(); });
+after(() => undo922());
 
 const sysOf = (o: { reaction: number; q: number; qn?: number; i: number; in?: number }) => ({
   derived: { reaction: o.reaction },
@@ -50,7 +57,8 @@ describe('v0.80.0 combat: the shipped values are the book', () => {
 
   test('the patch tables keep the shipped rows (only the Revamp\'s changes differ)', () => {
     const sit = URR80_PATCH_COMBAT['SITUATIONAL_MODIFIERS'] as Array<{ id: string; value: number }>;
-    for (const m of RULES.SITUATIONAL_MODIFIERS) assert.equal(sit.find((x) => x.id === m.id)?.value, m.value, m.id);
+    // v0.92.3: the book's difficult-ground rows are not in the Revamp's list.
+    for (const m of RULES.SITUATIONAL_MODIFIERS) if (!['attackerWalkingRough', 'attackerRunningRough'].includes(m.id)) assert.equal(sit.find((x) => x.id === m.id)?.value, m.value, m.id);
     const gr = URR80_PATCH_COMBAT['COMBAT.grenades'] as Array<{ id: string; perMetre?: number }>;
     for (const k of RULES.COMBAT.grenades) {
       const mine = gr.find((x) => x.id === k.id);

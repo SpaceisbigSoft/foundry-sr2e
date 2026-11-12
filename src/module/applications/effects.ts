@@ -5,7 +5,9 @@
 import { SYSTEM_ID } from "../config/system.ts";
 import { sysNow } from '../helpers/clock.ts';
 import { RULES, withdrawalState, WOUND_STATUS_IDS, STATE_STATUSES } from "../rules/index.ts";
+import * as C923 from "../rules/combat923.ts";
 import { t as tx, tCount, tNoun, tKey } from "../helpers/i18n.ts";
+import { addictWho, addictionBook } from "../rules/health923.ts";
 
 export interface EffectRow { group: string; name: string; detail: string; until: string; statusId?: string }
 
@@ -60,7 +62,8 @@ export function effectRows(actor: any): EffectRow[] {
   const ownState = (s: (typeof STATE_STATUSES)[number]) => s.id.startsWith('sr2e') || (s.state === 'onFire' ? Boolean(flag('onFire')) : s.state === 'broken' ? Boolean(flag('broken')) : true);
   const states = STATE_STATUSES.filter((s) => (actor?.statuses as Set<string> | undefined)?.has?.(s.id) && ownState(s));
   for (const s of states) {
-    const detail = s.state === 'fullDefense' ? tx('SR2E.App.Effects.diceAgainstAttacksUntilThe', { attribute: RULES.COMBAT.fullDefense.attribute })
+    // v0.92.3 (COMBAT_V923.fullDefense 'book', Core p. 102): no extra dice; the pool goes to the resistance test.
+    const detail = s.state === 'fullDefense' ? (C923.fullDefenseBook() ? tx('SR2E.App.Combat923.fullDefenseDetail') : tx('SR2E.App.Effects.diceAgainstAttacksUntilThe', { attribute: RULES.COMBAT.fullDefense.attribute }))
       : s.state === 'onFire' ? tx('SR2E.App.Effects.burnsEveryCombatTurnUntil')
       : s.state === 'broken' ? tx('SR2E.App.Effects.theGroupsMoraleHasBroken') : '';
     rows.push({ group: s.state === 'jackedIn' || s.state === 'jumpedIn' ? 'Matrix and rigging' : 'Combat', name: tKey(s.name), detail, until: '' });
@@ -76,7 +79,8 @@ export function effectRows(actor: any): EffectRow[] {
   for (const dr of (sys.drugs ?? []) as any[]) rows.push({ group: 'Health', name: dr.name, detail: tx('SR2E.App.Effects.drugInEffect'), until: untilLabel(dr, now) });
   for (const dz of (sys.diseases ?? []) as any[]) rows.push({ group: 'Health', name: dz.name, detail: dz.treated ? tx('SR2E.App.Effects.towardRecoveryTreated', { power: dz.power, level: dz.level, damageType: dz.damageType, recovered: dz.recovered, needed: dz.needed }) : tx('SR2E.App.Effects.towardRecovery', { power: dz.power, level: dz.level, damageType: dz.damageType, recovered: dz.recovered, needed: dz.needed }), until: Number(dz.nextAt) > now.worldTime ? tx('SR2E.App.Effects.nextIn', { time: timeLeftLabel(Number(dz.nextAt) - now.worldTime) }) : tx('SR2E.App.Effects.due') });
   for (const ad of (sys.addictions ?? []) as any[]) {
-    try { if (withdrawalState(ad, now.worldTime).withdrawal) rows.push({ group: 'Health', name: tx('SR2E.App.Effects.withdrawal', { drug: ad.drug }), detail: tx('SR2E.App.Effects.tnToEveryTestUntil', { withdrawalTn: RULES.HEALTH.addiction.withdrawalTn }), until: '' }); } catch { /* bad data */ }
+    // v0.92.3 (RULES.HEALTH_V923.addiction 'book'): the book's withdrawal timing and penalty.
+    try { if (withdrawalState(ad, now.worldTime, addictWho(sys)).withdrawal) rows.push({ group: 'Health', name: tx('SR2E.App.Effects.withdrawal', { drug: ad.drug }), detail: tx('SR2E.App.Effects.tnToEveryTestUntil', { withdrawalTn: addictionBook() ? RULES.HEALTH_V923.addictionBook.forcedWithdrawalTn : RULES.HEALTH.addiction.withdrawalTn }), until: '' }); } catch { /* bad data */ }
   }
   for (const r of (sys.recovering ?? []) as any[]) rows.push({ group: 'Health', name: tx('SR2E.App.Effects.recovering', { name: r.name }), detail: tx('SR2E.App.Effects.doesNotWorkYet'), until: untilLabel({ worldTime: Number(r.until) }, now) });
   for (const x of ((flag('stimDebt') as any[] | undefined) ?? [])) rows.push({ group: 'Health', name: x.name, detail: tCount(Number(x.boxes), 'SR2E.App.Effects.stunBoxEsComeBack'), until: untilLabel({ worldTime: Number(x.at) }, now) });

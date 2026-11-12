@@ -59,7 +59,8 @@ export const DOCS_V79_RANGED = {
   rangedFlechette: {
     mode: 'armor' as 'armor' | 'always',
     /** Ammunition ids that are flechette rounds. */
-    ammoIds: ['flechette'] as readonly string[],
+    // v0.92.3: shotgun shot follows the flechette rules (Core p. 95; COMBAT_V923.shotgun).
+    ammoIds: ['flechette', 'shot'] as readonly string[],
     /** Against armor: the higher of ballistic and impact × this. */
     armorMultiplier: 2,
   },

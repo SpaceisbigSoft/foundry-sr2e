@@ -7,6 +7,7 @@ import {
   workshopToolsLevel,
 } from '../paperwork.ts';
 import { guessSkillAttribute } from '../statblock.ts';
+import { oldWay } from './oldway.ts';
 
 const ORIGINAL = structuredClone(RULES.STREET_V61);
 afterEach(() => { (RULES as any).STREET_V61 = structuredClone(ORIGINAL); });
@@ -147,7 +148,9 @@ describe('v0.61.0 creation extras', () => {
     S().creation.nuyenPerSpellPoint = 1000;
     assert.deepEqual(spellPointCheck({ allowance: 10, spells: [{ force: 12 }] }), { used: 12, allowance: 10, ok: true, extraNuyen: 2000, note: '2 extra bought for ¥2,000' });
   });
-  test('leftover cash modes', () => {
+  test('leftover cash modes', (tt) => {
+    // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
+    tt.after(oldWay({ 'CORE_V923.leftoverCash': 'old' }));
     assert.deepEqual(leftoverCash(12000), { kept: 12000, lost: 0, note: '' });
     assert.deepEqual(leftoverCash(NaN), { kept: 0, lost: 0, note: '' });
     S().creation.leftoverCash = { mode: 'cap', cap: 5000 };

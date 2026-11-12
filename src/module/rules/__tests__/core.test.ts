@@ -5,6 +5,7 @@ import {
   naturalHealing, careModifiers, incapacitated, conditionStatuses, dyingTick, actionCost, spendAction, actionsLeftLabel,
   compareInitiative, surprised,
 } from '../core.ts';
+import { oldWay } from './oldway.ts';
 
 describe('core rules (v0.22.0)', () => {
   test('metatypes: modifiers and maximums', () => {
@@ -28,7 +29,9 @@ describe('core rules (v0.22.0)', () => {
     assert.equal(checkAttributeLimits('elf', base).warnings.length, 0);     // elf Q 7 is natural; 10 is exactly 7 × 1.5
   });
 
-  test('wound levels and first aid', () => {
+  test('wound levels and first aid', (t) => {
+    // v0.92.3: the old 1 box per success (the book's one level: v0923-health.test.ts).
+    t.after(oldWay({ 'HEALTH_V923.firstAid': 'boxes' }));
     assert.equal(woundLevel(0), null);
     assert.equal(woundLevel(2), 'L');
     assert.equal(woundLevel(4), 'M');
@@ -49,7 +52,9 @@ describe('core rules (v0.22.0)', () => {
     assert.deepEqual(careModifiers('none'), []);
   });
 
-  test('conditions', () => {
+  test('conditions', (t) => {
+    // v0.92.3: the old (Body) Combat Turns per box (the book's 10 minutes: v0923-health.test.ts).
+    t.after(oldWay({ 'HEALTH_V923.bleed': 'bodyTurns' }));
     assert.equal(incapacitated('ok'), false);
     assert.equal(incapacitated('unconscious'), true);
     assert.deepEqual(conditionStatuses('dying'), { unconscious: true, bleeding: true, dead: false });

@@ -5,6 +5,7 @@
  */
 import { RULES } from './config.ts';
 import type { TargetNumberModifier } from './dice.ts';
+import { veh923 } from './vehicles.ts';
 import { t as tx } from '../helpers/i18n.ts';
 
 const U = () => RULES.URR_V80;
@@ -28,7 +29,8 @@ export interface DsInterceptPlan {
  */
 export function dsInterceptPlan(o: { ownRcd: number; targetRcd: number; pilot: number; encryption: number; hasEwSkill: boolean }): DsInterceptPlan | null {
   const u = U();
-  if (u.dsLinkIntercept !== 'rcd') return null;
+  // v0.92.3 (RULES.VEHICLES_V923.interception 'book', Rigger 2 p. 68): the book's procedure is this one.
+  if (u.dsLinkIntercept !== 'rcd' && veh923('interception') !== 'book') return null;
   const enc = whole(o?.encryption);
   const target = whole(o?.targetRcd);
   let decrypt: DsInterceptPlan['decrypt'] = null;
@@ -68,9 +70,10 @@ export function dsRadioDecrypt(o: { encryption: number }): { baseTn: number; mod
 /** The casing test's extra TN for the lock's type (dsLockCasing 'byType'): a card reader's casing doubles, a scanner's adds. */
 export function dsCasingModifiers(lockType: string, casing: number): TargetNumberModifier[] {
   const u = U();
-  if (u.dsLockCasing !== 'byType') return [];
   const c = whole(casing);
   const id = String(lockType ?? '');
+  // v0.92.3 (RULES.VEHICLES_V923.cardCasing 'double', CSH p. 100): a card reader's casing is opened against twice its rating.
+  if (u.dsLockCasing !== 'byType') return c > 0 && id === 'card' && veh923('cardCasing') === 'double' ? [{ id: 'cardReaderCasing', label: tx('SR2E.Card.Mod.cardReaderCasing'), value: c }] : [];
   if (c > 0 && (u.dsCasingDouble ?? []).includes(id)) return [{ id: 'cardReaderCasing', label: tx('SR2E.Card.Mod.cardReaderCasing'), value: c }];
   const plus = num((u.dsCasingPlus ?? {})[id]);
   return plus ? [{ id: 'scannerCasing', label: tx('SR2E.Card.Mod.scannerCasing'), value: plus }] : [];
@@ -98,13 +101,18 @@ export function dsLockToolStep(o: { lockType: string; rating: number; skillDice:
   const rating = whole(o?.rating);
   const tn = Math.max(RULES.MIN_TARGET_NUMBER, rating);
   const skill = whole(o?.skillDice);
-  if (u.dsPasskey === 'rating' && id === 'card') {
+  // v0.92.3 (RULES.VEHICLES_V923.passkey 'book', CSH p. 100): the book's passkey is this test (it leaves the casing in
+  // place: bypassPlan asks for it before the casing). Review fix: as the sequencer it works like, used only when it rolls
+  // at least the skill's dice (the character may work the lock by skill instead).
+  const bookKey = veh923('passkey') === 'book';
+  if ((u.dsPasskey === 'rating' || bookKey) && id === 'card') {
     const k = best('passkey');
     if (k && whole(k.rating) >= skill) {
       return { step: 'circuit', tn, dice: whole(k.rating), modifiers: [], tool: { name: k.name, kind: 'passkey', rating: whole(k.rating), mode: 'replace' }, note: tx('SR2E.Text.Urr80DronesSecurity.spoofTheReaderWith', { name: k.name, rating: whole(k.rating) }) };
     }
   }
-  if (u.dsSequencer === 'opposed' && (id === 'keypad' || id === '')) {
+  // v0.92.3 (RULES.VEHICLES_V923.sequencer 'book', CSH p. 100): the book's sequencer is this opposed test.
+  if ((u.dsSequencer === 'opposed' || veh923('sequencer') === 'book') && (id === 'keypad' || id === '')) {
     const s = best('sequencer');
     if (s && whole(s.rating) >= skill) {
       return { step: 'voice', tn, dice: whole(s.rating), modifiers: [], tool: { name: s.name, kind: 'sequencer', rating: whole(s.rating), mode: 'replace' }, note: tx('SR2E.Text.Urr80DronesSecurity.crackTheKeypadWith', { name: s.name, rating: whole(s.rating) }) };

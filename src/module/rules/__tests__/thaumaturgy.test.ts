@@ -23,7 +23,8 @@ describe('thaumaturgy', () => {
     assert.equal(sustainingModifiers([{ spellName: 'Armor', force: 4, category: 'manipulation', focusId: '' }])[0]?.value, 2);
   });
 
-  test('projection lasts 2 x Essence hours; each hour or part over costs a point of Essence', () => {
+  test('projection lasts 2 x Essence hours; each hour or part over costs a point of Essence (v0.92.2 way)', (t) => {
+    t.after(oldWay({ 'SPIRITS_V923.projection': 'v922' }));
     assert.deepEqual(projectionOverstay(10, 6), { limit: 12, over: 0, essenceLoss: 0 });
     assert.deepEqual(projectionOverstay(13.5, 6), { limit: 12, over: 1.5, essenceLoss: 2 });
     assert.deepEqual(projectionOverstay(5, 2.8), { limit: 4, over: 1, essenceLoss: 1 });

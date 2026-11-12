@@ -1468,7 +1468,7 @@
       "general": "General",
       "reflexSystemsWiredAndBoostedReflexes": "Reflex systems: wired and boosted reflexes don't stack (blank: guessed from the name)",
       "reflexes": "Reflexes",
-      "builtIntoACyberlimbUsesIts": "Built into a cyberlimb: uses its capacity instead of Essence",
+      "builtIntoACyberlimbUsesIts": "Built into a cyberlimb: uses its capacity. By the book only spurs, razors, fingertip compartments, smartlinks, orientation systems and tactical computers cost less Essence there (house rules: cyberlimbs)",
       "housedIn": "Housed in",
       "damagedCyberwareGivesNothingUntilRepaire": "Damaged cyberware gives nothing until repaired",
       "costStandard": "Cost (¥, standard)",
@@ -2149,7 +2149,12 @@
       "referenceMore": "The first {shown} of {total}: type more to narrow it.",
       "referenceShown": "{shown} found.",
       "referenceDragHint": "Drag onto the sheet to open the shop with it ticked.",
-      "referenceNothing": "Nothing found."
+      "referenceNothing": "Nothing found.",
+      "toleranceRating": "Tolerance",
+      "strengthRating": "Strength rating",
+      "recoveringAddiction": "· kicking it",
+      "immuneToDrug": "immune",
+      "fetishExpendable": "Expendable fetish"
     },
     "Settings": {
       "rulesSource": {
@@ -2544,6 +2549,7 @@
         "thereIsNoEarlierBlastCard": "There is no earlier blast card to combine with.",
         "someoneHasAlreadyResistedOneOf": "Someone has already resisted one of these blasts.",
         "theCrashHasAlreadyBeenRolled": "The crash has already been rolled.",
+        "drainAlreadyRolled923": "That Drain has already been rolled.",
         "theOverloadTestHasAlreadyBeen": "The overload test has already been rolled.",
         "onlyTheGmCanChangeA2": "Only the GM can change a host.",
         "thatHostNoLongerExists": "That host no longer exists.",
@@ -3034,7 +3040,6 @@
         "damaged": "damaged",
         "stillHealingIn": "still healing in",
         "isBuiltIntoWhichIs": "{weaponName} is built into {wareName}, which is {part}.",
-        "isHolsteredDrawItFirstA": "{weaponName} is holstered: draw it first (a Simple Action; the \"holstered\" link on the sheet).",
         "isManifestingSeenAndHeardIn": "{name} is manifesting: seen and heard in the physical world, but unable to act there.",
         "isNotMaterializedOnlyAstralAttacks": "{targetName} is not materialized; only astral attacks can reach it.",
         "thatIsNotASlapPatch": "That is not a slap patch.",
@@ -3096,7 +3101,7 @@
         "allowedTheHouseRuleOnlyWarns": " (Allowed: the house rule only warns.)",
         "needsToLearnAtForce": "{name} needs {problem} to learn {name2} at Force {force}.{part}",
         "needsMagicAndToRaiseA": "{name} needs Magic and {wSkill} to raise a ward.",
-        "hasNoCenteringSkillNamedMagic": "{name} has no centering skill named (Magic tab).",
+        "hasNoCenteringSkillNamedMagic": "{name} has no centering skill named (Magic tab): name one there to roll centering (by the book centering is always a test of that skill, Grimoire p. 43).",
         "hasNoMagicToInitiate": "{name} has no Magic to initiate.",
         "thereIsNoMetamagicTechniqueCalled": "{name}: there is no metamagic technique called {technique}.",
         "isAlreadyInitiatingUpkeepTabUnder": "{name} is already initiating (Upkeep tab, Under way).",
@@ -3362,7 +3367,15 @@
         "sWirelessLinkIsJammedClearPlain": "{name}'s wireless link is jammed: clear it or use a hard line.",
         "aCategorySpell": "a {category} spell",
         "aSpellOfNoCategory": "a spell of no category",
-        "notCarried": "{name} isn't carried: tick Carried first."
+        "notCarried": "{name} isn't carried: tick Carried first.",
+        "allyNeedsMagicPoint": "{name} has no Magic point to give the ally.",
+        "summonOutsideDomain": "{name} can't summon a nature spirit of {domain} here: it is outside its domain.",
+        "noSpellHealsStun": "{spellName}: no spell heals Stun; it recovers by rest.",
+        "firstAidPhysicalOnly": "First aid treats Physical damage only; Stun recovers by rest.",
+        "notAddictedOrRecovering923": "{name} isn't addicted to {drug}, or is already kicking it.",
+        "replaceChip923": "{deckName}: gray IC damage is permanent; build the damaged part again to replace its chip.",
+        "frameCarry923": "{progName} (rating {progRating}) can carry utilities whose ratings total at most {progRating}.",
+        "noKarmaAfterOops": "Karma turned this test's disaster into a failure: no more Karma can be spent on it (Core p. 191)."
       },
       "Migrations": {
         "sr2eMigrationToFailedSeeThe": "SR2e: migration to {version} failed; see the console. Later migrations were not run."
@@ -3946,14 +3959,14 @@
         "commonSkillsNotOnTheSheet": "Common skills not on the sheet yet: {starterSkillsMissing}.",
         "used": "Used",
         "allowed": "Allowed",
-        "spellPoints": "{mark} Spell points",
+        "spellPoints": "{mark} Force Points",
         "lifestyleBoughtOutright": "{mark} Lifestyle bought outright",
         "notEnoughCashPaidByThe": ": not enough cash (paid by the month instead)",
         "months": "{wantMonths} months{part}",
         "cashLeft": "Cash left",
         "gearToAdd": "Gear to add",
         "lists": "✗ Lists",
-        "theSr2PriorityTableFromMemory": "The SR2 priority table, from memory (house rules: Characters). Base attributes are before racial modifiers; gear at its cost (cyberware at its grade). \"Fill the sheet\" sets the metatype, these base attributes, Magic {magicRating} for a magician or adept, the cash left after gear, a lifestyle by the Resources priority paid {lifestyleMonths} ahead, up to {contactsCount} free contacts, the listed skills (a skill already on the sheet is re-rated) and the listed gear. Skills and gear not listed stay as they are.",
+        "theSr2PriorityTableFromMemory": "The priority table in use (SR2 Core p. 47 by default; house rules: Characters). Base attributes are before racial modifiers; gear at its cost (cyberware at its grade). \"Fill the sheet\" sets the metatype, these base attributes, Magic {magicRating} for a magician or adept, the cash left after gear, a lifestyle by the Resources priority paid {lifestyleMonths} ahead, up to {contactsCount} free contacts, the listed skills (a skill already on the sheet is re-rated) and the listed gear. Skills and gear not listed stay as they are.",
         "savePriorities": "Save priorities",
         "fillTheSheet": "Fill the sheet",
         "build": "Build: {actorName}",
@@ -4821,7 +4834,22 @@
         "track2__monitor": "Track",
         "repair__tnBase": "Repair",
         "spell__pool": "Spell",
-        "isAFixerFinds": "A fixer: can find things for you (for a cut of the price)"
+        "isAFixerFinds": "A fixer: can find things for you (for a cut of the price)",
+        "allyBookPlan": "Conjuring vs TN {tn}; {days} day(s) ÷ successes, resisting (Force + days)L Stun each day; materials {nuyen}¥; bonding {karma} Good Karma and {magic} Magic on success. It counts for the familiar ordeal.",
+        "allyDesignKarma": "Design Karma (attributes, skills, extra forms, sense link)",
+        "allyForFamiliarOrdeal": "For the familiar ordeal (no Magic point)",
+        "dispelBookHint": "Only a spell of Force up to your grade. Sorcery vs the higher of its Force and the Karma that quickened it; every 2 successes take 1 off its Force; at 0 it ends. Drain as if you had cast it.",
+        "trueNameBookHint": "Conjuring vs its Force + Spirit Energy. One success binds it; it costs no Karma. You take conjuring drain.",
+        "hazardFallingBook923": "Falling now: Deadly, Power half the metres, less half impact armor and 1 per success of an Athletics test vs the metres.",
+        "hazardDrowningBook923": "Drowning and suffocation now: after the held breath (30 s per point of Body), 1 unresisted Stun box an action phase, then Physical.",
+        "orAt4VsTnByLevel923": "{skill} (or {fallbackAttribute} at +4) vs TN by the wound (Light {tnByLevel}, Moderate {tnByLevelM}, Serious {tnByLevelS}, Deadly {tnByLevelD}){part}; any success lowers the wound one level, never more; Physical damage only; once per wound unless a better healer tries. A Deadly wound can only be stabilised: any success.",
+        "stunVsTnByTheWoundBook923": "Stun: the higher of Body and Willpower vs {stunTn} + the wound modifiers (no care helps); one box takes {periodHoursStun} h divided by the successes. Physical heals in stages, one wound level each: first a self-recovery test (natural Body vs 2 / 4 / 6; failed, or Deadly, needs a doctor), then Body vs {healingStagesTnByLevel} / {tnByLevelM} / {tnByLevelS} / {tnByLevelD2}{part}; the stage takes 24 h / 10 / 20 / 30 days ÷ successes (at least 2 h / 1 / 2 / 3 days).",
+        "opposedManeuver923": "Opposed: your Evasion (Cloak lowers the TN) vs their Sensors (IC: the host's Security Value); they roll against your Evasion (their Lock-On helps). Net successes, at most {maneuversMaxTn}, are the TN change; it lasts until the end of the next Combat Turn.",
+        "attackHint923": "Your attack utility's rating (+ Hacking Pool) vs a TN by the host's security code and the target's status (Intruding: Blue 6, Green 5, Orange 4, Red 3; Legitimate: 3, 4, 5, 6); party IC +1 per member. {part}. Then the target resists the damage (IC with the host's Security Value).",
+        "frameAttackHint923": "{frameName} rolls its {fd} vs a TN by the host's security code and the target's status.",
+        "exclusiveForceWhenCast": "Exclusive (Force +{force} when cast)",
+        "fetishForceWhenCast": "Fetish-limited (Force +{force} when cast, +{expendable} expendable)",
+        "designBookHint": "Magical Theory (at most your library's or lodge's rating; 1 die per 2 points it is higher) vs 2 × Force − Magic + the drain modifiers; 6, 18, 30 or 60 days by drain level ÷ successes. A success gives a formula card: learn it for Good Karma = Force, or offer it to your group's grimoire."
       },
       "Spendkarma": {
         "raise": "Raise",
@@ -5002,6 +5030,18 @@
         "bigJumpHint": "Did that time pass for the characters? \"Count it as time passed\" runs everything timed for it: drugs wear off, wounds heal, upkeep and training come due, spirits leave. \"Only the date\" changes the calendar but not the characters' time: everything keeps the time it had left (the hours of a part day count).",
         "dateOnly": "Only the date",
         "countIt": "Count it as time passed"
+      },
+      "Combat923": {
+        "foesInMelee": "The target's friends in this melee (+1 each beyond yours)"
+      },
+      "Core923": {
+        "perceiveBook": "{actorName}'s Intelligence vs {tn} with the modifiers; one success notices them (SR2 has no Perception skill and no Stealth roll here). Light, walls, smoke, weather, distance and what they wear are read from the scene. (Alt-click a skill for a plain roll.)",
+        "perceiveCompanion": "Their {stealth} ({tn}) first, each success +1 to the TN; then {actorName}'s Intelligence vs {tn} with the modifiers, one success notices them. Light, walls, smoke, weather, distance and what they wear are read from the scene. (Alt-click a skill for a plain roll.)",
+        "sneakBook": "No Stealth roll: each observer's Intelligence vs {tn} with the modifiers; one success notices. The ticked conditions make it harder for the observers.",
+        "sneakCompanion": "{stealth} ({tn}) once; each success adds +1 to every observer's Intelligence test vs {tn}; one success notices. The ticked conditions make it harder for the observers.",
+        "publicRep": "Public rep (blank: private rep, the career Karma)",
+        "recognitionHint": "Each picked character's Etiquette (else Charisma at +4) vs (1,000 − rep) ÷ 50: private rep {rep} gives TN {tn} (whispered to the GM).",
+        "athleticsHint": "{skill} (or {attribute} at +{attributeDefaultTnMod}). Climbing: a quarter of (the average of Quickness and Strength + 2 per success) metres a turn; a Rule of One is a fall. Swimming: a fifth of the running distance, Quickness + 1 per success. Jumping: {jumpMetresPerSuccess} m per success."
       }
     },
     "Window": {
@@ -5315,6 +5355,7 @@
         "from": "{toxName} (from {toxFrom})",
         "resistsTheCrashPower": "{actorName} resists the {drug} crash (Power {boundPower}{boundLevel})",
         "resistsAnAdrenalPumpCrashRating": "{actorName} resists an adrenal pump crash (rating {rating})",
+        "resistsConjuringDrain923": "{actorName} resists conjuring Drain (Force {force})",
         "resistsSimsenseOverloadTn": "{deckerName} resists simsense overload (TN {tn})",
         "host": "Host",
         "securityTally": "Security tally",
@@ -5369,7 +5410,9 @@
         "changeTargetNumberMenu": "Change target number…",
         "goesOffAt": "{name} goes off at {pickedName}{part}.",
         "goesOffWhereItWasSet": "{name} goes off where it was set{part}.",
-        "catchesFireKeepsBurning": "{name} catches fire: resists the flames and keeps burning each Combat Turn"
+        "catchesFireKeepsBurning": "{name} catches fire: resists the flames and keeps burning each Combat Turn",
+        "rollsPermanentDamage923": "{actorName} rolls a permanent damage test: a limb, organ or attribute may be lost for good",
+        "stillExposed923": "Still exposed to {name}"
       },
       "Actor": {
         "aPlayer": "a player",
@@ -5596,7 +5639,7 @@
         "theConditionMonitorChangedSinceThis": "The condition monitor changed since this was rolled, so it was not adjusted. It should be {monitorPhysical} physical / {monitorStun} stun relative to before.",
         "isDamaged": "{bestName} is damaged (−{dgPoints}).",
         "knockdownTestBodyVs": "Knockdown test (Body vs {knockdownTn})",
-        "n1d6PerPieceOfCyberwareLow": "1d6 per piece of cyberware: low rolls damage it",
+        "n1d6PerPieceOfCyberwareLow": "Rolls which cyberware the wound damages",
         "cyberwareDamageCheck": "Cyberware damage check",
         "resistInfection": "Resist infection ({infectionName})",
         "resist5": "Resist {toxinHitName}",
@@ -6450,6 +6493,7 @@
         "theyAreConditionedInTheCorp": "they are conditioned in the corp's favour (the GM plays it)",
         "judas": "Judas:",
         "isCompelledToBetrayTheirTeam": "{name} is compelled to betray their team to the host's owners.",
+        "isCompelledToBetrayUntil923": "{name} is compelled to betray their team to the host's owners {until}.",
         "theMatrixMonitorChangedSinceThis": "The Matrix monitor changed since this was rolled, so it was not adjusted. It should be {resultAfter}.",
         "dumpShock": "Dump shock",
         "sLinkIsOutOfRange": "{name}'s {matrixConnection} link is out of range: {note}.",
@@ -7084,6 +7128,8 @@
         "library": " + {site} library",
         "learning": ", learning {technique}",
         "overstayedHLosesEssence": "Overstayed {over} h: loses {essenceLoss} Essence.",
+        "projectionEssenceBack923": "The body lost {essenceLoss} Essence while they were away; it comes back at 1 point a minute.",
+        "projectionBodyDied923": "The body lost {essenceLoss} Essence while they were away, more than it had: by the book the magician died (Core p. 147; the GM decides).",
         "thePatient": "the patient",
         "aTeamMember": "A team member",
         "aWall": "a wall",
@@ -7107,6 +7153,7 @@
         "losesMagic": "{name} loses {outcomeLost} Magic",
         "now4": "(now {value}).",
         "noMagicIsLost": "No Magic is lost.",
+        "focusLossUndone923": "The Magic the earlier roll took is given back.",
         "force3": "Force",
         "magic3": "Magic",
         "left": "{left} left.",
@@ -7591,7 +7638,134 @@
           "one": "· {name}'s {name2} (rating {idnRating}) against a rating {checkerRating} checker ({dice} dice vs TN {tn}): {count} success against the fake's {forgerSuccesses}.",
           "other": "· {name}'s {name2} (rating {idnRating}) against a rating {checkerRating} checker ({dice} dice vs TN {tn}): {count} successes against the fake's {forgerSuccesses}."
         },
-        "tweakPower": "custom tweak Power {value}"
+        "tweakPower": "custom tweak Power {value}",
+        "surgeryEssenceCost": "{name}'s Essence cost is {cost} (was {base}).",
+        "surgeryEssenceZero": "That would leave the patient below 0 Essence: the surgery stops there and the patient survives at Essence 0 (Cybertechnology p. 54).",
+        "adrenalTurns": "It runs for {turns} turns.",
+        "systemRepeat": "{name} again: no further hit",
+        "systemResist": "(graded: 5 dice vs {tn}, {successes} successes)",
+        "systemDestroyed": "destroyed",
+        "systemLevel": "{level} damage",
+        "systemNone": "no damage",
+        "systemDamageTitle": "System damage ({level} wound: {n} systems)",
+        "filterStops": "{filter} stops {name} ({mine} against {theirs} successes).",
+        "filterFails": "; {filter} fails ({mine} against {theirs}): full effect",
+        "filterStopsSmoke": "{filter} keeps the smoke out ({mine} against {theirs} successes).",
+        "autonavTooLowToDrive": "{vehicleName}'s autonav (rating 1) can't drive it by itself; someone has to.",
+        "undrivenCrash923": "No one is at the controls of {name} and its autonav can't drive it by itself (Rigger 2 p. 122): it can't make the Crash Test and crashes.",
+        "plusAutonavDice": " + autonav {nav}",
+        "vehicleNoDodge": "{name}: no dodge test (the rigger's Control Pool goes on the damage resistance)",
+        "bodyZeroDestroyed": "{name} (Body 0) takes {incPower}{incLevel}: any hit destroys it",
+        "vehicleCompleteMiss": "A complete miss (more Control Pool dice than the attacker's successes).",
+        "destroyedVehicleCrashes": "{name} is destroyed and crashes.",
+        "powerTheVehicleTakesThenAboard": "Power {power}: the vehicle takes {power}{vehicleLevel}{part}; everyone aboard then resists the same damage, even if the vehicle's test leaves it unharmed (no Combat Pool, impact armor only).",
+        "allyMagicPoint": "and gives up {mag} Magic for good",
+        "allyRitualDay": "Ally ritual, day {day}: fatigue",
+        "banishBackfire": "The spirit wins: {name} loses {lost} Magic (back at 1 an hour).",
+        "banishPassesOut": "{name} passes out, and the spirit is free to go.",
+        "banishForceBack": "{name} regains {back} Force lost in banishing.",
+        "banishMagicBack": "{name} regains {back} Magic lost in banishing.",
+        "barrierBacklash": "{bn} strikes back: {power}{level}, resisted with astral Body against its rating.",
+        "charismaOwnSpirit": "Charisma +{cha} (own spirit)",
+        "conjuringVsSpirit": ", Conjuring {dice} against a spirit",
+        "holdsControlOf": "{name} holds on to {spiritName} (Conjuring vs Force {force})",
+        "holderDrain923": "lost control of {spiritName}: they resist Drain as if they had summoned it (Force {force}; Core p. 143).",
+        "resistDrain923": "Resist Drain",
+        "regenDeathCheck": "{name}: regeneration death check, 1D6 = {die}.",
+        "regenDies": "A 1: it is dead.",
+        "regenDiesIfFire": "A 2: it dies if fire or an explosion did this (the GM's call); otherwise its wounds vanish.",
+        "regenLives": "It lives; its wounds vanish.",
+        "wardLastsDays": "it lasts {days} day(s)",
+        "weaponFocusAstral": "weapon focus: Charisma + half its rating",
+        "willpowerVsSpirit": "Willpower against a spirit, no Combat Pool",
+        "drowningBoxes923": "is out of air for {turns} Combat Turn(s) ({phases} action phase(s) a turn): {boxes} Stun box(es), unresisted (past a full Stun track they go on Physical).",
+        "fallingAthletics923": "falls {metres} m: Athletics ({dice} dice) vs {tn}, {successes} success(es) off the Power.",
+        "fallingNoDamage923": "lands without harm: the fall's Power is gone.",
+        "shockWeapon923": "Stun weapon",
+        "disoriented923": "Disoriented (shock)",
+        "shockDisoriented923": {
+          "one": "is disoriented by the shock for {count} Combat Turn: +{tn} to every TN ({attribute} vs 4: {successes} success(es)).",
+          "other": "is disoriented by the shock for {count} Combat Turns: +{tn} to every TN ({attribute} vs 4: {successes} success(es))."
+        },
+        "shockShrugged923": "shakes off the shock ({attribute} vs 4: {successes} success(es)).",
+        "permanentDamageDue923": "A Deadly wound: a vital organ, limb or system may be harmed for good (Body vs 4, dermal armor counts, +2 after a trauma patch).",
+        "permanentDamageTest923": "Permanent damage test",
+        "permanentDamageRoll923": "Body {dice} dice (dermal armor {dermal}) vs {tn}: {successes} success(es).",
+        "permanentDamageNone923": "no limb or organ damage.",
+        "permanentDamageAttribute923": "a vital organ or system is gravely damaged: loses a point of {attribute} for good (and its racial maximum); continuous Biotech care, healing time doubled, a transplant needed. The GM applies it.",
+        "permanentDamageLimb923": "{part} is beyond healing: a replacement is needed (natural or cyber), base healing time +50%. The GM applies it.",
+        "pdBody923": "Body",
+        "pdStrength923": "Strength",
+        "pdQuickness923": "Quickness",
+        "pdIntelligence923": "Intelligence",
+        "pdWillpower923": "Willpower",
+        "pdReaction923": "Reaction",
+        "pdRightArm923": "the right arm",
+        "pdLeftArm923": "the left arm",
+        "pdRightLeg923": "the right leg",
+        "pdLeftLeg923": "the left leg",
+        "pdRightEar923": "the right ear",
+        "pdLeftEar923": "the left ear",
+        "pdRightEye923": "the right eye",
+        "pdLeftEye923": "the left eye",
+        "drasticSurgeryMagicLoss": "went through drastic invasive surgery: a Magic loss test is due once the wound has healed.",
+        "kickTheHabitBook923": "Kick the {drug} habit (Willpower vs {rating} +{plus})",
+        "toleranceTest923": "{drug}: Tolerance test (Body vs {tn})",
+        "addictionTestBook923": "Addiction test: {drug} ({attribute} vs {rating}, {type})",
+        "toleranceNotYet923": "{name} still feels {drug}.",
+        "toleranceImmune923": "{name} is immune to {drug} for good: it no longer has any effect.",
+        "startsRecovering923": "{name} starts to kick the {drug} habit: +{tn} to every TN (double on concentration) while the rating falls back, about {days} day(s).",
+        "addictedBook923": "Without a dose every {hours} hours: forced withdrawal, +{tn} to every TN.",
+        "toleranceNoEffect923": "takes {name}: immune to it, it has no effect.",
+        "relapse923": "takes {name} while kicking it: addicted again, its rating +1.",
+        "recovered923": "is no longer addicted to {drugs}.",
+        "stillExposedButton923": "Still exposed: resist again (GM)",
+        "probeTest923": "{name} probes (rating {rating} vs Detection Factor {df})",
+        "versusHost923": "vs the host's {host}",
+        "redirects923": "{name} leaves a redirect: the Trace Factor is {n} higher this run.",
+        "relocates923": "{name} spoofs {icName}: its trace completes a turn later.",
+        "gracefulOut923": "{name} logs off {hostName} and leaves the Matrix cleanly: no dump shock.",
+        "traceStops923": "The trace stops.",
+        "locateProgress923": "Successes so far: {total} (a file every {need}).",
+        "jackOutShock923": "Jacking out without a Graceful Logoff",
+        "psycheAtJackOut923": "{name} is out of the Matrix: {icName}'s payload tests their mind now.",
+        "datatrail923": "{name}'s datatrail stays up {turns} turns after the jack-out ({left} left on the trace).",
+        "oneMoreAttack923": "{icName} gets one more attack before the link goes down.",
+        "noDumpShockLeft923": "No dump shock (the cool deck and ICCM take it all).",
+        "utilityDice923": "(utility {dice} dice)",
+        "cyberTn923": "TN {tn}: {name}, {status} on {code}",
+        "legitimate923": "Legitimate",
+        "intruding923": "Intruding",
+        "traceFactor923": "{name}'s Trace Factor",
+        "thenTrace923": "{part}, then {part2}. Derez it, spoof it with Relocate, or make a Graceful Logoff first: jacking out leaves the datatrail up.",
+        "resistIcon923": "Resist ({tName}'s icon)",
+        "shieldWears923": " · {name} drops to {to}",
+        "hackingPoolPlus923": "{pool} Hacking Pool",
+        "matrixDefense923": "Matrix defense ({parts} vs {tn})",
+        "crashTally923": "Crashing {icName} adds {n} to {name}'s security tally.",
+        "untilRecovered923": "until they recover (a Willpower ({rating}) test {every})",
+        "daily923": "daily",
+        "weekly923": "weekly",
+        "nowUntilReplaced923": "(now {value} until the chip is replaced).",
+        "paydataBomb923": ", data bomb {bomb}",
+        "areaEachOwnTn": "lowest {attrName} of {count} targets; each counts against its own",
+        "spellFocusDrain": "spell focus +{dice}",
+        "categoryFocusResist": " + {dice} spell focus",
+        "shieldingTn": " (shielding: caster's TN +{tn}, {before} → {after} successes)",
+        "aidSpent": " [{name} is used up and vanishes]",
+        "aidLeft": " [{name}: {left} dice left]",
+        "projectingDropsSpells": "projects: the spells they sustained drop ({list}).",
+        "dispelsForce": "{name} dispels {spellName} on {targetName}: Force {from} → {to}",
+        "forceLeft": "Force {force} left.",
+        "focusAddictionMagic": "Focus addiction test (Magic vs {tn}: foci {faTotal}, Magic {magic})",
+        "focusGeasDue": "{name} has lost 2 Magic to foci and takes the focus geas: magic without an active focus is at +{addictionWithdrawalTn} TN.",
+        "detectionRangeTest": "{spellName}: range (Force {force} vs 4)",
+        "detectionRangeIs": "The spell reaches {metres} m.",
+        "detectionOutOfRange": "is {metres} m away; the spell reaches {range} m.",
+        "dermalBody": ", dermal armor +{dermal} Body",
+        "threatDice": " [Threat +{threat}]",
+        "iccm2": " (ICCM)",
+        "magicalTheory2": "Magical Theory"
       },
       "Adding": {
         "buysFor": "buys {list} for ¥{planNuyen}.",
@@ -7613,7 +7787,8 @@
           "one": " ({count} build check not met)",
           "other": " ({count} build checks not met)"
         },
-        "mundane": "mundane"
+        "mundane": "mundane",
+        "startingCash": "Starting cash, {formula} × ¥{per}: {total} → ¥{nuyen} (included above)."
       },
       "Inline": {
         "base": "Base {baseTargetNumber}{part}{part2}",
@@ -7908,13 +8083,48 @@
         "legality": "{label} (found openly)",
         "legalityFixer": "{label} (through a fixer)",
         "legalityContact": "{label} (through a contact)",
-        "contactLevel": "Closer contact"
+        "contactLevel": "Closer contact",
+        "systemShock": "System shock (over the Body Index)",
+        "meleeHalf": "{label}, halved in melee",
+        "foesInMelee": "Opponent's friends in melee (+{n})",
+        "crashSpeed": "Speed vs the driver's Reaction {reaction}",
+        "relativeSpeed": "Relative speed (×{ratio})",
+        "unmountedWeapon": "Weapon not in a vehicle mount",
+        "brokenGeasa": "Broken geasa ({count})",
+        "withdrawalPain923": "Withdrawal pain (as Moderate Stun)",
+        "traced923": "Traced (IC −1)",
+        "passiveAlert923": "Passive alert",
+        "consoleAccess923": "Console access (half)",
+        "traceLogoff923": "{name} holds the trace",
+        "partyIc923": "Party IC ({n})",
+        "formulaNoTeacher": "Formula, no teacher",
+        "speakingDialect": "Speaking a dialect",
+        "stealthSuccesses": "The sneaker's Stealth successes",
+        "iccm": "ICCM"
       },
       "Drops": {
         "notInstalledTickInstalledAfterSurgery": "not installed (tick Installed after surgery)",
         "notBondedBondItForGood": "not bonded (bond it for Good Karma)",
         "notLoaded": "not loaded",
         "notWorn": "not worn"
+      },
+      "Notice923": {
+        "title": "SR2e v0.92.3: the books' rules are now the default.",
+        "lead": "These actors' numbers or behaviour change with the new defaults (nothing was changed on them; this card only reports). Each line names the house rule that puts the v0.92.2 way back (Configure Settings, the house rules window).",
+        "racialMods": "Racial modifiers (a dwarf's Quickness −1, a troll's Willpower −1, Core p. 45):",
+        "magicFromEssence": "Magic from Essence (every point or part of Essence lost takes a point of Magic; adept powers above the new Magic switch off, Core p. 47):",
+        "essence": "Essence (ware inside a cyberlimb, bioware on the Awakened, beta grade × 0.6; Cybertechnology p. 49, Shadowtech p. 5):",
+        "status": "Condition (dead only past the natural Body, Core p. 111; Essence 0 survivable, Core p. 246; or the Essence change above): the status shown now differs from v0.92.2's, check them:",
+        "bodyIndex": "Sensitive System (twice the bioware's Body Index, Companion; over the Body Index means system shock):",
+        "load": "Carrying (Strength × 5 kg free, then fatigue as a Stun wound and slower movement, Core p. 185):",
+        "threat": "Threat-rated NPCs (Threat dice on every test, no Dice Pools, Core p. 187):",
+        "karmaPool": "Karma Pool growth (10 points to Good Karma, the next to the pool, Companion p. 76): their career Karma gives a different number of pool points at the new rate; their pool isn't changed, the next award counts by the new rate:",
+        "creation": "Still in the creation wizard (their drafts keep the priority table they were started with; finishing uses the new starting Karma Pool, cash and leftover rules):",
+        "notReady": "Weapons saved holstered (drawing is now a Simple Action, Core p. 82; an attack draws them itself):",
+        "shotgun": "Shotguns loaded with something other than shot (they now fire a slug, Core p. 95; load shot to spread):",
+        "restore": "To keep the v0.92.2 way: {rules}.",
+        "more": "and {count} more",
+        "after": "The full list of v0.92.3's changes is in the house rules window and the release notes."
       },
       "Migrations": {
         "sr2eV0770RulesValues": "SR2e v0.77.0: rules values checked against the books.",
@@ -8089,6 +8299,35 @@
         "alias": "World time",
         "dateOnly": "GM only · World time jumped; only the date changed. The system's clock stays {span} behind the calendar, so nothing came due.",
         "counted": "GM only · World time jumped {span}; it counted as time passed for everything timed."
+      },
+      "Combat923": {
+        "goesOnFullDefense": "goes on full defense (no Combat Pool on the melee test; pool dice go to the resistance test, a clean miss if their successes beat the attacker's){part}.",
+        "noInitiativeCost": "no initiative cost",
+        "barrierStops": "is safe: the barrier is rated above the attack's Power and stops it cold. No damage.",
+        "barrierHolds": "the barrier is rated above the Power: the shot can't get through",
+        "shortBurst": "short burst: {rounds} round(s) left",
+        "delayBroken": "used pool dice while delaying: the delayed action is lost.",
+        "ambusher": " (ambusher, TN {tn})",
+        "secondFirearmAids": "second firearm: no smartlink, goggles or laser",
+        "shotAids": "shot: no goggles or laser",
+        "shotSmartlink": "Shot: smartlink only −1",
+        "noCalledShot": "no called shot (single shots, semi-auto and bursts only; no armor gap)"
+      },
+      "Core923": {
+        "withdraws": "{who} withdraws from the fight",
+        "gruntWithdraws": "The grunt in front ({who}) withdraws",
+        "willpowerToStay": "Willpower ({tn}) to stay in the fight",
+        "moraleWillpower": "{name}: Willpower vs {tn} to stay in the fight",
+        "staysInTheFight": "{who} steels their will and stays in the fight.",
+        "looksFor": "{name} looks for {targetName}: {label} vs {tn}",
+        "stealthFirst": "{name}: {skill}{suffix} vs {tn} (each success +1 to the observer's TN)",
+        "successesSay": "({n}: {reveal})",
+        "sneaksNoRoll": "{name} sneaks past {count} (no Stealth roll: each watcher's Intelligence vs {tn})",
+        "sneaksStealth": "{name} sneaks past {count}: {skill}{suffix} vs {tn} (each success +1 to the watchers' TN)",
+        "recognitionPrivate": "Etiquette (else Charisma +4) vs {tn}: (1,000 − private rep {rep}) ÷ 50",
+        "recognitionPublic": "Etiquette (else Charisma +4) vs {tn}: (1,000 − public rep {rep}) ÷ 50",
+        "withdrawsWhy": "(Professional Rating {pr}, a {level} wound). The GM may let them test Willpower to stay.",
+        "gruntWithdrawsWhy": "(Professional Rating {pr}, a {level} wound): the next steps in; {left} standing."
       }
     },
     "Privacy": {
@@ -8534,7 +8773,7 @@
         "COMBAT__armorDegrade__enabled": "Armor degrades under heavy hits",
         "COMBAT__armorDegrade__atLevel": "Armor degrades at this damage level or worse",
         "COMBAT__load__enabled": "Carried weight slows characters",
-        "COMBAT__load__kgPerStrength": "Carrying limit: kg per point of Strength",
+        "COMBAT__load__kgPerStrength": "Carrying limit: kg per point of Strength (the old carrying rule only; the book's carrying rule uses Strength × 5 / 10 / 15 / 20 kg)",
         "COMBAT__silencer__perceptionTn": "Silencer: Perception TN to notice the shot",
         "COMBAT__tracer__tnPerBurst": "Tracers: TN per earlier burst",
         "COMBAT__throwBack__enabled": "Grenades can be thrown back",
@@ -8596,7 +8835,7 @@
         "COMBAT__aim__maxFromSkill": "Take Aim: at most this fraction of the skill (0 = no limit from the skill)",
         "COMBAT__multipleTargets__tnPerTarget": "Shooting at another target than earlier this phase: TN per target",
         "COMBAT__unaware__autoFromSurprise": "Targets the attacker surprised can't dodge or use Combat Pool against them",
-        "COMBAT__ready__rule": "Drawing a weapon: off (always ready), warn (a note), action (a Simple Action; free with a quick-draw holster)",
+        "COMBAT__ready__rule": "Drawing a weapon: off (always ready), warn (a note), action (a Simple Action, spent by the attack when the weapon isn't drawn yet; free with a quick-draw holster)",
         "COMBAT__armorFor__thrown": "Armor against thrown weapons (when the weapon says auto)",
         "COMBAT__armorFor__bow": "Armor against bows (when the weapon says auto)",
         "COMBAT__shotgunTnPerMetre": "Shotgun spread: + TN per metre of spread at the target (0 = Power only)",
@@ -8939,7 +9178,7 @@
         "URR_V80__coreAwardPool": "…per award: points to the Karma Pool",
         "URR_V80__coreAwardGood": "…then points to Good Karma, and round again",
         "URR_V80__coreMetaMax": "Natural maximums from the URR table (dwarf Quickness 5, troll Willpower 5)",
-        "URR_V80__coreEssenceFloor": "Magic capped at Essence rounded down (book: rounded up)",
+        "URR_V80__coreEssenceFloor": "Magic capped at Essence rounded down (Revamp; off: the book's 'Magic and lost Essence' row)",
         "URR_V80__coreWebArrows": "Skill Web: a link written \"A > B\" is one-way",
         "URR_V80__coreWebAttributes": "Skill Web: defaulting to an attribute follows its links (+2 a step; no link: the flat TN)",
         "URR_V80__coreSubSkillDefault": "Without the general skill, default from its concentration or specialization",
@@ -8953,16 +9192,16 @@
         "URR_V80__coreInstructorMargin": "…instructor's skill at least the new rating +",
         "URR_V80__coreFindTn": "Finding gear: Availability TN +",
         "URR_V80__coreHaggleTn": "Haggling: the seller's TN is fixed (book), or the buyer's Intelligence",
-        "STUN_OVERFLOW_PER_PHYSICAL_BOX": "Stun boxes past a full track per Physical box (the book 2; the Revamp 1)",
+        "STUN_OVERFLOW_PER_PHYSICAL_BOX": "Stun boxes past a full track per Physical box (the book and the Revamp 1; old 2)",
         "URR_V80__hsDeathPastOverflow": "Death only one box past a full Overflow row (more than 10 + Body)",
-        "URR_V80__hsBleedMinutes": "Dying: minutes of game time per extra box (0 = every Body Combat Turns, the book)",
+        "URR_V80__hsBleedMinutes": "Dying: minutes of game time per extra box (0 = the Book Rules' own rule)",
         "URR_V80__hsSelfStabilise": "Failed first aid on the dying: the patient rolls natural Body to stabilise",
         "URR_V80__hsSelfStabiliseTn": "Self-stabilisation TN",
-        "URR_V80__hsTraumaPatch": "Trauma patch: stabilises outright (book), or a natural Body test vs 4 + dermal armor / blood filter",
+        "URR_V80__hsTraumaPatch": "Trauma patch: the Book Rules' own rule (stabilise), or a natural Body test vs 4 + dermal armor / blood filter",
         "URR_V80__hsTraumaPatchTn": "Trauma patch Body test: base TN",
-        "URR_V80__hsStunRecovery": "Stun recovery: Body vs 2/4/6/8 (book), or the higher of Body and Willpower vs 2 + wound modifiers",
+        "URR_V80__hsStunRecovery": "Stun recovery: the Book Rules' own rule, or the higher of Body and Willpower vs 2 + wound modifiers",
         "URR_V80__hsStunRecoveryTn": "Stun recovery TN (Revamp)",
-        "URR_V80__hsFirstAid": "First aid: 1 box per success, at most half (book), or one wound level (Deadly: stabilise only)",
+        "URR_V80__hsFirstAid": "First aid: the Book Rules' own rule (boxes), or one wound level (Deadly: stabilise only)",
         "URR_V80__hsFirstAidTime": "First aid card shows the treatment time (10/20/30 minutes ÷ successes)",
         "URR_V80__hsFirstAidRetry": "First aid again on the same wound by a healer with higher Biotech",
         "URR_V80__hsMagicLossUntreated": "First aid without the magician +2 calls for a Magic loss test",
@@ -8972,21 +9211,21 @@
         "URR_V80__hsBreathHold": "Hold breath for a while (seconds per point of Body) before drowning counts",
         "URR_V80__hsBreathSecondsPerBody": "Held breath: seconds per point of Body",
         "URR_V80__hsAthletics": "Climb, jump and swim distances: per success (book), or by Fitness and Quickness",
-        "URR_V80__hsFalling": "Falling: Power = metres, Serious (book), or half the metres with the level by height, no armor",
+        "URR_V80__hsFalling": "Falling: the Book Rules' own rule, or half the metres with the level by height, no armor",
         "URR_V80__hsVisibleArmor": "Social tests: offer the visible-armor-in-a-luxury-setting row",
         "URR_V80__hsVisibleArmorTn": "Visible armor in a luxury setting: TN modifier",
-        "URR_V80__cbtTies": "Initiative ties: Reaction then Quickness (book), or Reaction then natural Reaction (Revamp)",
-        "URR_V80__cbtDefense": "Ranged defense: dodge with the Combat Pool (book), or no dodge: pool dice in the resistance test, clean miss, net staging (Revamp)",
-        "URR_V80__cbtKnockdown": "Knockdown: Body vs the soak TN when Power beats Body (book), or after any damage, 2/3/4 successes for L/M/S, staggering (Revamp)",
-        "URR_V80__cbtReload": "Cylinders and internal magazines: the house rounds per action (book), or Quickness rounds; break action whole (Revamp)",
+        "URR_V80__cbtTies": "Initiative ties: Reaction then Quickness (v0.92.2), or Reaction then natural Reaction (Revamp)",
+        "URR_V80__cbtDefense": "Ranged defense: dodge with the Combat Pool (v0.92.2), or no dodge: pool dice in the resistance test, clean miss, net staging (Revamp)",
+        "URR_V80__cbtKnockdown": "Knockdown: Body vs the soak TN when Power beats Body (v0.92.2), or after any damage, 2/3/4 successes for L/M/S, staggering (Revamp)",
+        "URR_V80__cbtReload": "Cylinders and internal magazines: the house rounds per action (v0.92.2), or Quickness rounds; break action whole (Revamp)",
         "URR_V80__cbtStrengthRecoil": "Strength 5+ takes 1–4 off recoil (Revamp)",
-        "URR_V80__cbtTracers": "Tracers: −1 per earlier burst (book), or full auto only, −1 per third round, no Power (Revamp)",
-        "URR_V80__cbtShotgun": "Shotguns: always spread (book), or slugs unless loaded with shot; the cone doubles every choke metres (Revamp)",
-        "URR_V80__cbtScatter": "Scatter per success: 2 m for all (book), or aerodynamic and launcher 4 m, rockets and missiles 2D6 −1 m (Revamp)",
+        "URR_V80__cbtTracers": "Tracers: −1 per earlier burst (v0.92.2), or full auto only, −1 per third round, no Power (Revamp)",
+        "URR_V80__cbtShotgun": "Shotguns: always spread (v0.92.2), or slugs unless loaded with shot; the cone doubles every choke metres (Revamp)",
+        "URR_V80__cbtScatter": "Scatter per success: 2 m for all (v0.92.2), or aerodynamic and launcher 4 m, rockets and missiles 2D6 −1 m (Revamp)",
         "URR_V80__cbtBlastStaging": "A blast's attack successes stage its damage (Revamp)",
         "URR_V80__cbtSubdueTn": "Subduing in melee: + TN (Revamp 2)",
         "URR_V80__cbtChargePower": "Charging: + Power (Revamp 1)",
-        "URR_V80__cbtArmorPool": "Heavy armor lowers Quickness (book), or ballistic over Quickness costs Combat Pool dice (Revamp)",
+        "URR_V80__cbtArmorPool": "Heavy armor lowers Quickness (v0.92.2), or ballistic over Quickness costs Combat Pool dice (Revamp)",
         "URR_V80__cbtArmorLayers": "Best armor plus half: only the next piece adds half (Revamp)",
         "URR_V80__cbtGradedCover": "Graded cover rows count as partial cover (Revamp)",
         "URR_V80__vehCpCap": "Control Pool on driving tests: any dice, or at most the driving skill",
@@ -9012,19 +9251,19 @@
         "URR_V80__dsDumpDisorient": "Dump shock disorients (+2 TN, 10 turns ÷ Willpower successes)",
         "URR_V80__dsCommsEccm": "A drone link's ECCM against jamming is at least",
         "URR_V80__magCastDice": "Spell success test dice: Sorcery (book), or the spell's Force (Revamp)",
-        "URR_V80__magElementalTn": "Ranged manipulation (elemental) spells: fixed TN (0 = the spell's own TN, book; Revamp 4)",
-        "URR_V80__magRuleOfOneDrain": "Disaster on a casting test: + this to the drain TN (book 0; Revamp 2)",
-        "URR_V80__magSpellTie": "Tie on a damaging spell: no effect (book), or the caster wins at L (Revamp)",
-        "URR_V80__magSustainCap": "Spells a magician sustains: no limit (book), or at most the Sorcery rating (Revamp)",
-        "URR_V80__magExclusiveForce": "Exclusive spells take effect at + this Force, drain at normal Force (book 0; Revamp 2)",
-        "URR_V80__magFetishForce": "Fetish spells take effect at + this Force, drain at normal Force (book 0; Revamp 1)",
-        "URR_V80__magLearning": "Learning a spell: Sorcery vs Force (book), or Sorcery + Magical Theory vs 2 × Force (Revamp)",
+        "URR_V80__magElementalTn": "Ranged manipulation (elemental) spells: fixed TN (0 = the 'elemental TN' row; Revamp 4)",
+        "URR_V80__magRuleOfOneDrain": "Disaster on a casting test: + this to the drain TN (Revamp 2; 0 = the 'all ones' row)",
+        "URR_V80__magSpellTie": "Tie on a damaging spell: as the 'Tie' row (off), or the caster wins at L (Revamp)",
+        "URR_V80__magSustainCap": "Spells a magician sustains: as the 'Spells sustained' row (off), or at most the Sorcery rating (Revamp)",
+        "URR_V80__magExclusiveForce": "Exclusive spells take effect at + this Force, drain at normal Force (Revamp 2; 0 = the 'Exclusive and fetish' row)",
+        "URR_V80__magFetishForce": "Fetish spells take effect at + this Force, drain at normal Force (Revamp 1; 0 = the 'Exclusive and fetish' row)",
+        "URR_V80__magLearning": "Learning a spell: as the 'Learning a spell' row (book), or Sorcery + Magical Theory vs 2 × Force (Revamp)",
         "URR_V80__magRitualTeamCap": "Ritual team: at most as many members as the lowest Sorcery among them (Revamp)",
         "URR_V80__magRitualNoCombat": "No combat spells by ritual sorcery (Revamp)",
         "URR_V80__magRitualCircle": "Hermetic rituals need a hermetic circle, not a sorcery library (Revamp)",
-        "URR_V80__magRitualMaterials": "Ritual materials: per Force (book), or by category: detection and illusion 100¥, health 500¥, manipulation 1,000¥ × Force (Revamp)",
+        "URR_V80__magRitualMaterials": "Ritual materials: as the 'Ritual materials' row (book), or by category: detection and illusion 100¥, health 500¥, manipulation 1,000¥ × Force (Revamp)",
         "URR_V80__magSpotterDrain": "A ritual's spotter resists the drain too (Revamp)",
-        "URR_V80__magRitualResistTn": "Resisting a ritual spell: vs the Force (book), or the higher of Force and the leader's Sorcery (Revamp)",
+        "URR_V80__magRitualResistTn": "Resisting a ritual spell: as the 'Resisting a ritual spell' row (book), or the higher of Force and the leader's Sorcery (Revamp)",
         "URR_V80__magConjDrain": "Conjuring drain: Physical over Magic (book), or L below half Charisma, Physical over Charisma (Revamp)",
         "URR_V80__magNatureOneOnly": "Only one nature spirit in service at a time (warned; Revamp)",
         "URR_V80__magAstralReaction": "Astral Reaction = Intelligence × this (book 1; Revamp 2)",
@@ -9032,13 +9271,13 @@
         "URR_V80__magAstralDamage": "A magician's astral attack: Charisma M (book), or unarmed L, weapon focus + rating M (Revamp)",
         "URR_V80__magTrackRating": "Astral tracking: −2 TN when the Force is at most your Sorcery, +2 when higher (Revamp)",
         "URR_V80__magAstralDrainPhysical": "Drain from spells cast while projecting is Physical (Revamp)",
-        "URR_V80__magWardDrain": "Ward drain: Force ÷ 2 (book), or Force + successes, Stun (Revamp)",
+        "URR_V80__magWardDrain": "Ward drain: as the 'Wards' row (book), or Force + successes, Stun (Revamp)",
         "URR_V80__magWardMaxForce": "Ward Force at most this × the team's Magic (0 = no limit, book; Revamp 2)",
-        "URR_V80__magSiteCost": "Libraries and circles: price × rating, a day per rating (book), or library rating² × price, circle an hour per rating (Revamp)",
+        "URR_V80__magSiteCost": "Libraries and circles: as the 'Libraries and circles' row (book), or library rating² × price, circle an hour per rating (Revamp)",
         "URR_V80__magAspectedNoAstral": "Aspected sorcerers and conjurers can't perceive or project astrally (Revamp)",
         "URR_V80__magShamanistNoTotem": "Shamanists get no totem dice (Revamp)",
         "URR_V80__magAdeptFoci": "Physical adepts can use only weapon foci (Revamp)",
-        "URR_V80__magLossLe": "Magic loss test: lose a point on 2D6 below Magic (book), or at or below Magic (Revamp)",
+        "URR_V80__magLossLe": "Magic loss test: as the 'Magic loss test' row (book), or at or below Magic (Revamp)",
         "SHOP_V91__buying": "Buying in the shop: find first (an Availability test, then Buy or Haggle on the card) or buy now (the old way, no test); the GM, NPCs and creation always buy now",
         "SHOP_V91__retry": "A failed find: try again after its base Availability time (VERIFY) or at once (the old way)",
         "SHOP_V915__findByLegality": "Legality in the shop: a restricted or forbidden item is harder and slower to find openly (graded, VERIFY) or legality doesn't change the find (off, the old way)",
@@ -9082,7 +9321,229 @@
         "SHEET_V921__wizard": "The creation wizard warns but never refuses (advise) or greys out and clamps as before (block)",
         "SHEET_V921__ratingLock": "After creation, players may type higher ratings unless the approval queue is on (queue) or never may (always, the old way)",
         "CLOCK_V922__bigJump": "A big jump of world time outside combat (a calendar setting the date): the GM is asked whether it counts as time passed or only changes the date (ask) or it always counts (count, the old way)",
-        "CLOCK_V922__bigJumpDays": "A big jump of world time: at least this many days, forward or back"
+        "CLOCK_V922__bigJumpDays": "A big jump of world time: at least this many days, forward or back",
+        "GEAR_V923__grades": "Cyberware grades: beta ×0.6 Essence rounded up, never below .05, nuyen ×3/×7/×10 (book) or beta ×0.7, nuyen ×2/×4/×8 (old)",
+        "GEAR_V923__essenceZero": "Only Essence below 0 kills, 0 is survivable (survive) or Essence 0 is death (dead, the old way)",
+        "GEAR_V923__dermal": "Dermal plating adds its rating to Body and stops flechette's extra level (body) or counts as ballistic and impact armor (armor, the old way)",
+        "GEAR_V923__limbPairs": "Each pair of full cyberarms or cyberlegs adds +1 Body as dermal armor (body) or nothing (off)",
+        "GEAR_V923__limbHoused": "Ware housed in a cyberlimb costs its full Essence except the book's short list (book) or none, using the limb's capacity (capacity, the old way)",
+        "GEAR_V923__boneLacing": "Bone lacing adds to Body (+1/+1/+2) and aluminum/titanium add armor, less with many cyber replacements (book) or adds +1/+2/+3 damage resistance dice (dice, the old way)",
+        "GEAR_V923__bioware": "Bioware effects by Shadowtech: muscle augmentation +Quickness, adrenal pump +2 Reaction, cerebral booster Task Pool, orthoskin table, enhanced articulation on all Active Skills (book) or the old effects (old)",
+        "GEAR_V923__wareTables": "The stat-block importer guesses Essence and Body Cost from the books' tables (book) or the old guesses (old)",
+        "GEAR_V923__awakenedBioware": "Magicians and adepts pay Essence equal to bioware's Body Cost (essence) or lose Magic by half the Body Index (magic, the old way)",
+        "GEAR_V923__overBodyIndex": "Over the Body Index: system shock, +1 TN per point over on Body tests (shock) or the rejection test (rejection, the old way)",
+        "GEAR_V923__cultured": "Cultured bioware costs Body Cost ×0.75 and neural bioware is already cultured (book) or no Body Cost change and ×4 on neural ware too (old)",
+        "GEAR_V923__adrenalCrash": "An adrenal pump runs 1D6 turns per level, then Deadly Stun at half the turns (book) or Body vs 6, Moderate/Serious Stun (old)",
+        "GEAR_V923__load": "Carrying: Strength × 5 kg free, then Light/Moderate/Serious fatigue and slower movement, passing out over × 20 (book) or Strength × 10 kg free, then −1 Quickness per step (old)",
+        "GEAR_V923__armorEncumbrance": "Only heavy armor over Quickness costs Combat Pool dice (book) or any armor over Quickness lowers Quickness (old)",
+        "GEAR_V923__surgery": "Cybersurgery: Biotech vs 10 − Essence left, the successes change the Essence cost (book) or Biotech vs 4 + grade, no successes is complications (old)",
+        "GEAR_V923__cyberDamage": "Serious and Deadly wounds hit 1D6−4 / 1D6−2 systems, graded ware resists (book) or the cyberware damage roll above (old)",
+        "GEAR_V923__filtration": "A toxin or gas opposes a filtration system's rating and a winning filter stops it (opposed) or the rating adds resistance dice (dice, the old way)",
+        "COMBAT_V923__rangedDefense": "Ranged defense: no dodge, the Combat Pool goes into the resistance test, attack vs resistance successes, a clean miss on the pool's successes alone (book), or a pool dodge, then the soak on its own (dodge, v0.92.2; for all of v0.92.2 also set Attack staging to after the first)",
+        "COMBAT_V923__fullDefense": "Full defense: no extra dice and no pool on the melee test, the pool to the resistance test for a clean miss, no initiative cost (book), or + attribute dice and the initiative cost (dice, v0.92.2)",
+        "COMBAT_V923__poolRefresh": "Combat Pool refreshes at the start of each of the character's actions, leftovers lasting until the first action of the next Combat Turn (action, book), or at each new Combat Turn (turn, v0.92.2)",
+        "COMBAT_V923__knockdown": "Knockdown: every damaging hit, Body vs half the Power (melee: the attacker's Strength), beat half the wound or stagger 1 m, none or Deadly is down (book), or Body vs the soak TN when Power beats Body (old)",
+        "COMBAT_V923__blastStaging": "Blasts: each target's resistance successes are compared with the attack's, every 2 net stage the damage either way (book), or the successes only cut the scatter (off)",
+        "COMBAT_V923__scatter": "Scatter per success: standard grenades 2 m, aerodynamic and launchers 4 m, rockets and missiles 2D6 less 4 m a success (missiles also their Intelligence) (book), or 2 m for all, rockets by range band (old)",
+        "COMBAT_V923__shotgun": "Shotguns: a slug unless loaded with shot; shot widens 1, 2, 4, 6… m every choke metres, −1 Power and −1 TN each time, choke 2–10 (book), or every shotgun spreads (old)",
+        "COMBAT_V923__tracers": "Tracers: full auto only, −1 per 3 rounds beyond short range, none with a smartgun, no Power from them (book), or −1 per earlier burst (old)",
+        "COMBAT_V923__reload": "Cylinders and internal magazines: Quickness rounds per Complex Action (book), or the rounds per action set above (old)",
+        "COMBAT_V923__initiativeTies": "Initiative ties: adjusted Reaction, then natural Reaction (book), or Reaction, then Quickness (quickness, v0.92.2)",
+        "COMBAT_V923__meleeVisibility": "Melee visibility: light, smoke and weather at half, rounded down, except full darkness (half, book), or the ranged values (full, v0.92.2)",
+        "COMBAT_V923__subdueTn": "Subduing in melee: + TN (book 2; v0.92.2: 0)",
+        "COMBAT_V923__meleeTargets": "Several melee targets in one phase: +2 per target already attacked (book), or ranged only (off)",
+        "COMBAT_V923__spreadFire": "Full auto at several targets: +2 per new target engaged, and a smartlinked smartgun wastes no rounds walking the fire (book), or the spread TN above on every burst (old)",
+        "COMBAT_V923__flechette": "Flechette against armor: the higher of double Impact and plain Ballistic (book), or the higher of the two, doubled (double, v0.92.2)",
+        "COMBAT_V923__barriers": "Firing through a barrier: double against flechette and explosive rounds, and a barrier rated above the Power stops the shot (book), or the rating only adds to armor (old)",
+        "COMBAT_V923__shortBurst": "Short bursts: 2 rounds left fire a short burst (+2 Power, no extra level), 1 round a single shot (book), or too few rounds can't fire (off)",
+        "COMBAT_V923__ambush": "Surprise: an ambusher waiting on a delayed action rolls at TN −2 (book), or no change (off)",
+        "COMBAT_V923__delay": "Delayed actions: a delay held at the end of a Combat Turn carries into the next, and using pool dice breaks it (book), or it ends with the Combat Turn (turn, v0.92.2; for all of v0.92.2 also set a delay to be lost at the end of the pass)",
+        "COMBAT_V923__rangedRows": "Attack dialog: offer the book's target running / stationary, attacker in melee, difficult ground and smart goggles rows",
+        "COMBAT_V923__secondFirearm": "A second firearm cancels smartlink, smart goggles and laser sight bonuses (book), or they still count (off)",
+        "COMBAT_V923__aim": "Take Aim: at most half the skill, rounded down, so a skill of 1 can't aim (book), or at least 1 (old)",
+        "COMBAT_V923__calledShot": "Called shots: single shot, semi-auto and burst only, +1 level or a vehicle part (book), or also full auto and the armor gap (old)",
+        "COMBAT_V923__friends": "Friends in melee: both sides counted, −1 per friend more or +1 per friend fewer, at most 4 (book), or only the attacker's friends (old)",
+        "VEHICLES_V923__avArmor": "Anti-vehicle weapons vs vehicle armor: half (half the Armor comes off the Power, never stopped by it; the book) or full (all of it, armor at or above the Power stops them)",
+        "VEHICLES_V923__cpResist": "The jumped-in rigger's Control Pool on the vehicle's damage resistance: driving (at most the rigger's skill; more pool dice than the attacker's successes and no damage is a complete miss; the book) or none",
+        "VEHICLES_V923__vehicleDodge": "A vehicle's defence against an attack: none (no dodge test, the Control Pool goes on its resistance; the book) or old (evasive driving by the rigger or manual driver)",
+        "VEHICLES_V923__gunneryPool": "Pool for a jumped-in driver's or security rigger's mounted weapons: combat (Combat Pool, at most Gunnery; the book) or control (Control Pool)",
+        "VEHICLES_V923__cpCap": "Control Pool dice on a driving test: skill (at most the skill rated; the book) or none (any dice up to the pool left)",
+        "VEHICLES_V923__feedback": "Rigger feedback: book (only a Serious hit 6M or a Deadly hit or one that destroys the vehicle 6S, Physical, resisted with Body; a rigger aboard a destroyed vehicle takes the 6S instead of dump shock) or old (every hit, Willpower vs the Power, Stun)",
+        "VEHICLES_V923__vcrTn": "Control rig TN bonus: byTest (twice on a Driving Test, once on accelerating, positioning and ramming, none on crash tests, gunnery, sensors; the book) or flat (once on every jumped-in test)",
+        "VEHICLES_V923__autonavDice": "Autonav dice on a Driving Test and a Crash Test: book (the autonav's rating in dice) or none",
+        "VEHICLES_V923__autonavMin": "An autonav of rating 1 driving by itself: book (it can't) or any (any rating drives)",
+        "VEHICLES_V923__damageInit": "Vehicle damage and its driver's Initiative: book (−1 / −2 / −3 at Light / Moderate / Serious) or none",
+        "VEHICLES_V923__damageSpeed": "Vehicle damage and its Speed: book (Moderate −25 %, Serious −50 %) or none",
+        "VEHICLES_V923__crashPower": "Crash Power: up (speed ÷ 10 rounded up, no minimum; the book) or down (rounded down, at least the crash minimum)",
+        "VEHICLES_V923__crashMods": "Crash Test modifiers: book (terrain −1 / 0 / +2 / +4 and speed against the driver's Reaction × 20 / 30 / 40) or old (the driving test's terrain row)",
+        "VEHICLES_V923__passengers": "People aboard a vehicle that is hit: targeted (weapons hurt them only when aimed at them; collisions and crashes at the damage the vehicle resists, even if it escapes, no Combat Pool; the book) or old (every hit carries through at Power − Armor, a level lower)",
+        "VEHICLES_V923__occupant": "Shooting someone inside a vehicle: book (the higher of its Armor or Body counts, no Combat Pool, a jacked-in rigger takes the TN below) or old (its Armor only)",
+        "VEHICLES_V923__occupantRiggerTn": "A jacked-in rigger shot inside a vehicle: + TN on the resistance test",
+        "VEHICLES_V923__ram": "Ramming: book (Power and level by the difference in speed, the rammer less its Body × successes, collision damage with no armor, any damage calls a Crash Test; a pedestrian one level higher) or old (Body + speed ÷ 10, the rammer half)",
+        "VEHICLES_V923__accel": "Accelerating and braking: book (safe braking up to Acceleration × the multiplier below, no extra TN on the acceleration test) or old (the speed-change settings' brake multiplier and push TN)",
+        "VEHICLES_V923__brakeMultiplier": "Safe braking in a Combat Turn: Acceleration ×",
+        "VEHICLES_V923__gunneryMods": "Manual gunnery from or at a vehicle: book (relative speed 0 / +2 / +4 / +6, target size, unmounted weapon +2) or old (moving +1, fast +2, target moving +1)",
+        "VEHICLES_V923__drivingRows": "Driving Test rows: book (non-stressful −1, stressful +3, large / very large vehicle, during combat, datajack) or old (easy −1, hard +2)",
+        "VEHICLES_V923__repairTn": "Vehicle repair TN: boxes (the boxes repaired + 2; the book) or flat (the repair skill's TN)",
+        "VEHICLES_V923__interception": "Intercepting a drone's link: book (own remote control deck rating vs the target deck + 3, encryption broken first) or old (the link skill vs the radio TN)",
+        "VEHICLES_V923__dumpDisorient": "Dump shock disorients (+2 TN for 10 Combat Turns ÷ Willpower successes): book or none",
+        "VEHICLES_V923__autoCrash": "A moving vehicle whose condition monitor fills: book (crashes, no test) or old (nothing more)",
+        "VEHICLES_V923__body0": "A Body 0 vehicle or drone hit: destroyed (any hit that gets through; the book) or old (resists with no dice)",
+        "VEHICLES_V923__cardCasing": "A card reader's casing: double (opened against twice the reader's rating; the book) or single (the casing rating)",
+        "VEHICLES_V923__circuitFail": "No successes on a lock's circuit: passive (a passive alert as well as the tally; the book) or tally (the tally only)",
+        "VEHICLES_V923__passkey": "Maglock passkey: book (its rating vs the reader's rating, the casing left shut) or old (its rating replaces the skill dice, after the casing)",
+        "VEHICLES_V923__sequencer": "Maglock sequencer: book (an opposed test with the keypad; a tie does nothing, a keypad win a passive alert) or old (its rating replaces the skill dice)",
+        "VEHICLES__sensors__controlPool": "Control Pool dice on a vehicle's sensor tests",
+        "ACTIONS__costs__sensor": "A vehicle sensor test is a complex or simple action",
+        "SPIRITS_V923__conjDrain": "Conjuring Drain: L below half Charisma, M up to Charisma, S above it, D above twice it, S and D Physical (book) or L up to half, S up to 1.5 × Charisma, Physical over Magic (v922)",
+        "SPIRITS_V923__conjDrainDice": "Totem and spirit-focus dice also resist conjuring Drain (on) or only the summoning test (off)",
+        "SPIRITS_V923__immunityScope": "A manifest spirit's immunity counts against firearms, other ranged weapons and explosions only (book) or every non-magical attack, melee too (v922)",
+        "SPIRITS_V923__mundaneVsSpirits": "A mundane weapon against a manifest spirit rolls Willpower with no Combat Pool (willpower) or the combat skill and pool (v922)",
+        "SPIRITS_V923__conjuringDefense": "A magician may resist a spirit's attack with Conjuring instead of Body (on) or never (off)",
+        "SPIRITS_V923__banishPerPoint": "Banishing: net successes per point of Force lost (book 2; 1 = the v0.92.2 way)",
+        "SPIRITS_V923__banishBackfire": "A spirit winning a banishing round takes 1 Magic per 2 net successes from the banisher (book) or nothing (v922)",
+        "SPIRITS_V923__banishDrain": "Banishing costs no Drain (none) or conjuring Drain at the spirit's Force (conjuring, v0.92.2)",
+        "SPIRITS_V923__banishRecovery": "Force and Magic lost in banishing come back at 1 point an hour (hourly) or are lost for good (v922)",
+        "SPIRITS_V923__controlContest": "Taking over a spirit: Conjuring vs Force + 2 against its holder's Conjuring vs Force, an uncontrolled one 1 service per 2 net successes (book) or the banishing-style contest (v922)",
+        "SPIRITS_V923__banishSummoner": "Banishing your own spirit adds Charisma dice and no summoner helps (charisma) or another's summoner adds Conjuring successes (v922)",
+        "SPIRITS_V923__trueName": "Binding by a true name: Conjuring vs Force + Spirit Energy, 1 success, no Karma (book) or opposed, net successes as services, Karma (v922)",
+        "SPIRITS_V923__spiritTable": "A summoned spirit with no template takes the Spirit Table's attributes for its type (book) or Force for all (v922)",
+        "SPIRITS_V923__elementalSustain": "An elemental sustains a spell for Force Combat Turns (book) or Force × the hours per Force (v922)",
+        "SPIRITS_V923__projection": "Astral projection: the body loses 1 Essence every full hour from the start, back at 1 a minute after the return, death only below 0 (book), or after 2 × Essence free hours, each hour or part, lost for good (v922)",
+        "ASTRAL__initiativeBonus": "Projecting initiative: astral Reaction + this, + 1D6 (book 15; v0.92.2 20)",
+        "SPIRITS_V923__astralPool": "A magician fights astrally with the Astral Combat Pool, (Int + Wil + Cha) ÷ 2, the Combat Pool's dice while projecting (book) or the Spell Pool (v922)",
+        "SPIRITS_V923__astralGrade": "Initiates add their grade to astral Reaction and the Astral Combat Pool (book) or not (v922)",
+        "SPIRITS_V923__astralDamage": "A magician's astral attack: unarmed (Charisma)L, weapon focus (Charisma + rating ÷ 2)M (book) or Charisma M, a focus adding dice (v922)",
+        "SPIRITS_V923__tracking": "Astral tracking: −2 TN when the trail's Force is at most your Sorcery, +2 when higher (book) or no modifier (v922)",
+        "TRACKING__baseHours": "Astral tracking: base hours ÷ successes (book 12; v0.92.2 6)",
+        "SPIRITS_V923__barrierBacklash": "A barrier that beats an astral intruder hurts it, (rating)L + 1 level per 2 net successes (book) or does nothing (v922)",
+        "SPIRITS_V923__asceticism": "The asceticism ordeal lowers a Physical attribute only (physical) or any attribute (any, v0.92.2)",
+        "SPIRITS_V923__allyCost": "Allies: 5 × the current Force Karma per Force above 1, a Magic point, days ÷ successes and daily fatigue (book) or Karma × Force, no Magic (v922)",
+        "SPIRITS_V923__regenDeath": "Regeneration: a Deadly wound calls for 1D6, a 1 (or 2 from fire) kills (book) or it always heals (v922)",
+        "SPIRITS_V923__assensing": "Reading an aura: the basics at a glance, emotions at 2 successes, cyberware at 4, Essence and Magic only compared (book) or the MAGIC_V56 assensing table (v922)",
+        "HEALTH_V923__healingBody": "Healing Physical damage naturally: the Body Test rolls the natural Body, cyberware doesn't help (natural, the book) or the augmented Body (total, old)",
+        "HEALTH_V923__death": "Death: past the natural Body, one box beyond the Overflow row (the book), or when the Overflow reaches the total Body (old)",
+        "HEALTH_V923__bleed": "Dying: another box every 10 minutes (the book), or every (Body) Combat Turns (old)",
+        "HEALTH_V923__stunRecovery": "Stun recovery: higher of Body and Willpower vs 2 + wound modifiers, no care (the book), or Body vs 2/4/6/8 with care (old)",
+        "HEALTH_V923__firstAid": "First aid: any success lowers the wound one level, Deadly only stabilised (the book), or 1 box per success, at most half (old)",
+        "HEALTH_V923__firstAidStun": "First aid: Physical damage only (the book), or Stun too (old)",
+        "HEALTH_V923__firstAidTime": "First aid card shows the treatment time, 10/20/30 minutes ÷ successes (the book), or not (old)",
+        "HEALTH_V923__selfStabilise": "Failed first aid on the dying: the patient rolls natural Body vs 10 (the book), or no test (old)",
+        "HEALTH_V923__firstAidRetry": "First aid again on the same wound by a better healer (the book), or once per wound (old)",
+        "HEALTH_V923__traumaPatch": "Trauma patch: a natural Body test vs 4 + dermal armor / blood filter (the book), or it stabilises outright (old)",
+        "HEALTH_V923__permanentDamage": "A Deadly wound calls for a permanent damage test, Body vs 4 (the book), or none (old)",
+        "HEALTH_V923__magicLoss": "Magic loss: 2D6 at or below Magic (the book), or only below (old)",
+        "HEALTH_V923__magicLossUntreated": "Magician treated without the +2: a Magic loss test, twice for Deadly (the book), or none (old)",
+        "HEALTH_V923__surgeryMagicLoss": "Drastic surgery (1+ Essence, bioware over 1.5 Body Index): a Magic loss test (the book), or none (old)",
+        "HEALTH_V923__surgeryBands": "Surgery wound bands: the book's by Essence and by Body Index, or the table below (old)",
+        "HEALTH_V923__treatTn": "Treat: 8 − Essence, Heal 10 − Essence (the book), or every healing spell the same base (old)",
+        "HEALTH_V923__bodyIndexHealing": "Half the Body Index adds to magical healing (the book), or to first aid and natural healing (old)",
+        "HEALTH_V923__spellsHealStun": "Healing spells: Physical only (the book), or Stun too (old)",
+        "HEALTH_V923__falling": "Falling: Deadly, Power half the metres, Athletics successes off (the book), or Power per metre (old)",
+        "HEALTH_V923__breathHold": "Hold breath 30 seconds per point of Body before drowning counts (the book), or not (old)",
+        "HEALTH_V923__drowning": "Drowning and suffocation: 1 unresisted Stun box an action phase (the book), or a Body test a turn (old)",
+        "HEALTH_V923__burning": "Burning: 6M after the first turn, +2 Power each turn (the book), or the on-fire hazard each turn (old)",
+        "HEALTH_V923__shock": "Stun weapons disorient: +2 TNs for Power − ½ impact − successes turns (the book), or nothing (old)",
+        "HEALTH_V923__lowPainTolerance": "Low Pain Tolerance: wounds count one level higher (the book), or extra boxes (old)",
+        "HEALTH_V923__dwarfResistance": "Dwarf resistance dice: against disease only (the book), or toxins too (old)",
+        "HEALTH_V923__respirator": "Respirator: its own air, immune to inhaled toxins (the book), or rating dice (old)",
+        "HEALTH_V923__addiction": "Addiction: Shadowtech's dose interval, withdrawal, kicking, Strength and Tolerance (the book), or the old house numbers",
+        "HEALTH_V72__qualities__sensitiveSystem__bodyIndexMultiplier": "Sensitive System: bioware Body Index ×",
+        "MATRIX_V923__systemTests": "System tests: opposed (the decker needs more successes than the host's Security Value roll, VR2), or 1+ successes succeed (v0.92.2)",
+        "MATRIX_V923__initiative": "Persona speed: book (own Reaction + 2 per Response Increase, RI at most MPCP ÷ 4, hot DNI as one more level, tortoise half Reaction), or Intelligence-based (v0.92.2)",
+        "MATRIX_V923__icInitiative": "IC initiative dice: book (rating + 1/2/3/4 D6 Blue to Red), or v0.92.2's 1/1/2/2/3",
+        "MATRIX_V923__passiveAlert": "Passive alert: + this to every subsystem rating (VR2: 2; 0 = none, v0.92.2)",
+        "MATRIX_V923__crashTally": "Crashing IC adds to the attacker's security tally: its rating (VR2), half its rating, or nothing (v0.92.2)",
+        "MATRIX_V923__shutdown": "Host shutdown lasts 1D6 per 2 points of Security Value turns (VR2), or a fixed number of turns (v0.92.2)",
+        "MATRIX_V923__operations": "System operations: VR2's table (tests, utilities, actions; Locate File adds up 5 successes), or v0.92.2's",
+        "MATRIX_V923__cybercombat": "Cybercombat: book (utility rating dice, TN by security code and status, IC resist and maneuver with Security Value, party IC modifiers, cripplers opposed), or v0.92.2",
+        "MATRIX_V923__actions": "Cybercombat attacks and maneuvers: Simple Actions (VR2), or Complex (v0.92.2)",
+        "MATRIX_V923__icDamageLevel": "IC damage level: by the host's security code (VR2), or the IC's own (v0.92.2)",
+        "MATRIX_V923__iconHardening": "Hardening against icon damage: none (VR2: it protects the deck and the decker), or it lowers the Power (v0.92.2)",
+        "MATRIX_V923__overload": "Simsense overload: any white or gray IC damage on a hot deck, TN by level (VR2), or Serious+ vs the Power (v0.92.2)",
+        "MATRIX_V923__dumpShock": "Dump shock: a cool deck and an ICCM each −2 Power and −1 level, and any jack-out without a Graceful Logoff risks it (VR2), or neither (v0.92.2; all of v0.92.2 also needs the dump shock level fixed, hot sim dump shock Physical and ICCM dice 1 per rating)",
+        "MATRIX_V923__blackIc": "Black IC: Body (lethal) or Willpower (non-lethal) less Hardening, no Hacking Pool, the icon resists too, holds only after a hit, an ICCM the better of Body and Willpower and no dice (VR2), or v0.92.2 (all of v0.92.2 also needs ICCM filters turning black IC to Stun and 1 die per rating)",
+        "MATRIX_V923__psychotropic": "Psychotropic IC: one test at jack-out, cyberphobia + the IC's rating, lasts until recovered (VR2), or a test on every hit (v0.92.2)",
+        "MATRIX_V923__grayIc": "Gray IC: Hardening raises the Blaster/Sparky Test's TN, sparky's damage stages up, damaged chips must be replaced (VR2), or v0.92.2",
+        "MATRIX_V923__probe": "Probe IC: rolls with every System Test (reactive, VR2), or only when the GM acts with it (v0.92.2)",
+        "MATRIX_V923__trace": "Trace IC: Trace Factor, 10 ÷ successes rounded down, reports only, survives a jack-out (VR2), or v0.92.2",
+        "MATRIX_V923__logoff": "Graceful Logoff: leaves the Matrix with no dump shock and stops a trace (VR2), or moves to the parent grid (v0.92.2)",
+        "MATRIX_V923__connections": "Jackpoints: VR2's Access modifiers on Access tests only (and Trace Factor), or the connection's TN on every Matrix test (v0.92.2)",
+        "MATRIX_V923__armorWear": "Armor utility loses a point: only when it fails to absorb the whole hit (VR2), or every hit (v0.92.2)",
+        "MATRIX_V923__shield": "Shield utility: a parry against attacks (VR2), or soaks black IC damage (v0.92.2)",
+        "MATRIX_V923__frames": "Frames: dumb frames use the owner's Computer, carried utilities' ratings total ≤ the frame's (VR2), or v0.92.2",
+        "MATRIX_V923__deckBuilding": "Deck parts: VR2's design sizes and TNs, or v0.92.2's",
+        "MATRIX_V923__otaku": "Otaku: VR2's living persona (MPCP and Masking rounded up, Hardening, Reaction (I + W) ÷ 2, 3D6), or v0.92.2's",
+        "MATRIX_V923__paydata": "Paydata: 5,000¥ a point with VR2's sizes and defenses, or v0.92.2's per-Mp table",
+        "MATRIX__download__ioPerTurn": "I/O speed × this = Mp moved per Combat Turn (VR2: 3, Mp per second; v0.92.2: 1)",
+        "MATRIX__attributeDamage__minOnHit": "Crippler/ripper: at least this many points on any hit (VR2: 0; v0.92.2: 1)",
+        "MATRIX__utilitySize__kinds__smoke": "Smoke utility size multiplier (Core: 2; v0.92.2: 1)",
+        "MATRIX__utilitySize__kinds__frame": "Frame core size multiplier (VR2: 2; v0.92.2: 3)",
+        "MATRIX__utilitySize__kinds__smart-frame": "Smart frame core size multiplier (VR2: 3; v0.92.2: 5)",
+        "SORCERY_V923__magicFromEssence": "Magic and lost Essence: book = Magic falls by every point or part of Essence lost (Core p. 47; Ka-Ge 7 Q21); v922 = as 'Lost Essence' below says (capped at Essence rounded up)",
+        "SORCERY_V923__spellTie": "Tie on a resisted spell: book = the caster wins at the spell's minimum effect (combat spells: their base level); v922 = no effect",
+        "SORCERY_V923__ruleOfOneDrain": "All ones on a casting test: + this to the Drain TN (book 2; 0 = none, v0.92.2)",
+        "SORCERY_V923__restrictedSpells": "Exclusive and fetish spells: book = take effect at Force +2 (exclusive) / +1 (reusable fetish) / +2 (expendable fetish), Drain at the normal Force, and no exclusive spell while others are sustained; v922 = Drain TN −2 / −1",
+        "SORCERY_V923__sustainCap": "Spells a magician sustains: book = at most the Sorcery rating; v922 = no limit",
+        "SORCERY_V923__sustainProjecting": "Sustaining while projecting: book = not allowed (the magician's own sustained spells drop when projecting starts); v922 = allowed",
+        "SORCERY_V923__spellSituation": "Visibility and cover on spells: book = visibility on every spell and partial cover too (touch spells: none); v922 = visibility on elemental spells only, no cover",
+        "SORCERY_V923__areaTargets": "Area spells: book = one roll, each target counts the dice against its own TN; v922 = one TN for all (the highest, 'Area TN')",
+        "SORCERY_V923__elementalTn": "Ranged damaging manipulation (elemental) spells: base TN (book 4; 0 = the spell's own TN, v0.92.2)",
+        "SORCERY_V923__learning": "Learning a spell: book = Sorcery + Magical Theory vs 2 × Force; v922 = Sorcery vs Force",
+        "SORCERY_V923__formulaAloneTn": "Learning from a formula with no teacher: TN + (book 2; 0 = none, v0.92.2)",
+        "SORCERY_V923__design": "Designing a spell: book = Magical Theory (at most the library or lodge) vs 2 × Force − Magic + drain modifiers, 6/18/30/60 days by drain level, the book's drain tables; v922 = the old design test",
+        "SORCERY_V923__spellFocus": "Spell foci: book = also add their dice to Drain, and a category focus to resisting that category's spells; v922 = casting only",
+        "SORCERY_V923__spellLock": "Spell locks (sustaining foci): book = hold a spell of any Force; v922 = Force up to the rating",
+        "SORCERY_V923__weaponFocusKarma": "Bonding a weapon focus: Karma × rating (book 6; 0 = small 4 / large 5, v0.92.2)",
+        "SORCERY_V923__focusAddiction": "Focus addiction: book = Magic test; failed, 2D6 ≤ Magic loses a point and 2 points lost bring the focus geas; v922 = the old test (Focus addiction rows)",
+        "SORCERY_V923__enchanting": "Making a focus: book = TN by type + rating (spell lock 5), 30 days; v922 = the 'Make a focus' task",
+        "SORCERY_V923__enchantDays": "Making a focus by the book: base days ÷ successes (book 30)",
+        "SORCERY_V923__ritualPool": "Ritual team dice: book = the other members' Magic Pools join the leader's (not the spotter's); v922 = half each member's Sorcery",
+        "SORCERY_V923__ritualTeam": "Ritual team: book = no combat spells, at most as many members as the lowest Sorcery, a mage needs a hermetic circle; v922 = none of these",
+        "SORCERY_V923__ritualMaterials": "Ritual materials: book = detection and illusion 100¥, health 500¥, manipulation 1,000¥ × Force; v922 = the per-Force row",
+        "SORCERY_V923__ritualResist": "Resisting a ritual spell: book = vs the higher of Force and the leader's Sorcery; v922 = vs the Force",
+        "SORCERY_V923__ritualSpotter": "A ritual's astral spotter: book = resists the Drain too; v922 = no Drain",
+        "SORCERY_V923__ward": "Wards: book = Sorcery vs Force, Force hours, lasting days = successes, Drain (Force × successes) L Stun, Force at most 2 × Magic; v922 = the 'Ward ritual' rows (Conjuring, Force ÷ 2 M)",
+        "SORCERY_V923__siteCost": "Libraries and circles: book = a library costs rating² × its price, a circle takes an hour per rating; v922 = price × rating, a day per rating",
+        "SORCERY_V923__initiation": "Initiation grades: book = the first initiation is Grade 0 (no Magic, (6 + 0) × 3 Karma, rounded down; grades already reached are kept); v922 = the first is grade 1, the Karma rounded up",
+        "SORCERY_V923__dispelling": "Dispelling: book = only Force up to the grade, TN the higher of Force and quickening Karma, 2 successes take 1 Force off, Drain as the spell's own; v922 = 1 spell success per success, Drain M",
+        "SORCERY_V923__shielding": "Shielding: book = a shielding initiate's spell defense dice also raise the caster's TN; v922 = dice only",
+        "SORCERY_V923__centering": "Centering: book = always a test at the TN less the grade, 2 successes take 1 off the penalties; v922 = the 'Centering' row (automatic grade points off)",
+        "SORCERY_V923__geasa": "Geasa: book = a broken geas adds +2 TN per geas to non-astral magical tests (Drain too); v922 = an unmet geas takes away the Magic it protects",
+        "SORCERY_V923__elementalAid": "Elemental aid: book = its Force is a pool of dice used up as you go (one service when it starts); v922 = its full Force every cast, a service each time",
+        "SORCERY_V923__detectionRange": "Detection spell range: book = a Force test vs 4, successes × Magic metres; v922 = Magic × Force metres",
+        "SORCERY_V923__increaseReflexes": "Increase Reflexes and cyber: book = the spell can't boost anyone with cybernetic initiative dice; v922 = the better of the two counts",
+        "CORE_V923__priorities": "Creation priority table: the book's (Attributes 30/24/20/17/15, Skills 40/30/24/20/17, Resources ¥1,000,000 to ¥500 with Force Points 50 to 5; a metahuman needs Race A, a metahuman magician Magic B) (book) or the old table (old)",
+        "CORE_V923__moreMetahumans": "More Metahumans (optional): a metahuman needs only Race C, Magic A full magician / B adept for every race, and metahumans start with 1 Karma Pool point",
+        "CORE_V923__racialMods": "Racial modifiers: the dwarf has Quickness −1 and the troll Willpower −1 as well (book) or without them (old)",
+        "CORE_V923__startPool": "Starting Karma Pool from the creation wizard: 2 for a metahuman, 1 for a human (book) or 1 for everyone (old)",
+        "CORE_V923__leftoverCash": "Creation: unspent Resources are kept at 10:1 (tenth) or by the leftover-cash house rule (old)",
+        "CORE_V923__cashRatio": "Creation: unspent Resources kept at 1 nuyen in this many (with 'tenth')",
+        "CORE_V923__startingCash": "Creation: finishing the wizard adds 3D6 × ¥1,000 starting cash (roll) or nothing (none)",
+        "CORE_V923__nativeLanguage": "Native language free at Intelligence + 2 (book) or at Intelligence (old)",
+        "CORE_V923__streetDialect": "Creation: a Street lifestyle gives a free street dialect (City Speak, Tunnel Talk) at half Intelligence (book) or not (off)",
+        "CORE_V923__aboveMax": "Raising an attribute past its natural maximum with Karma: at double cost, up to the augmented maximum, with the GM's leave (double) or refused (refuse, the old way)",
+        "CORE_V923__trollDermal": "Troll dermal armor: +1 Body die on damage resistance (body) or 1 ballistic and 1 impact armor (armor, the old way)",
+        "CORE_V923__karmaDice": "Karma Pool buys extra dice, one point a die, up to the test's own skill, attribute or rating dice (book) or not at all (off, the old way)",
+        "CORE_V923__afterOops": "After Karma avoided a disaster no more Karma can be spent on that test (book) or the re-roll and buy buttons stay (old)",
+        "CORE_V923__skillKarma": "Karma for knowledge and language skills: a language new rating × 1, a knowledge skill as a general skill (× 2) (book) or the Intelligence bands (old)",
+        "CORE_V923__newSkill": "A new skill's first rating point costs 1 Good Karma (book) or its rating-1 price (old)",
+        "CORE_V923__trainingTime": "Timed training: the base days are the Karma spent × 7 (× 15 for knowledge and language) (karma) or the new rating × the days per rating (rating, the old way)",
+        "CORE_V923__attributeDefault": "Defaulting to an attribute: +2 per Skill Web circle from the attribute when the web links it (web) or always the flat modifier (flat, the old way)",
+        "CORE_V923__webArrows": "Skill Web links written \"A > B\" are one-way, as the book's arrows (book) or work both ways (old)",
+        "CORE_V923__timeRounding": "Base time ÷ successes: rounded to the nearest whole unit (nearest) or up to a tenth (tenth, the old way)",
+        "CORE_V923__perception": "Noticing someone: Intelligence vs 4, one success notices (book); the sneaker's Stealth (4) successes add to that TN (companion); or the old opposed Perception vs Stealth test (opposed)",
+        "CORE_V923__perceptionSounds": "The perception dialogs offer the book's sound, smell, touch and taste modifiers (book) or not (off)",
+        "CORE_V923__languageTns": "Language test TNs: the book's table (2, 4, 6, 9, 11; a dialect +2) (book) or the old complexity list (old)",
+        "CORE_V923__athletics": "Climbing and swimming distances: by Quickness and Strength, with the climbing height and surface modifiers (book) or a fixed number of metres per success (old)",
+        "CORE_V923__threat": "An NPC's Threat Rating: dice on every test it makes (counted as Combat Pool dice for a clean miss) and no Dice Pools (book) or extra Combat Pool dice (pool, the old way)",
+        "CORE_V923__morale": "NPC morale: an NPC withdraws at its Professional Rating's wound and may test Willpower (4) to stay (book) or a morale test of Professional Rating dice as grunts fall (old)",
+        "CORE_V923__recognition": "Has an NPC heard of a character: the NPC's Etiquette vs (1,000 − rep) ÷ 50 (book) or Intelligence vs 10 − Public Awareness (old)",
+        "CORE_V923__haggle": "Haggling: the seller rolls against the buyer's Willpower (book) or against the fixed TN (old)",
+        "CORE_V923__qualities": "Edges and flaws at creation must come to 0, with no per-side cap (zero) or the old caps and balance (old)",
+        "CORE_V923__fence": "Fencing: each side rolls against the other's Willpower + 2 and a fence pays at least 10% (book) or both at the fixed TN, down to 0% (old)",
+        "CORE_V923__awards": "Individual Karma awards: the book's (roleplaying, guts, smarts, right place, surprise, humor, drama) (book) or the old five rows (old)",
+        "CORE_V923__interrogation": "Interrogation: the interrogator's skill vs the subject's Willpower, the subject doesn't roll (book; with one-sided social tests) or an opposed test (old)"
       }
     },
     "Rules": {
@@ -9093,6 +9554,12 @@
         "attackerRunning": {
           "label": "Attacker running"
         },
+        "attackerWalkingRough": {
+          "label": "Attacker walking (difficult ground)"
+        },
+        "attackerRunningRough": {
+          "label": "Attacker running (difficult ground)"
+        },
         "calledShot": {
           "label": "Called shot"
         },
@@ -9102,8 +9569,23 @@
         "fullCover": {
           "label": "Target in full cover (blind fire through the barrier)"
         },
+        "targetRunning": {
+          "label": "Target running"
+        },
+        "targetStationary": {
+          "label": "Target stationary"
+        },
+        "attackerInMelee": {
+          "label": "Attacker in melee (one opponent)"
+        },
+        "attackerInMelee2": {
+          "label": "Attacker in melee (two opponents)"
+        },
         "smartlink": {
           "label": "Smartlink (smartgun + implant)"
+        },
+        "smartGoggles": {
+          "label": "Smart goggles (smartgun)"
         },
         "laserSight": {
           "label": "Laser sight"
@@ -9158,6 +9640,9 @@
           },
           "redirectDatatrail": {
             "label": "Redirect datatrail"
+          },
+          "relocateTrace": {
+            "label": "Relocate (spoof a trace)"
           },
           "crashHost": {
             "label": "Crash host"
@@ -9247,6 +9732,18 @@
           },
           "remote": {
             "label": "Remote deck (relayed)"
+          },
+          "legal": {
+            "label": "Legal jackpoint (registered line)"
+          },
+          "workstation": {
+            "label": "Workstation"
+          },
+          "device": {
+            "label": "Remote device (slaved to the host)"
+          },
+          "console": {
+            "label": "Console access"
           }
         },
         "programming": {
@@ -9319,6 +9816,9 @@
           },
           "tracer": {
             "label": "Tracer"
+          },
+          "shot": {
+            "label": "Shotgun shot"
           }
         },
         "grenades": {
@@ -9494,16 +9994,16 @@
         "athletics": {
           "climb": {
             "easy": {
-              "label": "Easy (ladder, rope with knots)"
+              "label": "Easily climbable (chain-link fence)"
             },
             "rough": {
-              "label": "Rough wall or tree"
+              "label": "Broken surface (debris, tree, loose stone wall)"
             },
             "smooth": {
-              "label": "Smooth wall"
+              "label": "Flat surface (brick wall)"
             },
             "sheer": {
-              "label": "Sheer or slick"
+              "label": "Sheer surface (metal wall, seamless stone)"
             }
           },
           "swim": {
@@ -9744,10 +10244,10 @@
         },
         "drivingModifiers": {
           "easy": {
-            "label": "Easy maneuver"
+            "label": "Non-stressful situation"
           },
           "hard": {
-            "label": "Hard maneuver"
+            "label": "Stressful situation"
           },
           "overSpeed": {
             "label": "Above the vehicle's Speed"
@@ -9757,6 +10257,18 @@
           },
           "poorVisibility": {
             "label": "Poor visibility"
+          },
+          "large": {
+            "label": "Large vehicle of its type"
+          },
+          "veryLarge": {
+            "label": "Very large vehicle of its type"
+          },
+          "inCombat": {
+            "label": "Driving during combat"
+          },
+          "datajack": {
+            "label": "Non-rigger driving by datajack"
           }
         },
         "modifications": {
@@ -10657,6 +11169,134 @@
           },
           "3": {
             "text": "Full and accurate detail."
+          }
+        }
+      },
+      "CORE_V923": {
+        "individualAwards": {
+          "roleplaying": {
+            "label": "Roleplaying (really good: 2)"
+          },
+          "guts": {
+            "label": "Guts"
+          },
+          "smarts": {
+            "label": "Smarts"
+          },
+          "rightPlace": {
+            "label": "Right place, right time"
+          },
+          "surprise": {
+            "label": "Surprise"
+          },
+          "humor": {
+            "label": "Humor"
+          },
+          "drama": {
+            "label": "Drama"
+          }
+        },
+        "senseRows": {
+          "gunshot": {
+            "label": "Sound: a single gunshot"
+          },
+          "gunshotSilenced": {
+            "label": "Sound: a silenced single gunshot"
+          },
+          "burst": {
+            "label": "Sound: burst fire"
+          },
+          "burstSilenced": {
+            "label": "Sound: sound-suppressed burst fire"
+          },
+          "auto": {
+            "label": "Sound: full autofire"
+          },
+          "autoSilenced": {
+            "label": "Sound: sound-suppressed autofire"
+          },
+          "grenade": {
+            "label": "Sound: grenade blast"
+          },
+          "yelling": {
+            "label": "Sound: a person's yell"
+          },
+          "roomsAway": {
+            "label": "Sound is rooms away"
+          },
+          "sameFloor": {
+            "label": "Sound is on the same floor"
+          },
+          "floorsAway": {
+            "label": "Sound is floors away"
+          },
+          "odorObvious": {
+            "label": "Smell: the odor is obvious"
+          },
+          "otherOdors": {
+            "label": "Smell: other odors present"
+          },
+          "temperature": {
+            "label": "Touch: extreme temperature"
+          },
+          "gloves": {
+            "label": "Touch: wearing gloves"
+          },
+          "tasteObvious": {
+            "label": "Taste: the taste is obvious"
+          },
+          "hasCold": {
+            "label": "Taste: perceiver has a cold"
+          }
+        },
+        "languageTable": {
+          "universal": {
+            "label": "Universal concept (hunger, fear)"
+          },
+          "basic": {
+            "label": "Basic conversation (daily life)"
+          },
+          "complex": {
+            "label": "Complex subject (special interests)"
+          },
+          "intricate": {
+            "label": "Intricate subject (technical)"
+          },
+          "obscure": {
+            "label": "Obscure subject (deeply technical)"
+          }
+        },
+        "climbModifiers": {
+          "height2": {
+            "label": "Height 2–4 metres"
+          },
+          "height4": {
+            "label": "Height 4 metres or more"
+          },
+          "wet": {
+            "label": "Slippery or wet"
+          },
+          "greased": {
+            "label": "Greased or gel-treated"
+          }
+        }
+      },
+      "VEHICLES_V923": {
+        "oldDrivingRows": {
+          "easy": {
+            "label": "Easy maneuver"
+          },
+          "hard": {
+            "label": "Hard maneuver"
+          },
+          "overSpeed": {
+            "label": "Above the vehicle's Speed"
+          },
+          "unfamiliar": {
+            "label": "Unfamiliar vehicle"
+          },
+          "poorVisibility": {
+            "label": "Poor visibility"
           }
         }
       }
@@ -13262,7 +13902,7 @@
         "system__offroad": "Off-road: uses the off-road Handling.",
         "system__drone": "A drone: rolls Pilot on autopilot and can be subscribed to a remote control deck.",
         "system__chase__metres": "The gap to the vehicle this one chases, in metres.",
-        "system__matrix__sim": "Hot sim: +1 initiative die, but Physical dump shock and simsense overload.",
+        "system__matrix__sim": "Hot sim: one more level of Response Increase (+2 Reaction, +1 die) and simsense overload; a cool deck softens dump shock and turns lethal black IC to Stun.",
         "system__matrix__connection": "How you connect: anything but a jackpoint adds to Matrix TNs.",
         "system__cost": "List price in nuyen.",
         "system__availability": "Availability, e.g. 6/48 hrs: TN and base time to find it.",
@@ -13278,7 +13918,7 @@
         "system__concealability": "The TN to find it when searching or scanning. Weapons and worn armor at 0 can't be hidden; other gear and cyberware at 0 aren't looked for (scanners still find cyberware).",
         "system__scanner__kind": "A scanner: weapon detector, cyberware scanner or explosive sniffer. Search with it from the Search quick action.",
         "system__scanner__rating": "Dice the scanner rolls against each item's Concealability.",
-        "system__threatRating": "Threat Rating: dice added to this NPC's Combat Pool (house rules; check the book).",
+        "system__threatRating": "Threat Rating: that many extra dice on every test this NPC makes, never spent; it uses no Combat Pool (Core p. 187; a house rule puts them in its Combat Pool instead).",
         "system__reputation__streetCred": "Street Cred (Shadowrun Companion): set by hand when it isn't worked out from career Karma.",
         "system__reputation__notoriety": "Notoriety: bad things the street remembers about this character.",
         "system__reputation__publicAwareness": "Public Awareness: how well known the character is to the public.",
@@ -13310,8 +13950,8 @@
         "system__autosofts__clearsight": "Clearsight autosoft: dice added to sensor tests with nobody at the controls."
       },
       "host": {
-        "system__securityValue": "Security Value: the host's detection dice, and dump shock TN.",
-        "system__securityCode": "Security code: sets IC initiative dice and the paydata it holds.",
+        "system__securityValue": "Security Value: the host's detection dice, its IC's attack and resistance dice, and dump shock's Power.",
+        "system__securityCode": "Security code: sets IC initiative dice and damage level, the cybercombat TNs, dump shock's level and the paydata it holds.",
         "system__tally": "Security tally: the host's detection successes so far. Sheaf steps fire as it rises.",
         "system__alert": "Alert level: only rises on its own; security deckers can cancel it.",
         "system__gridKind": "A host, or an LTG or RTG that other nodes hang off.",
@@ -13325,7 +13965,7 @@
         "system__hostUuid": "The Matrix host this site's devices are slaved to."
       },
       "ic": {
-        "system__rating": "IC rating: its dice, the TN to hit it, and its Power.",
+        "system__rating": "IC rating: its Power and the TN for tests against its effects (the host's Security Value is its attack dice).",
         "system__category": "White, gray or black IC. Black IC damage the decker's own body.",
         "system__behavior": "What it does when it acts (the hint below explains it).",
         "system__initiativeDice": "Initiative dice; 0 = from the host's security code.",
@@ -13333,10 +13973,10 @@
         "system__kind": "IC, or a decker's frame or agent.",
         "system__payload": "Psychotropic IC: what it does to the decker's mind.",
         "system__guards": "Barrier IC: the subsystem it blocks until crashed or decrypted.",
-        "system__traceMode": "What a completed trace does: dump, report the location, or dump and burn the deck.",
+        "system__traceMode": "What a completed trace does under the old house rule: dump, report the location, or dump and burn the deck (VR2's trace only reports).",
         "system__attribute": "Crippler and ripper: the persona program they go after.",
         "system__smart": "A smart frame adds pool dice.",
-        "system__party": "IC with the same party name in this host act on their best member's initiative and can attack together."
+        "system__party": "IC with the same party name in this host can attack together: +1 TN per member on their attacks and on attacks on them."
       },
       "barrier": {
         "system__rating": "The barrier's rating now; forcing through lowers it.",
@@ -13386,13 +14026,13 @@
         "system__kind": "What kind of implant: limbs, weapons, jacks, eyes, ears and reflexes each have their own rules.",
         "system__reaction": "Reaction it adds.",
         "system__initiativeDice": "Initiative dice it adds (capped in all).",
-        "system__armorBallistic": "Ballistic armor it adds (dermal plating and the like).",
+        "system__armorBallistic": "Ballistic armor it adds. Dermal plating adds its rating to Body instead by the book (house rules: dermal plating).",
         "system__armorImpact": "Impact armor it adds.",
         "system__bioware": "Bioware: costs Body Index instead of Essence.",
         "system__bodyIndex": "Body Index cost; the total is limited by natural Body.",
         "system__controlRig": "Vehicle control rig rating (needed to jump in).",
         "system__damaged": "Damaged: gives nothing until repaired.",
-        "system__cultured": "Cultured bioware: costs more; some kinds must be cultured.",
+        "system__cultured": "Cultured bioware: costs ×4 and, by the book, Body Cost × .75; neural bioware is always cultured (its listed cost counts it).",
         "system__rating": "Rating where the item has one: skillwires (activesoft cap), encephalon (dice), headware memory (Mp), ICCM filter (dice), bioware (effect)."
       },
       "spell": {
@@ -13406,9 +14046,10 @@
         "system__drainLevel": "Drain damage level.",
         "system__area": "An area spell: Force × 1 m around the target.",
         "system__resist": "The attribute an unwilling target resists a non-combat spell with.",
-        "system__exclusive": "Exclusive: drain TN −2, but nothing else while casting.",
-        "system__fetish": "Fetish-limited: drain TN −1; needs the fetish in hand.",
-        "system__elemental": "An elemental manipulation: a ranged attack with the element's side effect."
+        "system__exclusive": "Exclusive: takes effect at Force +2 (Drain at the normal Force), but no other spells while casting or sustaining it.",
+        "system__fetish": "Fetish-limited: takes effect at Force +1 (+2 if expendable); needs the fetish in hand.",
+        "system__elemental": "An elemental manipulation: a ranged attack with the element's side effect.",
+        "system__fetishExpendable": "The fetish is used up each cast: the spell takes effect at Force +2 instead of +1."
       },
       "focus": {
         "system__focusType": "Spell, sustaining, spirit, power or weapon focus.",
@@ -13439,7 +14080,7 @@
         "system__storageMemory": "Storage memory: downloaded data must fit in it.",
         "system__ioSpeed": "I/O speed: how fast downloads go.",
         "system__active": "Only the deck in use counts.",
-        "system__tortoise": "A tortoise (no ASIST): meat-speed initiative, less Hacking Pool, no hot sim; black IC and dump shock can't reach the user.",
+        "system__tortoise": "A tortoise (no ASIST): half Reaction, less Hacking Pool, no hot sim; black IC and dump shock can't reach the user.",
         "system__living": "An otaku's living persona: ratings from the otaku's attributes (house rule)."
       },
       "program": {
@@ -13824,7 +14465,7 @@
         "theApprovalQueueIsOnThis": "The approval queue is on: this goes to the GM, who approves it before it is added and paid.",
         "theApprovalQueueIsOnFree": "The approval queue is on: free adds go to the GM too.",
         "inCharacterCreation": "In character creation: everything here counts against the Resources nuyen (the wizard keeps the cash in step).",
-        "inCharacterCreationFocus": "In character creation: everything here counts against the Resources nuyen (the wizard keeps the cash in step). A bonded focus also takes its bonding Karma from the starting spell points.",
+        "inCharacterCreationFocus": "In character creation: everything here counts against the Resources nuyen (the wizard keeps the cash in step). A bonded focus also takes its bonding Karma from the starting Force Points.",
         "learningTestsAreOn": "Learning tests are on: each spell rolls {skill}, and the Karma is paid on success.",
         "eachSpellCostsItsForce": "Each spell costs its Force in Good Karma.",
         "karma": "{karma} Karma",
@@ -14003,7 +14644,7 @@
         "noCameraOrSensor": "(no camera or sensor)"
       },
       "Creation": {
-        "spellPoints": "Spell points",
+        "spellPoints": "Force Points",
         "foci": "{used} (foci {foci})",
         "magicPowerPoints": "Magic: power points",
         "unspent": "{value} unspent",
@@ -14197,7 +14838,8 @@
         "runsAtTheWorkingMpcp": "{attribute} {value} runs at the working MPCP {mpcp}",
         "isAboveTheWorkingMpcp": "{attribute} {value} is above the working MPCP {mpcp}",
         "reactionD6": "Reaction {reaction}{bonus} + {dice}D6",
-        "reactionAstralD6": "Reaction {reaction}{bonus} (astral) + {dice}D6"
+        "reactionAstralD6": "Reaction {reaction}{bonus} (astral) + {dice}D6",
+        "reflexSpellNoCyber": "A reflex spell can't boost cybernetic reflexes: it has no effect."
       },
       "Actors": {
         "token": "{name} (token)",
@@ -14833,7 +15475,19 @@
         "tweaksWhenLoaded": "These count while it is loaded.",
         "tweaksWhenInUse": "These count while the deck is in use.",
         "essenceWareRow": "{name}: {essence}",
-        "essenceWareRowGrade": "{name} ({grade}): {essence}"
+        "essenceWareRowGrade": "{name} ({grade}): {essence}",
+        "loadPassOut": "load: passes out",
+        "loadFatigue": "load: {level} fatigue",
+        "untilRecovered923": "until recovered",
+        "aTortoiseHalfReaction923": "A tortoise: half Reaction (Response Increase gives only its dice), {pct}% Hacking Pool{extras}.",
+        "icPsychotropic923": "Black IC with a psychotropic payload ({payload}): it attacks like non-lethal black IC; when the decker jacks out or is dumped, a Willpower test vs {rating} (−2 on a cool deck) decides whether it takes hold.",
+        "icBlackResists923": "Black IC: the decker resists with Body (lethal) or Willpower (non-lethal) vs Power − Hardening, no Hacking Pool, and the icon resists the same damage with its Bod.",
+        "icPersonaResists923": "The persona resists with Bod vs Power − Armor.",
+        "icDamage923": "The host's Security Value in dice vs a TN by its code and the target's status; Power = rating {rating}, level by the code. {resist}{crash}{defend}",
+        "icAttributeDeck923": "The host's Security Value in dice vs the code's TN, opposed by the persona program vs {rating}; each {successes} net successes take a point off the deck (the chip must be replaced).",
+        "icAttributePersona923": "The host's Security Value in dice vs the code's TN, opposed by the persona program vs {rating}; each {successes} net successes take a point off the persona (never below 1, until the decker jacks out).",
+        "icTrace923": "The host's Security Value in dice vs the decker's Trace Factor: a hit locks on; the trace locates the jackpoint in {turns} ÷ successes Combat Turns (rounded down) and reports it.",
+        "icDefault923": "The host's Security Value in dice vs a TN by its code and the target's status; the net successes are reported.{defend}"
       },
       "Shop": {
         "streetIndexTitle": "The price with its Street Index (×{si})",
@@ -15037,6 +15691,10 @@
         },
         "button": "Reference",
         "buttonFor": "Reference beside {name}'s sheet"
+      },
+      "Combat923": {
+        "declareFullDefense": "Declare full defense: no Combat Pool on your melee tests, pool dice to your resistance tests (a clean miss if they beat the attacker's) until your next action",
+        "fullDefenseDetail": "no Combat Pool on melee tests; pool dice to resistance tests until the next action"
       }
     },
     "Text": {
@@ -15694,7 +16352,8 @@
         "badQuantity": "a bad quantity",
         "badShopKey": "not a shop entry",
         "badPermitRef": "not a permit for an item or a vehicle",
-        "permitNoKarma": "a permit costs no Karma"
+        "permitNoKarma": "a permit costs no Karma",
+        "dispelledForce": "{who}: {spell} dispelled, Force {from} → {to}"
       },
       "Catalogue": {
         "qty": "Qty",
@@ -16725,7 +17384,8 @@
       "Vehicles": {
         "stunDamageDoesNotHurt": "Stun damage does not hurt vehicles",
         "notAntiVehicle": "not anti-vehicle",
-        "armorStopsPower": "armor {armor} stops Power {power}"
+        "armorStopsPower": "armor {armor} stops Power {power}",
+        "antiVehicleHalfArmor": "anti-vehicle: half the armor ({half})"
       },
       "Vitals": {
         "resistOverdose": "Resist {name} overdose (dose {dose} while active)",
@@ -16866,6 +17526,33 @@
           "smartgun": "Smartgun",
           "quickDraw": "Quick-draw holster"
         }
+      },
+      "Combat923": {
+        "flechetteVsBallistic": "flechette vs armor: ballistic {best}"
+      },
+      "Matrix923": {
+        "responseAboveMpcp": "Response Increase {ri} is above MPCP {mpcp} ÷ 4: only {cap} counts",
+        "coolDeck": "cool deck"
+      },
+      "Sorcery923": {
+        "noSustainingWhileProjecting": "a projecting magician can't sustain a spell (Core p. 128).",
+        "areaLevel": "area +1 level",
+        "touchLevel": "touch −1 level",
+        "sustainedTn": "sustained +1",
+        "wardForceCap": "a ward's Force can be at most {cap} (2 × Magic {magic}).",
+        "dispelGrade": "can dispel only a spell of Force up to the initiate grade ({grade}); this one is Force {force}.",
+        "exclusiveForce": "exclusive: Force +{force} when cast",
+        "fetishForce": "fetish: Force +{force} when cast (+{expendable} expendable)"
+      },
+      "Core923": {
+        "metahumanMagician": "Metahuman magician",
+        "metahumanAdept": "Metahuman adept",
+        "leftoverRatio": "¥{amount} unspent is kept at {ratio}:1: ¥{kept}",
+        "humanMagician": "Human magician",
+        "humanAdept": "Human adept or aspected",
+        "karmaDiceBook": "One Karma Pool point a die, up to the test's own skill, attribute or rating dice (not pool dice), spent until the pool refreshes (Core p. 191)",
+        "moreFlawsThanEdges": "the flaws come to more than the edges",
+        "qualitiesZero": "edges and flaws come to 0"
       }
     },
     "Guide": {
@@ -16936,7 +17623,7 @@
             "i2": "<strong>Combat:</strong> you don't dodge gunfire: Defend puts your Combat Pool dice into the resistance test, and if their successes beat the attacker's it is a clean miss. Damage stages on the resistance test (the attack's successes against yours, 2 either way per level). Full defense in melee adds no dice. A hit that hurts calls for a knockdown test. Initiative ties go to Reaction, then natural Reaction. Shotguns fire slugs unless loaded with shot. Strong shooters take less recoil; tracers only help full auto. Heavy armor costs Combat Pool dice; a second layer adds half. Charging is +1 Power; graded cover, running and sprinting targets and more are in the Attack dialog.",
             "i3": "<strong>Health:</strong> Stun past a full track goes onto Physical box for box. Bleeding is a box every 10 minutes, and death comes one box past Overflow. First aid lowers a wound one level (Deadly: stabilise only) and shows the treatment time; a better healer can try again. A trauma patch needs a Body test. Stun recovery is the better of Body and Willpower vs 2. A Deadly wound heals only in intensive care; a magician treated without the +2 makes a Magic loss test. Climbing, jumping, swimming and falling use Fitness; trolls run at Quickness × 2.",
             "i4": "<strong>Social and perception:</strong> the Perceive and Sneak dialogs list sound, smell, touch and taste rows; Negotiation is against Intelligence; haggling moves the price 10% per net success, and the seller rolls against your Intelligence; visible armor in a luxury setting is +2.",
-            "i5": "<strong>Magic:</strong> you roll the spell's Force (plus Spell Pool) to cast; you sustain at most your Sorcery rating in spells; a disaster on casting is +2 drain TN; exclusive spells hit as if 2 Force higher, fetish ones 1. Summoning above your Charisma gives Physical drain; one nature spirit at a time. Astral initiative is 2 × Intelligence + 15 + 1D6. Wards use Sorcery. The Magic loss test also loses a point on a roll equal to your Magic.",
+            "i5": "<strong>Magic:</strong> you roll the spell's Force (plus Spell Pool) to cast. Summoning above your Charisma gives Physical drain; one nature spirit at a time. Astral initiative is 2 × Intelligence + 15 + 1D6. Ward drain is Force + successes.",
             "i6": "<strong>Vehicles and rigging:</strong> Control Pool dice on a driving test are capped at your skill, and don't go on gunnery or sensor tests (shoot with the Combat Pool), but do help your vehicle resist damage. Rigger feedback comes only from Serious (6M) or Deadly (6S) hits, resisted with Body. Small arms lose Power by Body + Armor. Passengers are hurt only when shot at, or in a crash or ram. A damaged vehicle is slower. A sensor lock is a Complex Action.",
             "i7": "<strong>Drones and security:</strong> intercepting a drone link needs a remote control deck (break the encryption first); card-reader casings are twice as hard; a passkey and a sequencer roll against the lock; a weapon detector finds everything no better than its highest die; dump shock leaves you disoriented (+2 TN) for a few turns."
           },
@@ -16991,7 +17678,7 @@
             "i4": "The readied weapon (the one you last attacked with, else a pinned one, else the first ready gun) with its mode and rounds left. Click it to attack; Shift-click to attack at once with its remembered choices."
           },
           "b5": "<strong>Your turn</strong>: in a running combat, when it is your character's action phase, the strip says so. Unless the GM's house rule <em>Actions per phase</em> is off, it shows a pip for each action left, and buttons that need more than you have left are greyed out (hover one for why). Warn (the default) lets you click and warns you; block stops the click (the GM can always click). A projecting magician's or an unmaterialized spirit's physical actions are greyed the same way.",
-          "b6": "In Foundry's combat tracker, your own combatants show their pools, and get a shield button for full defense (out of turn it costs initiative) and <strong>Delay</strong> in your action phase (then <strong>Act now</strong> and <strong>Done</strong>), like the sheet's quick buttons.",
+          "b6": "In Foundry's combat tracker, your own combatants show their pools, and get a shield button for full defense (out of turn it costs initiative only under the old full-defense house rule) and <strong>Delay</strong> in your action phase (then <strong>Act now</strong> and <strong>Done</strong>), like the sheet's quick buttons.",
           "b7": "Other choices for yourself in Configure Settings, section <em>Look and layout</em>: <em>Windows: remember size and place</em> (SR2e's sheets and windows open where you left them; dialogs don't) and <em>Notifications: group bursts</em> (several notices at once become one, and a repeat shows ×2, ×3)."
         },
         "rolling": {
@@ -17016,7 +17703,7 @@
           "title": "Chat cards: Defend, Resist and Apply",
           "b1": "Most tests post a card with buttons for what comes next. Only the owner of the character named on the button, or the GM, can use it.",
           "b2": {
-            "i1": "<strong>Defend</strong>: on an attack card, for the target. It opens the defense dialog with pool dice. Against a melee attack you pick the weapon you fight back with (with a <em>Counterattack to subdue</em> box where it applies). Once you have defended, the button is greyed for you, even after a reload; the GM gets an <em>Already defended</em> question before a second defense. A vehicle defends with its driver's Combat Pool dice, or the Control Pool of a rigger jumped into it.",
+            "i1": "<strong>Defend</strong>: on an attack card, for the target. It opens the defense dialog with pool dice. Against a melee attack you pick the weapon you fight back with (with a <em>Counterattack to subdue</em> box where it applies). Once you have defended, the button is greyed for you, even after a reload; the GM gets an <em>Already defended</em> question before a second defense. A vehicle makes no dodge test (the old way, a house rule: its driver's Combat Pool or its rigger's evasive driving); a rigger jumped into it adds Control Pool dice, at most their skill, when it resists the damage.",
             "i2": "<strong>Resist</strong> (or <strong>Resist damage</strong>): after a hit, the damage resistance test. The condition monitor changes by itself.",
             "i3": "<strong>Resist</strong> on a spell or power card: the target's resistance test.",
             "i4": "<strong>Apply (GM)</strong>: your test changed something only the GM may change (a host, a site, a patient you don't own). The GM clicks it to make the change.",
@@ -17063,7 +17750,7 @@
           "b1": "If the character has a Karma Pool, their test cards get Karma buttons:",
           "b2": {
             "i1": "<strong>Re-roll N failures (Karma X)</strong>: rolls the failed dice again. Each re-roll of the same test costs more.",
-            "i2": "<strong>Avoid disaster</strong>: on a roll where every die shows 1.",
+            "i2": "<strong>Avoid disaster</strong>: on a roll where every die shows 1. After it no more Karma can be spent on that test.",
             "i3": "<strong>Buy a success</strong>: when the test has at least one success. The label says <em>permanent</em> when the point is gone for good rather than back at the next refresh."
           },
           "b3": "On an attack, use Karma before the target defends: once they have, the attack card's Karma buttons refuse.",
@@ -17074,9 +17761,9 @@
         "pools": {
           "title": "Dice pools",
           "b1": "The pools are the Combat Pool, Spell Pool, Hacking Pool (Matrix), Control Pool (rigging) and Karma Pool. The <a href=\"#layouts\">status strip</a> shows each as pips; click a pip to set how many are left (clicking the last filled pip takes one die off).",
-          "b2": "A test dialog that can take pool dice has a box for them. What you use comes off what is left. The Main tab shows the Combat Pool spent; the Matrix and Rigging tabs show theirs, with a box to correct the spent number.",
+          "b2": "A test dialog that can take pool dice has a box for them. What you use comes off what is left. The Main tab shows the Combat Pool spent; the Matrix and Rigging tabs show theirs, with a box to correct the spent number. Skill and attribute dialogs also have a box for <strong>Karma Pool dice</strong>: one point a die, up to the test's own dice.",
           "b3": "An encephalon gives a small <strong>Task Pool</strong> for Intelligence, knowledge and Build/Repair skills: the skill dialog has a box for it (used up only in combat). An adept's Combat Sense adds to the Combat Pool, and a power focus adds its rating to the Spell Pool.",
-          "b4": "The Combat, Spell, Hacking, Control and Task Pools refill when a combat starts and at each new Combat Turn. The GM can also refill them from the GM panel (Party tab: <strong>Refresh pools</strong>). The Karma Pool doesn't refill with them: use the circular arrow beside <strong>Karma Pool left</strong> on the Main tab, or the GM's <strong>Refresh Karma Pools</strong>. A house rule can refill Karma Pools by themselves at the start of each session or when a combat ends.",
+          "b4": "The Combat, Spell, Hacking, Control and Task Pools refill when a combat starts and at each new Combat Turn. The GM can also refill them from the GM panel (Party tab: <strong>Refresh pools</strong>). The Karma Pool refills by itself when a combat ends; between other scenes use the circular arrow beside <strong>Karma Pool left</strong> on the Main tab, or the GM's <strong>Refresh Karma Pools</strong>. A house rule can refill Karma Pools at the start of each session instead, or only by hand.",
           "b5": "On the Current tab, <strong>Initiative and pools</strong> lists the initiative (and Matrix or rigged initiative) and each pool, read only. Your combatants in the combat tracker show their pools too."
         },
         "shortcuts": {
@@ -17198,7 +17885,7 @@
             "i2": "The scene environment and background count here (the GM sets them with the pencils), and a running quest with <strong>Next stage</strong> and × to end it. While projecting, the hours out of the body show against the limit.",
             "i3": "Initiate grade and metamagic tick boxes. Adepts initiate too: they see <strong>Initiate</strong>, their grade and only the techniques an adept can learn (centering and the others the house rules allow), but not <strong>Quest</strong>, <strong>Ward…</strong> or <strong>Geasa</strong>. A centering initiate fills in <strong>Centering skill</strong> (for example Singing); <strong>Center</strong> then rolls it before a magical test.",
             "i4": "Shamans fill in the totem: its bonuses, its environment and the dice in and away from it, <em>Berserk</em>, <em>Daylight TN</em> and which spirits its conjuring dice help. An elementalist picks an <strong>Element</strong>.",
-            "i5": "<strong>Geasa</strong>: the + adds one; click one to change its words. Untick <em>Met</em> when a geas is broken; the heading shows the Magic lost.",
+            "i5": "<strong>Geasa</strong>: the + adds one; click one to change its words. Untick <em>Met</em> when a geas is broken: each broken geas adds +2 to your magical tests (by the book; the house rules can make it cost Magic instead, shown in the heading).",
             "i6": "<strong>Sustaining</strong>: spells you hold and the TN they add. The × drops one. <strong>Quicken</strong> or <strong>Elemental</strong> where allowed.",
             "i7": "<strong>Anchored</strong>: <strong>Release</strong>, or × to discard.",
             "i8": "<strong>Foci</strong>: tick Active; the rating is a box. <strong>Bond</strong> an unbonded focus for Good Karma. An addiction risk shows with an <strong>Addiction test</strong> button (the GM's × clears an addiction).",
@@ -17259,8 +17946,8 @@
             "i9": "A security decker of the host gets <strong>Security</strong>. An otaku sees their <strong>Channels</strong> (the + raises one for Karma) and <strong>Complex form…</strong> beside Write….",
             "i10": "On a wireless connection, type the distance to the relay to check the signal. The section also lists LTG numbers you know (× forgets one), defenses loaded, maneuvers in force and who rides your hitcher jacks (others ride along with the <strong>Hitch</strong> quick button)."
           },
-          "b3": "Warnings (traced, held, crippled, a damaged deck with <strong>Repair</strong>, psychotropic IC effects, smoke, time on the way to a host) show in red with what you can do about them; the GM has an × or eraser to clear them.",
-          "b4": "Cards from IC and jacking out carry the follow-up buttons: <strong>Resist dump shock</strong>, <strong>Deck damage</strong>, <strong>Resist biofeedback</strong>, a psychotropic <strong>Resist</strong>, <strong>Resist overload</strong>. On an NPC sheet the Matrix is a section, not a tab."
+          "b3": "Warnings (traced, held, crippled, a damaged deck, psychotropic IC effects, smoke, time on the way to a host) show in red with what you can do about them; the GM has an × or eraser to clear them. Gray IC damage to a deck is permanent: build the damaged part again to replace its chip (<strong>Repair</strong> works only under the GM's house rule).",
+          "b4": "Cards from IC and jacking out carry the follow-up buttons: <strong>Resist dump shock</strong>, <strong>Deck damage</strong>, <strong>Resist biofeedback</strong>, a psychotropic <strong>Resist</strong>, <strong>Resist overload</strong>, and against black IC a second <strong>Resist</strong> for your icon. Jacking out without a Graceful Logoff risks dump shock, and psychotropic IC that hit you test your mind when you jack out. On an NPC sheet the Matrix is a section, not a tab."
         },
         "rigging": {
           "title": "Rigging",
@@ -17272,14 +17959,14 @@
             "i4": "Jumped into a site's security system: its devices, alert and tally, and <strong>Jump out</strong>."
           },
           "b3": "Jumping in needs a control rig, and a rigger adaptation on the vehicle (drones count as adapted; the rigger adaptation goes in on top of a remote adaptation, under Modifications on the vehicle sheet). Jumping in from outside the vehicle also needs a remote control deck, and a link that is not jammed or spoofed; out of range it warns, or stops you if the house rules say so. Without a control rig you can still drive by hand.",
-          "b4": "Damage to a vehicle you are jumped into comes back on a card with <strong>Resist feedback</strong> (or <strong>Resist dump shock</strong> when it is destroyed or the link is cut).",
+          "b4": "A Serious or Deadly hit on a vehicle you are jumped into, or one that destroys it, comes back on a card with <strong>Resist feedback</strong> (6M, or 6S for a Deadly or destroying hit, Physical, resisted with Body); a remote rigger gets <strong>Resist dump shock</strong> when the vehicle is destroyed or the link is cut.",
           "b5": "The <strong>Drone link</strong> quick button (on characters and NPCs, when there are vehicles) intercepts a drone's remote link or spoofs it a command. Intercepting needs a remote control deck or a radio (under the <a href=\"#rules-urr\">Unified Rules Revamp</a>, a remote control deck, and an encrypted link is decrypted first). Spoofing needs a remote control deck. An intercepted link shows <em>Link intercepted</em> on the vehicle sheet until the GM clears it; with the house rule that lets a spoof take the drone over, a spoofed one shows <em>Link spoofed</em>. A character with a jammer has a <strong>Jam</strong> quick button.",
           "b6": "Vehicles and drones have their own sheet: see <a href=\"#vehicles\">Vehicle sheets</a>."
         },
         "cyberware": {
           "title": "Cyberware and bioware",
           "b1": "Cyberware and bioware, each with an <em>Installed</em> tick box. Ticking it by hand skips the surgery: use it for ware fitted before play. Ware that isn't installed has a <strong>Surgery</strong> button: pick who operates, the care while recovering, and whether to pay for a hospital. Recovery shows under the list with the days left; the bed icon changes the care (the GM's × ends it). Damaged ware has <strong>Repair</strong>; the burst or wrench icon marks it damaged or repaired. An adrenal pump has <strong>Activate</strong> and <strong>Switch off</strong>.",
-          "b2": "Lines under the list show the Body Index and other notes, and a <strong>Rejection test</strong> button when over the limit.",
+          "b2": "Lines under the list show the Body Index and other notes. Over the limit the character is in system shock (+1 TN per point over on Body tests); under the old house rule a <strong>Rejection test</strong> button shows instead.",
           "b3": "A grade changes the Essence and the price. The item's Essence field keeps the standard cost; its sheet shows <strong>At this grade</strong> with the Essence and price the grade gives. Hover over the Essence line on the Main tab to see which ware makes up the loss."
         },
         "gear": {
@@ -17381,11 +18068,11 @@
             "i1": "Priorities: pick a letter, A to E, for each of Race, Magic, Attributes, Skills and Resources. Picking a letter another one holds swaps the two.",
             "i2": "Metatype: choices the Race priority doesn't allow are greyed out.",
             "i3": "Attributes: base ratings, with points used and allowed.",
-            "i4": "Magic: mundane, full magician, adept or aspected, as the priority allows; tradition and totem; spells or adept powers through the Add window. A magician's foci bought in creation arrive bonded and count against the spell points.",
+            "i4": "Magic: mundane, full magician, adept or aspected, as the priority allows (a metahuman magician needs Magic B, a metahuman adept C); tradition and totem; spells or adept powers through the Add window. A magician's foci bought in creation arrive bonded and count against the Force Points, which come from the Resources priority.",
             "i5": "Skills: the + for each kind opens the skill picker (free in creation). Set ratings and specializations here; a specialization taken here lowers the skill as the trade works, and a check flags a trade that doesn't. Common skills you haven't taken are listed: click one to add it at 1.",
             "i6": "Resources: the lifestyle, months paid ahead or bought outright, and the <strong>Shopping</strong> buttons, which open the Add window. Free and bought items both come out of the Resources nuyen.",
             "i7": "Contacts: <strong>Add a contact</strong>, then its name, level (1 to 3) and role. The first ones are free; more cost nuyen.",
-            "i8": "Finish: every build check with ✓ or ✗; click a check to go to its step. You can finish with checks unmet; the record notes it. Finishing pays the lifestyle and keeps the cash left, as the hint says."
+            "i8": "Finish: every build check with ✓ or ✗; click a check to go to its step. You can finish with checks unmet; the record notes it. Finishing pays the lifestyle, keeps a tenth of the cash left, adds 3D6 × ¥1,000 starting cash and gives a metahuman a Karma Pool of 2, as the hint says."
           },
           "b3": "The <strong>Totals</strong> panel keeps the build checks in view at every step. Closing the wizard keeps the draft: <strong>Continue creation…</strong> opens it again. <strong>Finish creation</strong> freezes the <a href=\"#creation-record\">creation record</a>.",
           "b4": "For a character made another way, <strong>Record as it stands</strong> freezes it as it is. <strong>Quick build…</strong> on the Bio tab is the older builder that reads typed lists. <strong>Import a stat block…</strong> on the Bio tab fills the sheet from a pasted character write-up, with a preview of what it read; the GM can record the result as the creation. The priority table's values come from your SR2 rulebook and the GM's house rules.",
@@ -17480,7 +18167,7 @@
         },
         "credits": {
           "title": "Credits and licence",
-          "b1": "<strong>Built with AI.</strong> This system was written by an AI model, Anthropic's Claude, under the direction of its human owner: the code, the rules numbers and this guide. The numbers came from the AI's memory of the books; many have since been checked against the books, and the rest are listed in <code>docs/VERIFY.md</code>. Check anything that looks off against your rulebook and tell your GM; the GM can correct values in the house rules. It has not yet been play-tested at a real table.",
+          "b1": "<strong>Built with AI.</strong> This system was written by an AI model, Anthropic's Claude, under the direction of its human owner: the code, the rules numbers and this guide. The numbers first came from the AI's memory of the books; in v0.92.3 the AI checked the default rules against the books and corrected them (a person has not re-checked that yet), and every number is listed with its source in <code>docs/VERIFY.md</code>. Check anything that looks off against your rulebook and tell your GM; the GM can correct values in the house rules. It has not yet been play-tested at a real table.",
           "b2": "This is an <strong>unofficial</strong> fan system for Shadowrun, Second Edition. It is not affiliated with or endorsed by The Topps Company, Catalyst Game Labs or Black Book Editions. Shadowrun and Matrix are registered trademarks and/or trademarks of The Topps Company, Inc.",
           "b3": "It contains <strong>no rulebook text or art</strong>: it automates the rules, and you need your own copy of the rulebook for them. The default pictures and tokens (people, critters, spirits, vehicles and drones, IC and the rest) and the Scene builder's backdrops are the system's own art, drawn by the AI for it (vector art written as code in <code>src/art/</code>), under the same licence; they show no book art, logos or trademarks. The cover picture (the runner team in the neon alley, also the background of new worlds on the setup screen) was painted with another AI, OpenAI's ChatGPT image generation, by the project's owner from a brief Claude wrote; Claude added the title. It is under the same licence and shows no book art, logos or trademarks either. The game numbers it needs (rule constants, starter item templates, a totem table) were written from memory; the GM can check them against the book and change them as house rules.",
           "b4": "The system is licensed under <strong>CC BY-SA 4.0</strong> (the <code>LICENSE.md</code> file in the system folder). It started from the project setup of SRA2, the community Shadowrun Anarchy 2 system by the Anarchy development team: only the build configuration and folder layout came from SRA2; all of the game code, sheets, art and text were written for this system. The fonts (Chakra Petch, JetBrains Mono, Inter) are under the SIL Open Font License."
@@ -17515,7 +18202,7 @@
           "b2": "<strong>NPCs</strong> tab: <strong>Group roll…</strong> (one test, one card), <strong>Damage several…</strong> and <strong>Heal several…</strong> each ask who: the selected tokens, every NPC token on the scene, or the party. <strong>Group for morale</strong> and <strong>Ungroup</strong> work on the selected tokens; each morale group is then listed with a flag (its morale test) and an × (break it up). <strong>On this scene</strong> lists the tokens no player owns (up to 40) with the same quick icons.",
           "b3": "On both tabs, NPC rows show as compact stat cards (attributes, armor, initiative, weapon and damage). The card icon beside the heading switches to plain rows and back; the panel remembers.",
           "b4": "Foundry's combat tracker gets a banner with the Combat Turn, the pass, who is acting and how many are on full defense or delaying. The acting row is highlighted, delaying combatants are listed last under <em>Delaying</em>, and full defense shows as a badge. IC, frames and agents get an act button there.",
-          "b5": "The tracker's header has <strong>Surprise test</strong> (every combatant rolls; hover it for how the result is used) and, when Foundry's own button isn't there, <strong>Roll NPCs</strong>. Rows you own have <strong>Delay</strong>, <strong>Act now</strong> or <strong>Done</strong>, a shield to declare full defense (out of turn it costs initiative), and a line with the pools left."
+          "b5": "The tracker's header has <strong>Surprise test</strong> (every combatant rolls; hover it for how the result is used) and, when Foundry's own button isn't there, <strong>Roll NPCs</strong>. Rows you own have <strong>Delay</strong>, <strong>Act now</strong> or <strong>Done</strong>, a shield to declare full defense (out of turn it costs initiative only under the old full-defense house rule), and a line with the pools left."
         },
         "gmParty": {
           "title": "Party tab",
@@ -17602,7 +18289,7 @@
             "i4": "<em>Other</em>: <em>Rules source</em> (see <a href=\"#rules-urr\">the Unified Rules Revamp</a>), <em>Apply players' GM-only changes by themselves</em> and each player's <em>Dice So Nice: SR2e colours</em>.",
             "i5": "<em>Look and layout</em>: each player's own look (see <a href=\"#look\">Your look</a>)."
           },
-          "b7": "Many values were entered from memory and need checking against your SR2 rulebook: the list is <code>docs/VERIFY.md</code> in the project's source."
+          "b7": "Many values were first entered from memory; in v0.92.3 the defaults were checked against the SR2 books. Every value and its source is listed in <code>docs/VERIFY.md</code> in the project's source, for checking against your rulebook."
         },
         "newEntry": {
           "title": "New entries",
@@ -17644,7 +18331,7 @@
         },
         "spellFormulas": {
           "title": "Spell formulas and teachers",
-          "b1": "Out of character creation a magician learns a new spell only from a <strong>spell formula</strong> they hold, from a <strong>teacher</strong> who knows it, from their magical group's <strong>grimoire</strong>, or from a spell they <strong>designed</strong> themselves. The learning test and the Good Karma are the same in every case.",
+          "b1": "Out of character creation a magician learns a new spell only from a <strong>spell formula</strong> they hold, from a <strong>teacher</strong> who knows it, from their magical group's <strong>grimoire</strong>, or from a spell they <strong>designed</strong> themselves. The learning test (Sorcery + Magical Theory vs 2 × Force) and the Good Karma are the same in every case, but learning from a formula with no teacher is at +2 TN.",
           "b2": {
             "i1": "<strong>Buying a formula</strong>: in the shop or the Add window, the scroll on a spell's row opens <strong>Buy a formula…</strong>. Pick the Force (you can learn the spell at up to it) and the tradition (hermetic or shamanic). A formula is gear: it is found, haggled, bought, sent to the GM's approval queue and delivered like anything else, and it can be given, traded or sold.",
             "i2": "<strong>Learning from it</strong>: open the formula on your sheet and press <strong>Learn this spell…</strong>, or use Learn in the Add window: a formula you hold is used by itself. A spell you know at a lower Force is raised; raising a Force needs a formula of the new Force.",
@@ -17662,6 +18349,21 @@
             "i3": "The whole list opens from the SR2e tools window (Rules interpretations)."
           },
           "b3": "They are interpretations, not rulings: the GM's call always wins."
+        },
+        "rulesV0923Combat": {
+          "title": "Combat rules updated in v0.92.3",
+          "b1": "v0.92.3 brought combat closer to the SR2 core rulebook. The GM can put each change back under the GM's house rules (the <em>v0.92.3</em> rows; the old choice is the second one). Under the Unified Rules Revamp nothing here changes.",
+          "b2": {
+            "i1": "<strong>Gunfire:</strong> you don't dodge. <strong>Defend</strong> puts your Combat Pool dice into the damage resistance test (Body + pool against Power − armor). If the pool dice alone score more successes than the attacker, it is a clean miss. Otherwise the attacker's successes are set against yours: every 2 more on either side moves the damage one level up or down, and a tie does the weapon's base damage.",
+            "i2": "<strong>Staging:</strong> every 2 net successes raise the damage one level, for gunfire, melee and combat spells alike.",
+            "i3": "<strong>Combat Pool:</strong> it refills at the start of each of your actions. Dice left at the end of a Combat Turn last until your first action of the next one.",
+            "i4": "<strong>Melee:</strong> a tie goes to the attacker (base damage). Full defense adds no dice and costs no initiative: no Combat Pool on your melee test, and your pool dice go to the resistance test, a clean miss if their successes beat the attacker's. Light, smoke and weather count half in melee (not full darkness). Subduing is +2 TN, and each further target in the same phase is +2.",
+            "i5": "<strong>Knockdown:</strong> every hit that hurts calls for a Body test against half the Power (gel rounds: the Power; melee: the attacker's Strength). Beat half the wound (Light 1, Moderate 2, Serious 3) to stay put; some successes stagger you 1 m back; none, or a Deadly wound, knocks you down.",
+            "i6": "<strong>Grenades and rockets:</strong> each target's resistance successes are set against the thrower's, as for gunfire. Aerodynamic grenades and launchers lose 4 m of scatter per success; rockets and missiles scatter 2D6 m (a missile also its Intelligence in metres less). Anti-personnel rockets lose 1 Power per half metre.",
+            "i7": "<strong>Firearms:</strong> shotguns fire slugs unless loaded with shot, which follows the flechette rules and widens every choke metres (−1 Power and −1 TN each time). Flechette against armor uses double Impact or plain Ballistic, whichever is higher. Tracers help only full auto beyond short range. Full auto at several targets is +2 per new target, and a smartlinked smartgun wastes no rounds between them. Two rounds left fire a short burst (+2 Power, no extra level). A barrier rated above the Power stops the shot, and counts double against flechette and explosive rounds. Cylinders and internal magazines reload Quickness rounds per Complex Action. A weapon must be readied (a Simple Action) before use.",
+            "i8": "<strong>Attack dialog and armor:</strong> target running (+2), target stationary (−1), attacker in melee (+2 per opponent), difficult ground and smart goggles (−1) are new rows. Heavy armor costs a Combat Pool die per point of Ballistic over your Quickness, instead of Quickness.",
+            "i9": "<strong>Initiative and actions:</strong> ties go to Reaction, then natural Reaction. A wound changes your initiative at the next roll, not mid-turn. A delayed action lasts through the Combat Turn and into the next, but using pool dice while you wait loses it. Ambushers waiting on a delayed action roll the surprise test at TN 2."
+          }
         }
       }
     },

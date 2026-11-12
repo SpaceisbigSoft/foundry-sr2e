@@ -1,11 +1,14 @@
 import { RULES } from './config.ts';
 import { t as tx } from '../helpers/i18n.ts';
+import { delayCarries } from './combat923.ts';
 
 /** Combat flow at the table (v0.35.0): delaying, full defense, buying successes, disasters, Karma refresh. */
 
-/** A delayed action: whether it is still good (same combat, round and pass). */
-export function delayValid(flag: { combatId: string; round: number; pass: number } | null | undefined, now: { combatId: string | null; round: number; pass: number }): boolean {
-  if (!flag || !now.combatId || flag.combatId !== now.combatId || flag.round !== now.round) return false;
+/** A delayed action: whether it is still good (same combat, round and pass; `carry`: a held delay, see COMBAT_V923.delay). */
+export function delayValid(flag: { combatId: string; round: number; pass: number } | null | undefined, now: { combatId: string | null; round: number; pass: number }, carry = false): boolean {
+  if (!flag || !now.combatId || flag.combatId !== now.combatId) return false;
+  // v0.92.3 (COMBAT_V923.delay 'book', Core p. 80): a delay still held at the end of a Combat Turn carries into the next.
+  if (flag.round !== now.round) return carry && delayCarries(flag.round, now.round);
   return RULES.DELAY.lostAtPassEnd ? flag.pass === now.pass : flag.pass <= now.pass;
 }
 
