@@ -2,10 +2,25 @@
 
 This is the history of the unofficial Shadowrun 2nd Edition system for Foundry VTT (system id `sr2e`), newest version first. Every rules change since v0.70.0 has a house-rule switch that puts the old behaviour back. The system was built with AI (Anthropic's Claude) under human direction, and it has not yet been play-tested at a real table.
 
-## v0.92.5 — First release (12 Nov 2026)
-- **The first release** of the unofficial Shadowrun 2nd Edition system for Foundry VTT v14. It brings together everything built so far: SR2 rules for combat, health, magic, the Matrix (Virtual Realities 2.0), vehicles (Rigger 2) and gear, checked against the books in v0.92.3, each with a house rule to play it differently; character creation and advancement; the shop and the Catalogue; the GM panel, NPC generator and Scene builder; the in-game guide.
-- **Install** from Foundry's Game Systems with the manifest URL below; worlds made with the earlier test builds update in place (the first load shows the GM which characters' numbers changed with v0.92.3's book rules).
-- **Built with AI** (Anthropic's Claude) under human direction, and **not yet play-tested at a table**: please report anything that looks wrong with the in-game guide's **Report a bug** button or on the issue tracker.
+## v0.92.5 — First Rules Audit (12 Nov 2026)
+The rules checked against the SR2 books, and everything else since the last GitHub build (v0.91.6). Not yet play-tested at a table; built with AI (Anthropic's Claude) under human direction.
+
+**The rules audit (v0.92.3–v0.92.4)**
+- **The book's way is now the default.** Every rule the system models was compared with the SR2 books (Core Rulebook, Companion, Grimoire, Awakenings, Virtual Realities 2.0, Rigger 2, Shadowtech, Cybertechnology, Fields of Fire, the Corporate Security Handbook and others): about 270 rules that came from memory or from SR3 now follow the book, and about 50 rules that were missing are built. `docs/VERIFY.md` lists each with its book and page.
+- **Characters:** the SR2 priority table, Force Points by Resources, dwarf Quickness −1 and troll Willpower −1, attributes at new rating × 1 Karma, Karma Pool dice, starting cash, perception as Intelligence vs 4, Threat dice on every test.
+- **Combat:** one ranged test with clean misses, staging on every 2 net successes, the Combat Pool refreshing at each action, the melee tie to the attacker, heavy armor costing pool dice, the missing ranged modifiers, short bursts, knockdown, flechette and shotguns; the anti-vehicle rocket's blast at the book's −8 Power per metre.
+- **Health:** Stun overflow box for box, first aid lowering a wound one level, bleeding every 10 minutes, death past natural Body, shock-weapon disorientation, permanent damage, Shadowtech addiction, falling.
+- **Magic:** Magic falls with every Essence lost, the first initiation is Grade 0, conjuring Drain by Charisma, banishing, spirits immune only to firearms and explosions, the Astral Combat Pool, dispelling, wards, geasa, area spells resisted per target.
+- **The Matrix follows Virtual Realities 2.0** (opposed system tests, cybercombat by security code, dump shock, black IC, trace); **vehicles follow Rigger 2** (anti-vehicle weapons, the Control Pool on damage resistance, rigger feedback, ramming, Autonav).
+- **Gear:** dermal plating adds to Body, ware grades, cyberlimbs, bone lacing, bioware for magicians, carrying, and Concealability, weight, Availability and Street Index on the starter items.
+- **Your table, your call:** every change has a house rule that puts the old way back; the first load after updating shows the GM which characters' numbers change, and why. The Unified Rules Revamp keeps its own rules and gets the book fixes where it is silent.
+
+**Also since v0.91.6**
+- **The Scene builder** (v0.91.7): a step-by-step GM window that builds a whole scene: a backdrop with matching walls, doors and lamps, time and weather, magic and wards, the player characters and NPCs, a security site and its host, a journal and music.
+- **Spell formulas and teachers** (v0.91.8): out of creation a spell is learned from a formula (bought like gear), a teacher, the group's grimoire or the magician's own design.
+- **Rules interpretations and the layered Magic Pool** (v0.92.0): a † marks where the rules leave something unclear, with a window explaining each reading; Sorcery's concentration and specialization add Spell Pool dice only inside them.
+- **The flexible record sheet** (v0.92.1): custom tweaks on any item, a Carried tick, weapon accessories read from the description, a creation wizard that advises instead of refusing, a reference pane beside the sheet, the Armory tab.
+- **Release testing and the clock** (v0.92.2): in-Foundry test batches (Quench), upgrade tests from old worlds, module checks; a big jump of world time asks the GM whether it counts as time passed.
 
 ## v0.92.4 — The anti-vehicle rocket (12 Nov 2026)
 - **Anti-vehicle rockets and missiles** now lose 8 Power per metre from the blast point, as the book's rocket table gives (Core p. 99): they hit what they're aimed at, not everything within 60 m. The GM can put the old −1 per 4 m back in the house rules (*Ranged combat*).

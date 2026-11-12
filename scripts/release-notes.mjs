@@ -17,7 +17,7 @@ if (start >= 0) {
 }
 
 const notes = [
-  `**First release.** Not yet play-tested at a table, so expect rough edges: please report problems on the [issue tracker](${repo}/issues); the in-game guide's **Report a bug** button collects the details for you.`,
+  `**Not yet play-tested at a table**, so expect rough edges: please report problems on the [issue tracker](${repo}/issues); the in-game guide's **Report a bug** button collects the details for you.`,
   section,
   '## Install',
   'You need **Foundry VTT v14** and your own copy of the Shadowrun Second Edition rulebook.',

@@ -254,7 +254,7 @@ describe('v0.86.0 fan-content wording (W1–W5)', () => {
   test('W5: README status shows the current version (update it every version); the two LICENSE copies match', () => {
     const version = JSON.parse(read('package.json')).version;
     assert.equal(JSON.parse(read('public', 'system.json')).version, version);
-    assert.ok(read('README.md').includes(`## Status: v${version} (`), 'README status line'); // v0.92.5: (pre-release) or (release)
+    assert.ok(read('README.md').includes(`## Status: v${version}`), 'README status line'); // v0.92.5: the status line may name the version's title
     assert.equal(read('public', 'LICENSE.md'), license);
   });
 });
