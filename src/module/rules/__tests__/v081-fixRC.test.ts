@@ -174,8 +174,9 @@ describe('v0.81.0 fixRC: NPCs, upkeep, undo, magic', () => {
       const rcd = npcActorData(p).items.find((i) => Number((i.system as any).rcdRating) > 0);
       assert.ok(rcd, `seed ${s}`);
       const r = Number((rcd!.system as any).rcdRating);
-      assert.equal((rcd!.system as any).cost, 50000 * r);
-      assert.equal((rcd!.system as any).weight, 2 * r);
+      // v0.92.3 (Rigger 2 p. 97): 5,000¥ × Rating, weight 3 whatever the rating.
+      assert.equal((rcd!.system as any).cost, 5000 * r);
+      assert.equal((rcd!.system as any).weight, 3);
     }
     assert.ok(checked > 0, 'no Threat 1 rigger with drones found');
   });

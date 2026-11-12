@@ -5,7 +5,7 @@
 import { RULES, type DamageLevel } from './config.ts';
 import type { TargetNumberModifier } from './dice.ts';
 import { stageDown, resistanceTargetNumber } from './damage.ts';
-import { crashDamage, ramDamage, passengerDamage, riggerFeedback, vehicleIncomingDamage, vehicleFireModifiers } from './vehicles.ts';
+import { crashDamage, ramDamage, passengerDamage, riggerFeedback, vehicleIncomingDamage, vehicleFireModifiers, veh923, bookFireModifiers } from './vehicles.ts';
 import { impactLevel } from './docs79-vehicles.ts';
 import { t as tx } from '../helpers/i18n.ts';
 
@@ -27,20 +27,34 @@ export function veh80ConditionLevel(boxes: number): DamageLevel | null {
 
 /** Control Pool dice on a driving test: at most the skill dice rolled under 'skill'; as asked under 'none' (book). */
 export function veh80PoolCap(asked: number, skillDice: number): number {
-  if (U().vehCpCap !== 'skill') return asked;
+  // v0.92.3 (RULES.VEHICLES_V923.cpCap 'skill', Rigger 2 pp. 16, 20): the book caps it at the skill too.
+  if (U().vehCpCap !== 'skill' && veh923('cpCap') !== 'skill') return asked;
   return Math.min(Math.max(0, Math.floor(num(asked))), Math.max(0, Math.floor(num(skillDice))));
 }
 
 /** The pool a mounted weapon's firer rolls: a jumped-in driver uses the Combat Pool under 'combat' (book: the Control Pool). */
 export function veh80GunneryPool(bookPool: 'control' | 'combat', role: string | null | undefined): 'control' | 'combat' {
   if (bookPool === 'control' && role === 'driver' && U().vehCpGunnery === 'combat') return 'combat';
+  // v0.92.3 (RULES.VEHICLES_V923.gunneryPool 'combat', Rigger 2 pp. 16, 78): the Control Pool is never used on vehicle
+  // weapons: a jumped-in driver or security rigger fires with the Combat Pool (at most the Gunnery skill).
+  if (bookPool === 'control' && (role === 'driver' || role === 'security') && veh923('gunneryPool') === 'combat') return 'combat';
   return bookPool;
 }
 
-/** Control Pool dice a jumped-in rigger adds to the vehicle's damage resistance (0 unless vehCpResist). */
-export function veh80ResistPool(asked: number, left: number): number {
-  if (!U().vehCpResist) return 0;
-  return Math.max(0, Math.min(Math.floor(num(asked)), Math.floor(num(left))));
+/** Whether a jumped-in rigger may add Control Pool dice to the vehicle's damage resistance (vehCpResist, or the book's VEHICLES_V923.cpResist). */
+export function veh80ResistPoolOn(): boolean {
+  return Boolean(U().vehCpResist) || veh923('cpResist') === 'driving';
+}
+
+/**
+ * Control Pool dice a jumped-in rigger adds to the vehicle's damage resistance (0 unless vehCpResist). v0.92.3
+ * (RULES.VEHICLES_V923.cpResist 'driving', Rigger 2 pp. 50, 53): under the book, at most the rigger's skill in the vehicle
+ * (`skill`); the Revamp's own switch keeps its uncapped pool.
+ */
+export function veh80ResistPool(asked: number, left: number, skill?: number): number {
+  if (!veh80ResistPoolOn()) return 0;
+  const n = Math.max(0, Math.min(Math.floor(num(asked)), Math.floor(num(left))));
+  return U().vehCpResist || skill === undefined ? n : Math.min(n, Math.max(0, Math.floor(num(skill))));
 }
 
 // ---------------------------------------------------------------- rigger feedback (URR)
@@ -120,10 +134,19 @@ export function veh80Incoming(o: Veh80IncomingInput): ReturnType<typeof vehicleI
 
 /** What a hit on the vehicle does to the people aboard. 'urr': only an impact, at the vehicle's Power and level. */
 export function veh80PassengerDamage(o: { power: number; level: DamageLevel | null; vehicleArmor: number; impact?: boolean }): { power: number; level: DamageLevel } | null {
-  if (U().vehPassengers !== 'urr') return passengerDamage({ power: o.power, level: o.level, vehicleArmor: o.vehicleArmor });
+  // v0.92.3 (RULES.VEHICLES_V923.passengers 'targeted', Rigger 2 pp. 50, 53): the book's way is the Revamp's here.
+  if (!veh80PassengersTargeted()) return passengerDamage({ power: o.power, level: o.level, vehicleArmor: o.vehicleArmor });
   if (!o.impact || !o.level) return null;
   const power = Math.floor(num(o.power));
   return power > 0 ? { power, level: o.level } : null;
+}
+
+/**
+ * v0.92.3: whether weapon hits on a vehicle leave the people aboard alone and impacts reach them at the vehicle's Power
+ * and level (URR_V80.vehPassengers 'urr', or the book's VEHICLES_V923.passengers 'targeted').
+ */
+export function veh80PassengersTargeted(): boolean {
+  return U().vehPassengers === 'urr' || veh923('passengers') === 'targeted';
 }
 
 /** The level a crash does to the people aboard: the vehicle's under 'urr', the book's fixed level otherwise. */
@@ -134,7 +157,8 @@ export function veh80CrashPassengerLevel(bookLevel: DamageLevel, vehicleLevel: D
 /** The vehicle's protection for someone shot inside it: its Armor (book), or the higher of Body and Armor. */
 export function veh80OccupantArmor(o: { body: number; armor: number }): number {
   const armor = Math.max(0, num(o.armor));
-  return U().vehOccupantArmor === 'higher' ? Math.max(armor, Math.max(0, num(o.body))) : armor;
+  // v0.92.3 (RULES.VEHICLES_V923.occupant 'book', Rigger 2 p. 53): the higher of the vehicle's Armor or Body.
+  return U().vehOccupantArmor === 'higher' || veh923('occupant') === 'book' ? Math.max(armor, Math.max(0, num(o.body))) : armor;
 }
 
 // ---------------------------------------------------------------- impacts: crashes and rams (URR)
@@ -156,8 +180,9 @@ export function veh80BodyArmorFactor(body: number, armor: number): number {
  * Ramming. 'book': ramDamage. 'urr': the ramming speed (the rammer's, or in a chase between the two the difference of
  * their speeds) ÷ 10, round up; the level by the speed table; the rammer takes the same less its Body-Armor factor.
  */
-export function veh80RamDamage(o: { body: number; armor?: number; currentSpeed: number; speed: number; otherSpeed?: number | null }): ReturnType<typeof ramDamage> & { rammingSpeed?: number } {
-  if (U().vehImpact !== 'urr') return ramDamage({ body: o.body, currentSpeed: o.currentSpeed, speed: o.speed });
+export function veh80RamDamage(o: { body: number; armor?: number; currentSpeed: number; speed: number; otherSpeed?: number | null; pedestrian?: boolean }): ReturnType<typeof ramDamage> & { rammingSpeed?: number } {
+  // v0.92.3 (RULES.VEHICLES_V923.ram 'book'): the book's ram in ramDamage (the other's speed, a pedestrian).
+  if (U().vehImpact !== 'urr') return ramDamage({ body: o.body, currentSpeed: o.currentSpeed, speed: o.speed, otherSpeed: o.otherSpeed ?? null, ...(o.pedestrian ? { pedestrian: true } : {}) });
   const mine = Math.max(0, num(o.currentSpeed));
   const rs = o.otherSpeed === null || o.otherSpeed === undefined ? mine : Math.abs(mine - Math.max(0, num(o.otherSpeed)));
   const power = Math.max(1, Math.ceil(rs / Math.max(1, RULES.VEHICLES.ram.speedPerPower)));
@@ -172,7 +197,8 @@ export function veh80RamDamage(o: { body: number; armor?: number; currentSpeed: 
 export function veh80DamagedSpeed(speed: number, boxes: number): { speed: number; note: string } {
   const s = Math.max(0, num(speed));
   const d = U().vehDamageSpeed;
-  if (d.mode !== 'urr') return { speed: s, note: '' };
+  // v0.92.3 (RULES.VEHICLES_V923.damageSpeed 'book', Rigger 2 p. 49): the book's −25 % / −50 %, the same numbers.
+  if (d.mode !== 'urr' && veh923('damageSpeed') !== 'book') return { speed: s, note: '' };
   const lv = veh80ConditionLevel(boxes);
   const f = lv === 'S' || lv === 'D' ? d.serious : lv === 'M' ? d.moderate : 1;
   if (f === 1) return { speed: s, note: '' };
@@ -214,6 +240,8 @@ export type Veh80FireInput = Parameters<typeof vehicleFireModifiers>[0] & {
  */
 export function veh80FireModifiers(o: Veh80FireInput): TargetNumberModifier[] {
   const base = { firing: o.firing ?? null, ...(o.targetMoving !== undefined ? { targetMoving: o.targetMoving } : {}), ...(o.sensorLock !== undefined ? { sensorLock: o.sensorLock } : {}) };
+  // v0.92.3 (RULES.VEHICLES_V923.gunneryMods 'book', Rigger 2 p. 57): the book's manual gunnery table.
+  if (U().vehGunnery.mode !== 'urr' && veh923('gunneryMods') === 'book' && !o.still) return bookFireModifiers(o);
   if (U().vehGunnery.mode !== 'urr' || !o.mounted || o.still || o.targetSpeed === null || o.targetSpeed === undefined) return vehicleFireModifiers(base);
   const out = vehicleFireModifiers({ ...base, firing: o.firing ? { ...o.firing, currentSpeed: 0 } : null, targetMoving: false });
   const sd = veh80SpeedDifference(num(o.firing?.currentSpeed), num(o.targetSpeed));
@@ -231,8 +259,13 @@ export function veh80HeavyRecoil(heavy: boolean, mounted: boolean): boolean {
 // ---------------------------------------------------------------- repair (URR)
 
 /** The repair test's TN: by the worst damage stage under 'stage' (L/M/S/D), else the book's flat TN. */
-export function veh80RepairTn(boxes: number, bookTn: number): number {
+export function veh80RepairTn(boxes: number, bookTn: number, repairing?: number): number {
   const r = U().vehRepairTn;
+  // v0.92.3 (RULES.VEHICLES_V923.repairTn 'boxes', Rigger 2 p. 26): the boxes to repair + 2.
+  if (r.mode !== 'stage' && veh923('repairTn') === 'boxes') {
+    const b = Math.max(0, Math.floor(num(repairing ?? boxes)));
+    return Math.max(RULES.MIN_TARGET_NUMBER, b + num(RULES.VEHICLES_V923.repairTnPlus));
+  }
   if (r.mode !== 'stage') return bookTn;
   const lv = veh80ConditionLevel(boxes);
   return lv ? Math.max(RULES.MIN_TARGET_NUMBER, num(r.tn[lv])) : bookTn;

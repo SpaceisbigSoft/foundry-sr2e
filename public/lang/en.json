@@ -7591,7 +7591,14 @@
           "one": "· {name}'s {name2} (rating {idnRating}) against a rating {checkerRating} checker ({dice} dice vs TN {tn}): {count} success against the fake's {forgerSuccesses}.",
           "other": "· {name}'s {name2} (rating {idnRating}) against a rating {checkerRating} checker ({dice} dice vs TN {tn}): {count} successes against the fake's {forgerSuccesses}."
         },
-        "tweakPower": "custom tweak Power {value}"
+        "tweakPower": "custom tweak Power {value}",
+        "autonavTooLowToDrive": "{vehicleName}'s autonav (rating 1) can't drive it by itself; someone has to.",
+        "plusAutonavDice": " + autonav {nav}",
+        "vehicleNoDodge": "{name}: no dodge test (the rigger's Control Pool goes on the damage resistance)",
+        "bodyZeroDestroyed": "{name} (Body 0) takes {incPower}{incLevel}: any hit destroys it",
+        "vehicleCompleteMiss": "A complete miss (more Control Pool dice than the attacker's successes).",
+        "destroyedVehicleCrashes": "<strong>{name} is destroyed and crashes.</strong>",
+        "powerTheVehicleTakesThenAboard": "Power {power}: the vehicle takes {power}{vehicleLevel}{part}; everyone aboard then takes the Power at the level the vehicle's test leaves."
       },
       "Adding": {
         "buysFor": "buys {list} for ¥{planNuyen}.",
@@ -7908,7 +7915,10 @@
         "legality": "{label} (found openly)",
         "legalityFixer": "{label} (through a fixer)",
         "legalityContact": "{label} (through a contact)",
-        "contactLevel": "Closer contact"
+        "contactLevel": "Closer contact",
+        "crashSpeed": "Speed vs the driver's Reaction {reaction}",
+        "relativeSpeed": "Relative speed (×{ratio})",
+        "unmountedWeapon": "Weapon not in a vehicle mount"
       },
       "Drops": {
         "notInstalledTickInstalledAfterSurgery": "not installed (tick Installed after surgery)",
@@ -9082,7 +9092,39 @@
         "SHEET_V921__wizard": "The creation wizard warns but never refuses (advise) or greys out and clamps as before (block)",
         "SHEET_V921__ratingLock": "After creation, players may type higher ratings unless the approval queue is on (queue) or never may (always, the old way)",
         "CLOCK_V922__bigJump": "A big jump of world time outside combat (a calendar setting the date): the GM is asked whether it counts as time passed or only changes the date (ask) or it always counts (count, the old way)",
-        "CLOCK_V922__bigJumpDays": "A big jump of world time: at least this many days, forward or back"
+        "CLOCK_V922__bigJumpDays": "A big jump of world time: at least this many days, forward or back",
+        "VEHICLES_V923__avArmor": "Anti-vehicle weapons vs vehicle armor: half (half the Armor comes off the Power, never stopped by it; the book) or full (all of it, armor at or above the Power stops them)",
+        "VEHICLES_V923__cpResist": "The jumped-in rigger's Control Pool on the vehicle's damage resistance: driving (at most the rigger's skill; more pool dice than the attacker's successes and no damage is a complete miss; the book) or none",
+        "VEHICLES_V923__vehicleDodge": "A vehicle's defence against an attack: none (no dodge test, the Control Pool goes on its resistance; the book) or old (evasive driving by the rigger or manual driver)",
+        "VEHICLES_V923__gunneryPool": "Pool for a jumped-in driver's or security rigger's mounted weapons: combat (Combat Pool, at most Gunnery; the book) or control (Control Pool)",
+        "VEHICLES_V923__cpCap": "Control Pool dice on a driving test: skill (at most the skill rated; the book) or none (any dice up to the pool left)",
+        "VEHICLES_V923__feedback": "Rigger feedback: book (only at Serious 6M or Destroyed 6S, Physical, resisted with Body; a rigger aboard a destroyed vehicle takes the 6S instead of dump shock) or old (every hit, Willpower vs the Power, Stun)",
+        "VEHICLES_V923__vcrTn": "Control rig TN bonus: byTest (twice on a Driving Test, once on accelerating, positioning and ramming, none on crash tests, gunnery, sensors; the book) or flat (once on every jumped-in test)",
+        "VEHICLES_V923__autonavDice": "Autonav dice on a Driving Test and a Crash Test: book (the autonav's rating in dice) or none",
+        "VEHICLES_V923__autonavMin": "An autonav of rating 1 driving by itself: book (it can't) or any (any rating drives)",
+        "VEHICLES_V923__damageInit": "Vehicle damage and its driver's Initiative: book (−1 / −2 / −3 at Light / Moderate / Serious) or none",
+        "VEHICLES_V923__damageSpeed": "Vehicle damage and its Speed: book (Moderate −25 %, Serious −50 %) or none",
+        "VEHICLES_V923__crashPower": "Crash Power: up (speed ÷ 10 rounded up, no minimum; the book) or down (rounded down, at least the crash minimum)",
+        "VEHICLES_V923__crashMods": "Crash Test modifiers: book (terrain −1 / 0 / +2 / +4 and speed against the driver's Reaction × 20 / 30 / 40) or old (the driving test's terrain row)",
+        "VEHICLES_V923__passengers": "People aboard a vehicle that is hit: targeted (weapons hurt them only when aimed at them; collisions and crashes at the vehicle's Power and the level its test left; the book) or old (every hit carries through at Power − Armor, a level lower)",
+        "VEHICLES_V923__occupant": "Shooting someone inside a vehicle: book (the higher of its Armor or Body counts, no Combat Pool, a jacked-in rigger takes the TN below) or old (its Armor only)",
+        "VEHICLES_V923__occupantRiggerTn": "A jacked-in rigger shot inside a vehicle: + TN on the resistance test",
+        "VEHICLES_V923__ram": "Ramming: book (Power and level by the difference in speed, the rammer less its Body × successes, collision damage with no armor, any damage calls a Crash Test; a pedestrian one level higher) or old (Body + speed ÷ 10, the rammer half)",
+        "VEHICLES_V923__accel": "Accelerating and braking: book (safe braking up to Acceleration × the multiplier below, no extra TN on the acceleration test) or old (the speed-change settings' brake multiplier and push TN)",
+        "VEHICLES_V923__brakeMultiplier": "Safe braking in a Combat Turn: Acceleration ×",
+        "VEHICLES_V923__gunneryMods": "Manual gunnery from or at a vehicle: book (relative speed 0 / +2 / +4 / +6, target size, unmounted weapon +2) or old (moving +1, fast +2, target moving +1)",
+        "VEHICLES_V923__drivingRows": "Driving Test rows: book (non-stressful −1, stressful +3, large / very large vehicle, during combat, datajack) or old (easy −1, hard +2)",
+        "VEHICLES_V923__repairTn": "Vehicle repair TN: boxes (the boxes repaired + 2; the book) or flat (the repair skill's TN)",
+        "VEHICLES_V923__interception": "Intercepting a drone's link: book (own remote control deck rating vs the target deck + 3, encryption broken first) or old (the link skill vs the radio TN)",
+        "VEHICLES_V923__dumpDisorient": "Dump shock disorients (+2 TN for 10 Combat Turns ÷ Willpower successes): book or none",
+        "VEHICLES_V923__autoCrash": "A moving vehicle whose condition monitor fills: book (crashes, no test) or old (nothing more)",
+        "VEHICLES_V923__body0": "A Body 0 vehicle or drone hit: destroyed (any hit that gets through; the book) or old (resists with no dice)",
+        "VEHICLES_V923__cardCasing": "A card reader's casing: double (opened against twice the reader's rating; the book) or single (the casing rating)",
+        "VEHICLES_V923__circuitFail": "No successes on a lock's circuit: passive (a passive alert as well as the tally; the book) or tally (the tally only)",
+        "VEHICLES_V923__passkey": "Maglock passkey: book (its rating vs the reader's rating, the casing left shut) or old (its rating replaces the skill dice, after the casing)",
+        "VEHICLES_V923__sequencer": "Maglock sequencer: book (an opposed test with the keypad; a tie does nothing, a keypad win a passive alert) or old (its rating replaces the skill dice)",
+        "VEHICLES__sensors__controlPool": "Control Pool dice on a vehicle's sensor tests",
+        "ACTIONS__costs__sensor": "A vehicle sensor test is a complex or simple action"
       }
     },
     "Rules": {
@@ -9744,10 +9786,10 @@
         },
         "drivingModifiers": {
           "easy": {
-            "label": "Easy maneuver"
+            "label": "Non-stressful situation"
           },
           "hard": {
-            "label": "Hard maneuver"
+            "label": "Stressful situation"
           },
           "overSpeed": {
             "label": "Above the vehicle's Speed"
@@ -9757,6 +9799,18 @@
           },
           "poorVisibility": {
             "label": "Poor visibility"
+          },
+          "large": {
+            "label": "Large vehicle of its type"
+          },
+          "veryLarge": {
+            "label": "Very large vehicle of its type"
+          },
+          "inCombat": {
+            "label": "Driving during combat"
+          },
+          "datajack": {
+            "label": "Non-rigger driving by datajack"
           }
         },
         "modifications": {
@@ -10657,6 +10711,25 @@
           },
           "3": {
             "text": "Full and accurate detail."
+          }
+        }
+      },
+      "VEHICLES_V923": {
+        "oldDrivingRows": {
+          "easy": {
+            "label": "Easy maneuver"
+          },
+          "hard": {
+            "label": "Hard maneuver"
+          },
+          "overSpeed": {
+            "label": "Above the vehicle's Speed"
+          },
+          "unfamiliar": {
+            "label": "Unfamiliar vehicle"
+          },
+          "poorVisibility": {
+            "label": "Poor visibility"
           }
         }
       }
@@ -16725,7 +16798,8 @@
       "Vehicles": {
         "stunDamageDoesNotHurt": "Stun damage does not hurt vehicles",
         "notAntiVehicle": "not anti-vehicle",
-        "armorStopsPower": "armor {armor} stops Power {power}"
+        "armorStopsPower": "armor {armor} stops Power {power}",
+        "antiVehicleHalfArmor": "anti-vehicle: half the armor ({half})"
       },
       "Vitals": {
         "resistOverdose": "Resist {name} overdose (dose {dose} while active)",
@@ -17016,7 +17090,7 @@
           "title": "Chat cards: Defend, Resist and Apply",
           "b1": "Most tests post a card with buttons for what comes next. Only the owner of the character named on the button, or the GM, can use it.",
           "b2": {
-            "i1": "<strong>Defend</strong>: on an attack card, for the target. It opens the defense dialog with pool dice. Against a melee attack you pick the weapon you fight back with (with a <em>Counterattack to subdue</em> box where it applies). Once you have defended, the button is greyed for you, even after a reload; the GM gets an <em>Already defended</em> question before a second defense. A vehicle defends with its driver's Combat Pool dice, or the Control Pool of a rigger jumped into it.",
+            "i1": "<strong>Defend</strong>: on an attack card, for the target. It opens the defense dialog with pool dice. Against a melee attack you pick the weapon you fight back with (with a <em>Counterattack to subdue</em> box where it applies). Once you have defended, the button is greyed for you, even after a reload; the GM gets an <em>Already defended</em> question before a second defense. A vehicle makes no dodge test (the old way, a house rule: its driver's Combat Pool or its rigger's evasive driving); a rigger jumped into it adds Control Pool dice, at most their skill, when it resists the damage.",
             "i2": "<strong>Resist</strong> (or <strong>Resist damage</strong>): after a hit, the damage resistance test. The condition monitor changes by itself.",
             "i3": "<strong>Resist</strong> on a spell or power card: the target's resistance test.",
             "i4": "<strong>Apply (GM)</strong>: your test changed something only the GM may change (a host, a site, a patient you don't own). The GM clicks it to make the change.",
@@ -17272,7 +17346,7 @@
             "i4": "Jumped into a site's security system: its devices, alert and tally, and <strong>Jump out</strong>."
           },
           "b3": "Jumping in needs a control rig, and a rigger adaptation on the vehicle (drones count as adapted; the rigger adaptation goes in on top of a remote adaptation, under Modifications on the vehicle sheet). Jumping in from outside the vehicle also needs a remote control deck, and a link that is not jammed or spoofed; out of range it warns, or stops you if the house rules say so. Without a control rig you can still drive by hand.",
-          "b4": "Damage to a vehicle you are jumped into comes back on a card with <strong>Resist feedback</strong> (or <strong>Resist dump shock</strong> when it is destroyed or the link is cut).",
+          "b4": "Damage that leaves a vehicle you are jumped into at Serious or Destroyed comes back on a card with <strong>Resist feedback</strong> (6M or 6S Physical, resisted with Body); a remote rigger gets <strong>Resist dump shock</strong> when the vehicle is destroyed or the link is cut.",
           "b5": "The <strong>Drone link</strong> quick button (on characters and NPCs, when there are vehicles) intercepts a drone's remote link or spoofs it a command. Intercepting needs a remote control deck or a radio (under the <a href=\"#rules-urr\">Unified Rules Revamp</a>, a remote control deck, and an encrypted link is decrypted first). Spoofing needs a remote control deck. An intercepted link shows <em>Link intercepted</em> on the vehicle sheet until the GM clears it; with the house rule that lets a spoof take the drone over, a spoofed one shows <em>Link spoofed</em>. A character with a jammer has a <strong>Jam</strong> quick button.",
           "b6": "Vehicles and drones have their own sheet: see <a href=\"#vehicles\">Vehicle sheets</a>."
         },

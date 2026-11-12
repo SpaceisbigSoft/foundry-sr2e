@@ -81,6 +81,7 @@ export const DRONES_V73 = {
     signature: true,
     vsPeople: 'range' as 'range' | 'signature',
     ecm: true,
-    needsLock: false,
+    // v0.92.3 (Rigger 2 p. 59): a missile needs a sensor lock, or it won't hit as a guided weapon (was false).
+    needsLock: true,
   },
 };

@@ -23,7 +23,7 @@ import {
   type CalledShotEffect, parseStatBlock, parseFiringModes, specializationMatches, RULES,
   maxBoundElementals, SPIRIT_KINDS, UTILITY_KINDS, IC_CATEGORIES, IC_BEHAVIORS, IC_BEHAVIOR_LABELS, TRACE_MODES, PERSONA_ATTRIBUTES, icActionKind, programSize, behaviorFromName, smartlinkModifier, cyberCost, wareCost, bioEffect, ASTRAL_MODES, TRADITIONS, METAMAGIC, questStatus, FOCUS_TYPES, availableSustainingFocus, sorceryFocusDice, totemDice, POWER_DICE_SOURCES, POWER_TN_SOURCES, POWER_RESIST,
   personaWarnings, areaRadius, bindingCost, spellKarmaCost, MATERIAL_KINDS, blastRadius, blastFalloff,
-  handlingFor, overSpeed, crashDamage, vehicleCategory, canFireMount, rcdCapacity, ramDamage,
+  handlingFor, overSpeed, crashDamage, vehicleCategory, canFireMount, rcdCapacity, ramDamage, drivingRows, veh923,
   type RangeBand, type FiringMode,
   itemPrice, getSkillWeb, relatedDefaultTn, buildCheck, BUILD_COLUMNS, PRIORITY_LETTERS, type BuildColumn, type Priority, type BuildInput,
   siteRaiseCost, gradedAvailability, optionalTraditionOn, isShamanic, initiationCost, designDrain,
@@ -655,7 +655,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const choice = await foundry.applications.api.DialogV2.prompt({
       window: { title: tx('SR2E.Dialog.Sheet.groupCommandSDrones', { actorName: actor.name }) },
       content: `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.terrain')}</label><select name="terrain">${RULES.VEHICLES.terrain.map((t) => `<option value="${escHtml(t.id)}" ${t.id === ((SR2Actor as any).sceneTerrain?.() ?? "normal") ? "selected" : ""}>${escHtml(t.label)} (${t.value >= 0 ? "+" : ""}${t.value})</option>`).join("")}</select></div>
-        ${RULES.VEHICLES.drivingModifiers.map((m) => `<label class="sr2e-check"><input type="checkbox" name="sit" value="${escHtml(m.id)}"> ${escHtml(m.label)} (${m.value >= 0 ? "+" : ""}${m.value})</label>`).join("")}
+        ${drivingRows().map((m) => `<label class="sr2e-check"><input type="checkbox" name="sit" value="${escHtml(m.id)}"> ${escHtml(m.label)} (${m.value >= 0 ? "+" : ""}${m.value})</label>`).join("")}
         <label class="sr2e-check"><input type="checkbox" name="crash"> ${tx('SR2E.Dialog.Sheet.crashTest')}</label>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.label')}</label><input name="label" type="text" placeholder="${tx('SR2E.Dialog.Sheet.eGCloseInOnThe')}"></div>
         <p class="hint">${tx('SR2E.Dialog.Sheet.eachSubscribedDroneRollsItsOwn')}</p>`,
@@ -6400,7 +6400,7 @@ async function driveDialog(driver: any | null, vehicle: any): Promise<any | null
     content: `<p class="hint">${tx('SR2E.Dialog.Sheet.vsHandling', { who: escHtml(who), handling: escHtml(v.handling), part: v.handlingOffroad > 0 ? tx('SR2E.Dialog.Sheet.offRoad', { handlingOffroad: escHtml(v.handlingOffroad) }) : "", part2: v.derived?.damageModifier ? tx('SR2E.Dialog.Sheet.vehicleDamage', { derivedDamageModifier: escHtml(v.derived.damageModifier) }) : "" })}</p>
       <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.terrain')}</label><select name="terrain">${RULES.VEHICLES.terrain.map((t) => `<option value="${escHtml(t.id)}" ${t.id === sceneTerrain ? "selected" : ""}>${escHtml(t.label)} (${t.value >= 0 ? "+" : ""}${t.value})</option>`).join("")}</select></div>
       ${v.handlingOffroad > 0 ? `<label class="sr2e-check"><input type="checkbox" name="offroad" ${v.offroad ? "checked" : ""}> ${tx('SR2E.Dialog.Sheet.offRoadHandling', { handlingOffroad: escHtml(v.handlingOffroad) })}</label>` : ""}
-      ${RULES.VEHICLES.drivingModifiers.map((m) => `<label class="sr2e-check"><input type="checkbox" name="sit" value="${escHtml(m.id)}" ${m.id === "overSpeed" && over ? "checked" : ""}> ${escHtml(m.label)} (${m.value >= 0 ? "+" : ""}${m.value})${m.id === "overSpeed" && over ? ` <em>${tx('SR2E.Dialog.Sheet.auto')}</em>` : ""}</label>`).join("")}
+      ${drivingRows().map((m) => `<label class="sr2e-check"><input type="checkbox" name="sit" value="${escHtml(m.id)}" ${m.id === "overSpeed" && over ? "checked" : ""}> ${escHtml(m.label)} (${m.value >= 0 ? "+" : ""}${m.value})${m.id === "overSpeed" && over ? ` <em>${tx('SR2E.Dialog.Sheet.auto')}</em>` : ""}</label>`).join("")}
       <label class="sr2e-check"><input type="checkbox" name="crash"> ${tx('SR2E.Dialog.Sheet.crashTestNoSuccessesMeansA', { currentSpeed: escHtml(v.currentSpeed), power: crashDamage(Number(v.currentSpeed ?? 0)).power })}</label>
       ${weatherRow}
       ${skillRows}
@@ -6415,7 +6415,7 @@ async function driveDialog(driver: any | null, vehicle: any): Promise<any | null
       const c = readDrive(f);
       const pv = (driver ?? vehicle).previewDrive?.({ ...c, vehicle });
       if (!pv) return "";
-      const picked = new Set<string>([...c.situational.map((id: string) => RULES.VEHICLES.drivingModifiers.find((d) => d.id === id)?.label ?? ""), ...RULES.VEHICLES.terrain.map((t) => t.label)]);
+      const picked = new Set<string>([...c.situational.map((id: string) => drivingRows().find((d) => d.id === id)?.label ?? ""), ...RULES.VEHICLES.terrain.map((t) => t.label)]);
       const manual = pv.modifiers.filter((m: any) => picked.has(m.label) || c.modifiers.some((x: any) => x === m || x.label === m.label));
       return tnPreviewHtml({ base: pv.base, baseLabel: tx('SR2E.Dialog.Sheet.handling'), auto: pv.modifiers.filter((m: any) => !manual.includes(m)), manual: [...manual, ...c.modifiers], excluded });
     }),
@@ -6531,7 +6531,8 @@ export class SR2VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       handlingNow: handlingFor(sys.derived?.working ?? sys, Boolean(sys.offroad)),
       systemsNotes: sys.derived?.working?.notes ?? [],
       speedWindow: actor.speedWindow?.() ?? { limited: false },
-      pushTn: RULES.VEHICLES_V57.accel.pushTn,
+      // v0.92.3 (RULES.VEHICLES_V923.accel 'book', Rigger 2 p. 45): no extra TN on the acceleration test.
+      pushTn: veh923('accel') === 'book' ? 0 : RULES.VEHICLES_V57.accel.pushTn,
       position: (() => {
         const p = sys.position;
         if (!p?.winnerUuid || !(p.tn > 0)) return "";
@@ -6591,7 +6592,7 @@ export class SR2VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       window: { title: tx('SR2E.Dialog.Sheet.push2', { name: v.name }) },
       content: `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.speedWanted')}</label><input name="to" type="number" value="${escHtml(win.max + Number(v.system.accel ?? 0))}" min="0" autofocus></div>
         ${game.user?.isGM ? `<label class="sr2e-check"><input type="checkbox" name="outright"> ${tx('SR2E.Dialog.Sheet.gmSetItOutrightNoTest')}</label>` : ""}
-        <p class="hint">${tx('SR2E.Dialog.Sheet.thisCombatTurnItMayGo', { winMin: escHtml(win.min), winMax: escHtml(win.max), accelPushTn: RULES.VEHICLES_V57.accel.pushTn, value: Number(v.system.accel ?? 0) * RULES.VEHICLES_V57.accel.perSuccess })}</p>`,
+        <p class="hint">${tx('SR2E.Dialog.Sheet.thisCombatTurnItMayGo', { winMin: escHtml(win.min), winMax: escHtml(win.max), accelPushTn: veh923('accel') === 'book' ? 0 : RULES.VEHICLES_V57.accel.pushTn, value: Number(v.system.accel ?? 0) * RULES.VEHICLES_V57.accel.perSuccess })}</p>`,
       ok: { label: tx('SR2E.Dialog.Sheet.push'), callback: (_e: Event, b: any) => ({ to: Math.max(0, Math.floor(Number(b.form.elements.to.value) || 0)), outright: Boolean(b.form.elements.outright?.checked) }) },
       rejectClose: false,
     }) as any;

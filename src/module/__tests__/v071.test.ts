@@ -12,6 +12,7 @@ import { RULES, haggledPrice, hotFencePrice, icInitiative, initiativeWoundPenalt
 import { buttonCost } from '../rules/interface.ts';
 import { vehicleRepairPlan } from '../rules/roadwork.ts';
 import { initiativeFormula } from '../helpers/initiative.ts';
+import { useV922Vehicles } from '../rules/__tests__/v922vehicles.ts';
 
 const g = globalThis as any;
 const faces: number[] = [];
@@ -355,6 +356,7 @@ describe('R2 contests through the shared skill-dice path', () => {
 });
 
 describe('R5 a jumped-in rigger dodges with a driving test', () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   const atk = (v: any) => ({ attackerUuid: 'x', targetUuid: v.uuid, weaponName: 'Gun', melee: false, damageType: 'physical', power: 8, level: 'M', attackSuccesses: 2, targetNumber: 4, antiVehicle: true });
 
   test("riggerDodge 'skill': Car skill + Control Pool against Handling; 'pool': the pool alone", async () => {
@@ -543,7 +545,7 @@ describe('R14 the your-turn helper knows every button that costs an action', () 
     assert.equal(buttonCost('ramVehicle'), c.drive);
     assert.equal(buttonCost('pushSpeed'), c.drive);
     assert.deepEqual(['matrixPerceive', 'useUtility', 'sneak', 'sensorTest', 'ramVehicle', 'pushSpeed'].map((b) => buttonCost(b)),
-      ['simple', 'complex', 'simple', 'simple', 'complex', 'complex']);
+      ['simple', 'complex', 'simple', 'complex', 'complex', 'complex']); // v0.92.3: a sensor test is Complex (Rigger 2 p. 58)
   });
 });
 
@@ -609,6 +611,7 @@ describe('R17 rigger adaptation', () => {
 });
 
 describe('R18 vehicle repair', () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   const plan = (o: any) => vehicleRepairPlan({ successes: 0, condition: 0, systems: {}, destroyed: false, boxesPerSuccess: 1, hoursPerBox: 1, partsFirst: true, rebuild: true, rebuildFactor: 2, ...o });
 
   test('vehicleRepairPlan: parts first, then boxes; boxes first; a rebuild', () => {

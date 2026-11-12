@@ -14,6 +14,7 @@ import { RULES, buildCheck, generateNpc, npcActorData, makeRng, characterImportP
 import { initiativeFormula } from '../helpers/initiative.ts';
 import { oldWay } from '../rules/__tests__/oldway.ts';
 import { shown } from './helpers/shown.ts';
+import { useV922Vehicles } from '../rules/__tests__/v922vehicles.ts';
 
 const g = globalThis as any;
 const faces: number[] = [];
@@ -344,6 +345,7 @@ describe('O24 the hosts a character knows', () => {
 });
 
 describe('O25 ramming: the rammer\'s share after the defense; its passengers take theirs', () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   const ram = async () => {
     const truck = vehicle({ name: 'Ram truck', body: 6, currentSpeed: 60, speed: 100 });
     const drv = rigger();
@@ -407,6 +409,7 @@ describe('O25 ramming: the rammer\'s share after the defense; its passengers tak
 });
 
 describe('O26 the control rig on gunnery and the Control-Pool dodge', () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   const jumped = async () => {
     const v = vehicle({ name: 'Bulldog', mods: [{ name: 'Rigger adaptation', kind: 'adaptation', installed: true, rating: 1 }] }, [mg('turret')]);
     const rig = rigger();
@@ -443,6 +446,7 @@ describe('O26 the control rig on gunnery and the Control-Pool dodge', () => {
 });
 
 describe('O27 sensor locks lapse', () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   const setup = (round: number) => {
     g.game.combat = { id: 'c1', started: true, round };
     const drone = vehicle({ name: 'Doberman', drone: true, pilot: 3, autonav: 0, sensor: 4 }, [mg('turret')]);
@@ -521,6 +525,7 @@ describe('O27 sensor locks lapse', () => {
 });
 
 describe('O28 (5-A9) intercepting and spoofing a drone\'s link', () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   const radio = { id: 'rad', type: 'gear', name: 'Radio', system: { radio: { rating: 3 } } };
   const rcd = { id: 'rcd', type: 'gear', name: 'RCD', system: { rcdRating: 2 } };
   const hacker = (gear: any[] = [radio, rcd]) => who({ name: 'Spoofer' }, [skill('el', 'Electronics', 4, 'intelligence'), ...gear]);
@@ -682,6 +687,7 @@ describe('O28 (5-A10) firmpoints and hardpoints', () => {
 });
 
 describe('O28 (5-A11) guided missiles lock on to Signature', () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   const fireAt = async (targetExtra: any = {}) => {
     const d = vehicle({ name: 'Launcher drone', drone: true, pilot: 3, autonav: 0 }, [mg('turret', { guidance: 3, damagePower: 12, damageLevel: 'D', antiVehicle: true }, 'Missile launcher')]);
     const target = vehicle({ name: 'APC', signature: 3, ...targetExtra });

@@ -6,7 +6,7 @@ import { allActors } from '../helpers/actors.ts';
 import { playCue, decorateItemDrags } from './qol.ts';
 import { SYSTEM_ID } from '../config/system.ts';
 import { pxPerMetre } from './canvas.ts';
-import { retargetGroupsV73, sessionRefreshDue, localDateKey } from '../rules/index.ts';
+import { retargetGroupsV73, sessionRefreshDue, localDateKey, veh80ResistPoolOn, veh923 } from '../rules/index.ts';
 import { scatterDiceV79 } from '../rules/docs79-ranged.ts';
 import * as U80C from '../rules/urr80-combat.ts';
 import { blastThroughWalls, crossingFraction, indirectScatterDice, indirectScatterMetres, barrierSpellRadius } from '../rules/index.ts';
@@ -230,13 +230,15 @@ async function onDefend(message: any, button: HTMLButtonElement): Promise<void> 
     const ctl: any = defender.system.controlMode === 'jumped' ? defender.controller?.() : null;
     const rigger = ctl?.system?.rigging?.jumpedIn ? ctl : null;
     let pool = 0;
+    // v0.92.3 (RULES.VEHICLES_V923.vehicleDodge 'none', Rigger 2 p. 53): no dodge test, so no pool dice to ask for.
+    const noDodge = veh923('vehicleDodge') === 'none';
     if (wheel) {
       if (!wheel.isOwner) return ui.notifications.warn(tx('SR2E.Notify.Chat.onlySOwnerOrTheGm2', { wheelName: escHtml(wheel.name) }));
       if (!defender.isOwner && !message.isOwner) rememberOn = wheel;
-      const p = await promptPoolDice(wheel, tx('SR2E.Dialog.Chat.evasiveDriving', { defenderName: defender.name, wheelName: wheel.name }), 'combat');
+      const p = noDodge ? 0 : await promptPoolDice(wheel, tx('SR2E.Dialog.Chat.evasiveDriving', { defenderName: defender.name, wheelName: wheel.name }), 'combat');
       if (p === null) return;
       pool = p;
-    } else if (rigger) {
+    } else if (rigger && !noDodge) {
       if (!rigger.isOwner) return ui.notifications.warn(tx('SR2E.Notify.Chat.onlySOwnerOrTheGm3', { riggerName: escHtml(rigger.name) }));
       const p = await promptPoolDice(rigger, tx('SR2E.Dialog.Chat.evasiveDriving2', { defenderName: defender.name }), 'control');
       if (p === null) return;
@@ -842,7 +844,8 @@ async function onResist(message: any, button: HTMLButtonElement): Promise<void> 
   if (!(await playerMay(message, target, origin(message), tx('SR2E.Card.Chat.resistsDamage', { targetName: target.name, damagePower: damage.power, damageLevel: damage.level, boundType: boundType(damage.damageType) }), { routine: damageSources(message, damage) }))) return;
 
   // v0.80.0 (URR_V80.vehCpResist): a vehicle's jumped-in rigger may add Control Pool dice to its damage resistance.
-  const cpCtl: any = target.type === 'vehicle' && RULES.URR_V80.vehCpResist && target.system.controlMode === 'jumped' ? target.controller?.() : null;
+  // v0.92.3 (RULES.VEHICLES_V923.cpResist 'driving', Rigger 2 pp. 50, 53): the book's way too (capped at the rigger's skill).
+  const cpCtl: any = target.type === 'vehicle' && veh80ResistPoolOn() && target.system.controlMode === 'jumped' ? target.controller?.() : null;
   // Review #3: only the rigger's owner (or the GM) can spend their Control Pool; anyone else resists with no pool.
   const cpRigger: any = cpCtl?.system?.rigging?.jumpedIn && cpCtl.system.rigging.vehicleUuid === target.uuid && cpCtl.isOwner ? cpCtl : null;
   const pool = cpRigger

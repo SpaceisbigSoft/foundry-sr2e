@@ -1417,7 +1417,8 @@ export const RULES = {
       /** v0.47.0: a laser sight only helps out to this range (metres; 0 = any); a scope's vision mode (low-light, thermographic) counts for its weapon. */
       laserRangeMetres: 50, scopeVision: true,
     },
-    spellsVsVehicles: { manaAffects: false, objectResistance: 8, combatArmor: false, antiVehicle: true },
+    // v0.92.3 (Rigger 2 p. 54): a combat spell loses half the vehicle's armor, as anti-vehicle fire (combatArmor was false).
+    spellsVsVehicles: { manaAffects: false, objectResistance: 8, combatArmor: true, antiVehicle: true },
     /** v0.47.0 `ranged`: 'dice' adds a worn shield's Parry rating as dodge dice against ranged attacks too; 'off' melee only. */
     shields: { parryAs: 'dice' as 'dice' | 'tn', ranged: 'dice' as 'dice' | 'off' },
     /**
@@ -2089,7 +2090,7 @@ export const RULES = {
       // v0.55.0
       aim: 'simple', draw: 'simple', patch: 'simple', putOutFire: 'complex', hold: 'complex', breakFree: 'complex', suppress: 'complex',
       // v0.59.0: jacking in or out, taking the controls, jumping in or out, a sensor test, a command to drones. VERIFY
-      jackIn: 'simple', jackOut: 'simple', takeControls: 'simple', jumpIn: 'simple', jumpOut: 'simple', sensor: 'simple', droneCommand: 'complex' /* v0.77.0 book check: a Complex Action (was simple) */,
+      jackIn: 'simple', jackOut: 'simple', takeControls: 'simple', jumpIn: 'simple', jumpOut: 'simple', sensor: 'complex' /* v0.92.3 (Rigger 2 p. 58): a sensor test is a Complex Action (was simple) */, droneCommand: 'complex' /* v0.77.0 book check: a Complex Action (was simple) */,
       // v0.71.0 (R19): switching to astral perception, or leaving the body to project (RULES.FIXES_V71.astralSwitchCost). VERIFY
       astralPerceive: 'simple', astralProject: 'complex',
     } as Record<string, 'free' | 'simple' | 'complex'>,
@@ -2136,15 +2137,23 @@ export const RULES = {
       { id: 'tight', label: 'Tight terrain', value: 3 },
     ] as ReadonlyArray<{ id: string; label: string; value: number }>,
     /** Situational driving modifiers, picked in the Driving test dialog. Add rows freely. */
+    // v0.92.3: the Rigger 2 p. 20 Driving Test table: non-stressful −1, stressful +3 (was "hard" +2), large / very large
+    // vehicle +2 / +3, during combat +2, non-rigger by datajack −1 (new rows). The v0.92.2 rows: RULES.VEHICLES_V923
+    // .oldDrivingRows (switch VEHICLES_V923.drivingRows). The weather rows are RULES.HEALTH.weather's driving column.
     drivingModifiers: [
-      { id: 'easy', label: 'Easy maneuver', value: -1 },
-      { id: 'hard', label: 'Hard maneuver', value: 2 },
+      { id: 'easy', label: 'Non-stressful situation', value: -1 },
+      { id: 'hard', label: 'Stressful situation', value: 3 },
       // v0.79.0 docs check: +1 over the Speed rating (was +2). Rigger 2 Positioning / Accelerate-Brake / Ramming tables.
       { id: 'overSpeed', label: 'Above the vehicle\'s Speed', value: 1 },
       { id: 'unfamiliar', label: 'Unfamiliar vehicle', value: 1 },
       { id: 'poorVisibility', label: 'Poor visibility', value: 2 },
+      { id: 'large', label: 'Large vehicle of its type', value: 2 },
+      { id: 'veryLarge', label: 'Very large vehicle of its type', value: 3 },
+      { id: 'inCombat', label: 'Driving during combat', value: 2 },
+      { id: 'datajack', label: 'Non-rigger driving by datajack', value: -1 },
     ] as ReadonlyArray<{ id: string; label: string; value: number }>,
-    damage: { armorStops: true, normalWeapons: { powerMultiplier: 0.5, levelDrop: 1 } },
+    // v0.92.3 (Rigger 2 pp. 23, 53; Core p. 108): a normal weapon's Power isn't halved against a vehicle, only the level drops (was 0.5).
+    damage: { armorStops: true, normalWeapons: { powerMultiplier: 1, levelDrop: 1 } },
     crash: { speedPerPower: 10, minPower: 2, vehicleLevel: 'S' as 'L' | 'M' | 'S' | 'D', passengerLevel: 'M' as 'L' | 'M' | 'S' | 'D', vehicleArmor: false },
     autopilot: { reactionPerRating: 2, initiativeDice: 1 },
     /**
@@ -2180,7 +2189,8 @@ export const RULES = {
      *   the scanner's ECCM. Any success = detected, and a sensor lock for gunnery.
      * - ECD: a target with ECD rolls its rating vs `ecdTn`; a success means it notices the scan.
      */
-    sensors: { personSignature: 6, ecdTn: 4, controlPool: true },
+    // v0.92.3 (Rigger 2 p. 16): the Control Pool may not be used on sensor tests (was true).
+    sensors: { personSignature: 6, ecdTn: 4, controlPool: false },
     /**
      * Chases (v0.25.0). All VERIFY. Each chase turn the gap changes by (quarry's current speed −
      * pursuer's) × `metresPerSpeed`, then both drivers make a positioning test (driving test);
@@ -2219,7 +2229,8 @@ export const RULES = {
      * v0.49.0: cargo by volume too: a vehicle's Cargo Factor (CF, 0 = not tracked) against its items'
      * CF plus `personCf` per person aboard. Over either limit is overloaded.
      */
-    cargo: { personKg: 100, overloadTn: 2, personCf: 4 },
+    // v0.92.3 (Rigger 2 p. 24): Load does not include passengers (personKg was 100).
+    cargo: { personKg: 0, overloadTn: 2, personCf: 4 },
     /**
      * Drone autosofts (Rigger rules): rating dice added to the vehicle's own tests when its
      * autopilot rolls (maneuver: driving tests; targeting: its mounted weapons; clearsight: sensor
@@ -2777,7 +2788,9 @@ export const RULES = {
     // v0.46.0
     // v0.78.0 owner's decision: SR2 core 10,000¥ × Rating (Corporate Security says × Rating²: VERIFY).
     { id: 'passkey', type: 'gear', name: 'Maglock passkey', system: { cost: 40000, quantity: 1, bypassTool: { kind: 'passkey', rating: 4 } } },
-    { id: 'rcd', type: 'gear', name: 'Remote control deck', system: { cost: 100000, quantity: 1, rcdRating: 2, signal: 4, weight: 4 } }, // v0.77.0 book check: Rating × 50,000¥, weight Rating × 2 (was 5,000¥)
+    // v0.92.3 (Rigger 2 p. 97, the same as SRII p. 253): 5,000¥ × Rating, weight 3, Flux 2 (v0.77.0 had 50,000¥ × Rating,
+    // weight Rating × 2, signal 4).
+    { id: 'rcd', type: 'gear', name: 'Remote control deck', system: { cost: 10000, quantity: 1, rcdRating: 2, signal: 2, weight: 3 } },
     { id: 'jammer', type: 'gear', name: 'Jammer', system: { cost: 4000, quantity: 1, jammer: 4 } },
     { id: 'chameleonSuit', type: 'gear', name: 'Chameleon suit', system: { cost: 8000, quantity: 1, stealth: { kind: 'chameleon', rating: 4, worn: true } } },
     { id: 'iccm', type: 'cyberware', name: 'ICCM biofeedback filter', system: { cost: 10000, kind: 'iccm', rating: 1, essenceCost: 0.2, installed: true, bioware: false } },

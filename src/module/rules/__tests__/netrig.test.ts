@@ -6,6 +6,7 @@ import {
   jamTarget, sensorModeEffect, bearingDeg, inArc, cargoLoad, autosoftDice, modificationDef, modificationEffect, applyStatDelta,
   concealmentEffect, concealmentFromName, tamperTn, tamperTrips, bypassTime, chasePlacement, utilitySize, operation,
 } from '../index.ts';
+import { v922Vehicles } from './v922vehicles.ts';
 
 const withRule = (obj: any, key: string, value: unknown, fn: () => void) => { const old = obj[key]; obj[key] = value; try { fn(); } finally { obj[key] = old; } };
 
@@ -110,7 +111,8 @@ describe('v0.46.0 jamming, sensors, arcs, cargo, autosofts, modifications', () =
     assert.ok(inArc('', 0, 180).inside);
     withRule(RULES.VEHICLES.arcs, 'facingOffset', 180, () => assert.ok(inArc('front', 0, 180).inside));
   });
-  test('cargo and load', () => {
+  test('cargo and load', (t) => {
+    t.after(v922Vehicles()); // v0.92.3: people counted 100 kg each before (the book: Load leaves out passengers, personKg 0)
     assert.deepEqual(cargoLoad({ itemsKg: 150, people: 2, load: 300 }), { kg: 350, load: 300, over: true, tracked: true, cf: 2 * RULES.VEHICLES.cargo.personCf, cargoFactor: 0, overCf: false, overKg: true });
     assert.equal(cargoLoad({ itemsKg: 500, people: 0, load: 0 }).over, false);
   });

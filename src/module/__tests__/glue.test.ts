@@ -8,6 +8,7 @@ import { oldWay } from '../rules/__tests__/oldway.ts';
 import assert from "node:assert/strict";
 import { RULES } from "../rules/index.ts";
 import { shown } from "./helpers/shown.ts";
+import { useV922Vehicles } from '../rules/__tests__/v922vehicles.ts';
 
 const g = globalThis as any;
 const faces: number[] = [];
@@ -2993,6 +2994,7 @@ describe("v0.23.0 sheets and prompts", () => {
 });
 
 describe("v0.24.0 vehicles and rigging", () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   let VehicleDataModel: any;
   const R = { body: 4, quickness: 5, strength: 3, charisma: 3, intelligence: 5, willpower: 5 };
   const withGet = (list: any[]) => Object.assign(list, { get(id: string) { return list.find((i: any) => i.id === id); } });
@@ -3226,6 +3228,7 @@ describe("v0.24.0 vehicles and rigging", () => {
 });
 
 describe("v0.25.0 vehicle combat, sensors, remote decks, chases", () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   let VehicleDataModel: any;
   const R = { body: 4, quickness: 5, strength: 3, charisma: 3, intelligence: 5, willpower: 5 };
   const withGet = (list: any[]) => Object.assign(list, { get(id: string) { return list.find((i: any) => i.id === id); } });
@@ -3409,6 +3412,7 @@ describe("v0.25.0 vehicle combat, sensors, remote decks, chases", () => {
 });
 
 describe("v0.26.0 building security and security rigging", () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   let SiteDataModel: any, VehicleDataModel: any, HostDataModel: any;
   const R = { body: 4, quickness: 5, strength: 3, charisma: 3, intelligence: 5, willpower: 5 };
   const withGet = (list: any[]) => Object.assign(list, { get(id: string) { return list.find((i: any) => i.id === id); } });
@@ -4786,6 +4790,7 @@ describe("v0.37.0 gear and combat leftovers", () => {
 });
 
 describe("v0.38.0 skills: concentrations, the Skill Web, martial arts, parry, repairs", () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   const P = { body: 4, quickness: 5, strength: 4, charisma: 3, intelligence: 4, willpower: 4 };
   const withGet = (list: any[]) => Object.assign(list, { get(id: string) { return list.find((i: any) => i.id === id); } });
   const person = (items: any[] = [], extra: any = {}) => {
@@ -5562,6 +5567,7 @@ describe("v0.42.0 health and environment", () => {
 });
 
 describe("v0.43.0 gear and combat", () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   let VehicleDataModel: any;
   const P = { body: 4, quickness: 5, strength: 3, charisma: 3, intelligence: 4, willpower: 4 };
   const withGet = (list: any[]) => Object.assign(list, { get(id: string) { return list.find((i: any) => i.id === id); } });
@@ -6147,6 +6153,7 @@ describe("v0.45.0 magic and critters", () => {
 });
 
 describe("v0.46.0 Matrix and rigging", () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   let HostDataModel: any, IcDataModel: any, VehicleDataModel: any, SiteDataModel: any;
   const D = { body: 4, quickness: 5, strength: 3, charisma: 3, intelligence: 6, willpower: 5 };
   const withGet = (list: any[]) => Object.assign(list, { get(id: string) { return list.find((i: any) => i.id === id); } });
@@ -8533,6 +8540,7 @@ describe("v0.56.0 magic and critters", () => {
 });
 
 describe("v0.57.0 Matrix, vehicles and security", () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   let HostDataModel: any, IcDataModel: any, VehicleDataModel: any, SiteDataModel: any;
   const D = { body: 4, quickness: 5, strength: 3, charisma: 3, intelligence: 6, willpower: 5 };
   const R = RULES as any;

@@ -11,6 +11,7 @@ import {
 } from '../urr80-drones-security.ts';
 import { URR_V80_DRONES_SECURITY, URR80_PATCH_DRONES_SECURITY } from '../config80-drones-security.ts';
 import { urrMode } from './urrmode.ts';
+import { useV922Vehicles } from './v922vehicles.ts';
 
 describe('v0.80.0 drones-security: shipped values are the book', () => {
   test('every switch ships off', () => {
@@ -33,6 +34,7 @@ describe('v0.80.0 drones-security: shipped values are the book', () => {
 });
 
 describe('v0.80.0 drone-link interception (dsLinkIntercept)', () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   test('book: no plan', () => {
     assert.equal(dsInterceptPlan({ ownRcd: 4, targetRcd: 3, pilot: 2, encryption: 4, hasEwSkill: true }), null);
   });
@@ -69,6 +71,7 @@ describe('v0.80.0 radio decryption (dsRadioDecrypt)', () => {
 });
 
 describe('v0.80.0 maglocks (dsLockCasing, dsPasskey, dsSequencer)', () => {
+  useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
   const tools = [{ kind: 'passkey', rating: 5, name: 'Key' }, { kind: 'sequencer', rating: 4, name: 'Seq' }];
   test('book: no casing modifier, no tool step', () => {
     assert.deepEqual(dsCasingModifiers('card', 3), []);

@@ -28,7 +28,8 @@ describe('v0.77.0 book check: item templates', () => {
   test('armor, gear and the combat spell', () => {
     assert.deepEqual([T('formFitting').ballistic, T('formFitting').impact, T('formFitting').adds], [4, 1, false]);
     assert.deepEqual([T('riotShield').ballistic, T('riotShield').impact, T('riotShield').weight], [1, 0, 2]);
-    assert.deepEqual([T('rcd').cost, T('rcd').rcdRating, T('rcd').weight], [100000, 2, 4]);
+    // v0.92.3 (Rigger 2 p. 97): 5,000¥ × Rating, weight 3 (was 50,000¥ × Rating, weight Rating × 2).
+    assert.deepEqual([T('rcd').cost, T('rcd').rcdRating, T('rcd').weight], [10000, 2, 3]);
     assert.equal(T('climbingGear').cost, 250);
     // The builder's gear lists match templates by name: the name stays "Climbing gear" (v0.77.0 review fix).
     assert.equal((RULES.ITEM_TEMPLATES as any[]).find((t) => t.id === 'climbingGear').name, 'Climbing gear');
