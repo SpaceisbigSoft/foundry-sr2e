@@ -845,7 +845,7 @@ The Rigging tab shows for a character with a control rig or a remote control dec
 
 Jumping in needs a control rig, and a rigger adaptation on the vehicle (drones count as adapted; the rigger adaptation goes in on top of a remote adaptation, under Modifications on the vehicle sheet). Jumping in from outside the vehicle also needs a remote control deck, and a link that is not jammed or spoofed; out of range it warns, or stops you if the house rules say so. Without a control rig you can still drive by hand.
 
-Damage that leaves a vehicle you are jumped into at Serious or Destroyed comes back on a card with **Resist feedback** (6M or 6S Physical, resisted with Body); a remote rigger gets **Resist dump shock** when the vehicle is destroyed or the link is cut.
+A Serious or Deadly hit on a vehicle you are jumped into, or one that destroys it, comes back on a card with **Resist feedback** (6M, or 6S for a Deadly or destroying hit, Physical, resisted with Body); a remote rigger gets **Resist dump shock** when the vehicle is destroyed or the link is cut.
 
 The **Drone link** quick button (on characters and NPCs, when there are vehicles) intercepts a drone's remote link or spoofs it a command. Intercepting needs a remote control deck or a radio (under the [Unified Rules Revamp](#the-unified-rules-revamp-alternate-rules), a remote control deck, and an encrypted link is decrypted first). Spoofing needs a remote control deck. An intercepted link shows *Link intercepted* on the vehicle sheet until the GM clears it; with the house rule that lets a spoof take the drone over, a spoofed one shows *Link spoofed*. A character with a jammer has a **Jam** quick button.
 

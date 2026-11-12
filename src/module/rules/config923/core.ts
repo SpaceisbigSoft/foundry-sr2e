@@ -52,7 +52,10 @@
  *   right place–right time, surprise, humor and drama (`individualAwards`; Core p. 199). 'old': the five rows of
  *   CHARACTERS_V58.karmaAward.individual.
  * - (Karma Pool growth: UPKEEP.karma.poolEvery moved to 11 for everyone in place: 10 points to Good Karma, the next
- *   to the pool, Companion p. 76; Core p. 190 has metahumans at the same rate.)
+ *   to the pool, Companion p. 76; Core p. 190 has metahumans at the same rate. Core p. 190 splits 90/10 rounding in
+ *   favour of Good Karma while its Karma Pool section says one-tenth rounded up; the Companion's clarification of that
+ *   split, every 11th point, is the reading used. Existing pools aren't recomputed: the next award counts by the new
+ *   rate, and the v0.92.3 notice lists the characters whose career Karma gives a different pool at it.)
  *
  * Tests
  * - attributeDefault: 'web' — defaulting to an attribute traces the Skill Web from the attribute: +2 per circle (Core

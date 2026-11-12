@@ -21,7 +21,7 @@ Switches in `RULES.CORE_V923` (`rules/config923/core.ts`, pure functions in `rul
 | Starting Karma Pool | 1 for everyone | metahuman 2, human 1 (1 with More Metahumans) | Core p. 47 | `CORE_V923.startPool` |
 | Attribute Karma | new rating × 2 | new rating × 1 | Core p. 190 | `UPKEEP.karma.attributeMultiplier` 2 → 1 (the Revamp's patch sets 1.5) |
 | Past the natural maximum | refused | with the GM's leave, double Karma, up to the augmented maximum | Core p. 190 | `CORE_V923.aboveMax` (the house rule `karmaAboveRacial`, on under the Revamp, wins) |
-| Karma Pool growth | every 10 career Karma (metahumans 20) | 10 to Good Karma, the next point to the pool (every 11th), everyone | Companion p. 76; Core p. 190 | `UPKEEP.karma.poolEvery` human 10 → 11, metahuman 20 → 11 |
+| Karma Pool growth | every 10 career Karma (metahumans 20) | 10 to Good Karma, the next point to the pool (every 11th), everyone (Core p. 190 splits 90/10 rounding in favour of Good Karma; its "one-tenth, round up" in the Karma Pool section disagrees, and the Companion's clarification settles it as every 11th) | Companion p. 76; Core p. 190 | `UPKEEP.karma.poolEvery` human 10 → 11, metahuman 20 → 11 |
 | Karma Pool dice | Revamp only | 1 point a die, up to the test's own skill/attribute/rating dice | Core p. 191 | `CORE_V923.karmaDice` (the Revamp's no-cap rule wins when on) |
 | After avoiding a disaster | re-roll and buy buttons stay | no more Karma on that test | Core p. 191 | `CORE_V923.afterOops` |
 | Karma Pool refresh | by hand | full again when a combat ends (the next encounter) | Core p. 191 | `KARMA.refresh` 'manual' → 'combat' |
@@ -65,3 +65,10 @@ Not changed
 - The haggling cap (`STREET.haggle.maxPercent` 25%): the book has none (Core p. 184), but the cap also bounds the price a chat card may claim when buying (without it a forged card could buy for 0).
 - Street Cred and Notoriety (`STREET.reputation`, off by default): not SR2 (SR2's reputation is the Karma rep, now used by recognition).
 - The Athletics default path: the Skill Web is the GM's; with `attributeDefault` 'web' a link "Quickness - Athletics: 1" gives the Companion's +2.
+
+Existing worlds (migration 0.92.3, `src/module/notice923.ts`): on the first load after the update the lead GM gets one
+whispered card, changing no data, that lists by reason the actors whose numbers change with the new defaults (racial
+modifiers; Magic from Essence; Essence of housed ware, Awakened bioware and beta grade; condition status; Sensitive
+System's Body Index; carrying; Threat-rated NPCs; Karma Pool growth; characters still in the creation wizard; weapons
+saved holstered; shotguns not loaded with shot), each with the house rule that restores v0.92.2. A creation draft keeps
+the priority table it was started with (a draft saved before v0.92.3 keeps the old table).

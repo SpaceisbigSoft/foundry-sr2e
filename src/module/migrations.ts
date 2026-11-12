@@ -5,6 +5,7 @@ import type { HouseRules } from "./settings.ts";
 import { escHtml } from "./rules/html.ts";
 import { isLeadGm, leadSettled } from "./applications/leader.ts";
 import { t as tx, tCount } from './helpers/i18n.ts';
+import { collectNotice923, notice923Html } from './notice923.ts';
 
 /**
  * World data migrations. The GM's client runs every migration newer than the world's stored
@@ -82,7 +83,26 @@ const MIGRATIONS: Migration[] = [
     const gms = [...((game as any).users ?? [])].filter((u: any) => u.isGM).map((u: any) => u.id);
     await (globalThis as any).ChatMessage?.create?.({ whisper: gms, content: note });
   } },
+  // v0.92.3: the books' rules became the default. Nothing is converted (each change has a house rule that restores
+  // v0.92.2): the lead GM gets one card listing the actors whose numbers or status change, by reason (notice923.ts).
+  { version: "0.92.3", label: "v0.92.3 rules changes (a notice; no data changes)", run: async () => {
+    await notifyRules923();
+  } },
 ];
+
+/**
+ * v0.92.3: whisper the rules-changes notice to this (the lead) GM: the actors whose numbers change with the new defaults,
+ * grouped by reason, with the house rules that restore v0.92.2. Reads only. Nothing is posted when nobody is affected.
+ */
+export async function notifyRules923(): Promise<string> {
+  // Loaded here, not at the top: approvals.ts builds Foundry windows when it loads.
+  const { inCreation } = await import("./applications/approvals.ts");
+  const html = notice923Html(collectNotice923(everyActor(), { inCreation }));
+  if (!html) return "";
+  const me = String((game as any).user?.id ?? "");
+  await (globalThis as any).ChatMessage?.create?.({ whisper: me ? [me] : [], content: html });
+  return html;
+}
 
 /**
  * Pure (round 2): the GM's note for the 0.81.1 house-rule check: what moved, what was dropped, and what is refused at

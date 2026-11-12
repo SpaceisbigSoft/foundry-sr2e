@@ -410,7 +410,7 @@ const KIND_AREA: Record<string, AreaId> = {
   attack: 'combat', defend: 'combat',
   spell: 'magic', conjure: 'magic', banish: 'magic', dispel: 'magic', barrier: 'magic', track: 'magic', enchant: 'magic', quest: 'magic',
   cleanse: 'magic', divine: 'magic', invoke: 'magic', design: 'magic', learn: 'magic', ward: 'magic', bindName: 'magic',
-  centering: 'magic', assense: 'magic',
+  centering: 'magic', assense: 'magic', focusLoss: 'magic',
   system: 'matrix', code: 'matrix', psyche: 'matrix', jackOut: 'matrix', mperceive: 'matrix', maneuver: 'matrix', mutility: 'matrix', repair: 'matrix',
   drive: 'rigging', sensor: 'rigging', install: 'rigging',
   bypass: 'street', notice: 'street',

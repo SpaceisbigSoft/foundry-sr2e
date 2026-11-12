@@ -8108,6 +8108,24 @@
         "notLoaded": "not loaded",
         "notWorn": "not worn"
       },
+      "Notice923": {
+        "title": "SR2e v0.92.3: the books' rules are now the default.",
+        "lead": "These actors' numbers or behaviour change with the new defaults (nothing was changed on them; this card only reports). Each line names the house rule that puts the v0.92.2 way back (Configure Settings, the house rules window).",
+        "racialMods": "Racial modifiers (a dwarf's Quickness −1, a troll's Willpower −1, Core p. 45):",
+        "magicFromEssence": "Magic from Essence (every point or part of Essence lost takes a point of Magic; adept powers above the new Magic switch off, Core p. 47):",
+        "essence": "Essence (ware inside a cyberlimb, bioware on the Awakened, beta grade × 0.6; Cybertechnology p. 49, Shadowtech p. 5):",
+        "status": "Condition (dead only past the natural Body, Core p. 111; Essence 0 survivable, Core p. 246; or the Essence change above): the status shown now differs from v0.92.2's, check them:",
+        "bodyIndex": "Sensitive System (twice the bioware's Body Index, Companion; over the Body Index means system shock):",
+        "load": "Carrying (Strength × 5 kg free, then fatigue as a Stun wound and slower movement, Core p. 185):",
+        "threat": "Threat-rated NPCs (Threat dice on every test, no Dice Pools, Core p. 187):",
+        "karmaPool": "Karma Pool growth (10 points to Good Karma, the next to the pool, Companion p. 76): their career Karma gives a different number of pool points at the new rate; their pool isn't changed, the next award counts by the new rate:",
+        "creation": "Still in the creation wizard (their drafts keep the priority table they were started with; finishing uses the new starting Karma Pool, cash and leftover rules):",
+        "notReady": "Weapons saved holstered (drawing is now a Simple Action, Core p. 82; an attack draws them itself):",
+        "shotgun": "Shotguns loaded with something other than shot (they now fire a slug, Core p. 95; load shot to spread):",
+        "restore": "To keep the v0.92.2 way: {rules}.",
+        "more": "and {count} more",
+        "after": "The full list of v0.92.3's changes is in the house rules window and the release notes."
+      },
       "Migrations": {
         "sr2eV0770RulesValues": "SR2e v0.77.0: rules values checked against the books.",
         "alsoImprovedReflexesMadeByThe": "{part} Also: Improved Reflexes made by the stat-block importer before this version still carry +2 Reaction per level (the book gives initiative dice only): edit or re-import them; Increase [Attribute] spells no longer add to attributes cyberware raises (house rule to switch back); a remote control deck now holds one drone per rating point (drones already subscribed stay until unsubscribed). The full list is in the house rules and docs/VERIFY.md.",

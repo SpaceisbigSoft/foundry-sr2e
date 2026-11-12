@@ -94,7 +94,7 @@ describe('v0.59.0 migration of v0.58.0 data', () => {
     assert.equal(mig.itemMigrationUpdate({ type: 'skill', name: 'Car', system: { attribute: 'intelligence' } }), null);
     assert.equal(mig.itemMigrationUpdate({ type: 'skill', name: 'Pistols', system: { attribute: 'quickness' } }), null);
     // v0.81.1 (RB2-6): the house-rule cleanup for removed rules runs too.
-    assert.deepEqual(mig.pendingMigrations('0.58.0'), ['0.59.0', '0.77.0', '0.81.1']);
+    assert.deepEqual(mig.pendingMigrations('0.58.0'), ['0.59.0', '0.77.0', '0.81.1', '0.92.3']);
     // v0.77.0: Killing Hands saved under M/S/D moves up one level (L/M/S/D); other items and level 4 are left alone.
     assert.deepEqual(mig.killingHandsMigrationUpdate({ type: 'adeptpower', system: { special: 'killingHands', level: 1 } }), { 'system.level': 2 });
     assert.deepEqual(mig.killingHandsMigrationUpdate({ type: 'adeptpower', system: { special: 'killingHands', level: 3 } }), { 'system.level': 4 });

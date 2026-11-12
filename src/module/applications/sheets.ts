@@ -1440,7 +1440,9 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       const attributes = Object.fromEntries(ATTRIBUTE_KEYS.map((k) => [k, Math.max(0, Math.floor(Number(el[`attr-${k}`]?.value) || 0))]));
       return { priorities, metatype: String(el.metatype?.value || base.metatype), magic: String(el.magicKind?.value || base.magic) as BuildInput["magic"], attributes, outright: Boolean(el.outright?.checked), ...lists(el) };
     };
-    const render0 = (c: { priorities: Partial<Record<BuildColumn, Priority>>; metatype: string; magic: BuildInput["magic"]; attributes: Record<string, number>; skills?: any[]; gear?: { items: any[]; total: number }; warnings?: string[]; outright?: boolean }) => {
+    // v0.92.3 review fix: a creation draft is checked against the priority table it was started with.
+    const dt = draftTable(actor);
+    const render = (c: { priorities: Partial<Record<BuildColumn, Priority>>; metatype: string; magic: BuildInput["magic"]; attributes: Record<string, number>; skills?: any[]; gear?: { items: any[]; total: number }; warnings?: string[]; outright?: boolean }) => {
       const input = { ...buildInputFor(actor, c.priorities), metatype: c.metatype, magic: c.magic, attributes: c.attributes, intelligence: c.attributes["intelligence"] ?? base.intelligence };
       // The lists replace sheet skills of the same name, and add their gear's price.
       const listed = (c.skills ?? []);
@@ -1448,16 +1450,16 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       input.activeSkills = [...input.activeSkills.filter((s) => !named.has(s.name.toLowerCase())), ...listed.filter((s: any) => s.kind === "active" || s.kind === "buildRepair").map((s: any) => ({ name: s.name, rating: s.rating }))];
       input.knowledgeSkills = [...input.knowledgeSkills.filter((s) => !named.has(s.name.toLowerCase())), ...listed.filter((s: any) => s.kind === "knowledge" || s.kind === "language").map((s: any) => ({ name: s.name, rating: s.rating }))];
       input.gearCost += c.gear?.total ?? 0;
-      const rows = buildCheck(input).map((r) => `<tr class="${r.ok ? "" : "sr2e-warning"}"><td>${r.ok ? "✓" : "✗"} ${escHtml(r.label)}</td><td>${escHtml(r.used)}</td><td>${escHtml(r.allowed)}</td><td>${escHtml(r.note ?? "")}</td></tr>`);
+      const rows = CO923.withPriorityTable(dt, () => buildCheck(input)).map((r) => `<tr class="${r.ok ? "" : "sr2e-warning"}"><td>${r.ok ? "✓" : "✗"} ${escHtml(r.label)}</td><td>${escHtml(r.used)}</td><td>${escHtml(r.allowed)}</td><td>${escHtml(r.note ?? "")}</td></tr>`);
       // v0.61.0: a magician's starting spell points, the lifestyle bought outright, and what happens to leftover cash.
       if (c.magic !== "none") {
         const spells = [...(actor.items ?? [])].filter((i: any) => i.type === "spell").map((i: any) => ({ learnedForce: Number(i.system?.learnedForce ?? 0), force: Number(i.system?.force ?? 0) }));
         // v0.71.0 (R21): bonded foci take their bonding Karma from the spell points (RULES.FIXES_V71.creationFoci).
         const foci = [...(actor.items ?? [])].filter((i: any) => i.type === "focus").map((i: any) => ({ name: i.name, focusType: String(i.system?.focusType ?? ""), rating: Number(i.system?.rating ?? 0), bonded: Boolean(i.system?.bonded), target: String(i.system?.target ?? ""), category: String(i.system?.category ?? ""), size: String(i.system?.size ?? "") }));
-        const sp = spellPointCheck({ allowance: spellPointAllowance({ priority: String(c.priorities.magic ?? ""), adept: c.magic === "adept", resources: String(c.priorities.resources ?? "") }), spells, ...(c.magic === "adept" ? {} : { foci }) });
+        const sp = CO923.withPriorityTable(dt, () => spellPointCheck({ allowance: spellPointAllowance({ priority: String(c.priorities.magic ?? ""), adept: c.magic === "adept", resources: String(c.priorities.resources ?? "") }), spells, ...(c.magic === "adept" ? {} : { foci }) }));
         if (sp.allowance > 0 || sp.used > 0) rows.push(`<tr class="${sp.ok ? "" : "sr2e-warning"}"><td>${tx('SR2E.Dialog.Sheet.spellPoints', { mark: sp.ok ? "✓" : "✗" })}</td><td>${sp.used}</td><td>${sp.allowance}</td><td>${escHtml(sp.note)}</td></tr>`);
       }
-      const plan = buildPlan({ resources: c.priorities.resources, magic: c.magic, gearCost: input.gearCost });
+      const plan = CO923.withPriorityTable(dt, () => buildPlan({ resources: c.priorities.resources, magic: c.magic, gearCost: input.gearCost }));
       const want = c.outright ? lifestyleOutright({ lifestyle: plan.lifestyle }) : null;
       const extra = want ? Math.max(0, want.cost - (plan.lifestyleCost ?? 0)) : 0;
       const out = want && extra <= plan.nuyen ? want : null;
@@ -1469,8 +1471,6 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       if (c.warnings?.length) rows.push(`<tr class="sr2e-warning"><td>${tx('SR2E.Dialog.Sheet.lists')}</td><td colspan="3">${escHtml(c.warnings.join(" "))}</td></tr>`);
       return rows.join("");
     };
-    // v0.92.3 review fix: a creation draft is checked against the priority table it was started with.
-    const render = (c: Parameters<typeof render0>[0]) => CO923.withPriorityTable(draftTable(actor), () => render0(c));
     const selects = BUILD_COLUMNS.map((k) => `<label>${escHtml(cap(k))} <select name="${k}"><option value="">–</option>${PRIORITY_LETTERS.map((l) => `<option value="${l}" ${saved[k] === l ? "selected" : ""}>${l}</option>`).join("")}</select></label>`).join(" ");
     const metas = Object.entries(RULES.METATYPES.types).map(([k, v]) => `<option value="${escHtml(k)}" ${k === base.metatype ? "selected" : ""}>${escHtml(v.label)}</option>`).join("");
     const magics = [["none", tx('SR2E.App.Sheets.mundane')], ["full", tx('SR2E.App.Sheets.fullMagician')], ["adept", tx('SR2E.App.Sheets.physicalAdept')], ["aspected", tx('SR2E.App.Sheets.aspectedMagician')]].map(([k, l]) => `<option value="${escHtml(k)}" ${k === base.magic ? "selected" : ""}>${escHtml(l)}</option>`).join("");

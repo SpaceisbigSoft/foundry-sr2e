@@ -425,3 +425,66 @@ describe('v0.92.3 core: the street on the sheet', () => {
     assert.deepEqual(await a.athleticsTest('climb', { condition: 'easy', weather: false }), { successes: 2, metres: 4 });
   });
 });
+
+describe('v0.92.3 rules-changes notice (migration 0.92.3; notice923.ts)', () => {
+  const gun = (extra: any = {}) => ({ id: `w${Math.random()}`, type: 'weapon', name: 'Gun', system: { melee: false, ready: true, carried: true, ...extra } });
+  const ware = (extra: any = {}) => ({ id: `c${Math.random()}`, type: 'cyberware', name: 'Ware', system: { essenceCost: 1, grade: 'standard', installed: true, bioware: false, kind: 'other', attributes: {}, ...extra } });
+  test('lists the actors each new default changes, by reason; reads only; nothing when the world plays the old way', async (t) => {
+    const { collectNotice923, notice923Html } = await import('../notice923.ts');
+    const qOff = oldWay({ 'STREET.qualities.enabled': true });           // Sensitive System counts with edges and flaws on
+    t.after(qOff);
+    // Career Karma 5: the same Karma Pool at either rate (the Veteran's 40 isn't).
+    const w = (extra: any, items: any[] = []) => who({ karma: { pool: 1, poolSpent: 0, good: 5, career: 5 }, ...extra }, items);
+    const dwarf = w({ name: 'Dwarf', metatype: 'dwarf' });
+    const mage = w({ name: 'Chromed mage', magic: 6, tradition: 'hermetic' }, [ware({ essenceCost: 1.5 })]);
+    const beta = w({ name: 'Beta', }, [ware({ essenceCost: 1, grade: 'beta' })]);
+    const boss = w({ name: 'Boss', type: 'npc', threatRating: 3 });
+    const vet = w({ name: 'Veteran', karma: { pool: 4, poolSpent: 0, good: 0, career: 40 } });
+    const armed = w({ name: 'Armed' }, [gun({ ready: false }), gun({ shotgun: true, choke: 4, ammoType: 'standard' })]);
+    const dying = w({ name: 'Dying', monitor: { physical: 15, stun: 0 } }, [ware({ attributes: { body: 2 } })]);
+    const plain = w({ name: 'Plain' });
+    const drafted = w({ name: 'Drafting' });
+    const mule = w({ name: 'Mule' }, [{ id: 'g1', type: 'gear', name: 'Anvil', system: { quantity: 1, weight: 30, carried: true } }]);
+    const sensitive = w({ name: 'Sensitive', qualities: [{ id: 'q1', name: 'Sensitive System', kind: 'flaw', points: -2 }] }, [{ id: 'b1', type: 'cyberware', name: 'Muscle toner', system: { bioware: true, bioKind: 'other', rating: 1, bodyIndex: 0.5, installed: true, essenceCost: 0, grade: 'standard', attributes: {} } }]);
+    const before = JSON.stringify([mage, dying, beta].map((a: any) => ({ magic: a.system.magic, essence: a.system.essence, monitor: a.system.monitor })));
+    const derivedBefore = JSON.stringify([mage, dying].map((a: any) => [a.system.derived.magic, a.system.derived.status]));
+    const groups = collectNotice923([dwarf, mage, beta, boss, vet, armed, dying, plain, drafted, mule, sensitive], { inCreation: (a: any) => a === drafted });
+    const of = (id: string) => groups.find((g) => g.id === id)?.names ?? [];
+    assert.deepEqual(of('racialMods'), ['Dwarf']);
+    assert.deepEqual(of('magicFromEssence'), ['Chromed mage']);
+    assert.deepEqual(of('essence'), ['Beta']);
+    assert.deepEqual(of('threat'), ['Boss']);
+    assert.deepEqual(of('karmaPool'), ['Veteran']);                // 40 career: 4 at 1 per 10, 3 at 1 per 11
+    assert.deepEqual(of('notReady'), ['Armed']);
+    assert.deepEqual(of('shotgun'), ['Armed']);
+    assert.deepEqual(of('creation'), ['Drafting']);
+    assert.ok(of('status').includes('Dying'), JSON.stringify(groups));
+    assert.deepEqual(of('load'), ['Mule'], JSON.stringify(groups));
+    assert.deepEqual(of('bodyIndex'), ['Sensitive'], JSON.stringify(groups));
+    assert.ok(!groups.some((g) => g.names.includes('Plain')));
+    assert.equal(JSON.stringify([mage, dying, beta].map((a: any) => ({ magic: a.system.magic, essence: a.system.essence, monitor: a.system.monitor }))), before, 'no data changed');
+    assert.equal(JSON.stringify([mage, dying].map((a: any) => [a.system.derived.magic, a.system.derived.status])), derivedBefore, 'derived as it was');
+    const html = notice923Html(groups);
+    assert.match(html, /v0\.92\.3/);
+    assert.match(html, /Racial modifiers/);
+    assert.match(html, /<code>old<\/code>/);
+    // Every switch back at its v0.92.2 choice: nothing to say.
+    t.after(oldWay({ 'CORE_V923.racialMods': 'old', 'SORCERY_V923.magicFromEssence': 'v922', 'GEAR_V923.limbHoused': 'capacity', 'GEAR_V923.awakenedBioware': 'magic', 'GEAR_V923.grades': 'old',
+      'HEALTH_V923.death': 'total', 'GEAR_V923.essenceZero': 'dead', 'CORE_V923.threat': 'pool', 'UPKEEP.karma.poolEvery': { human: 10, metahuman: 20 }, 'CORE_V923.priorities': 'old',
+      'COMBAT.ready.rule': 'off', 'COMBAT_V923.shotgun': 'old', 'GEAR_V923.load': 'old', 'HEALTH_V72.qualities.sensitiveSystem.bodyIndexMultiplier': 1 }));
+    assert.deepEqual(collectNotice923([dwarf, mage, beta, boss, vet, armed, dying, plain, drafted, mule, sensitive], { inCreation: (a: any) => a === drafted }), []);
+    assert.equal(notice923Html([]), '');
+  });
+  test('names are escaped; the card goes to this (the lead) GM only', async () => {
+    const { notice923Html } = await import('../notice923.ts');
+    const html = notice923Html([{ id: 'threat', names: ['<img src=x onerror=alert(1)>'] }]);
+    assert.doesNotMatch(html, /<img/);
+    assert.match(html, /&lt;img/);
+    const { notifyRules923 } = await import('../migrations.ts');
+    g.game.actors = [who({ name: 'Boss', type: 'npc', threatRating: 2 })];
+    g.game.scenes = [];
+    await notifyRules923();
+    assert.deepEqual(chat.at(-1).whisper, ['gm1']);
+    assert.match(chat.at(-1).content, /Boss/);
+  });
+});

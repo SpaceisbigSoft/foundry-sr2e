@@ -343,13 +343,14 @@ describe('R2-DOC 6 (D2-3): lower and dispel from a player\'s card need a test ca
   test('a dispel: only what the dispelling card works out', async () => {
     const p = PLAYER();
     g.game.users = Object.assign([GM(), p], { activeGM: { id: 'gm1', isSelf: true }, get(this: any[], id: string) { return this.find((u: any) => u.id === id); } });
-    const mage = ownedBy(who({ name: 'Mage' }), 'p1');
+    // v0.92.3 review fix: the Apply also checks the dispeller knows dispelling (and the book's grade limit).
+    const mage = ownedBy(who({ name: 'Mage', metamagic: { dispelling: true }, initiateGrade: 5 }), 'p1');
     const boss = who({ name: 'Boss', sustaining: [{ spellName: 'Armor', force: 5, successes: 4 }] });
     const ch = { uuid: boss.uuid, dispel: { spellName: 'Armor', force: 5, from: 4, to: 0 }, by: mage.uuid };
     assert.equal(await SR2Actor.applyActorUpdate(ch, { author: p }), false);
     const { resolveDispel } = await import('../rules/index.ts');
     const remaining = resolveDispel(4, 2).remaining;
-    g.game.messages = { contents: [testCard(p, { kind: 'dispel', successes: 2, dispel: { targetUuid: boss.uuid, targetName: 'Boss', spellName: 'Armor', force: 5, successesBefore: 4, successesAfter: 4 } })] };
+    g.game.messages = { contents: [testCard(p, { kind: 'dispel', actorUuid: mage.uuid, successes: 2, dispel: { targetUuid: boss.uuid, targetName: 'Boss', spellName: 'Armor', force: 5, successesBefore: 4, successesAfter: 4 } })] };
     assert.equal(await SR2Actor.applyActorUpdate({ ...ch, dispel: { ...ch.dispel, to: remaining } }, { author: p }), true);
     assert.equal(remaining <= 0 ? boss.system.sustaining.length : boss.system.sustaining[0].successes, remaining <= 0 ? 0 : remaining);
     // The GM's own Apply needs no test card.
