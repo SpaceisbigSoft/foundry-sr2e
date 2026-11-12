@@ -248,7 +248,8 @@ describe('v0.78.0 toxins: bioware Power and critter immunity (BOOK_V78.toxinBiow
 });
 
 describe('v0.78.0 symbiotes shorten natural healing (BOOK_V78.symbiotes)', () => {
-  test('time × 0.7 at level 2, no dice', async () => {
+  test('time × 0.7 at level 2, no dice', async (t) => {
+    t.after(oldWay({ 'HEALTH_V923.stunRecovery': 'old' })); // v0.92.3: Body, not the higher of Body and Willpower
     const a = who({ name: 'Patient', monitor: { physical: 0, stun: 3 } }, [bio('sy', 'Symbiotes 2', 'symbiotes', 2, 0.7)]);
     faces.push(5, 5, 1, 1);                                            // Body 4, no symbiote dice
     await a.naturalHeal({ track: 'stun', hours: 100 });

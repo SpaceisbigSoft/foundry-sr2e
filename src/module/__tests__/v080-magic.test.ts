@@ -169,7 +169,13 @@ const spell = (over: any = {}) => ({ id: 'sp1', name: 'Detect Life', type: 'spel
 const drainCard = () => [...chat].reverse().find((m) => /(Drain|Ward drain) [LMSD] \(TN/.test(String(m.content ?? '')));
 
 describe('v0.80.0 magic loss on 2D6 ≤ Magic (URR_V80.magLossLe)', () => {
-  test('the book: a roll equal to Magic keeps it', async () => {
+  test('the book: a roll equal to Magic keeps it', async (t) => {
+    // v0.92.3 (RULES.HEALTH_V923.magicLoss 'atOrBelow', Core p. 115): the book itself says "less than or equal to";
+    // the v0.92.2 Book Rules kept it.
+    const b = mage();
+    faces.push(3, 3);
+    assert.deepEqual(await b.rollMagicLoss(), { total: 6, lost: 1 });
+    t.after(oldWay({ 'HEALTH_V923.magicLoss': 'below' }));
     const m = mage();
     faces.push(3, 3);
     assert.deepEqual(await m.rollMagicLoss(), { total: 6, lost: 0 });

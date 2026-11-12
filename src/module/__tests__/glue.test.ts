@@ -2087,6 +2087,8 @@ describe("spellcraft: resisted spells, healing, background count, spell options,
     faces.push(1, 1, 1, 1);                                   // Body 4: no successes vs 9S -> 6 boxes -> 13
     await a.resistDamage({ power: 9, level: "S" });
     assert.match(chat.at(-2).content, /Resist 9S/);
+    // v0.92.3 (RULES.HEALTH_V923.permanentDamage, Core p. 114): the damage card also offers the permanent damage test.
+    assert.match(chat.at(-2).content, /data-sr2e-action="permanentDamage923"/);
     assert.match(chat.at(-1).content, /data-sr2e-action="magicLoss"/);
     faces.push(1, 2);                                         // 2d6 = 3 < Magic 6
     const out = await a.rollMagicLoss();
@@ -2865,7 +2867,8 @@ describe("v0.22.0 core rules", () => {
   });
 
   test("first aid: Biotech vs the wound's TN, capped at half, once per wound, stabilises the dying", async (t) => {
-    t.after(oldWay({ 'HEALING.firstAid.tnByLevel': { L: 2, M: 4, S: 6, D: 8 }, 'DOCS_V79.firstAidMods': 'medkitDice' }));
+    // v0.92.3: the old first aid too (boxes, once per wound, no self-stabilisation; the book's: v0923-health.test.ts).
+    t.after(oldWay({ 'HEALING.firstAid.tnByLevel': { L: 2, M: 4, S: 6, D: 8 }, 'DOCS_V79.firstAidMods': 'medkitDice', 'HEALTH_V923.firstAid': 'boxes', 'HEALTH_V923.firstAidRetry': 'once', 'HEALTH_V923.selfStabilise': 'none' }));
     chat.length = 0;
     const medic = makeActor(A);
     medic.items = [{ id: "s1", type: "skill", name: "Biotech", system: { rating: 4, attribute: "intelligence" } }, { id: "k1", type: "gear", name: "Medkit", system: { medkitRating: 2 } }];
@@ -4204,10 +4207,15 @@ describe("v0.30.0 bioware depth", () => {
     assert.equal(a.system.derived.toxinDice, 3 - 0);             // Body Index 1.4 × 0.5 → −0 dice
   });
 
-  test("Body Index raises the patient's healing TNs", async () => {
+  test("Body Index raises the patient's healing TNs", async (t) => {
     chat.length = 0;
     const a = person([bw("big", "Lots of bioware", { bodyIndex: 4 })]);
     await a.update({ "system.monitor.stun": 2 });
+    // v0.92.3 (RULES.HEALTH_V923.bodyIndexHealing 'magical', Shadowtech bionetics): only magical healing by the book.
+    faces.push(1, 1, 1, 1, 1, 1);
+    const b = await a.naturalHeal({ track: "stun", hours: 1 });
+    assert.ok(!b.modifiers.some((m: any) => /^Body Index/.test(String(m.label))));
+    t.after(oldWay({ 'HEALTH_V923.bodyIndexHealing': 'natural' }));
     faces.push(1, 1, 1, 1, 1, 1);
     const r = await a.naturalHeal({ track: "stun", hours: 1 });
     assert.ok(r.modifiers.some((m: any) => m.label === "Body Index 4" && m.value === 2));
@@ -4268,6 +4276,7 @@ describe("v0.31.0 toxins, drugs, hazards, stun weapons, statuses", () => {
 
   test("toxins: an Expose card, then Body + toxin dice (inhalant dice when inhaled) vs Power, staged, no armor", async (t) => {
     t.after(oldWay({"BOOK_V78.toxinBioware": "dice"})); // v0.78.0: the old rule (a house rule)
+    t.after(oldWay({ 'HEALTH_V923.dwarfResistance': 'both' })); // v0.92.3: the old dwarf dice vs toxins (the book: disease only)
     chat.length = 0;
     const gm = person();
     const dwarf = person([{ id: "tf", type: "cyberware", name: "Tracheal Filter 2", system: { bioware: true, bodyIndex: 0.4, bioKind: "trachealFilter", rating: 2, installed: true, essenceCost: 0, grade: "standard", attributes: {} } }], { metatype: "dwarf", name: "Dwarf" });
@@ -4323,7 +4332,9 @@ describe("v0.31.0 toxins, drugs, hazards, stun weapons, statuses", () => {
     assert.match(chat.at(-1).content, /no longer blind/);
   });
 
-  test("stun weapons do Stun against half impact armor; hazards: falling, fire, drowning", async () => {
+  test("stun weapons do Stun against half impact armor; hazards: falling, fire, drowning", async (t) => {
+    // v0.92.3: the old falling and drowning (the book's: v0923-health glue tests).
+    t.after(oldWay({ 'HEALTH_V923.falling': 'old', 'HEALTH_V923.drowning': 'test', 'HEALTH_V923.breathHold': 'none' }));
     chat.length = 0;
     const a = person([{ id: "arm", type: "armor", name: "Vest", system: { worn: true, ballistic: 4, impact: 4 } }]);
     const taser = { id: "t", name: "Taser", system: { melee: false, skill: "Firearms", damagePower: 10, damageLevel: "S", damageType: "physical", modes: "SS", ammo: 4, ammoMax: 4, recoilComp: 0, stunWeapon: true } };
@@ -5436,7 +5447,8 @@ describe("v0.42.0 health and environment", () => {
     delete g.game.combat;
   });
 
-  test("addiction: a dose tests Willpower; an addict goes into withdrawal, builds tolerance, and can kick it after two weeks clean", async () => {
+  test("addiction: a dose tests Willpower; an addict goes into withdrawal, builds tolerance, and can kick it after two weeks clean", async (t) => {
+    t.after(oldWay({ 'HEALTH_V923.addiction': 'old' })); // v0.92.3: the old model (Shadowtech's: v0923-health glue tests)
     chat.length = 0;
     g.game.time.worldTime = 0;
     const a = person([tox("j", "Jazz", { kind: "drug", reaction: 2, initiativeDice: 1, durationMinutes: 10, addiction: 4, addictionType: "mental" })]);
@@ -5503,7 +5515,9 @@ describe("v0.42.0 health and environment", () => {
     assert.equal(a.system.diseases.length, 0);
   });
 
-  test("protection: a worn gas mask stops a gas, a respirator adds dice; radiation and suffocation", async () => {
+  test("protection: a worn gas mask stops a gas, a respirator adds dice; radiation and suffocation", async (t) => {
+    // v0.92.3: the old respirator and suffocation (the book's: v0923-health glue tests).
+    t.after(oldWay({ 'HEALTH_V923.respirator': 'dice', 'HEALTH_V923.drowning': 'test', 'HEALTH_V923.breathHold': 'none' }));
     chat.length = 0;
     const mask = { id: "m", type: "gear", name: "Gas mask", system: { quantity: 1, protection: { kind: "gasMask", rating: 0, worn: true } } };
     const resp = { id: "r", type: "gear", name: "Respirator", system: { quantity: 1, protection: { kind: "respirator", rating: 2, worn: true } } };
@@ -5528,7 +5542,8 @@ describe("v0.42.0 health and environment", () => {
     assert.equal(c.system.monitor.stun, 3);
   });
 
-  test("hospital care costs nuyen per day; resting at home uses the lifestyle", async () => {
+  test("hospital care costs nuyen per day; resting at home uses the lifestyle", async (t) => {
+    t.after(oldWay({ 'HEALTH_V923.stunRecovery': 'old' })); // v0.92.3: by the book no care helps Stun (and costs nothing)
     chat.length = 0;
     const a = person([], { nuyen: 1500, monitor: { physical: 0, stun: 3 } });
     faces.push(1, 1, 1, 1);
@@ -8209,11 +8224,10 @@ describe("v0.56.0 magic and critters", () => {
     const p = who({ name: "Old wound", monitor: { physical: 3, stun: 0 } });
     await p.setFlag("sr2e", "damagedAt", { physical: 0 });
     g.game.time.worldTime = 3 * 3600;
-    (RULES.MAGIC_V56.healing as any).treatBlock = true;
-    try {
-      assert.equal(await a.castSpell(a.items.get("tr"), { targetUuid: p.uuid }), null);
-      assert.match(warnings.at(-1) ?? "", /Treat only works within 1 hour of the wound \(it was 3 hours ago\)/);
-    } finally { (RULES.MAGIC_V56.healing as any).treatBlock = false; }
+    // v0.92.3: refused is the default now (Core p. 155: Treat "must" be within one hour).
+    assert.equal(RULES.MAGIC_V56.healing.treatBlock, true);
+    assert.equal(await a.castSpell(a.items.get("tr"), { targetUuid: p.uuid }), null);
+    assert.match(warnings.at(-1) ?? "", /Treat only works within 1 hour of the wound \(it was 3 hours ago\)/);
   });
 
   test("a touch spell: an unwilling target is touched first", async () => {
@@ -8379,7 +8393,7 @@ describe("v0.56.0 magic and critters", () => {
     faces.push(...Array(8).fill(1));                          // Willpower 6 + 2 dice
     await ad.resistSpell({ casterUuid: "x", targetUuid: ad.uuid, spellName: "Bolt", force: 4, resistAttribute: "willpower", level: "M", damageType: "stun", casterSuccesses: 0, effectOnly: true }, 0);
     assert.match(chat.at(-1).content, /\+ 2 spell resistance/);
-    faces.push(...Array(5).fill(1));                          // Body 4 + 1 die
+    faces.push(...Array(7).fill(1));                          // v0.92.3 (Core p. 112): Willpower 6 (higher than Body 4) + 1 die
     await ad.naturalHeal({ track: "stun", hours: 1 });
     assert.match(chat.at(-1).content, /rapid healing \+1/);
     const t = who({ name: "Far target" });

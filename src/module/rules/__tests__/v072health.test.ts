@@ -187,7 +187,13 @@ describe('v0.72.0 O11: Companion health edges and flaws', () => {
     assert.equal(toughnessDice(v, 'toxin'), 0);
     withRule('qualities.toughness.onStun', false, () => assert.equal(toughnessDice(qualityVitals(list), 'stun'), 0));
   });
-  test('Sensitive System: cyberware Essence doubled, rejection tests even under the limit', () => {
+  test('Sensitive System: cyberware Essence doubled, rejection tests even under the limit', (t) => {
+    // v0.92.3 (Companion): Body Index doubled too, and no rejection rule of its own.
+    const b = qualityVitals([{ name: 'Sensitive System', kind: 'flaw', points: 2 }]);
+    assert.equal(sensitiveBodyIndex(0.4, b), 0.8);
+    assert.equal(sensitiveRejectionTn(null, 0.5, b), null);
+    // the old way
+    t.after(oldWay({ 'HEALTH_V72.qualities.sensitiveSystem.bodyIndexMultiplier': 1, 'HEALTH_V72.qualities.sensitiveSystem.rejectionAlways': true }));
     const v = qualityVitals([{ name: 'Sensitive System', kind: 'flaw', points: 2 }]);
     assert.ok(v.sensitive);
     assert.equal(sensitiveEssence(0.3, v), 0.6);

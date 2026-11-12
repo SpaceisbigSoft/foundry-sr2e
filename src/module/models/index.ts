@@ -36,6 +36,7 @@ import { programsOverMpcp, mpcpProgramWarnings, mpcpCapsOn, programRunRating } f
 import { sysNow } from '../helpers/clock.ts';
 import { urrMagAstralModeFor, urrMagAdeptFoci } from '../rules/urr80-magic.ts';
 import { bleedEveryText } from '../rules/urr80-health-social.ts';
+import { deathBody, dwarfDiceAgainst } from '../rules/health923.ts';
 import { magicPoolBase, sorceryRating } from '../rules/docs79-drones-magic.ts';
 import { poolLayers, narrowLeft, sorcerySkillOf } from '../rules/magicpool.ts';
 import { TWEAK_TARGETS, sumTweaks, isCarried } from '../rules/tweaks.ts';
@@ -499,6 +500,15 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
         addicted: new fields.BooleanField({ required: true, initial: false }),
         dosesAddicted: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
         withdrawalNoted: new fields.BooleanField({ required: true, initial: false }),
+        /** v0.92.3 (RULES.HEALTH_V923.addiction 'book', Shadowtech pp. 87–89): the character's rise over the drug's ratings,
+         * doses taken, the drug's Strength and Tolerance ratings, immunity, and the recovery under way (−1 = none). */
+        rise: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
+        doses: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
+        strength: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
+        tolerance: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
+        immune: new fields.BooleanField({ required: true, initial: false }),
+        recovering: new fields.NumberField({ required: true, initial: -1 }),
+        riseAtKick: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
       })),
       diseases: new fields.ArrayField(new fields.SchemaField({
         name: new fields.StringField({ required: true, initial: '' }),
@@ -850,7 +860,9 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
     const d = { ...d0, spellPool: adeptPool ? d0.spellPool : magicPoolBase({ sorcery: sorceryRating((this as any).parent?.items), intelligence: totals.intelligence, willpower: totals.willpower, magic: poolMagic }) };
     // An NPC's Threat Rating adds Combat Pool dice (v0.44.0).
     const threat = (this as any).parent?.type === 'npc' && RULES.STREET.threat.addsToPool ? Math.max(0, Math.floor(sys.threatRating ?? 0)) : 0;
-    const bodyStatus = monitorStatus(sys.monitor, overflowBody(totals.body, qv)) as Status;
+    // v0.92.3 (RULES.HEALTH_V923.death 'natural', Core p. 111): the natural Body counts for death, not cyber or magic.
+    const deathBodyNow = deathBody(totals.body, sys.attributes?.body?.natural);
+    const bodyStatus = monitorStatus(sys.monitor, overflowBody(deathBodyNow, qv)) as Status;
     // v0.81.0 (RB-11): shared values, computed once so the paired derived fields stay in step.
     const foci = fociOf((this as any).parent, String(sys.tradition ?? ''));
     // v0.78.0 (RULES.BOOK_V78.powerFocus 'magic'): a power focus adds its rating to the Spell Pool and to the Magic for drain.
@@ -861,7 +873,7 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
     const spellPool = Math.max(0, d.spellPool + powerFocus + (poolMagic > 0 ? (tw.pools.spell ?? 0) : 0));
     sys.derived = {
       // v0.72.0: health edges and flaws, and Shadowtech bioware vitals (rules/vitals.ts).
-      vitals: { ...qv, overflowBody: overflowBody(totals.body, qv) },
+      vitals: { ...qv, overflowBody: overflowBody(deathBodyNow, qv) },
       reaction: d.reaction,
       initiativeDice: initDice.dice,
       combatPool,
@@ -930,7 +942,10 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
       attributeWarnings: [...limits.warnings, ...racialFloorWarnings(sys.metatype, Object.fromEntries(ATTRIBUTE_KEYS.map((k) => [k, this.attributeBase(k)])) as any, applyRace)],
       reachBonus: this.usesMetatype() ? race.reach : 0,
       // Dwarves, toxin extractors; Body Index takes some off.
-      toxinDice: (this.usesMetatype() ? race.toxinDice : 0) + bw.toxinDice - bodyIndexToxinPenalty(bio_index_used(ware)),
+      // v0.92.3 (RULES.HEALTH_V923.dwarfResistance 'disease', Core Racial Modifications Table): the racial dice count
+      // against disease only (raceDiseaseDice); 'both' puts them back on toxins.
+      toxinDice: (this.usesMetatype() && dwarfDiceAgainst('toxin') ? race.toxinDice : 0) + bw.toxinDice - bodyIndexToxinPenalty(bio_index_used(ware)),
+      raceDiseaseDice: this.usesMetatype() && !dwarfDiceAgainst('toxin') ? Math.max(0, Number(race.toxinDice) || 0) : 0,
       // Token bars (v0.36.0): boxes left on each track.
       // v0.60.0: and the Matrix condition monitor (a persona's boxes left).
       bars: { ...monitorBars(sys.monitor), matrix: trackBar(sys.matrix?.monitor ?? 0, RULES.MATRIX.monitorBoxes) ?? { value: 0, max: 0 } },
@@ -1407,6 +1422,9 @@ export class GearDataModel extends foundry.abstract.TypeDataModel {
         addiction: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
         /** v0.42.0: physical or mental addiction; a disease's incubation, interval between tests and recoveries needed. */
         addictionType: new fields.StringField({ required: true, initial: 'mental', choices: ['physical', 'mental'] }),
+        /** v0.92.3 (Shadowtech p. 87): a drug's Tolerance and Strength ratings (0 = none). */
+        tolerance: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
+        strength: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
         incubationHours: new fields.NumberField({ required: true, min: 0, initial: 24 }),
         intervalHours: new fields.NumberField({ required: true, min: 1, initial: 24 }),
         recoveries: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),

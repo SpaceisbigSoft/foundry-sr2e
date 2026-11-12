@@ -2149,7 +2149,11 @@
       "referenceMore": "The first {shown} of {total}: type more to narrow it.",
       "referenceShown": "{shown} found.",
       "referenceDragHint": "Drag onto the sheet to open the shop with it ticked.",
-      "referenceNothing": "Nothing found."
+      "referenceNothing": "Nothing found.",
+      "toleranceRating": "Tolerance",
+      "strengthRating": "Strength rating",
+      "recoveringAddiction": "· kicking it",
+      "immuneToDrug": "immune"
     },
     "Settings": {
       "rulesSource": {
@@ -2584,7 +2588,8 @@
         "alreadyConfirmed": "Already confirmed.",
         "hasNoInitiationWaitingOnThis": "{name} has no initiation waiting on this deed.",
         "thatCardHasNoRollWhose": "That card has no roll whose target number can be changed.",
-        "thisIsBeingAppliedByItself": "This is being applied by itself."
+        "thisIsBeingAppliedByItself": "This is being applied by itself.",
+        "onlyTheGm923": "Only the GM can do that."
       },
       "Creation": {
         "theCreationWizardIsForCharacters": "The creation wizard is for characters.",
@@ -3362,7 +3367,10 @@
         "sWirelessLinkIsJammedClearPlain": "{name}'s wireless link is jammed: clear it or use a hard line.",
         "aCategorySpell": "a {category} spell",
         "aSpellOfNoCategory": "a spell of no category",
-        "notCarried": "{name} isn't carried: tick Carried first."
+        "notCarried": "{name} isn't carried: tick Carried first.",
+        "noSpellHealsStun": "{spellName}: no spell heals Stun; it recovers by rest.",
+        "firstAidPhysicalOnly": "First aid treats Physical damage only; Stun recovers by rest.",
+        "notAddictedOrRecovering923": "{name} isn't addicted to {drug}, or is already kicking it."
       },
       "Migrations": {
         "sr2eMigrationToFailedSeeThe": "SR2e: migration to {version} failed; see the console. Later migrations were not run."
@@ -4821,7 +4829,11 @@
         "track2__monitor": "Track",
         "repair__tnBase": "Repair",
         "spell__pool": "Spell",
-        "isAFixerFinds": "A fixer: can find things for you (for a cut of the price)"
+        "isAFixerFinds": "A fixer: can find things for you (for a cut of the price)",
+        "hazardFallingBook923": "Falling now: Deadly, Power half the metres, less half impact armor and 1 per success of an Athletics test vs the metres.",
+        "hazardDrowningBook923": "Drowning and suffocation now: after the held breath (30 s per point of Body), 1 unresisted Stun box an action phase, then Physical.",
+        "orAt4VsTnByLevel923": "{skill} (or {fallbackAttribute} at +4) vs TN by the wound (Light {tnByLevel}, Moderate {tnByLevelM}, Serious {tnByLevelS}, Deadly {tnByLevelD}){part}; any success lowers the wound one level, never more; Physical damage only; once per wound unless a better healer tries. A Deadly wound can only be stabilised: any success.",
+        "stunVsTnByTheWoundBook923": "Stun: the higher of Body and Willpower vs {stunTn} + the wound modifiers (no care helps); one box takes {periodHoursStun} h divided by the successes. Physical heals in stages, one wound level each: first a self-recovery test (natural Body vs 2 / 4 / 6; failed, or Deadly, needs a doctor), then Body vs {healingStagesTnByLevel} / {tnByLevelM} / {tnByLevelS} / {tnByLevelD2}{part}; the stage takes 24 h / 10 / 20 / 30 days ÷ successes (at least 2 h / 1 / 2 / 3 days)."
       },
       "Spendkarma": {
         "raise": "Raise",
@@ -5369,7 +5381,9 @@
         "changeTargetNumberMenu": "Change target number…",
         "goesOffAt": "{name} goes off at {pickedName}{part}.",
         "goesOffWhereItWasSet": "{name} goes off where it was set{part}.",
-        "catchesFireKeepsBurning": "{name} catches fire: resists the flames and keeps burning each Combat Turn"
+        "catchesFireKeepsBurning": "{name} catches fire: resists the flames and keeps burning each Combat Turn",
+        "rollsPermanentDamage923": "{actorName} rolls a permanent damage test: a limb, organ or attribute may be lost for good",
+        "stillExposed923": "Still exposed to {name}"
       },
       "Actor": {
         "aPlayer": "a player",
@@ -7591,7 +7605,49 @@
           "one": "· {name}'s {name2} (rating {idnRating}) against a rating {checkerRating} checker ({dice} dice vs TN {tn}): {count} success against the fake's {forgerSuccesses}.",
           "other": "· {name}'s {name2} (rating {idnRating}) against a rating {checkerRating} checker ({dice} dice vs TN {tn}): {count} successes against the fake's {forgerSuccesses}."
         },
-        "tweakPower": "custom tweak Power {value}"
+        "tweakPower": "custom tweak Power {value}",
+        "drowningBoxes923": "is out of air for {turns} Combat Turn(s) ({phases} action phase(s) a turn): {boxes} Stun box(es), unresisted (past a full Stun track they go on Physical).",
+        "fallingAthletics923": "falls {metres} m: Athletics ({dice} dice) vs {tn}, {successes} success(es) off the Power.",
+        "fallingNoDamage923": "lands without harm: the fall's Power is gone.",
+        "shockWeapon923": "Stun weapon",
+        "disoriented923": "Disoriented (shock)",
+        "shockDisoriented923": {
+          "one": "is disoriented by the shock for {count} Combat Turn: +{tn} to every TN ({attribute} vs 4: {successes} success(es)).",
+          "other": "is disoriented by the shock for {count} Combat Turns: +{tn} to every TN ({attribute} vs 4: {successes} success(es))."
+        },
+        "shockShrugged923": "shakes off the shock ({attribute} vs 4: {successes} success(es)).",
+        "permanentDamageDue923": "A Deadly wound: a vital organ, limb or system may be harmed for good (Body vs 4, dermal armor counts, +2 after a trauma patch).",
+        "permanentDamageTest923": "Permanent damage test",
+        "permanentDamageRoll923": "Body {dice} dice (dermal armor {dermal}) vs {tn}: {successes} success(es).",
+        "permanentDamageNone923": "no limb or organ damage.",
+        "permanentDamageAttribute923": "a vital organ or system is gravely damaged: loses a point of {attribute} for good (and its racial maximum); continuous Biotech care, healing time doubled, a transplant needed. The GM applies it.",
+        "permanentDamageLimb923": "{part} is beyond healing: a replacement is needed (natural or cyber), base healing time +50%. The GM applies it.",
+        "pdBody923": "Body",
+        "pdStrength923": "Strength",
+        "pdQuickness923": "Quickness",
+        "pdIntelligence923": "Intelligence",
+        "pdWillpower923": "Willpower",
+        "pdReaction923": "Reaction",
+        "pdRightArm923": "the right arm",
+        "pdLeftArm923": "the left arm",
+        "pdRightLeg923": "the right leg",
+        "pdLeftLeg923": "the left leg",
+        "pdRightEar923": "the right ear",
+        "pdLeftEar923": "the left ear",
+        "pdRightEye923": "the right eye",
+        "pdLeftEye923": "the left eye",
+        "drasticSurgeryMagicLoss": "went through drastic invasive surgery: a Magic loss test is due once the wound has healed.",
+        "kickTheHabitBook923": "Kick the {drug} habit (Willpower vs {rating} +{plus})",
+        "toleranceTest923": "{drug}: Tolerance test (Body vs {tn})",
+        "addictionTestBook923": "Addiction test: {drug} ({attribute} vs {rating}, {type})",
+        "toleranceNotYet923": "{name} still feels {drug}.",
+        "toleranceImmune923": "{name} is immune to {drug} for good: it no longer has any effect.",
+        "startsRecovering923": "{name} starts to kick the {drug} habit: +{tn} to every TN (double on concentration) while the rating falls back, about {days} day(s).",
+        "addictedBook923": "Without a dose every {hours} hours: forced withdrawal, +{tn} to every TN.",
+        "toleranceNoEffect923": "takes {name}: immune to it, it has no effect.",
+        "relapse923": "takes {name} while kicking it: addicted again, its rating +1.",
+        "recovered923": "is no longer addicted to {drugs}.",
+        "stillExposedButton923": "Still exposed: resist again (GM)"
       },
       "Adding": {
         "buysFor": "buys {list} for ¥{planNuyen}.",
@@ -7908,7 +7964,8 @@
         "legality": "{label} (found openly)",
         "legalityFixer": "{label} (through a fixer)",
         "legalityContact": "{label} (through a contact)",
-        "contactLevel": "Closer contact"
+        "contactLevel": "Closer contact",
+        "withdrawalPain923": "Withdrawal pain (as Moderate Stun)"
       },
       "Drops": {
         "notInstalledTickInstalledAfterSurgery": "not installed (tick Installed after surgery)",
@@ -8953,16 +9010,16 @@
         "URR_V80__coreInstructorMargin": "…instructor's skill at least the new rating +",
         "URR_V80__coreFindTn": "Finding gear: Availability TN +",
         "URR_V80__coreHaggleTn": "Haggling: the seller's TN is fixed (book), or the buyer's Intelligence",
-        "STUN_OVERFLOW_PER_PHYSICAL_BOX": "Stun boxes past a full track per Physical box (the book 2; the Revamp 1)",
+        "STUN_OVERFLOW_PER_PHYSICAL_BOX": "Stun boxes past a full track per Physical box (the book and the Revamp 1; old 2)",
         "URR_V80__hsDeathPastOverflow": "Death only one box past a full Overflow row (more than 10 + Body)",
-        "URR_V80__hsBleedMinutes": "Dying: minutes of game time per extra box (0 = every Body Combat Turns, the book)",
+        "URR_V80__hsBleedMinutes": "Dying: minutes of game time per extra box (0 = the Book Rules' own rule)",
         "URR_V80__hsSelfStabilise": "Failed first aid on the dying: the patient rolls natural Body to stabilise",
         "URR_V80__hsSelfStabiliseTn": "Self-stabilisation TN",
-        "URR_V80__hsTraumaPatch": "Trauma patch: stabilises outright (book), or a natural Body test vs 4 + dermal armor / blood filter",
+        "URR_V80__hsTraumaPatch": "Trauma patch: the Book Rules' own rule (stabilise), or a natural Body test vs 4 + dermal armor / blood filter",
         "URR_V80__hsTraumaPatchTn": "Trauma patch Body test: base TN",
-        "URR_V80__hsStunRecovery": "Stun recovery: Body vs 2/4/6/8 (book), or the higher of Body and Willpower vs 2 + wound modifiers",
+        "URR_V80__hsStunRecovery": "Stun recovery: the Book Rules' own rule, or the higher of Body and Willpower vs 2 + wound modifiers",
         "URR_V80__hsStunRecoveryTn": "Stun recovery TN (Revamp)",
-        "URR_V80__hsFirstAid": "First aid: 1 box per success, at most half (book), or one wound level (Deadly: stabilise only)",
+        "URR_V80__hsFirstAid": "First aid: the Book Rules' own rule (boxes), or one wound level (Deadly: stabilise only)",
         "URR_V80__hsFirstAidTime": "First aid card shows the treatment time (10/20/30 minutes ÷ successes)",
         "URR_V80__hsFirstAidRetry": "First aid again on the same wound by a healer with higher Biotech",
         "URR_V80__hsMagicLossUntreated": "First aid without the magician +2 calls for a Magic loss test",
@@ -8972,7 +9029,7 @@
         "URR_V80__hsBreathHold": "Hold breath for a while (seconds per point of Body) before drowning counts",
         "URR_V80__hsBreathSecondsPerBody": "Held breath: seconds per point of Body",
         "URR_V80__hsAthletics": "Climb, jump and swim distances: per success (book), or by Fitness and Quickness",
-        "URR_V80__hsFalling": "Falling: Power = metres, Serious (book), or half the metres with the level by height, no armor",
+        "URR_V80__hsFalling": "Falling: the Book Rules' own rule, or half the metres with the level by height, no armor",
         "URR_V80__hsVisibleArmor": "Social tests: offer the visible-armor-in-a-luxury-setting row",
         "URR_V80__hsVisibleArmorTn": "Visible armor in a luxury setting: TN modifier",
         "URR_V80__cbtTies": "Initiative ties: Reaction then Quickness (book), or Reaction then natural Reaction (Revamp)",
@@ -9038,7 +9095,7 @@
         "URR_V80__magAspectedNoAstral": "Aspected sorcerers and conjurers can't perceive or project astrally (Revamp)",
         "URR_V80__magShamanistNoTotem": "Shamanists get no totem dice (Revamp)",
         "URR_V80__magAdeptFoci": "Physical adepts can use only weapon foci (Revamp)",
-        "URR_V80__magLossLe": "Magic loss test: lose a point on 2D6 below Magic (book), or at or below Magic (Revamp)",
+        "URR_V80__magLossLe": "Magic loss test: the Book Rules' own rule (below), or at or below Magic (Revamp)",
         "SHOP_V91__buying": "Buying in the shop: find first (an Availability test, then Buy or Haggle on the card) or buy now (the old way, no test); the GM, NPCs and creation always buy now",
         "SHOP_V91__retry": "A failed find: try again after its base Availability time (VERIFY) or at once (the old way)",
         "SHOP_V915__findByLegality": "Legality in the shop: a restricted or forbidden item is harder and slower to find openly (graded, VERIFY) or legality doesn't change the find (off, the old way)",
@@ -9082,7 +9139,34 @@
         "SHEET_V921__wizard": "The creation wizard warns but never refuses (advise) or greys out and clamps as before (block)",
         "SHEET_V921__ratingLock": "After creation, players may type higher ratings unless the approval queue is on (queue) or never may (always, the old way)",
         "CLOCK_V922__bigJump": "A big jump of world time outside combat (a calendar setting the date): the GM is asked whether it counts as time passed or only changes the date (ask) or it always counts (count, the old way)",
-        "CLOCK_V922__bigJumpDays": "A big jump of world time: at least this many days, forward or back"
+        "CLOCK_V922__bigJumpDays": "A big jump of world time: at least this many days, forward or back",
+        "HEALTH_V923__death": "Death: past the natural Body, one box beyond the Overflow row (the book), or when the Overflow reaches the total Body (old)",
+        "HEALTH_V923__bleed": "Dying: another box every 10 minutes (the book), or every (Body) Combat Turns (old)",
+        "HEALTH_V923__stunRecovery": "Stun recovery: higher of Body and Willpower vs 2 + wound modifiers, no care (the book), or Body vs 2/4/6/8 with care (old)",
+        "HEALTH_V923__firstAid": "First aid: any success lowers the wound one level, Deadly only stabilised (the book), or 1 box per success, at most half (old)",
+        "HEALTH_V923__firstAidStun": "First aid: Physical damage only (the book), or Stun too (old)",
+        "HEALTH_V923__firstAidTime": "First aid card shows the treatment time, 10/20/30 minutes ÷ successes (the book), or not (old)",
+        "HEALTH_V923__selfStabilise": "Failed first aid on the dying: the patient rolls natural Body vs 10 (the book), or no test (old)",
+        "HEALTH_V923__firstAidRetry": "First aid again on the same wound by a better healer (the book), or once per wound (old)",
+        "HEALTH_V923__traumaPatch": "Trauma patch: a natural Body test vs 4 + dermal armor / blood filter (the book), or it stabilises outright (old)",
+        "HEALTH_V923__permanentDamage": "A Deadly wound calls for a permanent damage test, Body vs 4 (the book), or none (old)",
+        "HEALTH_V923__magicLoss": "Magic loss: 2D6 at or below Magic (the book), or only below (old)",
+        "HEALTH_V923__magicLossUntreated": "Magician treated without the +2: a Magic loss test, twice for Deadly (the book), or none (old)",
+        "HEALTH_V923__surgeryMagicLoss": "Drastic surgery (1+ Essence, bioware over 1.5 Body Index): a Magic loss test (the book), or none (old)",
+        "HEALTH_V923__surgeryBands": "Surgery wound bands: the book's by Essence and by Body Index, or the table below (old)",
+        "HEALTH_V923__treatTn": "Treat: 8 − Essence, Heal 10 − Essence (the book), or every healing spell the same base (old)",
+        "HEALTH_V923__bodyIndexHealing": "Half the Body Index adds to magical healing (the book), or to first aid and natural healing (old)",
+        "HEALTH_V923__spellsHealStun": "Healing spells: Physical only (the book), or Stun too (old)",
+        "HEALTH_V923__falling": "Falling: Deadly, Power half the metres, Athletics successes off (the book), or Power per metre (old)",
+        "HEALTH_V923__breathHold": "Hold breath 30 seconds per point of Body before drowning counts (the book), or not (old)",
+        "HEALTH_V923__drowning": "Drowning and suffocation: 1 unresisted Stun box an action phase (the book), or a Body test a turn (old)",
+        "HEALTH_V923__burning": "Burning: 6M after the first turn, +2 Power each turn (the book), or the on-fire hazard each turn (old)",
+        "HEALTH_V923__shock": "Stun weapons disorient: +2 TNs for Power − ½ impact − successes turns (the book), or nothing (old)",
+        "HEALTH_V923__lowPainTolerance": "Low Pain Tolerance: wounds count one level higher (the book), or extra boxes (old)",
+        "HEALTH_V923__dwarfResistance": "Dwarf resistance dice: against disease only (the book), or toxins too (old)",
+        "HEALTH_V923__respirator": "Respirator: its own air, immune to inhaled toxins (the book), or rating dice (old)",
+        "HEALTH_V923__addiction": "Addiction: Shadowtech's dose interval, withdrawal, kicking, Strength and Tolerance (the book), or the old house numbers",
+        "HEALTH_V72__qualities__sensitiveSystem__bodyIndexMultiplier": "Sensitive System: bioware Body Index ×"
       }
     },
     "Rules": {

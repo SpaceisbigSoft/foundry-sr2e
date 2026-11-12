@@ -4,6 +4,7 @@ import {
   RULES, aimCap, multipleTargetModifier, reloadAmount, weaponArmorKind, shotgunTnModifier,
   combinedBlastPower, holdOutcome, stimEffect, tranqBoxes, antidoteEffect, surgicalTrauma,
 } from '../index.ts';
+import { oldWay } from './oldway.ts';
 
 const R = RULES as any;
 
@@ -75,8 +76,10 @@ describe('v0.55.0 slap patches and surgical trauma', () => {
     assert.equal(tranqBoxes(3, 5), 0);
     assert.deepEqual(antidoteEffect(4), { dice: 4, hours: 4 });
   });
-  test('surgical trauma by size, off by default', () => {
+  test('surgical trauma by size, off by default', (t) => {
     assert.equal(surgicalTrauma(2), null);
+    // v0.92.3: the old table (the book's bands: v0923-health.test.ts).
+    t.after(oldWay({ 'HEALTH_V923.surgeryBands': 'table' }));
     R.BIOWARE.surgery.trauma.enabled = true;
     try {
       assert.deepEqual(surgicalTrauma(0.3), { level: 'L', type: 'physical' });

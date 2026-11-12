@@ -3,6 +3,7 @@ import { weatherV79 } from './docs79-melee-vision.ts';
 import { combatStamp, sameCombatRound, type ClockDue, own } from './util.ts';
 import { recoveryCareCost } from './afflictions.ts';
 import { t as tx, tCount } from '../helpers/i18n.ts';
+import { respiratorImmune, addictionBook, isRecovering, recoveryDone, bookWithdrawalTn, type BookAddiction } from './health923.ts';
 
 /** Toxins, drugs, disease, hazards, stun weapons and timed statuses (v0.31.0). Pure rules. */
 
@@ -110,17 +111,41 @@ export function applyTolerance(b: { attributes: Record<string, number>; reaction
   return { attributes: Object.fromEntries(Object.entries(b.attributes ?? {}).map(([k, v]) => [k, cut(Number(v) || 0)])), reaction: cut(b.reaction ?? 0), initiativeDice: cut(b.initiativeDice ?? 0) };
 }
 
-/** Whether an addiction is in withdrawal now, and whether it can be kicked (days clean). */
-export function withdrawalState(a: Pick<Addiction, 'addicted' | 'lastDose'>, now: number): { withdrawal: boolean; daysClean: number; canKick: boolean } {
+/**
+ * Whether an addiction is in withdrawal now, and whether it can be kicked (days clean).
+ * v0.92.3 (RULES.HEALTH_V923.addiction 'book', Shadowtech pp. 87–88): forced withdrawal after Body × 4 (physical) or
+ * Willpower × 4 (mental) hours without a dose (`who`: the addict's attributes); not while recovering; the habit can be
+ * kicked at any time (the GM's call) while addicted and not already recovering.
+ */
+export function withdrawalState(a: Pick<Addiction, 'addicted' | 'lastDose'> & BookAddiction | Pick<Addiction, 'addicted' | 'lastDose'>, now: number, who?: { body: number; willpower: number }): { withdrawal: boolean; daysClean: number; canKick: boolean; recovering?: boolean } {
   const h = RULES.HEALTH.addiction;
   const clean = Math.max(0, now - a.lastDose);
-  const withdrawal = a.addicted && clean >= h.withdrawalHours * 3600;
   const daysClean = Math.floor(clean / 86400);
+  if (addictionBook() && who) {
+    const b = a as BookAddiction;
+    const recovering = isRecovering(b) && !recoveryDone(b, now);
+    return { withdrawal: bookWithdrawalTn(b, now, who)?.kind === 'forced', daysClean, canKick: a.addicted && !isRecovering(b), recovering };
+  }
+  const withdrawal = a.addicted && clean >= h.withdrawalHours * 3600;
   return { withdrawal, daysClean, canKick: a.addicted && daysClean >= h.kickDays };
 }
 
-/** TN modifiers from drug withdrawal (the worst one counts). */
-export function withdrawalModifiers(list: readonly Addiction[], now: number): Array<{ label: string; value: number }> {
+/**
+ * TN modifiers from drug withdrawal (the worst one counts).
+ * v0.92.3 (RULES.HEALTH_V923.addiction 'book', Shadowtech p. 88): forced withdrawal +3 (+6 on concentration tests such
+ * as spellcasting) and the pain of a persistent Moderate Stun wound (its +2 when the Stun track's own is less);
+ * recovering +2 (+4). `who`: the addict's attributes and Stun wound modifier; without it the old way.
+ */
+export function withdrawalModifiers(list: readonly Addiction[], now: number, who?: { body: number; willpower: number; stunWoundTn?: number; concentration?: boolean }): Array<{ label: string; value: number }> {
+  if (addictionBook() && who) {
+    const all = list.map((a) => ({ a, w: bookWithdrawalTn(a as Addiction & BookAddiction, now, who, Boolean(who.concentration)) })).filter((x) => x.w);
+    if (!all.length) return [];
+    const worst = all.reduce((m, x) => (x.w!.tn > m.w!.tn ? x : m));
+    const out = [{ label: tx('SR2E.Card.Mod.withdrawal', { w: all.map((x) => x.a.drug).join(', ') }), value: worst.w!.tn }];
+    const pain = all.some((x) => x.w!.kind === 'forced') ? Math.max(0, (RULES.WOUND_MODIFIERS.find(([min]) => min === RULES.BOXES_PER_LEVEL.M)?.[1] ?? 2) - Math.max(0, Number(who.stunWoundTn) || 0)) : 0;
+    if (pain) out.push({ label: tx('SR2E.Card.Mod.withdrawalPain923'), value: pain });
+    return out;
+  }
   const w = list.filter((a) => withdrawalState(a, now).withdrawal);
   return w.length ? [{ label: tx('SR2E.Card.Mod.withdrawal', { w: w.map((a) => a.drug).join(', ') }), value: RULES.HEALTH.addiction.withdrawalTn }] : [];
 }
@@ -154,6 +179,8 @@ export function protectionFor(gear: ReadonlyArray<{ kind: string; rating: number
     const mask = worn.find((g) => g.kind === 'gasMask');
     if (mask) return { immune: true, dice: 0, label: mask.name ?? tx('SR2E.Text.Hazards.gasMask') };
     const r = worn.filter((g) => g.kind === 'respirator').sort((a, b) => b.rating - a.rating)[0];
+    // v0.92.3 (RULES.HEALTH_V923.respirator 'immune', Core p. 244): a respirator is its own air supply.
+    if (r && respiratorImmune()) return { immune: true, dice: 0, label: r.name ?? tx('SR2E.Text.Hazards.respirator') };
     return r ? { immune: false, dice: Math.max(0, r.rating), label: tx('SR2E.Text.Hazards.respiratorRating', { name: r.name ?? tx('SR2E.Text.Hazards.respirator'), rating: r.rating }) } : { immune: false, dice: 0, label: '' };
   }
   if (vector === 'contact') {

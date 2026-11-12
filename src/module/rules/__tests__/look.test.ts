@@ -12,6 +12,7 @@ import {
   portraitReplaceable, cleanFolder, hexToRgb,
 } from '../look.ts';
 import { RULES, monitorStatus } from '../index.ts';
+import { oldWay } from './oldway.ts';
 
 const read = (...p: string[]) => readFileSync(join(process.cwd(), ...p), 'utf8');
 
@@ -139,7 +140,9 @@ describe('the condition monitor: wound groups and overflow', () => {
     assert.equal(trackView('matrix', 3, { boxes: 10, label: 'Persona' }).label, 'Persona');
   });
 
-  test('overflow: one box per point of Body, idle until the track is full, the last box is death', () => {
+  test('overflow: one box per point of Body, idle until the track is full, the last box is death', (t) => {
+    // v0.92.3: the old way (the book's extra death box past Body: v0923-health.test.ts).
+    t.after(oldWay({ 'HEALTH_V923.death': 'total' }));
     const idle = overflowView(9, 6);
     assert.equal(idle.idle, true); assert.equal(idle.filled, 0); assert.equal(idle.boxes.length, 6);
     assert.deepEqual(idle.boxes.map((b) => b.value), [11, 12, 13, 14, 15, 16]);
@@ -150,7 +153,8 @@ describe('the condition monitor: wound groups and overflow', () => {
     assert.equal(overflowView(5, 0).boxes.length, 0);
   });
 
-  test('the overflow death box matches monitorStatus with the same Body', () => {
+  test('the overflow death box matches monitorStatus with the same Body', (t) => {
+    t.after(oldWay({ 'HEALTH_V923.death': 'total' }));
     for (const body of [1, 3, 6, 9]) {
       const dead = RULES.MONITOR_BOXES + body;
       assert.equal(monitorStatus({ physical: dead, stun: 0 }, body), 'dead');

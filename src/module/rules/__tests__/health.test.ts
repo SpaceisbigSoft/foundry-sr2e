@@ -51,7 +51,9 @@ describe('v0.42.0 health and environment (rules)', () => {
     assert.equal(homeCareModifier('unknown'), 0);
   });
 
-  test('protection: a worn gas mask stops inhalants; respirators and chemsuits add dice', () => {
+  test('protection: a worn gas mask stops inhalants; respirators and chemsuits add dice', (t) => {
+    // v0.92.3: the old respirator dice (by the book it is its own air supply: v0923-health.test.ts).
+    t.after(oldWay({ 'HEALTH_V923.respirator': 'dice' }));
     const gear = [{ kind: 'gasMask', rating: 0, worn: false, name: 'Mask' }, { kind: 'respirator', rating: 3, worn: true, name: 'Resp' }, { kind: 'chemsuit', rating: 4, worn: true, name: 'Suit' }];
     assert.deepEqual(protectionFor(gear, 'inhalation'), { immune: false, dice: 3, label: 'Resp 3' });
     assert.equal(protectionFor([{ ...gear[0]!, worn: true }], 'inhalation').immune, true);

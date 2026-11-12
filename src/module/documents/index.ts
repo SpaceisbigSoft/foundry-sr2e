@@ -129,6 +129,8 @@ import {
   surpriseBlockedTargets, type ScatterType,
 } from '../rules/docs79-ranged.ts';
 import { mountedRecoil, sensorGunneryByMode, vehicleRepairByMode } from '../rules/docs79-vehicles.ts';
+// v0.92.3 book alignment: damage, health and hazards (RULES.HEALTH_V923).
+import * as H923 from '../rules/health923.ts';
 import { clearFlag, clearFlagUpdate, dropFlagKeys, replaceFlag } from '../helpers/flags.ts';
 export { initiativeFormula };
 import { approvalNeeded, fileRequest, inCreation, approvalContext, queueOn } from '../applications/approvals.ts';
@@ -502,6 +504,8 @@ export interface AttackState {
   reach?: number;
   /** Ammunition and called shots: how much armor counts, which kind, or none at all. */
   armorMultiplier?: number;
+  /** v0.92.3 (RULES.HEALTH_V923.shock): a stun weapon's hit disorients (Core p. 103). */
+  shock?: boolean;
   armorKind?: 'ballistic' | 'impact';
   ignoreArmor?: boolean;
   /** v0.79.0 (RULES.DOCS_V79.rangedFlechette 'armor', SRII p. 93): flechette rounds; the soak decides the extra level and the armor. */
@@ -728,6 +732,7 @@ function armorExtras(a: Partial<AttackState>): Partial<DamageState> {
   return {
     ...(a.armorMultiplier !== undefined && a.armorMultiplier !== 1 ? { armorMultiplier: a.armorMultiplier } : {}),
     ...(a.flechette ? { flechette: true } : {}),
+    ...(a.shock ? { shock: true } : {}),
     ...(a.armorKind ? { armorKind: a.armorKind } : {}),
     ...(a.ignoreArmor ? { ignoreArmor: true } : {}),
     ...(a.ignoreImmunity ? { ignoreImmunity: true } : {}),
@@ -773,6 +778,8 @@ export interface DamageState {
   /** v0.72.0 (O3): the attacker is a spirit or a dual-natured critter: its blow isn't stopped outright by immunity. */
   awakenedAttacker?: boolean;
   armorMultiplier?: number;
+  /** v0.92.3 (RULES.HEALTH_V923.shock): a stun weapon's hit disorients (Core p. 103). */
+  shock?: boolean;
   armorKind?: 'ballistic' | 'impact';
   ignoreArmor?: boolean;
   extraArmor?: number;
@@ -1120,7 +1127,7 @@ export interface TestSnapshot {
   /** attack: a ram, so a hit also damages the rammer. */
   ram?: { vehicleUuid: string; power: number; level: DamageLevel | null };
   /** addiction: a drug's addiction test on a dose, or kicking the habit (v0.42.0). */
-  addiction?: { drug: string; mode: 'dose' | 'kick'; applied?: boolean };
+  addiction?: { drug: string; mode: 'dose' | 'kick' | 'tolerance'; applied?: boolean };
   /** disease: resisting infection, or a disease's progress test (v0.42.0); once applied. */
   disease?: { name: string; mode: 'infect' | 'tick'; level: DamageLevel; damageType: DamageType; power: number; intervalHours: number; incubationHours: number; needed: number; index?: number; applied?: boolean; before?: Monitor;
     /** v0.48.0: how it spreads on (RULES.HEALTH.contagion), and who it was caught from. */
@@ -1676,6 +1683,11 @@ export class SR2Actor extends Actor {
     if (!this.canAct('give first aid')) return null;
     const f = RULES.HEALING.firstAid;
     const track = opts.track ?? 'physical';
+    // v0.92.3 (RULES.HEALTH_V923.firstAidStun 'physical', Core p. 115): Biotech helps Physical damage only; Stun is rested off.
+    if (track === 'stun' && !H923.firstAidOnStun()) {
+      ui.notifications?.warn?.(tx('SR2E.Notify.Actor.firstAidPhysicalOnly'));
+      return null;
+    }
     const before = (patient?.system?.monitor?.[track] as number | undefined) ?? 0;
     if (before <= 0) {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.hasNoDamage', { patientName: escHtml(patient?.name ?? tx('SR2E.Notify.Actor.thePatient')), track }));
@@ -1712,10 +1724,13 @@ export class SR2Actor extends Actor {
     const tableMods = firstAidModifiers({ medkit: Boolean(medkit), conditions: opts.conditions ?? 'normal', magician: Number(patient?.system?.magic ?? 0) > 0 && patient?.type !== 'spirit', applyMagician: opts.applyMagician, naturalBody: Number(patient?.system?.attributes?.body?.natural ?? patient?.system?.attributes?.body?.total ?? 0) });
     const sd = this.#skillDice(this.findSkill(f.skill), false, null, f.fallbackAttribute as AttributeKey);
     const faResult = await this.#runTest(tx('SR2E.Card.Actor.firstAidOnWoundHealsUp', { patientName: patient.name, track, level: t.level, maxBoxes: t.maxBoxes, sdSuffix: sd.suffix, part: kitDice ? ` [${medkit.name} +${kitDice}]` : '' }),
-      sd.dice + kitDice, { targetNumber: t.tn, modifiers: [...sd.modifiers, ...tableMods, ...SR2Actor.bodyIndexHealingMods(patient)], poolDice: opts.poolDice ?? 0 },
+      sd.dice + kitDice, { targetNumber: t.tn, modifiers: [...sd.modifiers, ...tableMods, ...(H923.bodyIndexOn('firstAid') ? SR2Actor.bodyIndexHealingMods(patient) : [])], poolDice: opts.poolDice ?? 0 },
       { kind: 'heal', heal: { targetUuid: patient.uuid, targetName: patient.name, track, before, mode: 'firstAid' } });
     // v0.80.0 (RULES.URR_V80.hsMagicLossUntreated): a magician treated without the +2 may lose Magic.
-    if (faResult && magicLossOnTreatment({ magician: Number(patient?.system?.magic ?? 0) > 0 && patient?.type !== 'spirit', applyMagician: opts.applyMagician })) await SR2Actor.urrMagicLossCard(patient, this);
+    // v0.92.3 (RULES.HEALTH_V923.magicLossUntreated 'test', Core p. 115): by the book, twice for a Deadly wound.
+    if (faResult && magicLossOnTreatment({ magician: Number(patient?.system?.magic ?? 0) > 0 && patient?.type !== 'spirit', applyMagician: opts.applyMagician })) {
+      for (let i = H923.magicLossUntreatedTests(t.level === 'D'); i > 0; i--) await SR2Actor.urrMagicLossCard(patient, this);
+    }
     return faResult;
   }
 
@@ -1782,7 +1797,8 @@ export class SR2Actor extends Actor {
     }
     // A stay in hospital or intensive care costs nuyen per day (v0.42.0); the GM can waive it.
     // v0.80.0 (review #10): the Revamp's Stun recovery ignores care, so it costs nothing.
-    const cost = opts.pay === false || (track === 'stun' && RULES.URR_V80.hsStunRecovery === 'urr') ? 0 : careCost(care, opts.hours);
+    // v0.92.3 (RULES.HEALTH_V923.stunRecovery 'book', Core p. 112): no medical treatment helps Stun, so it costs nothing either.
+    const cost = opts.pay === false || (track === 'stun' && H923.stunRecoveryBaseTn() !== null) ? 0 : careCost(care, opts.hours);
     if (cost > 0 && !(await this.adjustNuyen(-cost, care === 'intensive' ? tx('SR2E.Text.Actor.intensiveCareDayS', { days: Math.max(1, Math.ceil(opts.hours / 24)) }) : tx('SR2E.Text.Actor.hospitalDayS', { days: Math.max(1, Math.ceil(opts.hours / 24)) })))) {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.canTPayForThatCare', { name: escHtml(this.name), cost: cost.toLocaleString() }));
       return null;
@@ -1830,7 +1846,7 @@ export class SR2Actor extends Actor {
     const rapid = rapidHealingDice(adeptSpecialLevel(adeptPowersOf(this) as any, 'rapidHealing'));
     // v0.72.0 (O9): symbiotes add dice to natural healing.
     const sym = Math.max(0, Number(this.sys.derived?.bio?.vitals?.healingDice ?? 0));
-    const result = await successTest({ dice: (this.sys.attributes[attr].total as number) + rapid + sym, targetNumber: tn, modifiers: [...(stunUrr ? stunUrr.modifiers : careMods), ...SR2Actor.bodyIndexHealingMods(this)], roll: foundryRoller(rolls) });
+    const result = await successTest({ dice: (this.sys.attributes[attr].total as number) + rapid + sym, targetNumber: tn, modifiers: [...(stunUrr ? stunUrr.modifiers : careMods), ...(H923.bodyIndexOn('natural') ? SR2Actor.bodyIndexHealingMods(this) : [])], roll: foundryRoller(rolls) });
     // v0.78.0 (RULES.BOOK_V78.symbiotes 'time'): symbiotes shorten the healing time instead.
     const timeFactor = Math.min(1, Math.max(0.1, Number(this.sys.derived?.bio?.vitals?.healingTimeFactor ?? 1) || 1));
     await this.#post(this.#snapshot(tx('SR2E.Card.Actor.woundHRest', { part: stages ? tx('SR2E.Card.Actor.healingStage') : tx('SR2E.Card.Actor.naturalHealing'), track, woundLevel: woundLevel(before), hours: opts.hours, part2: cost ? tx('SR2E.Card.Actor.paid', { cost: cost.toLocaleString() }) : '', part3: rapid ? tx('SR2E.Card.Actor.rapidHealing', { rapid }) : '', part4: sym ? tx('SR2E.Card.Actor.symbiotes', { sym }) : '', part5: timeFactor < 1 ? tx('SR2E.Card.Actor.symbiotesTime', { timeFactor }) : '' }), result, {
@@ -2184,12 +2200,17 @@ export class SR2Actor extends Actor {
       if (it && !it.system.installed) await it.update({ 'system.installed': true });
       next.installed = true;
       // v0.55.0 (Shadowtech, optional): the operation itself wounds the patient by its size, once.
-      const tr = !sg.traumaDone ? surgicalTrauma(Number(sg.points ?? 0)) : null;
+      const tr = !sg.traumaDone ? surgicalTrauma(Number(sg.points ?? 0), Boolean(it?.system?.bioware)) : null;
       if (tr) {
         const r = applyDamageToMonitor({ physical: patient.system.monitor.physical, stun: patient.system.monitor.stun }, tr.type, tr.level, Number(patient.system.derived?.vitals?.overflowBody ?? patient.system.attributes.body.total));
         await patient.update({ 'system.monitor.physical': r.monitor.physical, 'system.monitor.stun': r.monitor.stun });
         next.traumaDone = true;
         traumaNote = tx('SR2E.Card.Actor.theOperationLeavesWithAWound', { sgPatientName: escText(sg.patientName), trLevel: tr.level, trType: tr.type, plural: escText(plural(r.boxes, 'box')) });
+      }
+      // v0.92.3 (RULES.HEALTH_V923.surgeryMagicLoss 'drastic', Core p. 114; Shadowtech bionetics): a magician through
+      // drastic invasive surgery tests for Magic loss after healing (the card waits for the GM or the player).
+      if (Number(patient.system?.magic ?? 0) > 0 && patient.type !== 'spirit' && RULES.MAGIC_LOSS.enabled && H923.surgeryMagicLossDue(Number(sg.points ?? 0), Boolean(it?.system?.bioware))) {
+        await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: patient }), content: `<p><strong>${escText(patient.name)}</strong> ${tx('SR2E.Card.Actor.drasticSurgeryMagicLoss')}</p><p><button type="button" data-sr2e-action="magicLoss">${tx('SR2E.Card.Actor.magicLossTestD6', { magicLossDice: RULES.MAGIC_LOSS.dice })}</button></p>`, flags: { [SYSTEM_ID]: { magicLossFor: patient.uuid } } });
       }
       // v0.45.0: it works once the patient has recovered; a re-roll moves the date.
       await patient.update({ 'system.recovering': [...(patient.system.recovering ?? []).filter((r: any) => r.itemId !== sg.itemId), { itemId: sg.itemId, name: sg.itemName, until: now + days * 86400, care, factor }] });
@@ -2518,7 +2539,8 @@ export class SR2Actor extends Actor {
     // v0.61.0: a totem that dislikes daylight (Owl) (MAGIC_V61.totems).
     if (!opts.noPenalties) { const dl = daylightModifier(this.totemDrawbacks(), sysNow()); if (dl) extra.push(dl); }
     // Drug withdrawal (v0.42.0).
-    if (!opts.noPenalties && this.sys.addictions?.length) extra.push(...withdrawalModifiers(this.sys.addictions as Addiction[], sysNow()));
+    // v0.92.3 (RULES.HEALTH_V923.addiction 'book'): forced withdrawal or recovery, doubled on concentration (magic).
+    if (!opts.noPenalties && this.sys.addictions?.length) extra.push(...withdrawalModifiers(this.sys.addictions as Addiction[], sysNow(), H923.addictWho(this.sys, Boolean(opts.magical))));
     // v0.45.0: recovering from surgery, and a ghoul or vampire going hungry.
     if (!opts.noPenalties && this.sys.recovering?.length) {
       const r = recoveryTn(this.sys.recovering as Recovery[], sysNow());
@@ -3138,7 +3160,8 @@ export class SR2Actor extends Actor {
     }
 
     // v0.72.0 (O11): Will to Live adds Overflow boxes (the death check counts them).
-    const ctxBody = ctx.body + Math.max(0, Number(this.sys.derived?.vitals?.overflowBoxes ?? 0));
+    // v0.92.3 (RULES.HEALTH_V923.death 'natural', Core p. 111): the natural Body counts for death.
+    const ctxBody = H923.deathBody(ctx.body, this.sys.attributes?.body?.natural) + Math.max(0, Number(this.sys.derived?.vitals?.overflowBoxes ?? 0));
     const result = applyDamageToMonitor(ctx.before, ctx.type, level, ctxBody);
     // Platelet factories take boxes off each Physical hit, never below 1 (v0.30.0).
     const pf = ctx.type === 'physical' && ctx.noun === 'damage' ? ((this.sys.derived?.bio?.boxesOff as number | undefined) ?? 0) : 0;
@@ -3222,7 +3245,12 @@ export class SR2Actor extends Actor {
     // v0.55.0: a weapon's toxin (a dart or a poisoned blade): on any hit, or only when it wounds.
     const tox = ctx.toxinHit && ['character', 'npc', 'spirit'].includes(this.type) && (!ctx.toxinHit.needsWound || result.boxes > 0)
       ? `<p><button type="button" data-sr2e-action="toxinHit" title="${escText(ctx.toxinHit.name)}: ${Number(ctx.toxinHit.power) || 0}${escText(ctx.toxinHit.level)} ${escText(ctx.toxinHit.damageType)}">${tx('SR2E.Card.Actor.resist5', { toxinHitName: escText(ctx.toxinHit.name) })}</button></p>` : '';
+    // v0.92.3 (RULES.HEALTH_V923.permanentDamage 'test', Core p. 114): reaching a Deadly wound may harm an organ, limb or
+    // system for good: the Body (4) test, to roll now or once a trauma patch is on (+2).
+    const perm = !['spirit', 'vehicle', 'ic'].includes(String(this.type)) && Boolean(this.sys.attributes?.body) && H923.permanentDamageTn(false) !== null && !reachedDeadly(Number(ctx.before?.physical ?? 0)) && reachedDeadly(result.monitor.physical)
+      ? `<p>${tx('SR2E.Card.Actor.permanentDamageDue923')} <button type="button" data-sr2e-action="permanentDamage923">${tx('SR2E.Card.Actor.permanentDamageTest923')}</button></p>` : '';
     const flags: Record<string, unknown> = {
+      ...(perm ? { permanentDamageFor: this.uuid } : {}),
       ...(tox ? { toxinHit: { targetUuid: this.uuid, toxin: ctx.toxinHit } } : {}),
       ...(kd ? { knockdown: { actorUuid: this.uuid, tn: ctx.knockdown!.tn, ...U80C.cbtKnockdownFlag(level) } } : {}),
       ...(cyber ? { cyberDamage: { actorUuid: this.uuid, location: cyberCheck?.location ?? '' } } : {}),
@@ -3230,7 +3258,7 @@ export class SR2Actor extends Actor {
       ...reflected.flags,
     };
     return {
-      html: `<p>${body}${note}${degradeNote}</p>${kd}${cyber}${inf}${tox}${reflected.html}`,
+      html: `<p>${body}${note}${degradeNote}</p>${kd}${cyber}${inf}${tox}${perm}${reflected.html}`,
       flags,
       snap: { ...snap, soak: { ...ctx, after: result.monitor, ...(degradedNow ? { degraded: true } : {}), ...(cyberCheck ? { cyberCheck } : {}) } },
     };
@@ -7054,9 +7082,14 @@ export class SR2Actor extends Actor {
     const rows = states.map((_st, i) => `<li>${escText(targets[i].name)} <button type="button" data-sr2e-action="resistToxin" data-index="${i}">${tx('SR2E.Card.Actor.resist')}</button></li>`).join('');
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor: this }),
-      content: `<p><strong>${escText(t.name)}</strong> (${escText(t.kind)}, ${escText(t.vector)}, ${t.power}${t.level} ${t.damageType}): ${on.at ? escText(on.label) : escText(speed.label.toLowerCase())}.${t.effect ? ` ${escText(t.effect)}` : ''}</p><ul class="sr2e-blast">${rows}</ul>`,
+      content: `<p><strong>${escText(t.name)}</strong> (${escText(t.kind)}, ${escText(t.vector)}, ${t.power}${t.level} ${t.damageType}): ${on.at ? escText(on.label) : escText(speed.label.toLowerCase())}.${t.effect ? ` ${escText(t.effect)}` : ''}</p><ul class="sr2e-blast">${rows}</ul>${SR2Actor.reexposeButton923(t.kind)}`,
       flags: { [SYSTEM_ID]: { toxins: states, ...(on.at ? { toxinOnset: { at: on.at, name: t.name, announced: false } } : {}) } },
     });
+  }
+
+  /** v0.92.3 (Core p. 186): the GM's "still exposed" button on a toxin or drug card (not a disease: it runs its own course). */
+  static reexposeButton923(kind: string | undefined): string {
+    return kind === 'disease' ? '' : `<p><button type="button" data-sr2e-action="reexposeToxin923">${tx('SR2E.Card.Actor.stillExposedButton923')}</button></p>`;
   }
 
   /** v0.61.0: when a toxin of this Speed takes effect (0 = now) and how to say it. */
@@ -7089,7 +7122,7 @@ export class SR2Actor extends Actor {
     const rows = states.map((_st, i) => `<li>${escText(targets[i].name)} <button type="button" data-sr2e-action="resistToxin" data-index="${i}">${tx('SR2E.Card.Actor.resist')}</button></li>`).join('');
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor: this }),
-      content: `<p><strong>${escText(title || t.name)}</strong>: ${escText(t.name)} (${escText(t.vector)}, ${t.power}${t.level} ${t.damageType})${on.at ? `: ${escText(on.label)}` : ''}.</p><ul class="sr2e-blast">${rows}</ul>`,
+      content: `<p><strong>${escText(title || t.name)}</strong>: ${escText(t.name)} (${escText(t.vector)}, ${t.power}${t.level} ${t.damageType})${on.at ? `: ${escText(on.label)}` : ''}.</p><ul class="sr2e-blast">${rows}</ul>${SR2Actor.reexposeButton923(t.kind)}`,
       flags: { [SYSTEM_ID]: { toxins: states, ...(on.at ? { toxinOnset: { at: on.at, name: t.name, announced: false } } : {}) } },
     });
   }
@@ -7152,7 +7185,8 @@ export class SR2Actor extends Actor {
     // v0.72.0 (O9): a nephritic screen helps against blood-borne toxins (injected, ingested); (O11) Toughness if set to.
     const neph = isToxin || t.kind === 'drug' ? nephriticDice(d.bio?.vitals ?? { bloodToxinDice: 0, toxinVectors: [] }, t.vector) : 0;
     const toughT = t.kind === 'disease' ? 0 : toughnessDice(d.vitals ?? { toughnessDice: 0, toughnessOnStun: false, toughnessOnToxins: false }, 'toxin');
-    const dice = toxinResistDice({ attribute: this.sys.attributes[attr].total, toxinDice: d.toxinDice ?? 0, inhalantDice: d.bio?.inhalantDice ?? 0, vector: t.vector }) + prot.dice + antiDice + filt.dice + neph + toughT + immDice;
+    // v0.92.3 (RULES.HEALTH_V923.dwarfResistance 'disease'): a dwarf's racial dice count against disease only.
+    const dice = toxinResistDice({ attribute: this.sys.attributes[attr].total, toxinDice: (d.toxinDice ?? 0) + (t.kind === 'disease' ? Number(d.raceDiseaseDice ?? 0) : 0), inhalantDice: d.bio?.inhalantDice ?? 0, vector: t.vector }) + prot.dice + antiDice + filt.dice + neph + toughT + immDice;
     // v0.78.0 (RULES.BOOK_V78.toxinBioware 'power'): a toxin extractor or tracheal filter lowers the Power (not for disease).
     const power = t.kind === 'disease' ? t.power : toxinPower(t.power, d.bio?.toxinPowerOff, t.vector);
     const powerCut = t.power - power;
@@ -7217,7 +7251,7 @@ export class SR2Actor extends Actor {
     // v0.78.0 review fix (RULES.BOOK_V78.critterToxins 'dice'): immunity to pathogens helps on every progress test too.
     const immDice = RULES.BOOK_V78.critterToxins.mode === 'dice' && this.immunities().pathogens
       ? Math.max(0, Math.floor(RULES.BOOK_V78.critterToxins.dicePerEssence * Number(this.sys.derived?.essence ?? this.sys.essence ?? 0))) : 0;
-    const dice = toxinResistDice({ attribute: this.sys.attributes[attr].total, toxinDice: this.sys.derived?.toxinDice ?? 0, inhalantDice: 0, vector: '' }) + care + immDice;
+    const dice = toxinResistDice({ attribute: this.sys.attributes[attr].total, toxinDice: (this.sys.derived?.toxinDice ?? 0) + Number(this.sys.derived?.raceDiseaseDice ?? 0), inhalantDice: 0, vector: '' }) + care + immDice;
     return this.#runTest(tx('SR2E.Card.Actor.progressesVs', { dzName: dz.name, attr: cap(attr), part: care ? tx('SR2E.Card.Actor.treated', { care }) : '', part2: immDice ? tx('SR2E.Card.Actor.immunityToPathogens', { immDice }) : '', dzPower: dz.power, dzLevel: dz.level, dzDamageType: dz.damageType }), dice, {
       targetNumber: Math.max(RULES.MIN_TARGET_NUMBER, dz.power), noPenalties: true,
     }, { kind: 'disease', disease: { name: dz.name, mode: 'tick', index, level: dz.level as DamageLevel, damageType: dz.damageType as DamageType, power: dz.power, intervalHours: dz.intervalHours, incubationHours: 0, needed: dz.needed, before: { ...this.#monitor() } } });
@@ -7299,10 +7333,30 @@ export class SR2Actor extends Actor {
   }
 
   /** Drug addiction (v0.42.0): a test after a dose, or kicking the habit after enough days clean. */
-  async drugAddictionTest(drug: string, mode: 'dose' | 'kick' = 'dose'): Promise<SuccessTestResult | null> {
+  async drugAddictionTest(drug: string, mode: 'dose' | 'kick' | 'tolerance' = 'dose'): Promise<SuccessTestResult | null> {
     const a: any = (this.sys.addictions ?? []).find((x: any) => x.drug === drug);
     if (!a) return null;
     const now = sysNow();
+    // v0.92.3 (RULES.HEALTH_V923.addiction 'book', Shadowtech pp. 87–88): the character's current ratings; kicking the
+    // habit at any time (the GM's call) vs the rating +1/+3; the Tolerance test (Body vs the Tolerance rating).
+    if (H923.addictionBook()) {
+      const rating = H923.addictionRatingNow(a, now);
+      if (mode === 'kick') {
+        if (!a.addicted || H923.isRecovering(a)) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.notAddictedOrRecovering923', { name: escHtml(this.name), drug: escHtml(drug) })); return null; }
+        const tn = H923.kickTn(a, now);
+        return this.#runTest(tx('SR2E.Card.Actor.kickTheHabitBook923', { drug, rating, plus: tn - rating }), this.sys.attributes.willpower.total, { targetNumber: tn },
+          { kind: 'addiction', addiction: { drug, mode: 'kick' } });
+      }
+      if (mode === 'tolerance') {
+        const tn = Math.max(RULES.MIN_TARGET_NUMBER, Math.floor(Number(a.tolerance) || 0) + H923.currentRise(a, now));
+        return this.#runTest(tx('SR2E.Card.Actor.toleranceTest923', { drug, tn }), this.sys.attributes.body.total, { targetNumber: tn },
+          { kind: 'addiction', addiction: { drug, mode: 'tolerance' } });
+      }
+      const attribute: AttributeKey = a.type === 'physical' ? 'body' : 'willpower';
+      return this.#runTest(tx('SR2E.Card.Actor.addictionTestBook923', { drug, attribute: cap(attribute), rating, type: a.type }), this.sys.attributes[attribute].total, { targetNumber: Math.max(RULES.MIN_TARGET_NUMBER, rating) },
+        { kind: 'addiction', addiction: { drug, mode: 'dose' } });
+    }
+    if (mode === 'tolerance') return null;
     if (mode === 'kick') {
       const st = withdrawalState(a, now);
       if (!st.canKick) {
@@ -7325,7 +7379,18 @@ export class SR2Actor extends Actor {
     const ok = snap.successes > 0;
     if (ad.applied) return { html: `<p><em>${tx('SR2E.Card.Actor.alreadyAppliedAdjustByHandIf')}</em></p>`, flags: {}, snap };
     let html: string;
-    if (ad.mode === 'kick') {
+    // v0.92.3 (RULES.HEALTH_V923.addiction 'book', Shadowtech pp. 87–88): a kick starts the recovery; no Tolerance
+    // success = immune for good.
+    if (H923.addictionBook() && ad.mode === 'tolerance') {
+      if (!ok) a.immune = true;
+      html = ok ? `<p>${tx('SR2E.Card.Actor.toleranceNotYet923', { name: escText(this.name), drug: escText(ad.drug) })}</p>` : `<p><strong>${tx('SR2E.Card.Actor.toleranceImmune923', { name: escText(this.name), drug: escText(ad.drug) })}</strong></p>`;
+    } else if (H923.addictionBook() && ad.mode === 'kick') {
+      if (ok) { a.riseAtKick = H923.currentRise(a, sysNow()); a.recovering = sysNow(); a.withdrawalNoted = false; }
+      html = ok ? `<p><strong>${tx('SR2E.Card.Actor.startsRecovering923', { name: escText(this.name), drug: escText(ad.drug), days: Math.max(0, Number(a.riseAtKick) || 0) * Math.max(1, Number(RULES.HEALTH_V923.addictionBook.recoveryDaysPerPoint) || 3), tn: RULES.HEALTH_V923.addictionBook.recoveryTn })}</strong></p>` : `<p><strong>${tx('SR2E.Card.Actor.isStillHookedOn', { name: escText(this.name), adDrug: escText(ad.drug) })}</strong></p>`;
+    } else if (H923.addictionBook() && ad.mode === 'dose') {
+      if (!ok && !a.addicted) a.addicted = true;
+      html = ok ? `<p>${tx('SR2E.Card.Actor.doesnTGetHookedOnThis', { name: escText(this.name), adDrug: escText(ad.drug) })}</p>` : `<p><strong>${tx('SR2E.Card.Actor.isAddictedTo', { name: escText(this.name), adDrug: escText(ad.drug) })}</strong> ${tx('SR2E.Card.Actor.addictedBook923', { hours: H923.doseIntervalHours(a.type, H923.addictWho(this.sys)), tn: RULES.HEALTH_V923.addictionBook.forcedWithdrawalTn })}</p>`;
+    } else if (ad.mode === 'kick') {
       if (ok) { a.addicted = false; a.dosesAddicted = 0; a.withdrawalNoted = false; a.recent = []; }
       html = ok ? `<p><strong>${tx('SR2E.Card.Actor.kicksTheHabit', { name: escText(this.name), adDrug: escText(ad.drug) })}</strong></p>` : `<p><strong>${tx('SR2E.Card.Actor.isStillHookedOn', { name: escText(this.name), adDrug: escText(ad.drug) })}</strong></p>`;
     } else {
@@ -7369,11 +7434,26 @@ export class SR2Actor extends Actor {
     const addictions: any[] = [...(this.sys.addictions ?? [])].map((x: any) => ({ ...x }));
     let add: any = null;
     let loss = 0;
+    let relapse = false;
     if ((t.addiction ?? 0) > 0) {
       add = addictions.find((x) => x.drug === it.name);
       if (!add) { add = { drug: it.name, rating: t.addiction, type: t.addictionType ?? 'mental', recent: [], lastDose: now, addicted: false, dosesAddicted: 0, withdrawalNoted: false }; addictions.push(add); }
       add.rating = t.addiction; add.type = t.addictionType ?? add.type;
-      loss = add.addicted ? toleranceLoss(add.dosesAddicted) : 0;
+      // v0.92.3 (RULES.HEALTH_V923.addiction 'book', Shadowtech pp. 87–88): immune for good: the dose does nothing (and
+      // doesn't feed the habit); every Strength-th dose, a relapse or easing forced withdrawal raises the ratings; no
+      // tolerance points off the bonuses.
+      if (H923.addictionBook()) {
+        add.strength = Math.max(0, Math.floor(Number(t.strength) || 0)); add.tolerance = Math.max(0, Math.floor(Number(t.tolerance) || 0));
+        if (add.immune) {
+          await this.update({ 'system.addictions': addictions });
+          await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p><strong>${escText(this.name)}</strong> ${tx('SR2E.Card.Actor.toleranceNoEffect923', { name: escText(it.name) })}</p>` });
+          return true;
+        }
+        const d = H923.bookDose(add, now, withdrawalState(add, now, H923.addictWho(this.sys)).withdrawal);
+        add.rise = d.rise; add.doses = d.doses; relapse = d.relapse;
+        if (relapse) { add.recovering = -1; add.riseAtKick = 0; add.addicted = true; }
+      }
+      loss = add.addicted && !H923.addictionBook() ? toleranceLoss(add.dosesAddicted) : 0;
       add.recent = [...recentDoses(add.recent ?? [], now), now];
       add.lastDose = now;
       add.withdrawalNoted = false;
@@ -7405,7 +7485,10 @@ export class SR2Actor extends Actor {
       const hit: ToxinHit = { name: od.name, vector: od.vector, power: od.power, level: od.level, damageType: od.damageType, kind: 'toxin', from: this.name as string, needsWound: false, speed: 'immediate' };
       await this.exposeToxinState(hit, [this.uuid as string], tx('SR2E.Card.Actor.overdoseDoseWhileActive', { name: it.name, value: od.dosesBefore + 1 }));
     }
+    if (add && relapse) await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p><strong>${escText(this.name)}</strong> ${tx('SR2E.Card.Actor.relapse923', { name: escText(it.name) })}</p>` });
     if (add && RULES.HEALTH.addiction.auto && !add.addicted) await this.drugAddictionTest(it.name, 'dose');
+    // v0.92.3 (Shadowtech p. 88): a drug with a Tolerance rating: Body vs it after a dose; no successes = immune.
+    if (add && RULES.HEALTH.addiction.auto && H923.addictionBook() && Number(add.tolerance) > 0 && !add.immune) await this.drugAddictionTest(it.name, 'tolerance');
     return true;
   }
 
@@ -7469,12 +7552,41 @@ export class SR2Actor extends Actor {
       if (left <= 0) { await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p><strong>${escText(this.name)}</strong> ${tx('SR2E.Card.Actor.stillHoldsTheirBreathCombatTurns', { part: breathHoldTurns(Number(this.sys.attributes?.body?.total ?? 0)) ? tx('SR2E.Card.Actor.heldBreath') : tx('SR2E.Card.Actor.extendedVolumeLungs'), lungs })}</p>` }); return; }
       amount = left;
     }
+    // v0.92.3 (RULES.HEALTH_V923.drowning 'boxes', Cyberpirates): out of breath, 1 unresisted Stun box an action phase
+    // (then Physical, past a full Stun track); suffocation the same.
+    if (kind === 'drowning' || kind === 'suffocation') {
+      const cmb: any = [...((game as any).combat?.combatants ?? [])].find((c: any) => c?.actor === this || (c?.actor?.uuid && c.actor.uuid === this.uuid));
+      const phases = cmb && Number(cmb.initiative) > 0 ? Math.ceil(Number(cmb.initiative) / 10) : 1;
+      const boxes = H923.drowningBoxes(Number(amount) || 0, phases);
+      if (boxes !== null) {
+        const m = addStun(this.#monitor(), boxes);
+        await this.update({ 'system.monitor.stun': m.stun, 'system.monitor.physical': m.physical });
+        await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p><strong>${escText(this.name)}</strong> ${tx('SR2E.Card.Actor.drowningBoxes923', { turns: Number(amount) || 0, phases, boxes })}</p>` });
+        return;
+      }
+    }
     if (kind === 'suffocation') {
       const s = RULES.HEALTH.suffocation;
       return this.#drainTest({ label: tCount(Number(amount), 'SR2E.Card.Actor.suffocationTurnsWithoutAir'), attribute: 'body', targetNumber: suffocationTn(Number(amount) || 0), level: s.level, type: s.type, poolDice: 0, noun: 'damage' });
     }
     if (kind === 'falling') {
       // v0.80.0 (RULES.URR_V80.hsFalling 'urr'): Power half the metres, level by height, no armor; 2 m or less is nothing.
+      // v0.92.3 (RULES.HEALTH_V923.falling 'book', Fields of Fire p. 76): Deadly, Power half the metres less half impact
+      // armor; an Athletics test vs the metres takes 1 off the Power per success.
+      if (!fallingDamageUrr(Number(amount) || 0) && H923.fallingBook(Number(amount) || 0, armor.impact)) {
+        const metres = Math.max(0, Number(amount) || 0);
+        let cut = 0;
+        if (Math.floor(metres / 2) > 0) {
+          const sd = this.#skillDice(this.findSkill('Athletics'), false, null, 'body');
+          const rolls: any[] = [];
+          const r = await successTest({ dice: sd.dice, targetNumber: Math.max(RULES.MIN_TARGET_NUMBER, Math.ceil(metres)), modifiers: this.#testModifiers({ modifiers: sd.modifiers }), roll: foundryRoller(rolls) });
+          cut = r.successes;
+          await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), rolls, content: `<p><strong>${escText(this.name)}</strong> ${tx('SR2E.Card.Actor.fallingAthletics923', { metres, dice: sd.dice, tn: r.targetNumber, successes: r.successes })}</p>` });
+        }
+        const fb = H923.fallingBook(metres, armor.impact, cut)!;
+        if (fb.power <= 0) { await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p><strong>${escText(this.name)}</strong> ${tx('SR2E.Card.Actor.fallingNoDamage923')}</p>` }); return; }
+        return this.resistDamage({ power: fb.power, level: fb.level, type: 'physical', armor: fb.armor, ...(RULES.GEAR.cyberDamage.nonAttack ? { cyberCheck: { location: '' } } : {}) });
+      }
       const f = fallingDamageUrr(Number(amount) || 0) ?? fallingDamage(Number(amount) || 0, armor);
       if (f.power <= 0 || !f.level) return;
       return this.resistDamage({ power: f.power, level: f.level, type: 'physical', armor: f.armor, ...(RULES.GEAR.cyberDamage.nonAttack ? { cyberCheck: { location: '' } } : {}) });
@@ -7699,11 +7811,17 @@ export class SR2Actor extends Actor {
       }
     }
     const ad: any[] = [...(a.system?.addictions ?? [])].map((x: any) => ({ ...x }));
-    const newly = ad.filter((x) => withdrawalState(x, time).withdrawal && !x.withdrawalNoted);
-    if (newly.length) {
+    // v0.92.3 (RULES.HEALTH_V923.addiction 'book'): the addict's Body or Willpower sets when withdrawal comes.
+    const who = H923.addictWho(a.system);
+    const newly = ad.filter((x) => withdrawalState(x, time, who).withdrawal && !x.withdrawalNoted);
+    // v0.92.3 (Shadowtech p. 88): a recovery whose rating is back at the base: no longer addicted.
+    const cured = H923.addictionBook() ? ad.filter((x) => H923.recoveryDone(x, time)) : [];
+    if (newly.length || cured.length) {
       for (const x of newly) x.withdrawalNoted = true;
+      for (const x of cured) { x.addicted = false; x.recovering = -1; x.rise = 0; x.riseAtKick = 0; x.withdrawalNoted = false; }
       await a.update({ 'system.addictions': ad });
-      await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: a }), content: `<p><strong>${tx('SR2E.Card.Actor.isInWithdrawal', { name: escText(a.name) })}</strong> ${tx('SR2E.Card.Actor.fromTnOnEveryTestUntil', { newly: escText(newly.map((x) => x.drug).join(', ')), addictionWithdrawalTn: RULES.HEALTH.addiction.withdrawalTn })}</p>` });
+      if (newly.length) await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: a }), content: `<p><strong>${tx('SR2E.Card.Actor.isInWithdrawal', { name: escText(a.name) })}</strong> ${tx('SR2E.Card.Actor.fromTnOnEveryTestUntil', { newly: escText(newly.map((x) => x.drug).join(', ')), addictionWithdrawalTn: H923.addictionBook() ? RULES.HEALTH_V923.addictionBook.forcedWithdrawalTn : RULES.HEALTH.addiction.withdrawalTn })}</p>` });
+      if (cured.length) await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: a }), content: `<p><strong>${escText(a.name)}</strong> ${tx('SR2E.Card.Actor.recovered923', { drugs: escText(cured.map((x) => x.drug).join(', ')) })}</p>` });
     }
   }
 
@@ -8102,6 +8220,7 @@ export class SR2Actor extends Actor {
       damageType = 'stun';
       extras.armorKind = RULES.STUN_WEAPONS.armorKind;
       extras.armorMultiplier = RULES.STUN_WEAPONS.armorMultiplier;
+      extras.shock = true;
       notes.push(tx('SR2E.Card.Actor.stunWeapon'));
     } else if (charge && !charge.stun) notes.push(charge.note);
     if ((opts.barrierArmor ?? 0) > 0) {
@@ -8833,6 +8952,7 @@ export class SR2Actor extends Actor {
       counter.damageType = 'stun';
       extras.armorKind = RULES.STUN_WEAPONS.armorKind;
       extras.armorMultiplier = RULES.STUN_WEAPONS.armorMultiplier;
+      extras.shock = true;
       // A stun baton spends a charge per blow, a parry included.
       if (charge.spend > 0 && typeof wpn.update === 'function') await wpn.update({ 'system.ammo': Math.max(0, Number(ws.ammo ?? 0) - charge.spend) });
     }
@@ -8941,7 +9061,7 @@ export class SR2Actor extends Actor {
   static async urrAfterFirstAid(healer: any, patient: any, snap: any, wasDying: boolean): Promise<string> {
     const h = snap.heal;
     let out = '';
-    if (RULES.URR_V80.hsFirstAidRetry) {
+    if (H923.firstAidRetryOn()) {  // v0.92.3: or by the book (RULES.HEALTH_V923.firstAidRetry)
       const by = { ...((patient.getFlag?.(SYSTEM_ID, 'firstAidBy') as Record<string, number> | undefined) ?? {}) };
       const mine = Number(healer.findSkill?.(RULES.HEALING.firstAid.skill)?.system?.rating ?? 0);
       if (!(Number(by[h.track]) >= mine)) { by[h.track] = mine; await patient.setFlag?.(SYSTEM_ID, 'firstAidBy', by); }
@@ -8996,6 +9116,8 @@ export class SR2Actor extends Actor {
     } else if (p.kind === 'trauma') {
       // v0.80.0 (RULES.URR_V80.hsTraumaPatch 'bodyTest'): natural Body vs 4 + dermal armor / blood filter rating.
       const tp = traumaPatchTest(Number(target.system.attributes?.body?.natural ?? target.system.attributes?.body?.total ?? 0), target.items ?? []);
+      // v0.92.3 (Core p. 114): a trauma patch makes the later permanent damage test harder (+2).
+      if (H923.permanentDamageTn(false) !== null) await target.setFlag?.(SYSTEM_ID, 'traumaPatched923', true);
       if (tp) text = (await SR2Actor.urrSelfStabilise(target, tp.dice, tp.tn, tp.modifiers, tx('SR2E.Card.Actor.traumaPatchSelfStabilisationNaturalBody'))) ? tx('SR2E.Card.Actor.stabilisedNoLongerLosingBoxesWhile') : tx('SR2E.Card.Actor.theBodyTestFailsStillBleeding');
       else await target.update({ 'system.care.stabilised': true });
       if (!tp) text = tx('SR2E.Card.Actor.stabilisedNoLongerLosingBoxesWhile');
@@ -9051,8 +9173,14 @@ export class SR2Actor extends Actor {
     // Caught fire outside this combat (or in an earlier one): it starts burning from this Combat Turn.
     if (f.combatId !== c.id) { await a.setFlag(SYSTEM_ID, 'onFire', { combatId: c.id, round }); return; }
     if (round <= f.round) return;
-    await a.setFlag(SYSTEM_ID, 'onFire', { ...f, round });
-    await a.resistHazard?.('fire', RULES.COMBAT.burning.amount);
+    // v0.92.3 (RULES.HEALTH_V923.burning 'rising', Grimoire p. 113): 6M at the end of the first turn, +2 Power each turn after.
+    const burnt = Math.max(0, Math.floor(Number((f as any).turns) || 0)) + 1;
+    await a.setFlag(SYSTEM_ID, 'onFire', { ...f, round, turns: burnt });
+    const bd = H923.burningDamage(burnt);
+    if (bd && !a.immunities?.().fire) {
+      const fa = RULES.HAZARDS.fire;
+      await a.resistDamage?.({ power: bd.power, level: bd.level, type: 'physical', armor: Math.floor(Number(a.armorRating?.(fa.armorKind) ?? 0) * fa.armorFraction), ...(RULES.GEAR.cyberDamage.nonAttack ? { cyberCheck: { location: '' } } : {}) });
+    } else if (!bd) await a.resistHazard?.('fire', RULES.COMBAT.burning.amount);
     await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: a }), content: `<p><strong>${escText(a.name)}</strong> ${tx('SR2E.Card.Actor.isStillBurning')} <button type="button" data-sr2e-action="putOutFire">${tx('SR2E.Card.Actor.putOutTheFlames')}</button></p>`, flags: { [SYSTEM_ID]: { putOutFire: { actorUuid: a.uuid } } } });
   }
 
@@ -9267,6 +9395,28 @@ export class SR2Actor extends Actor {
       : armorAfterAmmo(this.armorRating(kind, opts), damage.armorMultiplier ?? 1) + Math.max(0, damage.extraArmor ?? 0);
     await this.resistDamage({ power: damage.power, level: damage.level, type: damage.damageType, armor, poolDice, knockdown: !damage.black, knockdownMelee: damage.melee, ...(damage.cleanMiss80 ? { cleanMiss80: damage.cleanMiss80 } : {}), ...(damage.ignoreArmor || damage.elemental ? {} : { armorKind: kind }), ...(vuln ? { noRegen: true } : {}),
       ...(damage.black ? {} : { cyberCheck: { location: damage.calledLocation ?? '' } }), ...(damage.infection ? { infection: damage.infection } : {}), ...(damage.toxinHit ? { toxinHit: damage.toxinHit } : {}) });
+    // v0.92.3 (RULES.HEALTH_V923.shock 'disorient', Core p. 103): a stun weapon's hit disorients the target.
+    if (damage.shock) await this.shockDisorient(Number(damage.power) || 0, this.armorRating('impact', opts));
+  }
+
+  /**
+   * v0.92.3 (RULES.HEALTH_V923.shock 'disorient', Core p. 103): after a stun weapon's hit, Body or Willpower (the
+   * higher) vs 4; disoriented (+2 to every TN) for Power − ½ impact armor − successes Combat Turns.
+   */
+  async shockDisorient(power: number, impactArmor: number, fromName = ''): Promise<number> {
+    if (RULES.HEALTH_V923.shock !== 'disorient' || this.type === 'vehicle' || !this.sys.attributes?.body) return 0;
+    const attr: AttributeKey = Number(this.sys.attributes.willpower?.total ?? 0) > Number(this.sys.attributes.body.total ?? 0) ? 'willpower' : 'body';
+    const rolls: any[] = [];
+    const r = await successTest({ dice: Number(this.sys.attributes[attr].total ?? 0), targetNumber: Math.max(RULES.MIN_TARGET_NUMBER, Number(RULES.HEALTH_V923.shockTest.tn) || 4), modifiers: [], roll: foundryRoller(rolls) });
+    const turns = H923.shockTurns(power, impactArmor, r.successes) ?? 0;
+    const tn = Math.floor(Number(RULES.HEALTH_V923.shockTest.testsTn) || 0);
+    if (turns > 0 && tn) {
+      const combat: any = (game as any).combat;
+      const until = effectEnds({ round: combat?.started ? Number(combat.round ?? 0) : null, worldTime: sysNow(), seconds: turns * Math.max(1, Number(RULES.COMBAT_TURN_SECONDS) || 3), combatId: combat?.started ? String(combat.id ?? '') : null });
+      await SR2Actor.setPowerEffect(String(this.uuid), { id: 'shockDisoriented923', fromUuid: '', fromName: fromName || tx('SR2E.Card.Actor.shockWeapon923'), name: tx('SR2E.Card.Actor.disoriented923'), attributes: {}, testsTn: tn, until } as FxEntry);
+    }
+    await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), rolls, content: `<p><strong>${escText(this.name)}</strong> ${turns > 0 ? tCount(turns, 'SR2E.Card.Actor.shockDisoriented923', { attribute: cap(attr), successes: r.successes, tn }) : tx('SR2E.Card.Actor.shockShrugged923', { attribute: cap(attr), successes: r.successes })}</p>` });
+    return turns;
   }
 
   /** Resist incoming damage: Body test against (Power - armor), then stage down and mark the monitor. */
@@ -9600,9 +9750,15 @@ export class SR2Actor extends Actor {
     let healContext: TestSnapshot['heal'] | undefined;
     if (heals) {
       const patient: any = targets[0] ?? this;
-      targetNumber = healingTargetNumber(patient.system.derived?.essence ?? 6, sp.targetNumber);
-      tnLabel = RULES.SPELLCRAFT.healing.tn === 'essence' ? tx('SR2E.Card.Actor.sEssence', { healingBase: RULES.SPELLCRAFT.healing.base, patientName: patient.name }) : tx('SR2E.Card.Actor.spellTn');
+      // v0.92.3 (RULES.HEALTH_V923.treatTn 'book', Core p. 155): Treat 8 − Essence, Heal 10 − Essence.
+      targetNumber = healingTargetNumber(patient.system.derived?.essence ?? 6, sp.targetNumber, Boolean(sp.treat));
+      tnLabel = RULES.SPELLCRAFT.healing.tn === 'essence' ? tx('SR2E.Card.Actor.sEssence', { healingBase: H923.healingSpellBase(Boolean(sp.treat)), patientName: patient.name }) : tx('SR2E.Card.Actor.spellTn');
       const track = (sp.healTrack ?? 'physical') as 'physical' | 'stun';
+      // v0.92.3 (RULES.HEALTH_V923.spellsHealStun 'no', Core p. 112): no spell recovers Stun.
+      if (track === 'stun' && !H923.spellsHealStun()) {
+        ui.notifications?.warn?.(tx('SR2E.Notify.Actor.noSpellHealsStun', { spellName: escHtml(spell.name) }));
+        return null;
+      }
       const healedAt = patient.getFlag?.(SYSTEM_ID, 'healedAt') as Record<string, number> | undefined;
       if (RULES.SPELLCRAFT.healing.oncePerWound && healedAt && typeof healedAt[track] === 'number' && patient.system.monitor[track] <= healedAt[track]) {
         ui.notifications?.warn?.(tx('SR2E.Notify.Actor.sDamageHasAlreadyBeenHealed', { patientName: escHtml(patient.name), track }));
@@ -9720,7 +9876,9 @@ export class SR2Actor extends Actor {
       // v0.79.0 (RULES.DOCS_V79.magicPool.castingCap 'magic', SR2 p85): at most Magic-rating Spell Pool dice on the success test.
       { targetNumber, poolDice: castingPoolDice(opts.poolDice ?? 0, Number(this.sys.derived?.magic ?? 0)), pool: 'spell', spellUse: castUse, magical: true, sightHandled: true,
         modifiers: [...(touch ? [] : this.#spellEnvironment(elemental, targets[0] ?? vehicles[0]?.actor ?? null)), ...(combat || elemental || resistAttribute ? SR2Actor.attackedMods(targets) : []),
-          ...(barrierTn ? [{ label: tx('SR2E.Card.Mod.across', { barrierName: barrier.name }), value: barrierTn }] : [])],
+          ...(barrierTn ? [{ label: tx('SR2E.Card.Mod.across', { barrierName: barrier.name }), value: barrierTn }] : []),
+          // v0.92.3 (RULES.HEALTH_V923.bodyIndexHealing 'magical', Shadowtech bionetics; Ka-Ge 12 Q2): ½ Body Index on magical healing.
+          ...(heals && H923.bodyIndexOn('spell') ? SR2Actor.bodyIndexHealingMods(targets[0] ?? this) : [])],
         ...(opts.exclude?.length ? { exclude: opts.exclude } : {}) },
       {
         kind: elemental ? 'attack' : heals ? 'heal' : 'spell',
@@ -9889,7 +10047,7 @@ export class SR2Actor extends Actor {
     const vehicles = all.filter((t) => t.type === 'vehicle');
     let base = Number(sp.targetNumber ?? 4);
     let baseLabel = tx('SR2E.Text.Actor.spellTn');
-    if (heals) { const p = people[0] ?? this; base = healingTargetNumber(p.system.derived?.essence ?? 6, sp.targetNumber); baseLabel = tx('SR2E.Text.Actor.sEssence', { name: p.name }); }
+    if (heals) { const p = people[0] ?? this; base = healingTargetNumber(p.system.derived?.essence ?? 6, sp.targetNumber, Boolean(sp.treat)); baseLabel = tx('SR2E.Text.Actor.sEssence', { name: p.name }); }
     else if (resist && people.length) {
       base = areaTargetNumber(people.map((t) => t.system.attributes[resist]?.total ?? 0));
       baseLabel = people.length === 1 ? tx('SR2E.Text.Actor.sAttribute', { name: people[0].name, attribute: cap(resist) }) : `${RULES.MAGIC.areaTn} ${cap(resist)}`;
@@ -11710,6 +11868,33 @@ export class SR2Actor extends Actor {
         <p><button type="button" data-sr2e-action="magicLoss">${tx('SR2E.Card.Actor.magicLossTestD6', { magicLossDice: RULES.MAGIC_LOSS.dice })}</button></p>`,
       flags: { [SYSTEM_ID]: { magicLossFor: this.uuid } },
     });
+  }
+
+  /** v0.92.3 (Core p. 114): Body (dermal armor counts) vs 4, +2 after a trauma patch; the card says what is lost, the GM applies it. */
+  async rollPermanentDamage(): Promise<H923.PermanentDamageOutcome & { successes: number }> {
+    const patched = Boolean(this.getFlag?.(SYSTEM_ID, 'traumaPatched923'));
+    const tn = H923.permanentDamageTn(patched) ?? 4;
+    const dermal = [...this.items].filter((i: any) => i.type === 'cyberware' && i.system?.installed !== false && !i.system?.bioware && i.system?.kind !== 'cyberlimb' && i.system?.kind !== 'filtration' && Number(i.system?.armorBallistic ?? 0) > 0)
+      .reduce((n: number, i: any) => n + Math.floor(Number(i.system.armorBallistic) || 0), 0);
+    const rolls: any[] = [];
+    const r = await successTest({ dice: Number(this.sys.attributes.body.total ?? 0) + dermal, targetNumber: tn, modifiers: [], roll: foundryRoller(rolls) });
+    const faces = r.successes < 2 ? await foundryRoller(rolls)(2) : [1, 1];
+    const out = H923.permanentDamageOutcome(r.successes, faces[0] ?? 1, faces[1] ?? 1);
+    if (patched) await clearFlag(this, 'traumaPatched923');
+    const parts: Record<string, string> = {
+      body: tx('SR2E.Card.Actor.pdBody923'), strength: tx('SR2E.Card.Actor.pdStrength923'), quickness: tx('SR2E.Card.Actor.pdQuickness923'),
+      intelligence: tx('SR2E.Card.Actor.pdIntelligence923'), willpower: tx('SR2E.Card.Actor.pdWillpower923'), reaction: tx('SR2E.Card.Actor.pdReaction923'),
+      rightArm: tx('SR2E.Card.Actor.pdRightArm923'), leftArm: tx('SR2E.Card.Actor.pdLeftArm923'), rightLeg: tx('SR2E.Card.Actor.pdRightLeg923'), leftLeg: tx('SR2E.Card.Actor.pdLeftLeg923'),
+      rightEar: tx('SR2E.Card.Actor.pdRightEar923'), leftEar: tx('SR2E.Card.Actor.pdLeftEar923'), rightEye: tx('SR2E.Card.Actor.pdRightEye923'), leftEye: tx('SR2E.Card.Actor.pdLeftEye923'),
+    };
+    const what = out.kind === 'none' ? tx('SR2E.Card.Actor.permanentDamageNone923')
+      : out.kind === 'attribute' ? tx('SR2E.Card.Actor.permanentDamageAttribute923', { attribute: parts[out.result] ?? out.result })
+      : tx('SR2E.Card.Actor.permanentDamageLimb923', { part: parts[out.result] ?? out.result });
+    await ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: this }), rolls,
+      content: `<div class="sr2e-roll"><h3>${tx('SR2E.Card.Actor.permanentDamageTest923')}</h3><p>${tx('SR2E.Card.Actor.permanentDamageRoll923', { dice: Number(this.sys.attributes.body.total ?? 0) + dermal, dermal, tn, successes: r.successes })}</p><p><strong>${escText(this.name)}</strong>: ${what}</p></div>`,
+    });
+    return { ...out, successes: r.successes };
   }
 
   /** Roll the Magic loss test: the dice total below Magic costs a point of (natural) Magic. */

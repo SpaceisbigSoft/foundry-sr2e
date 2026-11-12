@@ -72,8 +72,11 @@ export const RULES = {
   ] as ReadonlyArray<readonly [number, number]>,
   /** If true, Physical and Stun wound modifiers add together; if false, the worse one applies. VERIFY */
   WOUNDS_CUMULATIVE: true,
-  /** Stun boxes beyond a full Stun track convert to Physical at this many stun boxes per 1 physical box. VERIFY */
-  STUN_OVERFLOW_PER_PHYSICAL_BOX: 2,
+  /**
+   * Stun boxes beyond a full Stun track convert to Physical at this many stun boxes per 1 physical box.
+   * v0.92.3: 1, box for box (Core p. 111: Serious Stun on 6 boxes fills 4 Stun and 2 Physical); was 2.
+   */
+  STUN_OVERFLOW_PER_PHYSICAL_BOX: 1,
 
   /**
    * Essence cost multiplier by cyberware grade (standard, alpha, beta, delta). VERIFY
@@ -428,8 +431,9 @@ export const RULES = {
 
   /**
    * Magic loss: when a magician's Physical damage reaches Deadly (a full track), they roll
-   * `dice`d6; if the total is below their (natural) Magic they lose `loss` point(s). VERIFY:
-   * the book's trigger and comparison may differ.
+   * `dice`d6; if the total is below their (natural) Magic they lose `loss` point(s).
+   * v0.92.3: at or below it by the book (RULES.HEALTH_V923.magicLoss, Core p. 115); treatment without the magician +2
+   * and drastic surgery call for the test too (HEALTH_V923.magicLossUntreated, surgeryMagicLoss).
    */
   MAGIC_LOSS: { enabled: true, dice: 2, loss: 1, compareTo: 'magic' as 'magic' | 'fixed', fixed: 7 },
 
@@ -2837,7 +2841,7 @@ export const RULES = {
    */
   MAGIC_V56: {
     spellEffects: { reflexesExclusive: true, step: 1, capAtForce: true },
-    healing: { woundLevels: [[1, 'L'], [3, 'M'], [6, 'S'], [10, 'D']] as ReadonlyArray<readonly [number, 'L' | 'M' | 'S' | 'D']>, treatHours: 1, treatBlock: false },
+    healing: { woundLevels: [[1, 'L'], [3, 'M'], [6, 'S'], [10, 'D']] as ReadonlyArray<readonly [number, 'L' | 'M' | 'S' | 'D']>, treatHours: 1, /* v0.92.3: Treat "must" be within one hour (Core p. 155): true (was false, a warning) */ treatBlock: true },
     touch: { skill: 'Unarmed Combat', tn: 4, opposed: true, defense: 'quickness' as 'quickness' | 'reaction' | 'body', reachMetres: 2, distance: 'warn' as 'warn' | 'block' | 'off' },
     learning: { enabled: true, skill: 'Sorcery', daysPerForce: 1, site: 'warn' as 'warn' | 'block' | 'off' },
     permanent: { enabled: true, turnsPerForce: 1, secondsPerTurn: 0, undoHealing: true },

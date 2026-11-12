@@ -723,6 +723,8 @@
     <label>{{sr2eT "SR2E.UI.crashLevel"}} <select name="system.toxin.crashLevel">{{selectOptions crashLevels selected=system.toxin.crashLevel valueAttr="key" labelAttr="label"}}</select></label>
     <label>{{sr2eT "SR2E.UI.addiction"}} <input type="number" name="system.toxin.addiction" value="{{system.toxin.addiction}}" min="0"></label>
     {{#if system.toxin.addiction}}<label>{{sr2eT "SR2E.UI.addictionType"}} <select name="system.toxin.addictionType">{{selectOptions addictionTypes selected=system.toxin.addictionType valueAttr="key" labelAttr="label"}}</select></label>{{/if}}
+    {{#if system.toxin.addiction}}<label>{{sr2eT "SR2E.UI.toleranceRating"}} <input type="number" name="system.toxin.tolerance" value="{{system.toxin.tolerance}}" min="0"></label>
+    <label>{{sr2eT "SR2E.UI.strengthRating"}} <input type="number" name="system.toxin.strength" value="{{system.toxin.strength}}" min="0"></label>{{/if}}
   </div>
   <div class="sr2e-row">
     <span>{{sr2eT "SR2E.UI.andWhileItLasts"}}</span>

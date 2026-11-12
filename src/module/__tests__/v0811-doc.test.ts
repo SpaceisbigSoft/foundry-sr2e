@@ -1042,7 +1042,8 @@ describe('round 2 H6: smaller fixes', () => {
   });
 
   test('V-DOC 9: a burning character not in the tracker burns on the round of the combat on their scene', async () => {
-    await withRule(RULES.COMBAT.burning, 'enabled', true, async () => {
+    // v0.92.3: the old flat burn through resistHazard (the book's rising burn: v0923-health tests).
+    await withRule(RULES.HEALTH_V923, 'burning', 'flat', async () => withRule(RULES.COMBAT.burning, 'enabled', true, async () => {
       const a = who({ name: 'Torch' });
       let burned = 0;
       a.resistHazard = async () => { burned++; };
@@ -1054,7 +1055,7 @@ describe('round 2 H6: smaller fixes', () => {
       g.game.combats = { get: (id: string) => (id === 'A' ? A : undefined) };
       try { await SR2Actor.burningTick(a, 2, 'A'); } finally { delete g.game.combats; delete g.game.scenes; }
       assert.equal(burned, 1);
-    });
+    }));
   });
 
   test('V-DOC 12: a paralysed observer still perceives; an unconscious one doesn\'t', async () => {
@@ -1138,7 +1139,7 @@ describe('round 3 item 9 (V2 #10): two PCs cover each other whatever their dispo
 
 describe('round 3 item 10 (V2 #11): burning in a combat linked to no scene', () => {
   test('someone on fire outside the tracker burns on its rounds, as before v0.81.1', async () => {
-    await withRule(RULES.COMBAT.burning, 'enabled', true, async () => {
+    await withRule(RULES.HEALTH_V923, 'burning', 'flat', async () => withRule(RULES.COMBAT.burning, 'enabled', true, async () => {
       const a = who({ name: 'Torch' });
       let burned = 0;
       a.resistHazard = async () => { burned++; };
@@ -1147,7 +1148,7 @@ describe('round 3 item 10 (V2 #11): burning in a combat linked to no scene', () 
       g.game.combats = { get: (id: string) => (id === 'A' ? A : undefined) };
       try { await SR2Actor.burningTick(a, 2, 'A'); } finally { delete g.game.combats; }
       assert.equal(burned, 1);
-    });
+    }));
   });
 });
 

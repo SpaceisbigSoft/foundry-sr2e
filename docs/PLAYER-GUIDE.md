@@ -140,7 +140,7 @@ v0.79.0 corrected rules to follow the official SR2 rulebooks (the core rules and
 - **Seeing:** minimal light is +6 for normal eyes. Natural (metatype) low-light and thermographic vision are better than cybereyes. Glare, mist and heavy smoke are new choices, and rain and fog count as light or heavy smoke.
 - **Melee:** the shorter reach takes +1 per point on its own roll; superior position (−1) is on.
 - **Notice:** tick every sight row that applies (very small, partly hidden, brightly colored, very obvious, not obvious); the result reads in the book's four steps.
-- **Healing:** Physical damage heals in stages, one wound level per Rest test (days, not hours); a failed first self-recovery test means you need a doctor. First aid is TN 4/6/8/10, +4 without a medkit, +2 for a magician patient.
+- **Healing:** Physical damage heals in stages, one wound level per Rest test (days, not hours); a failed first self-recovery test means you need a doctor. First aid is TN 4/6/8/10, +4 without a medkit, +2 for a magician patient. Since v0.92.3 (the book, Core pp. 111–115): first aid treats Physical damage only and lowers the wound one level (a Deadly wound is only stabilised; a failed try gives the patient a Body test, and a better healer may try again); Stun past a full track goes onto Physical box for box; a dying character loses a box every 10 minutes and dies only past their natural Body; Stun recovery is the higher of Body and Willpower vs 2 + wound modifiers; a Deadly wound offers a permanent damage test; Treat is 8 − Essence and half the Body Index adds to magical healing only.
 - **Social:** Etiquette, Leadership and Negotiation roll only your side, against the target's attribute; one success gets you what you asked. Pick what you want on the book's scale, from "advantageous to them" (−2) to "disastrous to them" (+6). A suspicious NPC is +2.
 - **Karma:** an active skill costs the new rating × 2, a concentration × 1.5 and a specialization × 1, whatever your attribute.
 - **Magic:** your Spell Pool is your Sorcery rating (plus an active power focus); at most your Magic rating of it goes on a spell's success test, any amount on drain. Spell defense dice you use are spent until the pools refresh. An ally's spell defense can protect you when you share a player, a fight or a scene (and aren't on opposite sides), or when its mage covers you: target your tokens and press **Cover targets** next to the spell defense box.
@@ -434,7 +434,7 @@ The Current tab's Attributes table shows the same values read only: hover a tota
 
 Two tracks, Physical and Stun. Click a box to set the damage to that box; click the last filled box again to clear it. Each track is split into its wound groups with a divider and a label: boxes 1–2 **+1**, 3–5 **+2**, 6–9 **+3** to every target number, then box 10 (**D** on Physical: dying; **KO** on Stun: unconscious). The group the damage has reached is underlined.
 
-**Overflow** sits beside Physical: one box per point of the character's Body (one more under the [Unified Rules Revamp](#the-unified-rules-revamp-alternate-rules)). It stays grey until the Physical track is full, then turns red and fills with damage past box 10. Filling its last box (marked ✕) means death. Spirits have no overflow. The Matrix tracks (a persona, IC) are grouped the same way, with **Crash** at the end.
+**Overflow** sits beside Physical: one box per point of the character's natural Body, plus one more, the death box (the book since v0.92.3; under the [Unified Rules Revamp](#the-unified-rules-revamp-alternate-rules) the Body with augmentations, plus one). It stays grey until the Physical track is full, then turns red and fills with damage past box 10. Filling its last box (marked ✕) means death. Spirits have no overflow. The Matrix tracks (a persona, IC) are grouped the same way, with **Crash** at the end.
 
 The **−** and **+** beside each track take off or add one box (past box 10 on Physical, into Overflow). Hovering a box shows which boxes a click would fill or clear. With the keyboard, <kbd>Tab</kbd> to a box and press <kbd>Enter</kbd> or <kbd>Space</kbd>.
 
@@ -489,7 +489,7 @@ The Current tab's **In effect** list shows the same things. On the Gear tab, **I
 
 These show on the Gear tab when they apply.
 
-- **Addictions**: the drug, rating and type, whether addicted (and in withdrawal), days clean, or recent doses while not yet addicted. **Kick the habit** when you can try.
+- **Addictions**: the drug, your current rating and type, whether addicted (and in withdrawal, or kicking it), days clean, or recent doses while not yet addicted, and whether you have become immune. **Kick the habit** when you can try (by the book, any time the GM agrees: Willpower vs the rating +1, or +3 for a physical addiction; then the rating falls 1 every 3 days, at +2 to every TN, until it is back to the drug's own). An addict needs a dose every Willpower × 4 hours (Body × 4 for a physical addiction), or goes into withdrawal at +3.
 - **Diseases**: progress toward recovery, a *Treated* tick box, **Resist** when a test is due and **Spread…**.
 
 The GM can clear either with ×. A radiation dose shows as a line between them (the GM's × clears it).

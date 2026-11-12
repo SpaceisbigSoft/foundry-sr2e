@@ -7,6 +7,20 @@ import { test, describe, before, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { RULES } from '../rules/index.ts';
 import { urrMode } from '../rules/__tests__/urrmode.ts';
+import { oldWay } from '../rules/__tests__/oldway.ts';
+import { after } from 'node:test';
+
+// v0.92.3: the "book" in these tests is the v0.92.2 Book Rules; the book's own rules for these switches are now the
+// defaults (RULES.HEALTH_V923, v0923-health tests), so the old ways are set here for the whole file. The Revamp's
+// results (urrMode) don't depend on them.
+let restore923: () => void = () => {};
+before(() => {
+  restore923 = oldWay({ 'HEALTH_V923.death': 'total', 'HEALTH_V923.bleed': 'bodyTurns', 'HEALTH_V923.stunRecovery': 'old', 'HEALTH_V923.firstAid': 'boxes',
+    'HEALTH_V923.firstAidTime': 'hidden', 'HEALTH_V923.selfStabilise': 'none', 'HEALTH_V923.firstAidRetry': 'once', 'HEALTH_V923.traumaPatch': 'stabilise',
+    'HEALTH_V923.magicLossUntreated': 'none', 'HEALTH_V923.breathHold': 'none', 'HEALTH_V923.falling': 'old', 'HEALTH_V923.drowning': 'test',
+    'HEALTH_V923.bodyIndexHealing': 'natural', 'HEALTH_V923.firstAidStun': 'both', 'HEALTH_V923.permanentDamage': 'none', STUN_OVERFLOW_PER_PHYSICAL_BOX: 2 });
+});
+after(() => restore923());
 
 const g = globalThis as any;
 const faces: number[] = [];

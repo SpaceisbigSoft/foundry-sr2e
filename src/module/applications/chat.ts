@@ -1103,6 +1103,19 @@ async function onMagicLoss(message: any, button: HTMLButtonElement): Promise<voi
   await markCardDone(message, actor, 'magicLossRolled');
 }
 
+/** v0.92.3 (RULES.HEALTH_V923.permanentDamage, Core p. 114): roll the Deadly wound's permanent damage test (owner or GM). */
+async function onPermanentDamage923(message: any, button: HTMLButtonElement): Promise<void> {
+  const uuid = message.getFlag(SYSTEM_ID, 'permanentDamageFor') as string | undefined;
+  const actor: any = uuid ? await fromUuid(uuid) : null;
+  if (!actor) return ui.notifications.warn(tx('SR2E.Notify.Chat.thatCharacterNoLongerExists'));
+  if (!actor.isOwner) return ui.notifications.warn(tx('SR2E.Notify.Chat.onlySOwnerOrTheGm4', { actorName: escHtml(actor.name) }));
+  if (!(await playerMay(message, actor, origin(message), tx('SR2E.Card.Chat.rollsPermanentDamage923', { actorName: actor.name })))) return;
+  if (cardDone(message, actor, 'permanentDamageRolled')) return ui.notifications.warn(tx('SR2E.Notify.Chat.alreadyRolled'));
+  button.disabled = true;
+  await actor.rollPermanentDamage?.();
+  await markCardDone(message, actor, 'permanentDamageRolled');
+}
+
 /** Use a repeating power again on the same targets. */
 async function onRepeatPower(message: any): Promise<void> {
   const repeat = message.getFlag(SYSTEM_ID, 'repeat') as { powerUuid: string; targetUuids: string[]; modifiers?: any[]; exclude?: string[] } | undefined;
@@ -1999,6 +2012,22 @@ async function onResistToxin(message: any, button: HTMLButtonElement): Promise<v
   button.disabled = true;
   await markCardDone(message, actor, key);
   await actor.resistToxin(t);
+}
+
+/**
+ * v0.92.3 (Core p. 186): still in contact with the toxin when its speed period passes: everyone on the card resists
+ * again (the GM). A fresh card, with the toxin's onset counted from now.
+ */
+async function onReexposeToxin923(message: any): Promise<void> {
+  if (!game.user?.isGM) return ui.notifications.warn(tx('SR2E.Notify.Chat.onlyTheGm923'));
+  const list = listFlag(message.getFlag(SYSTEM_ID, 'toxins')).filter((t: any) => t && typeof t === 'object').map((t: any) => boundToxin(t));
+  const first: any = list[0];
+  if (!first || first.kind === 'disease') return;
+  const targets = list.map((t: any) => String(t.targetUuid ?? '')).filter(Boolean);
+  const by: any = (first.sourceUuid ? await fromUuid(first.sourceUuid) : null) ?? (targets[0] ? await fromUuid(targets[0]) : null);
+  if (!by?.exposeToxinState) return;
+  const { targetUuid: _t, onsetAt: _o, sourceUuid: _s, ...tox } = first;
+  await by.exposeToxinState({ ...tox, kind: tox.kind || 'toxin', speed: tox.speed ?? 'immediate', needsWound: false }, targets, tx('SR2E.Card.Chat.stillExposed923', { name: String(tox.name ?? '') }));
 }
 
 /** v0.55.0: put out the flames (the burning actor's owner or the GM). */
@@ -3243,6 +3272,7 @@ function dispatch(message: any, button: HTMLButtonElement, action: string): Prom
   else if (action === 'createSpirit') return onCreateSpirit(message, button);
   else if (action === 'repeatPower') return onRepeatPower(message);
   else if (action === 'magicLoss') return onMagicLoss(message, button);
+  else if (action === 'permanentDamage923') return onPermanentDamage923(message, button);
   else if (action === 'dumpShock') return onDumpShock(message, button);
   else if (action === 'applyTally') return onApplyTally(message, button);
   else if (action === 'knockdown') return onKnockdown(message, button);
@@ -3265,6 +3295,7 @@ function dispatch(message: any, button: HTMLButtonElement, action: string): Prom
   else if (action === 'overload') return onOverload(message, button);
   else if (action === 'adrenalCrash') return onAdrenalCrash(message, button);
   else if (action === 'resistToxin') return onResistToxin(message, button);
+  else if (action === 'reexposeToxin923') return onReexposeToxin923(message);
   else if (action === 'morale') return onMorale(message, button);
   else if (action === 'buyItem') return onBuyItem(message, button);
   else if (action === 'haggle') return onHaggle(message, button);

@@ -44,6 +44,7 @@ import {
 import { legworkDifficulties, legworkLevelDice, encephalonFits } from "../rules/index.ts";
 import { doctoringCareOptions } from "../rules/index.ts";
 import { buysByFinding } from "../rules/index.ts";
+import { addictWho, addictionBook, addictionRatingNow, firstAidOnStun, firstAidByLevelOn, fallingBook, drowningBoxes, stunRecoveryBaseTn } from "../rules/health923.ts";
 import { REFERENCE_DRAG_TYPE } from "../rules/index.ts";
 import { dropReferenceEntry } from "./reference.ts";
 import { isCarried, tweakKeyChoices, normalizeTweaks, tweakText, TWEAK_TARGETS, TWEAK_TARGET_KEYS, ACCESSORY_FIELD_KEYS, TWEAK_KEYS, TWEAK_VALUE_MAX, TWEAK_MAX, essenceLoss as wareEssenceLoss, type TweakTarget } from "../rules/index.ts";
@@ -515,8 +516,10 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       cyberWeapons: (actor.cyberWeapons?.() ?? []).map((w: any) => weaponRow(actor, w)),
       softSkills: actor.softSkills?.() ?? [],
       addictions: (actor.system.addictions ?? []).map((a: any, index: number) => {
-        const st = withdrawalState(a, sysNow());
-        return { ...a, index, withdrawal: a.addicted && st.withdrawal, daysClean: st.daysClean, canKick: a.addicted && st.canKick, recentCount: (a.recent ?? []).length };
+        // v0.92.3 (RULES.HEALTH_V923.addiction 'book'): withdrawal by the addict's Body or Willpower; kicking at any time.
+        const st = withdrawalState(a, sysNow(), addictWho(actor.system));
+        return { ...a, index, withdrawal: a.addicted && st.withdrawal, daysClean: st.daysClean, canKick: a.addicted && st.canKick, recentCount: (a.recent ?? []).length,
+          ...(addictionBook() ? { rating: addictionRatingNow(a, sysNow()), recoveringNow: Boolean(st.recovering) } : {}) };
       }),
       diseases: (actor.system.diseases ?? []).map((d: any, index: number) => ({ ...d, index,
         due: d.pending ? tx('SR2E.App.Sheets.dueNow') : tx('SR2E.App.Sheets.nextInHours', { hours: Math.max(0, Math.round((d.nextAt - sysNow()) / 3600)) }),
@@ -1944,6 +1947,9 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const H = RULES.HAZARDS;
     // v0.72.0 (O12): heat and electricity (RULES.HEALTH_V72.hazards).
     const H72: any = RULES.HEALTH_V72.hazards;
+    // v0.92.3 (RULES.HEALTH_V923.falling, drowning): the book's falling and drowning, ahead of the older summary.
+    const lines923 = [fallingBook(0, 0) ? tx('SR2E.Dialog.Sheet.hazardFallingBook923') : "", drowningBoxes(0) !== null ? tx('SR2E.Dialog.Sheet.hazardDrowningBook923') : ""].filter(Boolean);
+    const hint923 = lines923.length ? `<p class="hint">${lines923.join(" ")}</p>` : "";
     const choice = await foundry.applications.api.DialogV2.prompt({
       window: { title: tx('SR2E.Dialog.Sheet.hazard2', { actorName: actor.name }) },
       content: `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.hazard')}</label><select name="kind"><option value="falling">${tx('SR2E.Dialog.Sheet.falling')}</option><option value="fire">${tx('SR2E.Dialog.Sheet.fire__hazard')}</option><option value="drowning">${tx('SR2E.Dialog.Sheet.drowning')}</option><option value="cold">${tx('SR2E.Dialog.Sheet.coldExposure')}</option><option value="fatigue">${tx('SR2E.Dialog.Sheet.fatigue')}</option><option value="radiation">${tx('SR2E.Dialog.Sheet.radiation')}</option><option value="suffocation">${tx('SR2E.Dialog.Sheet.suffocation')}</option>${H72.heat.enabled ? `<option value="heat">${tx('SR2E.Dialog.Sheet.heatExposure')}</option>` : ""}${H72.electricity.enabled ? `<option value="electricity">${tx('SR2E.Dialog.Sheet.electricShock')}</option>` : ""}</select></div>
@@ -1957,6 +1963,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         ${H72.heat.enabled ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.heat')}</label><select name="heat">${H72.heat.severities.map((x: any) => `<option value="${escHtml(x.id)}">${tx('SR2E.Dialog.Sheet.tn2', { label: escHtml(x.label), tn: escHtml(x.tn) })}</option>`).join("")}</select></div>` : ""}
         ${H72.electricity.enabled ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.electricity')}</label><select name="shock">${H72.electricity.sources.map((x: any) => `<option value="${escHtml(x.id)}">${escHtml(x.label)} (${escHtml(x.power)}${escHtml(x.level)} ${escHtml(x.type)})</option>`).join("")}</select></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.electricityInsulationRating')}</label><input name="insulation" type="number" value="0" min="0"></div>` : ""}
+        ${hint923}
         <p class="hint">${tx('SR2E.Dialog.Sheet.fallingPowerPerMetreHalfImpact', { fallingPowerPerMetre: H.falling.powerPerMetre, fallingLevel: H.falling.level, drowningLevel: H.drowning.level, coldLevel: H.cold.level, fatigueLevel: H.fatigue.level, radiationLevel: RULES.HEALTH.radiation.level, suffocationTn: RULES.HEALTH.suffocation.tn, suffocationTnPerTurn: RULES.HEALTH.suffocation.tnPerTurn, suffocationLevel: RULES.HEALTH.suffocation.level, part: H72.heat.enabled ? tx('SR2E.Dialog.Sheet.heatBodyVsATnLike') : "", part2: H72.electricity.enabled ? tx('SR2E.Dialog.Sheet.electricityPartOfImpactArmorInsulation') : "" })}</p>`,
       ok: {
         label: tx('SR2E.Dialog.Sheet.roll'),
@@ -3783,13 +3790,13 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       window: { title: tx('SR2E.Dialog.Sheet.firstAidBy', { actorName: actor.name }) },
       position: { width: 440 },
       content: `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.patient')}</label><select name="patient">${patients.map(row).join("")}</select></div>
-        <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.track2__monitor')}</label><select name="track"><option value="physical">${tx('SR2E.Dialog.Sheet.physical')}</option><option value="stun">${tx('SR2E.Dialog.Sheet.stun')}</option></select></div>
+        <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.track2__monitor')}</label><select name="track"><option value="physical">${tx('SR2E.Dialog.Sheet.physical')}</option>${firstAidOnStun() ? `<option value="stun">${tx('SR2E.Dialog.Sheet.stun')}</option>` : ""}</select></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.medkit')}</label><select name="kit"><option value="">${tx('SR2E.Dialog.Sheet.none3')}</option>${kits.map((k: any) => `<option value="${escHtml(k.id)}">${tx('SR2E.Dialog.Sheet.rating6', { name: escHtml(k.name), medkitRating: escHtml(k.system.medkitRating) })}</option>`).join("")}</select></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.combatPoolDiceLeft2', { derivedCombatPoolLeft: escHtml(actor.system.derived.combatPoolLeft) })}</label><input name="pool" type="number" value="0" min="0"></div>
         ${RULES.DOCS_V79.firstAidMods === "table" ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.conditions')}</label><select name="conditions"><option value="normal">${tx('SR2E.Dialog.Sheet.normal')}</option><option value="bad">${tx('SR2E.Dialog.Sheet.bad1')}</option><option value="terrible">${tx('SR2E.Dialog.Sheet.terrible3')}</option></select></div>
         <label class="sr2e-check"><input type="checkbox" name="magician" checked> ${tx('SR2E.Dialog.Sheet.allow2IfThePatientIs')}</label>` : ""}
         <label class="sr2e-check"><input type="checkbox" name="late"> ${tx('SR2E.Dialog.Sheet.moreThanHAfterTheInjury', { windowHours: f.windowHours })}</label>
-        <p class="hint">${tx('SR2E.Dialog.Sheet.orAt4VsTnBy', { skill: f.skill, fallbackAttribute: f.fallbackAttribute, tnByLevel: f.tnByLevel.L, tnByLevelM: f.tnByLevel.M, tnByLevelS: f.tnByLevel.S, tnByLevelD: f.tnByLevel.D, part: RULES.DOCS_V79.firstAidMods === "table" ? tx('SR2E.Dialog.Sheet.noMedkit4PatientIsA') : tx('SR2E.Dialog.Sheet.theMedkitSRatingAsDice') })}</p>`,
+        <p class="hint">${tx(firstAidByLevelOn() ? 'SR2E.Dialog.Sheet.orAt4VsTnByLevel923' : 'SR2E.Dialog.Sheet.orAt4VsTnBy', { skill: f.skill, fallbackAttribute: f.fallbackAttribute, tnByLevel: f.tnByLevel.L, tnByLevelM: f.tnByLevel.M, tnByLevelS: f.tnByLevel.S, tnByLevelD: f.tnByLevel.D, part: RULES.DOCS_V79.firstAidMods === "table" ? tx('SR2E.Dialog.Sheet.noMedkit4PatientIsA') : tx('SR2E.Dialog.Sheet.theMedkitSRatingAsDice') })}</p>`,
       ok: { label: tx('SR2E.Dialog.Sheet.treat'), callback: (_e: Event, b: any) => ({ patient: b.form.elements.patient.value as string, track: b.form.elements.track.value as "physical" | "stun", kit: (b.form.elements.kit.value as string) || null, pool: Math.max(0, Math.floor(Number(b.form.elements.pool.value) || 0)), late: Boolean(b.form.elements.late.checked), conditions: (b.form.elements.conditions?.value ?? "normal") as "normal" | "bad" | "terrible", applyMagician: b.form.elements.magician ? Boolean(b.form.elements.magician.checked) : true }) },
       rejectClose: false,
     });
@@ -3827,7 +3834,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.payForHospitalCare')}</label><input name="pay" type="checkbox" checked></div>
         ${homes.length ? `<p class="hint">${tx('SR2E.Dialog.Sheet.restingAtHomeCountsWhenIt', { homes: homes.map((h: any) => `${escHtml(h.name)} (${escHtml(h.comfort)}${h.medical ? `, medical ${escHtml(h.medical)}` : ""})`).join(", "), lifestyleLevel: escHtml(actor.system.lifestyle?.level ?? tx('SR2E.Dialog.Sheet.low')) })}</p>` : ""}
         <p class="hint">${RULES.DOCS_V79.healing === "stages"
-          ? tx('SR2E.Dialog.Sheet.stunVsTnByTheWound', { attribute: escHtml(cap(n.attribute)), tnByLevel: n.tnByLevel.L, tnByLevelD: n.tnByLevel.D, periodHoursStun: n.periodHours.stun, healingStagesTnByLevel: RULES.DOCS_V79.healingStages.tnByLevel.L, tnByLevelM: RULES.DOCS_V79.healingStages.tnByLevel.M, tnByLevelS: RULES.DOCS_V79.healingStages.tnByLevel.S, tnByLevelD2: RULES.DOCS_V79.healingStages.tnByLevel.D, part: RULES.DOCS_V79.doctoring === "table" ? tx('SR2E.Dialog.Sheet.theDoctoringTableWithADoctor') : "" })
+          ? tx(stunRecoveryBaseTn() !== null ? 'SR2E.Dialog.Sheet.stunVsTnByTheWoundBook923' : 'SR2E.Dialog.Sheet.stunVsTnByTheWound', { stunTn: stunRecoveryBaseTn() ?? 2, attribute: escHtml(cap(n.attribute)), tnByLevel: n.tnByLevel.L, tnByLevelD: n.tnByLevel.D, periodHoursStun: n.periodHours.stun, healingStagesTnByLevel: RULES.DOCS_V79.healingStages.tnByLevel.L, tnByLevelM: RULES.DOCS_V79.healingStages.tnByLevel.M, tnByLevelS: RULES.DOCS_V79.healingStages.tnByLevel.S, tnByLevelD2: RULES.DOCS_V79.healingStages.tnByLevel.D, part: RULES.DOCS_V79.doctoring === "table" ? tx('SR2E.Dialog.Sheet.theDoctoringTableWithADoctor') : "" })
           : tx('SR2E.Dialog.Sheet.vsTnByTheWoundLight', { attribute: escHtml(cap(n.attribute)), tnByLevel: n.tnByLevel.L, tnByLevelD: n.tnByLevel.D, periodHoursStun: n.periodHours.stun, periodHoursPhysical: n.periodHours.physical })}</p>`,
       ok: { label: tx('SR2E.Dialog.Sheet.rest'), callback: (_e: Event, b: any) => ({ track: b.form.elements.track.value as "physical" | "stun", hours: Math.max(0, Number(b.form.elements.hours.value) || 0), care: (b.form.elements.track.value === "physical" && b.form.elements.carePhysical ? b.form.elements.carePhysical.value : b.form.elements.care.value) as string, pay: Boolean(b.form.elements.pay.checked) }) },
       rejectClose: false,
