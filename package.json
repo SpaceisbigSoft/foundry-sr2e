@@ -1,6 +1,6 @@
 {
   "name": "sr2e",
-  "version": "0.91.6",
+  "version": "0.91.7",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,6 +10,7 @@
     "test": "tsx --import ./src/module/__tests__/helpers/english-lang.ts --test \"src/**/__tests__/*.test.ts\"",
     "packs": "node scripts/build-packs.mjs",
     "tokens": "tsx scripts/build-tokens.ts",
+    "backdrops": "tsx scripts/build-backdrops.ts",
     "cover": "tsx scripts/build-cover.ts"
   },
   "devDependencies": {

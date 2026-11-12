@@ -16,6 +16,7 @@ import { openBugReport } from './bugreport.ts';
 import { startTour } from './tours.ts';
 import { SR2GmPanel } from './ui.ts';
 import { SR2NpcGenerator } from './npcgen.ts';
+import { openSceneBuilder } from './scenebuilder.ts';
 import { openAwardDialog } from './chat.ts';
 import { SR2NewEntry } from './newentry.ts';
 import { openShop } from './adding.ts';
@@ -76,6 +77,7 @@ export const TOOL_ACTIONS: Record<string, () => void> = {
   catalogue: () => { SR2Codex.open(); },
   newEntry: () => { SR2NewEntry.open({ actorUuid: String((game as any).user?.character?.uuid ?? '') }); },
   gmPanel: () => { if (isGm()) SR2GmPanel.open(); },
+  sceneBuilder: () => { if (isGm()) openSceneBuilder({ sceneId: '' }); },
   npcGenerator: () => { if (isGm()) SR2NpcGenerator.open(); },
   award: () => { if (isGm()) void openAwardDialog(); },
   calculator: () => gmPanelAt('tools'),

@@ -139,6 +139,8 @@ export const GUIDE_TOPICS: GuideTopic[] = [
   topic('gm-tools', 'gm', ['NPC generator', 'Preview', 'Dice and TN calculator'], [3]),
   topic('gm-setup', 'gm', ['Start of the session', 'End of the session', 'Players and characters', 'Token setup', 'Starter kits', 'Item catalogue', 'Characters from a stat block', 'Modules', 'Rules source', 'Portraits by name', 'Starter demo'], [10]),
   topic('gm-world', 'gm', ['Magical groups', 'Building security', 'Safehouses', 'Security sheaf', 'IC', 'Data stores', 'Deckers here', 'Security deckers', 'Subsystem data bombs', 'Comcalls', 'Devices', 'Guards', 'Security steps', 'Security rigger', 'Turrets and drones', 'People', 'Build it'], ['p', 4, 'p']),
+  // v0.91.7
+  topic('scene-builder', 'gm', [], ['p', 7, 'p', 'p']),
   topic('gm-undo', 'gm', ['Undo', "What undo can't do", 'Recent rolls'], ['p', 'p', 'p']),
   topic('gm-cards', 'gm', [], [8, 'p', 10]),
   topic('house-rules', 'gm', [], ['p', 'p', 'p', 'p', 'p', 5, 'p']),
@@ -162,7 +164,7 @@ export const GUIDE_CATEGORIES: GuideCategory[] = [
   category('matrix', 'players', ['matrix', 'rigging']),
   category('sheets', 'players', ['npc-sheets', 'vehicles']),
   category('gm-run', 'gm', ['gm-panel', 'gm-time', 'gm-combat', 'gm-party', 'gm-cards', 'gm-undo']),
-  category('gm-setup', 'gm', ['gm-setup', 'gm-world', 'gm-tools', 'house-rules']),
+  category('gm-setup', 'gm', ['gm-setup', 'scene-builder', 'gm-world', 'gm-tools', 'house-rules']),
 ];
 
 /** The categories with their topics, for a player or the GM (GM categories only for the GM). */

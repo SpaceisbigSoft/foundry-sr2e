@@ -59,6 +59,22 @@ export function planFor(s: GenState): Plan {
   }
 }
 
+/** v0.91.7: the critter choices (also the Scene builder's). */
+export function critterChoices(): Array<{ id: string; label: string }> {
+  return [{ id: '', label: tx('SR2E.App.Npcgen.byThreatLevel') }, { id: 'dog', label: tx('SR2E.App.Npcgen.guardDog') }, { id: 'wolf', label: tx('SR2E.App.Npcgen.wolf') }, { id: 'cat', label: tx('SR2E.App.Npcgen.bigCat') }, { id: 'bear', label: tx('SR2E.App.Npcgen.bear') }, { id: 'awakenedWolf', label: tx('SR2E.App.Npcgen.awakenedWolf') }];
+}
+
+/** v0.91.7: the generator's other choices for a Scene builder row (archetypes, group kinds, spirit kinds; '' = random). */
+export function generatorChoices(): { archetypes: Array<{ id: string; label: string }>; groupKinds: Array<{ id: string; label: string }>; spiritKinds: Array<{ id: string; label: string }>; critters: Array<{ id: string; label: string }>; threats: Array<{ id: string; label: string }> } {
+  return {
+    archetypes: [{ id: '', label: tx('SR2E.App.Npcgen.random') }, ...ARCHETYPES.map((a) => ({ id: a.id, label: a.label }))],
+    groupKinds: GROUP_KINDS.map((g) => ({ id: g.id, label: g.label })),
+    spiritKinds: [{ id: 'random', label: tx('SR2E.App.Npcgen.random') }, { id: 'nature', label: tx('SR2E.App.Npcgen.natureSpirit') }, { id: 'elemental', label: tx('SR2E.App.Npcgen.elemental') }],
+    critters: critterChoices(),
+    threats: RULES.NPCGEN.threat.map((t, i) => ({ id: String(i), label: `${i}: ${t.label}` })),
+  };
+}
+
 /** A kind the generator knows (anything else is a person). */
 export const genKind = (k: unknown): GenKind => (GEN_KINDS.some((g) => g.id === k) ? (k as GenKind) : 'npc');
 
@@ -134,7 +150,7 @@ export class SR2NpcGenerator extends HandlebarsApplicationMixin(ApplicationV2) {
       roles: sel([{ id: '', label: tx('SR2E.App.Npcgen.random') }, ...CONTACT_ROLES.map((c) => ({ id: c.id, label: c.label }))], s.contactRole),
       pcs: sel([{ id: '', label: tx('SR2E.App.Npcgen.nobodyJustTheNpc') }, ...pcs], s.contactFor),
       spiritKinds: sel([{ id: 'random', label: tx('SR2E.App.Npcgen.random') }, { id: 'nature', label: tx('SR2E.App.Npcgen.natureSpirit') }, { id: 'elemental', label: tx('SR2E.App.Npcgen.elemental') }], s.spiritKind),
-      critters: sel([{ id: '', label: tx('SR2E.App.Npcgen.byThreatLevel') }, { id: 'dog', label: tx('SR2E.App.Npcgen.guardDog') }, { id: 'wolf', label: tx('SR2E.App.Npcgen.wolf') }, { id: 'cat', label: tx('SR2E.App.Npcgen.bigCat') }, { id: 'bear', label: tx('SR2E.App.Npcgen.bear') }, { id: 'awakenedWolf', label: tx('SR2E.App.Npcgen.awakenedWolf') }], s.critter),
+      critters: sel(critterChoices(), s.critter),
       preview: previewHtml(plan),
       summary: createSummary(plan, s),
       scene: (game as any).scenes?.viewed?.name ?? '',
@@ -200,12 +216,21 @@ function folder(type: 'Actor' | 'JournalEntry'): Promise<string | null> {
   return folderMaking.get(type)!;
 }
 
+/**
+ * v0.91.7: how the Scene builder calls the generator: the actors go in its folder with its flag, are returned in
+ * `made`, and get no tokens here (the builder places them in the scene's start zones). The generator window passes
+ * nothing.
+ */
+export interface CreateContext { made?: any[]; folderId?: string | null; flags?: Record<string, unknown> }
+
 /** Create actors (with items), then optionally place their tokens around the view's centre. */
-async function makeActors(list: Array<{ actor: any; items?: any[] }>, s: GenState): Promise<any[]> {
-  const fid = await folder('Actor');
-  const data = list.map((x) => ({ ...x.actor, ...(x.items ? { items: x.items } : {}), ...(fid ? { folder: fid } : {}) }));
+async function makeActors(list: Array<{ actor: any; items?: any[] }>, s: GenState, ctx: CreateContext = {}): Promise<any[]> {
+  const fid = ctx.folderId !== undefined ? ctx.folderId : await folder('Actor');
+  const withFlags = (a: any) => (ctx.flags ? { ...a, flags: { ...(a.flags ?? {}), [SYSTEM.id]: { ...(a.flags?.[SYSTEM.id] ?? {}), ...ctx.flags } } } : a);
+  const data = list.map((x) => ({ ...withFlags(x.actor), ...(x.items ? { items: x.items } : {}), ...(fid ? { folder: fid } : {}) }));
   const actors: any[] = (await (CONFIG.Actor.documentClass as any).createDocuments(data)) ?? [];
-  if (s.tokens && actors.length) await placeTokens(actors, s);
+  if (ctx.made) ctx.made.push(...actors);
+  if (s.tokens && !ctx.made && actors.length) await placeTokens(actors, s);
   return actors;
 }
 
@@ -242,7 +267,7 @@ async function journal(name: string, html: string): Promise<any> {
  * v0.61.0: a rigger's vehicles and drones (from the plan): created as actors next to them (named after the rigger),
  * drones subscribed to the rigger's remote control deck. `made` are the actors created for `plans` (matched by name).
  */
-async function rigVehicles(pairs: Array<{ plan: NpcPlan; name: string }>, made: any[], s: GenState): Promise<number> {
+async function rigVehicles(pairs: Array<{ plan: NpcPlan; name: string }>, made: any[], s: GenState, ctx: CreateContext = {}): Promise<number> {
   let n = 0;
   const used = new Set<string>();
   for (const { plan, name } of pairs) {
@@ -250,7 +275,7 @@ async function rigVehicles(pairs: Array<{ plan: NpcPlan; name: string }>, made: 
     const rigger = made.find((a: any) => a?.name === name && !used.has(a.id));
     if (!rigger) continue;
     used.add(rigger.id);
-    const vs = await makeActors(plan.vehicles.map((v) => { const d = vehicleActorData(v); return { actor: { ...d, name: `${d.name} (${plan.name})`, ownership: { ...(rigger.ownership ?? {}) } } }; }), s);
+    const vs = await makeActors(plan.vehicles.map((v) => { const d = vehicleActorData(v); return { actor: { ...d, name: `${d.name} (${plan.name})`, ownership: { ...(rigger.ownership ?? {}) } } }; }), s, ctx);
     n += vs.length;
     const drones = vs.filter((a: any) => a?.system?.drone).map((a: any) => a.uuid);
     if (drones.length) {
@@ -268,20 +293,20 @@ async function rigVehicles(pairs: Array<{ plan: NpcPlan; name: string }>, made: 
 }
 
 /** Make what the plan describes; returns a one-line summary. */
-export async function createFromPlan(p: Plan, s: GenState): Promise<string> {
+export async function createFromPlan(p: Plan, s: GenState, ctx: CreateContext = {}): Promise<string> {
   switch (p.kind) {
     case 'npc': {
       const d = actorDataFor(p);
-      const a = await makeActors([d], s);
-      const v = await rigVehicles([{ plan: p, name: d.actor.name }], a, s);
+      const a = await makeActors([d], s, ctx);
+      const v = await rigVehicles([{ plan: p, name: d.actor.name }], a, s, ctx);
       return v ? tCount(v, 'SR2E.Card.Npcgen.createdAndVehicles', { name: a[0]?.name ?? p.name }) : tx('SR2E.Card.Npcgen.created', { name: a[0]?.name ?? p.name });
     }
     case 'group': {
       const plans = [p.leader, ...p.grunts, ...p.extras];
       const list = plans.map(npcActorData);
       for (const x of list) if (!x.actor.name.startsWith(p.name)) x.actor.name = `${x.actor.name} (${p.name})`;
-      const a = await makeActors(list, s);
-      const v = await rigVehicles(plans.map((pl, i) => ({ plan: pl, name: list[i]!.actor.name })), a, s);
+      const a = await makeActors(list, s, ctx);
+      const v = await rigVehicles(plans.map((pl, i) => ({ plan: pl, name: list[i]!.actor.name })), a, s, ctx);
       return tx('SR2E.Card.Npcgen.createdActorsFor', { length: a.length, name: p.name, part: v ? tCount(v, 'SR2E.Card.Npcgen.andVehicles2') : '' });
     }
     case 'org': {
@@ -309,7 +334,7 @@ export async function createFromPlan(p: Plan, s: GenState): Promise<string> {
       const tpl: any = (CONFIG.Actor.documentClass as any).spiritTemplateFor?.(p.spiritType);
       const items = tpl ? [...(tpl.items ?? [])].filter((i: any) => i.type === 'power').map((i: any) => { const o = i.toObject(); delete o._id; return o; }) : [];
       if (tpl) data.actor.system.offsets = { ...(tpl.system?.offsets ?? {}) };
-      const a = await makeActors([{ actor: data.actor, items }], s);
+      const a = await makeActors([{ actor: data.actor, items }], s, ctx);
       return tpl ? tx('SR2E.Card.Npcgen.createdWithPowers', { name: a[0]?.name ?? p.name, tplName: tpl.name }) : tx('SR2E.Card.Npcgen.createdNoPowers', { name: a[0]?.name ?? p.name });
     }
     case 'job': {

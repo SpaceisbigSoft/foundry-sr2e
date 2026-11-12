@@ -3,6 +3,7 @@ import { SYSTEM } from "./config/system.ts";
 import { registerBugReport, bugReport, openBugReport } from "./applications/bugreport.ts";
 import { registerPrint, printActor, printPage } from "./applications/print.ts";
 import { createDemo, removeDemo } from "./applications/demo.ts";
+import { registerSceneBuilder, openSceneBuilder, buildScene, applyToScene, removeBuiltScene } from "./applications/scenebuilder.ts";
 import { SR2NewEntry } from "./applications/newentry.ts";
 import { registerShopButton, openShop } from "./applications/adding.ts";
 import { SR2Codex } from "./applications/codex.ts";
@@ -83,6 +84,8 @@ export class SR2System {
           printActor, printPage, bugReport, openBugReport,
           // v0.88.0: the starter demo (GM).
           createDemo, removeDemo,
+          // v0.91.7: the Scene builder ({ sceneId } changes an existing scene), building from a spec, removing a built scene.
+          sceneBuilder: (o: { sceneId?: string } = {}) => openSceneBuilder(o), buildScene, applyToScene, removeBuiltScene,
           // v0.91.1: the new-entry form ({ kind, actorUuid }).
           newEntry: (o: { kind?: string; actorUuid?: string } = {}) => SR2NewEntry.open(o),
           // v0.91.1: the shop for an actor (else your character, or the GM's selected token).
@@ -134,6 +137,8 @@ export class SR2System {
     registerModuleSupport();
     registerHelp();
     registerTools();
+    // v0.91.7: the Scene builder (its setting, the Scenes sidebar button and the scene menu).
+    registerSceneBuilder();
     // v0.82.0: the Guide button in every SR2e sheet's title bar.
     registerGuideButton();
     // v0.87.0: the Print button on character, NPC and spirit sheets; Report a bug (Configure Settings and the guide).

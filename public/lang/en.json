@@ -17219,7 +17219,7 @@
           "title": "Credits and licence",
           "b1": "<strong>Built with AI.</strong> This system was written by an AI model, Anthropic's Claude, under the direction of its human owner: the code, the rules numbers and this guide. The numbers came from the AI's memory of the books; many have since been checked against the books, and the rest are listed in <code>docs/VERIFY.md</code>. Check anything that looks off against your rulebook and tell your GM; the GM can correct values in the house rules. It has not yet been play-tested at a real table.",
           "b2": "This is an <strong>unofficial</strong> fan system for Shadowrun, Second Edition. It is not affiliated with or endorsed by The Topps Company, Catalyst Game Labs or Black Book Editions. Shadowrun and Matrix are registered trademarks and/or trademarks of The Topps Company, Inc.",
-          "b3": "It contains <strong>no rulebook text or art</strong>: it automates the rules, and you need your own copy of the rulebook for them. The default pictures and tokens (people, critters, spirits, vehicles and drones, IC and the rest) are the system's own art, drawn by the AI for it (vector art written as code in <code>src/art/</code>), under the same licence; they show no book art, logos or trademarks. The cover picture (the runner team in the neon alley, also the background of new worlds on the setup screen) was painted with another AI, OpenAI's ChatGPT image generation, by the project's owner from a brief Claude wrote; Claude added the title. It is under the same licence and shows no book art, logos or trademarks either. The game numbers it needs (rule constants, starter item templates, a totem table) were written from memory; the GM can check them against the book and change them as house rules.",
+          "b3": "It contains <strong>no rulebook text or art</strong>: it automates the rules, and you need your own copy of the rulebook for them. The default pictures and tokens (people, critters, spirits, vehicles and drones, IC and the rest) and the Scene builder's backdrops are the system's own art, drawn by the AI for it (vector art written as code in <code>src/art/</code>), under the same licence; they show no book art, logos or trademarks. The cover picture (the runner team in the neon alley, also the background of new worlds on the setup screen) was painted with another AI, OpenAI's ChatGPT image generation, by the project's owner from a brief Claude wrote; Claude added the title. It is under the same licence and shows no book art, logos or trademarks either. The game numbers it needs (rule constants, starter item templates, a totem table) were written from memory; the GM can check them against the book and change them as house rules.",
           "b4": "The system is licensed under <strong>CC BY-SA 4.0</strong> (the <code>LICENSE.md</code> file in the system folder). It started from the project setup of SRA2, the community Shadowrun Anarchy 2 system by the Anarchy development team: only the build configuration and folder layout came from SRA2; all of the game code, sheets, art and text were written for this system. The fonts (Chakra Petch, JetBrains Mono, Inter) are under the SIL Open Font License."
         },
         "gmPanel": {
@@ -17362,6 +17362,21 @@
             "i4": "The GM can open the item itself and tick <em>In the shop</em> on a page."
           },
           "b3": "It lists what the shop reads: the GM’s catalogue, the system’s generic templates, world items and compendiums. Players see what the GM’s shop shows them (all of it, the catalogue only, or only what is marked in the shop)."
+        },
+        "sceneBuilder": {
+          "title": "Scene builder",
+          "b1": "The <strong>Scene builder</strong> walks you through making a scene with everything in one place, then builds it in one go. Open it from the <strong>SR2e tools</strong> window (<kbd>Alt</kbd>+<kbd>T</kbd>), the toolbar's toolbox, the button in the Scenes sidebar, or <strong>New scene…</strong> at the top of the GM panel's Scene tab. Every step can be skipped, the column on the right shows what you have so far, and nothing is made until you press <strong>Build the scene</strong>.",
+          "b2": {
+            "i1": "<strong>Basics</strong>: the name, the folder, what kind of place it is (<em>Real world</em>, <em>Astral</em> or <em>Matrix host</em>), and its size in metres with the grid. The kind picks sensible defaults: an astral or Matrix scene is lit everywhere and gets its own backdrop, and a Matrix scene gets a host. Characters still project, perceive or jack in themselves, as on any scene.",
+            "i2": "<strong>Map</strong>: one of the backdrops drawn for the system (streets, an alley, a rooftop, a warehouse, an office floor, a club, sewers, a garage, docks, a forest, the astral plane, a host, the grid), a plain colour, or a picture of your own. A built-in backdrop brings its size and, ticked, walls, doors and lamps that match the picture. Token vision and fog of war are set here too.",
+            "i3": "<strong>Time and conditions</strong>: the time of day sets the darkness (day, dusk and dawn, night, darker in the wilds; indoors the lamps light it), or type your own darkness. The light level it gives is shown. You can also move world time to that hour (it asks first: every timer runs). Weather and the vehicle terrain are the Scene tab's settings.",
+            "i4": "<strong>Magic</strong>: background count and its sources, environment tags for totems, and a ward or barrier over the whole scene or the NPCs' area (a barrier actor and a region on the map).",
+            "i5": "<strong>Who's there</strong>: tick the player characters, then add NPCs, spirits and critters from your actors (the list, or drag them in from the Actors sidebar) or made by the NPC generator (a person, a group, a spirit, critters, each with a Threat Level; roll again to change them). Each row sets how many, whether they are hidden, their attitude (the token's disposition) and whether they are one morale group. Player characters start in one area of the map and everyone else in another. Copies of an actor are unlinked tokens; tick <em>Unique</em> for a named NPC whose sheet is the token's.",
+            "i6": "<strong>Security and Matrix</strong>: a host and a security site, either ones you have or made for the scene. A new site puts a maglock on the backdrop's secure doors, with cameras and an alarm rated by Threat; its host is the one above. On a Matrix scene the host's token stands on the map, and its IC arrives from its security sheaf as the tally climbs.",
+            "i7": "<strong>Finish</strong>: your notes, a GM journal entry (the notes, the summary and links to everything made), music, the combat tracker (everyone added to a new combat, and the NPCs' initiative rolled if you like), and whether to view the scene yourself or show it to the players."
+          },
+          "b3": "Opened on an existing scene (<strong>Change this scene…</strong> in the Scene tab, or <em>Change with the Scene builder</em> in a scene's menu in the sidebar), it starts from that scene's settings. What you change there is changed, and the people, ward, site and host you pick are added; nothing already on the scene is deleted, its size stays, and a backdrop's walls are only added to a scene with no walls yet.",
+          "b4": "<strong>Save as a template</strong> (on the Finish step) keeps every choice, including who's there, so the same kind of scene takes one click next time: load it on the Basics step. Everything the builder makes is marked, so <strong>Remove this scene and what the builder made</strong> (it asks first) deletes the scene, the actors and journal it made for it and the combats on it, and leaves your own actors and journals alone."
         }
       }
     },
@@ -17422,6 +17437,10 @@
         "label": "GM panel",
         "hint": "The scene, combat, the party, NPCs, the world, the log and setup in one window."
       },
+      "sceneBuilder": {
+        "label": "Scene builder",
+        "hint": "A step-by-step window that builds a scene: map, time and weather, magic, who's there, security and the Matrix."
+      },
       "npcGenerator": {
         "label": "NPC generator",
         "hint": "Grunts, contacts, critters and groups made from archetypes, ready to place."
@@ -17473,6 +17492,365 @@
       "catalogue": {
         "label": "Catalogue",
         "hint": "Browse everything you can get, with a page for each (what your shop shows)"
+      }
+    },
+    "SceneBuilder": {
+      "title": "Scene builder",
+      "newScene": "New scene…",
+      "changeScene": "Change this scene…",
+      "contextChange": "Change with the Scene builder",
+      "steps": "Steps",
+      "step": {
+        "basics": "Basics",
+        "map": "Map",
+        "conditions": "Time and conditions",
+        "magic": "Magic",
+        "people": "Who's there",
+        "security": "Security and Matrix",
+        "finish": "Finish"
+      },
+      "stepHint": {
+        "basics": "Name the scene, say what kind of place it is, and set its size and grid.",
+        "map": "Pick a backdrop drawn for the system, a plain colour, or a picture of your own.",
+        "conditions": "The time of day sets how dark it is; weather and terrain change the tests made here.",
+        "magic": "Background count, environment tags for totems, and a ward if the place has one.",
+        "people": "Who is on the map when it starts: player characters, and NPCs from your actors or made on the spot.",
+        "security": "A security site with locks, cameras and an alarm, and the Matrix host behind it.",
+        "finish": "Notes, a journal, music, the combat tracker, then build it. You can save the whole set-up as a template."
+      },
+      "kindLegend": "What kind of place is it?",
+      "kind": {
+        "real": "Real world",
+        "astral": "Astral",
+        "matrix": "Matrix host"
+      },
+      "kindHint": {
+        "real": "A place in the physical world: streets, buildings, the wilds.",
+        "astral": "The astral plane. Characters still project or perceive themselves; the scene gives the backdrop, background count and wards.",
+        "matrix": "The inside of a host. Deckers still jack in themselves; the scene gives the backdrop and the host."
+      },
+      "editingScene": "Changing {name}: what you add is added; nothing already on the scene is deleted.",
+      "startNew": "Start a new scene instead",
+      "template": "Template",
+      "load": "Load",
+      "deleteTemplateTitle": "Delete the template",
+      "deleteTemplateAsk": "Delete the template {name}?",
+      "templateLoaded": "Loaded the template {name}.",
+      "templateSaved": "Saved the template {name}.",
+      "templateReplaced": "Replaced the template {name}.",
+      "templateNeedsName": "Give the template a name first.",
+      "name": "Name",
+      "namePlaceholder": "e.g. The meet at the docks",
+      "folder": "Folder",
+      "noFolder": "(no folder)",
+      "width": "Width (m)",
+      "height": "Height (m)",
+      "gridPx": "Square (px)",
+      "gridDistance": "Metres a square",
+      "gridless": "No grid",
+      "sizeHint": "Scenes use metres, so ranges and movement measure correctly.",
+      "sizeLockedHint": "The size of an existing scene stays as it is, so its tokens and walls stay where they are.",
+      "plainColour": "Plain colour",
+      "plainHint": "No picture: a colour and the grid.",
+      "ownPicture": "Your own picture",
+      "ownHint": "Any image in your Foundry data.",
+      "imagePath": "Picture",
+      "browse": "Browse",
+      "colour": "Colour",
+      "walls": "Walls, doors and lamps",
+      "hasWalls": "This scene already has walls; the backdrop's are not added.",
+      "wallsHint": "A built-in backdrop comes with walls, doors and lamps that match the picture.",
+      "tokenVision": "Token vision",
+      "fog": "Fog of war",
+      "matrixLightHint": "A host is lit by its own icons: darkness and weather don't change Matrix tests.",
+      "astralLightHint": "On the astral plane auras give the light; the darkness here only changes how the map looks.",
+      "hour": "Time of day",
+      "hourNone": "Not set",
+      "hourKeep": "Keep as it is",
+      "hourOption": "{h}:00",
+      "darknessAuto": "Darkness from the time of day",
+      "darkness": "Darkness (0–1)",
+      "lightIs": "Light: {light} (darkness {pct}%).",
+      "light": {
+        "normal": "Normal light",
+        "partial": "Partial light",
+        "minimal": "Minimal light",
+        "darkness": "Total darkness"
+      },
+      "globalLight": "Light everywhere (no light sources needed)",
+      "moveTime": "Move world time to that hour (now {now}:00)",
+      "moveTimeHint": "Moving world time runs every timer: healing, upkeep, projects, spirits leaving at dawn. You are asked before it moves.",
+      "moveTimeTitle": "Move world time?",
+      "moveTimeAsk": "Move world time forward {hours} hours, to {hour}:00? Every timer runs: healing, upkeep, projects, spirits leaving at dawn or dusk.",
+      "weather": "Weather",
+      "terrain": "Terrain for vehicles",
+      "terrainNone": "Pick in each test",
+      "conditionsHint": "These are the same settings as the GM panel's Scene tab, and you can change them there later.",
+      "background": "Background count",
+      "sources": "Sources",
+      "sourcesPlaceholder": "e.g. 2 toxic, 1 aspected hermetic",
+      "backgroundHint": "Background count adds to magic tests here (sources: a number and its kind, separated by commas).",
+      "environment": "Environment tags",
+      "environmentPlaceholder": "e.g. urban, water",
+      "environmentHint": "Tags such as urban, forest or water: a totem's environment gives its shaman dice here.",
+      "wardHeading": "A ward",
+      "wardOn": "Put a ward or barrier here",
+      "wardKindLabel": "Kind",
+      "wardKind": {
+        "ward": "Ward",
+        "manabarrier": "Mana barrier",
+        "astralbarrier": "Astral barrier",
+        "physicalbarrier": "Physical barrier"
+      },
+      "wardRating": "Force",
+      "wardArea": "Covers",
+      "wardScene": "The whole scene",
+      "wardNpcs": "The NPCs' area",
+      "wardHint": "Makes a barrier actor and a region on the map; astral forms and spells meet it at its edge.",
+      "wardName": "{name} ward",
+      "pcsHeading": "Player characters",
+      "noPlayer": "(no player)",
+      "alreadyHere": "(already here)",
+      "noPcs": "No characters in this world yet.",
+      "peopleHeading": "NPCs, spirits and critters",
+      "who": "Who",
+      "details": "Details",
+      "attitudeLabel": "Attitude",
+      "attitude": {
+        "hostile": "Hostile",
+        "neutral": "Neutral",
+        "friendly": "Friendly"
+      },
+      "hidden": "Hidden",
+      "morale": "Morale group",
+      "linked": "Unique (linked token)",
+      "count": "How many",
+      "threat": "Threat Level",
+      "subtype": "Kind",
+      "reroll": "Roll again",
+      "removeRow": "Remove",
+      "noPeople": "Nobody yet. Add someone below, or drag actors here from the sidebar.",
+      "dropHint": "Drag actors here from the Actors sidebar.",
+      "addActor": "From your actors",
+      "pickActor": "Pick an actor…",
+      "pickActorFirst": "Pick an actor in the list first.",
+      "addGenerated": "Made by the NPC generator",
+      "add": "Add",
+      "gen": {
+        "npc": "A person",
+        "group": "A group",
+        "spirit": "A spirit",
+        "critter": "Critters"
+      },
+      "peopleHint": "About {tokens} tokens. Player characters start in one area and everyone else in another; copies of an actor are unlinked tokens, so damage stays on the token. Generated people are made when you build (roll again to change them).",
+      "worldActorsOnly": "Only actors in the world can go on a scene: import it from the compendium first.",
+      "matrixHostHint": "A Matrix scene needs a host: its token stands on the map, and its IC arrives from its security sheaf as the tally climbs.",
+      "hostHeading": "Matrix host",
+      "siteHeading": "Security site",
+      "modeNone": "None",
+      "modeExisting": "One you have",
+      "modeGenerate": "Make one",
+      "pickHost": "Pick a host…",
+      "pickSite": "Pick a site…",
+      "corporate": "A corporation's",
+      "securityHint": "A new site puts a maglock on the backdrop's secure doors, with cameras and an alarm rated by Threat; its host is the one above. Change anything on its sheet afterwards.",
+      "hostName": "{name} host",
+      "siteName": "{name} security",
+      "deviceLock": "{door} maglock",
+      "deviceCamera": "Camera {n}",
+      "deviceAlarm": "Alarm",
+      "stepCameras": "A guard checks the cameras.",
+      "stepAlarm": "The alarm goes off: security responds.",
+      "stepLockdown": "Lockdown.",
+      "response0": "A lone guard, in a few minutes.",
+      "response1": "Two guards, in a few minutes.",
+      "response2": "A security team of four.",
+      "response3": "A security team with a mage.",
+      "response4": "A tactical team with a mage and a drone.",
+      "response5": "A high-threat response team, with combat magic and drones.",
+      "notes": "Notes for you",
+      "notesPlaceholder": "What happens here, who wants what, what's hidden…",
+      "journal": "Write a GM journal entry",
+      "playlist": "Music",
+      "noPlaylist": "(none)",
+      "combatLabel": "Combat tracker",
+      "combat": {
+        "none": "Leave it",
+        "ready": "Add everyone to a new combat",
+        "roll": "Add everyone and roll the NPCs' initiative"
+      },
+      "showLabel": "Afterwards",
+      "show": {
+        "none": "Stay where you are",
+        "view": "View it yourself",
+        "activate": "Show it to the players"
+      },
+      "summaryHeading": "Summary",
+      "saveHeading": "Save as a template",
+      "templateName": "Template name",
+      "saveTemplate": "Save",
+      "saveHint": "A template keeps every choice, including who's there, so the same kind of scene is one click next time.",
+      "removeScene": "Remove this scene and what the builder made",
+      "removeTitle": "Remove the scene",
+      "removeAsk": "Delete the scene {name} and what the Scene builder made for it? Actors: {actors}; journal entries: {journal}; combats: {combats}. Actors and journals of your own are not touched (copies you made with Duplicate are kept).",
+      "removed": "Removed {name} ({n} documents).",
+      "notBuilt": "That scene wasn't made by the Scene builder.",
+      "back": "Back",
+      "next": "Next",
+      "build": "Build the scene",
+      "apply": "Apply the changes",
+      "readyHint": "Ready to build. Every step can be changed before you do.",
+      "problemName": "Give the scene a name.",
+      "problemImage": "Pick your picture, or another backdrop.",
+      "problemSite": "Pick the security site, or make one.",
+      "problemHost": "Pick the host, or make one.",
+      "problemMatrixHost": "A Matrix scene needs a host.",
+      "problemGone": "A character picked here no longer exists.",
+      "problemRow": "An actor in the NPC list no longer exists, or none is picked.",
+      "problemTooMany": "That's more than {max} tokens: split it into two scenes.",
+      "gmOnly": "Only the GM can build scenes.",
+      "busy": "The Scene builder is already working.",
+      "sceneGone": "That scene no longer exists.",
+      "sceneNotMade": "Foundry didn't make the scene.",
+      "buildFailed": "The scene couldn't be built: {err}",
+      "built": "Built {name}: {tokens} tokens, {actors} new actors.",
+      "changed": "Changed {name}: {tokens} tokens and {actors} new actors added.",
+      "folderName": "{name} (scene)",
+      "journalName": "{name}: GM notes",
+      "journalSummary": "The scene",
+      "journalMade": "Made for this scene",
+      "unknown": "(unknown)",
+      "none": "none",
+      "sumKind": "Kind",
+      "sumSize": "Size",
+      "sizeValue": "{w} × {h} m, {grid}",
+      "sizeShort": "{w} × {h} m",
+      "gridValue": "{d} m squares",
+      "sumMap": "Map",
+      "sumLight": "Light",
+      "hourValue": "{h}:00",
+      "globalLightShort": "lit everywhere",
+      "sumWeather": "Weather",
+      "sumMagic": "Magic",
+      "bgValue": "background count {n}",
+      "wardValue": "a Force {rating} ward",
+      "sumPcs": "Player characters",
+      "sumPeople": "Others",
+      "hiddenShort": "hidden",
+      "sumSecurity": "Security",
+      "siteNew": "a new site (Threat {t})",
+      "hostNew": "a new host (Threat {t})",
+      "sumFinish": "Then",
+      "journalShort": "a GM journal",
+      "removeTokensAsk": "Tokens of these actors on other scenes are deleted too: {tokens}.",
+      "sizeFromBackdrop": "The backdrop sets the size: its picture and walls are drawn for it. Pick a plain colour or your own picture for another size."
+    },
+    "Backdrop": {
+      "street": {
+        "label": "Night street",
+        "hint": "A road between two buildings: sidewalks, shop and bar fronts, doors, parked cars, streetlamps.",
+        "door": {
+          "shopFront": "Shop door",
+          "side": "Side door",
+          "apartment": "Apartment door",
+          "bar": "Bar door"
+        }
+      },
+      "alley": {
+        "label": "Back alley",
+        "hint": "A narrow alley behind buildings: back doors, dumpsters, fire escapes, puddles, a chain-link fence.",
+        "door": {
+          "kitchen": "Kitchen back door",
+          "back": "Back door",
+          "staff": "Staff door",
+          "loading": "Loading door"
+        }
+      },
+      "rooftop": {
+        "label": "Rooftop",
+        "hint": "A flat roof with a parapet: air-conditioning units, vents, a stair hut, and a lower roof across a gap.",
+        "door": {
+          "roofAccess": "Roof access door"
+        }
+      },
+      "warehouse": {
+        "label": "Warehouse",
+        "hint": "A warehouse floor: crate stacks, shelving rows, a forklift, a loading-bay roll door and a small office.",
+        "door": {
+          "side": "Side door",
+          "loadingBay": "Loading bay door",
+          "office": "Office door"
+        }
+      },
+      "office": {
+        "label": "Office floor",
+        "hint": "A corporate floor: lobby with a security desk, cubicles, private offices, a glass meeting room, elevators and a server room.",
+        "door": {
+          "entrance": "Main entrance",
+          "elevatorA": "Elevator (north)",
+          "elevatorB": "Elevator (south)",
+          "security": "Security door",
+          "meeting": "Meeting room door",
+          "server": "Server room door",
+          "office": "Office door",
+          "executive": "Executive office door"
+        }
+      },
+      "club": {
+        "label": "Nightclub",
+        "hint": "A bar and club: the bar counter, booths, a neon dance floor, a stage, a back room and a staff door.",
+        "door": {
+          "staff": "Staff door",
+          "front": "Front doors",
+          "backRoom": "Back room door",
+          "restroom": "Restroom door"
+        }
+      },
+      "sewer": {
+        "label": "Sewer junction",
+        "hint": "Sewer tunnels: a water channel with walkways, a junction, a ladder up and a maintenance room.",
+        "door": {
+          "maintenance": "Maintenance door"
+        }
+      },
+      "garage": {
+        "label": "Parking garage",
+        "hint": "A parking level: concrete pillars, painted bays, parked cars, a ramp, a stairwell and a utility room.",
+        "door": {
+          "stairwell": "Stairwell door",
+          "utility": "Utility room door"
+        }
+      },
+      "docks": {
+        "label": "Docks at night",
+        "hint": "A quay and a pier over dark water: container stacks, a crane, bollards and a warehouse door.",
+        "door": {
+          "roll": "Warehouse roll door",
+          "side": "Warehouse side door"
+        }
+      },
+      "forest": {
+        "label": "Forest clearing",
+        "hint": "A wooded clearing with a dirt track, a campfire, a fallen log and a ruined shack.",
+        "door": {
+          "shack": "Shack door"
+        }
+      },
+      "astral": {
+        "label": "Astral plane",
+        "hint": "The astral plane: a violet haze, drifting motes and faint auras. No walls."
+      },
+      "astral-city": {
+        "label": "Astral city block",
+        "hint": "The astral reflection of a street corner: ghostly buildings and glowing living auras. No walls."
+      },
+      "matrix-host": {
+        "label": "Matrix host",
+        "hint": "A host's sculpted interior: an I/O port, the CPU core, a datastore and a slave node joined by light-paths."
+      },
+      "matrix-grid": {
+        "label": "Matrix grid",
+        "hint": "The open grid: a lattice of datalines with distant host icons. No walls."
       }
     }
   },

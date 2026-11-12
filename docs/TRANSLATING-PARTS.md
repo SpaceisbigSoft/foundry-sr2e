@@ -539,6 +539,7 @@ See `docs/TRANSLATING.md` for the rest.
 | `SR2E.Notify.Ui.of`: {power}{level} {type} {part} {n} of {actorsLength}. | `{part}` | `SR2E.Notify.Ui.appliedTo` (applied to)<br>`SR2E.Notify.Ui.resistedBy` (resisted by) |
 | `SR2E.Notify.Ui.refreshedTheCombatSpellHackingAnd`: Refreshed the Combat, Spell, Hacking and Control Pools of {n}. | `{n}` | `SR2E.Count.character` ({count} character \| {count} characters) |
 | `SR2E.Notify.Ui.refreshedTheKarmaPoolOfCharacter`: Refreshed the Karma Pool of {n}. | `{n}` | `SR2E.Count.character` ({count} character \| {count} characters) |
+| `SR2E.SceneBuilder.sizeValue`: {w} × {h} m, {grid} | `{grid}` | `SR2E.SceneBuilder.gridValue` ({d} m squares)<br>`SR2E.SceneBuilder.gridless` (No grid) |
 | `SR2E.Text.Actor.heldBy`: held by {name} | `{name}` | `SR2E.Text.Actor.someone2` (someone) |
 | `SR2E.Text.Actor.noVehicleSkill`:  (no {skill} skill: {attr}) | `{skill}` | `SR2E.Text.Actor.vehicle` (vehicle) |
 | `SR2E.Text.Actor.oath`: Oath: {text} | `{text}` | `SR2E.Text.Actor.keptFaithfully` (kept faithfully) |

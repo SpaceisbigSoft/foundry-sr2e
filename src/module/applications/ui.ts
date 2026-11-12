@@ -17,6 +17,7 @@ import type { AttributeKey } from '../models/index.ts';
 import { useItem, runSheetAction, latestAttackOn } from './tokens.ts';
 import { SR2Undo } from './undo.ts';
 import { SR2NpcGenerator } from './npcgen.ts';
+import { openSceneBuilder } from './scenebuilder.ts';
 import { personRow, recentRollRow, poolsLine, combatChips, statusNames } from './groups.ts';
 import { openAwardDialog } from './chat.ts';
 import { DSN_COLORSETS } from './dice.ts';
@@ -102,6 +103,9 @@ export class SR2GmPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       calcRoll: SR2GmPanel.#onCalcRoll,
       showMessage: SR2GmPanel.#onShowMessage,
       npcGenerator: () => void SR2NpcGenerator.open(),
+      // v0.91.7: the Scene builder, for a new scene or the viewed one.
+      sceneBuilder: () => { openSceneBuilder({ sceneId: '' }); },
+      sceneBuilderHere: () => { const sc: any = (game as any).scenes?.viewed ?? (game as any).scenes?.current; openSceneBuilder(sc ? { sceneId: sc.id } : {}); },
       advanceTime: SR2GmPanel.#onAdvanceTime,
       refreshPools: SR2GmPanel.#onRefreshPools,
       refreshKarma: SR2GmPanel.#onRefreshKarma,

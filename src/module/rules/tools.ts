@@ -38,6 +38,7 @@ export const TOOLS: readonly ToolDef[] = [
   { id: 'newEntry', icon: 'fa-solid fa-file-circle-plus', who: 'player', toolbar: false },
   // GM
   { id: 'gmPanel', icon: 'fa-solid fa-sliders', who: 'gm', toolbar: true, hotkey: 'gmPanel' },
+  { id: 'sceneBuilder', icon: 'fa-solid fa-map-location-dot', who: 'gm', toolbar: true },
   { id: 'npcGenerator', icon: 'fa-solid fa-user-plus', who: 'gm', toolbar: true },
   { id: 'award', icon: 'fa-solid fa-award', who: 'gm', toolbar: true },
   { id: 'calculator', icon: 'fa-solid fa-calculator', who: 'gm', toolbar: false },

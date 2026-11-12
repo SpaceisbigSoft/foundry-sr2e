@@ -104,3 +104,5 @@ export * from './urr80-vehicles.ts';
 export * from './urr80-drones-security.ts';
 export * from './urr80-magic.ts';
 export * from './html.ts';
+export * from './backdrops.ts';
+export * from './scenebuilder.ts';

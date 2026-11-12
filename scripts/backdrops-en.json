@@ -1,0 +1,108 @@
+{
+  "street": {
+    "label": "Night street",
+    "hint": "A road between two buildings: sidewalks, shop and bar fronts, doors, parked cars, streetlamps.",
+    "door": {
+      "shopFront": "Shop door",
+      "side": "Side door",
+      "apartment": "Apartment door",
+      "bar": "Bar door"
+    }
+  },
+  "alley": {
+    "label": "Back alley",
+    "hint": "A narrow alley behind buildings: back doors, dumpsters, fire escapes, puddles, a chain-link fence.",
+    "door": {
+      "kitchen": "Kitchen back door",
+      "back": "Back door",
+      "staff": "Staff door",
+      "loading": "Loading door"
+    }
+  },
+  "rooftop": {
+    "label": "Rooftop",
+    "hint": "A flat roof with a parapet: air-conditioning units, vents, a stair hut, and a lower roof across a gap.",
+    "door": {
+      "roofAccess": "Roof access door"
+    }
+  },
+  "warehouse": {
+    "label": "Warehouse",
+    "hint": "A warehouse floor: crate stacks, shelving rows, a forklift, a loading-bay roll door and a small office.",
+    "door": {
+      "side": "Side door",
+      "loadingBay": "Loading bay door",
+      "office": "Office door"
+    }
+  },
+  "office": {
+    "label": "Office floor",
+    "hint": "A corporate floor: lobby with a security desk, cubicles, private offices, a glass meeting room, elevators and a server room.",
+    "door": {
+      "entrance": "Main entrance",
+      "elevatorA": "Elevator (north)",
+      "elevatorB": "Elevator (south)",
+      "security": "Security door",
+      "meeting": "Meeting room door",
+      "server": "Server room door",
+      "office": "Office door",
+      "executive": "Executive office door"
+    }
+  },
+  "club": {
+    "label": "Nightclub",
+    "hint": "A bar and club: the bar counter, booths, a neon dance floor, a stage, a back room and a staff door.",
+    "door": {
+      "staff": "Staff door",
+      "front": "Front doors",
+      "backRoom": "Back room door",
+      "restroom": "Restroom door"
+    }
+  },
+  "sewer": {
+    "label": "Sewer junction",
+    "hint": "Sewer tunnels: a water channel with walkways, a junction, a ladder up and a maintenance room.",
+    "door": {
+      "maintenance": "Maintenance door"
+    }
+  },
+  "garage": {
+    "label": "Parking garage",
+    "hint": "A parking level: concrete pillars, painted bays, parked cars, a ramp, a stairwell and a utility room.",
+    "door": {
+      "stairwell": "Stairwell door",
+      "utility": "Utility room door"
+    }
+  },
+  "docks": {
+    "label": "Docks at night",
+    "hint": "A quay and a pier over dark water: container stacks, a crane, bollards and a warehouse door.",
+    "door": {
+      "roll": "Warehouse roll door",
+      "side": "Warehouse side door"
+    }
+  },
+  "forest": {
+    "label": "Forest clearing",
+    "hint": "A wooded clearing with a dirt track, a campfire, a fallen log and a ruined shack.",
+    "door": {
+      "shack": "Shack door"
+    }
+  },
+  "astral": {
+    "label": "Astral plane",
+    "hint": "The astral plane: a violet haze, drifting motes and faint auras. No walls."
+  },
+  "astral-city": {
+    "label": "Astral city block",
+    "hint": "The astral reflection of a street corner: ghostly buildings and glowing living auras. No walls."
+  },
+  "matrix-host": {
+    "label": "Matrix host",
+    "hint": "A host's sculpted interior: an I/O port, the CPU core, a datastore and a slave node joined by light-paths."
+  },
+  "matrix-grid": {
+    "label": "Matrix grid",
+    "hint": "The open grid: a lattice of datalines with distant host icons. No walls."
+  }
+}

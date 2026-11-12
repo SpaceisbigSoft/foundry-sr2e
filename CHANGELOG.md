@@ -2,6 +2,14 @@
 
 This is the history of the unofficial Shadowrun 2nd Edition system for Foundry VTT (system id `sr2e`), newest version first. Every rules change since v0.70.0 has a house-rule switch that puts the old behaviour back. The system was built with AI (Anthropic's Claude) under human direction, and it has not yet been play-tested at a real table.
 
+## v0.91.7 — The Scene builder (11 Nov 2026)
+- **New: the Scene builder**, a step-by-step window for the GM that builds a whole scene in one go: basics (name, folder, size, grid, and the kind of place: real world, astral or a Matrix host), the map, time and conditions, magic, who's there, security and the Matrix, and a summary before anything is made. Open it from the SR2e tools window, the toolbar, the Scenes sidebar, or **New scene…** in the GM panel's Scene tab.
+- **Backdrops drawn for the system:** a night street, an alley, a rooftop, a warehouse, an office floor, a club, sewers, a parking garage, docks, a forest, the astral plane, the astral city, a host and the grid. The real-world maps come with walls, doors and lamps that match the picture. Or use a plain colour or your own picture.
+- **Time of day** sets the darkness (and, if you like, moves world time to that hour); weather, terrain, background count, environment tags and a ward are set in the same place.
+- **Who's there:** player characters in one start area and everyone else in another; NPCs from your actors (pick or drag them in) or made on the spot by the NPC generator, each row hidden or not, hostile, neutral or friendly, and a morale group. A new security site puts maglocks on the map's secure doors, with cameras and an alarm, and its host; a Matrix scene places the host's token.
+- **Finish:** a GM journal with your notes and links to everything made, music, the combat tracker (and the NPCs' initiative), then view the scene or show it to the players. **Save as a template** keeps every choice for next time; **Change this scene…** opens it on an existing scene (it only adds, never deletes); **Remove this scene** deletes exactly what the builder made.
+- Rules values are unchanged.
+
 ## v0.91.6 — Contacts and fixers (2 Nov 2026)
 - **Find things through your contacts:** when a character with contacts finds something (*Find & buy* in the shop, *Find…* or *Buy* on an item), they are asked how: on their own, **helped by a contact**, or, for a contact ticked as a fixer, **let the fixer find it**.
 - **A contact's help** works like legwork: a buddy or a friend for life adds dice, you can pay for more dice (up to their Loyalty) or call in a favour, a contact with dice of their own looks too (the better result counts), and their fee is paid when you ask. A restricted or forbidden item is easier to find this way than openly (half the legality TN).

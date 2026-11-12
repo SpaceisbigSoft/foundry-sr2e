@@ -49,6 +49,10 @@
   {{#if tab.scene}}
   <section>
     <h2 data-heading="Scene">{{sr2eT "SR2E.UI.scene"}}{{#if scene}}: {{scene.name}}{{/if}}</h2>
+    <p class="sr2e-row sr2e-gm-sb">
+      <button type="button" data-action="sceneBuilder"><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i> {{sr2eT "SR2E.SceneBuilder.newScene"}}</button>
+      {{#if scene}}<button type="button" data-action="sceneBuilderHere"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> {{sr2eT "SR2E.SceneBuilder.changeScene"}}</button>{{/if}}
+    </p>
     {{#if scene}}
     <div class="sr2e-row">
       <label>{{sr2eT "SR2E.UI.backgroundCount"}} <input type="number" data-gm="background" value="{{scene.background}}" min="0"></label>

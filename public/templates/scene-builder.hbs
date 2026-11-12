@@ -1,0 +1,204 @@
+<div class="sr2e-sheet sr2e-wizard sr2e-sb">
+  <nav class="sr2e-wiz-steps" aria-label="{{sr2eT "SR2E.SceneBuilder.steps"}}">
+    {{#each steps}}<a data-action="sbStep" data-step="{{id}}" class="sr2e-wiz-step{{#if active}} active{{/if}} sr2e-wiz-{{state}}" title="{{hint}}"><span class="sr2e-wiz-n">{{n}}</span> {{label}}</a>{{/each}}
+  </nav>
+  <div class="sr2e-wiz-main">
+    <div class="sr2e-wiz-body">
+      {{#if editing}}<p class="sr2e-sb-editing"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> {{sr2eT "SR2E.SceneBuilder.editingScene" name=sceneName}} <a data-action="sbNew">{{sr2eT "SR2E.SceneBuilder.startNew"}}</a></p>{{/if}}
+      <h2 data-help="scene-builder">{{n}}. {{label}}</h2>
+      <p class="hint">{{hint}}</p>
+
+      {{#if is.basics}}
+      {{#if templates.length}}
+      <div class="sr2e-row sr2e-sb-template">
+        <label>{{sr2eT "SR2E.SceneBuilder.template"}} <select name="sbTemplate">{{#each templates}}<option value="{{id}}">{{label}}</option>{{/each}}</select></label>
+        <button type="button" data-action="sbLoadTemplate"><i class="fa-solid fa-file-import" aria-hidden="true"></i> {{sr2eT "SR2E.SceneBuilder.load"}}</button>
+        <button type="button" data-action="sbDeleteTemplate" title="{{sr2eT "SR2E.SceneBuilder.deleteTemplateTitle"}}" aria-label="{{sr2eT "SR2E.SceneBuilder.deleteTemplateTitle"}}"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+      </div>
+      {{/if}}
+      <div class="form-group"><label for="sb-name">{{sr2eT "SR2E.SceneBuilder.name"}}</label><input id="sb-name" type="text" data-sb="name" value="{{spec.name}}" placeholder="{{sr2eT "SR2E.SceneBuilder.namePlaceholder"}}"></div>
+      <fieldset class="sr2e-sb-kinds"><legend data-heading="What kind of place is it">{{sr2eT "SR2E.SceneBuilder.kindLegend"}}</legend>
+        {{#each kinds}}<button type="button" class="sr2e-sb-card{{#if checked}} active{{/if}}" data-action="sbKind" data-kind="{{id}}" aria-pressed="{{#if checked}}true{{else}}false{{/if}}"><strong>{{label}}</strong><span class="hint">{{hint}}</span></button>{{/each}}
+      </fieldset>
+      <div class="form-group"><label for="sb-folder">{{sr2eT "SR2E.SceneBuilder.folder"}}</label><select id="sb-folder" data-sb="folderId">{{#each folders}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
+      <div class="sr2e-row">
+        <label>{{sr2eT "SR2E.SceneBuilder.width"}} <input type="number" class="sr2e-num" data-sb="width" value="{{spec.width}}" min="5" max="400" {{#if sizeLocked}}disabled{{/if}}></label>
+        <label>{{sr2eT "SR2E.SceneBuilder.height"}} <input type="number" class="sr2e-num" data-sb="height" value="{{spec.height}}" min="5" max="400" {{#if sizeLocked}}disabled{{/if}}></label>
+        <label>{{sr2eT "SR2E.SceneBuilder.gridPx"}} <input type="number" class="sr2e-num" data-sb="grid" value="{{spec.grid}}" min="50" max="300" {{#if sizeLocked}}disabled{{/if}}></label>
+        <label>{{sr2eT "SR2E.SceneBuilder.gridDistance"}} <input type="number" class="sr2e-num" data-sb="gridDistance" value="{{spec.gridDistance}}" min="0.5" max="10" step="0.5" {{#if sizeLocked}}disabled{{/if}}></label>
+        <label><input type="checkbox" data-sb="gridless" {{checked spec.gridless}} {{#if sizeLocked}}disabled{{/if}}> {{sr2eT "SR2E.SceneBuilder.gridless"}}</label>
+      </div>
+      <p class="hint">{{#if editing}}{{sr2eT "SR2E.SceneBuilder.sizeLockedHint"}}{{else}}{{#if sizeFromBackdrop}}{{sr2eT "SR2E.SceneBuilder.sizeFromBackdrop"}}{{else}}{{sr2eT "SR2E.SceneBuilder.sizeHint"}}{{/if}}{{/if}}</p>
+      {{/if}}
+
+      {{#if is.map}}
+      <div class="sr2e-sb-gallery" role="list">
+        <button type="button" role="listitem" class="sr2e-sb-backdrop{{#if plain}} active{{/if}}" data-action="sbBackdrop" data-backdrop="" aria-pressed="{{#if plain}}true{{else}}false{{/if}}">
+          <span class="sr2e-sb-thumb sr2e-sb-plain" style="background: {{spec.color}}"></span><strong>{{sr2eT "SR2E.SceneBuilder.plainColour"}}</strong><span class="hint">{{sr2eT "SR2E.SceneBuilder.plainHint"}}</span></button>
+        {{#each backdrops}}
+        <button type="button" role="listitem" class="sr2e-sb-backdrop{{#if selected}} active{{/if}}" data-action="sbBackdrop" data-backdrop="{{id}}" aria-pressed="{{#if selected}}true{{else}}false{{/if}}" title="{{hint}}">
+          <img class="sr2e-sb-thumb" src="{{src}}" alt="" loading="lazy"><strong>{{label}}</strong><span class="hint">{{size}}</span></button>
+        {{/each}}
+        <button type="button" role="listitem" class="sr2e-sb-backdrop{{#if custom}} active{{/if}}" data-action="sbPickImage" aria-pressed="{{#if custom}}true{{else}}false{{/if}}">
+          <span class="sr2e-sb-thumb sr2e-sb-own"><i class="fa-solid fa-image" aria-hidden="true"></i></span><strong>{{sr2eT "SR2E.SceneBuilder.ownPicture"}}</strong><span class="hint">{{sr2eT "SR2E.SceneBuilder.ownHint"}}</span></button>
+      </div>
+      {{#if custom}}<div class="form-group"><label for="sb-image">{{sr2eT "SR2E.SceneBuilder.imagePath"}}</label><div class="form-fields"><input id="sb-image" type="text" data-sb="image" value="{{spec.image}}"><button type="button" data-action="sbPickImage" title="{{sr2eT "SR2E.SceneBuilder.browse"}}" aria-label="{{sr2eT "SR2E.SceneBuilder.browse"}}"><i class="fa-solid fa-folder-open" aria-hidden="true"></i></button></div></div>{{/if}}
+      <div class="sr2e-row">
+        <label>{{sr2eT "SR2E.SceneBuilder.colour"}} <input type="color" data-sb="color" value="{{spec.color}}"></label>
+        {{#if builtIn}}{{#if canWalls}}<label><input type="checkbox" data-sb="walls" {{checked spec.walls}}> {{sr2eT "SR2E.SceneBuilder.walls"}}</label>{{else}}{{#if hasWalls}}<span class="hint">{{sr2eT "SR2E.SceneBuilder.hasWalls"}}</span>{{/if}}{{/if}}{{/if}}
+        <label><input type="checkbox" data-sb="tokenVision" {{checked spec.tokenVision}}> {{sr2eT "SR2E.SceneBuilder.tokenVision"}}</label>
+        <label><input type="checkbox" data-sb="fog" {{checked spec.fog}}> {{sr2eT "SR2E.SceneBuilder.fog"}}</label>
+      </div>
+      {{#if builtIn}}<p class="hint">{{sr2eT "SR2E.SceneBuilder.wallsHint"}}</p>{{/if}}
+      {{/if}}
+
+      {{#if is.conditions}}
+      {{#unless isReal}}<p class="hint">{{#if isMatrix}}{{sr2eT "SR2E.SceneBuilder.matrixLightHint"}}{{else}}{{sr2eT "SR2E.SceneBuilder.astralLightHint"}}{{/if}}</p>{{/unless}}
+      <div class="sr2e-row">
+        <label>{{sr2eT "SR2E.SceneBuilder.hour"}} <select data-sb="hour">{{#each hours}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>
+        <label><input type="checkbox" data-sb="darknessAuto" {{checked darknessAuto}}> {{sr2eT "SR2E.SceneBuilder.darknessAuto"}}</label>
+        <label>{{sr2eT "SR2E.SceneBuilder.darkness"}} <input type="number" class="sr2e-num" data-sb="darkness" value="{{darkness}}" min="0" max="1" step="0.05" {{#if darknessAuto}}disabled{{/if}}></label>
+      </div>
+      <p>{{sr2eT "SR2E.SceneBuilder.lightIs" light=light pct=darknessPct}}</p>
+      <div class="sr2e-row">
+        <label><input type="checkbox" data-sb="globalLight" {{checked spec.globalLight}}> {{sr2eT "SR2E.SceneBuilder.globalLight"}}</label>
+        <label><input type="checkbox" data-sb="moveTime" {{checked spec.moveTime}} {{#unless hourSet}}disabled{{/unless}}> {{sr2eT "SR2E.SceneBuilder.moveTime" now=worldHour}}</label>
+      </div>
+      <p class="hint">{{sr2eT "SR2E.SceneBuilder.moveTimeHint"}}</p>
+      <div class="sr2e-row">
+        <label>{{sr2eT "SR2E.SceneBuilder.weather"}} <select data-sb="weather">{{#each weathers}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>
+        <label>{{sr2eT "SR2E.SceneBuilder.terrain"}} <select data-sb="terrain">{{#each terrains}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>
+      </div>
+      <p class="hint">{{sr2eT "SR2E.SceneBuilder.conditionsHint"}}</p>
+      {{/if}}
+
+      {{#if is.magic}}
+      <div class="sr2e-row">
+        <label>{{sr2eT "SR2E.SceneBuilder.background"}} <input type="number" class="sr2e-num" data-sb="background" value="{{spec.background}}" min="0" max="20"></label>
+        <label class="sr2e-grow">{{sr2eT "SR2E.SceneBuilder.sources"}} <input type="text" data-sb="sources" value="{{spec.sources}}" placeholder="{{sr2eT "SR2E.SceneBuilder.sourcesPlaceholder"}}"></label>
+      </div>
+      <p class="hint">{{sr2eT "SR2E.SceneBuilder.backgroundHint"}}</p>
+      <div class="form-group"><label for="sb-env">{{sr2eT "SR2E.SceneBuilder.environment"}}</label><input id="sb-env" type="text" data-sb="environment" value="{{spec.environment}}" placeholder="{{sr2eT "SR2E.SceneBuilder.environmentPlaceholder"}}"></div>
+      <p class="hint">{{sr2eT "SR2E.SceneBuilder.environmentHint"}}</p>
+      <h3 data-help="scene-builder" data-heading="A ward">{{sr2eT "SR2E.SceneBuilder.wardHeading"}}</h3>
+      <div class="sr2e-row">
+        <label><input type="checkbox" data-sb="ward.on" {{checked spec.ward.on}}> {{sr2eT "SR2E.SceneBuilder.wardOn"}}</label>
+        {{#if spec.ward.on}}
+        <label>{{sr2eT "SR2E.SceneBuilder.wardKindLabel"}} <select data-sb="ward.kind">{{#each wardKinds}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>
+        <label>{{sr2eT "SR2E.SceneBuilder.wardRating"}} <input type="number" class="sr2e-num" data-sb="ward.rating" value="{{spec.ward.rating}}" min="1" max="20"></label>
+        <label>{{sr2eT "SR2E.SceneBuilder.wardArea"}} <select data-sb="ward.area">{{#each wardAreas}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>
+        {{/if}}
+      </div>
+      <p class="hint">{{sr2eT "SR2E.SceneBuilder.wardHint"}}</p>
+      {{/if}}
+
+      {{#if is.people}}
+      <h3 data-help="scene-builder" data-heading="Player characters">{{sr2eT "SR2E.SceneBuilder.pcsHeading"}}</h3>
+      <ul class="sr2e-sb-pcs">
+        {{#each pcs}}<li><label><input type="checkbox" data-sb="pc" data-uuid="{{uuid}}" {{checked checked}} {{#if here}}disabled{{/if}}> {{name}}{{#unless player}} <span class="hint">{{sr2eT "SR2E.SceneBuilder.noPlayer"}}</span>{{/unless}}{{#if here}} <span class="hint">{{sr2eT "SR2E.SceneBuilder.alreadyHere"}}</span>{{/if}}</label></li>
+        {{else}}<li><em>{{sr2eT "SR2E.SceneBuilder.noPcs"}}</em></li>{{/each}}
+      </ul>
+      <h3 data-help="scene-builder" data-heading="NPCs, spirits and critters">{{sr2eT "SR2E.SceneBuilder.peopleHeading"}}</h3>
+      <div class="sr2e-sb-drop" aria-label="{{sr2eT "SR2E.SceneBuilder.dropHint"}}">
+        {{#if rows.length}}
+        <table class="sr2e-sb-rows">
+          <thead><tr><th>{{sr2eT "SR2E.SceneBuilder.who"}}</th><th>{{sr2eT "SR2E.SceneBuilder.details"}}</th><th>{{sr2eT "SR2E.SceneBuilder.attitudeLabel"}}</th><th>{{sr2eT "SR2E.SceneBuilder.hidden"}}</th><th>{{sr2eT "SR2E.SceneBuilder.morale"}}</th><th></th></tr></thead>
+          <tbody>
+          {{#each rows}}
+          <tr>
+            <td><strong>{{title}}</strong></td>
+            <td class="sr2e-sb-details">
+              {{#if isGen}}
+              <select data-sb="threat" data-row="{{id}}" aria-label="{{sr2eT "SR2E.SceneBuilder.threat"}}">{{#each threats}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
+              {{#if (eq kind "npc")}}<select data-sb="archetype" data-row="{{id}}" aria-label="{{sr2eT "SR2E.SceneBuilder.subtype"}}">{{#each subtypes}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>{{/if}}
+              {{#if (eq kind "group")}}<select data-sb="groupKind" data-row="{{id}}" aria-label="{{sr2eT "SR2E.SceneBuilder.subtype"}}">{{#each subtypes}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>{{/if}}
+              {{#if (eq kind "spirit")}}<select data-sb="spiritKind" data-row="{{id}}" aria-label="{{sr2eT "SR2E.SceneBuilder.subtype"}}">{{#each subtypes}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>{{/if}}
+              {{#if (eq kind "critter")}}<select data-sb="critter" data-row="{{id}}" aria-label="{{sr2eT "SR2E.SceneBuilder.subtype"}}">{{#each subtypes}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>{{/if}}
+              <a data-action="sbReroll" data-row="{{id}}" title="{{sr2eT "SR2E.SceneBuilder.reroll"}}" aria-label="{{sr2eT "SR2E.SceneBuilder.reroll"}}"><i class="fa-solid fa-dice" aria-hidden="true"></i></a>
+              {{else}}
+              <label><input type="checkbox" data-sb="linked" data-row="{{id}}" {{checked linked}}> {{sr2eT "SR2E.SceneBuilder.linked"}}</label>
+              {{/if}}
+              {{#if showCount}}<label>× <input type="number" class="sr2e-num" data-sb="count" data-row="{{id}}" value="{{count}}" min="1" max="20" aria-label="{{sr2eT "SR2E.SceneBuilder.count"}}"></label>{{/if}}
+            </td>
+            <td><select data-sb="attitude" data-row="{{id}}" aria-label="{{sr2eT "SR2E.SceneBuilder.attitudeLabel"}}">{{#each attitudes}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></td>
+            <td><input type="checkbox" data-sb="hidden" data-row="{{id}}" {{checked hidden}} aria-label="{{sr2eT "SR2E.SceneBuilder.hidden"}}"></td>
+            <td><input type="checkbox" data-sb="morale" data-row="{{id}}" {{checked morale}} aria-label="{{sr2eT "SR2E.SceneBuilder.morale"}}"></td>
+            <td><a data-action="sbRemoveRow" data-row="{{id}}" title="{{sr2eT "SR2E.SceneBuilder.removeRow"}}" aria-label="{{sr2eT "SR2E.SceneBuilder.removeRow"}}"><i class="fa-solid fa-trash" aria-hidden="true"></i></a></td>
+          </tr>
+          {{/each}}
+          </tbody>
+        </table>
+        {{else}}<p><em>{{sr2eT "SR2E.SceneBuilder.noPeople"}}</em></p>{{/if}}
+        <p class="hint">{{sr2eT "SR2E.SceneBuilder.dropHint"}}</p>
+      </div>
+      <div class="sr2e-row">
+        <label class="sr2e-grow">{{sr2eT "SR2E.SceneBuilder.addActor"}} <select data-sb-pick="actor">{{#each actorPick}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>
+        <button type="button" data-action="sbAddActor"><i class="fa-solid fa-plus" aria-hidden="true"></i> {{sr2eT "SR2E.SceneBuilder.add"}}</button>
+      </div>
+      <div class="sr2e-row">
+        <label class="sr2e-grow">{{sr2eT "SR2E.SceneBuilder.addGenerated"}} <select data-sb-pick="gen">{{#each genKinds}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>
+        <button type="button" data-action="sbAddGen"><i class="fa-solid fa-dice" aria-hidden="true"></i> {{sr2eT "SR2E.SceneBuilder.add"}}</button>
+      </div>
+      <p class="hint">{{sr2eT "SR2E.SceneBuilder.peopleHint" tokens=tokens}}</p>
+      {{/if}}
+
+      {{#if is.security}}
+      {{#if isMatrix}}<p class="hint">{{sr2eT "SR2E.SceneBuilder.matrixHostHint"}}</p>{{/if}}
+      <h3 data-help="scene-builder" data-heading="Matrix host">{{sr2eT "SR2E.SceneBuilder.hostHeading"}}</h3>
+      <div class="sr2e-row">
+        <label><input type="radio" name="sb-host" data-sb="host.mode" value="none" {{checked hostMode.none}}> {{sr2eT "SR2E.SceneBuilder.modeNone"}}</label>
+        <label><input type="radio" name="sb-host" data-sb="host.mode" value="existing" {{checked hostMode.existing}}> {{sr2eT "SR2E.SceneBuilder.modeExisting"}}</label>
+        <label><input type="radio" name="sb-host" data-sb="host.mode" value="generate" {{checked hostMode.generate}}> {{sr2eT "SR2E.SceneBuilder.modeGenerate"}}</label>
+      </div>
+      {{#if hostMode.existing}}<select data-sb="host.uuid" aria-label="{{sr2eT "SR2E.SceneBuilder.hostHeading"}}">{{#each hosts}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>{{/if}}
+      {{#if hostMode.generate}}<div class="sr2e-row">
+        <label>{{sr2eT "SR2E.SceneBuilder.threat"}} <select data-sb="host.threat">{{#each hostThreats}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>
+        <label><input type="checkbox" data-sb="host.corporation" {{checked spec.host.corporation}}> {{sr2eT "SR2E.SceneBuilder.corporate"}}</label>
+      </div>{{/if}}
+      <h3 data-help="scene-builder" data-heading="Security site">{{sr2eT "SR2E.SceneBuilder.siteHeading"}}</h3>
+      <div class="sr2e-row">
+        <label><input type="radio" name="sb-site" data-sb="site.mode" value="none" {{checked siteMode.none}}> {{sr2eT "SR2E.SceneBuilder.modeNone"}}</label>
+        <label><input type="radio" name="sb-site" data-sb="site.mode" value="existing" {{checked siteMode.existing}}> {{sr2eT "SR2E.SceneBuilder.modeExisting"}}</label>
+        <label><input type="radio" name="sb-site" data-sb="site.mode" value="generate" {{checked siteMode.generate}}> {{sr2eT "SR2E.SceneBuilder.modeGenerate"}}</label>
+      </div>
+      {{#if siteMode.existing}}<select data-sb="site.uuid" aria-label="{{sr2eT "SR2E.SceneBuilder.siteHeading"}}">{{#each sites}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>{{/if}}
+      {{#if siteMode.generate}}<label>{{sr2eT "SR2E.SceneBuilder.threat"}} <select data-sb="site.threat">{{#each siteThreats}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>{{/if}}
+      <p class="hint">{{sr2eT "SR2E.SceneBuilder.securityHint"}}</p>
+      {{/if}}
+
+      {{#if is.finish}}
+      <div class="form-group stacked"><label for="sb-notes">{{sr2eT "SR2E.SceneBuilder.notes"}}</label><textarea id="sb-notes" data-sb="notes" rows="4" placeholder="{{sr2eT "SR2E.SceneBuilder.notesPlaceholder"}}">{{spec.notes}}</textarea></div>
+      <div class="sr2e-row">
+        <label><input type="checkbox" data-sb="journal" {{checked spec.journal}}> {{sr2eT "SR2E.SceneBuilder.journal"}}</label>
+        <label>{{sr2eT "SR2E.SceneBuilder.playlist"}} <select data-sb="playlist">{{#each playlists}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>
+      </div>
+      <div class="sr2e-row">
+        <label>{{sr2eT "SR2E.SceneBuilder.combatLabel"}} <select data-sb="combat">{{#each combats}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>
+        <label>{{sr2eT "SR2E.SceneBuilder.showLabel"}} <select data-sb="show">{{#each shows}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>
+      </div>
+      <h3 data-help="scene-builder" data-heading="Summary">{{sr2eT "SR2E.SceneBuilder.summaryHeading"}}</h3>
+      <table class="sr2e-sb-summary"><tbody>{{#each summary}}<tr><th scope="row">{{label}}</th><td>{{value}}</td></tr>{{/each}}</tbody></table>
+      {{#if problems.length}}<ul class="sr2e-warn">{{#each problems}}<li>{{this}}</li>{{/each}}</ul>{{/if}}
+      <h3 data-help="scene-builder" data-heading="Save as a template">{{sr2eT "SR2E.SceneBuilder.saveHeading"}}</h3>
+      <div class="sr2e-row">
+        <label class="sr2e-grow">{{sr2eT "SR2E.SceneBuilder.templateName"}} <input type="text" name="sbTemplateName" value="{{templateName}}"></label>
+        <button type="button" data-action="sbSaveTemplate"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> {{sr2eT "SR2E.SceneBuilder.saveTemplate"}}</button>
+      </div>
+      <p class="hint">{{sr2eT "SR2E.SceneBuilder.saveHint"}}</p>
+      {{#if builtHere}}<p><button type="button" class="sr2e-danger" data-action="sbRemoveScene"><i class="fa-solid fa-trash" aria-hidden="true"></i> {{sr2eT "SR2E.SceneBuilder.removeScene"}}</button></p>{{/if}}
+      {{/if}}
+    </div>
+    <aside class="sr2e-wiz-totals" aria-label="{{sr2eT "SR2E.SceneBuilder.summaryHeading"}}">
+      <h3 data-help="scene-builder" data-heading="Summary">{{sr2eT "SR2E.SceneBuilder.summaryHeading"}}</h3>
+      <ul>{{#each summary}}<li><span>{{label}}</span> {{value}}</li>{{/each}}</ul>
+    </aside>
+  </div>
+  <footer class="sr2e-wiz-foot">
+    <button type="button" data-action="sbBack" {{#if first}}disabled{{/if}}><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> {{sr2eT "SR2E.SceneBuilder.back"}}</button>
+    <span class="hint">{{#if problems.length}}{{problems.[0]}}{{else}}{{sr2eT "SR2E.SceneBuilder.readyHint"}}{{/if}}</span>
+    <span class="sr2e-sb-foot-right">
+      {{#unless last}}<button type="button" data-action="sbNext">{{sr2eT "SR2E.SceneBuilder.next"}} <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>{{/unless}}
+      <button type="button" class="sr2e-primary" data-action="sbBuild" {{#unless ready}}disabled{{/unless}}><i class="fa-solid fa-hammer" aria-hidden="true"></i> {{#if editing}}{{sr2eT "SR2E.SceneBuilder.apply"}}{{else}}{{sr2eT "SR2E.SceneBuilder.build"}}{{/if}}</button>
+    </span>
+  </footer>
+</div>
