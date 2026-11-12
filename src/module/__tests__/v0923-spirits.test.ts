@@ -337,7 +337,7 @@ describe('v0.92.3 the astral plane (Core p. 147; Grimoire p. 91)', () => {
   });
 });
 
-describe('v0.92.3 initiation, allies, wards, geasa, dispelling (Grimoire)', () => {
+describe('v0.92.3 initiation, allies, wards, geasa, dispelling (Grimoire; initiation, wards, geasa and dispelling are RULES.SORCERY_V923)', () => {
   test('book: the first initiation is Grade 0 for 18 Karma and adds no Magic; the next is Grade 1 for 21', async (t) => {
     const m = mage({ karma: { pool: 0, poolSpent: 0, good: 60, career: 60 } });
     assert.equal(await m.advanceInitiation(null), true);
@@ -372,7 +372,7 @@ describe('v0.92.3 initiation, allies, wards, geasa, dispelling (Grimoire)', () =
   test('book: a ward rolls Sorcery, drains (Force × days)L Stun and is capped at 2 × Magic', async () => {
     const m = mage();
     assert.equal(await m.raiseWardRitual({ force: 13, payMaterials: false }), null);
-    assert.match(warnings.at(-1) ?? '', /at most Force 12/);
+    assert.match(warnings.at(-1) ?? '', /at most 12/);
     faces.push(5, 5, 1, 1, 1);                        // Sorcery 5 vs 3: 2 successes
     faces.push(1, 1, 1, 1, 1);                        // drain: Willpower 5 vs 3 × 2
     await m.raiseWardRitual({ force: 3, payMaterials: false });
@@ -385,7 +385,7 @@ describe('v0.92.3 initiation, allies, wards, geasa, dispelling (Grimoire)', () =
     faces.push(...Array(10).fill(1));
     await m.castSpell(spell(), { force: 3 });
     assert.ok(has(/Broken geasa/));
-    t.after(oldWay({ 'SPIRITS_V923.geasa': 'v922' }));
+    t.after(oldWay({ 'SORCERY_V923.geasa': 'v922' }));
     const o = mage({ geasa: [{ text: 'Talisman', magic: 1, met: false, checkOnCast: false }] });
     assert.equal(o.system.derived.magic, 5);
   });
@@ -393,7 +393,7 @@ describe('v0.92.3 initiation, allies, wards, geasa, dispelling (Grimoire)', () =
     const caster = mage({ name: 'Caster', sustaining: [{ spellName: 'Armor', force: 3, category: 'manipulation', focusId: '', successes: 3 }] });
     const d = mage({ name: 'Dispeller', initiateGrade: 2, metamagic: { dispelling: true } });
     assert.equal(await d.dispel(caster, 0), null);
-    assert.match(warnings.at(-1) ?? '', /up to their grade \(2\)/);
+    assert.match(warnings.at(-1) ?? '', /up to the initiate grade \(2\)/);
     const d3 = mage({ name: 'Dispeller', initiateGrade: 3, metamagic: { dispelling: true } });
     faces.push(5, 5, 5, 5, 1);                        // Sorcery 5 vs 3: 4 successes, Force 3 → 1
     faces.push(...Array(10).fill(1));

@@ -1,5 +1,6 @@
 /**
- * v0.92.3 book alignment (conjuring, spirits, astral, initiation, allies and critters): pure functions. Each reads its
+ * v0.92.3 book alignment (conjuring, spirits, astral, allies and critters; initiation, metamagic, geasa and wards are
+ * in sorcery923.ts): pure functions. Each reads its
  * switch in RULES.SPIRITS_V923 (rules/config923/spirits.ts) and behaves the book way at the shipped value; the other
  * choice gives the v0.92.2 result.
  */
@@ -148,26 +149,6 @@ export function trackingMods(force: number, sorcery: number): Array<{ id: string
     : [{ id: 'forceOverYourSorcery', label: tx('SR2E.Card.Mod.forceOverYourSorcery'), value: 2 }];
 }
 
-// ---------------------------------------------------------------- Initiation
-
-/**
- * The grade the next initiation reaches. Book (Grimoire p. 38): the first initiation makes a Grade 0 initiate (no
- * Magic added: Magic + grade); the next Grade 1, and so on. 'v922': the first is Grade 1. `initiated` = already
- * an initiate (a Grade 0 initiate stores grade 0 and the `initiated` flag).
- */
-export function nextInitiationGrade(grade: number, initiated: boolean): number {
-  const g = Math.max(0, whole(grade));
-  return S().gradeZero === 'book' && g === 0 && !initiated ? 0 : g + 1;
-}
-
-/**
- * Initiation's Good Karma (Grimoire p. 38): (6 + the new grade) × 3 alone or × 2 in a group, an ordeal taking
- * RULES.OCCULT.initiation.ordealReduction (0.5) off the multiplier; rounded down ('down') or up ('up', v0.92.2).
- */
-export function roundInitiationKarma(raw: number): number {
-  return Math.max(0, S().initiationRounding === 'down' ? Math.floor(raw + 1e-9) : Math.ceil(raw - 1e-9));
-}
-
 // ---------------------------------------------------------------- Allies
 
 /**
@@ -198,42 +179,6 @@ export function allyDailyDrain(force: number, days: number): Array<{ tn: number;
   if (S().allyCost !== 'book') return [];
   const f = Math.max(1, whole(force));
   return Array.from({ length: Math.max(0, whole(days)) }, (_, i) => ({ tn: f + i + 1, level: 'L' as DamageLevel }));
-}
-
-// ---------------------------------------------------------------- Wards
-
-/** A ward's drain (Grimoire p. 92): (Force × days)L, days = the successes kept, never Physical. Null under 'v922'. */
-export function wardDrainBook(force: number, successes: number): { tn: number; level: DamageLevel; type: 'stun' } | null {
-  if (S().ward !== 'book') return null;
-  return { tn: Math.max(RULES.MIN_TARGET_NUMBER, Math.max(1, whole(force)) * Math.max(1, whole(successes))), level: 'L', type: 'stun' };
-}
-
-/** A ward's highest Force (Grimoire p. 92): wardMaxForcePerMagic × Magic; Infinity at 0. */
-export function wardMaxForce(magic: number): number {
-  const per = Number(S().wardMaxForcePerMagic) || 0;
-  return per > 0 ? Math.floor(per * Math.max(0, whole(magic))) : Infinity;
-}
-
-// ---------------------------------------------------------------- Geasa
-
-/** A broken geas (Grimoire p. 52): +2 TN per broken geas on the magician's magical tests ('book'); 0 under 'v922'. */
-export function geasaTn(geasa: ReadonlyArray<{ met?: boolean }>): number {
-  if (S().geasa !== 'book') return 0;
-  return (geasa ?? []).filter((g) => g && g.met === false).length * 2;
-}
-
-// ---------------------------------------------------------------- Dispelling
-
-/**
- * Dispelling (Grimoire p. 45), book way: only a spell of Force ≤ grade; TN = the higher of Force and the Karma that
- * quickened it; every 2 successes take 1 off the spell's Force. Null under 'v922'.
- */
-export function dispelBook(): boolean { return S().dispelling === 'book'; }
-export function dispelTn(force: number, quickenKarma = 0): number {
-  return Math.max(RULES.MIN_TARGET_NUMBER, whole(force), whole(quickenKarma));
-}
-export function dispelForceAfter(force: number, successes: number): number {
-  return Math.max(0, whole(force) - Math.floor(Math.max(0, whole(successes)) / 2));
 }
 
 // ---------------------------------------------------------------- Elemental services

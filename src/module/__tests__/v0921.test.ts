@@ -7,7 +7,6 @@ import { test, describe, before, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { oldWay } from '../rules/__tests__/oldway.ts';
 import { RULES } from '../rules/index.ts';
-import { oldWay } from '../rules/__tests__/oldway.ts';
 
 const g = globalThis as any;
 const faces: number[] = [];

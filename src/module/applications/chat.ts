@@ -1,7 +1,7 @@
 import type { AttackState, DamageState, SpellState, TestSnapshot, PoolKind, BlastContext, Contest } from '../documents/index.ts';
 import { opposedMelee, SR2Actor, serialTicks } from '../documents/index.ts';
 import { settleClock } from './clock.ts';
-import { nextInitiationGrade } from '../rules/spirits923.ts';
+import { nextInitiationGrade } from '../rules/sorcery923.ts';
 import { sysNow, toSysTime } from '../helpers/clock.ts';
 import { allActors } from '../helpers/actors.ts';
 import { playCue, decorateItemDrags } from './qol.ts';

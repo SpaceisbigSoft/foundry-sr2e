@@ -15,7 +15,9 @@ describe('spellcraft', () => {
     assert.equal(boxesHealed(3, 5), 3);
     assert.equal(boxesHealed(4, 2), 2);
   });
-  test('exclusive and fetish lower drain TN', () => {
+  test('exclusive and fetish lower drain TN', (t) => {
+    // v0.92.3: the v0.92.2 rule (RULES.SORCERY_V923).
+    t.after(oldWay({ 'SORCERY_V923.restrictedSpells': 'v922' }));
     assert.deepEqual(spellOptionDrainMods({ exclusive: true, fetish: true }), [{ label: 'Exclusive', value: -2 }, { label: 'Fetish', value: -1 }]);
     assert.deepEqual(spellOptionDrainMods({}), []);
   });
@@ -27,7 +29,9 @@ describe('spellcraft', () => {
     assert.equal(ritualTeamDice([4, 5, 1]), 2 + 2 + 0);
     assert.equal(ritualHours(6), 6);
   });
-  test('magic loss when Deadly and the roll is under Magic', () => {
+  test('magic loss when Deadly and the roll is under Magic', (t) => {
+    // v0.92.3: the v0.92.2 rule (RULES.SORCERY_V923).
+    t.after(oldWay({ 'SORCERY_V923.magicLoss': 'v922' }));
     assert.equal(reachedDeadly(10), true);
     assert.equal(reachedDeadly(9), false);
     assert.deepEqual(magicLossOutcome(5, 6), { lost: 1, threshold: 6 });

@@ -2873,9 +2873,9 @@ export const RULES = {
     touch: { skill: 'Unarmed Combat', tn: 4, opposed: true, defense: 'quickness' as 'quickness' | 'reaction' | 'body', reachMetres: 2, distance: 'warn' as 'warn' | 'block' | 'off' },
     learning: { enabled: true, skill: 'Sorcery', daysPerForce: 1, site: 'warn' as 'warn' | 'block' | 'off' },
     permanent: { enabled: true, turnsPerForce: 1, secondsPerTurn: 0, undoHealing: true },
-    // v0.92.3 book check (Grimoire p. 92 and its errata): Sorcery (was Conjuring), 1,000¥ of materials per Force (was 0),
-    // drain at L (was M); the TN and the time are RULES.SPIRITS_V923.ward.
-    ward: { skill: 'Sorcery', hoursPerForce: 1, nuyenPerForce: 1000, drainModifier: 0, drainLevel: 'L' as 'L' | 'M' | 'S' | 'D' },
+    // v0.92.3 (Grimoire p. 92): ward materials 1,000¥ per Force (was 0); the Revamp's patch keeps its 100. The skill,
+    // the drain and the time follow RULES.SORCERY_V923.ward ('book': Sorcery, (Force × successes)L Stun, Force hours).
+    ward: { skill: 'Conjuring', hoursPerForce: 1, nuyenPerForce: 1000, drainModifier: 0, drainLevel: 'M' as 'L' | 'M' | 'S' | 'D' },
     manifest: { enabled: true, blocksPhysical: true, alpha: 0.5 },
     detectionRange: { factor: 1, extendedFactor: 10, enforce: 'warn' as 'warn' | 'block' | 'off' },
     assensing: [

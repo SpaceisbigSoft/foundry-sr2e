@@ -6,6 +6,7 @@
 import { test, describe, before, beforeEach, after } from 'node:test';
 import { oldWay } from '../rules/__tests__/oldway.ts';
 import { SPIRITS_V922_WAY } from '../rules/__tests__/spirits922.ts';
+import { SORCERY_V922 } from '../rules/__tests__/sorcery922.ts';
 import assert from 'node:assert/strict';
 import { RULES } from '../rules/index.ts';
 // v0.92.3: this file pins the v0.92.2 conjuring, astral and initiation rules (the book way: v0923-spirits.test.ts).
@@ -277,7 +278,9 @@ describe('R2-DOC 3 (D1-7): sneaking is a physical act', () => {
 });
 
 describe('R2-DOC 4 (D2-2): a ritual member\'s drain', () => {
-  test('a drain that fails after posting its card is not asked for again; the card for another\'s member gives TN and level', async () => {
+  test('a drain that fails after posting its card is not asked for again; the card for another\'s member gives TN and level', async (t) => {
+    // v0.92.3: 'the book' here is the v0.92.2 reading (RULES.SORCERY_V923 at its old way); the book's way is in v0923-sorcery.test.ts.
+    t.after(oldWay(SORCERY_V922));
     const leader = who({ name: 'Leader', magic: 6, nuyen: 100000 }, [skill('cj', RULES.MAGIC_V56.ward.skill, 6, 'charisma')]);
     const mine = who({ name: 'Mine', magic: 5 }, [skill('cj2', RULES.MAGIC_V56.ward.skill, 4, 'charisma')]);
     mine.wardDrain = async function (this: any, ...args: any[]) { await SR2Actor.prototype.wardDrain.apply(this, args); throw new Error('a later update failed'); };

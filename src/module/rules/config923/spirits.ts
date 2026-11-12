@@ -1,5 +1,6 @@
 /**
- * v0.92.3 book alignment: Conjuring, spirits, astral, initiation, adepts, allies and critters. Read through RULES.SPIRITS_V923. Every value here was checked against the SR2 books
+ * v0.92.3 book alignment: Conjuring, spirits, astral, adepts, allies and critters (initiation, metamagic, geasa and
+ * wards: RULES.SORCERY_V923). Read through RULES.SPIRITS_V923. Every value here was checked against the SR2 books
  * (book and page in each comment). Each switch's first choice is the book's way (the default); the other puts the
  * old v0.92.2 behaviour back.
  */
@@ -46,26 +47,12 @@ export const SPIRITS_V923 = {
   tracking: 'book' as 'book' | 'v922',
   /** A barrier that beats an astral intruder hurts it: (rating)L, +1 level per 2 net successes (Core p. 148) / nothing. */
   barrierBacklash: 'book' as 'book' | 'v922',
-  /** The first initiation is Grade 0, adding no Magic (Grimoire p. 38) / Grade 1. */
-  gradeZero: 'book' as 'book' | 'v922',
-  /** Initiation Karma is rounded down (Grimoire p. 38) / up. */
-  initiationRounding: 'down' as 'down' | 'up',
   /** The asceticism ordeal lowers a Physical attribute only (Grimoire p. 40) / any attribute. */
   asceticism: 'physical' as 'physical' | 'any',
   /** Allies (Grimoire pp. 67–71): 5 × current Force Karma per Force above 1, 1 Magic point, (Force + day)L Stun each ritual day / Karma × Force, no Magic. */
   allyCost: 'book' as 'book' | 'v922',
-  /** Wards (Grimoire p. 92 and errata): Force hours, lasting days = successes, drain (Force × days)L Stun / Force hours ÷ successes, drain MAGIC_V56.ward's level at Force ÷ 2. */
-  ward: 'book' as 'book' | 'v922',
-  /** A ward's Force is at most this × the warder's Magic (Grimoire p. 92: 2; 0 = no limit). */
-  wardMaxForcePerMagic: 2 as number,
   /** Regeneration: a Deadly wound calls for 1D6, a 1 (or 2 from fire or explosions) kills (Core p. 219) / it always heals. */
   regenDeath: 'book' as 'book' | 'v922',
-  /** A broken geas: +2 TN per broken geas on magical tests (Grimoire p. 52) / it takes its Magic away. */
-  geasa: 'book' as 'book' | 'v922',
-  /** Centering (Grimoire pp. 43–44): always a Centering-skill test, every 2 successes cancel 1 point of penalties / grade points off automatically (or 1 per success up to the grade). */
-  centering: 'book' as 'book' | 'v922',
-  /** Dispelling (Grimoire p. 45): Force ≤ grade only, TN the higher of Force and quickening Karma, 1 Force per 2 successes, Drain as casting / Sorcery vs Force, 1 success each. */
-  dispelling: 'book' as 'book' | 'v922',
 };
 
 /** The house-rules window's rows for SPIRITS_V923 (spread into settings.ts HOUSE_RULES). */
@@ -93,16 +80,7 @@ export const HOUSE_SPIRITS_V923: Array<{ path: string; section: string; type: 'n
   { section: 'magicAndCritters', path: 'SPIRITS_V923.tracking', type: 'select', choices: ['book', 'v922'] },
   { section: 'magicAndCritters', path: 'TRACKING.baseHours', type: 'number' },
   { section: 'magicAndCritters', path: 'SPIRITS_V923.barrierBacklash', type: 'select', choices: ['book', 'v922'] },
-  { section: 'magicAndCritters', path: 'SPIRITS_V923.gradeZero', type: 'select', choices: ['book', 'v922'] },
-  { section: 'magicAndCritters', path: 'SPIRITS_V923.initiationRounding', type: 'select', choices: ['down', 'up'] },
   { section: 'magicAndCritters', path: 'SPIRITS_V923.asceticism', type: 'select', choices: ['physical', 'any'] },
   { section: 'magicAndCritters', path: 'SPIRITS_V923.allyCost', type: 'select', choices: ['book', 'v922'] },
-  { section: 'magicAndCritters', path: 'SPIRITS_V923.ward', type: 'select', choices: ['book', 'v922'] },
-  { section: 'magicAndCritters', path: 'MAGIC_V56.ward.skill', type: 'select', choices: ['Sorcery', 'Conjuring'] },
-  { section: 'magicAndCritters', path: 'MAGIC_V56.ward.drainLevel', type: 'select', choices: ['L', 'M', 'S', 'D'] },
-  { section: 'magicAndCritters', path: 'SPIRITS_V923.wardMaxForcePerMagic', type: 'number' },
   { section: 'magicAndCritters', path: 'SPIRITS_V923.regenDeath', type: 'select', choices: ['book', 'v922'] },
-  { section: 'magicAndCritters', path: 'SPIRITS_V923.geasa', type: 'select', choices: ['book', 'v922'] },
-  { section: 'magicAndCritters', path: 'SPIRITS_V923.centering', type: 'select', choices: ['book', 'v922'] },
-  { section: 'magicAndCritters', path: 'SPIRITS_V923.dispelling', type: 'select', choices: ['book', 'v922'] },
 ];

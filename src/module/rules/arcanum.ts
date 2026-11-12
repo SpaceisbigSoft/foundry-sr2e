@@ -5,8 +5,9 @@
  */
 import { RULES, type DamageLevel } from './config.ts';
 import { EFFECT_NUMBER_KEYS, emptyBundle, type EffectBundle } from './effects.ts';
-import { urrMagLearnTnFactor, urrMagWardDrain } from './urr80-magic.ts';
-import { wardDrainBook, assensingBookTable } from './spirits923.ts';
+import { urrMagWardDrain } from './urr80-magic.ts';
+import { assensingBookTable } from './spirits923.ts';
+import { learnTnFactor, bookWardDrain, bookCenteringCut } from './sorcery923.ts';
 import { t as tx, tCount, tNoun } from '../helpers/i18n.ts';
 
 const M = () => RULES.MAGIC_V56;
@@ -158,7 +159,8 @@ export function touchContact(casterSuccesses: number, defenderSuccesses: number)
 /** Learning a spell: TN, base days and days taken with these successes (null: failed). */
 export function learningPlan(force: number, successes: number): { tn: number; baseDays: number; days: number | null } {
   // v0.80.0 (RULES.URR_V80.magLearning 'theory', URR): TN = 2 × Force.
-  const tn = Math.max(RULES.MIN_TARGET_NUMBER, Math.floor(force) * urrMagLearnTnFactor());
+  // v0.92.3 (RULES.SORCERY_V923.learning 'book', Core p. 132): the same 2 × Force.
+  const tn = Math.max(RULES.MIN_TARGET_NUMBER, Math.floor(force) * learnTnFactor());
   const baseDays = force * num(M().learning.daysPerForce);
   return { tn, baseDays, days: successes > 0 ? Math.ceil(baseDays / successes) : null };
 }
@@ -186,16 +188,18 @@ export function wardPlan(force: number, successes: number): {
 } {
   const w = M().ward;
   const baseHours = force * num(w.hoursPerForce);
-  // v0.92.3 (RULES.SPIRITS_V923.ward 'book', Grimoire p. 92 and errata): the ritual takes the full Force hours, lasts
-  // days = successes, and drains (Force × days)L Stun. The Revamp's own drain ('urr') keeps its path.
-  const bk = urrMagWardDrain(force, successes) ? null : wardDrainBook(force, successes);
+  // v0.92.3 (RULES.SORCERY_V923.ward 'book', Grimoire p. 92 with the Grimoire II errata): the ritual takes Force hours
+  // (not ÷ successes), lasts days = successes, and drains (Force × successes)L Stun. The Revamp's own drain
+  // (URR_V80.magWardDrain) wins while it is on.
+  const urr = urrMagWardDrain(force, successes);
+  const bk = urr ? null : bookWardDrain(force, successes);
   return {
     tn: Math.max(RULES.MIN_TARGET_NUMBER, force),
     baseHours,
     hours: successes > 0 ? (bk ? baseHours : Math.ceil(baseHours / successes)) : null,
     nuyen: force * num(w.nuyenPerForce),
     // v0.80.0 (RULES.URR_V80.magWardDrain 'urr', URR): drain TN = Force + the successes.
-    drainTn: urrMagWardDrain(force, successes)?.drainTn ?? bk?.tn ?? Math.max(RULES.MIN_TARGET_NUMBER, Math.floor(force / 2) + num(w.drainModifier)),
+    drainTn: urr?.drainTn ?? bk?.drainTn ?? Math.max(RULES.MIN_TARGET_NUMBER, Math.floor(force / 2) + num(w.drainModifier)),
     drainLevel: (bk?.level ?? w.drainLevel) as DamageLevel,
     ...(bk ? { days: Math.max(0, Math.floor(successes)), stun: true } : {}),
   };
@@ -295,16 +299,15 @@ function revealLine(key: string, s: AssenseSubject, a: { essence: number; magic:
 
 /** Penalty points a centering test takes off: successes, up to grade × centeringPerGrade and the penalties. */
 export function centeringCut(successes: number, grade: number, penaltyTotal: number): number {
-  // v0.92.3 (RULES.SPIRITS_V923.centering 'book', Grimoire p. 44): every 2 successes cancel 1 point of penalties (the
-  // grade lowers the centering test's TN instead of capping the result).
-  if (RULES.SPIRITS_V923.centering === 'book') return Math.min(Math.floor(Math.max(0, successes) / 2), Math.max(0, penaltyTotal));
+  // v0.92.3 (RULES.SORCERY_V923.centering 'book', Grimoire p. 44): every 2 successes take 1 off, no grade cap.
+  if (RULES.SORCERY_V923.centering === 'book') return bookCenteringCut(successes, penaltyTotal);
   return Math.min(Math.max(0, successes), Math.max(0, grade) * RULES.MAGIC.centeringPerGrade, Math.max(0, penaltyTotal));
 }
 
 /** Whether centering is automatic or a test for this character. */
 export function centeringMode(skillName: string | null | undefined): 'auto' | 'test' {
-  // v0.92.3 (RULES.SPIRITS_V923.centering 'book', Grimoire p. 43): centering is always a test of a Centering skill.
-  if (RULES.SPIRITS_V923.centering === 'book') return 'test';
+  // v0.92.3 (RULES.SORCERY_V923.centering 'book', Grimoire p. 43): centering is always a test.
+  if (RULES.SORCERY_V923.centering === 'book') return 'test';
   const mode = M().centering.mode;
   if (mode === 'auto') return 'auto';
   if (mode === 'test') return 'test';
