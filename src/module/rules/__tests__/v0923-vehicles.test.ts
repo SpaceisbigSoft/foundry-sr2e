@@ -264,8 +264,11 @@ describe('v0.92.3 building security (CSH p. 100)', () => {
     assert.equal(bypassOutcome(0, false, 'circuit').minAlert, '');
   });
   test('a passkey: its rating vs the reader, the casing left shut; a sequencer: opposed with the keypad', (t) => {
-    const p = bypassPlan({ rating: 5, lockType: 'card', casing: 5, casingOpen: false, skillDice: 6, tools: tools('passkey', 3), light: null, vision: {} });
+    const p = bypassPlan({ rating: 5, lockType: 'card', casing: 5, casingOpen: false, skillDice: 3, tools: tools('passkey', 3), light: null, vision: {} });
     assert.deepEqual([p.step, p.dice, p.tn, p.modifiers.length], ['circuit', 3, 5, 0]);
+    // Review fix: a better skill works the lock instead (through the casing); a passkey's failure is an alarm.
+    assert.equal(bypassPlan({ rating: 5, lockType: 'card', casing: 5, casingOpen: false, skillDice: 6, tools: tools('passkey', 3), light: null, vision: {} }).step, 'casing');
+    { const u = oldWay({ 'VEHICLES_V923.circuitFail': 'tally' }); try { assert.equal(bypassOutcome(0, false, 'circuit', { passkey: true }).minAlert, 'passive'); assert.equal(bypassOutcome(0, false, 'circuit').minAlert, ''); } finally { u(); } }
     const s = dsLockToolStep({ lockType: 'keypad', rating: 5, skillDice: 2, tools: tools('sequencer', 4) });
     assert.deepEqual([s?.step, s?.dice], ['voice', 4]);
     t.after(v922Vehicles());

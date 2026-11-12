@@ -168,8 +168,10 @@ function listFlag<T = any>(v: unknown): T[] { return Array.isArray(v) ? v as T[]
 const POOL_LABELS = (): Record<PoolKind, string> => ({ combat: tx('SR2E.App.Chat.combatPool'), spell: tx('SR2E.App.Chat.spellPool'), hacking: tx('SR2E.App.Chat.hackingPool'), control: tx('SR2E.App.Chat.controlPool'), task: tx('SR2E.App.Chat.taskPool') });
 
 /** Ask how many pool dice to spend. Returns null if the dialog was cancelled. */
-export async function promptPoolDice(actor: any, title: string, pool: PoolKind = 'combat'): Promise<number | null> {
-  const left = (actor.system.derived?.[`${pool}PoolLeft`] as number | undefined) ?? 0;
+export async function promptPoolDice(actor: any, title: string, pool: PoolKind = 'combat', cap?: number): Promise<number | null> {
+  // v0.92.3 review fix: `cap`, the most the test takes (e.g. the rigger's skill for Control Pool on a vehicle's resistance).
+  const all = (actor.system.derived?.[`${pool}PoolLeft`] as number | undefined) ?? 0;
+  const left = cap === undefined ? all : Math.max(0, Math.min(all, Math.floor(Number(cap) || 0)));
   if (!(left > 0)) return 0;
   const result = await foundry.applications.api.DialogV2.prompt({
     window: { title },
@@ -852,8 +854,13 @@ async function onResist(message: any, button: HTMLButtonElement): Promise<void> 
   const cpCtl: any = target.type === 'vehicle' && veh80ResistPoolOn() && target.system.controlMode === 'jumped' ? target.controller?.() : null;
   // Review #3: only the rigger's owner (or the GM) can spend their Control Pool; anyone else resists with no pool.
   const cpRigger: any = cpCtl?.system?.rigging?.jumpedIn && cpCtl.system.rigging.vehicleUuid === target.uuid && cpCtl.isOwner ? cpCtl : null;
-  const pool = cpRigger
-    ? await promptPoolDice(cpRigger, tx('SR2E.Dialog.Chat.resistDamage', { targetName: target.name }), 'control')
+  // v0.92.3 review fix: no pool to ask for when the test takes none (shot inside a vehicle, Rigger 2 p. 53; aboard in a
+  // collision or crash, Rigger 2 p. 50).
+  const noPool = (Boolean(damage.occupantShot) && veh923('occupant') === 'book') || Boolean(damage.noPool)
+    // and black IC's damage to a decker (RULES.MATRIX_V923.blackIc: no Hacking Pool, VR2 p. 47).
+    || (Boolean((damage as any).black) && target.type !== 'ic' && RULES.MATRIX_V923.blackIc !== 'v922');
+  const pool = noPool ? 0 : cpRigger
+    ? await promptPoolDice(cpRigger, tx('SR2E.Dialog.Chat.resistDamage', { targetName: target.name }), 'control', RULES.URR_V80.vehCpResist ? undefined : cpRigger.vehicleSkillRating?.(target))
     : await promptPoolDice(target, tx('SR2E.Dialog.Chat.resistDamage', { targetName: target.name }), target.poolFor?.(damage) ?? 'combat');
   if (pool === null) return;
   if (resistedOn(message, target).includes(index) && !game.user?.isGM) return ui.notifications.warn(tx('SR2E.Notify.Chat.thatTargetHasAlreadyResistedThis'));
@@ -1312,7 +1319,10 @@ async function vehicleCrashTest(message: any, button: HTMLButtonElement, c: { ve
   if (!vehicle.isOwner && !driver?.isOwner) { button.disabled = false; return ui.notifications.warn(tx('SR2E.Notify.Chat.onlySDriverOrTheGm', { vehicleName: escHtml(vehicle.name) })); }
   if (!(await playerMay(message, driver?.isOwner ? driver : vehicle, origin(message, vehicle.uuid), tx('SR2E.Card.Chat.aCrashTestTn', { vehicleName: vehicle.name, tn: safeInt(c.tn, 2, 30, 4) })))) { button.disabled = false; return; }
   if (cardDone(message, driver?.isOwner ? driver : vehicle, 'crashTestRolled')) return ui.notifications.warn(tx('SR2E.Notify.Chat.theCrashTestHasAlreadyBeen'));
-  await vehicle.crashTestFor({ tn: safeInt(c.tn, 2, 30, 4), why: String(c.why ?? '').slice(0, 200) });
+  const rolled = await vehicle.crashTestFor({ tn: safeInt(c.tn, 2, 30, 4), why: String(c.why ?? '').slice(0, 200) });
+  // v0.92.3 review fix: no test was rolled (no one can drive): an autonav too weak to drive crashes; anything else
+  // leaves the card open (the warning said why) instead of losing the crash.
+  if (!rolled && !(await vehicle.crashUndriven?.())) { button.disabled = false; return; }
   await markCardDone(message, driver?.isOwner ? driver : vehicle, 'crashTestRolled');
 }
 

@@ -192,8 +192,9 @@ export function crashDamage(speed: number): { power: number; vehicleLevel: Damag
 export function riggerFeedback(o: { level: DamageLevel | null; power: number }): { tn: number; level: DamageLevel; type: 'stun' | 'physical'; attribute?: 'body' | 'willpower' } | null {
   const f = RULES.RIGGING.feedback;
   if (!f.enabled || !o.level) return null;
-  // v0.92.3 (VEHICLES_V923.feedback 'book', Rigger 2 p. 49): only when the vehicle is left at Serious (6M Physical) or
-  // Destroyed (6S Physical), resisted with Body (the numbers are the Revamp's URR_V80.vehFeedback rows, the same as the book's).
+  // v0.92.3 (VEHICLES_V923.feedback 'book', Rigger 2 p. 49): only a Serious hit (6M Physical) or a Deadly one (6S; a hit
+  // that destroys the vehicle is handled by the caller, 6S too), keyed on the hit's level, not the condition it leaves;
+  // resisted with Body (the numbers are the Revamp's URR_V80.vehFeedback rows, the same as the book's).
   if (veh923('feedback') === 'book') {
     const u = RULES.URR_V80.vehFeedback;
     const row = o.level === 'D' ? u.deadly : o.level === 'S' ? u.serious : null;

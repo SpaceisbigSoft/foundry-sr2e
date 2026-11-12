@@ -25,9 +25,11 @@
  *   'control': Gunnery + Control Pool.
  * - cpCap: 'skill': Control Pool dice on a driving test at most the skill rating rolled (Rigger 2 pp. 16, 20, 51).
  *   'none': any dice up to the pool left.
- * - feedback: rigger damage. 'book': only a hit that leaves the vehicle at Serious (6M Physical) or Destroyed (6S
- *   Physical), resisted with an ordinary Damage Resistance Test (Body), and a destroyed vehicle's 6S replaces the dump
- *   shock for a rigger jumped in aboard (Rigger 2 p. 49). 'old': every damaging hit, Willpower vs the Power, at the
+ * - feedback: rigger damage. 'book': only a hit the vehicle sustains at Serious (6M Physical) or Destroyed/Deadly (6S
+ *   Physical), and 6S whenever the hit destroys the vehicle, resisted with an ordinary Damage Resistance Test (Body);
+ *   a destroyed vehicle's 6S replaces the dump shock for a rigger jumped in aboard (Rigger 2 p. 49). Keyed on the hit's
+ *   level, not the condition it leaves: Rigger 2 uses "sustains … damage" for a single hit's level (p. 85's subsystem
+ *   damage), and the vehicle's levels are its damage levels (Destroyed = Deadly). 'old': every damaging hit, Willpower vs the Power, at the
  *   vehicle's level, Stun (RULES.RIGGING.feedback), and dump shock when destroyed (RULES.RIGGING.dumpShock).
  * - vcrTn: the control rig's TN bonus (RULES.RIGGING.vcr.tnPerLevel per level). 'byTest': twice that on an ordinary
  *   Driving Test ("rigger in control", Rigger 2 p. 20), once on the combat maneuvers (accelerate or brake, positioning,
@@ -47,8 +49,9 @@
  *   (`crashTerrain`), and the speed against the driver's Reaction: below × 20 +0, × 30 +1, × 40 +2, above +4
  *   (`crashSpeed`). 'old': the driving test's terrain row, no speed row.
  * - passengers: 'targeted': a weapon hit on the vehicle doesn't reach the people aboard (they are hurt by weapons only
- *   when they are the declared target), a collision reaches them at the vehicle's Power and level, and a crash at the
- *   level of the vehicle's crash damage (Rigger 2 pp. 50, 53). 'old': every damaging hit carries through at Power −
+ *   when they are the declared target), a collision or crash reaches them at the damage the vehicle resists (its Power
+ *   and level, even when the vehicle's test leaves it unharmed), with no Combat Pool (Rigger 2 pp. 50, 53; the rigger's
+ *   Crash Test Control Pool dice carrying over to them are not built). 'old': every damaging hit carries through at Power −
  *   Armor, a level lower; crash passengers at RULES.VEHICLES.crash.passengerLevel.
  * - occupant: shooting someone inside a vehicle. 'book': the higher of the vehicle's Armor or Body comes off the Power,
  *   and a jacked-in rigger takes +3 TN on the resistance test (Rigger 2 p. 53). 'old': the vehicle's Armor only.

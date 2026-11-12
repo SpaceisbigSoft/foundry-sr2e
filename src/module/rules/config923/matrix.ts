@@ -79,8 +79,10 @@ export const MATRIX_V923 = {
   overloadTn: { L: 2, M: 3, S: 5 } as Record<string, number>,
   /**
    * Dump shock (VR2 p. 124): Power = the Security Value, level by code; a cool deck and an ICCM each take 2 off the Power
-   * and a level (they add up); any jack-out without a Graceful Logoff risks it. 'v922': neither reduction, and jacking
-   * out on purpose is free (ICCM gives its dice).
+   * and a level (they add up; an ICCM's dice never count on top); any jack-out without a Graceful Logoff risks it.
+   * 'v922': neither reduction, and jacking out on purpose is free (ICCM gives its dice). All of v0.92.2 also needs the
+   * values moved in place set back: RULES.MATRIX_V57.dumpShock.levelBy 'fixed', RULES.MATRIX.sim.hot.dumpShockType
+   * 'physical', RULES.MATRIX.iccm.dicePerRating 1.
    */
   dumpShock: 'book' as 'book' | 'v922',
   /**
@@ -88,7 +90,9 @@ export const MATRIX_V923 = {
    * Willpower, Hardening lowers the Power, no Hacking Pool, and the icon resists the same damage with its Bod; the IC
    * holds a decker only after a hit; jacking out under it: Willpower (IC rating), ICCM −2 TN, no Hacking Pool, and the
    * IC gets one more attack; an ICCM resists with the better of Body or Willpower (it does not turn the damage to Stun).
-   * 'v922': RULES.MATRIX.blackIcResist + Hacking Pool, no Hardening, held on any attack, ICCM Stun and dice.
+   * The book's way ignores RULES.MATRIX.iccm.dicePerRating (no ICCM dice on top of the better attribute).
+   * 'v922': RULES.MATRIX.blackIcResist + Hacking Pool, no Hardening, held on any attack, ICCM Stun and dice; all of
+   * v0.92.2 also needs the values moved in place set back: RULES.MATRIX.iccm.blackIcStun true, dicePerRating 1.
    */
   blackIc: 'book' as 'book' | 'v922',
   /**

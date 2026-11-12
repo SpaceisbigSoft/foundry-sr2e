@@ -51,11 +51,12 @@ export function detectionOutcome(deviceSuccesses: number, intruderSuccesses: num
 }
 
 /** The outcome of a lock bypass test. */
-export function bypassOutcome(successes: number, disaster: boolean, step?: 'casing' | 'circuit' | 'voice'): { opened: boolean; tally: number; minAlert: string } {
+export function bypassOutcome(successes: number, disaster: boolean, step?: 'casing' | 'circuit' | 'voice', o: { passkey?: boolean } = {}): { opened: boolean; tally: number; minAlert: string } {
   const b = RULES.SECURITY.bypass;
   if (successes > 0) return { opened: true, tally: 0, minAlert: '' };
   // v0.92.3 (RULES.VEHICLES_V923.circuitFail 'passive', CSH p. 100): no successes on the circuit trips a passive alert.
-  const passive = step === 'circuit' && veh923('circuitFail') === 'passive';
+  // v0.92.3 review fix (RULES.VEHICLES_V923.passkey 'book', CSH p. 100): a passkey with no successes trips the alarm too.
+  const passive = step === 'circuit' && (veh923('circuitFail') === 'passive' || (Boolean(o.passkey) && veh923('passkey') === 'book'));
   const minAlert = disaster ? b.disasterAlert : '';
   return { opened: false, tally: b.failTally, minAlert: passive && (!minAlert || minAlert === 'passive') ? 'passive' : minAlert };
 }

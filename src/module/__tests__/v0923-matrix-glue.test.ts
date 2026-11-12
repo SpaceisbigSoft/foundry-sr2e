@@ -242,6 +242,17 @@ describe('v0.92.3 Matrix glue: the persona and system tests', () => {
     assert.ok(r2.modifiers.some((m: any) => m.id === 'jackpoint' && m.value === -2));
   });
 
+  test('review fix: the v0.92.2 connections add a cellular link\'s +1 to a logon once, not twice', async (t) => {
+    t.after(oldWay({ 'MATRIX_V923.connections': 'v922' }));
+    const h = host();
+    const d = decker({ connection: 'cellular' });
+    d.system.matrix.jackedIn = true; d.system.prepareDerivedData();
+    g.game.actors = [d];
+    noDetect(); faces.push(1, 1, 1, 1, 1);
+    const r = await d.systemTest('', { operationId: 'logon', targetUuid: h.uuid });
+    assert.equal(r.modifiers.filter((m: any) => /Cellular/.test(String(m.label))).length, 1);
+  });
+
   test('Locate File adds up net successes: a file every 5 (switch: a file per success)', async () => {
     const files = [1, 2, 3].map((i) => ({ id: `f${i}`, name: `File ${i}`, size: 10, value: 0, paydata: false, encrypted: 0, scramble: 0, foundBy: [] }));
     const h = host({ files });
@@ -369,6 +380,50 @@ describe('v0.92.3 Matrix glue: cybercombat and IC', () => {
       assert.match(text(), /\(Willpower/);
     } finally { undo(); }
   });
+  test('review fix: with ICCM dice set back to 1 per rating, the book\'s black IC still adds none (no double count)', async (t) => {
+    t.after(oldWay({ 'MATRIX.iccm.dicePerRating': 1 }));
+    const h = host();
+    const d = inside(h);
+    d.items.push({ id: 'ic1', type: 'cyberware', name: 'ICCM biofeedback filter', system: { kind: 'iccm', rating: 1, essenceCost: 0.2, installed: true, bioware: false, grade: 'standard', attributes: {} } });
+    d.system.prepareDerivedData();
+    assert.ok(Number(d.system.derived.cyber.iccm) > 0);
+    g.game.actors = [d];
+    const before = faces.length;
+    faces.push(...Array(20).fill(1));
+    await d.resistMatrixDamage({ targetUuid: d.uuid, melee: false, damageType: 'physical', power: 6, level: 'S', matrix: true, black: true });
+    const used = 20 + before - faces.length;
+    faces.length = 0;
+    assert.equal(used, Math.max(d.system.attributes.body.total, d.system.attributes.willpower.total));
+  });
+});
+
+describe('v0.92.3 review fix: a re-resolved miss takes back the marks of the hit', () => {
+  test('a black IC hit that a GM\'s TN change turns into a miss releases the hold it took', async () => {
+    const h = host();
+    const d = inside(h);
+    const bl = icIn(h, { category: 'black', rating: 4, name: 'Black 4', damageType: 'stun' });
+    g.game.actors = [d, bl];
+    chat.length = 0;
+    faces.push(5, 5, 5, 5, 5, 5, 5, 5, 5, 5);
+    await bl.icAttack({ targetUuid: d.uuid });
+    assert.deepEqual(d.system.matrix.engagedBy, [bl.uuid]);
+    const card = chat.find((c: any) => c.flags?.sr2e?.test?.kind === 'attack' || c.flags?.sr2e?.test?.attack);
+    assert.ok(card, chat.map((c: any) => JSON.stringify(c.flags?.sr2e?.test?.kind)).join(','));
+    Object.assign(card, { author: g.game.user, async update(dd: any) { for (const [k, v] of Object.entries(dd)) setPath(this, k, v); }, async setFlag(this: any, sc: string, k: string, v: any) { ((this.flags ??= {})[sc] ??= {})[k] = v; } });
+    await SR2Actor.retarget(card, { baseTargetNumber: 30, modifiers: [] });
+    assert.deepEqual(d.system.matrix.engagedBy, []);
+  });
+});
+
+describe('v0.92.3 review fix: party IC (VR2 p. 52)', () => {
+  test('the party\'s modifiers count every program, a crashed one too', () => {
+    const h = host();
+    const a = icIn(h, { party: 'p1', name: 'A' }), b = icIn(h, { party: 'p1', name: 'B' }), c = icIn(h, { party: 'p1', name: 'C', matrix: { monitor: 10 } });
+    g.game.actors = [a, b, c];
+    assert.equal(c.system.derived.crashed, true);
+    assert.equal(a.partyMembers().length, 2);
+    assert.equal(a.partySize(), 3);
+  });
 });
 
 describe('v0.92.3 Matrix glue: trace, psychotropic and gray IC', () => {
@@ -393,6 +448,34 @@ describe('v0.92.3 Matrix glue: trace, psychotropic and gray IC', () => {
       const r2 = await tr.icAttack({ targetUuid: d.uuid });
       assert.equal(r2.targetNumber, 5);
     } finally { undo(); }
+  });
+
+  test('review fix: the datatrail card a player\'s jack-out makes is blind (GM only)', async () => {
+    const h = host();
+    const tr = icIn(h, { behavior: 'trace', rating: 4, traceMode: 'report', name: 'Trace 4' });
+    const d = inside(h, { connection: 'legal' });
+    g.game.actors = [d, tr];
+    faces.push(5, 5, 5, 5);
+    await tr.icAttack({ targetUuid: d.uuid });
+    assert.equal(d.system.matrix.trace?.active, true);
+    chat.length = 0;
+    g.game.user = { id: 'p1', name: 'Player', isGM: false, can: () => true };
+    faces.push(6, 6, 6, 6, 6, 6);
+    try { await d.jackOut({ force: true }); } finally { g.game.user = GM(); }
+    const card = chat.find((c: any) => /datatrail|Datatrail/.test(String(c.content)));
+    assert.ok(card, chat.map((c: any) => c.content).join(' | '));
+    assert.equal(card.blind, true);
+  });
+
+  test('review fix: a Judas card under the book says "until they recover", not billions of days', async () => {
+    const d = decker();
+    g.game.actors = [d];
+    chat.length = 0;
+    faces.push(1, 1, 1, 1, 1, 1, 1, 1);
+    await d.resistPsychotropic({ icName: 'Judas 5', rating: 5, kind: 'judas' });
+    const all = chat.map((c: any) => String(c.content)).join(' | ');
+    assert.match(all, /betray their team to the host's owners until they recover/);
+    assert.doesNotMatch(all, /\d{6,}/);
   });
 
   test('psychotropic IC: the hit marks the decker; the test comes at the jack-out', async () => {

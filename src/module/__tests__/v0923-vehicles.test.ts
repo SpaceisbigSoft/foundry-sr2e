@@ -212,6 +212,15 @@ describe('v0.92.3 vehicles: driving tests', () => {
     faces.push(5);
     assert.ok(await vehicle({ autonav: 1 }).driveTest({}));
   });
+  test('review fix: a crash test an autonav 1 can\'t roll is an automatic crash (the crash-damage card), not lost', async () => {
+    const v = vehicle({ autonav: 1 });
+    assert.equal(await v.crashTestFor({ why: 'test' }), null);
+    assert.equal(await v.crashUndriven(), true);
+    assert.match(chat.at(-1).content, /data-sr2e-action="vehicleCrash"/);
+    assert.equal(chat.at(-1).flags.sr2e.crash.vehicleUuid, v.uuid);
+    assert.equal(await vehicle({ autonav: 1, currentSpeed: 0 }).crashUndriven(), false, 'standing still: no crash');
+    assert.equal(await vehicle({ autonav: 2 }).crashUndriven(), false, 'an autonav that drives rolls the test');
+  });
 });
 
 describe('v0.92.3 vehicles: attacks on a vehicle', () => {
@@ -267,6 +276,13 @@ describe('v0.92.3 vehicles: attacks on a vehicle', () => {
     await v.resistVehicleDamage(hit(v, { antiVehicle: true, level: 'D', power: 20 }));
     assert.match(allText(), /dump shock/i);
   });
+  test('review fix (the hit-level reading): a Moderate hit that destroys an already Serious vehicle is 6S feedback', async () => {
+    const { v } = await jumped({ condition: 8 });
+    chat.length = 0;
+    faces.push(1, 1, 1, 1);
+    await v.resistVehicleDamage(hit(v, { antiVehicle: true, level: 'M' }));
+    assert.match(allText(), /Resist feedback \(Rigger: Body vs 6, S physical\)/i);
+  });
   test('a Body 0 drone is destroyed by any hit that gets through', async (t) => {
     let v = vehicle({ body: 0, armor: 0, drone: true, pilot: 2 });
     await v.resistVehicleDamage(hit(v, { power: 6, level: 'L', antiVehicle: true }));
@@ -294,6 +310,35 @@ describe('v0.92.3 vehicles: crashes and initiative', () => {
     await v.crash(100);
     card = chat.at(-1);
     assert.equal(card.flags.sr2e.damages.length, 2);
+  });
+  test('review fix: the people aboard a crash resist the same damage even when the vehicle escapes it, with no Combat Pool', async () => {
+    const p = who({ name: 'Passenger' });
+    const v = vehicle({ occupants: [p.uuid], currentSpeed: 100 });
+    chat.length = 0;
+    await v.crash(100);
+    const crash = chat.at(-1).flags.sr2e.damages[0];
+    faces.push(...Array(30).fill(6), ...Array(30).fill(1));            // the vehicle's Body: all successes
+    await v.resistFromState(crash);
+    const pass = chat.flatMap((c: any) => c.flags?.sr2e?.damages ?? []).filter((d: any) => d.targetUuid === p.uuid);
+    assert.equal(pass.length, 1, chat.map((c: any) => c.content).join(' | '));
+    assert.equal(pass[0].level, crash.level);
+    assert.equal(pass[0].noPool, true);
+    faces.length = 0;
+    assert.equal(await diceUsed(() => p.resistFromState(pass[0], 3)), p.system.attributes.body.total, 'no Combat Pool dice');
+  });
+  test('review fix: a re-resolved soak card (the GM\'s TN change) still offers the crash of a destroyed moving vehicle', async () => {
+    const v = vehicle({ condition: 8, currentSpeed: 60 });
+    chat.length = 0;
+    faces.push(1, 1, 1, 1);
+    await v.resistFromState(hit(v, { antiVehicle: true, level: 'S' }));
+    const first = chat.at(-1);
+    assert.match(first.content, /data-sr2e-action="vehicleCrash"/);
+    Object.assign(first, { author: g.game.user, async update(d: any) { for (const [k, val] of Object.entries(d)) setPath(this, k, val); }, async setFlag(this: any, sc: string, k: string, val: any) { ((this.flags ??= {})[sc] ??= {})[k] = val; } });
+    const snap = first.flags.sr2e.test;
+    await SR2Actor.retarget(first, { baseTargetNumber: snap.baseTargetNumber, modifiers: [] });
+    const again = chat.at(-1);
+    assert.notEqual(again, first);
+    assert.match(again.content, /data-sr2e-action="vehicleCrash"/);
   });
   test("vehicle damage lowers its driver's Initiative", (t) => {
     const v = vehicle({ condition: 3 });

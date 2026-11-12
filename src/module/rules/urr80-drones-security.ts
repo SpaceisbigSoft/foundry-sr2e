@@ -101,12 +101,13 @@ export function dsLockToolStep(o: { lockType: string; rating: number; skillDice:
   const rating = whole(o?.rating);
   const tn = Math.max(RULES.MIN_TARGET_NUMBER, rating);
   const skill = whole(o?.skillDice);
-  // v0.92.3 (RULES.VEHICLES_V923.passkey 'book', CSH p. 100): the book's passkey is this test, used whenever one is carried
-  // (it leaves the casing in place: bypassPlan asks for it before the casing).
+  // v0.92.3 (RULES.VEHICLES_V923.passkey 'book', CSH p. 100): the book's passkey is this test (it leaves the casing in
+  // place: bypassPlan asks for it before the casing). Review fix: as the sequencer it works like, used only when it rolls
+  // at least the skill's dice (the character may work the lock by skill instead).
   const bookKey = veh923('passkey') === 'book';
   if ((u.dsPasskey === 'rating' || bookKey) && id === 'card') {
     const k = best('passkey');
-    if (k && (bookKey || whole(k.rating) >= skill)) {
+    if (k && whole(k.rating) >= skill) {
       return { step: 'circuit', tn, dice: whole(k.rating), modifiers: [], tool: { name: k.name, kind: 'passkey', rating: whole(k.rating), mode: 'replace' }, note: tx('SR2E.Text.Urr80DronesSecurity.spoofTheReaderWith', { name: k.name, rating: whole(k.rating) }) };
     }
   }

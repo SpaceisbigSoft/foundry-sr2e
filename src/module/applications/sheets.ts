@@ -43,7 +43,7 @@ import {
   activeManeuvers, designVehicle, lockTypeOf, icInitiative,
 } from "../rules/index.ts";
 import { legworkDifficulties, legworkLevelDice, encephalonFits } from "../rules/index.ts";
-import { doctoringCareOptions } from "../rules/index.ts";
+import { doctoringCareOptions, veh80GunneryPool } from "../rules/index.ts";
 import { buysByFinding } from "../rules/index.ts";
 import { addictWho, addictionBook, addictionRatingNow, firstAidOnStun, firstAidByLevelOn, fallingBook, drowningBoxes, stunRecoveryBaseTn } from "../rules/health923.ts";
 import { REFERENCE_DRAG_TYPE } from "../rules/index.ts";
@@ -1031,7 +1031,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     // v0.57.0: black IC holding the decker: breaking free is a test (Hacking Pool may help).
     const held: any = actor.blackIcHold?.();
     if (held) {
-      const pool = RULES.MATRIX_V57.blackIcHold.pool ? await promptPoolDice(actor, tx('SR2E.Dialog.Sheet.breakFreeOf', { heldName: held.name, actorName: actor.name }), "hacking") : 0;
+      // v0.92.3 review fix: the book's black IC takes no Hacking Pool (RULES.MATRIX_V923.blackIc): nothing to ask then.
+      const pool = RULES.MATRIX_V57.blackIcHold.pool && RULES.MATRIX_V923.blackIc === 'v922' ? await promptPoolDice(actor, tx('SR2E.Dialog.Sheet.breakFreeOf', { heldName: held.name, actorName: actor.name }), "hacking") : 0;
       if (pool === null) return;
       return void (await actor.jackOut({ poolDice: pool }));
     }
@@ -7039,9 +7040,11 @@ async function mountedFireDialog(vehicle: any, weapon: any): Promise<void> {
     if (mount === "none") return ui.notifications.warn(tx('SR2E.Notify.Sheet.isNotMountedSetItsMount', { weaponName: escHtml(weapon.name) }));
     const firers: Array<{ uuid: string; label: string; pool: string; left: number }> = [];
     const ctl: any = vehicle.controller?.() ?? null;
+    // v0.92.3 review fix: the pool shown is the one the attack spends (veh80GunneryPool: the book fires with Combat Pool).
+    const poolShown = (a: any, k: "control" | "combat") => ({ pool: k === "control" ? tx('SR2E.App.Sheets.control') : tx('SR2E.App.Sheets.combat'), left: k === "control" ? a.system.derived?.controlPoolLeft ?? 0 : a.system.derived?.combatPoolLeft ?? 0 });
     if (ctl && ctl.isOwner && canFireMount(mount, "driver")) {
       const jumped = vehicle.system.controlMode === "jumped";
-      firers.push({ uuid: ctl.uuid, label: jumped ? tx('SR2E.App.Sheets.firerDriverJumpedIn', { name: ctl.name }) : tx('SR2E.App.Sheets.firerDriver', { name: ctl.name }), pool: jumped ? tx('SR2E.App.Sheets.control') : tx('SR2E.App.Sheets.combat'), left: jumped ? ctl.system.derived?.controlPoolLeft ?? 0 : ctl.system.derived?.combatPoolLeft ?? 0 });
+      firers.push({ uuid: ctl.uuid, label: jumped ? tx('SR2E.App.Sheets.firerDriverJumpedIn', { name: ctl.name }) : tx('SR2E.App.Sheets.firerDriver', { name: ctl.name }), ...poolShown(ctl, veh80GunneryPool(jumped ? "control" : "combat", "driver")) });
     }
     if (canFireMount(mount, "gunner")) {
       for (const u of vehicle.system.occupants ?? []) {
@@ -7051,7 +7054,7 @@ async function mountedFireDialog(vehicle: any, weapon: any): Promise<void> {
     }
     const secSite: any = SR2Actor.securitySiteFor(vehicle);
     const secRigger: any = secSite?.securityRigger?.() ?? null;
-    if (secRigger && secRigger.isOwner && canFireMount(mount, "security")) firers.push({ uuid: secRigger.uuid, label: tx('SR2E.App.Sheets.firerSecurityRigger', { name: secRigger.name, site: secSite.name }), pool: tx('SR2E.App.Sheets.control'), left: secRigger.system.derived?.controlPoolLeft ?? 0 });
+    if (secRigger && secRigger.isOwner && canFireMount(mount, "security")) firers.push({ uuid: secRigger.uuid, label: tx('SR2E.App.Sheets.firerSecurityRigger', { name: secRigger.name, site: secSite.name }), ...poolShown(secRigger, veh80GunneryPool("control", "security")) });
     if (canFireMount(mount, "autopilot") && (vehicle.system.derived?.autopilotRating ?? 0) > 0) firers.push({ uuid: vehicle.uuid, label: vehicle.system.drone ? tx('SR2E.App.Sheets.firerAutopilotPilot', { rating: vehicle.system.derived.autopilotRating }) : tx('SR2E.App.Sheets.firerAutopilotAutonav', { rating: vehicle.system.derived.autopilotRating }), pool: "", left: 0 });
     if (!firers.length) return ui.notifications.warn(tx('SR2E.Notify.Sheet.nobodyCanFireMount', { weaponName: escHtml(weapon.name), mount: escHtml(mount), part: mount === "pintle" || mount === "ring" ? tx('SR2E.Notify.Sheet.putAGunnerAboard') : tx('SR2E.Notify.Sheet.putADriverAtTheControls') }));
     const fromToken = attackerToken(vehicle);
