@@ -1446,6 +1446,17 @@ export class GearDataModel extends foundry.abstract.TypeDataModel {
       availability: new fields.StringField({ required: true, initial: '' }),
       streetIndex: new fields.NumberField({ required: true, min: 0, initial: 1 }),
       ...legalFields(),
+      /**
+       * v0.91.8 (RULES.FORMULA_V918): a spell formula (empty `spell` = ordinary gear): the spell it teaches, its Force
+       * (learned at up to this), its tradition, the spell's category and the spell's data (rules/formulas.ts).
+       */
+      formula: new fields.SchemaField({
+        spell: new fields.StringField({ required: true, blank: true, initial: '' }),
+        force: new fields.NumberField({ required: true, integer: true, min: 0, max: 12, initial: 0 }),
+        tradition: new fields.StringField({ required: true, blank: true, initial: '', choices: ['', 'hermetic', 'shamanic'] }),
+        category: new fields.StringField({ required: true, blank: true, initial: '' }),
+        data: new fields.ObjectField({ required: true, initial: {} }),
+      }),
       description: new fields.HTMLField({ required: true, initial: '' }),
     };
   }

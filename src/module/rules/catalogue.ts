@@ -214,7 +214,8 @@ export function amountMax(type: string): number {
  * v0.81.1 (RC2-2): the gear fields (under `system`) that never make two pieces different things: how many, the text,
  * and stolen goods' Heat. Every other field of the gear model is in GEAR_STACK_FIELDS (a test walks the schema).
  */
-export const GEAR_STACK_IGNORED: readonly string[] = ['quantity', 'description', 'heat', 'heatAt'];
+// v0.91.8: a formula's spell data follows its spell's name (formula.spell is compared).
+export const GEAR_STACK_IGNORED: readonly string[] = ['quantity', 'description', 'heat', 'heatAt', 'formula.data'];
 
 /**
  * v0.81.0 (RC-3): the gear fields (under `system`) that make two pieces of gear different things, for stacking: the
@@ -240,6 +241,8 @@ export const GEAR_STACK_FIELDS: readonly string[] = [
   'optics.lowLight', 'optics.thermographic', 'optics.flareComp', 'optics.magnification', 'optics.worn',
   'surveillance.kind', 'surveillance.rating', 'surveillance.active', 'surveillance.plantedOn', 'surveillance.plantedName',
   'identity.kind', 'identity.rating', 'identity.fake', 'identity.covers',
+  // v0.91.8: a spell formula (two formulas of different spells, Forces or traditions never stack).
+  'formula.spell', 'formula.force', 'formula.tradition', 'formula.category',
 ];
 
 /**
@@ -255,6 +258,7 @@ export const GEAR_STACK_DEFAULTS: Readonly<Record<string, unknown>> = {
 /** Sub-parts (and the field saying they are in use) whose other fields keep their defaults while it is unset. */
 const GATED_PARTS: Readonly<Record<string, string>> = {
   toxin: 'kind', chip: 'kind', patch: 'kind', protection: 'kind', scanner: 'kind', identity: 'kind', surveillance: 'kind',
+  formula: 'spell',
   simchip: 'kind', stealth: 'kind', bypassTool: 'kind', site: 'kind', explosive: 'power', tools: 'level',
 };
 

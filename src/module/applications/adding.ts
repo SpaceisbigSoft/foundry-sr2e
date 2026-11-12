@@ -29,6 +29,8 @@ import { t as tx, tKey } from '../helpers/i18n.ts';
 import { headingName } from '../helpers/heading.ts';
 import { SR2Codex } from './codex.ts';
 import { askFindThrough } from './through.ts';
+import { buyFormula } from './formulas.ts';
+import { formulasRequired } from '../rules/formulas.ts';
 import { SR2NewEntry, entryKindFor } from './newentry.ts';
 import { entriesFor, entryData, entryShown, shopSettings, toggleShopMark, kitShopKeys, shopTab, setShopAdder, vehicleListChange, vehicleForSale, type Entry } from './shop.ts';
 import { buysByFinding, shopRowInfo, retryFlagKey, retryHoursLeft, timeLabel, soldInShop, shopGroupOf, shopGroupRank, shopGroupsFor, passesGroups, SHOP_GROUP_KEYS, isCodexType, parseShopKey } from '../rules/index.ts';
@@ -153,6 +155,8 @@ export class SR2AddWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       newEntry: SR2AddWindow.#onNewEntry,
       // v0.91.3: a row's page in the Catalogue.
       codexOpen: SR2AddWindow.#onCodexOpen,
+      // v0.91.8: a spell row's "Buy a formula…".
+      buyFormula: SR2AddWindow.#onBuyFormula,
       openSkillPicker: SR2AddWindow.#onSkillPicker,
     },
   };
@@ -165,7 +169,7 @@ export class SR2AddWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   static show(actor: any, type?: string, o: { shop?: boolean; query?: string; payment?: AddPayment } = {}): SR2AddWindow | null {
     if (!actor?.isOwner) { ui.notifications?.warn?.(tx('SR2E.Notify.Adding.onlyTheOwnerCanAddThings')); return null; }
     // v0.91.2: as the shop (the Shop button) it shows only the tabs that sell things.
-    const types = windowTypesFor(actor.type).filter((t) => !o.shop || soldInShop(t));
+    const types = windowTypesFor(actor.type).filter((t) => !o.shop || soldInShop(t) || (t === 'spell' && formulasRequired()));
     if (!types.length) { ui.notifications?.warn?.(tx('SR2E.Notify.Adding.doesnTHoldItems', { actorName: escHtml(actor.name) })); return null; }
     if (!SR2AddWindow.#hooked) {
       SR2AddWindow.#hooked = true;
@@ -260,7 +264,8 @@ export class SR2AddWindow extends HandlebarsApplicationMixin(ApplicationV2) {
 
   async _prepareContext(_options: any): Promise<any> {
     const actor = this.actor;
-    const types = windowTypesFor(actor?.type ?? 'character').filter((t) => !this.shopMode || soldInShop(t));
+    // v0.91.8: with formulas on, the shop has the Spells tab too (a row's Buy a formula…).
+    const types = windowTypesFor(actor?.type ?? 'character').filter((t) => !this.shopMode || soldInShop(t) || (t === 'spell' && formulasRequired()));
     if (!types.includes(this.type)) this.type = types[0] ?? 'weapon';
     const isKit = this.type === 'kit';
     // v0.64.0: in the creation wizard nothing is learned with Karma (spells come from spell points).
@@ -272,7 +277,9 @@ export class SR2AddWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     // v0.91.2: the shop only buys: a player gets Find & buy (or Buy now), the GM Buy now and Free (a gift).
     const buying = all.filter((p) => p === 'find' || p === 'buy');
     // v0.91.2 review (R4): in character creation the shop keeps every way to pay (Free too).
-    const pays: Array<AddPayment | 'find'> = this.shopMode && buying.length && !inCreation(actor) ? (Boolean(game.user?.isGM) ? all.filter((p) => p !== 'karma') : buying) : all;
+    const pays: Array<AddPayment | 'find'> = this.shopMode && buying.length && !inCreation(actor) ? (Boolean(game.user?.isGM) ? all.filter((p) => p !== 'karma') : buying)
+      // v0.91.8 review (R7): the shop's Spells tab (formulas on) only learns for a player (Learn uses a held formula); a row's scroll buys one.
+      : this.shopMode && this.type === 'spell' && !inCreation(actor) && !Boolean(game.user?.isGM) && all.includes('karma') ? ['karma'] : all;
     if (!pays.includes(this.payment)) this.payment = (this.payment === 'karma' || this.payment === 'buy' || this.payment === 'find') && pays.includes(finds ? 'find' : 'buy') ? (finds ? 'find' : 'buy') : pays[0]!;
     // v0.71.0 (R21): in creation a focus (free or bought with nuyen) arrives bonded with spell points.
     // v0.71.0 review (F4): only a magician with starting spell points bonds that way; anyone else's focus arrives unbonded.
@@ -316,6 +323,7 @@ export class SR2AddWindow extends HandlebarsApplicationMixin(ApplicationV2) {
         markable: isGM && shopTab(e.type) && (e.key.startsWith('tpl:w:') || e.key.startsWith('world:') || e.key.startsWith('actor:')),
         group: groupOf.get(e) ?? '',
         codex: isCodexType(e.type),
+        formula: e.type === 'spell' && formulasRequired() && Boolean(actor),
         search: `${e.name} ${entrySummary(e.type, e.system)} ${e.source}`.toLowerCase(),
         hidden: !matchesSearch(`${e.name} ${entrySummary(e.type, e.system)} ${e.source}`, this.query) || !passesGroups(groupOf.get(e) ?? '', this.groups) };
     });
@@ -339,7 +347,8 @@ export class SR2AddWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       readyNote: isKit ? tx('SR2E.App.Adding.readyToUseInstalledWornBonded') : readyNote(this.type), ready: this.ready,
       approvalNote: actor && approvalNeeded(actor) && this.payment === 'find' ? tx('SR2E.App.Shop.queueOnFind') : actor && approvalNeeded(actor) && this.payment !== 'free' ? tx('SR2E.App.Adding.theApprovalQueueIsOnThis') : actor && approvalNeeded(actor) ? tx('SR2E.App.Adding.theApprovalQueueIsOnFree') : '',
       creationNote: actor && inCreation(actor) ? (creationFocus ? tx('SR2E.App.Adding.inCharacterCreationFocus') : tx('SR2E.App.Adding.inCharacterCreation')) : '',
-      karmaNote: this.payment === 'karma' && this.type === 'spell' ? (RULES.MAGIC_V56.learning.enabled ? tx('SR2E.App.Adding.learningTestsAreOn', { skill: RULES.MAGIC_V56.learning.skill }) : tx('SR2E.App.Adding.eachSpellCostsItsForce')) : '',
+      karmaNote: this.payment === 'karma' && this.type === 'spell' ? `${RULES.MAGIC_V56.learning.enabled ? tx('SR2E.App.Adding.learningTestsAreOn', { skill: RULES.MAGIC_V56.learning.skill }) : tx('SR2E.App.Adding.eachSpellCostsItsForce')}${formulasRequired() && actor?.type === 'character' && !inCreation(actor) ? ` ${tx('SR2E.App.Formula.learnNeedsFormula')}` : ''}` : '',
+      formulaNote: this.type === 'spell' && formulasRequired() ? tx('SR2E.App.Formula.rowHint') : '',
       money: actor?.type === 'character' ? { nuyen: Number(actor.system.nuyen ?? 0).toLocaleString(), karma: Number(actor.system.karma?.good ?? 0) } : null,
       packCount: [...((game as any).packs ?? [])].filter((p: any) => p.documentName === 'Item').length,
     };
@@ -482,6 +491,17 @@ export class SR2AddWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     }
   }
 
+  /** v0.91.8 (RULES.FORMULA_V918): buy a spell's formula (the Force and tradition asked first). */
+  static async #onBuyFormula(this: SR2AddWindow, _e: Event, t: HTMLElement) {
+    const key = t.dataset['key'] ?? '';
+    const e = this.#entries.find((x) => x.key === key);
+    const actor = this.actor;
+    if (!e || e.type !== 'spell' || !actor || this.#busy) return;
+    this.#busy = true;
+    try { await buyFormula(actor, key, { name: e.name, category: String(e.system?.category ?? ''), force: this.ticked.get(key) ?? Number(e.system?.learnedForce ?? 1) }); }
+    finally { this.#busy = false; }
+  }
+
   /** v0.91.3: the Catalogue at this tab (a row's link: at that row's page). */
   static #onCodexOpen(this: SR2AddWindow, _e: Event, t: HTMLElement) {
     SR2Codex.open({ type: this.type, key: t.dataset['key'] ?? '' });
@@ -566,7 +586,7 @@ export async function addLines(actor: any, lines: Array<BasketLine & { key?: str
   if (payment === 'karma') {
     const learned: string[] = [];
     for (const l of lines) {
-      if (await actor.learnFormula(l.data.name, systemWithAmount(l.type, l.data.system ?? {}, l.amount), 'study')) { learned.push(l.data.name); done.push(l.key ?? l.name); }
+      if (await actor.learnFormula(l.data.name, systemWithAmount(l.type, l.data.system ?? {}, l.amount), 'study', { origin: 'shop' })) { learned.push(l.data.name); done.push(l.key ?? l.name); }
     }
     if (learned.length) ui.notifications?.info?.(tx('SR2E.Notify.Adding.learns', { actorName: escHtml(actor.name), learned: escHtml(learned.join(', ')) }));
     return done;

@@ -1814,3 +1814,15 @@ Switches in `RULES.SHOP_V916` (`rules/config91.ts`); the first choice is the new
 | A contact's help | On the character's own find: a buddy **+1** die, a friend for life **+2** (the legwork table; under the old legwork rule −1 TN per level above 1 instead), paid dice (¥100 each, at most their Loyalty), a favour **+2** dice and no fee, the contact's own dice roll too (the better result counts); the contact's fee is paid when asking. A house choice: the book may not let contacts help Availability tests this way | `SHOP_V916.through`, `STREET.contacts`, `BOOK_V78.legwork.levelDice` |
 | Legality through a contact | The "found openly" TN row × **0.5** (rounded down: Restricted +1, Forbidden +2); the Forbidden time ×2 stays | `SHOP_V916.contactLegalShare` |
 | A fixer's own find | The fixer rolls their own dice (or **2** per contact level) against the Availability TN; legality doesn't count (× **0**); the price has the fixer's **10%** cut on top (a favour waives it); the time is **×1.5**; no Haggle | `SHOP_V916.fixerLegalShare`, `.fixerFee`, `.fixerTime`, `.fixerDicePerLevel` |
+
+## Spell formulas and teachers (v0.91.8), from memory and the owner's decisions
+
+Switches in `RULES.FORMULA_V918` (`rules/config91.ts`); the first choice is the new way, the other the old one. The owner's decisions (11 Nov 2026): a formula is a kind of gear (found and bought like gear); out of creation learning needs a formula, a teacher, the group's grimoire or the magician's own design; a teacher's Instruction test helps the student's own learning test, and NPC teachers charge; the other tradition's formula is allowed but harder. **Every number here is a placeholder: check the Core Rules (learning spells, spell formulas) and the Grimoire.**
+
+| Rule | What the system does | Where |
+|---|---|---|
+| A formula is needed | Out of creation a player character learns a new spell only from a formula they hold (Force ≥ the Force learned), a teacher, the group's grimoire or their own design; raising a Force needs one of the new Force. NPCs and characters in creation need none | `FORMULA_V918.required`, `.raise` |
+| A formula's price | Force × **¥500**, ×**2** for a combat spell | `FORMULA_V918.nuyenPerForce`, `.combatFactor` |
+| A formula's Availability | TN = Force (at least 2) / **7 days**; Street Index **1**; no legality | `FORMULA_V918.tnPerForce`, `.availDays`, `.streetIndex` |
+| The other tradition | A shamanic formula or teacher for a hermetic magician (or the reverse): learning TN **+2**, study time **×2** | `FORMULA_V918.foreign`, `.foreignTn`, `.foreignTime` |
+| A teacher | Knows the spell at the Force or more; rolls Instruction (Charisma default) against TN **4** (the training rule's); the successes, up to the teacher's Sorcery, are extra dice for the student's learning test; a teacher no player plays charges Force × **¥100** | `FORMULA_V918.teacher`, `.feePerForce`, `CHARACTERS_V58.training.instructionSkill`, `.instructionTn` |

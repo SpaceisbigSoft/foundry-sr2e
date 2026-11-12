@@ -96,7 +96,7 @@ describe('v0.66.0 player guide topics', () => {
 
   test('every topic has headings or is one of the general topics', () => {
     // v0.87.0: 'printing' (no sheet heading of its own). v0.89.8: 'tools' (the tools window's headings name it with data-help). v0.91.7: 'scene-builder' (likewise).
-    const general = new Set(['getting-started', 'sheet-tools', 'summary-bar', 'rolling', 'targeting', 'chat-cards', 'karma-pool', 'shortcuts', 'inline-tests', 'skill-picker', 'adding', 'gm-cards', 'house-rules', 'look', 'credits', 'rules-v079', 'rules-urr', 'printing', 'tools', 'scene-builder']);
+    const general = new Set(['getting-started', 'sheet-tools', 'summary-bar', 'rolling', 'targeting', 'chat-cards', 'karma-pool', 'shortcuts', 'inline-tests', 'skill-picker', 'adding', 'gm-cards', 'house-rules', 'look', 'credits', 'rules-v079', 'rules-urr', 'printing', 'tools', 'scene-builder', 'spell-formulas']);
     for (const t of GUIDE_TOPICS) {
       if (general.has(t.id)) assert.equal(t.headings.length, 0, t.id);
       else assert.ok(t.headings.length > 0, `${t.id} has no headings`);

@@ -1,5 +1,7 @@
 import { importIntoCharacter } from './catalogue.ts';
 import { askFindThrough } from './through.ts';
+import { learnFromFormulaDialog, learnFromTeacherDialog } from './formulas.ts';
+import { teachersOn } from '../rules/formulas.ts';
 import { castingPoolMax } from '../rules/docs79-drones-magic.ts';
 import { metamagicAllowed } from "../rules/sorcery.ts";
 import { ATTRIBUTE_KEYS, type AttributeKey } from "../models/index.ts";
@@ -186,6 +188,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       endPossession: SR2CharacterSheet.#onEndPossession,
       designSpell: SR2CharacterSheet.#onDesignSpell,
       learnGrimoire: SR2CharacterSheet.#onLearnGrimoire,
+      // v0.91.8 (RULES.FORMULA_V918.teacher): learn a spell from a teacher.
+      learnFromTeacher: SR2CharacterSheet.#onLearnFromTeacher,
       addGrimoire: SR2CharacterSheet.#onAddGrimoire,
       feed: SR2CharacterSheet.#onFeed,
       dropPowerEffect: SR2CharacterSheet.#onDropPowerEffect,
@@ -550,6 +554,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       metamagicList: METAMAGIC.filter((k) => Boolean(actor.system.metamagic?.[k]) || !metamagicAllowed(String(actor.system.tradition ?? ''), k).block).map((k) => ({ key: k, label: cap(k), known: Boolean(actor.system.metamagic?.[k]) })),
       geasaList: (actor.system.geasa ?? []).map((g: any, index: number) => ({ ...g, index })),
       isGM: Boolean(game.user?.isGM),
+      // v0.91.8: the Spells heading's "Learn from a teacher…".
+      teachersOn: teachersOn() && String(actor.system.tradition ?? 'none') !== 'none' && String(actor.system.tradition ?? '') !== 'adept',
       canEnchant: Boolean(actor.findSkill?.("Enchanting")),
       questInfo: (() => { const q = actor.quest?.(); return q ? { ...q, status: questStatus(q) } : null; })(),
       knowsDispelling: Boolean(actor.system.metamagic?.dispelling),
@@ -825,6 +831,11 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       rejectClose: false,
     });
     if (choice) await actor.designSpell(choice);
+  }
+
+  /** v0.91.8: learn a spell from a teacher (who, which spell, the Force). */
+  static async #onLearnFromTeacher(this: SR2CharacterSheet) {
+    await learnFromTeacherDialog(this.document);
   }
 
   static async #onLearnGrimoire(this: SR2CharacterSheet, _event: Event, target: HTMLElement) {
@@ -5333,8 +5344,17 @@ export class SR2ItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
       toggleAllFields: SR2ItemSheet.#onToggleAllFields,
       postItem: SR2ItemSheet.#onPostItem,
       getPermit: SR2ItemSheet.#onGetPermit,
+      // v0.91.8: learn the spell of this formula.
+      learnFormulaItem: SR2ItemSheet.#onLearnFormulaItem,
     },
   };
+
+  /** v0.91.8 (RULES.FORMULA_V918): learn this formula's spell (the Force asked first). */
+  static async #onLearnFormulaItem(this: SR2ItemSheet) {
+    const item: any = this.document;
+    if (!item.parent?.learnFromFormula) return ui.notifications.warn(tx('SR2E.Notify.Sheet.putTheItemOnACharacter'));
+    await learnFromFormulaDialog(item.parent, item);
+  }
 
   /** v0.91.5: get a permit for this item (its cost and time; RULES.SHOP_V915). */
   static async #onGetPermit(this: SR2ItemSheet) {
@@ -5526,6 +5546,9 @@ export class SR2ItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
       ],
       spellCategories: ["combat", "detection", "health", "illusion", "manipulation"].map((k) => ({ key: k, label: k.charAt(0).toUpperCase() + k.slice(1) })),
       spellTypes: [{ key: "mana", label: tx('SR2E.App.Sheets.mana') }, { key: "physical", label: tx('SR2E.App.Sheets.physical') }],
+      // v0.91.8: a spell formula's tradition.
+      formulaTraditions: [{ key: "", label: tx('SR2E.Text.Formula.either') }, { key: "hermetic", label: tx('SR2E.Text.Formula.hermetic') }, { key: "shamanic", label: tx('SR2E.Text.Formula.shamanic') }],
+      formulaTraditionLabel: item.system?.formula?.tradition === "shamanic" ? tx('SR2E.Text.Formula.shamanic') : item.system?.formula?.tradition === "hermetic" ? tx('SR2E.Text.Formula.hermetic') : tx('SR2E.Text.Formula.either'),
       gradeChoices: [
         { key: "standard", label: tx('SR2E.App.Sheets.standard') }, { key: "alpha", label: tx('SR2E.App.Sheets.alphaware') },
         { key: "beta", label: tx('SR2E.App.Sheets.betaware') }, { key: "delta", label: tx('SR2E.App.Sheets.deltaware') },

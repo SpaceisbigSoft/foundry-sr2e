@@ -13,7 +13,7 @@ import { NETRIG_V73 } from './config73/netrig.ts';
 import { DRONES_V73 } from './config73/drones.ts';
 import { CHARACTERS_V73 } from './config73/characters.ts';
 import { BOOK_V78 } from './config78.ts';
-import { SHOP_V91, SHOP_V915, SHOP_V916 } from './config91.ts';
+import { SHOP_V91, SHOP_V915, SHOP_V916, FORMULA_V918 } from './config91.ts';
 import { DOCS_V79 } from './config79.ts';
 import { URR_V80 } from './config80.ts';
 
@@ -3297,6 +3297,8 @@ export const RULES = {
   SHOP_V915,
   /** v0.91.6: finding through contacts and fixers (house-rule switches; rules/config91.ts). */
   SHOP_V916,
+  /** v0.91.8: spell formulas (house-rule switches; rules/config91.ts). */
+  FORMULA_V918,
 } as const;
 
 export type RangeBand = keyof typeof RULES.RANGE_TN;

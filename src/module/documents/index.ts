@@ -131,6 +131,7 @@ import { mountedRecoil, sensorGunneryByMode, vehicleRepairByMode } from '../rule
 import { clearFlag, clearFlagUpdate, dropFlagKeys, replaceFlag } from '../helpers/flags.ts';
 export { initiativeFormula };
 import { approvalNeeded, fileRequest, inCreation, approvalContext, queueOn } from '../applications/approvals.ts';
+import { formulasRequired, raiseNeedsFormula, teachersOn, bestFormula, learnerTradition, isForeign, foreignAdjust, formulaForce, isFormula, teacherDice, teacherFee, canTeach, formulaSpellData } from '../rules/formulas.ts';
 import { needsApproval } from '../rules/advancement.ts';
 import { resolveShopKey, shopListPrice, buyShopLine, safeMakeOwnedVehicle, recordVehicleOrder, takeVehicleOrder } from '../applications/shop.ts';
 import { legalityId, legalFindTimeFactor, legalWarning, permitPlan, permitSource } from '../rules/legalbuy.ts';
@@ -1139,7 +1140,9 @@ export interface TestSnapshot {
   /** v0.49.0: installing a vehicle modification (applied once; a re-roll only changes the time). */
   install?: { vehicleUuid: string; vehicleName: string; index: number; modName: string; rating: number; baseHours: number; payerUuid: string; applied?: boolean; botchApplied?: boolean; projectId?: string };
   /** v0.56.0 learn: learning (or raising) a spell; Karma paid and the spell written once. */
-  learn?: { name: string; force: number; cost: number; spellId?: string; system?: Record<string, unknown>; from?: string; applied?: boolean; projectId?: string };
+  learn?: { name: string; force: number; cost: number; spellId?: string; system?: Record<string, unknown>; from?: string; applied?: boolean; projectId?: string; foreign?: boolean; extraDice?: number };
+  /** v0.91.8: a teacher's Instruction test for a student's spell (RULES.FORMULA_V918.teacher); `used` once learned from. */
+  teach?: { studentUuid: string; teacherUuid: string; spell: string; force: number; spellId?: string; system?: Record<string, unknown>; teacherName: string; sorcery: number; foreign: boolean; fee: number };
   /** v0.56.0 ward: raising a ward by ritual; the barrier actor once made. */
   ward?: { force: number; name: string; team: number; nuyen: number; barrierUuid?: string; pending?: boolean; projectId?: string };
   /** v0.56.0 bindName: binding a free spirit by its true name. */
@@ -2977,6 +2980,15 @@ export class SR2Actor extends Actor {
       } else if (ins.readyAt !== undefined && e.readyAt !== ins.readyAt && e.readyAt !== readyAt) note = ` <em>${tx('SR2E.Card.Actor.theTrainingChangedSinceThisWas')}</em>`;
       snap = { ...snap, instruct: { ...ins, readyAt } };
       parts.push(`<p>${r.usable && s > 0 ? `${tx('SR2E.Card.Actor.cutsTheTrainingTo', { insInstructorName: escText(ins.instructorName) })} <strong>${escText(plural(r.days, 'day'))}</strong>.` : `<em>${escText(String(r.note || tx('SR2E.Card.Actor.noHelpFromTheInstructor')).replace(/\.+$/, ''))}.</em> ${tx('SR2E.Card.Actor.ofTraining', { plural: escText(plural(r.days, 'day')) })}`}${note}</p>`);
+    }
+    // v0.91.8 (RULES.FORMULA_V918.teacher): a teacher's test: the student's learning test with its successes as dice.
+    if (snap.teach) {
+      const t = snap.teach;
+      const dice = teacherDice(s, t.sorcery);
+      const fee = t.fee > 0 ? tx('SR2E.Card.Formula.fee', { fee: Number(t.fee).toLocaleString() }) : '';
+      const other = t.foreign ? tx('SR2E.Card.Formula.otherTraditionNote') : '';
+      parts.push(`<p>${dice > 0 ? tx('SR2E.Card.Formula.helps', { teacher: escText(t.teacherName), dice }) : tx('SR2E.Card.Formula.noHelp', { teacher: escText(t.teacherName) })}${fee}${other}</p>`
+        + `<p><button type="button" data-sr2e-action="learnTaught">${tx('SR2E.Card.Formula.learnButton', { spell: escText(t.spell), force: t.force })}</button></p>`);
     }
     return { html: parts.join(''), flags: {}, snap };
   }
@@ -9968,14 +9980,21 @@ export class SR2Actor extends Actor {
   }
 
   /** Raise (or learn) a spell's Force for Good Karma. */
-  async raiseSpellForce(spell: any, newForce: number): Promise<boolean> {
+  async raiseSpellForce(spell: any, newForce: number, o: { formulaId?: string; teachMessage?: string } = {}): Promise<boolean> {
     // v0.65.0: one study of a spell at a time (the Force rises only when it's done).
     if (this.projects().some((p) => p.kind === 'learn' && (p.effect.updates?.some((u) => u.itemId === spell?.id) || p.subject === spell?.name || (p.subject === undefined && p.label.startsWith(`Learning ${spell?.name} at`))))) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.isAlreadyStudying', { name: escHtml(this.name), spellName: escHtml(spell?.name) })); return false; }
+    // v0.91.8 (RULES.FORMULA_V918.raise): a higher Force needs a formula of that Force (or a teacher who knows it).
+    // v0.91.8: a teacher's help is read again from their card (`o.teachMessage`), a formula item from the sheet.
+    const help = o.teachMessage ? await this.#teachHelp(o.teachMessage, String(spell?.name ?? ''), newForce) : null;
+    if (o.teachMessage && !help) return false;
+    const src = help ? { from: help.from, foreign: help.foreign } : o.formulaId ? this.#formulaItemSource(o.formulaId, String(spell?.name ?? ''), newForce) : this.#formulaSource(spell?.name, newForce, raiseNeedsFormula());
+    if (!src) return false;
+    if (newForce <= Number(spell?.system?.learnedForce ?? 0)) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.isAlreadyForce', { spellName: escHtml(spell.name), spellLearnedForce: escHtml(spell.system.learnedForce) })); return false; }
     // v0.56.0: a learning test (RULES.MAGIC_V56.learning); Karma is paid on success.
     if (RULES.MAGIC_V56.learning.enabled) {
-      if (newForce <= spell.system.learnedForce) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.isAlreadyForce', { spellName: escHtml(spell.name), spellLearnedForce: escHtml(spell.system.learnedForce) })); return false; }
-      if (approvalNeeded(this)) { await fileRequest(this, { kind: 'spellForce', label: tx('SR2E.Text.Actor.forceLearningTest', { name: spell.name, from: spell.system.learnedForce, to: newForce }), karma: spellKarmaCost(newForce), data: { method: 'raiseSpellForce', args: [spell.id, newForce] } }); return false; }
-      const r = await this.learnSpellTest({ name: spell.name, force: newForce, spellId: spell.id });
+      if (approvalNeeded(this)) { await fileRequest(this, { kind: 'spellForce', label: tx('SR2E.Text.Actor.forceLearningTest', { name: spell.name, from: spell.system.learnedForce, to: newForce }), karma: spellKarmaCost(newForce), data: { method: 'raiseSpellForce', args: [spell.id, newForce, o] } }); return false; }
+      if (help && !(await this.#payTeacher(help.fee, spell.name, newForce))) return false;
+      const r = await this.learnSpellTest({ name: spell.name, force: newForce, spellId: spell.id, ...(src.from ? { from: src.from } : {}), foreign: src.foreign, extraDice: help?.dice ?? 0 });
       return Boolean(r && r.successes > 0);
     }
     const cost = spellKarmaCost(newForce);
@@ -9988,12 +10007,13 @@ export class SR2Actor extends Actor {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.forceCostsGoodKarmaHas', { newForce, spellName: escHtml(spell.name), cost, name: escHtml(this.name), good }));
       return false;
     }
-    if (approvalNeeded(this)) { await fileRequest(this, { kind: 'spellForce', label: tx('SR2E.Text.Actor.forceFromTo', { name: spell.name, from: spell.system.learnedForce, to: newForce }), karma: cost, data: { method: 'raiseSpellForce', args: [spell.id, newForce] } }); return false; }
+    if (approvalNeeded(this)) { await fileRequest(this, { kind: 'spellForce', label: tx('SR2E.Text.Actor.forceFromTo', { name: spell.name, from: spell.system.learnedForce, to: newForce }), karma: cost, data: { method: 'raiseSpellForce', args: [spell.id, newForce, o] } }); return false; }
+    if (help && !(await this.#payTeacher(help.fee, spell.name, newForce))) return false;
     const from = Number(spell.system.learnedForce ?? 0);
     // v0.65.0: the study takes Force × days per Force (no test to shorten it): the Force rises when it has passed.
     if (this.waitsFor('magic')) {
       await this.update({ 'system.karma.good': good - cost, 'system.ledger': this.#ledgerWith({ kind: 'karma', amount: -cost, reason: tx('SR2E.Text.Actor.forceStudying', { name: spell.name, from, to: newForce }) }) });
-      await this.startProject({ kind: 'learn', area: 'magic', subject: spell.name, label: tx('SR2E.Card.Actor.learningAtForce', { name: spell.name, force: newForce }), hours: Number(learningPlan(newForce, 1).days ?? newForce) * 24, paid: { karma: cost }, effect: { updates: [{ itemId: spell.id, changes: [['system.learnedForce', newForce]] }] } });
+      await this.startProject({ kind: 'learn', area: 'magic', subject: spell.name, label: tx('SR2E.Card.Actor.learningAtForce', { name: spell.name, force: newForce }), hours: Number(foreignAdjust(learningPlan(newForce, 1), src.foreign).days ?? newForce) * 24, paid: { karma: cost }, effect: { updates: [{ itemId: spell.id, changes: [['system.learnedForce', newForce]] }] } });
       return true;
     }
     await spell.update({ 'system.learnedForce': newForce });
@@ -10008,7 +10028,16 @@ export class SR2Actor extends Actor {
    * Force × daysPerForce days ÷ successes and a sorcery library (hermetic) or lodge of the totem (shaman)
    * of at least the Force. Good Karma is paid, and the spell written, on success only.
    */
-  async learnSpellTest(o: { name: string; force: number; spellId?: string; system?: Record<string, unknown>; from?: string; poolDice?: number }): Promise<SuccessTestResult | null> {
+  /** The learning test's site problem at `force` (no library or lodge, or too low a rating); '' when fine or off. */
+  #learnSiteProblem(force: number): string {
+    if (RULES.MAGIC_V56.learning.site === 'off') return '';
+    const shaman = isShamanic(this.tradition);
+    const site = bestSite(this.magicSites(), shaman ? 'lodge' : 'library', shaman ? this.sys.totem?.name ?? '' : 'sorcery');
+    const what = shaman ? tx('SR2E.Card.Actor.aLodge', { part: this.sys.totem?.name ? ` (${this.sys.totem.name})` : '' }) : tx('SR2E.Card.Actor.aSorceryLibrary');
+    return !site ? what : site.rating < force ? tx('SR2E.Card.Actor.ofRatingOrMoreIs', { what, force, siteName: site.name, siteRating: site.rating }) : '';
+  }
+
+  async learnSpellTest(o: { name: string; force: number; spellId?: string; system?: Record<string, unknown>; from?: string; poolDice?: number; foreign?: boolean; extraDice?: number }): Promise<SuccessTestResult | null> {
     const L = RULES.MAGIC_V56.learning;
     const force = Math.max(1, Math.floor(Number(o.force) || 1));
     const cost = spellKarmaCost(force);
@@ -10016,27 +10045,28 @@ export class SR2Actor extends Actor {
     if (good < cost) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.learningAtForceCostsGoodKarma', { name: escHtml(o.name), force, cost, name2: escHtml(this.name), good })); return null; }
     const skill = this.findSkill(L.skill);
     if (!skill || !((skill.system?.rating ?? 0) > 0)) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.needsToLearnSpells', { name: escHtml(this.name), lSkill: L.skill })); return null; }
-    if (L.site !== 'off') {
-      const shaman = isShamanic(this.tradition);
-      const site = bestSite(this.magicSites(), shaman ? 'lodge' : 'library', shaman ? this.sys.totem?.name ?? '' : 'sorcery');
-      const what = shaman ? tx('SR2E.Card.Actor.aLodge', { part: this.sys.totem?.name ? ` (${this.sys.totem.name})` : '' }) : tx('SR2E.Card.Actor.aSorceryLibrary');
-      const problem = !site ? what : site.rating < force ? tx('SR2E.Card.Actor.ofRatingOrMoreIs', { what, force, siteName: site.name, siteRating: site.rating }) : '';
-      if (problem) {
-        ui.notifications?.warn?.(tx('SR2E.Notify.Actor.needsToLearnAtForce', { name: escHtml(this.name), problem: escHtml(problem), name2: escHtml(o.name), force, part: L.site === 'block' ? '' : tx('SR2E.Notify.Actor.allowedTheHouseRuleOnlyWarns') }));
-        if (L.site === 'block') return null;
-      }
+    const problem = this.#learnSiteProblem(force);
+    if (problem) {
+      ui.notifications?.warn?.(tx('SR2E.Notify.Actor.needsToLearnAtForce', { name: escHtml(this.name), problem: escHtml(problem), name2: escHtml(o.name), force, part: L.site === 'block' ? '' : tx('SR2E.Notify.Actor.allowedTheHouseRuleOnlyWarns') }));
+      if (L.site === 'block') return null;
     }
-    const plan = learningPlan(force, 0);
+    // v0.91.8 (RULES.FORMULA_V918.foreign): the other tradition's formula or teacher: a higher TN and more time.
+    const foreign = Boolean(o.foreign);
+    const plan = foreignAdjust(learningPlan(force, 0), foreign);
     // v0.80.0 (RULES.URR_V80.magLearning 'theory', URR): Sorcery + Magical Theory.
     const theory = urrMagLearnExtraDice(Number(this.findSkill('Magical Theory')?.system?.rating ?? 0));
-    return this.#runTest(tx('SR2E.Card.Actor.learnAtForceVsSuccessesGood', { name: o.name, force, skillName: skill.name, part: theory ? tx('SR2E.Card.Actor.magicalTheory', { theory }) : '', planTn: plan.tn, plural: plural(plan.baseDays, 'day'), cost }), Number(skill.system.rating) + theory,
+    // v0.91.8 (RULES.FORMULA_V918.teacher): a teacher's successes as extra dice.
+    // Capped (a request carries the number): no teacher's Sorcery goes past 12.
+    const extra = Math.min(12, Math.max(0, Math.floor(Number(o.extraDice ?? 0)) || 0));
+    const parts = `${theory ? tx('SR2E.Card.Actor.magicalTheory', { theory }) : ''}${extra ? tx('SR2E.Card.Formula.teacherDice', { dice: extra }) : ''}${foreign ? tx('SR2E.Card.Formula.otherTradition') : ''}`;
+    return this.#runTest(tx('SR2E.Card.Actor.learnAtForceVsSuccessesGood', { name: o.name, force, skillName: skill.name, part: parts, planTn: plan.tn, plural: plural(plan.baseDays, 'day'), cost }), Number(skill.system.rating) + theory + extra,
       { targetNumber: plan.tn, poolDice: 0, pool: 'spell' },
-      { kind: 'learn', learn: { name: o.name, force, cost, ...(o.spellId ? { spellId: o.spellId } : {}), ...(o.system ? { system: { ...o.system } } : {}), ...(o.from ? { from: o.from } : {}) } });
+      { kind: 'learn', learn: { name: o.name, force, cost, ...(o.spellId ? { spellId: o.spellId } : {}), ...(o.system ? { system: { ...o.system } } : {}), ...(o.from ? { from: o.from } : {}), ...(foreign ? { foreign: true } : {}), ...(extra ? { extraDice: extra } : {}) } });
   }
 
   async #resolveLearn(snap: TestSnapshot): Promise<Resolved> {
     const l = snap.learn!;
-    const plan = learningPlan(l.force, snap.successes);
+    const plan = foreignAdjust(learningPlan(l.force, snap.successes), Boolean(l.foreign));
     if (snap.successes <= 0 && l.projectId) {
       const note = await this.dropProjectOnFailure(l.projectId);
       return { html: `<p><strong>${tx('SR2E.Card.Actor.isNotLearnedThisTime', { name: escText(l.name) })}</strong>${note}</p>`, flags: {}, snap: { ...snap, learn: { ...l, applied: false, projectId: undefined } } };
@@ -17603,19 +17633,114 @@ export class SR2Actor extends Actor {
     return ok;
   }
 
-  /** Learn a spell from a spell formula (a design or a grimoire) for Good Karma = Force. */
-  async learnFormula(name: string, system: Record<string, unknown>, from = 'a formula'): Promise<boolean> {
+  /**
+   * v0.91.8 (RULES.FORMULA_V918.required): where a character out of creation learns `name` at `force` from: the best
+   * spell formula they hold (their own tradition first), as `{ from: its name, foreign }`. Not required (off, an NPC, in
+   * creation): `{ from: '', foreign: false }`. Required and none held: a notice, and null.
+   */
+  #formulaSource(name: string, force: number, required: boolean): { from: string; foreign: boolean } | null {
+    const learner = learnerTradition(this.sys.tradition);
+    const held = bestFormula([...this.items].filter((i: any) => i.type === 'gear'), String(name ?? ''), force, learner) as any;
+    if (held) return { from: String(held.name), foreign: isForeign(held.system.formula.tradition, learner) };
+    if (!required || this.type !== 'character' || inCreation(this)) return { from: '', foreign: false };
+    ui.notifications?.warn?.(tx('SR2E.Notify.Formula.needsOne', { name: escHtml(this.name), spell: escHtml(name), force }));
+    return null;
+  }
+
+  /**
+   * v0.91.8: can a study of `spell` at `force` go ahead (the Good Karma; with learning tests, the skill and a site the
+   * house rule demands)? A notice when not. Checked before a teacher's card is used and before their fee is paid.
+   */
+  #canStudy(spell: string, force: number): boolean {
+    const cost = spellKarmaCost(force);
+    const good = Number(this.sys.karma?.good ?? 0);
+    if (good < cost) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.learningAtForceCostsGoodKarma', { name: escHtml(spell), force, cost, name2: escHtml(this.name), good })); return false; }
+    const L = RULES.MAGIC_V56.learning;
+    if (!L.enabled) return true;
+    if (!(Number(this.findSkill(L.skill)?.system?.rating ?? 0) > 0)) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.needsToLearnSpells', { name: escHtml(this.name), lSkill: L.skill })); return false; }
+    const problem = L.site === 'block' ? this.#learnSiteProblem(force) : '';
+    if (problem) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.needsToLearnAtForce', { name: escHtml(this.name), problem: escHtml(problem), name2: escHtml(spell), force, part: '' })); return false; }
+    return true;
+  }
+
+  /** v0.91.8: one of this character's formula items as a source for `spell` at `force` (null with a notice when it isn't). */
+  #formulaItemSource(id: string, spell: string, force: number): { from: string; foreign: boolean } | null {
+    const it: any = this.items.get?.(String(id ?? ''));
+    if (!it || it.type !== 'gear' || !isFormula(it.system) || it.system.formula.spell !== spell || formulaForce(it.system.formula.force) < force) { ui.notifications?.warn?.(tx('SR2E.Notify.Formula.notThatFormula', { name: escHtml(this.name), spell: escHtml(spell), force })); return null; }
+    return { from: String(it.name), foreign: isForeign(it.system.formula.tradition, learnerTradition(this.sys.tradition)) };
+  }
+
+  /**
+   * v0.91.8: a teacher's help, read again from their card (never from a request): the card must be a teacher's test for
+   * this character and `spell` at `force` or more, posted by the user learning (the filer of an approved request) or a
+   * GM; the teacher must still know the spell. Their Sorcery, the fee and the tradition are worked out again here; the
+   * dice are the card's own successes, up to the Sorcery. Null (with a notice) when not.
+   */
+  async #teachHelp(messageId: string, spell: string, force: number): Promise<{ dice: number; from: string; foreign: boolean; fee: number } | null> {
+    const refuse = () => { ui.notifications?.warn?.(tx('SR2E.Notify.Formula.notThatTeaching')); return null; };
+    const m: any = (game as any).messages?.get?.(String(messageId ?? ''));
+    const snap: any = m?.getFlag?.(SYSTEM_ID, 'test') ?? m?.flags?.[SYSTEM_ID]?.test;
+    const t = snap?.teach;
+    if (!t || t.studentUuid !== this.uuid || t.spell !== spell || formulaForce(t.force) < force) return refuse();
+    const ctx = approvalContext(String(this.uuid ?? ''));
+    const who = ctx?.requesterId ?? game.user?.id;
+    const by = m?.author?.id ?? m?.author ?? m?.user?.id ?? m?.user;
+    if (!by || (by !== who && !(game as any).users?.get?.(by)?.isGM)) return refuse();
+    const inst: any = await fromUuid(String(t.teacherUuid ?? ''));
+    if (!(inst instanceof SR2Actor) || inst.uuid === this.uuid) return refuse();
+    const theirs = [...inst.items].filter((i: any) => i.type === 'spell').map((i: any) => ({ name: String(i.name), system: i.system }));
+    if (!canTeach(theirs, spell, force)) return refuse();
+    const sorcery = Number(inst.findSkill(RULES.MAGIC_V56.learning.skill)?.system?.rating ?? 0);
+    return {
+      dice: teacherDice(snap.successes, sorcery), from: String(inst.name),
+      foreign: isForeign(learnerTradition(inst.sys.tradition), learnerTradition(this.sys.tradition)),
+      fee: teacherFee(formulaForce(t.force), Boolean(inst.hasPlayerOwner)),
+    };
+  }
+
+  /** v0.91.8: pay a teacher's fee once the study can go ahead (#canStudy); false when it can't or the money isn't there. */
+  async #payTeacher(fee: number, spell: string, force: number): Promise<boolean> {
+    if (!this.#canStudy(spell, force)) return false;
+    const f = Math.max(0, Math.round(Number(fee) || 0));
+    if (!f) return true;
+    return Boolean(await this.adjustNuyen(-f, tx('SR2E.Text.Formula.teacherFee', { spell })));
+  }
+
+  /**
+   * Learn a spell from a spell formula (a design or a grimoire) for Good Karma = Force. v0.91.8: `o.origin` 'shop' (the
+   * shop's Learn) needs a formula the character holds (RULES.FORMULA_V918.required); 'formula' is one of their formula
+   * items (`o.formulaId`); `o.teach` is a teacher's help (their dice, name, tradition and fee, from their card).
+   */
+  async learnFormula(name: string, system: Record<string, unknown>, from = 'a formula', o: { origin?: 'shop' | 'formula' | 'design' | 'grimoire'; formulaId?: string; teachMessage?: string } = {}): Promise<boolean> {
     if ([...this.items].some((i: any) => i.type === 'spell' && i.name === name)) {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.alreadyKnows2', { name: escHtml(this.name), name2: escHtml(name) }));
       return false;
     }
     if (this.projects().some((p) => p.kind === 'learn' && (p.subject === name || (p.subject === undefined && p.label.startsWith(`Learning ${name} at`))))) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.isAlreadyStudying2', { name: escHtml(this.name), name2: escHtml(name) })); return false; }
     const force = Math.max(1, Number((system as any).learnedForce ?? 1));
+    // v0.91.8: where it is learned from (a held formula, one formula item, a teacher), and the other tradition's penalty.
+    // A design or the group's grimoire needs no formula; anything else (the shop, a request, a call without an origin) does.
+    let foreign = false;
+    const help = o.teachMessage ? await this.#teachHelp(o.teachMessage, name, force) : null;
+    if (o.teachMessage && !help) return false;
+    if (help) { from = help.from; foreign = help.foreign; }
+    else if (o.origin === 'formula') {
+      const src = this.#formulaItemSource(String(o.formulaId ?? ''), name, force);
+      if (!src) return false;
+      from = src.from; foreign = src.foreign;
+    } else if (o.origin !== 'design' && o.origin !== 'grimoire') {
+      const src = this.#formulaSource(name, force, formulasRequired());
+      if (!src) return false;
+      if (src.from) from = src.from;
+      foreign = src.foreign;
+    }
     // v0.64.0: with the approval queue on, a player's new spell waits for the GM.
-    if (approvalNeeded(this)) { await fileRequest(this, { kind: 'spellForce', label: RULES.MAGIC_V56.learning.enabled ? tx('SR2E.Text.Actor.learnForceLearningTest', { name, force }) : tx('SR2E.Text.Actor.learnForce', { name, force }), karma: spellKarmaCost(force), data: { method: 'learnFormula', args: [name, { ...system }, from] } }); return false; }
+    if (approvalNeeded(this)) { await fileRequest(this, { kind: 'spellForce', label: RULES.MAGIC_V56.learning.enabled ? tx('SR2E.Text.Actor.learnForceLearningTest', { name, force }) : tx('SR2E.Text.Actor.learnForce', { name, force }), karma: spellKarmaCost(force), data: { method: 'learnFormula', args: [name, { ...system }, from, o] } }); return false; }
+    // v0.91.8: the teacher's fee only once the study can go ahead (a refused study pays no one).
+    if (help && !(await this.#payTeacher(help.fee, name, force))) return false;
     // v0.56.0: a learning test (RULES.MAGIC_V56.learning); the spell is written and Karma paid on success.
     if (RULES.MAGIC_V56.learning.enabled) {
-      const r = await this.learnSpellTest({ name, force, system, from });
+      const r = await this.learnSpellTest({ name, force, system, from, foreign, extraDice: help?.dice ?? 0 });
       return Boolean(r && r.successes > 0);
     }
     const cost = spellKarmaCost(force);
@@ -17624,7 +17749,7 @@ export class SR2Actor extends Actor {
     // v0.65.0: the study takes Force × days per Force: the spell is known when it has passed.
     if (this.waitsFor('magic')) {
       await this.update({ 'system.karma.good': good - cost, 'system.ledger': this.#ledgerWith({ kind: 'karma', amount: -cost, reason: tx('SR2E.Text.Actor.studying', { name }) }) });
-      await this.startProject({ kind: 'learn', area: 'magic', subject: name, label: tx('SR2E.Card.Actor.learningAtForce', { name, force }), hours: Number(learningPlan(force, 1).days ?? force) * 24, paid: { karma: cost }, effect: { creates: [{ name, type: 'spell', system: { ...system } }] } });
+      await this.startProject({ kind: 'learn', area: 'magic', subject: name, label: tx('SR2E.Card.Actor.learningAtForce', { name, force }), hours: Number(foreignAdjust(learningPlan(force, 1), foreign).days ?? force) * 24, paid: { karma: cost }, effect: { creates: [{ name, type: 'spell', system: { ...system } }] } });
       return true;
     }
     await this.createEmbeddedDocuments('Item', [{ name, type: 'spell', system: { ...system } }]);
@@ -17641,7 +17766,72 @@ export class SR2Actor extends Actor {
     if (inBreach(g, this.selfUuids())) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.hasBrokenSStricturesAndCan', { name: escHtml(this.name), name2: escHtml(g.name) })); return false; }
     const entry = g.grimoire.find((s) => s.name === name);
     if (!entry) return false;
-    return this.learnFormula(entry.name, entry.system, `${g.name}'s grimoire`);
+    return this.learnFormula(entry.name, entry.system, `${g.name}'s grimoire`, { origin: 'grimoire' });
+  }
+
+  /**
+   * v0.91.8: learn the spell of one of this character's spell formulas (a gear item) at `force` (up to the formula's).
+   * A spell already known at a lower Force is raised; one not known yet is learned (the learning test, Good Karma).
+   */
+  async learnFromFormula(itemId: string, force?: number): Promise<boolean> {
+    const it: any = this.items.get?.(String(itemId ?? ''));
+    if (!it || it.type !== 'gear' || !isFormula(it.system)) return false;
+    const f = it.system.formula;
+    const top = formulaForce(f.force);
+    const want = Math.min(top, formulaForce(force ?? top));
+    const known: any = [...this.items].find((i: any) => i.type === 'spell' && i.name === f.spell);
+    if (known) {
+      if (Number(known.system?.learnedForce ?? 0) >= want) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.isAlreadyForce', { spellName: escHtml(known.name), spellLearnedForce: escHtml(known.system.learnedForce) })); return false; }
+      return this.raiseSpellForce(known, want, { formulaId: it.id });
+    }
+    return this.learnFormula(String(f.spell), { ...(f.data ?? {}), learnedForce: want }, String(it.name), { origin: 'formula', formulaId: it.id });
+  }
+
+  /**
+   * v0.91.8 (RULES.FORMULA_V918.teacher): a teacher who knows `spell` at `force` or more makes their Instruction test
+   * (RULES.CHARACTERS_V58.training's skill and TN, rolled with their dice); its card offers this character the learning
+   * test with the successes, up to the teacher's Sorcery, as extra dice. A teacher no player owns charges a fee.
+   */
+  async learnFromTeacher(teacherUuid: string, spell: string, force: number, o: { modifiers?: TargetNumberModifier[] } = {}): Promise<SuccessTestResult | null> {
+    if (!teachersOn()) { ui.notifications?.warn?.(tx('SR2E.Notify.Formula.teachersOff')); return null; }
+    if (!this.isOwner) { ui.notifications?.warn?.(tx('SR2E.Notify.Shop.onlyTheOwner', { name: escHtml(this.name) })); return null; }
+    const inst: any = await fromUuid(String(teacherUuid ?? ''));
+    if (!(inst instanceof SR2Actor) || inst.uuid === this.uuid) return null;
+    const f = formulaForce(force);
+    const theirs = [...inst.items].filter((i: any) => i.type === 'spell').map((i: any) => ({ name: String(i.name), system: i.system }));
+    if (!canTeach(theirs, String(spell ?? ''), f)) { ui.notifications?.warn?.(tx('SR2E.Notify.Formula.teacherDoesNotKnow', { teacher: escHtml(inst.name), spell: escHtml(spell), force: f })); return null; }
+    const known: any = [...this.items].find((i: any) => i.type === 'spell' && i.name === spell);
+    if (known && Number(known.system?.learnedForce ?? 0) >= f) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.isAlreadyForce', { spellName: escHtml(spell), spellLearnedForce: escHtml(known.system.learnedForce) })); return null; }
+    const c = RULES.CHARACTERS_V58.training;
+    const isd = inst.#skillDice(inst.findSkill(c.instructionSkill), false, null, 'charisma', { skillName: c.instructionSkill });
+    const sorcery = Number(inst.findSkill(RULES.MAGIC_V56.learning.skill)?.system?.rating ?? 0);
+    const foreign = isForeign(learnerTradition(inst.sys.tradition), learnerTradition(this.sys.tradition));
+    const fee = teacherFee(f, Boolean(inst.hasPlayerOwner));
+    const taught: any = [...inst.items].find((i: any) => i.type === 'spell' && i.name === spell);
+    // Review (B3): the teacher's own choices (exclusive, fetish, sustaining) aren't taught.
+    const system = { ...formulaSpellData(taught?.system?.toObject?.() ?? taught?.system ?? {}), learnedForce: f };
+    return inst.#runTest(tx('SR2E.Card.Formula.teaches', { teacher: inst.name, name: this.name, spell, force: f, skill: c.instructionSkill, suffix: isd.suffix }), isd.dice, {
+      targetNumber: c.instructionTn, modifiers: [...(o.modifiers ?? []), ...isd.modifiers],
+    }, { kind: 'plain', teach: { studentUuid: String(this.uuid), teacherUuid: String(inst.uuid), spell: String(spell), force: f, ...(known ? { spellId: known.id } : {}), system, teacherName: String(inst.name), sorcery, foreign, fee } });
+  }
+
+  /**
+   * v0.91.8: the learning test with a teacher's help, from their card (`messageId`). The help is read again from the card
+   * (#teachHelp). Returns 'refused' when nothing was started (the card stays usable), 'used' once the learning test was
+   * rolled or the request filed (the card is then spent, whatever the result).
+   */
+  async learnTaught(messageId: string): Promise<'used' | 'refused'> {
+    const m: any = (game as any).messages?.get?.(String(messageId ?? ''));
+    const t: any = (m?.getFlag?.(SYSTEM_ID, 'test') ?? m?.flags?.[SYSTEM_ID]?.test)?.teach;
+    if (!t) return 'refused';
+    const force = formulaForce(t.force);
+    const known: any = [...this.items].find((i: any) => i.type === 'spell' && i.name === t.spell);
+    if (known && Number(known.system?.learnedForce ?? 0) >= force) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.isAlreadyForce', { spellName: escHtml(known.name), spellLearnedForce: escHtml(known.system.learnedForce) })); return 'refused'; }
+    if (!(await this.#teachHelp(messageId, String(t.spell), force))) return 'refused';
+    if (!approvalNeeded(this) && !this.#canStudy(String(t.spell), force)) return 'refused';
+    if (known) await this.raiseSpellForce(known, force, { teachMessage: String(messageId) });
+    else await this.learnFormula(String(t.spell), { ...(t.system ?? {}), learnedForce: force }, String(t.teacherName ?? ''), { teachMessage: String(messageId) });
+    return 'used';
   }
 
   /** Spell design: the design test; a success gives a formula card to learn it from. */

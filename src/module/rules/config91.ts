@@ -80,3 +80,35 @@ export const SHOP_V916 = {
   fixerTime: 1.5,
   fixerDicePerLevel: 2,
 };
+
+/**
+ * v0.91.8: spell formulas (the owner's decisions, 11 Nov 2026). Read through RULES.FORMULA_V918. The first choice of
+ * each switch is the new way (the default), the other puts the old behaviour back. All numbers VERIFY against the books.
+ *
+ * - required: 'on' — a character learns a spell only from a spell formula they hold (a gear item marked as one, found
+ *   and bought in the shop like gear), a teacher who knows it, their group's grimoire or their own design. 'off': the
+ *   shop's Learn with Good Karma needs nothing more (the old way).
+ * - raise: 'on' — raising a known spell's Force needs a formula (or a teacher) of at least the new Force. 'off': not.
+ * - nuyenPerForce: a formula's price per point of Force; combatFactor multiplies it for combat spells.
+ * - availDays: a formula's Availability time in days (its TN is its Force × tnPerForce).
+ * - streetIndex: a formula's Street Index.
+ * - foreign: 'harder' — a formula (or teacher) of the other tradition (hermetic or shamanic) can be learned from,
+ *   with the learning TN + foreignTn and the time × foreignTime. 'same': no difference.
+ * - teacher: 'on' — a character or contact who knows the spell at the Force (or more) can teach it: their Instruction
+ *   test (RULES.CHARACTERS_V58.training's skill and TN) gives its successes, up to their Sorcery, as extra dice to the
+ *   student's learning test; one no player owns charges feePerForce × the Force. 'off': no teachers.
+ */
+export const FORMULA_V918 = {
+  required: 'on' as 'on' | 'off',
+  raise: 'on' as 'on' | 'off',
+  nuyenPerForce: 500,
+  combatFactor: 2,
+  tnPerForce: 1,
+  availDays: 7,
+  streetIndex: 1,
+  foreign: 'harder' as 'harder' | 'same',
+  foreignTn: 2,
+  foreignTime: 2,
+  teacher: 'on' as 'on' | 'off',
+  feePerForce: 100,
+};

@@ -56,6 +56,8 @@ before(async () => {
   (RULES.MAGIC_V39.domains as any).enforce = 'off';
   // v0.56.0: learning tests (the older tests buy spells with Karma alone) and centering tests are switched on in their own tests.
   (RULES.MAGIC_V56.learning as any).enabled = false;
+  // v0.91.8: learning needs a spell formula (RULES.FORMULA_V918.required); the older tests learn without one.
+  (RULES.FORMULA_V918 as any).required = "off";
   (RULES.MAGIC_V56.centering as any).mode = 'auto';
   // v0.65.0: waiting for time (on by default) is tested in v065.test.ts; these older tests check the instant results.
   (RULES.WAITING as any).enabled = false;

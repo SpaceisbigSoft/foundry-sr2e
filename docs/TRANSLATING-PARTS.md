@@ -136,7 +136,6 @@ See `docs/TRANSLATING.md` for the rest.
 | `SR2E.Card.Actor.karma5`: {good} Karma{part} | `{part}` | `SR2E.Card.Actor.karmaPool` (, Karma Pool +{pool}) |
 | `SR2E.Card.Actor.launchesInto`: launches {frameName} into {where}{part}. | `{frameName}` | `SR2E.Card.Actor.aFrame` (a frame)<br>`SR2E.Card.Actor.anAgent` (an agent) |
 | `SR2E.Card.Actor.launchesInto`: launches {frameName} into {where}{part}. | `{part}` | `SR2E.Card.Actor.carrying` (, carrying {carry}) |
-| `SR2E.Card.Actor.learnAtForceVsSuccessesGood`: Learn {name} at Force {force} ({skillName}{part} vs {planTn}; {plural} ÷ successes) [{cost} Good Karma on success] | `{part}` | `SR2E.Card.Actor.magicalTheory` ( + Magical Theory {theory}) |
 | `SR2E.Card.Actor.locksATraceOn`: {name} locks a trace on {name2} | `{name2}` | `SR2E.Card.Actor.theIntruder` (the intruder) |
 | `SR2E.Card.Actor.locksATraceOnCombatTurns`: {name} locks a trace on {name2} ({turns} Combat Turns). | `{name2}` | `SR2E.Card.Actor.theIntruder` (the intruder) |
 | `SR2E.Card.Actor.logsOffTo`: {whoName} logs off {hostName} to {name}. | `{hostName}` | `SR2E.Card.Actor.theHost` (the host) |
@@ -576,6 +575,7 @@ See `docs/TRANSLATING.md` for the rest.
 | `SR2E.Text.Demo.toLetPlayersTryIt`: To let players try it, give each one a runner: GM panel ({keys}), {setup} tab, {players}. The runners are full characters, made with the NPC generator at Threat Level 3. | `{players}` | `SR2E.Text.Demo.playersAndCharacters` (Players and characters) |
 | `SR2E.Text.Demo.whenYouAreDoneGm`: When you are done: GM panel, {setup}, {remove}. It deletes only what the demo made. | `{remove}` | `SR2E.Text.Demo.removeTheDemo` (Remove the demo) |
 | `SR2E.Text.Dronelink.firmpointsHardpointsTooMany`: Firmpoints {firmUsed}/{firm} · hardpoints {hardUsed}/{hard} ({over} too many) | `{over}` | `SR2E.Text.Dronelink.firmpointWeapon` ({count} firmpoint weapon \| {count} firmpoint weapons)<br>`SR2E.Text.Dronelink.hardpointWeapon` ({count} hardpoint weapon \| {count} hardpoint weapons) |
+| `SR2E.Text.Formula.nameTradition`: Spell formula: {spell} (Force {force}, {tradition}) | `{tradition}` | `SR2E.Text.Formula.hermetic` (hermetic)<br>`SR2E.Text.Formula.shamanic` (shamanic) |
 | `SR2E.Text.Gridwork.theRamMissedTakesNo`: The ram missed: {name} takes no damage. | `{name}` | `SR2E.Text.Gridwork.theRammer` (the rammer) |
 | `SR2E.Text.Hazards.respiratorRating`: {name} {rating} | `{name}` | `SR2E.Text.Hazards.respirator` (Respirator) |
 | `SR2E.Text.Printsheet.printTitle`: {name} (SR2e) | `{name}` | `SR2E.Text.Printsheet.character` (Character) |

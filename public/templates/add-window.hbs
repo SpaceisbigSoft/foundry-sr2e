@@ -26,7 +26,7 @@
       {{#each entries}}
       <tr data-key="{{key}}" data-group="{{group}}" data-search="{{search}}"{{#if hidden}} hidden{{/if}}>
         <td><input type="checkbox" class="sr2e-add-tick" {{checked ticked}} aria-label="{{sr2eT "SR2E.UI.add2" name=name}}"></td>
-        <td class="sr2e-add-name">{{name}}{{#if codex}} <a class="sr2e-add-info" data-action="codexOpen" data-key="{{key}}" role="button" data-tooltip="{{sr2eT "SR2E.UI.codexOpenHint"}}" aria-label="{{sr2eT "SR2E.UI.codexOpenFor" name=name}}"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></a>{{/if}}</td>
+        <td class="sr2e-add-name">{{name}}{{#if codex}} <a class="sr2e-add-info" data-action="codexOpen" data-key="{{key}}" role="button" data-tooltip="{{sr2eT "SR2E.UI.codexOpenHint"}}" aria-label="{{sr2eT "SR2E.UI.codexOpenFor" name=name}}"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></a>{{/if}}{{#if formula}} <a class="sr2e-add-info" data-action="buyFormula" data-key="{{key}}" role="button" data-tooltip="{{sr2eT "SR2E.UI.buyFormulaHint"}}" aria-label="{{sr2eT "SR2E.UI.buyFormulaFor" name=name}}"><i class="fa-solid fa-scroll" aria-hidden="true"></i></a>{{/if}}</td>
         <td class="sr2e-add-what">{{summary}}</td>
         <td><input type="number" class="sr2e-add-amount" value="{{amount}}" min="1" max="{{max}}" aria-label="{{@root.amountLabel}}"{{#if locked}} disabled title="{{sr2eT "SR2E.UI.boughtAtItsListedRatingChange"}}"{{/if}}></td>
         <td{{#if priceTitle}} title="{{priceTitle}}"{{/if}}>{{price}}</td>
@@ -48,6 +48,7 @@
     <span class="sr2e-add-total"></span>
     {{#if findNote}}<span class="sr2e-add-note"><i class="fa-solid fa-magnifying-glass"></i> {{findNote}}</span>{{/if}}
     {{#if karmaNote}}<span class="sr2e-add-note">{{karmaNote}}</span>{{/if}}
+    {{#if formulaNote}}<span class="sr2e-add-note">{{formulaNote}}</span>{{/if}}
     {{#if approvalNote}}<span class="sr2e-add-note sr2e-approval-note"><i class="fa-solid fa-user-check"></i> {{approvalNote}}</span>{{/if}}
     {{#if creationNote}}<span class="sr2e-add-note"><i class="fa-solid fa-wand-magic-sparkles"></i> {{creationNote}}</span>{{/if}}
     <button type="button" class="sr2e-add-go" data-action="addSelected"><i class="fa-solid {{#if finding}}fa-magnifying-glass{{else}}fa-plus{{/if}}"></i> {{#if finding}}{{sr2eT "SR2E.UI.findTicked"}}{{else}}{{sr2eT "SR2E.UI.addTicked"}}{{/if}}</button>
