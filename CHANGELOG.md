@@ -2,6 +2,13 @@
 
 This is the history of the unofficial Shadowrun 2nd Edition system for Foundry VTT (system id `sr2e`), newest version first. Every rules change since v0.70.0 has a house-rule switch that puts the old behaviour back. The system was built with AI (Anthropic's Claude) under human direction, and it has not yet been play-tested at a real table.
 
+## v0.91.8 — Spell formulas (11 Nov 2026)
+- **Spell formulas:** out of character creation a magician learns a new spell from a formula they hold, from a teacher, from their group's grimoire, or from a spell they designed. A formula is gear: the scroll on a spell's row in the shop or the Add window opens **Buy a formula…** (the Force and the tradition), and it is found, haggled, bought, approved and delivered like anything else. It can be given, traded or sold.
+- **Learn this spell…** on a formula learns it (or raises a spell you know to a higher Force) with the usual learning test and Good Karma. Learn in the Add window uses a formula you hold by itself. Raising a Force needs a formula of the new Force.
+- **Learn from a teacher…** (the teacher icon by the *Spells* heading): anyone in the world who knows the spell at that Force can teach it. They roll Instruction, and their successes, up to their Sorcery, are extra dice for your learning test, rolled from the button on their card. A teacher no player plays charges a fee.
+- **The other tradition:** a shamanic formula or teacher for a hermetic magician (or the reverse) works, but the learning test is harder and the study takes longer.
+- All the new numbers are placeholders to check against your book (`docs/VERIFY.md`); the GM can change them, or turn any part off, in the house rules (*Magic and critters*).
+
 ## v0.91.7 — The Scene builder (11 Nov 2026)
 - **New: the Scene builder**, a step-by-step window for the GM that builds a whole scene in one go: basics (name, folder, size, grid, and the kind of place: real world, astral or a Matrix host), the map, time and conditions, magic, who's there, security and the Matrix, and a summary before anything is made. Open it from the SR2e tools window, the toolbar, the Scenes sidebar, or **New scene…** in the GM panel's Scene tab.
 - **Backdrops drawn for the system:** a night street, an alley, a rooftop, a warehouse, an office floor, a club, sewers, a parking garage, docks, a forest, the astral plane, the astral city, a host and the grid. The real-world maps come with walls, doors and lamps that match the picture. Or use a plain colour or your own picture.

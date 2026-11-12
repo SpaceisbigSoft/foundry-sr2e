@@ -16,6 +16,7 @@ import { kitLinesFor, normalizeKit, type StarterKit } from '../rules/setup.ts';
 import { t as tx } from '../helpers/i18n.ts';
 import { escHtml } from '../rules/html.ts';
 import { permitsBought } from '../rules/legalbuy.ts';
+import { parseFormulaKey, formulaGearSystem } from '../rules/formulas.ts';
 
 /** Fields a compendium index is asked for, so the list can show a summary and a price without loading every item. */
 export const INDEX_FIELDS = ['system.cost', 'system.availability', 'system.streetIndex', 'system.grade', 'system.bioware', 'system.cultured', 'system.damagePower', 'system.damageLevel',
@@ -270,7 +271,27 @@ export interface ShopThing { key: string; type: string; name: string; system: an
  * doesn't show (a hidden compendium, an unmarked template, a forbidden item) is null.
  */
 export async function resolveShopKey(key: unknown, user: any = game.user): Promise<ShopThing | null> {
+  // v0.91.8 (RULES.FORMULA_V918): a spell formula: read back from the spell itself (as the user's Catalogue shows it).
+  if (parseFormulaKey(key)) return resolveFormulaKey(key, user);
   return resolveKey(key, user, BOUGHT_TYPES);
+}
+
+/**
+ * v0.91.8: a formula key (rules/formulas.ts `formulaKey`) as the gear it sells: the spell read through the user's own
+ * Catalogue (a spell they can't see is null), its price and Availability from its category and the key's Force. Its
+ * name is in the GM's language at the time it is made (it is the item's name). The buttons that make one only show while formulas are on.
+ */
+export async function resolveFormulaKey(key: unknown, user: any = game.user): Promise<ShopThing | null> {
+  const f = parseFormulaKey(key);
+  // Review (N4): read even with formulas switched off, so orders and requests already made still arrive.
+  if (!f) return null;
+  const spell = await resolveCatalogueKey(f.spellKey, user);
+  if (!spell || spell.type !== 'spell') return null;
+  const system = formulaGearSystem({ name: spell.name, system: spell.system }, f.force, f.tradition);
+  const name = f.tradition
+    ? tx('SR2E.Text.Formula.nameTradition', { spell: spell.name, force: f.force, tradition: f.tradition === 'shamanic' ? tx('SR2E.Text.Formula.shamanic') : tx('SR2E.Text.Formula.hermetic') })
+    : tx('SR2E.Text.Formula.name', { spell: spell.name, force: f.force });
+  return { key: String(key), type: 'gear', name, system, data: { name, type: 'gear', img: 'icons/svg/book.svg', system: foundry.utils.deepClone(system) }, marked: true };
 }
 
 /**

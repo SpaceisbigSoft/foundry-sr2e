@@ -618,6 +618,17 @@
   {{/if}}
 
   {{#if (eq type "gear")}}
+  {{#if system.formula.spell}}
+  <h3 class="sr2e-subhead" data-help="spell-formulas" data-heading="Spell formula">{{sr2eT "SR2E.UI.spellFormula"}}</h3>
+  <div class="sr2e-row">
+    {{#if isGM}}<label class="sr2e-gm-only">{{sr2eT "SR2E.UI.formulaSpell"}} <input type="text" name="system.formula.spell" value="{{system.formula.spell}}"></label>
+    <label class="sr2e-gm-only">{{sr2eT "SR2E.UI.formulaForce"}} <input type="number" name="system.formula.force" value="{{system.formula.force}}" min="1" max="12"></label>
+    <label class="sr2e-gm-only">{{sr2eT "SR2E.UI.formulaTradition"}} <select name="system.formula.tradition">{{selectOptions formulaTraditions selected=system.formula.tradition valueAttr="key" labelAttr="label"}}</select></label>
+    {{else}}<span>{{sr2eT "SR2E.UI.formulaLine" spell=system.formula.spell force=system.formula.force tradition=formulaTraditionLabel}}</span>{{/if}}
+    {{#if item.parent}}<button type="button" data-action="learnFormulaItem" title="{{sr2eT "SR2E.UI.learnFormulaHint"}}"><i class="fa-solid fa-book-open" aria-hidden="true"></i> {{sr2eT "SR2E.UI.learnFormula"}}</button>{{/if}}
+  </div>
+  <p class="hint">{{sr2eT "SR2E.UI.formulaHint"}}</p>
+  {{/if}}
   <h3 class="sr2e-subhead" data-help="item-sheet" data-heading="General">{{sr2eT "SR2E.UI.general"}}</h3>
   <div class="sr2e-row">
     <label>{{sr2eT "SR2E.UI.quantity"}} <input type="number" name="system.quantity" value="{{system.quantity}}" min="0"></label>

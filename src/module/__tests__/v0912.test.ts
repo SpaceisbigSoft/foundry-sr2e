@@ -75,7 +75,8 @@ describe('v0.91.2 the shop categories', () => {
 describe('v0.91.2 the window', () => {
   test('the Shop button opens only the tabs that sell things; the categories filter with the search', () => {
     const add = read('src', 'module', 'applications', 'adding.ts');
-    assert.match(add, /const types = windowTypesFor\(actor\.type\)\.filter\(\(t\) => !o\.shop \|\| soldInShop\(t\)\);/);
+    // v0.91.8: and the Spells tab while spell formulas are on (a row's Buy a formula…).
+    assert.match(add, /const types = windowTypesFor\(actor\.type\)\.filter\(\(t\) => !o\.shop \|\| soldInShop\(t\) \|\| \(t === 'spell' && formulasRequired\(\)\)\);/);
     assert.match(add, /tr\.hidden = !matchesSearch\(tr\.dataset\['search'\] \?\? '', this\.query\) \|\| !passesGroups\(tr\.dataset\['group'\] \?\? '', this\.groups\);/);
     assert.match(add, /return this\.shopMode \? tx\('SR2E\.Window\.Adding\.shopFor'/);
     const tpl = read('public', 'templates', 'add-window.hbs');

@@ -2108,7 +2108,18 @@
       "permitUnderWay": "Permit under way",
       "permitGmTicks": "The GM ticks this; players use Get a permit…",
       "permitRequested": "Permit asked of the GM",
-      "fixer": "Fixer"
+      "fixer": "Fixer",
+      "buyFormulaHint": "Buy this spell's formula (found and bought like gear)",
+      "buyFormulaFor": "Buy a formula for {name}",
+      "spellFormula": "Spell formula",
+      "formulaSpell": "Spell",
+      "formulaForce": "Force",
+      "formulaTradition": "Tradition",
+      "formulaLine": "{spell}, Force {force}, {tradition}",
+      "learnFormulaHint": "Learn the spell from this formula (the learning test and Good Karma)",
+      "learnFormula": "Learn this spell…",
+      "formulaHint": "A spell formula teaches its spell at up to its Force. Learning from the other tradition's formula is harder and slower.",
+      "learnFromTeacher": "Learn from a teacher…"
     },
     "Settings": {
       "rulesSource": {
@@ -3382,6 +3393,15 @@
         "notFixer": "{contactName} isn't marked as a fixer (edit the contact).",
         "tooManyFavours": "{name} already owes {contactName} too many favours.",
         "noHaggle": "A fixer's find can't be haggled over: the fixer does the dealing."
+      },
+      "Formula": {
+        "needsOne": "{name} needs a spell formula for {spell} at Force {force} or more: buy one (the scroll on the spell's row in the shop), learn from a teacher, or from the group's grimoire.",
+        "notThatFormula": "{name}'s formula doesn't teach {spell} at Force {force}.",
+        "teachersOff": "Learning from a teacher is switched off (house rule).",
+        "teacherDoesNotKnow": "{teacher} doesn't know {spell} at Force {force} or more.",
+        "noTeachers": "No one in the world knows a spell to teach.",
+        "alreadyTaught": "This teaching has already been used.",
+        "notThatTeaching": "That teacher's card can't be used for this: it is someone else's, for another spell or Force, or the teacher no longer knows the spell."
       }
     },
     "Dialog": {
@@ -4914,6 +4934,26 @@
         "hint": "Through a contact, a restricted or forbidden item's legality TN is {legal}% of finding it openly; a fixer (by default) ignores it, but takes a {percent}% cut of the price and {time}× the time, and you can't haggle. A contact's fee and the pay for dice are paid now.",
         "each": "The same choice goes for each of the {count} finds: each pays the fee and the dice, and each calls in its own favour.",
         "find": "Find"
+      },
+      "Formula": {
+        "buyIntro": "A spell formula for {spell}, written for one tradition. You can learn the spell from it at up to its Force.",
+        "force": "Force",
+        "tradition": "Tradition",
+        "buyHint": "¥{price} per point of Force for this spell; Availability {avail} at Force 1, its TN rising with the Force. The other tradition's formula is harder to learn from. All numbers VERIFY.",
+        "buyNow": "Buy now",
+        "giveFree": "Give it free",
+        "buyTitle": "Buy a formula: {spell}",
+        "learnTitle": "Learn from the formula: {spell}",
+        "learnIntro": "This formula teaches {spell} at up to Force {force}.",
+        "knownAt": "Known now at Force {force}.",
+        "learnHintTest": "A learning test ({skill} against the Force); Good Karma equal to the Force is paid on success.",
+        "learnHintPlain": "It costs Good Karma equal to the Force.",
+        "learn": "Learn",
+        "teacherOption": "{teacher}: {spell} (Force {force})",
+        "teacherTitle": "Learn from a teacher: {name}",
+        "teacher": "Teacher and spell",
+        "teacherHint": "The teacher rolls {skill}; their successes, up to their {sorcery}, are extra dice for your learning test. A teacher no player plays charges ¥{fee} per point of Force. Up to the teacher's own Force. VERIFY.",
+        "teach": "Ask them to teach"
       }
     },
     "Window": {
@@ -7974,6 +8014,17 @@
         "closerDice": "closer +{n}",
         "paidDice": "paid +{n}",
         "favourDice": "favour +{n}"
+      },
+      "Formula": {
+        "teacherDice": " + {dice} from the teacher",
+        "otherTradition": ", the other tradition",
+        "teaches": "{teacher} teaches {name} {spell} (Force {force}): {skill}{suffix}",
+        "fee": " Teacher's fee ¥{fee}, paid when the learning test is rolled.",
+        "otherTraditionNote": " The other tradition: the learning test is harder and the study slower.",
+        "helps": "{teacher} helps: +{dice} dice for the learning test.",
+        "noHelp": "{teacher} is no help this time; the learning test can still be rolled.",
+        "learnButton": "Roll the learning test: {spell}, Force {force}",
+        "learnIt": "the learning test"
       }
     },
     "Privacy": {
@@ -8945,7 +8996,19 @@
         "SHOP_V916__fixerLegalShare": "Through a fixer: share of the legality TN row and its time (0 = none; VERIFY)",
         "SHOP_V916__fixerFee": "A fixer's cut: share of the price (VERIFY)",
         "SHOP_V916__fixerTime": "A fixer's find: time × (VERIFY)",
-        "SHOP_V916__fixerDicePerLevel": "A fixer with no dice of their own: dice per contact level (VERIFY)"
+        "SHOP_V916__fixerDicePerLevel": "A fixer with no dice of their own: dice per contact level (VERIFY)",
+        "FORMULA_V918__required": "Spell formulas: out of creation a character learns a spell only from a formula they hold, a teacher, the group's grimoire or their own design (on, VERIFY) or the shop's Learn needs nothing more (off, the old way)",
+        "FORMULA_V918__raise": "Spell formulas: raising a known spell's Force needs a formula or teacher of the new Force (on) or not (off, the old way)",
+        "FORMULA_V918__nuyenPerForce": "A formula's price per point of Force (VERIFY)",
+        "FORMULA_V918__combatFactor": "A combat spell's formula: price × (VERIFY)",
+        "FORMULA_V918__tnPerForce": "A formula's Availability TN per point of Force (VERIFY)",
+        "FORMULA_V918__availDays": "A formula's Availability time in days (VERIFY)",
+        "FORMULA_V918__streetIndex": "A formula's Street Index (VERIFY)",
+        "FORMULA_V918__foreign": "The other tradition's formula or teacher: a harder, slower learning test (harder, VERIFY) or no difference (same)",
+        "FORMULA_V918__foreignTn": "The other tradition: learning TN + (VERIFY)",
+        "FORMULA_V918__foreignTime": "The other tradition: study time × (VERIFY)",
+        "FORMULA_V918__teacher": "Teachers: a character who knows the spell gives their Instruction successes (up to their Sorcery) as learning dice (on, VERIFY) or no teachers (off)",
+        "FORMULA_V918__feePerForce": "A teacher no player plays: fee per point of Force (VERIFY)"
       }
     },
     "Rules": {
@@ -14869,6 +14932,10 @@
         "getPermitTitle": "Costs ¥{cost} and takes {time} (the GM's waiting rules)",
         "covered": "Covered by {by}",
         "coveredFake": "Covered by {by} (a fake)"
+      },
+      "Formula": {
+        "learnNeedsFormula": "Out of creation a character needs a formula they hold (the scroll on a row buys one), a teacher or the group's grimoire.",
+        "rowHint": "The scroll on a spell's row buys its formula."
       }
     },
     "Text": {
@@ -16615,6 +16682,14 @@
       },
       "Through": {
         "paid": "{name} helps find {item}"
+      },
+      "Formula": {
+        "name": "Spell formula: {spell} (Force {force})",
+        "nameTradition": "Spell formula: {spell} (Force {force}, {tradition})",
+        "hermetic": "hermetic",
+        "shamanic": "shamanic",
+        "either": "either tradition",
+        "teacherFee": "Teacher's fee: {spell}"
       }
     },
     "Guide": {
@@ -17381,6 +17456,17 @@
           },
           "b3": "Opened on an existing scene (<strong>Change this scene…</strong> in the Scene tab, or <em>Change with the Scene builder</em> in a scene's menu in the sidebar), it starts from that scene's settings. What you change there is changed, and the people, ward, site and host you pick are added; nothing already on the scene is deleted, its size stays, and a backdrop's walls are only added to a scene with no walls yet.",
           "b4": "<strong>Save as a template</strong> (on the Finish step) keeps every choice, including who's there, so the same kind of scene takes one click next time: load it on the Basics step. Everything the builder makes is marked, so <strong>Remove this scene and what the builder made</strong> (it asks first) deletes the scene, the actors and journal it made for it and the combats on it, and leaves your own actors and journals alone."
+        },
+        "spellFormulas": {
+          "title": "Spell formulas and teachers",
+          "b1": "Out of character creation a magician learns a new spell only from a <strong>spell formula</strong> they hold, from a <strong>teacher</strong> who knows it, from their magical group's <strong>grimoire</strong>, or from a spell they <strong>designed</strong> themselves. The learning test and the Good Karma are the same in every case.",
+          "b2": {
+            "i1": "<strong>Buying a formula</strong>: in the shop or the Add window, the scroll on a spell's row opens <strong>Buy a formula…</strong>. Pick the Force (you can learn the spell at up to it) and the tradition (hermetic or shamanic). A formula is gear: it is found, haggled, bought, sent to the GM's approval queue and delivered like anything else, and it can be given, traded or sold.",
+            "i2": "<strong>Learning from it</strong>: open the formula on your sheet and press <strong>Learn this spell…</strong>, or use Learn in the Add window: a formula you hold is used by itself. A spell you know at a lower Force is raised; raising a Force needs a formula of the new Force.",
+            "i3": "<strong>A teacher</strong>: the teacher icon by the <em>Spells</em> heading lists everyone in the world who knows a spell. The teacher rolls Instruction; their successes, up to their Sorcery, are extra dice for your learning test, rolled from the button on their card. A teacher no player plays charges a fee per point of Force.",
+            "i4": "<strong>The other tradition</strong>: a shamanic formula or teacher for a hermetic magician (or the reverse) works, but the learning test's TN is higher and the study takes longer."
+          },
+          "b3": "The GM can switch every part of this off, or change its numbers, in the house rules (Magic and critters). All the numbers are the creator's interpretation, marked VERIFY until checked against the books."
         }
       }
     },

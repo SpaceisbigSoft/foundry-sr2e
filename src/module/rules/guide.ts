@@ -99,6 +99,8 @@ export const GUIDE_TOPICS: GuideTopic[] = [
   topic('magic', 'both', ['Magic', 'Geasa', 'Sustaining', 'Anchored', 'Foci', 'Adept powers', 'Sustaining powers', 'Under spells and powers'], ['p', 11, 'p', 3, 'p', 'p', 'p']),
   topic('conjuring', 'both', ['Attacks', 'Ally'], ['p', 'p', 'p', 6, 'p']),
   topic('spells', 'both', ['Spells'], ['p', 'p', 'p', 'p', 'p']),
+  // v0.91.8: spell formulas, teachers and the other tradition (RULES.FORMULA_V918); the formula's sheet heading names it (data-help).
+  topic('spell-formulas', 'both', [], ['p', 4, 'p']),
   topic('powers', 'both', ['Powers'], ['p', 'p']),
   // ---------------------------------------------------------------- Matrix and Rigging tabs
   topic('matrix', 'both', ['Matrix', 'Cyberdecks', 'Programs', 'Frames and agents', 'Downloaded data'], ['p', 10, 'p', 'p']),
@@ -160,7 +162,7 @@ export const GUIDE_CATEGORIES: GuideCategory[] = [
   category('character', 'players', ['attributes', 'condition-monitor', 'skills', 'skill-picker', 'current-tab', 'effects', 'health', 'contacts', 'bio', 'token-art']),
   category('gear', 'players', ['weapons', 'cyberware', 'gear', 'item-sheet', 'money', 'adding', 'catalogue', 'new-entry']),
   category('advancement', 'players', ['creation-wizard', 'creation-record', 'spend-karma', 'under-way', 'approval']),
-  category('magic', 'players', ['magic', 'conjuring', 'spells', 'powers']),
+  category('magic', 'players', ['magic', 'conjuring', 'spells', 'spell-formulas', 'powers']),
   category('matrix', 'players', ['matrix', 'rigging']),
   category('sheets', 'players', ['npc-sheets', 'vehicles']),
   category('gm-run', 'gm', ['gm-panel', 'gm-time', 'gm-combat', 'gm-party', 'gm-cards', 'gm-undo']),

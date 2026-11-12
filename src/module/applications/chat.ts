@@ -2764,7 +2764,26 @@ async function onLearnFormula(message: any, button: HTMLButtonElement): Promise<
   if (!a.isOwner) return ui.notifications.warn(tx('SR2E.Notify.Chat.onlySOwnerOrTheGm25', { name: escHtml(a.name) }));
   if (!(await playerMay(message, a))) return;
   button.disabled = true;
-  if (!(await asCardAuthor(message, tx('SR2E.Card.Chat.learnIt'), () => a.learnFormula(f.name, f.system, 'their own design')))) button.disabled = false;
+  if (!(await asCardAuthor(message, tx('SR2E.Card.Chat.learnIt'), () => a.learnFormula(f.name, f.system, 'their own design', { origin: 'design' })))) button.disabled = false;
+}
+
+/**
+ * v0.91.8: the learning test with a teacher's help (a teacher's card, `snap.teach`): the student's owner rolls it,
+ * once per card. The help is read from the card's own test (its successes, capped by the teacher's Sorcery).
+ */
+async function onLearnTaught(message: any, button: HTMLButtonElement): Promise<void> {
+  const t = (message.getFlag(SYSTEM_ID, 'test') as TestSnapshot | undefined)?.teach;
+  const a: any = t ? await fromUuid(t.studentUuid) : null;
+  if (!t || !a) return;
+  if (!a.isOwner) return ui.notifications.warn(tx('SR2E.Notify.Chat.onlySOwnerOrTheGm25', { name: escHtml(a.name) }));
+  if (message.getFlag(SYSTEM_ID, 'taught')) return ui.notifications.warn(tx('SR2E.Notify.Formula.alreadyTaught'));
+  if (!(await playerMay(message, a))) return;
+  button.disabled = true;
+  // Review (B1): spent once the learning test was rolled or the request filed, whatever its result (the student's
+  // learning card has its own Karma re-roll); a study refused before that leaves the card usable.
+  const r = await asCardAuthor(message, tx('SR2E.Card.Formula.learnIt'), () => a.learnTaught(message.id));
+  if (r === 'used') { try { await message.setFlag(SYSTEM_ID, 'taught', true); } catch { /* not saved */ } }
+  else button.disabled = false;
 }
 
 /** Offer a designed spell to a group's grimoire. */
@@ -3276,6 +3295,7 @@ function dispatch(message: any, button: HTMLButtonElement, action: string): Prom
   else if (action === 'placeWard') return onPlaceWard(message);
   else if (action === 'grimoireAdd') return onGrimoireAdd(message, button);
   else if (action === 'learnFormula') return onLearnFormula(message, button);
+  else if (action === 'learnTaught') return onLearnTaught(message, button);
   else if (action === 'formulaGrimoire') return onFormulaGrimoire(message, button);
   else if (action === 'noticeRitual') return onNoticeRitual(message, button);
   else if (action === 'startFire') return onStartFire(message, button);

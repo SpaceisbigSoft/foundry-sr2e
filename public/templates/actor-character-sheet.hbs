@@ -370,7 +370,7 @@
     </section>
     {{/if}}
     <section class="sr2e-items">
-    <h2 data-heading="Spells">{{sr2eT "SR2E.UI.spells"}} <a class="sr2e-add" data-action="addItem" data-type="spell" title="{{sr2eT "SR2E.UI.addSpells"}}"><i class="fa-solid fa-plus"></i></a></h2>
+    <h2 data-heading="Spells">{{sr2eT "SR2E.UI.spells"}} <a class="sr2e-add" data-action="addItem" data-type="spell" title="{{sr2eT "SR2E.UI.addSpells"}}"><i class="fa-solid fa-plus"></i></a>{{#if teachersOn}} <a class="sr2e-add" data-action="learnFromTeacher" role="button" title="{{sr2eT "SR2E.UI.learnFromTeacher"}}" aria-label="{{sr2eT "SR2E.UI.learnFromTeacher"}}"><i class="fa-solid fa-chalkboard-user" aria-hidden="true"></i></a>{{/if}}</h2>
     <ul>
       {{#each spells}}
       <li>

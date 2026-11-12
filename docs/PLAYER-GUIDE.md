@@ -66,6 +66,7 @@ How to use the unofficial Shadowrun 2nd Edition system for Foundry VTT: what the
 - [Magic](#magic)
 - [Conjuring and spirits](#conjuring-and-spirits)
 - [Spells](#spells)
+- [Spell formulas and teachers](#spell-formulas-and-teachers)
 - [Powers](#powers)
 
 **Matrix and rigging**
@@ -752,6 +753,17 @@ A barrier spell or a ward (**Ward…** on the Magic tab) becomes a Barrier actor
 Row icons: pin, place the area on the map (area spells), cast at an object or wall (the cube, physical spells), learn at a higher Force for Good Karma (the up arrow), offer it to your group's grimoire (the book).
 
 The + opens the [Add window](#the-shop-the-add-window) at Spells. Learning a spell with Karma rolls a learning test first (on by default) and may take time: see [Under way](#under-way-things-that-take-time).
+
+## Spell formulas and teachers
+
+Out of character creation a magician learns a new spell only from a **spell formula** they hold, from a **teacher** who knows it, from their magical group's **grimoire**, or from a spell they **designed** themselves. The learning test and the Good Karma are the same in every case.
+
+- **Buying a formula**: in the shop or the Add window, the scroll on a spell's row opens **Buy a formula…**. Pick the Force (you can learn the spell at up to it) and the tradition (hermetic or shamanic). A formula is gear: it is found, haggled, bought, sent to the GM's approval queue and delivered like anything else, and it can be given, traded or sold.
+- **Learning from it**: open the formula on your sheet and press **Learn this spell…**, or use Learn in the Add window: a formula you hold is used by itself. A spell you know at a lower Force is raised; raising a Force needs a formula of the new Force.
+- **A teacher**: the teacher icon by the *Spells* heading lists everyone in the world who knows a spell. The teacher rolls Instruction; their successes, up to their Sorcery, are extra dice for your learning test, rolled from the button on their card. A teacher no player plays charges a fee per point of Force.
+- **The other tradition**: a shamanic formula or teacher for a hermetic magician (or the reverse) works, but the learning test's TN is higher and the study takes longer.
+
+The GM can switch every part of this off, or change its numbers, in the house rules (Magic and critters). All the numbers are the creator's interpretation, marked VERIFY until checked against the books.
 
 ## Powers
 
