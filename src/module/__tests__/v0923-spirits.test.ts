@@ -296,7 +296,7 @@ describe('v0.92.3 spirits and normal weapons (Core pp. 142–143)', () => {
     assert.match(chat.at(-1).content, /shrugs it off/);
   });
   test('a mundane attacker rolls Willpower with no Combat Pool', async (t) => {
-    const a = who({ name: 'Sam' }, [skill('ua', 'Unarmed Combat', 6, 'strength')]);
+    const a = who({ name: 'Kestrel' }, [skill('ua', 'Unarmed Combat', 6, 'strength')]);
     const s = spirit();
     faces.push(...Array(20).fill(1));
     const r = await a.attackWith(SR2Actor.unarmed(), { targetUuid: s.uuid, poolDice: 2 });
