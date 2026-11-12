@@ -48,9 +48,9 @@ That has two consequences you should know about:
 - **The rules numbers came from the AI's memory of the books**, not from a human typing them out of a rulebook, so some were wrong. In v0.92.3 the AI checked the default rules against the SR2 books and corrected them; a human has not re-checked that work, so every number is listed with its source in `docs/VERIFY.md` for checking against your book.
 - **No human has play-tested it at a table yet.** Expect bugs, and please report them.
 
-## Status: v0.92.4 (pre-release)
+## Status: v0.92.5 (release)
 
-The system is feature-complete for SR2 core play and much of the sourcebook material, and is public for testing ahead of its first full release. It is tested by 4,100 automated tests, by in-Foundry test batches (Quench), by live runs in Foundry v14 as a GM and a player, and by an upgrade test from worlds saved with v0.50 and v0.72, and v0.81 had a full code and security review. It has not yet been play-tested at a real table, so expect rough edges. In v0.92.3 the default rules were checked against the SR2 books and made to follow them; `docs/VERIFY.md` lists every rules number with its source (and what is still unchecked), and every rules change since v0.70.0 has a house-rule switch that puts the earlier behaviour back.
+The system is feature-complete for SR2 core play and much of the sourcebook material, and v0.92.5 is its first release (earlier GitHub builds were test builds). It is tested by 4,104 automated tests, by in-Foundry test batches (Quench), by live runs in Foundry v14 as a GM and a player, and by an upgrade test from worlds saved with v0.50 and v0.72, and v0.81 had a full code and security review. It has not yet been play-tested at a real table, so expect rough edges. In v0.92.3 the default rules were checked against the SR2 books and made to follow them; `docs/VERIFY.md` lists every rules number with its source (and what is still unchecked), and every rules change since v0.70.0 has a house-rule switch that puts the earlier behaviour back.
 
 What changed in each version: `CHANGELOG.md`.
 

@@ -2,6 +2,11 @@
 
 This is the history of the unofficial Shadowrun 2nd Edition system for Foundry VTT (system id `sr2e`), newest version first. Every rules change since v0.70.0 has a house-rule switch that puts the old behaviour back. The system was built with AI (Anthropic's Claude) under human direction, and it has not yet been play-tested at a real table.
 
+## v0.92.5 — First release (12 Nov 2026)
+- **The first release** of the unofficial Shadowrun 2nd Edition system for Foundry VTT v14. It brings together everything built so far: SR2 rules for combat, health, magic, the Matrix (Virtual Realities 2.0), vehicles (Rigger 2) and gear, checked against the books in v0.92.3, each with a house rule to play it differently; character creation and advancement; the shop and the Catalogue; the GM panel, NPC generator and Scene builder; the in-game guide.
+- **Install** from Foundry's Game Systems with the manifest URL below; worlds made with the earlier test builds update in place (the first load shows the GM which characters' numbers changed with v0.92.3's book rules).
+- **Built with AI** (Anthropic's Claude) under human direction, and **not yet play-tested at a table**: please report anything that looks wrong with the in-game guide's **Report a bug** button or on the issue tracker.
+
 ## v0.92.4 — The anti-vehicle rocket (12 Nov 2026)
 - **Anti-vehicle rockets and missiles** now lose 8 Power per metre from the blast point, as the book's rocket table gives (Core p. 99): they hit what they're aimed at, not everything within 60 m. The GM can put the old −1 per 4 m back in the house rules (*Ranged combat*).
 - The passkey keeps the Core price (¥10,000 × Rating).
