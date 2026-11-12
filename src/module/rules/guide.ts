@@ -137,7 +137,7 @@ export const GUIDE_TOPICS: GuideTopic[] = [
   // ================================================================ For the GM
   topic('credits', 'both', [], ['p', 'p', 'p', 'p']),
   topic('gm-panel', 'gm', ['Scene', 'Regions with an SR2e environment', 'Presets', 'Encounter notes', 'Charges on a timer', 'Fires', 'Damaged walls'], ['p', 'p', 'p', 9]),
-  topic('gm-time', 'gm', ['Time'], ['p', 'p', 'p']),
+  topic('gm-time', 'gm', ['Time'], ['p', 'p', 'p', 'p']),
   topic('gm-combat', 'gm', ['Combat', 'NPCs and groups', 'On this scene'], ['p', 'p', 'p', 'p', 'p']),
   topic('gm-party', 'gm', ['Party', 'Money and Karma'], ['p', 'p']),
   topic('gm-tools', 'gm', ['NPC generator', 'Preview', 'Dice and TN calculator'], [3]),

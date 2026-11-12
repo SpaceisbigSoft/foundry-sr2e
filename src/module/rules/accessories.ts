@@ -74,9 +74,12 @@ interface Rule { id: string; re: RegExp; hit: (m: RegExpExecArray) => Omit<Acces
 
 /** Each accessory, most specific first (a suppressor before a silencer; a smartgun before a scope's "smart"). */
 const RULES_LIST: Rule[] = [
-  { id: 'gasVent', re: /\bgas[- ]?vent(?:\s*(?:system|compensator))?(?:\s*(?:rating\s*)?(\d|iii|ii|iv|vi|v|i)\b)?/gi,
-    hit: (m) => { const n = numberOf(m[1]); return n ? { field: 'recoilComp', value: n } : {}; } },
-  { id: 'recoilComp', re: /\b(?:recoil\s+comp(?:ensation|ensator)?|rc)\s*(?:of\s*)?[+:]?\s*(\d)\b|\b(\d)\s+(?:points?\s+of\s+)?recoil\s+comp(?:ensation)?\b/gi,
+  // v0.92.2: also plural ("gas vents 3"), a bracketed rating ("gas vent (2)", "(rating 3)") and ", rating 2" (digits only
+  // after a comma, so "gas vent, i.e." reads no rating).
+  { id: 'gasVent', re: /\bgas[- ]?vents?(?:\s*(?:system|compensator)s?)?(?:\s*,\s*rating\s*(\d)\b|\s*\(\s*(?:rating\s*)?(\d|iii|ii|iv|vi|v|i)\s*\)|\s*(?:rating\s*)?(\d|iii|ii|iv|vi|v|i)\b)?/gi,
+    // Review (v0.92.2): a bracketed rating needs its closing bracket, so "gas vent (I think)" reads none.
+    hit: (m) => { const n = numberOf(m[1] ?? m[2] ?? m[3]); return n ? { field: 'recoilComp', value: n } : {}; } },
+  { id: 'recoilComp', re: /\b(?:recoil\s+comp(?:ensation|ensator)?|rc)\s*(?:of\s*)?[+:]?\s*\(?\s*(?:rating\s*)?(\d)\b|\b(\d)\s+(?:points?\s+of\s+)?recoil\s+comp(?:ensation)?\b/gi,
     hit: (m) => { const n = numberOf(m[1] ?? m[2]); return n ? { field: 'recoilComp', value: n } : null; } },
   { id: 'suppressor', re: /\b(?:sound\s+)?suppressor\b/gi, hit: () => ({ field: 'muzzle', value: 'suppressor' }) },
   { id: 'silencer', re: /\bsilencer\b|\bsilenced\b/gi, hit: () => ({ field: 'muzzle', value: 'silencer' }) },
@@ -84,8 +87,9 @@ const RULES_LIST: Rule[] = [
   { id: 'laserSight', re: /\blaser\s+sight\b|\blaser\s+pointer\b/gi, hit: () => ({ field: 'laserSight', value: true }) },
   { id: 'scopeVision', re: /\b(low[- ]?light|thermo(?:graphic)?|thermal)\s+(?:imaging\s+)?scope\b|\bscope\s*\(\s*(low[- ]?light|thermo(?:graphic)?|thermal)\b/gi,
     hit: (m) => ({ field: 'scopeVision', value: /low/i.test(m[1] ?? m[2] ?? '') ? 'lowLight' : 'thermographic' }) },
-  { id: 'scope', re: /\b(?:imaging\s+|telescopic\s+|optical\s+)?scope\b(?:[^.;]{0,24}?\b(?:magnification|mag\.?)\s*(\d))?|\b(?:magnification|mag\.?)\s*(\d)\s+scope\b|\b(\d)\s*x\s+scope\b/gi,
-    hit: (m) => { const n = numberOf(m[1] ?? m[2] ?? m[3]); return { field: 'scope', value: Math.min(3, n ?? 1) }; } },
+  { id: 'scope', re: /\b(?:imaging\s+|telescopic\s+|optical\s+)?scope\b(?:\s*\(\s*(\d)\s*\)|[^.;]{0,24}?\b(?:magnification|mag\.?)\s*(\d))?|\b(?:magnification|mag\.?)\s*(\d)\s+scope\b|\b(\d)\s*x\s+scope\b/gi,
+    // v0.92.2: "scope (2)" is magnification 2.
+    hit: (m) => { const n = numberOf(m[1] ?? m[2] ?? m[3] ?? m[4]); return { field: 'scope', value: Math.min(3, n ?? 1) }; } },
   { id: 'shockPad', re: /\bshock\s+pad\b/gi, hit: () => ({ field: 'shockPad', value: true }) },
   { id: 'tripod', re: /\btripod\b/gi, hit: () => ({ field: 'support', value: 'tripod' }) },
   { id: 'bipod', re: /\bbipod\b/gi, hit: () => ({ field: 'support', value: 'bipod' }) },
@@ -132,7 +136,14 @@ export function readAccessories(description: unknown): AccessoryHit[] {
   }
   // A low-light or thermographic scope is a scope too (magnification 1 unless the text says more).
   const vision = out.find((h) => h.id === 'scopeVision');
-  if (vision && !out.some((h) => h.field === 'scope')) out.push({ id: 'scope', field: 'scope', value: 1, text: vision.text });
+  // v0.92.2: a magnification just after it counts ("scope (low-light, magnification 2)").
+  if (vision && !out.some((h) => h.field === 'scope')) {
+    const at = text.toLowerCase().indexOf(vision.text.toLowerCase());
+    const near = at >= 0 ? text.slice(at + vision.text.length, at + vision.text.length + 32) : '';
+    // Review: "magnification N" within the phrase, or "(N)" / ", N x" straight after (not "and 2 x spare clips").
+    const mag = /^[^.;]*?\b(?:magnification|mag\.?)\s*(\d)|^\s*\(\s*(\d)\s*\)|^\s*,?\s*(\d)\s*x\b/i.exec(near);
+    out.push({ id: 'scope', field: 'scope', value: Math.min(3, Math.max(1, numberOf(mag?.[1] ?? mag?.[2] ?? mag?.[3]) ?? 1)), text: vision.text });
+  }
   return out;
 }
 

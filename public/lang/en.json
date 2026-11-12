@@ -4993,6 +4993,15 @@
         "teacher": "Teacher and spell",
         "teacherHint": "The teacher rolls {skill}; their successes, up to their {sorcery}, are extra dice for your learning test. A teacher no player plays charges ¥{fee} per point of Force. Up to the teacher's own Force. VERIFY.",
         "teach": "Ask them to teach"
+      },
+      "Clock": {
+        "bigJumpTitle": "World time jumped",
+        "bigJumpBody": "World time just moved {way} by {span} (a calendar setting the date, or the clock moved by hand).",
+        "forward": "forward",
+        "back": "back",
+        "bigJumpHint": "Did that time pass for the characters? \"Count it as time passed\" runs everything timed for it: drugs wear off, wounds heal, upkeep and training come due, spirits leave. \"Only the date\" changes the calendar but not the characters' time: everything keeps the time it had left (the hours of a part day count).",
+        "dateOnly": "Only the date",
+        "countIt": "Count it as time passed"
       }
     },
     "Window": {
@@ -8075,6 +8084,11 @@
       },
       "MagicPool": {
         "narrow": "{name} {rating}"
+      },
+      "Clock": {
+        "alias": "World time",
+        "dateOnly": "GM only · World time jumped; only the date changed. The system's clock stays {span} behind the calendar, so nothing came due.",
+        "counted": "GM only · World time jumped {span}; it counted as time passed for everything timed."
       }
     },
     "Privacy": {
@@ -9066,7 +9080,9 @@
         "SHEET_V921__carried": "Weapons, armor and gear not ticked Carried have no weight, aren't searched and can't be used (on) or the tick is ignored (off, the old way)",
         "SHEET_V921__accessories": "A weapon's description is read for accessories when it arrives or is edited, filling only fields still at their default (auto) or never (off)",
         "SHEET_V921__wizard": "The creation wizard warns but never refuses (advise) or greys out and clamps as before (block)",
-        "SHEET_V921__ratingLock": "After creation, players may type higher ratings unless the approval queue is on (queue) or never may (always, the old way)"
+        "SHEET_V921__ratingLock": "After creation, players may type higher ratings unless the approval queue is on (queue) or never may (always, the old way)",
+        "CLOCK_V922__bigJump": "A big jump of world time outside combat (a calendar setting the date): the GM is asked whether it counts as time passed or only changes the date (ask) or it always counts (count, the old way)",
+        "CLOCK_V922__bigJumpDays": "A big jump of world time: at least this many days, forward or back"
       }
     },
     "Rules": {
@@ -17490,7 +17506,8 @@
           "title": "Time",
           "b1": "The Scene tab's <strong>Time</strong> shows the world time (and the Combat Turn in a fight) and buttons from <strong>+3 s</strong> (one Combat Turn) to <strong>+1 year</strong>. A week or more asks first (house rules, GM tools: the days in a month and a year, and when to ask). Moving time on is what finishes things <a href=\"#under-way\">under way</a> and runs other timers (drugs, diseases, recovery, rent, fires). <a href=\"#gm-undo\">Undo</a> moves the time back.",
           "b2": "The Party tab lists everyone's things under way, each with <strong>Change the time left</strong> (hourglass) and <strong>Finish it now</strong> (fast-forward). The same icons show on the character's Upkeep tab for the GM.",
-          "b3": "What waits at all is set in the house rules, section <em>Time to get things</em>: the main switch, each area (magic, buying gear, repairs, Matrix work, vehicles), the Availability time multiplier for buying straight from the Add window, and the shortest wait. Training time for raised ratings is the <em>Characters</em> house rule about raising a skill or attribute. See <a href=\"#house-rules\">House rules</a>."
+          "b3": "What waits at all is set in the house rules, section <em>Time to get things</em>: the main switch, each area (magic, buying gear, repairs, Matrix work, vehicles), the Availability time multiplier for buying straight from the Add window, and the shortest wait. Training time for raised ratings is the <em>Characters</em> house rule about raising a skill or attribute. See <a href=\"#house-rules\">House rules</a>.",
+          "b4": "<strong>A calendar module, or the clock moved by hand:</strong> when world time jumps a week or more outside combat (a calendar setting the date when you turn it on, or you set the campaign's date), you are asked: <strong>Count it as time passed</strong> runs everything timed for it, as above; <strong>Only the date</strong> changes the date but not the characters' time, so drugs, recovery, upkeep and training keep the time they had left (the time of day stays the calendar's). Putting the date back the same way undoes it. The size of a big jump, or always counting, is a house rule (<em>GM tools</em>). The Scene tab's own buttons always count."
         },
         "gmCombat": {
           "title": "Combat and NPCs tabs",

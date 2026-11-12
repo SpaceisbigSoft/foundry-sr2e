@@ -48,9 +48,9 @@ That has two consequences you should know about:
 - **The rules numbers came from the AI's memory of the books**, not from a human typing them out of a rulebook, so some will be wrong. Many have since been checked; every one is listed in `docs/VERIFY.md` for checking against your book.
 - **No human has play-tested it at a table yet.** Expect bugs, and please report them.
 
-## Status: v0.92.1 (pre-release)
+## Status: v0.92.2 (pre-release)
 
-The system is feature-complete for SR2 core play and much of the sourcebook material, and is public for testing ahead of its first full release. It is tested by 3,611 automated tests and by live runs in Foundry v14 as a GM and a player, and v0.81 had a full code and security review. It has not yet been play-tested at a real table, so expect rough edges. Many rules numbers were written from memory: `docs/VERIFY.md` lists every one for checking against your book, least certain first, and every rules change since v0.70.0 has a house-rule switch that puts the earlier behaviour back.
+The system is feature-complete for SR2 core play and much of the sourcebook material, and is public for testing ahead of its first full release. It is tested by 3,629 automated tests, by in-Foundry test batches (Quench), by live runs in Foundry v14 as a GM and a player, and by an upgrade test from worlds saved with v0.50 and v0.72, and v0.81 had a full code and security review. It has not yet been play-tested at a real table, so expect rough edges. Many rules numbers were written from memory: `docs/VERIFY.md` lists every one for checking against your book, least certain first, and every rules change since v0.70.0 has a house-rule switch that puts the earlier behaviour back.
 
 What changed in each version: `CHANGELOG.md`.
 
@@ -91,7 +91,8 @@ Treat players as untrusted: anyone can change what their own browser sends. The 
 3. `npx tsc --noEmit` type-checks.
 4. `npm run build` compiles `src/start.ts` to `public/index.mjs`.
 5. To try your build, copy the contents of the `public` folder into `Data/systems/sr2e`.
-6. `npm run tokens` redraws the default token art from `src/art/` into `public/tokens/`, and `npm run backdrops` the scene backdrops into `public/backdrops/` (only needed after changing a drawing; the files are committed).
+6. **In-Foundry tests:** with the [Quench](https://github.com/Ethaks/FVTT-Quench) module active, a GM can run the system's test batches from Quench's window (or `quench.runBatches('sr2e.**')` in the console): every document type and sheet, tests and chat cards, combat, the record sheet's tweaks and accessories, the translation and the world's migrations. **SR2e: performance on a busy table** is opt-in: it builds a temporary scene with 50 tokens, a long combat and 300 chat cards and prints timings. Run them in a test world: each batch makes `ZZ Quench …` documents and removes them afterwards. Keep Quench's window open while they run.
+7. `npm run tokens` redraws the default token art from `src/art/` into `public/tokens/`, and `npm run backdrops` the scene backdrops into `public/backdrops/` (only needed after changing a drawing; the files are committed).
 
 The rules engine (`src/module/rules`) is pure TypeScript with no Foundry dependency; its numbers live in `src/module/rules/config.ts`, marked `VERIFY`, so they are easy to check and to change as house rules. The Foundry glue is in `src/module/documents`, `models` and `applications`. Module authors: see `docs/API.md` (`game.sr2e.api` and hooks).
 

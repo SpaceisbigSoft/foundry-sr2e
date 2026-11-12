@@ -30,7 +30,7 @@ export function noTags(v: unknown): string { return String(v ?? '').replace(/[<>
 /** The item data the pure builder reads (a few fields per type, not the whole document). */
 const ITEM_FIELDS: Record<string, string[]> = {
   skill: ['rating', 'kind', 'specialization', 'specializationRating'],
-  weapon: ['ammo', 'ammoMax', 'modes', 'melee', 'jammed', 'damagePower', 'damageLevel', 'damageType', 'strengthPower'],
+  weapon: ['ammo', 'ammoMax', 'modes', 'melee', 'jammed', 'damagePower', 'damageLevel', 'damageType', 'strengthPower', 'carried'],
   spell: ['learnedForce', 'category', 'spellType'],
   power: ['active', 'special'],
   adeptpower: ['active', 'level', 'special'],

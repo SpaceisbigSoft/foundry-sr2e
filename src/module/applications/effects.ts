@@ -3,6 +3,7 @@
  * statuses, combat states, spells and powers, drugs and illness, Matrix and rigging), with when each ends.
  */
 import { SYSTEM_ID } from "../config/system.ts";
+import { sysNow } from '../helpers/clock.ts';
 import { RULES, withdrawalState, WOUND_STATUS_IDS, STATE_STATUSES } from "../rules/index.ts";
 import { t as tx, tCount, tNoun, tKey } from "../helpers/i18n.ts";
 
@@ -33,7 +34,7 @@ export function effectRows(actor: any): EffectRow[] {
   const sys = actor?.system ?? {};
   const d = sys.derived ?? {};
   const combat: any = (game as any).combat;
-  const now = { round: combat?.started ? Number(combat.round ?? 0) : null, worldTime: Number((game as any).time?.worldTime ?? 0) };
+  const now = { round: combat?.started ? Number(combat.round ?? 0) : null, worldTime: sysNow() };
   const flag = (k: string) => actor?.getFlag?.(SYSTEM_ID, k);
 
   // Condition.

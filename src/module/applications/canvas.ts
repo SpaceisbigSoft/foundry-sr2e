@@ -1,4 +1,5 @@
 import { RULES, metresPerUnit, withElevation, nearest, coverFromSightLines, lightFromDarkness, lightFromSource, brighter, inShotgunCone, smokeOnLine, worseSmoke, type LightLevel, type AreaSweepCause } from "../rules/index.ts";
+import { sysNow } from '../helpers/clock.ts';
 import { SYSTEM } from "../config/system.ts";
 import { requestGm, onRelay } from "./socket.ts";
 import { withGmLock } from "./gmlock.ts";
@@ -517,7 +518,7 @@ async function drawAreaNow(scene: any, point: { x: number; y: number }, radiusMe
     const turns = Math.max(0, Math.floor(Number(more.turns ?? 0)));
     // v0.70.0: a lingering cloud lasts its Combat Turns in world time (3 s each), in or out of combat, and outlives the
     // combat (RULES.FIXES_V70.areasWorldTime); before, it went after real seconds outside combat or when the combat ended.
-    const worldNow = Number((game as any).time?.worldTime ?? 0);
+    const worldNow = sysNow();
     const expires = turns && RULES.FIXES_V70.areasWorldTime
       // A real-time backstop (10× its game time, at least 10 minutes) in case the GM never moves the clock.
       ? { round: null, combatId: null, world: worldNow + turns * Number(RULES.COMBAT_TURN_SECONDS || 3), at: Date.now() + Math.max(600, turns * Number(RULES.COMBAT_TURN_SECONDS || 3) * 10) * 1000 }
@@ -609,7 +610,7 @@ export function registerAreaHooks(): void {
   const sweep = (cause: AreaSweepCause = 'timer') => {
     if (!isLeadGm()) return;
     const rounds = new Map<string, number>([...((game as any).combats ?? [])].filter((c: any) => c.started).map((c: any) => [c.id, Number(c.round ?? 0)]));
-    const now = { rounds, ms: Date.now(), world: Number((game as any).time?.worldTime ?? 0) };
+    const now = { rounds, ms: Date.now(), world: sysNow() };
     for (const sc of [...((game as any).scenes ?? [])] as any[]) {
       const ids = [...(sc.regions ?? [])].filter((r: any) => r.getFlag?.(SYSTEM.id, 'area') && areaExpired(r.getFlag(SYSTEM.id, 'expires'), now)).map((r: any) => r.id);
       if (ids.length) void sc.deleteEmbeddedDocuments('Region', ids, { sr2eAreaSweep: cause } as any).catch?.(() => {});

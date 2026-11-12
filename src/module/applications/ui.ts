@@ -3,6 +3,7 @@
  * and high-contrast), Dice So Nice colour sets, dropping a weapon or spell on a token, and the GM
  * panel (scene magic and light, world time, hosts and sites, the party, group rolls and damage).
  */
+import { COUNTED_TIME, sysNow } from '../helpers/clock.ts';
 import { SYSTEM } from '../config/system.ts';
 import { applyFieldTooltips } from '../config/tooltips.ts';
 import {
@@ -235,7 +236,7 @@ export class SR2GmPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     const scene: any = game.scenes?.viewed ?? game.scenes?.current;
     const actors = [...((game as any).actors ?? [])];
     const combat: any = (game as any).combat;
-    const wt = Number((game as any).time?.worldTime ?? 0);
+    const wt = sysNow();
     const now = cls.matrixNow?.() ?? { round: null, worldTime: wt };
     return {
       scene: scene ? {
@@ -793,7 +794,7 @@ export class SR2GmPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       rejectClose: false,
     });
     if (!choice) return;
-    await cls.updateMagicGroup(g.id, (x: any) => ({ ...x, breaches: [...x.breaches.filter((b: any) => b.uuid !== choice.who), { uuid: choice.who, strictureId: choice.st, at: Number((game as any).time?.worldTime ?? 0) }] }));
+    await cls.updateMagicGroup(g.id, (x: any) => ({ ...x, breaches: [...x.breaches.filter((b: any) => b.uuid !== choice.who), { uuid: choice.who, strictureId: choice.st, at: sysNow() }] }));
     const text = g.strictures.find((s: any) => s.id === choice.st)?.text ?? '';
     await ChatMessage.create({ speaker: { alias: g.name }, content: `<p><strong>${escHtml(fromUuidSync(choice.who)?.name ?? tx('SR2E.Card.Ui.aMember'))}</strong> ${tx('SR2E.Card.Ui.hasBrokenSStricture', { name: escHtml(g.name) })} <em>${escHtml(text)}</em>${tx('SR2E.Card.Ui.noSharedResourcesOrGroupInitiation')}</p>` });
     SR2GmPanel.refresh();
@@ -820,7 +821,7 @@ export class SR2GmPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   static async #onSpreadFire(this: SR2GmPanel) {
-    await (CONFIG.Actor.documentClass as any).fireTicks({ round: null, worldTime: Number((game as any).time?.worldTime ?? 0) }, 1);
+    await (CONFIG.Actor.documentClass as any).fireTicks({ round: null, worldTime: sysNow() }, 1);
     SR2GmPanel.refresh();
   }
 
@@ -864,7 +865,8 @@ export class SR2GmPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       });
       if (!ok) return;
     }
-    await (game as any).time.advance(seconds);
+    // v0.92.2: the GM's own "time passes" always counts (no big-jump question).
+    await (game as any).time.advance(seconds, COUNTED_TIME);
   }
 
   /** The calculator's result block. */

@@ -635,6 +635,9 @@ export const HOUSE_RULES: HouseRuleDef[] = [
   { section: "characters", path: "SHEET_V921.accessories", type: "select", choices: ["auto", "off"] },
   { section: "characters", path: "SHEET_V921.wizard", type: "select", choices: ["advise", "block"] },
   { section: "characters", path: "SHEET_V921.ratingLock", type: "select", choices: ["queue", "always"] },
+  // v0.92.2: a big jump of world time (RULES.CLOCK_V922).
+  { section: "gmTools", path: "CLOCK_V922.bigJump", type: "select", choices: ["ask", "count"] },
+  { section: "gmTools", path: "CLOCK_V922.bigJumpDays", type: "number", step: 1 },
   { section: "timeToGetThings", path: "WAITING.areas.magic", type: "boolean" },
   { section: "timeToGetThings", path: "WAITING.areas.gear", type: "boolean" },
   { section: "timeToGetThings", path: "WAITING.areas.repairs", type: "boolean" },

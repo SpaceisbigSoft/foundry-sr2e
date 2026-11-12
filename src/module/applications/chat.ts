@@ -1,5 +1,7 @@
 import type { AttackState, DamageState, SpellState, TestSnapshot, PoolKind, BlastContext, Contest } from '../documents/index.ts';
 import { opposedMelee, SR2Actor, serialTicks } from '../documents/index.ts';
+import { settleClock } from './clock.ts';
+import { sysNow, toSysTime } from '../helpers/clock.ts';
 import { allActors } from '../helpers/actors.ts';
 import { playCue, decorateItemDrags } from './qol.ts';
 import { SYSTEM_ID } from '../config/system.ts';
@@ -1984,7 +1986,7 @@ async function onResistToxin(message: any, button: HTMLButtonElement): Promise<v
   const disease = t.kind === 'disease';
   if (!(await playerMay(message, actor, origin(message), tx('SR2E.Card.Chat.resistsPower', { actorName: actor.name, name: String(t.name ?? tx('SR2E.Card.Chat.aToxin')), power: t.power ?? '?', level: t.level ?? '', part: disease ? tx('SR2E.Card.Chat.aDiseaseWhichLasts') : '' }), disease ? {} : { routine: realSources(message, t.sourceUuid) }))) return;
   // v0.61.0: a slow toxin can't be resisted before it takes effect (the GM may go ahead anyway).
-  const nowT = Number(game.time?.worldTime ?? 0);
+  const nowT = sysNow();
   if (Number(t.onsetAt ?? 0) > nowT) {
     const left = toxinOnsetLabel(Number(t.onsetAt) - nowT, nowT, Number(t.onsetAt));
     if (!game.user?.isGM) return ui.notifications.warn(tx('SR2E.Notify.Chat.hasnTTakenEffectYet', { tName: escHtml(t.name ?? tx('SR2E.Notify.Chat.it')), left: escHtml(left) }));
@@ -3100,9 +3102,13 @@ export function registerChatHandlers(): void {
       if (a?.totemDrawbacks?.().berserk === 'combat') void a.berserkCheck?.(tx('SR2E.Card.Chat.combatBegins'));
     }
   });
-  Hooks.on('updateWorldTime', (worldTime: number) => {
+  Hooks.on('updateWorldTime', (worldTimeIn: number, dt: number, options: any) => {
     const cls: any = CONFIG.Actor.documentClass;
     void serialTicks(async () => {
+      // v0.92.2 (RULES.CLOCK_V922): a big jump is settled first (the GM may say it only changes the date), and the
+      // ticks run on the system's clock.
+      await settleClock(worldTimeIn, dt, options);
+      const worldTime = toSysTime(worldTimeIn);
       await cls.securityResponses?.({ worldTime });
       // Matrix traces that complete as world time passes (outside combat).
       await cls.matrixTraces?.({ worldTime });

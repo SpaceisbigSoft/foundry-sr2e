@@ -107,5 +107,6 @@ export * from './html.ts';
 export * from './backdrops.ts';
 export * from './scenebuilder.ts';
 export * from './tweaks.ts';
+export * from './clock.ts';
 export * from './accessories.ts';
 export * from './reference.ts';

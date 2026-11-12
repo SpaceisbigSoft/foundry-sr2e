@@ -8,6 +8,7 @@
  * The parsing is pure: `rules/catalogcsv.ts` and `rules/charimport.ts`.
  */
 import { SYSTEM } from '../config/system.ts';
+import { sysNow } from '../helpers/clock.ts';
 import {
   catalogueFolderPath, CATALOGUE_FOLDER_NAMES,
   rowsToTemplates, templatesToCsv, catalogueToJson, parseCatalogueJson, mergeTemplates, missingValues, fillablePaths, MAX_CATALOGUE_CHARS, CATALOGUE_TYPES, typeLabel, normalizeKit, mergeKits,
@@ -543,7 +544,7 @@ export async function importCharacter(actor: any, text: string): Promise<{ lines
   if (typeof after.essenceShown === 'number') second['system.essence'] = Math.round((after.essenceShown + Number(d.essenceLoss ?? 0)) * 100) / 100;
   if (typeof after.reactionShown === 'number') second['system.reactionBonus'] = after.reactionShown - (Number(d.reaction ?? 0) - Number(actor.system?.reactionBonus ?? 0));
   if (typeof after.initiativeDice === 'number') second['system.initiativeDiceBonus'] = Math.max(0, after.initiativeDice - (Number(d.initiativeDice ?? 1) - Number(actor.system?.initiativeDiceBonus ?? 0)));
-  if (typeof after.lifestyleSeconds === 'number' && after.lifestyleSeconds > 0) second['system.lifestyle.paidUntil'] = Number((game as any).time?.worldTime ?? 0) + after.lifestyleSeconds;
+  if (typeof after.lifestyleSeconds === 'number' && after.lifestyleSeconds > 0) second['system.lifestyle.paidUntil'] = sysNow() + after.lifestyleSeconds;
   if (Object.keys(second).length) await actor.update(second);
   return { lines: plan.summary, warnings: [...plan.warnings] };
 }
