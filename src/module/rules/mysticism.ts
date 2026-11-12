@@ -1,4 +1,5 @@
 /** The rest of magic (v0.39.0): elemental effects, sustain limits, domains, focus addiction, sites, rituals, signatures, background count. */
+import { elementalSustainSeconds } from './spirits923.ts';
 import { RULES } from './config.ts';
 import { tags } from './thaumaturgy.ts';
 import { urrMagRitualMaterials } from './urr80-magic.ts';
@@ -26,6 +27,8 @@ export function shockOutcome(successes: number): { stunned: boolean; initiativeL
 
 /** When an elemental sustaining a spell lets it drop (world time, seconds), or -1 for never. */
 export function elementalSustainUntil(now: number, force: number): number {
+  // v0.92.3 (RULES.SPIRITS_V923.elementalSustain 'book', Core p. 142): one Combat Turn (3 s) per point of Force.
+  if (RULES.SPIRITS_V923.elementalSustain === 'book') return now + elementalSustainSeconds(Math.max(1, force));
   const h = RULES.MAGIC_V39.sustainLimit.hoursPerForce;
   return h > 0 ? now + Math.max(1, force) * h * 3600 : -1;
 }

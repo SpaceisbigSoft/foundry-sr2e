@@ -1,5 +1,6 @@
 import { importIntoCharacter } from './catalogue.ts';
 import { sysNow } from '../helpers/clock.ts';
+import { nextInitiationGrade } from '../rules/spirits923.ts';
 import { askFindThrough } from './through.ts';
 import { learnFromFormulaDialog, learnFromTeacherDialog } from './formulas.ts';
 import { teachersOn } from '../rules/formulas.ts';
@@ -724,7 +725,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
 
   static async #onAdvanceInitiation(this: SR2CharacterSheet) {
     const actor: any = this.document;
-    const grade = (actor.system.initiateGrade ?? 0) + 1;
+    // v0.92.3 (RULES.SPIRITS_V923.gradeZero 'book', Grimoire p. 38): the first initiation is to Grade 0.
+    const grade = nextInitiationGrade(Number(actor.system.initiateGrade ?? 0), Boolean(actor.getFlag?.("sr2e", "initiated")));
     // v0.72.0 (O15): adepts and aspected magicians see only the techniques they can learn (MAGIC_V72.metamagicLimits).
     const unknown = metamagicChoices(String(actor.tradition ?? actor.system.tradition ?? ""), METAMAGIC.filter((k) => !actor.system.metamagic?.[k]));
     const groups = (actor.myGroups?.() ?? []) as any[];
@@ -733,7 +735,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const content = `<p>${tx('SR2E.Dialog.Sheet.grade', { grade: escHtml(grade) })} <strong data-cost>${costOf(false, false).cost}</strong> ${tx('SR2E.Dialog.Sheet.goodKarmaAvailable', { karmaGood: escHtml(actor.system.karma.good) })}</p>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.learnMetamagic')}</label><select name="tech"><option value="">${tx('SR2E.Dialog.Sheet.none')}</option>${unknown.map((k) => `<option value="${escHtml(k)}">${escHtml(cap(k))}</option>`).join("")}</select></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.ordeal')}</label><select name="ordeal"><option value="">${tx('SR2E.Dialog.Sheet.none')}</option>${ordeals.map((o) => `<option value="${escHtml(o.id)}">${escHtml(o.label)}</option>`).join("")}</select></div>
-        <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.asceticismLower')}</label><select name="attr">${ATTRIBUTE_KEYS.map((k) => `<option value="${k}">${escHtml(cap(k))} (${escHtml(actor.system.attributes[k].base)})</option>`).join("")}</select></div>
+        <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.asceticismLower')}</label><select name="attr">${ATTRIBUTE_KEYS.filter((k) => RULES.SPIRITS_V923.asceticism !== "physical" || ["body", "quickness", "strength"].includes(k)).map((k) => `<option value="${k}">${escHtml(cap(k))} (${escHtml(actor.system.attributes[k].base)})</option>`).join("")}</select></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.geasOrOathTheWords')}</label><input name="geas" type="text" placeholder="${tx('SR2E.Dialog.Sheet.eGMustSpeakOnlyTruth')}"></div>
         <p class="hint" data-ordeal></p>
         ${groups.length ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.withAGroup')}</label><select name="group"><option value="">${tx('SR2E.Dialog.Sheet.alone')}</option>${groups.map((g) => `<option value="${escHtml(g.id)}">${escHtml(g.name)}</option>`).join("")}</select></div>` : ""}
@@ -2037,6 +2039,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.formOrType')}</label><input name="type" type="text" placeholder="${tx('SR2E.Dialog.Sheet.eGRavenAllyFamiliar')}"></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.copyFrom')}</label><select name="template"><option value="">${tx('SR2E.Dialog.Sheet.aBlankSpirit')}</option>${templates.map((t: any) => `<option value="${escHtml(t.uuid)}">${escHtml(t.name)}</option>`).join("")}</select></div>
         <label class="sr2e-check"><input type="checkbox" name="pay" checked> ${tx('SR2E.Dialog.Sheet.payForTheRitualMaterials')}</label>
+        ${RULES.SPIRITS_V923.allyCost === "book" ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.allyDesignKarma')}</label><input name="design" type="number" value="0" min="0"></div>
+        <label class="sr2e-check"><input type="checkbox" name="familiar"> ${tx('SR2E.Dialog.Sheet.allyForFamiliarOrdeal')}</label>` : ""}
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.spellPoolDiceForDrainLeft', { left })}</label><input name="drainPool" type="number" value="0" min="0" max="${left}"></div>
         <p class="hint" data-ally></p>`,
       render: (_e: Event, dialog: any) => {
@@ -2046,9 +2050,12 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
           const out = form?.querySelector("[data-ally]");
           if (!el || !out) return;
           const f = Math.max(1, Math.floor(Number(el.force.value) || 1));
-          const c = allyCosts(f);
+          const c = allyCosts(f, { designKarma: Math.max(0, Math.floor(Number(el.design?.value) || 0)), familiar: Boolean(el.familiar?.checked) });
           const p = allyProblem({ grade, magic, force: f });
-          out.textContent = p || tx('SR2E.Dialog.Sheet.conjuringVsTnDaySMaterials', { tn: c.tn, days: c.days, nuyen: c.nuyen, karma: c.karma });
+          // v0.92.3 (RULES.SPIRITS_V923.allyCost 'book', Grimoire pp. 70–71): days ÷ successes, a Magic point, daily fatigue.
+          out.textContent = p || (RULES.SPIRITS_V923.allyCost === "book"
+            ? tx('SR2E.Dialog.Sheet.allyBookPlan', { tn: c.tn, days: c.days, nuyen: c.nuyen, karma: c.karma, magic: c.magic })
+            : tx('SR2E.Dialog.Sheet.conjuringVsTnDaySMaterials', { tn: c.tn, days: c.days, nuyen: c.nuyen, karma: c.karma }));
         };
         form?.addEventListener("input", upd);
         upd();
@@ -2056,7 +2063,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       ok: { label: tx('SR2E.Dialog.Sheet.beginTheRitual'), callback: (_e: Event, b: any) => {
         const el: any = b.form.elements;
         return { force: Math.max(1, Math.floor(Number(el.force.value) || 1)), spiritType: String(el.type.value ?? "").trim(), templateUuid: (el.template.value as string) || null,
-          payMaterials: Boolean(el.pay.checked), drainPoolDice: Math.max(0, Math.min(left, Math.floor(Number(el.drainPool.value) || 0))) };
+          payMaterials: Boolean(el.pay.checked), drainPoolDice: Math.max(0, Math.min(left, Math.floor(Number(el.drainPool.value) || 0))),
+          ...(el.design ? { designKarma: Math.max(0, Math.floor(Number(el.design.value) || 0)) } : {}), ...(el.familiar?.checked ? { familiar: true } : {}) };
       } },
       rejectClose: false,
     });
@@ -2779,7 +2787,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       content: `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.spell')}</label><select name="spell">${options.join("")}</select></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.spellPoolDiceLeft', { spellLeft })}</label><input name="pool" type="number" value="0" min="0" max="${spellLeft}"></div>
         ${RULES.MAGIC_V72.dispelDrainPool ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.spellPoolDiceForDrain')}</label><input name="drainPool" type="number" value="0" min="0" max="${spellLeft}"></div>` : ""}
-        <p class="hint">${tx('SR2E.Dialog.Sheet.sorceryVsTnTheSpellS', { magicDispelDrainLevel: RULES.MAGIC.dispelDrainLevel })}</p>`,
+        <p class="hint">${RULES.SPIRITS_V923.dispelling === "book" ? tx('SR2E.Dialog.Sheet.dispelBookHint') : tx('SR2E.Dialog.Sheet.sorceryVsTnTheSpellS', { magicDispelDrainLevel: RULES.MAGIC.dispelDrainLevel })}</p>`,
       ok: { label: tx('SR2E.Dialog.Sheet.dispel'), callback: (_e: Event, button: any) => ({ spell: String(button.form.elements.spell.value), pool: Number(button.form.elements.pool?.value) || 0, drainPool: Number(button.form.elements.drainPool?.value) || 0 }) },
       rejectClose: false,
     });
@@ -2982,7 +2990,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       window: { title: tx('SR2E.Dialog.Sheet.bindByTrueName', { actorName: actor.name }) },
       content: `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.freeSpirit')}</label><select name="spirit">${spirits.map((s: any) => `<option value="${escHtml(s.uuid)}">${tx('SR2E.Dialog.Sheet.force2', { name: escHtml(s.name), force: escHtml(s.system.force) })}</option>`).join("")}</select></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.itsTrueName')}</label><input type="text" name="trueName" autocomplete="off"></div>
-        <p class="hint">${tx('SR2E.Dialog.Sheet.conjuringVsItsForceOpposedBy', { trueNameKarmaPerForce: RULES.MAGIC_V56.trueName.karmaPerForce })}</p>`,
+        <p class="hint">${(RULES.SPIRITS_V923.trueName === "book" ? tx('SR2E.Dialog.Sheet.trueNameBookHint') : tx('SR2E.Dialog.Sheet.conjuringVsItsForceOpposedBy', { trueNameKarmaPerForce: RULES.MAGIC_V56.trueName.karmaPerForce }))}</p>`,
       ok: { label: tx('SR2E.Dialog.Sheet.bind'), callback: (_e: Event, button: any) => ({ uuid: String(button.form.elements.spirit.value), name: String(button.form.elements.trueName.value ?? "") }) },
       rejectClose: false,
     } as any) as any;

@@ -3362,7 +3362,11 @@
         "sWirelessLinkIsJammedClearPlain": "{name}'s wireless link is jammed: clear it or use a hard line.",
         "aCategorySpell": "a {category} spell",
         "aSpellOfNoCategory": "a spell of no category",
-        "notCarried": "{name} isn't carried: tick Carried first."
+        "notCarried": "{name} isn't carried: tick Carried first.",
+        "allyNeedsMagicPoint": "{name} has no Magic point to give the ally.",
+        "dispelForceOverGrade": "{name} can only dispel a spell of Force up to their grade ({grade}); this one is Force {force}.",
+        "summonOutsideDomain": "{name} can't summon a nature spirit of {domain} here: it is outside its domain.",
+        "wardForceOverMagic": "{name} can raise a ward of at most Force {cap} (twice their Magic)."
       },
       "Migrations": {
         "sr2eMigrationToFailedSeeThe": "SR2e: migration to {version} failed; see the console. Later migrations were not run."
@@ -4821,7 +4825,12 @@
         "track2__monitor": "Track",
         "repair__tnBase": "Repair",
         "spell__pool": "Spell",
-        "isAFixerFinds": "A fixer: can find things for you (for a cut of the price)"
+        "isAFixerFinds": "A fixer: can find things for you (for a cut of the price)",
+        "allyBookPlan": "Conjuring vs TN {tn}; {days} day(s) ÷ successes, resisting (Force + days)L Stun each day; materials {nuyen}¥; bonding {karma} Good Karma and {magic} Magic on success. It counts for the familiar ordeal.",
+        "allyDesignKarma": "Design Karma (attributes, skills, extra forms, sense link)",
+        "allyForFamiliarOrdeal": "For the familiar ordeal (no Magic point)",
+        "dispelBookHint": "Only a spell of Force up to your grade. Sorcery vs the higher of its Force and the Karma that quickened it; every 2 successes take 1 off its Force; at 0 it ends. Drain as if you had cast it.",
+        "trueNameBookHint": "Conjuring vs its Force + Spirit Energy. One success binds it; it costs no Karma. You take conjuring drain."
       },
       "Spendkarma": {
         "raise": "Raise",
@@ -7612,7 +7621,26 @@
         "bodyZeroDestroyed": "{name} (Body 0) takes {incPower}{incLevel}: any hit destroys it",
         "vehicleCompleteMiss": "A complete miss (more Control Pool dice than the attacker's successes).",
         "destroyedVehicleCrashes": "<strong>{name} is destroyed and crashes.</strong>",
-        "powerTheVehicleTakesThenAboard": "Power {power}: the vehicle takes {power}{vehicleLevel}{part}; everyone aboard then takes the Power at the level the vehicle's test leaves."
+        "powerTheVehicleTakesThenAboard": "Power {power}: the vehicle takes {power}{vehicleLevel}{part}; everyone aboard then takes the Power at the level the vehicle's test leaves.",
+        "allyMagicPoint": "and gives up {mag} Magic for good",
+        "allyRitualDay": "Ally ritual, day {day}: fatigue",
+        "banishBackfire": "The spirit wins: {name} loses {lost} Magic (back at 1 an hour).",
+        "banishPassesOut": "{name} passes out, and the spirit is free to go.",
+        "banishForceBack": "{name} regains {back} Force lost in banishing.",
+        "banishMagicBack": "{name} regains {back} Magic lost in banishing.",
+        "barrierBacklash": "{bn} strikes back: {power}{level}, resisted with astral Body against its rating.",
+        "charismaOwnSpirit": "Charisma +{cha} (own spirit)",
+        "conjuringVsSpirit": ", Conjuring {dice} against a spirit",
+        "dispelForceByHand": "The GM lowers {spellName}'s Force to {force} by hand.",
+        "dispelForceLeft": "Force {force} left.",
+        "holdsControlOf": "{name} holds on to {spiritName} (Conjuring vs Force {force})",
+        "regenDeathCheck": "{name}: regeneration death check, 1D6 = {die}.",
+        "regenDies": "A 1: it is dead.",
+        "regenDiesIfFire": "A 2: it dies if fire or an explosion did this (the GM's call); otherwise its wounds vanish.",
+        "regenLives": "It lives; its wounds vanish.",
+        "wardLastsDays": "it lasts {days} day(s)",
+        "weaponFocusAstral": "weapon focus: Charisma + half its rating",
+        "willpowerVsSpirit": "Willpower against a spirit, no Combat Pool"
       },
       "Adding": {
         "buysFor": "buys {list} for ¥{planNuyen}.",
@@ -7935,7 +7963,8 @@
         "foesInMelee": "Opponent's friends in melee (+{n})",
         "crashSpeed": "Speed vs the driver's Reaction {reaction}",
         "relativeSpeed": "Relative speed (×{ratio})",
-        "unmountedWeapon": "Weapon not in a vehicle mount"
+        "unmountedWeapon": "Weapon not in a vehicle mount",
+        "brokenGeasa": "Broken geasa"
       },
       "Drops": {
         "notInstalledTickInstalledAfterSurgery": "not installed (tick Installed after surgery)",
@@ -9198,7 +9227,42 @@
         "VEHICLES_V923__passkey": "Maglock passkey: book (its rating vs the reader's rating, the casing left shut) or old (its rating replaces the skill dice, after the casing)",
         "VEHICLES_V923__sequencer": "Maglock sequencer: book (an opposed test with the keypad; a tie does nothing, a keypad win a passive alert) or old (its rating replaces the skill dice)",
         "VEHICLES__sensors__controlPool": "Control Pool dice on a vehicle's sensor tests",
-        "ACTIONS__costs__sensor": "A vehicle sensor test is a complex or simple action"
+        "ACTIONS__costs__sensor": "A vehicle sensor test is a complex or simple action",
+        "SPIRITS_V923__conjDrain": "Conjuring Drain: L below half Charisma, M up to Charisma, S above it, D above twice it, S and D Physical (book) or L up to half, S up to 1.5 × Charisma, Physical over Magic (v922)",
+        "SPIRITS_V923__conjDrainDice": "Totem and spirit-focus dice also resist conjuring Drain (on) or only the summoning test (off)",
+        "SPIRITS_V923__immunityScope": "A manifest spirit's immunity counts against firearms, other ranged weapons and explosions only (book) or every non-magical attack, melee too (v922)",
+        "SPIRITS_V923__mundaneVsSpirits": "A mundane weapon against a manifest spirit rolls Willpower with no Combat Pool (willpower) or the combat skill and pool (v922)",
+        "SPIRITS_V923__conjuringDefense": "A magician may resist a spirit's attack with Conjuring instead of Body (on) or never (off)",
+        "SPIRITS_V923__banishPerPoint": "Banishing: net successes per point of Force lost (book 2; 1 = the v0.92.2 way)",
+        "SPIRITS_V923__banishBackfire": "A spirit winning a banishing round takes 1 Magic per 2 net successes from the banisher (book) or nothing (v922)",
+        "SPIRITS_V923__banishDrain": "Banishing costs no Drain (none) or conjuring Drain at the spirit's Force (conjuring, v0.92.2)",
+        "SPIRITS_V923__banishRecovery": "Force and Magic lost in banishing come back at 1 point an hour (hourly) or are lost for good (v922)",
+        "SPIRITS_V923__controlContest": "Taking over a spirit: Conjuring vs Force + 2 against its holder's Conjuring vs Force, an uncontrolled one 1 service per 2 net successes (book) or the banishing-style contest (v922)",
+        "SPIRITS_V923__banishSummoner": "Banishing your own spirit adds Charisma dice and no summoner helps (charisma) or another's summoner adds Conjuring successes (v922)",
+        "SPIRITS_V923__trueName": "Binding by a true name: Conjuring vs Force + Spirit Energy, 1 success, no Karma (book) or opposed, net successes as services, Karma (v922)",
+        "SPIRITS_V923__spiritTable": "A summoned spirit with no template takes the Spirit Table's attributes for its type (book) or Force for all (v922)",
+        "SPIRITS_V923__elementalSustain": "An elemental sustains a spell for Force Combat Turns (book) or Force × the hours per Force (v922)",
+        "SPIRITS_V923__projection": "Astral projection costs 1 Essence every full hour from the start (book) or after 2 × Essence free hours, each hour or part (v922)",
+        "ASTRAL__initiativeBonus": "Projecting initiative: astral Reaction + this, + 1D6 (book 15; v0.92.2 20)",
+        "SPIRITS_V923__astralPool": "A magician fights astrally with the Astral Combat Pool, (Int + Wil + Cha) ÷ 2, the Combat Pool's dice while projecting (book) or the Spell Pool (v922)",
+        "SPIRITS_V923__astralGrade": "Initiates add their grade to astral Reaction and the Astral Combat Pool (book) or not (v922)",
+        "SPIRITS_V923__astralDamage": "A magician's astral attack: unarmed (Charisma)L, weapon focus (Charisma + rating ÷ 2)M (book) or Charisma M, a focus adding dice (v922)",
+        "SPIRITS_V923__tracking": "Astral tracking: −2 TN when the trail's Force is at most your Sorcery, +2 when higher (book) or no modifier (v922)",
+        "TRACKING__baseHours": "Astral tracking: base hours ÷ successes (book 12; v0.92.2 6)",
+        "SPIRITS_V923__barrierBacklash": "A barrier that beats an astral intruder hurts it, (rating)L + 1 level per 2 net successes (book) or does nothing (v922)",
+        "SPIRITS_V923__gradeZero": "The first initiation makes a Grade 0 initiate, adding no Magic (book) or Grade 1 (v922)",
+        "SPIRITS_V923__initiationRounding": "Initiation Karma is rounded down (down, book) or up (up, v0.92.2)",
+        "SPIRITS_V923__asceticism": "The asceticism ordeal lowers a Physical attribute only (physical) or any attribute (any, v0.92.2)",
+        "SPIRITS_V923__allyCost": "Allies: 5 × the current Force Karma per Force above 1, a Magic point, days ÷ successes and daily fatigue (book) or Karma × Force, no Magic (v922)",
+        "SPIRITS_V923__ward": "Wards: Force hours, lasting days = successes, Drain (Force × days)L Stun (book) or Force hours ÷ successes, Drain at Force ÷ 2 (v922)",
+        "MAGIC_V56__ward__skill": "Ward ritual: the skill rolled (book Sorcery; v0.92.2 Conjuring)",
+        "MAGIC_V56__ward__drainLevel": "Ward ritual: Drain level (book L; v0.92.2 M)",
+        "SPIRITS_V923__wardMaxForcePerMagic": "A ward's Force is at most this × the warder's Magic (book 2; 0 = no limit)",
+        "SPIRITS_V923__regenDeath": "Regeneration: a Deadly wound calls for 1D6, a 1 (or 2 from fire) kills (book) or it always heals (v922)",
+        "SPIRITS_V923__geasa": "A broken geas adds +2 TN to every magical test, Drain included (book) or takes its Magic away (v922)",
+        "SPIRITS_V923__dispelling": "Dispelling: Force up to your grade, TN the higher of Force and quickening Karma, 1 Force per 2 successes, Drain as casting (book) or 1 success per success, Drain at Force ÷ 2 (v922)",
+        "SPIRITS_V923__assensing": "Reading an aura: the basics at a glance, emotions at 2 successes, cyberware at 4, Essence and Magic only compared (book) or the MAGIC_V56 assensing table (v922)",
+        "SPIRITS_V923__centering": "Centering: always a Centering-skill test at the TN less the grade, every 2 successes cancel 1 point of penalties (book) or grade points off automatically or 1 per success up to the grade (v922)"
       }
     },
     "Rules": {
@@ -17379,7 +17443,7 @@
             "i2": "The scene environment and background count here (the GM sets them with the pencils), and a running quest with <strong>Next stage</strong> and × to end it. While projecting, the hours out of the body show against the limit.",
             "i3": "Initiate grade and metamagic tick boxes. Adepts initiate too: they see <strong>Initiate</strong>, their grade and only the techniques an adept can learn (centering and the others the house rules allow), but not <strong>Quest</strong>, <strong>Ward…</strong> or <strong>Geasa</strong>. A centering initiate fills in <strong>Centering skill</strong> (for example Singing); <strong>Center</strong> then rolls it before a magical test.",
             "i4": "Shamans fill in the totem: its bonuses, its environment and the dice in and away from it, <em>Berserk</em>, <em>Daylight TN</em> and which spirits its conjuring dice help. An elementalist picks an <strong>Element</strong>.",
-            "i5": "<strong>Geasa</strong>: the + adds one; click one to change its words. Untick <em>Met</em> when a geas is broken; the heading shows the Magic lost.",
+            "i5": "<strong>Geasa</strong>: the + adds one; click one to change its words. Untick <em>Met</em> when a geas is broken: each broken geas adds +2 to the target number of your magical tests, Drain included (with the house rule back at v0.92.2, the heading shows the Magic lost instead).",
             "i6": "<strong>Sustaining</strong>: spells you hold and the TN they add. The × drops one. <strong>Quicken</strong> or <strong>Elemental</strong> where allowed.",
             "i7": "<strong>Anchored</strong>: <strong>Release</strong>, or × to discard.",
             "i8": "<strong>Foci</strong>: tick Active; the rating is a box. <strong>Bond</strong> an unbonded focus for Good Karma. An addiction risk shows with an <strong>Addiction test</strong> button (the GM's × clears an addiction).",

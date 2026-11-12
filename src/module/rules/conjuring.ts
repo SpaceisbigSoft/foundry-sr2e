@@ -2,6 +2,7 @@ import { RULES, type DamageLevel } from './config.ts';
 import { netSuccesses } from './dice.ts';
 import { drainDamageType } from './magic.ts';
 import { urrMagConjuringDrainLevel, urrMagConjuringDrainType } from './urr80-magic.ts';
+import { banishLoss } from './spirits923.ts';
 
 export const SPIRIT_KINDS = ['nature', 'elemental', 'watcher', 'ally', 'free', 'other', 'toxic', 'insect'] as const;
 export type SpiritKind = (typeof SPIRIT_KINDS)[number];
@@ -21,16 +22,24 @@ export function conjuringDrainLevel(force: number, charisma: number): DamageLeve
   // v0.80.0 (RULES.URR_V80.magConjDrain 'charisma', URR): L only strictly below half Charisma.
   const urr = urrMagConjuringDrainLevel(force, charisma);
   if (urr) return urr;
+  // v0.92.3 (RULES.SPIRITS_V923.conjDrain 'book', Core p. 140): L below half Charisma, M up to Charisma, S above it,
+  // D above twice it.
+  if (RULES.SPIRITS_V923.conjDrain === 'book') {
+    const f = Math.floor(force);
+    return f < charisma / 2 ? 'L' : f <= charisma ? 'M' : f <= 2 * charisma ? 'S' : 'D';
+  }
   for (const [ratio, level] of RULES.CONJURING.drainLevels) {
     if (force <= ratio * charisma) return level;
   }
   return 'D';
 }
 
-/** Conjuring drain is Stun, or Physical if the Force exceeds the conjurer's Magic (as for spells). VERIFY */
+/** Conjuring drain is Stun, or Physical if the Force exceeds the conjurer's Charisma (book) or Magic (v0.92.2). */
 export function conjuringDrainType(force: number, magic: number, charisma?: number): 'stun' | 'physical' {
   // v0.80.0 (RULES.URR_V80.magConjDrain 'charisma', URR): Physical when the Force is over Charisma.
   if (typeof charisma === 'number') { const urr = urrMagConjuringDrainType(force, charisma); if (urr) return urr; }
+  // v0.92.3 (RULES.SPIRITS_V923.conjDrain 'book', Core p. 140): S and D are Physical, i.e. Physical when Force > Charisma.
+  if (RULES.SPIRITS_V923.conjDrain === 'book' && typeof charisma === 'number') return Math.floor(force) > Math.floor(charisma) ? 'physical' : 'stun';
   return drainDamageType(force, magic);
 }
 
@@ -61,9 +70,12 @@ export interface BanishOutcome {
   banished: boolean;
 }
 
-/** Banishing: the banisher's net successes over the spirit's lower its Force; at 0 it is gone. VERIFY */
+/**
+ * Banishing: the banisher's net successes over the spirit's lower its Force; at 0 it is gone. v0.92.3
+ * (RULES.SPIRITS_V923.banishPerPoint, Core p. 143): 1 Force per 2 net successes (1 per net success under 1).
+ */
 export function resolveBanishing(opts: { banisherSuccesses: number; spiritSuccesses: number; force: number }): BanishOutcome {
   const net = Math.max(0, netSuccesses(opts.banisherSuccesses, opts.spiritSuccesses));
-  const force = Math.max(0, opts.force - net);
+  const force = Math.max(0, opts.force - banishLoss(net));
   return { netSuccesses: net, force, banished: force <= 0 };
 }

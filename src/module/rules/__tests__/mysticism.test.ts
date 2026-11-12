@@ -21,7 +21,8 @@ describe('magic leftovers (v0.39.0)', () => {
     assert.deepEqual(shockOutcome(0), { stunned: true, initiativeLoss: 10 });
     assert.deepEqual(shockOutcome(2), { stunned: false, initiativeLoss: 0 });
   });
-  test('sustain limit, domains, addiction', () => {
+  test('sustain limit, domains, addiction (v0.92.2 sustain hours)', (t) => {
+    t.after(oldWay({ 'SPIRITS_V923.elementalSustain': 'v922' }));
     assert.equal(elementalSustainUntil(100, 4), 100 + 4 * 3600);
     (RULES.MAGIC_V39.sustainLimit as any).hoursPerForce = 0;
     try { assert.equal(elementalSustainUntil(100, 4), -1); } finally { (RULES.MAGIC_V39.sustainLimit as any).hoursPerForce = 1; }

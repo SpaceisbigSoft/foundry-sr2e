@@ -4,6 +4,7 @@ import {
   clampSpiritForce, conjuringDrainTargetNumber, conjuringDrainLevel, conjuringDrainType,
   servicesForSuccesses, spiritAttribute, immunityArmor, maxBoundElementals, resolveBanishing,
 } from '../conjuring.ts';
+import { oldWay } from './oldway.ts';
 
 describe('conjuring rules', () => {
   test('force clamps to a whole number of at least 1', () => {
@@ -16,7 +17,8 @@ describe('conjuring rules', () => {
     assert.equal(conjuringDrainTargetNumber(5), 5);
     assert.equal(conjuringDrainTargetNumber(1), 2);
   });
-  test('drain level from Force vs Charisma', () => {
+  test('drain level from Force vs Charisma (the v0.92.2 table)', (t) => {
+    t.after(oldWay({ 'SPIRITS_V923.conjDrain': 'v922' }));
     // Charisma 6: <=3 L, <=6 M, <=9 S, above D
     assert.equal(conjuringDrainLevel(3, 6), 'L');
     assert.equal(conjuringDrainLevel(4, 6), 'M');
@@ -28,7 +30,8 @@ describe('conjuring rules', () => {
     assert.equal(conjuringDrainLevel(2, 5), 'L');
     assert.equal(conjuringDrainLevel(3, 5), 'M');
   });
-  test('drain is physical only when Force exceeds Magic', () => {
+  test('drain is physical only when Force exceeds Magic (v0.92.2)', (t) => {
+    t.after(oldWay({ 'SPIRITS_V923.conjDrain': 'v922' }));
     assert.equal(conjuringDrainType(6, 6), 'stun');
     assert.equal(conjuringDrainType(7, 6), 'physical');
   });
@@ -49,7 +52,8 @@ describe('conjuring rules', () => {
   test('bound elementals limited by Charisma', () => {
     assert.equal(maxBoundElementals(4), 4);
   });
-  test('banishing lowers Force by net successes', () => {
+  test('banishing lowers Force by net successes (v0.92.2: 1 per net success)', (t) => {
+    t.after(oldWay({ 'SPIRITS_V923.banishPerPoint': 1 }));
     assert.deepEqual(resolveBanishing({ banisherSuccesses: 3, spiritSuccesses: 1, force: 5 }), { netSuccesses: 2, force: 3, banished: false });
     assert.deepEqual(resolveBanishing({ banisherSuccesses: 1, spiritSuccesses: 2, force: 5 }), { netSuccesses: 0, force: 5, banished: false });
     assert.deepEqual(resolveBanishing({ banisherSuccesses: 7, spiritSuccesses: 0, force: 4 }), { netSuccesses: 7, force: 0, banished: true });

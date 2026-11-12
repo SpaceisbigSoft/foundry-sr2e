@@ -6,6 +6,7 @@
  * Pure rules; no Foundry. Values in RULES.FIRE, RULES.HEALTH, RULES.BIOWARE.recovery,
  * RULES.CRITTERS.infection and RULES.OCCULT.
  */
+import { allyKarmaBook, allyMagicCost } from './spirits923.ts';
 import { RULES, type DamageLevel } from './config.ts';
 import type { SceneFire } from './occult.ts';
 import { levelIndex, own } from './util.ts';
@@ -306,11 +307,16 @@ export function allyProblem(o: { grade: number; magic: number; force: number }):
   return '';
 }
 
-/** An ally ritual's TN, materials, days and Karma. */
-export function allyCosts(force: number): { tn: number; nuyen: number; days: number; karma: number } {
+/**
+ * An ally ritual's TN, materials, days and Karma. v0.92.3 (RULES.SPIRITS_V923.allyCost 'book', Grimoire p. 70): Karma
+ * 5 × the current Force for each point above the first (bought with a Magic point), plus the design's own Karma
+ * (attributes, skills, forms, sense link); `magic` = the Magic point it costs.
+ */
+export function allyCosts(force: number, o: { designKarma?: number; familiar?: boolean } = {}): { tn: number; nuyen: number; days: number; karma: number; magic: number } {
   const a = RULES.OCCULT.ally;
   const f = Math.max(1, Math.floor(force));
-  return { tn: Math.max(2, f + a.tnModifier), nuyen: f * a.nuyenPerForce, days: Math.ceil(f * a.daysPerForce), karma: Math.ceil(f * a.karmaPerForce) };
+  const book = allyKarmaBook(f, o.designKarma ?? 0);
+  return { tn: Math.max(2, f + a.tnModifier), nuyen: f * a.nuyenPerForce, days: Math.ceil(f * a.daysPerForce), karma: book ?? Math.ceil(f * a.karmaPerForce), magic: allyMagicCost(Boolean(o.familiar)) };
 }
 
 // ---------------------------------------------------------------- The rest of the ordeals

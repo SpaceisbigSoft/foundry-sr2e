@@ -747,7 +747,7 @@ The Magic tab's **Magic** section is for magically active characters.
 - The scene environment and background count here (the GM sets them with the pencils), and a running quest with **Next stage** and × to end it. While projecting, the hours out of the body show against the limit.
 - Initiate grade and metamagic tick boxes. Adepts initiate too: they see **Initiate**, their grade and only the techniques an adept can learn (centering and the others the house rules allow), but not **Quest**, **Ward…** or **Geasa**. A centering initiate fills in **Centering skill** (for example Singing); **Center** then rolls it before a magical test.
 - Shamans fill in the totem: its bonuses, its environment and the dice in and away from it, *Berserk*, *Daylight TN* and which spirits its conjuring dice help. An elementalist picks an **Element**.
-- **Geasa**: the + adds one; click one to change its words. Untick *Met* when a geas is broken; the heading shows the Magic lost.
+- **Geasa**: the + adds one; click one to change its words. Untick *Met* when a geas is broken: each broken geas adds +2 to the target number of your magical tests, Drain included (with the house rule back at v0.92.2, the heading shows the Magic lost instead).
 - **Sustaining**: spells you hold and the TN they add. The × drops one. **Quicken** or **Elemental** where allowed.
 - **Anchored**: **Release**, or × to discard.
 - **Foci**: tick Active; the rating is a box. **Bond** an unbonded focus for Good Karma. An addiction risk shows with an **Addiction test** button (the GM's × clears an addiction).

@@ -5,6 +5,7 @@
  * for libraries, circles and lodges, ghouls' and vampires' diet, and fire spreading on a scene.
  * Pure rules; no Foundry. Values in RULES.OCCULT, RULES.FIRE and RULES.CRITTERS.diet.
  */
+import { roundInitiationKarma } from './spirits923.ts';
 import { RULES, type DamageLevel } from './config.ts';
 import { isShamanic, isHermetic } from './arcana.ts';
 import { bestSite, type BackgroundSource, type MagicSite, type SiteKind } from './mysticism.ts';
@@ -118,7 +119,10 @@ export function initiationCost(newGrade: number, o: { group?: boolean; ordeal?: 
   const k = RULES.MAGIC_EXTRA.karmaCosts;
   const base = o.group ? i.multipliers.group : i.multipliers.self;
   const multiplier = Math.max(i.minMultiplier, base - (o.ordeal ? i.ordealReduction : 0));
-  return { cost: Math.max(0, Math.ceil((k.initiationBase + Math.max(1, Math.floor(newGrade))) * multiplier)), multiplier };
+  // v0.92.3 (RULES.SPIRITS_V923.gradeZero 'book', Grimoire p. 38): the first initiation is to Grade 0 (6 + 0);
+  // RULES.SPIRITS_V923.initiationRounding 'down' (always round down).
+  const g = RULES.SPIRITS_V923.gradeZero === 'book' ? Math.max(0, Math.floor(newGrade)) : Math.max(1, Math.floor(newGrade));
+  return { cost: roundInitiationKarma((k.initiationBase + g) * multiplier), multiplier };
 }
 
 /** What a magician lacks to initiate to this grade (a library, or a lodge of the totem). */

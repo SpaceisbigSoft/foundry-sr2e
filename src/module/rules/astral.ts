@@ -1,6 +1,7 @@
 import { RULES } from './config.ts';
 import type { Attributes } from './stats.ts';
 import { urrMagAstralReactionFactor } from './urr80-magic.ts';
+import { astralGradeBonus } from './spirits923.ts';
 import type { TargetNumberModifier } from './dice.ts';
 import { t as tx } from '../helpers/i18n.ts';
 
@@ -23,10 +24,11 @@ export interface AstralForm {
 }
 
 /** Astral form stats from (total) attributes. VERIFY */
-export function astralForm(a: Attributes): AstralForm {
+export function astralForm(a: Attributes, grade = 0): AstralForm {
   const map = RULES.ASTRAL.formAttributes;
   // v0.80.0 (RULES.URR_V80.magAstralReaction, URR): astral Reaction = 2 × Intelligence under the Revamp.
-  const reaction = a[RULES.ASTRAL.reactionAttribute] * urrMagAstralReactionFactor();
+  // v0.92.3 (RULES.SPIRITS_V923.astralGrade 'book', Grimoire pp. 38, 91): initiates add their grade.
+  const reaction = a[RULES.ASTRAL.reactionAttribute] * urrMagAstralReactionFactor() + astralGradeBonus(grade);
   return {
     body: a[map.body],
     quickness: a[map.quickness],

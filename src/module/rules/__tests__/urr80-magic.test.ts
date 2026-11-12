@@ -25,7 +25,7 @@ describe('v0.80.0 magic: the book (shipped switches)', () => {
     assert.equal(u.magAstralReaction, 1);
     assert.equal(u.magLossLe, false);
     assert.equal(RULES.SPELLCRAFT.exclusiveDrainMod, -2);
-    assert.equal(RULES.ASTRAL.initiativeBonus, 20);
+    assert.equal(RULES.ASTRAL.initiativeBonus, 15); // v0.92.3: the book's astral Reaction + 15 (Core p. 147), as the Revamp
   });
   test('the functions give the book answers', () => {
     assert.equal(urrMagCastingDice({ dice: 5, force: 3 }), 5);
