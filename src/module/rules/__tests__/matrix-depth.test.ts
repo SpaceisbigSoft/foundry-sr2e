@@ -148,6 +148,12 @@ describe('matrix depth (v0.27.0)', () => {
 });
 
 import { gridReachable, gridPath, simInitiativeDice, simsenseOverload, dumpShockType, blackIcDamageType, frameDice, connectionModifiers, type GridNode } from '../matrix.ts';
+// v0.92.3: these tests pin the v0.92.2 Matrix rules (the book's defaults: v0923-matrix.test.ts).
+import { before as before922, after as after922 } from 'node:test';
+import { matrix922 } from '../../__tests__/helpers/matrix922.ts';
+let undo922: () => void = () => {};
+before922(() => { undo922 = matrix922(); });
+after922(() => undo922());
 
 describe('the grid, sims, frames and connections (v0.28.0)', () => {
   const rtg: GridNode = { uuid: 'R', gridKind: 'rtg', parentUuid: '' };

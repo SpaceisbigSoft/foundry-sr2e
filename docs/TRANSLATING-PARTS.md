@@ -15,9 +15,11 @@ See `docs/TRANSLATING.md` for the rest.
 | `SR2E.App.Npcgen.createsActorsTheLeader`: Creates {count} actors (the leader, {members}{extras}){tok}{morale}. | `{morale}` | `SR2E.App.Npcgen.groupedForMorale` (, grouped for morale) |
 | `SR2E.App.Settings.default`: Default {def}{srcNote}{part} | `{part}` | `SR2E.App.Settings.changed` ( · changed) |
 | `SR2E.App.Settings.theNumberIsTheStepsBetween`: (the number is the steps between them; 1 if left out). Lines starting with # are notes. Defaulting to a related skill costs +{perStep} TN per step along the shortest path, up to {maxSteps} steps; skills with no path {part}. With no links at all, every related skill is +{skillDefaultTnMod}. {count} link now. \| (the number is the steps between them; 1 if left out). Lines starting with # are notes. Defaulting to a related skill costs +{perStep} TN per step along the shortest path, up to {maxSteps} steps; skills with no path {part}. With no links at all, every related skill is +{skillDefaultTnMod}. {count} links now. | `{part}` | `SR2E.App.Settings.canOnlyDefaultToTheAttribute` (can only default to the attribute)<br>`SR2E.App.Settings.defaultAt` (default at +{skillDefaultTnMod}) |
+| `SR2E.App.Sheets.aTortoiseHalfReaction923`:  | `{extras}` | `SR2E.App.Sheets.tortoiseBlackIcCantReach` ()<br>`SR2E.App.Sheets.tortoiseColdSimOnly` ()<br>`SR2E.App.Sheets.tortoiseNoDumpShock` () |
 | `SR2E.App.Sheets.aTortoiseMeatSpeed`:  | `{extras}` | `SR2E.App.Sheets.tortoiseBlackIcCantReach` ()<br>`SR2E.App.Sheets.tortoiseColdSimOnly` ()<br>`SR2E.App.Sheets.tortoiseNoDumpShock` () |
 | `SR2E.App.Sheets.icGuardsSubsystem`:  | `{subsystem}` | `SR2E.App.Sheets.pickOne` () |
 | `SR2E.App.Sheets.icPsychotropic`:  | `{payload}` | `SR2E.App.Sheets.fromItsName` () |
+| `SR2E.App.Sheets.icPsychotropic923`:  | `{payload}` | `SR2E.App.Sheets.fromItsName` () |
 | `SR2E.App.Sheets.ordealFamiliarReady`:  | `{ally}` | `SR2E.App.Sheets.yourAlly` () |
 | `SR2E.App.Sheets.reflexesLine`:  | `{reflexes}` | `SR2E.App.Sheets.reflexes` () |
 | `SR2E.App.Sheets.unplugFromHitcherJack`:  | `{name}` | `SR2E.App.Sheets.theDecker` () |
@@ -59,6 +61,7 @@ See `docs/TRANSLATING.md` for the rest.
 | `SR2E.Card.Actor.crashTest`: Crash test ({name}{part}) | `{part}` | `SR2E.Card.Actor.forTheTires` (, +{tn} for the tires) |
 | `SR2E.Card.Actor.crashTestWhy`: Crash test ({why}) | `{why}` | `SR2E.Card.Actor.damageWord` (damage) |
 | `SR2E.Card.Actor.crashes2`: {icIcName} crashes {icProgramName} | `{icProgramName}` | `SR2E.Card.Actor.theUtility` (the utility) |
+| `SR2E.Card.Actor.cyberTn923`: TN {tn}: {name}, {status} on {code} | `{status}` | `SR2E.Card.Actor.intruding923` (Intruding)<br>`SR2E.Card.Actor.legitimate923` (Legitimate) |
 | `SR2E.Card.Actor.damagedOn`: {name}: {results} (damaged on {part}){part2} | `{part2}` | `SR2E.Card.Actor.damaged` (damaged) |
 | `SR2E.Card.Actor.defend`: Defend ({name}){part} | `{name}` | `SR2E.Card.Actor.target` (target) |
 | `SR2E.Card.Actor.defense`: {part} defense{part2} | `{part}` | `SR2E.Card.Actor.dodge` (Dodge)<br>`SR2E.Card.Actor.melee` (Melee) |
@@ -91,6 +94,7 @@ See `docs/TRANSLATING.md` for the rest.
 | `SR2E.Card.Actor.gmEssenceByHand`: GM: {part} {dTaken} Essence {part2} {name} by hand. | `{part2}` | `SR2E.Card.Actor.from3` (from)<br>`SR2E.Card.Actor.to` (to) |
 | `SR2E.Card.Actor.gmItsInitiativeByByHand`: GM: {part} its Initiative by {delta} by hand. | `{part}` | `SR2E.Card.Actor.lower` (lower)<br>`SR2E.Card.Actor.raise` (raise) |
 | `SR2E.Card.Actor.goesOnFullDefenseDiceAgainst`: goes on full defense (+{attribute} dice against attacks until their next action){part}. | `{part}` | `SR2E.Card.Actor.initiative` (; −{initiativeCost} initiative)<br>`SR2E.Card.Actor.thatIsTheirAction` (; that is their action) |
+| `SR2E.Card.Actor.gracefulOut923`: {name} logs off {hostName} and leaves the Matrix cleanly: no dump shock. | `{hostName}` | `SR2E.Card.Actor.theHost` (the host) |
 | `SR2E.Card.Actor.handlingPlain`: {vehicleName}: {label} ({setupModeLabel}, Handling {handling}){suffix} | `{label}` | `SR2E.Card.Actor.crashTest3` (Crash test)<br>`SR2E.Card.Actor.drivingTest` (Driving test)<br>`SR2E.Card.Actor.pushToSpeed` (Push to speed {push}) |
 | `SR2E.Card.Actor.handlingWithOffRoad`: {vehicleName}: {label} ({setupModeLabel}, Handling {handling} off-road){suffix} | `{label}` | `SR2E.Card.Actor.crashTest3` (Crash test)<br>`SR2E.Card.Actor.drivingTest` (Driving test)<br>`SR2E.Card.Actor.pushToSpeed` (Push to speed {push}) |
 | `SR2E.Card.Actor.healsSuccessEs`: · {name} heals {targetName} ({track}, {part}): {successes} success(es), {before} → {target}. | `{part}` | `SR2E.Card.Actor.firstAid` (first aid) |
@@ -155,7 +159,7 @@ See `docs/TRANSLATING.md` for the rest.
 | `SR2E.Card.Actor.moraleOne`: Morale: {name} (Professional Rating {pr}{part2}{part3}) | `{part3}` | `SR2E.Card.Actor.badlyHurt` (, badly hurt) |
 | `SR2E.Card.Actor.mp`: ({size} Mp{part}{part2}) | `{part}` | `SR2E.Card.Actor.paydata` (, paydata {value}¥) |
 | `SR2E.Card.Actor.mp`: ({size} Mp{part}{part2}) | `{part2}` | `SR2E.Card.Actor.encrypted` (, encrypted)<br>`SR2E.Card.Actor.scrambleIc2` (, scramble IC) |
-| `SR2E.Card.Actor.mp2`: {name}: {size} Mp, {value}¥{part} | `{part}` | `SR2E.Card.Actor.encrypted2` (, encrypted {encrypted})<br>`SR2E.Card.Actor.scramble` (, scramble {scramble}) |
+| `SR2E.Card.Actor.mp2`: {name}: {size} Mp, {value}¥{part} | `{part}` | `SR2E.Card.Actor.encrypted2` (, encrypted {encrypted})<br>`SR2E.Card.Actor.paydataBomb923` (, data bomb {bomb})<br>`SR2E.Card.Actor.scramble` (, scramble {scramble}) |
 | `SR2E.Card.Actor.noJackingInUntilItClears`: {part}; no jacking in until it clears.{body} | `{part}` | `SR2E.Card.Actor.theyAreDumpedFromTheMatrix` (: they are dumped from the Matrix)<br>`SR2E.Card.Actor.theyCanDoNothingInThe` (: they can do nothing in the Matrix) |
 | `SR2E.Card.Actor.noKarmaIsSpentTryAgain`: : no Karma is spent; try again.{part} | `{part}` | `SR2E.Card.Actor.itWasAlreadyLearnedFromAn` ((It was already learned from an earlier roll and stays.)) |
 | `SR2E.Card.Actor.noticeARitualIntelligenceVs`: Notice a ritual (Intelligence {int}{part} vs {tn}) | `{part}` | `SR2E.Card.Actor.grade2` ( + grade {g}) |
@@ -198,12 +202,14 @@ See `docs/TRANSLATING.md` for the rest.
 | `SR2E.Card.Actor.resist4`: Resist ({name}: {power}{level}) | `{name}` | `SR2E.Card.Actor.vehicle` (vehicle) |
 | `SR2E.Card.Actor.resist9`: Resist {part} ({casterName}) | `{casterName}` | `SR2E.Card.Actor.theCaster` (the caster) |
 | `SR2E.Card.Actor.resist9`: Resist {part} ({casterName}) | `{part}` | `SR2E.Card.Actor.power4` (power)<br>`SR2E.Card.Actor.spell` (spell) |
+| `SR2E.Card.Actor.resistBiofeedbackVs`: Resist biofeedback ({spResist} vs {icRating}, {spLevel} {spType}) | `{spResist}` | `SR2E.Attribute.body` (Body) |
 | `SR2E.Card.Actor.resistBlackIc`: Resist black IC {damagePower}{damageLevel} {damageDamageType} ({attr}{part}{part2}) | `{part}` | `SR2E.Card.Actor.iccm` ( + ICCM {iccm}) |
 | `SR2E.Card.Actor.resistForceVsSMagic`: Resist {part} (Force {force}{energy} vs {name}'s Magic {magic}) | `{part}` | `SR2E.Card.Actor.banishing` (banishing)<br>`SR2E.Card.Actor.beingTakenOver` (being taken over) |
-| `SR2E.Card.Actor.resistMatrixDamage`: Resist {damagePower}{damageLevel} Matrix damage ({part}{part2}{part3}) | `{part}` | `SR2E.Card.Actor.bod` (Bod)<br>`SR2E.Card.Actor.rating10` (rating) |
+| `SR2E.Card.Actor.resistMatrixDamage`: Resist {damagePower}{damageLevel} Matrix damage ({part}{part2}{part3}) | `{part}` | `SR2E.Card.Actor.bod` (Bod)<br>`SR2E.Card.Actor.rating10` (rating)<br>`SR2E.Text.Datawar.securityValue` (Security Value {securityValue}) |
 | `SR2E.Card.Actor.resistMatrixDamage`: Resist {damagePower}{damageLevel} Matrix damage ({part}{part2}{part3}) | `{part2}` | `SR2E.Card.Actor.hardening` (, Hardening {hardening}) |
 | `SR2E.Card.Actor.resistVs`: Resist {part} ({riggerName}: {shockAttr} vs {tn}, {level} {type}) | `{part}` | `SR2E.Card.Actor.dumpShock2` (dump shock)<br>`SR2E.Card.Actor.feedback` (feedback) |
 | `SR2E.Card.Actor.resistVs2`: Resist {stateSpellName} ({attr} vs {part} {stateForce}) | `{part}` | `SR2E.Card.Actor.force3` (Force)<br>`SR2E.Card.Actor.rating10` (rating) |
+| `SR2E.Card.Actor.resistVs3`: Resist {kindLabel} ({psResist} vs {icRating}) | `{psResist}` | `SR2E.Attribute.willpower` (Willpower) |
 | `SR2E.Card.Actor.resistVs4`: Resist {label} ({icName}: {attr}{part} vs {rating}) | `{part}` | `SR2E.Card.Actor.shield` ( + Shield {shield}) |
 | `SR2E.Card.Actor.resistsRatingVsS`: {barrierName} resists (rating {rating} vs {name}'s {part} {opposing}) | `{part}` | `SR2E.Card.Actor.force3` (Force)<br>`SR2E.Card.Actor.magic3` (Magic) |
 | `SR2E.Card.Actor.resistsVsTnSuccessesAgainst`: resists {source} ({attr} {dice} vs TN {tn}): {count} success against {rating}. {part} \| resists {source} ({attr} {dice} vs TN {tn}): {count} successes against {rating}. {part} | `{part}` | `SR2E.Card.Actor.seesThroughIt` (Sees through it.)<br>`SR2E.Card.Actor.staysUnseen` ({targetName} stays unseen.) |
@@ -247,6 +253,8 @@ See `docs/TRANSLATING.md` for the rest.
 | `SR2E.Card.Actor.then`: {part}, then {part2}. | `{part2}` | `SR2E.Card.Actor.dumpsThem` (dumps them)<br>`SR2E.Card.Actor.dumpsThemAndBurnsTheDeck` (dumps them and burns the deck)<br>`SR2E.Card.Actor.reportsTheirLocation` (reports their location) |
 | `SR2E.Card.Actor.thenJackOutDerezItOr`: {part}, then {part2}. Jack out, derez it or redirect the datatrail first. | `{part}` | `SR2E.Card.Actor.combatTurn3` ( (Combat Turn {dueRound})) |
 | `SR2E.Card.Actor.thenJackOutDerezItOr`: {part}, then {part2}. Jack out, derez it or redirect the datatrail first. | `{part2}` | `SR2E.Card.Actor.dumpsThem` (dumps them)<br>`SR2E.Card.Actor.dumpsThemAndBurnsTheDeck` (dumps them and burns the deck)<br>`SR2E.Card.Actor.reportsTheirLocation` (reports their location) |
+| `SR2E.Card.Actor.thenTrace923`: {part}, then {part2}. Derez it, spoof it with Relocate, or make a Graceful Logoff first: jacking out leaves the datatrail up. | `{part}` | `SR2E.Card.Actor.combatTurn3` ( (Combat Turn {dueRound})) |
+| `SR2E.Card.Actor.thenTrace923`: {part}, then {part2}. Derez it, spoof it with Relocate, or make a Graceful Logoff first: jacking out leaves the datatrail up. | `{part2}` | `SR2E.Card.Actor.dumpsThem` (dumps them)<br>`SR2E.Card.Actor.dumpsThemAndBurnsTheDeck` (dumps them and burns the deck)<br>`SR2E.Card.Actor.reportsTheirLocation` (reports their location) |
 | `SR2E.Card.Actor.thesisOrdealVs`: Thesis ordeal: {skill}{sdSuffix}{part} vs {tn} | `{part}` | `SR2E.Card.Actor.library` ( + {site} library) |
 | `SR2E.Card.Actor.throughAPlain`: ({label}{part}) through a {hwVia}: {what}.{part3} | `{part3}` | `SR2E.Card.Actor.theChipBurnsOut` ( The chip burns out.) |
 | `SR2E.Card.Actor.throughAPlain`: ({label}{part}) through a {hwVia}: {what}.{part3} | `{what}` | `SR2E.Card.Actor.theGmPlaysTheEffect` (the GM plays the effect) |
@@ -259,6 +267,7 @@ See `docs/TRANSLATING.md` for the rest.
 | `SR2E.Card.Actor.triesToPossessWillpowerVs`: {name} tries to possess {targetName} (Willpower {myWil}{part} vs {theirWil}) | `{part}` | `SR2E.Card.Actor.grade` ( + grade {grade}) |
 | `SR2E.Card.Actor.turnsTo`: · {weaponName} turns to {facing}°. | `{weaponName}` | `SR2E.Card.Actor.theTurret` (The turret) |
 | `SR2E.Card.Actor.undidSDamageFromBackTo`: undid {name}'s damage from "{label}" (back to {beforePhysical} physical / {beforeStun} stun){part}. | `{part}` | `SR2E.Card.Actor.itHadChangedSinceSoLater` (; it had changed since, so later damage was undone too) |
+| `SR2E.Card.Actor.untilRecovered923`: until they recover (a Willpower ({rating}) test {every}) | `{every}` | `SR2E.Card.Actor.daily923` (daily)<br>`SR2E.Card.Actor.weekly923` (weekly) |
 | `SR2E.Card.Actor.usesSSenses`: uses {allyName}'s senses | `{allyName}` | `SR2E.Card.Actor.theAlly` (the ally) |
 | `SR2E.Card.Actor.vs2`: {successes} vs {spiritSuccesses}{part} | `{part}` | `SR2E.Card.Actor.itsSummonerAdded` ( (its summoner added {help})) |
 | `SR2E.Card.Actor.vsTheLockS2`: ({successes} vs the lock's {lockS}).{part} | `{part}` | `SR2E.Card.Actor.theAlarmGoesOff` (The alarm goes off!) |
@@ -338,6 +347,7 @@ See `docs/TRANSLATING.md` for the rest.
 | `SR2E.Dialog.Sheet.areaRadiusM`: Area radius {radius} m{part}. | `{part}` | `SR2E.Dialog.Sheet.targetsWithinItAreTicked` (: targets within it are ticked) |
 | `SR2E.Dialog.Sheet.areaRadiusMAround`: Area radius {radius} m around {name}{part}. | `{part}` | `SR2E.Dialog.Sheet.targetsWithinItAreTicked` (: targets within it are ticked) |
 | `SR2E.Dialog.Sheet.astralAttackDiceVsTnThe`: Astral attack dice vs TN = the barrier's rating, opposed by its rating vs your {part}. Each net success lowers its rating by 1. | `{part}` | `SR2E.Dialog.Sheet.force` (Force)<br>`SR2E.Dialog.Sheet.magic` (Magic) |
+| `SR2E.Dialog.Sheet.attackHint923`: Your attack utility's rating (+ Hacking Pool) vs a TN by the host's security code and the target's status (Intruding: Blue 6, Green 5, Orange 4, Red 3; Legitimate: 3, 4, 5, 6); party IC +1 per member. {part}. Then the target resists the damage (IC with the host's Security Value). | `{part}` | `SR2E.Dialog.Sheet.personasDefendWithHackingPoolDice` (personas defend with Hacking Pool dice)<br>`SR2E.Dialog.Sheet.personasDoNotDefend` (personas do not defend) |
 | `SR2E.Dialog.Sheet.bodyHandlingSpeedAccelArmorSignature`: Body {stBody} · Handling {stHandling} · Speed {stSpeed} · Accel {stAccel} · Armor {stArmor} · Signature {stSignature} · CF {stCf}{part} | `{part}` | `SR2E.Dialog.Sheet.mountS` ( · {stMounts} mount(s)) |
 | `SR2E.Dialog.Sheet.callInAFavourDice`: Call in a favour (+{contactsFavourDice} dice{part}; {part2}) | `{part}` | `SR2E.Dialog.Sheet.noFee` (, no fee) |
 | `SR2E.Dialog.Sheet.callInAFavourDice`: Call in a favour (+{contactsFavourDice} dice{part}; {part2}) | `{part2}` | `SR2E.Dialog.Sheet.owes` ({name} owes {favours})<br>`SR2E.Dialog.Sheet.owesNoneYouLlOweThem` ({name} owes none: you'll owe them) |

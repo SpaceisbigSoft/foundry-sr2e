@@ -5,6 +5,7 @@
  */
 import { test, describe, before, after, afterEach } from "node:test";
 import { oldWay } from '../rules/__tests__/oldway.ts';
+import { matrix922 } from "./helpers/matrix922.ts";
 import assert from "node:assert/strict";
 import { RULES } from "../rules/index.ts";
 import { shown } from "./helpers/shown.ts";
@@ -2153,6 +2154,8 @@ describe("spellcraft: resisted spells, healing, background count, spell options,
 });
 
 describe("the Matrix: decks, hosts, system tests, cybercombat, dump shock", () => {
+  // v0.92.3: these pin the v0.92.2 Matrix rules (the book's defaults: v0923-matrix tests).
+  let undo922 = () => {}; before(() => { undo922 = matrix922(); }); after(() => undo922());
   // v0.79.0: these fixtures count dice for the old Spell Pool, (Int + Wil + Magic) / 3 (RULES.DOCS_V79.magicPool.size).
   let undoPool79 = () => {}; before(() => { undoPool79 = oldWay({ "DOCS_V79.magicPool.size": "attributes" }); }); after(() => undoPool79());
   let HostDataModel: any, IcDataModel: any;
@@ -3579,6 +3582,8 @@ describe("v0.26.0 building security and security rigging", () => {
 });
 
 describe("v0.27.0 Matrix depth: IC behaviors, defense, operations, paydata, Medic, deck damage", () => {
+  // v0.92.3: these pin the v0.92.2 Matrix rules (the book's defaults: v0923-matrix tests).
+  let undo922 = () => {}; before(() => { undo922 = matrix922(); }); after(() => undo922());
   let HostDataModel: any, IcDataModel: any;
   const D = { body: 4, quickness: 5, strength: 3, charisma: 3, intelligence: 6, willpower: 5 };
   const withGet = (list: any[]) => Object.assign(list, { get(id: string) { return list.find((i: any) => i.id === id); } });
@@ -3886,6 +3891,8 @@ describe("v0.27.0 Matrix depth: IC behaviors, defense, operations, paydata, Medi
 });
 
 describe("v0.28.0 the grid, hot and cold sim, frames, connections", () => {
+  // v0.92.3: these pin the v0.92.2 Matrix rules (the book's defaults: v0923-matrix tests).
+  let undo922 = () => {}; before(() => { undo922 = matrix922(); }); after(() => undo922());
   let HostDataModel: any, IcDataModel: any;
   const D = { body: 4, quickness: 5, strength: 3, charisma: 3, intelligence: 6, willpower: 5 };
   const withGet = (list: any[]) => Object.assign(list, { get(id: string) { return list.find((i: any) => i.id === id); } });
@@ -5075,6 +5082,8 @@ describe("v0.39.0 magic and critters", () => {
 });
 
 describe("v0.40.0 Matrix leftovers: psychotropic IC, defensive utilities, frames and agents, grid travel, security deckers", () => {
+  // v0.92.3: these pin the v0.92.2 Matrix rules (the book's defaults: v0923-matrix tests).
+  let undo922 = () => {}; before(() => { undo922 = matrix922(); }); after(() => undo922());
   let HostDataModel: any, IcDataModel: any;
   const D = { body: 4, quickness: 5, strength: 3, charisma: 3, intelligence: 6, willpower: 5 };
   const withGet = (list: any[]) => Object.assign(list, { get(id: string) { return list.find((i: any) => i.id === id); } });
@@ -6147,6 +6156,8 @@ describe("v0.45.0 magic and critters", () => {
 });
 
 describe("v0.46.0 Matrix and rigging", () => {
+  // v0.92.3: these pin the v0.92.2 Matrix rules (the book's defaults: v0923-matrix tests).
+  let undo922 = () => {}; before(() => { undo922 = matrix922(); }); after(() => undo922());
   let HostDataModel: any, IcDataModel: any, VehicleDataModel: any, SiteDataModel: any;
   const D = { body: 4, quickness: 5, strength: 3, charisma: 3, intelligence: 6, willpower: 5 };
   const withGet = (list: any[]) => Object.assign(list, { get(id: string) { return list.find((i: any) => i.id === id); } });
@@ -7135,6 +7146,8 @@ describe("v0.48.0 health, magic and critters", () => {
 });
 
 describe("v0.49.0 street, Matrix, rigging and security leftovers", () => {
+  // v0.92.3: these pin the v0.92.2 Matrix rules (the book's defaults: v0923-matrix tests).
+  let undo922 = () => {}; before(() => { undo922 = matrix922(); }); after(() => undo922());
   let HostDataModel: any, VehicleDataModel: any, SiteDataModel: any, R: any;
   const P = { body: 4, quickness: 5, strength: 3, charisma: 4, intelligence: 6, willpower: 5 };
   const withGet = (list: any[]) => Object.assign(list, { get(id: string) { return list.find((i: any) => i.id === id); } });
@@ -8533,6 +8546,8 @@ describe("v0.56.0 magic and critters", () => {
 });
 
 describe("v0.57.0 Matrix, vehicles and security", () => {
+  // v0.92.3: these pin the v0.92.2 Matrix rules (the book's defaults: v0923-matrix tests).
+  let undo922 = () => {}; before(() => { undo922 = matrix922(); }); after(() => undo922());
   let HostDataModel: any, IcDataModel: any, VehicleDataModel: any, SiteDataModel: any;
   const D = { body: 4, quickness: 5, strength: 3, charisma: 3, intelligence: 6, willpower: 5 };
   const R = RULES as any;

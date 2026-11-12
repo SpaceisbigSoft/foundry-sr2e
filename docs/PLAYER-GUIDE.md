@@ -815,9 +815,9 @@ The Matrix tab shows when the character owns a cyberdeck or a program.
 - A security decker of the host gets **Security**. An otaku sees their **Channels** (the + raises one for Karma) and **Complex form…** beside Write….
 - On a wireless connection, type the distance to the relay to check the signal. The section also lists LTG numbers you know (× forgets one), defenses loaded, maneuvers in force and who rides your hitcher jacks (others ride along with the **Hitch** quick button).
 
-Warnings (traced, held, crippled, a damaged deck with **Repair**, psychotropic IC effects, smoke, time on the way to a host) show in red with what you can do about them; the GM has an × or eraser to clear them.
+Warnings (traced, held, crippled, a damaged deck, psychotropic IC effects, smoke, time on the way to a host) show in red with what you can do about them; the GM has an × or eraser to clear them. Gray IC damage to a deck is permanent: build the damaged part again to replace its chip (**Repair** works only under the GM's house rule).
 
-Cards from IC and jacking out carry the follow-up buttons: **Resist dump shock**, **Deck damage**, **Resist biofeedback**, a psychotropic **Resist**, **Resist overload**. On an NPC sheet the Matrix is a section, not a tab.
+Cards from IC and jacking out carry the follow-up buttons: **Resist dump shock**, **Deck damage**, **Resist biofeedback**, a psychotropic **Resist**, **Resist overload**, and against black IC a second **Resist** for your icon. Jacking out without a Graceful Logoff risks dump shock, and psychotropic IC that hit you test your mind when you jack out. On an NPC sheet the Matrix is a section, not a tab.
 
 ## Rigging
 

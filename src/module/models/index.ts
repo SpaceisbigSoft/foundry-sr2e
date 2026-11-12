@@ -33,6 +33,7 @@ import {
 } from '../rules/index.ts';
 // v0.71.0 (R7): MPCP caps on loaded programs.
 import { programsOverMpcp, mpcpProgramWarnings, mpcpCapsOn, programRunRating } from '../rules/matrix.ts';
+import { personaSpeed, jackpointMods, otakuPersona923 } from '../rules/matrix923.ts';
 import { sysNow } from '../helpers/clock.ts';
 import { urrMagAstralModeFor, urrMagAdeptFoci } from '../rules/urr80-magic.ts';
 import { bleedEveryText } from '../rules/urr80-health-social.ts';
@@ -957,7 +958,8 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
         impact: installed.filter((i: any) => i.system.kind !== 'cyberlimb').reduce((n: number, i: any) => n + (i.system.armorImpact ?? 0), 0) + (this.usesMetatype() ? race.dermal : 0) + bw.impact + tw.armor.impact,
       },
     };
-    Object.assign(sys.derived, deckerDerived((this as any).parent, sys, totals.intelligence, totals as unknown as Record<string, number>, tw.pools.hacking ?? 0));
+    // v0.92.3: the decker's own Reaction (no cyber or magic Reaction boosts) for the persona (VR2 p. 120).
+    Object.assign(sys.derived, deckerDerived((this as any).parent, sys, totals.intelligence, totals as unknown as Record<string, number>, tw.pools.hacking ?? 0, d.reaction - bonus.reaction));
     Object.assign(sys.derived, riggerDerived(sys, installed, d.reaction, bonus, [...((this as any).parent?.items ?? [])], tw.pools.control ?? 0));
   }
 }
@@ -989,14 +991,15 @@ export function activeDeckOf(actor: any): any | null {
 }
 
 /** Decker values: Hacking Pool, Matrix Reaction/initiative, persona and Detection Factor (none without a deck). */
-function deckerDerived(actor: any, sys: any, intelligence: number, totals: Record<string, number> = {}, tweakPool = 0) {
+function deckerDerived(actor: any, sys: any, intelligence: number, totals: Record<string, number> = {}, tweakPool = 0, ownReaction: number = sys.derived?.reaction ?? 0) {
   const item = activeDeckOf(actor);
   const spent = sys.poolSpent?.hacking ?? 0;
   if (!item) return { hackingPool: 0, hackingPoolLeft: 0, matrix: null };
   // v0.46.0: an otaku's living persona takes its ratings from their attributes; a tortoise has no ASIST.
   const living = Boolean(item.system.living) && RULES.MATRIX.otaku.enabled;
   const tortoise = Boolean(item.system.tortoise) && !living;
-  const base = living ? { ...item.system, ...otakuPersona({ intelligence, ...totals }) } : item.system;
+  // v0.92.3: the book's otaku values (VR2 p. 145; RULES.MATRIX_V923.otaku).
+  const base = living ? { ...item.system, ...otakuPersona({ intelligence, ...totals }), ...(otakuPersona923({ intelligence, ...totals }) ?? {}) } : item.system;
   // Damage to the deck (blaster, ripper, trace and burn) and crippler IC lower the working persona.
   const d = effectivePersona(base, base.damage ?? {}, sys.matrix?.crippled ?? {});
   const programs = [...(actor?.items ?? [])].filter((i: any) => i.type === 'program').map((i: any) => ({ id: i.id, name: i.name, ...i.system }));
@@ -1025,6 +1028,10 @@ function deckerDerived(actor: any, sys: any, intelligence: number, totals: Recor
       .map((k) => (capsOn ? tx('SR2E.App.Models.runsAtTheWorkingMpcp', { attribute: k.charAt(0).toUpperCase() + k.slice(1), value: rawPersona(k), mpcp: d.mpcp }) : tx('SR2E.App.Models.isAboveTheWorkingMpcp', { attribute: k.charAt(0).toUpperCase() + k.slice(1), value: rawPersona(k), mpcp: d.mpcp }))),
     ...mpcpProgramWarnings(overMpcp, d.mpcp),
   ];
+  // v0.92.3 (RULES.MATRIX_V923.initiative): the book's persona speed; null keeps the v0.92.2 formulas below.
+  const speed = personaSpeed({ reaction: ownReaction, responseIncrease: d.responseIncrease, mpcp: d.mpcp, sim, tortoise, otaku: living ? { intelligence, willpower: Number(totals.willpower ?? 0) } : null });
+  // A satellite uplink's signal lag: −2 Reaction (VR2 p. 30; RULES.MATRIX_V923.connections).
+  const lag = RULES.MATRIX_V923.connections !== 'v922' ? jackpointMods(sys.matrix?.connection ?? 'jackpoint').reaction : 0;
   return {
     hackingPool: pool,
     hackingPoolLeft: Math.max(0, pool - spent),
@@ -1032,9 +1039,9 @@ function deckerDerived(actor: any, sys: any, intelligence: number, totals: Recor
       deckId: item.id,
       deckName: item.name,
       // A tortoise works at meat speed: the user's own Reaction and initiative dice.
-      reaction: tortoise ? (sys.derived?.reaction ?? 0) : matrixReaction(intelligence, d.responseIncrease) + filter.reaction,
+      reaction: Math.max(0, (speed ? speed.reaction + (tortoise ? 0 : filter.reaction) : tortoise ? (sys.derived?.reaction ?? 0) : matrixReaction(intelligence, d.responseIncrease) + filter.reaction) + lag),
       filterModifiers: filter.modifiers,
-      initiativeDice: tortoise ? (sys.derived?.initiativeDice ?? 1)
+      initiativeDice: speed ? speed.dice + (living && RULES.MATRIX_V923.otaku === 'v922' ? RULES.MATRIX.otaku.initiativeDice : 0) : tortoise ? (sys.derived?.initiativeDice ?? 1)
         : matrixInitiativeDice(d.responseIncrease) + simInitiativeDice(sim) + (living ? RULES.MATRIX.otaku.initiativeDice : 0),
       sim,
       tortoise, living, signal: Number(item.system.signal ?? 0),

@@ -1480,14 +1480,15 @@ async function onRiggerShock(message: any, button: HTMLButtonElement): Promise<v
 
 /** Deck damage after a blaster or sparky crash, or a trace and burn: the IC rolls its rating vs the MPCP. */
 async function onDeckDamage(message: any, button: HTMLButtonElement): Promise<void> {
-  const d = message.getFlag(SYSTEM_ID, 'deckDamage') as { deckerUuid: string; icName: string; rating: number; reason: string } | undefined;
+  const d = message.getFlag(SYSTEM_ID, 'deckDamage') as { deckerUuid: string; icName: string; rating: number; reason: string; sparky?: boolean } | undefined;
   const decker: any = d ? await fromUuid(d.deckerUuid) : null;
   if (!d || !decker) return ui.notifications.warn(tx('SR2E.Notify.Chat.thatDeckerNoLongerExists'));
   if (!decker.isOwner) return ui.notifications.warn(tx('SR2E.Notify.Chat.onlySOwnerOrTheGm17', { deckerName: escHtml(decker.name) }));
   if (!(await playerMay(message, decker, origin(message), tx('SR2E.Card.Chat.sDeckTakesDamageFromRating', { deckerName: decker.name, slice: String(d.icName ?? 'IC').slice(0, 120), rating: safeInt(d.rating, 0, 20, 0) })))) return;
   if (cardDone(message, decker, 'deckDamageRolled')) return ui.notifications.warn(tx('SR2E.Notify.Chat.deckDamageHasAlreadyBeenRolled'));
   button.disabled = true;
-  await decker.takeDeckDamage(String(d.icName ?? 'IC').slice(0, 120), safeInt(d.rating, 0, 20, 0), String(d.reason ?? '').slice(0, 200));
+  // v0.92.3: a sparky crash's test has its own TN and is followed by its damage (VR2 p. 44).
+  await decker.takeDeckDamage(String(d.icName ?? 'IC').slice(0, 120), safeInt(d.rating, 0, 20, 0), String(d.reason ?? '').slice(0, 200), { sparky: d.sparky === true });
   await markCardDone(message, decker, 'deckDamageRolled');
 }
 
@@ -1503,7 +1504,8 @@ async function onPsychotropic(message: any, button: HTMLButtonElement): Promise<
   const payload = { icName: String(p.icName ?? 'IC').slice(0, 120), rating: safeInt(p.rating, 0, 20, 0), kind: String(p.kind), ...(safeStr(p.hostUuid, 400) ? { hostUuid: String(p.hostUuid) } : {}) };
   if (!(await playerMay(message, decker, origin(message), tx('SR2E.Card.Chat.resistsSPayloadRatingItCan', { deckerName: decker.name, payloadIcName: payload.icName, payloadKind: payload.kind, payloadRating: payload.rating })))) return;
   if (cardDone(message, decker, 'psychotropicRolled')) return ui.notifications.warn(tx('SR2E.Notify.Chat.thePsychotropicTestHasAlreadyBeen'));
-  const pool = await promptPoolDice(decker, tx('SR2E.Dialog.Chat.resistThePayload', { deckerName: decker.name }), 'hacking');
+  // v0.92.3: no Hacking Pool on this Willpower test (VR2 p. 17; RULES.MATRIX_V923.psychotropic).
+  const pool = RULES.MATRIX_V923.psychotropic !== 'v922' ? 0 : await promptPoolDice(decker, tx('SR2E.Dialog.Chat.resistThePayload', { deckerName: decker.name }), 'hacking');
   if (pool === null) return;
   button.disabled = true;
   await decker.resistPsychotropic(payload, pool);
@@ -1528,14 +1530,15 @@ async function onDiseaseTick(message: any, button: HTMLButtonElement): Promise<v
 
 /** Sparky biofeedback: the decker resists the IC's rating. */
 async function onBiofeedback(message: any, button: HTMLButtonElement): Promise<void> {
-  const b = message.getFlag(SYSTEM_ID, 'biofeedback') as { deckerUuid: string; tn: number } | undefined;
+  const b = message.getFlag(SYSTEM_ID, 'biofeedback') as { deckerUuid: string; tn: number; level?: string } | undefined;
   const decker: any = b ? await fromUuid(b.deckerUuid) : null;
   if (!b || !decker) return ui.notifications.warn(tx('SR2E.Notify.Chat.thatDeckerNoLongerExists'));
   if (!decker.isOwner) return ui.notifications.warn(tx('SR2E.Notify.Chat.onlySOwnerOrTheGm17', { deckerName: escHtml(decker.name) }));
   if (!(await playerMay(message, decker, origin(message), tx('SR2E.Card.Chat.resistsBiofeedbackTn', { deckerName: decker.name, tn: safeInt(b.tn, 2, 30, 4) })))) return;
   if (cardDone(message, decker, 'biofeedbackRolled')) return ui.notifications.warn(tx('SR2E.Notify.Chat.biofeedbackHasAlreadyBeenRolled'));
   button.disabled = true;
-  await decker.rollBiofeedback(safeInt(b.tn, 2, 30, 4));
+  // v0.92.3: the level the Sparky Test staged it to (VR2 p. 44), one of L/M/S/D.
+  await decker.rollBiofeedback(safeInt(b.tn, 2, 30, 4), ['L', 'M', 'S', 'D'].includes(String(b.level)) ? String(b.level) : null);
   await markCardDone(message, decker, 'biofeedbackRolled');
 }
 

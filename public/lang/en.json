@@ -3362,7 +3362,9 @@
         "sWirelessLinkIsJammedClearPlain": "{name}'s wireless link is jammed: clear it or use a hard line.",
         "aCategorySpell": "a {category} spell",
         "aSpellOfNoCategory": "a spell of no category",
-        "notCarried": "{name} isn't carried: tick Carried first."
+        "notCarried": "{name} isn't carried: tick Carried first.",
+        "replaceChip923": "{deckName}: gray IC damage is permanent; build the damaged part again to replace its chip.",
+        "frameCarry923": "{progName} (rating {progRating}) can carry utilities whose ratings total at most {progRating}."
       },
       "Migrations": {
         "sr2eMigrationToFailedSeeThe": "SR2e: migration to {version} failed; see the console. Later migrations were not run."
@@ -4821,7 +4823,10 @@
         "track2__monitor": "Track",
         "repair__tnBase": "Repair",
         "spell__pool": "Spell",
-        "isAFixerFinds": "A fixer: can find things for you (for a cut of the price)"
+        "isAFixerFinds": "A fixer: can find things for you (for a cut of the price)",
+        "opposedManeuver923": "Opposed: your Evasion (Cloak lowers the TN) vs their Sensors (IC: the host's Security Value); they roll against your Evasion (their Lock-On helps). Net successes, at most {maneuversMaxTn}, are the TN change; it lasts until the end of the next Combat Turn.",
+        "attackHint923": "Your attack utility's rating (+ Hacking Pool) vs a TN by the host's security code and the target's status (Intruding: Blue 6, Green 5, Orange 4, Red 3; Legitimate: 3, 4, 5, 6); party IC +1 per member. {part}. Then the target resists the damage (IC with the host's Security Value).",
+        "frameAttackHint923": "{frameName} rolls its {fd} vs a TN by the host's security code and the target's status."
       },
       "Spendkarma": {
         "raise": "Raise",
@@ -7591,7 +7596,35 @@
           "one": "· {name}'s {name2} (rating {idnRating}) against a rating {checkerRating} checker ({dice} dice vs TN {tn}): {count} success against the fake's {forgerSuccesses}.",
           "other": "· {name}'s {name2} (rating {idnRating}) against a rating {checkerRating} checker ({dice} dice vs TN {tn}): {count} successes against the fake's {forgerSuccesses}."
         },
-        "tweakPower": "custom tweak Power {value}"
+        "tweakPower": "custom tweak Power {value}",
+        "probeTest923": "{name} probes (rating {rating} vs Detection Factor {df})",
+        "versusHost923": "vs the host's {host}",
+        "redirects923": "{name} leaves a redirect: the Trace Factor is {n} higher this run.",
+        "relocates923": "{name} spoofs {icName}: its trace completes a turn later.",
+        "gracefulOut923": "{name} logs off {hostName} and leaves the Matrix cleanly: no dump shock.",
+        "traceStops923": "The trace stops.",
+        "locateProgress923": "Successes so far: {total} (a file every {need}).",
+        "jackOutShock923": "Jacking out without a Graceful Logoff",
+        "psycheAtJackOut923": "{name} is out of the Matrix: {icName}'s payload tests their mind now.",
+        "datatrail923": "{name}'s datatrail stays up {turns} turns after the jack-out ({left} left on the trace).",
+        "oneMoreAttack923": "{icName} gets one more attack before the link goes down.",
+        "noDumpShockLeft923": "No dump shock (the cool deck and ICCM take it all).",
+        "utilityDice923": "(utility {dice} dice)",
+        "cyberTn923": "TN {tn}: {name}, {status} on {code}",
+        "legitimate923": "Legitimate",
+        "intruding923": "Intruding",
+        "traceFactor923": "{name}'s Trace Factor",
+        "thenTrace923": "{part}, then {part2}. Derez it, spoof it with Relocate, or make a Graceful Logoff first: jacking out leaves the datatrail up.",
+        "resistIcon923": "Resist ({tName}'s icon)",
+        "shieldWears923": " · {name} drops to {to}",
+        "hackingPoolPlus923": "{pool} Hacking Pool",
+        "matrixDefense923": "Matrix defense ({parts} vs {tn})",
+        "crashTally923": "Crashing {icName} adds {n} to {name}'s security tally.",
+        "untilRecovered923": "until they recover (a Willpower ({rating}) test {every})",
+        "daily923": "daily",
+        "weekly923": "weekly",
+        "nowUntilReplaced923": "(now {value} until the chip is replaced).",
+        "paydataBomb923": ", data bomb {bomb}"
       },
       "Adding": {
         "buysFor": "buys {list} for ¥{planNuyen}.",
@@ -7908,7 +7941,12 @@
         "legality": "{label} (found openly)",
         "legalityFixer": "{label} (through a fixer)",
         "legalityContact": "{label} (through a contact)",
-        "contactLevel": "Closer contact"
+        "contactLevel": "Closer contact",
+        "traced923": "Traced (IC −1)",
+        "passiveAlert923": "Passive alert",
+        "consoleAccess923": "Console access (half)",
+        "traceLogoff923": "{name} holds the trace",
+        "partyIc923": "Party IC ({n})"
       },
       "Drops": {
         "notInstalledTickInstalledAfterSurgery": "not installed (tick Installed after surgery)",
@@ -9082,7 +9120,38 @@
         "SHEET_V921__wizard": "The creation wizard warns but never refuses (advise) or greys out and clamps as before (block)",
         "SHEET_V921__ratingLock": "After creation, players may type higher ratings unless the approval queue is on (queue) or never may (always, the old way)",
         "CLOCK_V922__bigJump": "A big jump of world time outside combat (a calendar setting the date): the GM is asked whether it counts as time passed or only changes the date (ask) or it always counts (count, the old way)",
-        "CLOCK_V922__bigJumpDays": "A big jump of world time: at least this many days, forward or back"
+        "CLOCK_V922__bigJumpDays": "A big jump of world time: at least this many days, forward or back",
+        "MATRIX_V923__systemTests": "System tests: opposed (the decker needs more successes than the host's Security Value roll, VR2), or 1+ successes succeed (v0.92.2)",
+        "MATRIX_V923__initiative": "Persona speed: book (own Reaction + 2 per Response Increase, RI at most MPCP ÷ 4, hot DNI as one more level, tortoise half Reaction), or Intelligence-based (v0.92.2)",
+        "MATRIX_V923__icInitiative": "IC initiative dice: book (rating + 1/2/3/4 D6 Blue to Red), or v0.92.2's 1/1/2/2/3",
+        "MATRIX_V923__passiveAlert": "Passive alert: + this to every subsystem rating (VR2: 2; 0 = none, v0.92.2)",
+        "MATRIX_V923__crashTally": "Crashing IC adds to the attacker's security tally: its rating (VR2), half its rating, or nothing (v0.92.2)",
+        "MATRIX_V923__shutdown": "Host shutdown lasts 1D6 per 2 points of Security Value turns (VR2), or a fixed number of turns (v0.92.2)",
+        "MATRIX_V923__operations": "System operations: VR2's table (tests, utilities, actions; Locate File adds up 5 successes), or v0.92.2's",
+        "MATRIX_V923__cybercombat": "Cybercombat: book (utility rating dice, TN by security code and status, IC resist and maneuver with Security Value, party IC modifiers, cripplers opposed), or v0.92.2",
+        "MATRIX_V923__actions": "Cybercombat attacks and maneuvers: Simple Actions (VR2), or Complex (v0.92.2)",
+        "MATRIX_V923__icDamageLevel": "IC damage level: by the host's security code (VR2), or the IC's own (v0.92.2)",
+        "MATRIX_V923__iconHardening": "Hardening against icon damage: none (VR2: it protects the deck and the decker), or it lowers the Power (v0.92.2)",
+        "MATRIX_V923__overload": "Simsense overload: any white or gray IC damage on a hot deck, TN by level (VR2), or Serious+ vs the Power (v0.92.2)",
+        "MATRIX_V923__dumpShock": "Dump shock: a cool deck and an ICCM each −2 Power and −1 level, and any jack-out without a Graceful Logoff risks it (VR2), or neither (v0.92.2)",
+        "MATRIX_V923__blackIc": "Black IC: Body (lethal) or Willpower (non-lethal) less Hardening, no Hacking Pool, the icon resists too, holds only after a hit (VR2), or v0.92.2",
+        "MATRIX_V923__psychotropic": "Psychotropic IC: one test at jack-out, cyberphobia + the IC's rating, lasts until recovered (VR2), or a test on every hit (v0.92.2)",
+        "MATRIX_V923__grayIc": "Gray IC: Hardening raises the Blaster/Sparky Test's TN, sparky's damage stages up, damaged chips must be replaced (VR2), or v0.92.2",
+        "MATRIX_V923__probe": "Probe IC: rolls with every System Test (reactive, VR2), or only when the GM acts with it (v0.92.2)",
+        "MATRIX_V923__trace": "Trace IC: Trace Factor, 10 ÷ successes rounded down, reports only, survives a jack-out (VR2), or v0.92.2",
+        "MATRIX_V923__logoff": "Graceful Logoff: leaves the Matrix with no dump shock and stops a trace (VR2), or moves to the parent grid (v0.92.2)",
+        "MATRIX_V923__connections": "Jackpoints: VR2's Access modifiers on Access tests only (and Trace Factor), or the connection's TN on every Matrix test (v0.92.2)",
+        "MATRIX_V923__armorWear": "Armor utility loses a point: only when it fails to absorb the whole hit (VR2), or every hit (v0.92.2)",
+        "MATRIX_V923__shield": "Shield utility: a parry against attacks (VR2), or soaks black IC damage (v0.92.2)",
+        "MATRIX_V923__frames": "Frames: dumb frames use the owner's Computer, carried utilities' ratings total ≤ the frame's (VR2), or v0.92.2",
+        "MATRIX_V923__deckBuilding": "Deck parts: VR2's design sizes and TNs, or v0.92.2's",
+        "MATRIX_V923__otaku": "Otaku: VR2's living persona (MPCP and Masking rounded up, Hardening, Reaction (I + W) ÷ 2, 3D6), or v0.92.2's",
+        "MATRIX_V923__paydata": "Paydata: 5,000¥ a point with VR2's sizes and defenses, or v0.92.2's per-Mp table",
+        "MATRIX__download__ioPerTurn": "I/O speed × this = Mp moved per Combat Turn (VR2: 3, Mp per second; v0.92.2: 1)",
+        "MATRIX__attributeDamage__minOnHit": "Crippler/ripper: at least this many points on any hit (VR2: 0; v0.92.2: 1)",
+        "MATRIX__utilitySize__kinds__smoke": "Smoke utility size multiplier (Core: 2; v0.92.2: 1)",
+        "MATRIX__utilitySize__kinds__frame": "Frame core size multiplier (VR2: 2; v0.92.2: 3)",
+        "MATRIX__utilitySize__kinds__smart-frame": "Smart frame core size multiplier (VR2: 3; v0.92.2: 5)"
       }
     },
     "Rules": {
@@ -9158,6 +9227,9 @@
           },
           "redirectDatatrail": {
             "label": "Redirect datatrail"
+          },
+          "relocateTrace": {
+            "label": "Relocate (spoof a trace)"
           },
           "crashHost": {
             "label": "Crash host"
@@ -9247,6 +9319,18 @@
           },
           "remote": {
             "label": "Remote deck (relayed)"
+          },
+          "legal": {
+            "label": "Legal jackpoint (registered line)"
+          },
+          "workstation": {
+            "label": "Workstation"
+          },
+          "device": {
+            "label": "Remote device (slaved to the host)"
+          },
+          "console": {
+            "label": "Console access"
           }
         },
         "programming": {
@@ -13262,7 +13346,7 @@
         "system__offroad": "Off-road: uses the off-road Handling.",
         "system__drone": "A drone: rolls Pilot on autopilot and can be subscribed to a remote control deck.",
         "system__chase__metres": "The gap to the vehicle this one chases, in metres.",
-        "system__matrix__sim": "Hot sim: +1 initiative die, but Physical dump shock and simsense overload.",
+        "system__matrix__sim": "Hot sim: one more level of Response Increase (+2 Reaction, +1 die) and simsense overload; a cool deck softens dump shock and turns lethal black IC to Stun.",
         "system__matrix__connection": "How you connect: anything but a jackpoint adds to Matrix TNs.",
         "system__cost": "List price in nuyen.",
         "system__availability": "Availability, e.g. 6/48 hrs: TN and base time to find it.",
@@ -13310,8 +13394,8 @@
         "system__autosofts__clearsight": "Clearsight autosoft: dice added to sensor tests with nobody at the controls."
       },
       "host": {
-        "system__securityValue": "Security Value: the host's detection dice, and dump shock TN.",
-        "system__securityCode": "Security code: sets IC initiative dice and the paydata it holds.",
+        "system__securityValue": "Security Value: the host's detection dice, its IC's attack and resistance dice, and dump shock's Power.",
+        "system__securityCode": "Security code: sets IC initiative dice and damage level, the cybercombat TNs, dump shock's level and the paydata it holds.",
         "system__tally": "Security tally: the host's detection successes so far. Sheaf steps fire as it rises.",
         "system__alert": "Alert level: only rises on its own; security deckers can cancel it.",
         "system__gridKind": "A host, or an LTG or RTG that other nodes hang off.",
@@ -13325,7 +13409,7 @@
         "system__hostUuid": "The Matrix host this site's devices are slaved to."
       },
       "ic": {
-        "system__rating": "IC rating: its dice, the TN to hit it, and its Power.",
+        "system__rating": "IC rating: its Power and the TN for tests against its effects (the host's Security Value is its attack dice).",
         "system__category": "White, gray or black IC. Black IC damage the decker's own body.",
         "system__behavior": "What it does when it acts (the hint below explains it).",
         "system__initiativeDice": "Initiative dice; 0 = from the host's security code.",
@@ -13333,10 +13417,10 @@
         "system__kind": "IC, or a decker's frame or agent.",
         "system__payload": "Psychotropic IC: what it does to the decker's mind.",
         "system__guards": "Barrier IC: the subsystem it blocks until crashed or decrypted.",
-        "system__traceMode": "What a completed trace does: dump, report the location, or dump and burn the deck.",
+        "system__traceMode": "What a completed trace does under the old house rule: dump, report the location, or dump and burn the deck (VR2's trace only reports).",
         "system__attribute": "Crippler and ripper: the persona program they go after.",
         "system__smart": "A smart frame adds pool dice.",
-        "system__party": "IC with the same party name in this host act on their best member's initiative and can attack together."
+        "system__party": "IC with the same party name in this host can attack together: +1 TN per member on their attacks and on attacks on them."
       },
       "barrier": {
         "system__rating": "The barrier's rating now; forcing through lowers it.",
@@ -13439,7 +13523,7 @@
         "system__storageMemory": "Storage memory: downloaded data must fit in it.",
         "system__ioSpeed": "I/O speed: how fast downloads go.",
         "system__active": "Only the deck in use counts.",
-        "system__tortoise": "A tortoise (no ASIST): meat-speed initiative, less Hacking Pool, no hot sim; black IC and dump shock can't reach the user.",
+        "system__tortoise": "A tortoise (no ASIST): half Reaction, less Hacking Pool, no hot sim; black IC and dump shock can't reach the user.",
         "system__living": "An otaku's living persona: ratings from the otaku's attributes (house rule)."
       },
       "program": {
@@ -14833,7 +14917,17 @@
         "tweaksWhenLoaded": "These count while it is loaded.",
         "tweaksWhenInUse": "These count while the deck is in use.",
         "essenceWareRow": "{name}: {essence}",
-        "essenceWareRowGrade": "{name} ({grade}): {essence}"
+        "essenceWareRowGrade": "{name} ({grade}): {essence}",
+        "untilRecovered923": "until recovered",
+        "aTortoiseHalfReaction923": "A tortoise: half Reaction (Response Increase gives only its dice), {pct}% Hacking Pool{extras}.",
+        "icPsychotropic923": "Black IC with a psychotropic payload ({payload}): it attacks like non-lethal black IC; when the decker jacks out or is dumped, a Willpower test vs {rating} (−2 on a cool deck) decides whether it takes hold.",
+        "icBlackResists923": "Black IC: the decker resists with Body (lethal) or Willpower (non-lethal) vs Power − Hardening, no Hacking Pool, and the icon resists the same damage with its Bod.",
+        "icPersonaResists923": "The persona resists with Bod vs Power − Armor.",
+        "icDamage923": "The host's Security Value in dice vs a TN by its code and the target's status; Power = rating {rating}, level by the code. {resist}{crash}{defend}",
+        "icAttributeDeck923": "The host's Security Value in dice vs the code's TN, opposed by the persona program vs {rating}; each {successes} net successes take a point off the deck (the chip must be replaced).",
+        "icAttributePersona923": "The host's Security Value in dice vs the code's TN, opposed by the persona program vs {rating}; each {successes} net successes take a point off the persona (never below 1, until the decker jacks out).",
+        "icTrace923": "The host's Security Value in dice vs the decker's Trace Factor: a hit locks on; the trace locates the jackpoint in {turns} ÷ successes Combat Turns (rounded down) and reports it.",
+        "icDefault923": "The host's Security Value in dice vs a TN by its code and the target's status; the net successes are reported.{defend}"
       },
       "Shop": {
         "streetIndexTitle": "The price with its Street Index (×{si})",
@@ -16866,6 +16960,10 @@
           "smartgun": "Smartgun",
           "quickDraw": "Quick-draw holster"
         }
+      },
+      "Matrix923": {
+        "responseAboveMpcp": "Response Increase {ri} is above MPCP {mpcp} ÷ 4: only {cap} counts",
+        "coolDeck": "cool deck"
       }
     },
     "Guide": {
@@ -17259,8 +17357,8 @@
             "i9": "A security decker of the host gets <strong>Security</strong>. An otaku sees their <strong>Channels</strong> (the + raises one for Karma) and <strong>Complex form…</strong> beside Write….",
             "i10": "On a wireless connection, type the distance to the relay to check the signal. The section also lists LTG numbers you know (× forgets one), defenses loaded, maneuvers in force and who rides your hitcher jacks (others ride along with the <strong>Hitch</strong> quick button)."
           },
-          "b3": "Warnings (traced, held, crippled, a damaged deck with <strong>Repair</strong>, psychotropic IC effects, smoke, time on the way to a host) show in red with what you can do about them; the GM has an × or eraser to clear them.",
-          "b4": "Cards from IC and jacking out carry the follow-up buttons: <strong>Resist dump shock</strong>, <strong>Deck damage</strong>, <strong>Resist biofeedback</strong>, a psychotropic <strong>Resist</strong>, <strong>Resist overload</strong>. On an NPC sheet the Matrix is a section, not a tab."
+          "b3": "Warnings (traced, held, crippled, a damaged deck, psychotropic IC effects, smoke, time on the way to a host) show in red with what you can do about them; the GM has an × or eraser to clear them. Gray IC damage to a deck is permanent: build the damaged part again to replace its chip (<strong>Repair</strong> works only under the GM's house rule).",
+          "b4": "Cards from IC and jacking out carry the follow-up buttons: <strong>Resist dump shock</strong>, <strong>Deck damage</strong>, <strong>Resist biofeedback</strong>, a psychotropic <strong>Resist</strong>, <strong>Resist overload</strong>, and against black IC a second <strong>Resist</strong> for your icon. Jacking out without a Graceful Logoff risks dump shock, and psychotropic IC that hit you test your mind when you jack out. On an NPC sheet the Matrix is a section, not a tab."
         },
         "rigging": {
           "title": "Rigging",

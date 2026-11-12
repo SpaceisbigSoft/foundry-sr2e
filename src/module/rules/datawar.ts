@@ -55,7 +55,8 @@ export function advanceDeckerTally(tallies: readonly DeckerTally[], key: string,
 /** The deck's load speed: its own loadSpeed when > 0, else its ioSpeed when loading.fromIo, else 0. */
 export function loadSpeedOf(deck: { loadSpeed?: number; ioSpeed?: number }): number {
   if ((deck.loadSpeed ?? 0) > 0) return deck.loadSpeed as number;
-  return V().loading.fromIo ? Math.max(0, deck.ioSpeed ?? 0) : 0;
+  // v0.92.3: I/O speed is Mp per second, so × RULES.MATRIX.download.ioPerTurn a Combat Turn (VR2 p. 86).
+  return V().loading.fromIo ? Math.max(0, deck.ioSpeed ?? 0) * Math.max(0, RULES.MATRIX.download.ioPerTurn) : 0;
 }
 
 /** Combat Turns to load a utility of `size` Mp: 0 for size <= 0, else ceil(size / loadSpeed), at least 1. */
