@@ -92,12 +92,14 @@ describe('weapons', () => {
     assert.deepEqual(attackerReachModifiers(0, 1), []);
   });
 
-  test('opposed melee: more successes wins; a winning defender counterattacks; ties hurt nobody', () => {
+  test('opposed melee: more successes wins; a winning defender counterattacks; ties (v0.92.3: to the attacker, Core p. 101; tie \'none\' hurts nobody)', () => {
     const attacker = { power: 6, level: 'M' as const };
     const defender = { power: 4, level: 'L' as const };
     assert.deepEqual(resolveMelee({ attackerSuccesses: 4, defenderSuccesses: 1, attacker, defender }), { winner: 'attacker', net: 3, power: 6, level: 'S' });
     assert.deepEqual(resolveMelee({ attackerSuccesses: 1, defenderSuccesses: 2, attacker, defender }), { winner: 'defender', net: 1, power: 4, level: 'L' });
-    assert.equal(resolveMelee({ attackerSuccesses: 2, defenderSuccesses: 2, attacker, defender }).winner, 'none');
+    assert.deepEqual(resolveMelee({ attackerSuccesses: 2, defenderSuccesses: 2, attacker, defender }), { winner: 'attacker', net: 0, power: 6, level: 'M' });
+    (RULES.COMBAT.melee as any).tie = 'none';
+    try { assert.equal(resolveMelee({ attackerSuccesses: 2, defenderSuccesses: 2, attacker, defender }).winner, 'none'); } finally { (RULES.COMBAT.melee as any).tie = 'attacker'; }
     assert.equal(resolveMelee({ attackerSuccesses: 0, defenderSuccesses: 2, attacker, defender: null }).winner, 'none');
   });
 

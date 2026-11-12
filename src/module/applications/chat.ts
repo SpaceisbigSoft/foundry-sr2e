@@ -9,6 +9,7 @@ import { pxPerMetre } from './canvas.ts';
 import { retargetGroupsV73, sessionRefreshDue, localDateKey } from '../rules/index.ts';
 import { scatterDiceV79 } from '../rules/docs79-ranged.ts';
 import * as U80C from '../rules/urr80-combat.ts';
+import * as C923 from '../rules/combat923.ts';
 import { blastThroughWalls, crossingFraction, indirectScatterDice, indirectScatterMetres, barrierSpellRadius } from '../rules/index.ts';
 import { tokensNear, scatterPoint, blastBlocked, wallDistances, wallsBetweenPoints, sightBlockedBetweenPoints, wallsNear, scatterStop, tokenOf, drawArea, placeWardRegion } from './canvas.ts';
 import { escHtml } from '../rules/html.ts';
@@ -259,7 +260,7 @@ async function onDefend(message: any, button: HTMLButtonElement): Promise<void> 
         <div class="form-group"><label>${tx('SR2E.Dialog.Chat.combatPoolDiceLeft', { left })}</label><input name="pool" type="number" value="0" min="0" max="${left}"></div>
         ${fullDefenseRow(defender)}
         ${RULES.COMBAT.melee.counterattack && RULES.FIXES_V71.counterWeaponExtras ? `<label class="sr2e-check"><input type="checkbox" name="subdue"> ${tx('SR2E.Dialog.Chat.counterattackToSubdueDamage', { subdueDamageType: RULES.COMBAT.subdue.damageType })}</label>` : ''}
-        <p class="hint">${tx('SR2E.Dialog.Chat.opposedTestWhoeverScoresMoreSuccesses', { part: RULES.COMBAT.melee.counterattack ? tx('SR2E.Dialog.Chat.soWinningLetsYouCounterattack') : '', part2: RULES.URR_V80.cbtDefense === 'cleanMiss' ? tx('SR2E.Dialog.Chat.onFullDefenseLeaveThePool') : '' })}</p>`,
+        <p class="hint">${tx('SR2E.Dialog.Chat.opposedTestWhoeverScoresMoreSuccesses', { part: RULES.COMBAT.melee.counterattack ? tx('SR2E.Dialog.Chat.soWinningLetsYouCounterattack') : '', part2: RULES.URR_V80.cbtDefense === 'cleanMiss' || C923.fullDefenseBook() ? tx('SR2E.Dialog.Chat.onFullDefenseLeaveThePool') : '' })}</p>`,
       ok: { label: tx('SR2E.Dialog.Chat.defend'), callback: (_e: Event, b: any) => ({ weapon: b.form.elements.weapon.value as string, pool: Math.max(0, Math.min(left, Math.floor(Number(b.form.elements.pool.value) || 0))), full: Boolean(b.form.elements.full?.checked), subdue: Boolean(b.form.elements.subdue?.checked) }) },
       rejectClose: false,
     });
@@ -303,7 +304,7 @@ function fullDefenseRow(defender?: any): string {
   // Already declared (v0.35.0): it applies to every attack until their next action, at no further cost.
   if (defender?.fullDefenseUp?.()) return `<label class="sr2e-check"><input type="checkbox" name="full" checked disabled> ${tx('SR2E.Dialog.Chat.onFullDefense', { cbtFullDefenseText: escHtml(U80C.cbtFullDefenseText(attr, true)) })}</label>`;
   const own = defender?.isActing?.();
-  return `<label class="sr2e-check"><input type="checkbox" name="full"> ${tx('SR2E.Dialog.Chat.fullDefense', { cbtFullDefenseText: escHtml(U80C.cbtFullDefenseText(attr, false)), part: own ? tx('SR2E.Dialog.Chat.usesYourAction') : tx('SR2E.Dialog.Chat.initiative', { initiativeCost: f.initiativeCost }) })}</label>`;
+  return `<label class="sr2e-check"><input type="checkbox" name="full"> ${tx('SR2E.Dialog.Chat.fullDefense', { cbtFullDefenseText: escHtml(U80C.cbtFullDefenseText(attr, false)), part: own ? tx('SR2E.Dialog.Chat.usesYourAction') : C923.fullDefenseInitiativeCost() ? tx('SR2E.Dialog.Chat.initiative', { initiativeCost: C923.fullDefenseInitiativeCost() }) : tx('SR2E.Card.Combat923.noInitiativeCost') })}</label>`;
 }
 
 /** Knockdown test after a heavy hit. */
@@ -1905,7 +1906,7 @@ function registerDelayButtons(): void {
           fd.type = 'button';
           fd.className = 'sr2e-fulldef';
           fd.innerHTML = '<i class="fa-solid fa-shield-halved"></i>';
-          fd.title = tx('SR2E.Card.Chat.fullDefense', { name: a.name, part: combat.combatant?.id === c.id ? tx('SR2E.Card.Chat.thisAction') : tx('SR2E.Card.Chat.outOfTurnInitiative', { fullDefenseInitiativeCost: RULES.COMBAT.fullDefense.initiativeCost }) });
+          fd.title = tx('SR2E.Card.Chat.fullDefense', { name: a.name, part: combat.combatant?.id === c.id ? tx('SR2E.Card.Chat.thisAction') : (C923.fullDefenseInitiativeCost() ? tx('SR2E.Card.Chat.outOfTurnInitiative', { fullDefenseInitiativeCost: C923.fullDefenseInitiativeCost() }) : tx('SR2E.Card.Combat923.noInitiativeCost')) });
           fd.addEventListener('click', async (ev) => { ev.preventDefault(); ev.stopPropagation(); fd.disabled = true; await a.declareFullDefense(); ui.combat?.render?.(); });
           (li.querySelector('.combatant-controls, .token-initiative') ?? li).prepend(fd);
         }

@@ -7,16 +7,18 @@
 import { RULES, type DamageLevel } from './config.ts';
 import type { TargetNumberModifier } from './dice.ts';
 import { own } from './util.ts';
+import { aimFloor } from './combat923.ts';
 import { t as tx } from '../helpers/i18n.ts';
 
 const C = () => RULES.COMBAT;
 
 // ---------------------------------------------------------------- Take Aim
 
-/** The most Take Aim can give with a skill of this rating (at least 1 when allowed at all). */
+/** The most Take Aim can give with a skill of this rating (v0.92.2: at least 1 when allowed at all; see COMBAT_V923.aim). */
 export function aimCap(skillRating: number): number {
   const a = C().aim;
-  const fromSkill = a.maxFromSkill > 0 ? Math.max(1, Math.floor(Math.max(0, skillRating) * a.maxFromSkill)) : Infinity;
+  // v0.92.3 (COMBAT_V923.aim 'book', Core p. 82): half the skill, rounded down, even 0 (v0.92.2: at least 1).
+  const fromSkill = a.maxFromSkill > 0 ? Math.max(aimFloor(), Math.floor(Math.max(0, skillRating) * a.maxFromSkill)) : Infinity;
   const fixed = a.max > 0 ? a.max : Infinity;
   const cap = Math.min(fromSkill, fixed);
   return Number.isFinite(cap) ? cap : 99;

@@ -29,7 +29,7 @@ export function stageDown(level: DamageLevel, steps: number): DamageLevel | null
 
 /**
  * Attacker's net successes stage the damage level up one step per RULES.SUCCESSES_PER_STAGE: counted beyond the
- * first ('afterFirst') or from the first (RULES.ATTACK_STAGING 'all', v0.54.0).
+ * first ('afterFirst') or from the first (RULES.ATTACK_STAGING 'all', v0.54.0; the default since v0.92.3, Core p. 91).
  */
 export function stageForNetSuccesses(level: DamageLevel, netSuccesses: number): DamageLevel {
   // The first success hits; each further SUCCESSES_PER_STAGE successes raise the level one step

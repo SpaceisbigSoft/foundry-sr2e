@@ -27,11 +27,11 @@ describe('staging', () => {
     assert.equal(stageDown('L', 1), null);
     assert.equal(stageDown('D', 2), 'M');
   });
-  test('attacker staging: first success hits, then every 2 more raise a level', () => {
+  test('attacker staging: every 2 net successes raise a level (v0.92.3 default, Core p. 91)', () => {
     assert.equal(stageForNetSuccesses('M', 1), 'M');
-    assert.equal(stageForNetSuccesses('M', 2), 'M');
+    assert.equal(stageForNetSuccesses('M', 2), 'S');
     assert.equal(stageForNetSuccesses('M', 3), 'S');
-    assert.equal(stageForNetSuccesses('M', 5), 'D');
+    assert.equal(stageForNetSuccesses('M', 4), 'D');
   });
   test('defender staging: every 2 successes lower a level', () => {
     assert.equal(resolveResistance('S', 0), 'S');

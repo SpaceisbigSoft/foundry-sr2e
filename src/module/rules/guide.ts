@@ -72,6 +72,8 @@ export const GUIDE_TOPICS: GuideTopic[] = [
   // v0.89.8: the SR2e tools window (applications/tools.ts); its headings name this topic (data-help).
   topic('tools', 'both', [], ['p', 'p', 'p']),
   topic('rules-v079', 'both', [], ['p', 11]),
+  // v0.92.3 (area: combat): the book alignment of combat (RULES.COMBAT_V923).
+  topic('rules-v0923-combat', 'both', [], ['p', 9]),
   topic('rules-urr', 'both', [], ['p', 'p', 7, 'p']),
   topic('sheet-tools', 'both', [], ['p', 2, 'p', 'p', 'p', 'p', 'p', 'p', 'p']),
   topic('summary-bar', 'both', [], ['p', 3, 'p', 5, 'p']),
@@ -159,7 +161,7 @@ const category = (id: string, audience: GuideCategory['audience'], topics: strin
   ({ id, audience, topics, get label() { return tKey(`SR2E.Guide.Category.${guideKeyPart(id)}`); } });
 
 export const GUIDE_CATEGORIES: GuideCategory[] = [
-  category('start', 'players', ['getting-started', 'tools', 'rules-v079', 'rules-urr', 'sheet-tools', 'summary-bar', 'layouts', 'look', 'shortcuts', 'printing', 'interpretations', 'credits']),
+  category('start', 'players', ['getting-started', 'tools', 'rules-v079', 'rules-v0923-combat', 'rules-urr', 'sheet-tools', 'summary-bar', 'layouts', 'look', 'shortcuts', 'printing', 'interpretations', 'credits']),
   category('rolls', 'players', ['rolling', 'targeting', 'chat-cards', 'karma-pool', 'pools', 'inline-tests']),
   category('character', 'players', ['attributes', 'condition-monitor', 'skills', 'skill-picker', 'current-tab', 'effects', 'health', 'contacts', 'bio', 'token-art']),
   category('gear', 'players', ['weapons', 'cyberware', 'gear', 'item-sheet', 'money', 'adding', 'catalogue', 'new-entry']),

@@ -8,10 +8,11 @@ import {
 const R = RULES as any;
 
 describe('v0.55.0 Take Aim', () => {
-  test('the cap is half the skill, at least 1', () => {
+  test('the cap is half the skill (v0.92.3: rounded down, Core p. 82; the old way at least 1)', () => {
     assert.equal(aimCap(6), 3);
-    assert.equal(aimCap(1), 1);
-    assert.equal(aimCap(0), 1);
+    assert.equal(aimCap(1), 0);
+    R.COMBAT_V923.aim = 'old';
+    try { assert.equal(aimCap(1), 1); assert.equal(aimCap(0), 1); } finally { R.COMBAT_V923.aim = 'book'; }
     R.COMBAT.aim.max = 2;
     try { assert.equal(aimCap(8), 2); } finally { R.COMBAT.aim.max = 0; }
   });

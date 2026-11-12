@@ -6,6 +6,7 @@
 import { test, describe, before, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { RULES } from '../rules/index.ts';
+import { oldWay } from '../rules/__tests__/oldway.ts';
 
 const g = globalThis as any;
 const faces: number[] = [];
@@ -216,8 +217,13 @@ describe('v0.92.1 Carried', () => {
     assert.ok(heavy(true).system.derived.load.penalty > 0);
     assert.equal(heavy(false).system.derived.load.penalty, 0);
     const vest = (carried: boolean) => who({}, [{ id: 'ar', type: 'armor', name: 'ZZ Vest', system: { ballistic: 9, impact: 9, worn: true, carried } }]);
-    assert.ok(vest(true).system.derived.encumbrance > 0);
-    assert.equal(vest(false).system.derived.encumbrance, 0);
+    // v0.92.3 (COMBAT_V923.armorPenalty 'pool', Dice Pools p. 85): heavy armor costs Combat Pool dice, not Quickness.
+    assert.ok(vest(true).system.derived.combatPool < vest(false).system.derived.combatPool);
+    const undo = oldWay({ 'COMBAT_V923.armorPenalty': 'quickness' });
+    try {
+      assert.ok(vest(true).system.derived.encumbrance > 0);
+      assert.equal(vest(false).system.derived.encumbrance, 0);
+    } finally { undo(); }
     const a = who({}, [GUN({ carried: false, concealability: 5 }), { id: 'k', type: 'weapon', name: 'ZZ Knife', system: { melee: true, concealability: 8 } }]);
     assert.deepEqual(a.carriedItems().map((i: any) => i.name), ['ZZ Knife']);
   });

@@ -8,6 +8,13 @@ import { oldWay } from '../rules/__tests__/oldway.ts';
 import assert from "node:assert/strict";
 import { RULES } from "../rules/index.ts";
 import { shown } from "./helpers/shown.ts";
+import { combat922 } from '../rules/__tests__/combat922.ts';
+
+// v0.92.3: these tests pin the v0.92.2 combat flow (COMBAT_V923 at its old choices, the moved defaults put back);
+// the book alignment is tested in v0923-combat.test.ts.
+let undo922: () => void = () => {};
+before(() => { undo922 = combat922(); });
+after(() => undo922());
 
 const g = globalThis as any;
 const faces: number[] = [];

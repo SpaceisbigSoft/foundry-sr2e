@@ -11,6 +11,7 @@ How to use the unofficial Shadowrun 2nd Edition system for Foundry VTT: what the
 - [Getting started](#getting-started)
 - [All the tools](#all-the-tools)
 - [Rules updated in v0.79.0](#rules-updated-in-v0790)
+- [Combat rules updated in v0.92.3](#combat-rules-updated-in-v0923)
 - [The Unified Rules Revamp (alternate rules)](#the-unified-rules-revamp-alternate-rules)
 - [Edit mode, Play mode and the toolbar](#edit-mode-play-mode-and-the-toolbar)
 - [The summary bar](#the-summary-bar)
@@ -147,6 +148,20 @@ v0.79.0 corrected rules to follow the official SR2 rulebooks (the core rules and
 - **Vehicles:** driving over the Speed rating is +1. Crashes and rams hurt by speed (up to 20 m/turn Light, 60 Moderate, 200 Serious, faster Destroyed). Fixed mounts and turrets halve recoil; a pintle compensates 2, the new ring mount 6. The Sensor dialog has the Rigger 2 rows (line of sight, terrain, a concealing spirit), and sensor-enhanced gunnery rolls Gunnery + half the Sensor against the target's Signature. A repair fixes all the damage in 16 hours per box ÷ successes.
 - **Rigging:** dumped from a remote control deck (your drone destroyed, or your link jammed), you resist (deck rating + 4)S Stun with Body. Radio ranges follow the Rigger 2 flux table (250 m at 0, up to 25 km at 9); a deck with no signal of its own has flux 2.
 
+## Combat rules updated in v0.92.3
+
+v0.92.3 brought combat closer to the SR2 core rulebook. The GM can put each change back under the GM's house rules (the *v0.92.3* rows; the old choice is the second one). Under the Unified Rules Revamp nothing here changes.
+
+- **Gunfire:** you don't dodge. **Defend** puts your Combat Pool dice into the damage resistance test (Body + pool against Power − armor). If the pool dice alone score more successes than the attacker, it is a clean miss. Otherwise the attacker's successes are set against yours: every 2 more on either side moves the damage one level up or down, and a tie does the weapon's base damage.
+- **Staging:** every 2 net successes raise the damage one level, for gunfire, melee and combat spells alike.
+- **Combat Pool:** it refills at the start of each of your actions. Dice left at the end of a Combat Turn last until your first action of the next one.
+- **Melee:** a tie goes to the attacker (base damage). Full defense adds no dice and costs no initiative: no Combat Pool on your melee test, and your pool dice go to the resistance test, a clean miss if their successes beat the attacker's. Light, smoke and weather count half in melee (not full darkness). Subduing is +2 TN, and each further target in the same phase is +2.
+- **Knockdown:** every hit that hurts calls for a Body test against half the Power (gel rounds: the Power; melee: the attacker's Strength). Beat half the wound (Light 1, Moderate 2, Serious 3) to stay put; some successes stagger you 1 m back; none, or a Deadly wound, knocks you down.
+- **Grenades and rockets:** each target's resistance successes are set against the thrower's, as for gunfire. Aerodynamic grenades and launchers lose 4 m of scatter per success; rockets and missiles scatter 2D6 m (a missile also its Intelligence in metres less). Anti-personnel rockets lose 1 Power per half metre.
+- **Firearms:** shotguns fire slugs unless loaded with shot, which follows the flechette rules and widens every choke metres (−1 Power and −1 TN each time). Flechette against armor uses double Impact or plain Ballistic, whichever is higher. Tracers help only full auto beyond short range. Full auto at several targets is +2 per new target, and a smartlinked smartgun wastes no rounds between them. Two rounds left fire a short burst (+2 Power, no extra level). A barrier rated above the Power stops the shot, and counts double against flechette and explosive rounds. Cylinders and internal magazines reload Quickness rounds per Complex Action. A weapon must be readied (a Simple Action) before use.
+- **Attack dialog and armor:** target running (+2), target stationary (−1), attacker in melee (+2 per opponent), difficult ground and smart goggles (−1) are new rows. Heavy armor costs a Combat Pool die per point of Ballistic over your Quickness, instead of Quickness.
+- **Initiative and actions:** ties go to Reaction, then natural Reaction. A wound changes your initiative at the next roll, not mid-turn. A delayed action lasts through the Combat Turn and into the next, but using pool dice while you wait loses it. Ambushers waiting on a delayed action roll the surprise test at TN 2.
+
 ## The Unified Rules Revamp (alternate rules)
 
 The GM chooses the world's **Rules source** (Configure Settings, or the GM panel's Setup tab). **SR2E Book Rules** is the default and is not changed by any of this. **SR2E Unified Rules Revamp** is the GM's alternate ruleset: the Unified Rules Revamp follows the community document *Shadowrun Classic: Unified Rule Revamp* (v1.2), with a few house rules where it is silent. The GM's own house rules still win over it, and the house rules window marks every row it changes (search for "revamp"). A switch reaches every player at once.
@@ -219,7 +234,7 @@ The **status strip** stays at the top of the sheet with the tabs while you scrol
 
 **Your turn**: in a running combat, when it is your character's action phase, the strip says so. Unless the GM's house rule *Actions per phase* is off, it shows a pip for each action left, and buttons that need more than you have left are greyed out (hover one for why). Warn (the default) lets you click and warns you; block stops the click (the GM can always click). A projecting magician's or an unmaterialized spirit's physical actions are greyed the same way.
 
-In Foundry's combat tracker, your own combatants show their pools, and get a shield button for full defense (out of turn it costs initiative) and **Delay** in your action phase (then **Act now** and **Done**), like the sheet's quick buttons.
+In Foundry's combat tracker, your own combatants show their pools, and get a shield button for full defense (out of turn it costs initiative only under the old full-defense house rule) and **Delay** in your action phase (then **Act now** and **Done**), like the sheet's quick buttons.
 
 Other choices for yourself in Configure Settings, section *Look and layout*: *Windows: remember size and place* (SR2e's sheets and windows open where you left them; dialogs don't) and *Notifications: group bursts* (several notices at once become one, and a repeat shows ×2, ×3).
 
@@ -396,7 +411,7 @@ A test dialog that can take pool dice has a box for them. What you use comes off
 
 An encephalon gives a small **Task Pool** for Intelligence, knowledge and Build/Repair skills: the skill dialog has a box for it (used up only in combat). An adept's Combat Sense adds to the Combat Pool, and a power focus adds its rating to the Spell Pool.
 
-The Combat, Spell, Hacking, Control and Task Pools refill when a combat starts and at each new Combat Turn. The GM can also refill them from the GM panel (Party tab: **Refresh pools**). The Karma Pool doesn't refill with them: use the circular arrow beside **Karma Pool left** on the Main tab, or the GM's **Refresh Karma Pools**. A house rule can refill Karma Pools by themselves at the start of each session or when a combat ends.
+The Combat, Spell, Hacking, Control and Task Pools refill when a combat starts and at each new Combat Turn. The Combat Pool follows the book instead: it refills at the start of each of your actions, and dice left at the end of a Combat Turn last until your first action of the next. The GM can also refill them from the GM panel (Party tab: **Refresh pools**). The Karma Pool doesn't refill with them: use the circular arrow beside **Karma Pool left** on the Main tab, or the GM's **Refresh Karma Pools**. A house rule can refill Karma Pools by themselves at the start of each session or when a combat ends.
 
 On the Current tab, **Initiative and pools** lists the initiative (and Matrix or rigged initiative) and each pool, read only. Your combatants in the combat tracker show their pools too.
 
@@ -901,7 +916,7 @@ On both tabs, NPC rows show as compact stat cards (attributes, armor, initiative
 
 Foundry's combat tracker gets a banner with the Combat Turn, the pass, who is acting and how many are on full defense or delaying. The acting row is highlighted, delaying combatants are listed last under *Delaying*, and full defense shows as a badge. IC, frames and agents get an act button there.
 
-The tracker's header has **Surprise test** (every combatant rolls; hover it for how the result is used) and, when Foundry's own button isn't there, **Roll NPCs**. Rows you own have **Delay**, **Act now** or **Done**, a shield to declare full defense (out of turn it costs initiative), and a line with the pools left.
+The tracker's header has **Surprise test** (every combatant rolls; hover it for how the result is used) and, when Foundry's own button isn't there, **Roll NPCs**. Rows you own have **Delay**, **Act now** or **Done**, a shield to declare full defense (out of turn it costs initiative only under the old full-defense house rule), and a line with the pools left.
 
 ## Party tab
 

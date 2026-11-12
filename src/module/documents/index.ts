@@ -165,6 +165,7 @@ import {
 import { riggerDumpShock, rcdFlux, castingPoolDice } from '../rules/docs79-drones-magic.ts';
 import { attackPowerTweak, isCarried, accessoryPlan, readAccessories, normalizeTweaks, ACCESSORY_NAME_KEYS, TWEAK_MAX } from '../rules/index.ts';
 import * as U80C from '../rules/urr80-combat.ts';
+import * as C923 from '../rules/combat923.ts';
 import { dsInterceptPlan, dsDecryptPassed, dsRadioDecrypt, dsDeviceStepWords, dsSequencerSeconds, dsMadScanOn, dsHighestDie, dsMadFinds, dsDisorientation } from '../rules/urr80-drones-security.ts';
 import {
   noticeTest, noticeReveal, timeTaken, toolsModifier, bestTools, gearRepairPlan, readWriteRating, languageReveal,
@@ -470,6 +471,10 @@ export interface AttackState {
   vehHit?: Veh80Hit;
   /** v0.80.0: the defender is on full defense (the Revamp's clean-miss flow allows a melee clean miss only then). */
   fullDefense80?: boolean;
+  /** v0.92.3 (COMBAT_V923.knockdown 'book'): gel rounds (the knockdown TN is the Power, Core p. 92). */
+  gel?: boolean;
+  /** v0.92.3 (COMBAT_V923.barriers 'book', Core p. 98): a barrier in the way is rated above the Power: the shot is stopped. */
+  barrierStopped?: boolean;
   /** v0.78.0: the Power a barrier takes from this attack (before burst or full-auto fire; RULES.BOOK_V78.barriers). */
   barrierPower?: number;
   /** v0.72.0 (O3): a spirit's or dual-natured critter's attack (immunity doesn't stop it outright). */
@@ -607,6 +612,8 @@ export interface AttackOptions {
   ammoType?: string;
   /** Full auto spread over several targets: rounds fired at this one, and how many other targets. */
   rounds?: number; spreadExtraTargets?: number;
+  /** v0.92.3 (COMBAT_V923.spreadFire 'book'): this burst's place among the spread's targets (0 = the first). */
+  spreadIndex?: number;
   /** Rounds wasted walking fire to this target: they use ammo and add recoil, but no damage. */
   wastedRounds?: number;
   /** Several targets with their own Power (shotgun spread, blasts). Replaces targetUuid. */
@@ -728,6 +735,8 @@ function armorExtras(a: Partial<AttackState>): Partial<DamageState> {
   return {
     ...(a.armorMultiplier !== undefined && a.armorMultiplier !== 1 ? { armorMultiplier: a.armorMultiplier } : {}),
     ...(a.flechette ? { flechette: true } : {}),
+    ...(a.gel ? { gel: true } : {}),
+    ...(a.barrierStopped ? { barrierStopped: true } : {}),
     ...(a.armorKind ? { armorKind: a.armorKind } : {}),
     ...(a.ignoreArmor ? { ignoreArmor: true } : {}),
     ...(a.ignoreImmunity ? { ignoreImmunity: true } : {}),
@@ -794,7 +803,13 @@ export interface DamageState {
   /** Matrix damage from IC: blaster and sparky crashes damage the deck. */
   ic?: IcAction;
   /** v0.80.0 (URR_V80.cbtDefense 'cleanMiss'): the attacker's successes and the net, staged at the resistance test. */
-  cleanMiss80?: { hits: number; net: number; noClean?: boolean };
+  /** v0.92.3: `apart` (COMBAT_V923.fullDefense 'book'): the level is already staged; the soak stages down on its own. */
+  cleanMiss80?: { hits: number; net: number; noClean?: boolean; apart?: boolean };
+  /** v0.92.3 (COMBAT_V923.knockdown 'book'): gel rounds, and a melee hit's attacker's Strength (the knockdown TN). */
+  gel?: boolean;
+  strength?: number;
+  /** v0.92.3 (COMBAT_V923.barriers 'book', Core p. 98): the barrier stopped the shot. */
+  barrierStopped?: boolean;
   /** v0.57.0: a called shot at part of a vehicle (applied when the vehicle takes the damage). */
   vehiclePart?: string; vehicleWeaponId?: string;
   damageType: DamageType;
@@ -868,8 +883,8 @@ export interface SoakContext {
   degraded?: boolean;
   /** Damage from an attack: the Power and resistance TN, for a knockdown test. */
   knockdown?: { power: number; tn: number };
-  /** v0.80.0 (URR_V80.cbtDefense 'cleanMiss'): clean miss and net staging at this test. */
-  cleanMiss80?: { hits: number; net: number; noClean?: boolean };
+  /** v0.80.0 (URR_V80.cbtDefense 'cleanMiss'): clean miss and net staging at this test (v0.92.3: `apart`, see DamageState). */
+  cleanMiss80?: { hits: number; net: number; noClean?: boolean; apart?: boolean };
   /** Damage from a vulnerability: regeneration can't heal it (v0.39.0). */
   noRegen?: boolean;
   /** An Essence drain power: who drains, and whether the Essence has moved (v0.39.0). */
@@ -1554,7 +1569,7 @@ export class SR2Actor extends Actor {
 
   /** Whether this actor is holding a delayed action this pass. */
   isDelaying(): boolean {
-    return delayValid(this.getFlag(SYSTEM_ID, 'delayed') as any, this.#combatNow());
+    return delayValid(this.getFlag(SYSTEM_ID, 'delayed') as any, this.#combatNow(), true);
   }
 
   /** Whether this actor is taking its delayed action right now. */
@@ -1617,13 +1632,15 @@ export class SR2Actor extends Actor {
     const f = RULES.COMBAT.fullDefense;
     const cost = fullDefenseCost({ inCombat: Boolean(c?.started), ownPhase: this.isActing() });
     if (cost === 'action' && !(await this.useAction('fullDefense', tx('SR2E.Card.Actor.fullDefense')))) return false;
-    if (cost === 'initiative') {
+    // v0.92.3 (COMBAT_V923.fullDefense 'book', Core p. 102): no initiative cost.
+    const initCost = C923.fullDefenseInitiativeCost();
+    if (cost === 'initiative' && initCost) {
       const me = this.myCombatant();
-      try { if (me && typeof me.initiative === 'number') await c.updateEmbeddedDocuments('Combatant', [{ _id: me.id, initiative: me.initiative - f.initiativeCost }]); }
+      try { if (me && typeof me.initiative === 'number') await c.updateEmbeddedDocuments('Combatant', [{ _id: me.id, initiative: me.initiative - initCost }]); }
       catch { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.onlyTheGmCanChangeInitiative')); }
     }
     if (c?.started) await this.setFlag(SYSTEM_ID, 'fullDefense', this.#combatNow());
-    await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p><strong>${escText(this.name)}</strong> ${tx('SR2E.Card.Actor.goesOnFullDefenseDiceAgainst', { attribute: escText(cap(f.attribute)), part: cost === 'initiative' ? tx('SR2E.Card.Actor.initiative', { initiativeCost: f.initiativeCost }) : cost === 'action' ? tx('SR2E.Card.Actor.thatIsTheirAction') : '' })}</p>` });
+    await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p><strong>${escText(this.name)}</strong> ${C923.fullDefenseBook() ? tx('SR2E.Card.Combat923.goesOnFullDefense', { part: cost === 'action' ? tx('SR2E.Card.Actor.thatIsTheirAction') : '' }) : tx('SR2E.Card.Actor.goesOnFullDefenseDiceAgainst', { attribute: escText(cap(f.attribute)), part: cost === 'initiative' && initCost ? tx('SR2E.Card.Actor.initiative', { initiativeCost: initCost }) : cost === 'action' ? tx('SR2E.Card.Actor.thatIsTheirAction') : '' })}</p>` });
     return true;
   }
 
@@ -2715,10 +2732,12 @@ export class SR2Actor extends Actor {
             const outcome = a.fixedDamage
               ? U80C.cbtBlastStaged({ power: a.power, level: a.level, successes: s })
               : resolveAttack({ attackSuccesses: s, defenseSuccesses: 0, power: a.power, level: a.level });
+            // v0.92.3 (COMBAT_V923.blastStaging 'book', Core p. 97): each target's resistance is compared with the attack's successes.
+            const bt923 = a.fixedDamage ? C923.blastTally(s) : null;
             return {
               targetUuid: a.targetUuid, melee: false, damageType: a.damageType, power: outcome.power, level: outcome.level as DamageLevel,
               ...(a.matrix ? { matrix: true } : {}), ...(a.black ? { black: true } : {}), ...(a.elemental ? { elemental: true } : {}),
-              ...armorExtras(a),
+              ...armorExtras(a), ...(bt923 ? { cleanMiss80: bt923 } : {}),
             };
           });
           if (attack.fixedDamage) {
@@ -3037,7 +3056,10 @@ export class SR2Actor extends Actor {
       return { html: `<p><strong>${tx('SR2E.Card.Actor.noDamage')}</strong> ${tally}${s > attack.attackSuccesses ? tx('SR2E.Card.Actor.theBlowIsParried') : ''}.</p>${whipHtml}`, flags: whip ? { whipCheck: whip } : {}, snap };
     }
     if (r.winner === 'attacker') {
-      const damage: DamageState = { targetUuid: this.uuid as string, melee: true, damageType: attack.damageType, power: r.power, level: r.level, ...armorExtras(attack), ...U80C.cbtMeleeDamage(attack.level, attack.attackSuccesses, r.net, Boolean(attack.fullDefense80)) };
+      // v0.92.3 (COMBAT_V923.fullDefense 'book'): a full-defense defender may still turn it into a clean miss at the soak.
+      const fd923 = C923.fullDefenseTally(attack.attackSuccesses, r.net, Boolean(attack.fullDefense80));
+      const atkStr = Number((fromUuidSync(attack.attackerUuid) as any)?.system?.attributes?.strength?.total ?? 0);
+      const damage: DamageState = { targetUuid: this.uuid as string, melee: true, damageType: attack.damageType, power: r.power, level: r.level, ...armorExtras(attack), ...U80C.cbtMeleeDamage(attack.level, attack.attackSuccesses, r.net, Boolean(attack.fullDefense80)), ...(fd923 ? { cleanMiss80: fd923 } : {}), ...(atkStr > 0 ? { strength: atkStr } : {}) };
       return {
         html: `<p>${outcomeWord('hit')} ${tx('SR2E.Card.Actor.netDamage', { tally, net: r.net })} <strong>${damage.power}${damage.level}</strong> ${damage.damageType}.</p>
            <p><button type="button" data-sr2e-action="resist">${tx('SR2E.Card.Actor.resistDamage')}</button></p>`,
@@ -3047,6 +3069,8 @@ export class SR2Actor extends Actor {
     const c = counter as CounterWeapon;
     const damage: DamageState = {
       targetUuid: attack.attackerUuid, melee: true, damageType: c.damageType, power: r.power, level: r.level, ...U80C.cbtMeleeDamage(c.level, s, r.net),
+      // v0.92.3 (COMBAT_V923.knockdown 'book'): the counterattacker's Strength is the knockdown TN.
+      ...(Number(this.sys.attributes?.strength?.total ?? 0) > 0 ? { strength: Number(this.sys.attributes.strength.total) } : {}),
       // v0.71.0 (R10): the defending weapon's extras (armor kind, stun, material, toxin).
       ...(c.extras ? armorExtras(c.extras) : {}),
       ...(c.ignoreImmunity ? { ignoreImmunity: true } : {}), ...(c.infection ? { infection: c.infection } : {}),
@@ -3129,7 +3153,14 @@ export class SR2Actor extends Actor {
       reflected = this.#reflection(ctx, s);
     } else {
       // v0.80.0 (URR_V80.cbtDefense 'cleanMiss', URR): pool successes above the attack's are a clean miss; else net staging.
-      if (ctx.cleanMiss80) {
+      if (ctx.cleanMiss80?.apart) {
+        // v0.92.3 (COMBAT_V923.fullDefense 'book', Core p. 102): a clean miss on the pool's successes alone; else the
+        // hit (already staged by the melee test) comes down one level per 2 resistance successes.
+        const ap = C923.apartSoak(ctx.level, ctx.cleanMiss80.hits, s, poolSuccesses(snap.dice ?? []));
+        level = ap.level;
+        cleanMiss = ap.clean;
+        lead = ap.clean ? `${outcomeWord('cleanMiss')} ${tx('SR2E.Card.Urr80Combat.poolBeatsAttack', { pool: poolSuccesses(snap.dice ?? []), hits: Math.max(0, Math.floor(Number(ctx.cleanMiss80.hits) || 0)) })} ` : '';
+      } else if (ctx.cleanMiss80) {
         const cm80 = U80C.cbtSoakLevel(ctx.level, ctx.cleanMiss80, s, poolSuccesses(snap.dice ?? []));
         level = cm80.level;
         lead = cm80.clean ? `${outcomeWord('cleanMiss')} ${cm80.lead}` : cm80.lead;
@@ -7997,6 +8028,7 @@ export class SR2Actor extends Actor {
     let earlier = 0;
     let wasted = 0;
     let firstShotSingle: boolean | undefined;
+    let short923: ReturnType<typeof C923.shortBurst> = null;
     const extras: Partial<AttackState> = {};
     // v0.72.0 (O3, review): a spirit's or dual-natured critter's natural attack isn't stopped outright by immunity.
     if (this.type === 'spirit' || Boolean(this.sys.derived?.dualNatured)) extras.awakenedAttacker = true;
@@ -8012,6 +8044,10 @@ export class SR2Actor extends Actor {
       const mode = opts.mode && allowed.includes(opts.mode) ? opts.mode : (allowed[0] as FiringMode);
       rounds = opts.rounds != null && mode === 'FA' ? Math.max(1, Math.floor(opts.rounds)) : roundsForMode(mode, opts.fullAutoRounds);
       wasted = mode === 'FA' ? Math.max(0, Math.floor(opts.wastedRounds ?? 0)) : 0;
+      // v0.92.3 (COMBAT_V923.shortBurst 'book', Core p. 92): a burst the clip runs short of: 2 rounds +2 Power and no
+      // extra level (the 2 rounds' recoil), 1 round a single shot.
+      short923 = (mode === 'BF' || mode === 'FA') && w.ammoMax > 0 && !wasted ? C923.shortBurst(rounds, w.ammo) : null;
+      if (short923) { rounds = short923.rounds; notes.push(tx('SR2E.Card.Combat923.shortBurst', { rounds })); }
       if (w.ammoMax > 0 && w.ammo < rounds + wasted) ammoShort = tCount(w.ammo, 'SR2E.Text.Actor.roundsLeftNeededReload', { name: weapon.name, needed: rounds + wasted });
       earlier = Math.max(0, opts.earlierRoundsThisPhase ?? this.trackedRecoilRounds()) + wasted;
       if (wasted) notes.push(tCount(wasted, 'SR2E.Card.Actor.roundsWastedWalkingFire'));
@@ -8027,20 +8063,20 @@ export class SR2Actor extends Actor {
       if (recoil > 0) fireMods.push({ label: w.heavy ? tx('SR2E.Card.Mod.recoilHeavy') : tx('SR2E.Card.Mod.recoil'), value: recoil });
       // A gyro mount cancels recoil, then the attacker's walking/running penalty.
       if ((w.gyro ?? 0) > 0) {
-        const moving = RULES.SITUATIONAL_MODIFIERS.filter((m) => (opts.situational ?? []).includes(m.id) && /^attacker(Walking|Running)$/.test(m.id)).reduce((n, m) => n + m.value, 0);
+        const moving = RULES.SITUATIONAL_MODIFIERS.filter((m) => (opts.situational ?? []).includes(m.id) && /^attacker(Walking|Running)(Rough)?$/.test(m.id)).reduce((n, m) => n + m.value, 0);
         const g = gyroOffset({ recoil, movement: moving, gyro: w.gyro });
         if (g.used > 0) fireMods.push({ label: tx('SR2E.Card.Mod.gyroMount', { gyro: w.gyro }), value: -g.used });
       }
       // v0.78.0 (RULES.BOOK_V78.barriers 'book'): a barrier takes the base Power, before burst or full-auto fire.
       extras.barrierPower = power;
-      ({ power, level } = damageForMode(power, level, mode, rounds));
+      ({ power, level } = short923 ? { power: power + short923.power, level } : damageForMode(power, level, mode, rounds));
       modeLabel = mode === 'FA' ? `FA ×${rounds}` : mode;
       // Muzzle devices and tracers (v0.37.0).
       const mz = muzzleCheck(String(w.muzzle ?? ''), mode);
       if (!mz.ok) ammoShort = `${weapon.name}: ${mz.reason}.`;
       else if (mz.perceptionTn) notes.push(w.muzzle === 'silencer' ? tx('SR2E.Card.Actor.silencedNoticingTheShot', { tn: mz.perceptionTn }) : tx('SR2E.Card.Actor.suppressedNoticingTheShot', { tn: mz.perceptionTn }));
       // v0.80.0 (URR_V80.cbtTracers, URR): full auto only, −1 per third round (not with a smartgun), and no Power from them.
-      const tr80 = U80C.cbtTracer(tracerModifier({ ammo: String(opts.ammoType ?? w.ammoType ?? ''), mode, earlierRounds: earlier }), { ammo: String(opts.ammoType ?? w.ammoType ?? ''), mode, rounds, smartgun: Boolean(w.smartgun && this.sys.derived?.smartlink) });
+      const tr80 = U80C.cbtTracer(tracerModifier({ ammo: String(opts.ammoType ?? w.ammoType ?? ''), mode, earlierRounds: earlier }), { ammo: String(opts.ammoType ?? w.ammoType ?? ''), mode, rounds, smartgun: Boolean(w.smartgun && this.sys.derived?.smartlink), range: range ?? 'short' });
       const tr = tr80.tn;
       if (tr) fireMods.push({ id: 'tracers', label: tx('SR2E.Card.Mod.tracers'), value: tr });
       if (tr80.powerOff) { power = Math.max(0, power - tr80.powerOff); notes.push(tx('SR2E.Card.Actor.tracersPower', { powerOff: tr80.powerOff })); }
@@ -8057,13 +8093,16 @@ export class SR2Actor extends Actor {
           // v0.72.0 (O6): house-rule rounds can also make an attack anti-vehicle.
           const ax = ammoExtras(ammo);
           if (ax.armorMultiplier !== undefined) extras.armorMultiplier = ax.armorMultiplier;
+          // v0.92.3 (COMBAT_V923.knockdown 'book', Core p. 92): gel rounds knock down at TN = Power.
+          if (ammo.id === 'gel') extras.gel = true;
           if (ax.armorKind) extras.armorKind = ax.armorKind;
           if (ax.damageType) damageType = ax.damageType;
           if (ax.antiVehicle) extras.antiVehicle = true;
           notes.push(ammo.label);
         }
       }
-      fireMods.push(...spreadFireModifiers(opts.spreadExtraTargets ?? 0));
+      // v0.92.3 (COMBAT_V923.spreadFire 'book', Core p. 93): +2 per new target engaged before this one.
+      fireMods.push(...(C923.spreadFireBook() && (opts.spreadExtraTargets ?? 0) > 0 ? C923.spreadTargetModifiers(opts.spreadIndex ?? 0) : spreadFireModifiers(opts.spreadExtraTargets ?? 0)));
     }
     // v0.55.0: suppressive fire does the weapon's base damage (the rounds are for the area, not one target).
     if (!melee && opts.suppressive) {
@@ -8105,16 +8144,31 @@ export class SR2Actor extends Actor {
       notes.push(tx('SR2E.Card.Actor.stunWeapon'));
     } else if (charge && !charge.stun) notes.push(charge.note);
     if ((opts.barrierArmor ?? 0) > 0) {
-      extras.extraArmor = opts.barrierArmor;
-      notes.push(tx('SR2E.Card.Actor.throughBarrier', { armor: opts.barrierArmor }));
+      // v0.92.3 (COMBAT_V923.barriers 'book', Core pp. 93, 98): double against flechette and explosive rounds; rated
+      // above the (base) Power, the barrier stops the shot.
+      const bt = melee || blast ? null : C923.barrierThrough({ rating: opts.barrierArmor ?? 0, power: extras.barrierPower ?? power, ammoId: ammoType(opts.ammoType ?? w.ammoType).id });
+      extras.extraArmor = bt ? bt.armor : opts.barrierArmor;
+      notes.push(tx('SR2E.Card.Actor.throughBarrier', { armor: extras.extraArmor }));
+      if (bt?.stops) { extras.barrierStopped = true; notes.push(tx('SR2E.Card.Combat923.barrierHolds')); }
     }
 
     // Called shot: the TN, and the payoff.
-    const called = opts.calledShot ?? 'none';
+    // v0.92.3 (COMBAT_V923.calledShot 'book', Core p. 92): only single shots, semi-auto and bursts can call a shot, and
+    // the book has no armor-gap option.
+    const called = C923.calledShotAllowed(opts.calledShot ?? 'none', modeLabel.startsWith('FA'));
+    if ((opts.calledShot ?? 'none') !== 'none' && called === 'none') notes.push(tx('SR2E.Card.Combat923.noCalledShot'));
     // A laser sight doesn't add to a smartlink (v0.43.0).
     const ls = laserAndSmartlink(opts.situational ?? []);
     const situational = ls.situational;
     if (ls.dropped) notes.push(tx('SR2E.Card.Actor.laserSightNotUsedWithThe'));
+    // v0.92.3 (COMBAT_V923.secondFirearm 'book', Core p. 90): a second firearm cancels smartlink, smart goggles and laser
+    // sight; (COMBAT_V923.shotgun 'book', Core p. 95) shot gets only −1 from a smartlink and nothing from goggles or a laser.
+    const sightAids = C923.sightAidsDropped({ melee, secondWeapon: situational.includes('secondWeapon'), shot: Boolean(w.shotgun) && String(opts.ammoType ?? w.ammoType ?? '') === RULES.URR_V80.cbtShotAmmo });
+    if (sightAids.drop.some((id) => situational.includes(id))) {
+      for (const id of sightAids.drop) { const i = situational.indexOf(id); if (i >= 0) situational.splice(i, 1); }
+      notes.push(sightAids.why === 'second' ? tx('SR2E.Card.Combat923.secondFirearmAids') : tx('SR2E.Card.Combat923.shotAids'));
+    }
+    if (sightAids.smartlinkAdd && situational.includes('smartlink')) fireMods.push({ id: 'shotSmartlink', label: tx('SR2E.Card.Combat923.shotSmartlink'), value: sightAids.smartlinkAdd });
     if (called !== 'none') {
       if (!situational.includes('calledShot')) situational.push('calledShot');
       const c = calledShotDamage(level, called);
@@ -8292,7 +8346,8 @@ export class SR2Actor extends Actor {
         relatedRating: opts.relatedSkillId ? Number(this.items.get(opts.relatedSkillId)?.system?.rating ?? 0) : 0,
       })),
       // (not for full-auto spread: it has its own per-target modifier)
-      ...(melee || opts.suppressive || (opts.spreadExtraTargets ?? 0) > 0 ? [] : this.#otherTargetMods(targetDoc?.uuid ?? '')),
+      // v0.92.3 (COMBAT_V923.meleeTargets 'book', Core p. 102): melee too, +2 per other target this phase.
+      ...((melee && !C923.meleeTargetsBook()) || opts.suppressive || (opts.spreadExtraTargets ?? 0) > 0 ? [] : this.#otherTargetMods(targetDoc?.uuid ?? '')),
       ...(melee ? attackerReachModifiers(((w.reach as number | undefined) ?? 0) + this.reachBonus + (style?.style.reach ?? 0), opts.targetReach ?? 0) : []),
       ...vehicleMods,
       // v0.56.0: a Guard power (or spell) on the target.
@@ -8327,6 +8382,8 @@ export class SR2Actor extends Actor {
     try {
       const tl = targetLight(to);
       out.light = lightModifier(tl?.light ?? null, vision);
+      // v0.92.3 (COMBAT_V923.meleeVisibility): full darkness is marked (melee halves every other row).
+      if (out.light && tl?.light === 'darkness') out.light = { ...out.light, id: 'fullDarkness' };
       out.lit = Boolean(tl?.source);
       if (from && to && !o.melee) {
         const cv = RULES.COMBAT.cover.autoDetect ? sightCover(from, to) : null;
@@ -8356,7 +8413,9 @@ export class SR2Actor extends Actor {
     if (!RULES.TN_AUTO.attack.meleeDefenseSight) return [];
     const attacker: any = attack?.attackerUuid ? fromUuidSync(attack.attackerUuid) : null;
     const s = attacker ? this.attackSight(attacker, { melee: true }) : null;
-    return attackVisibility({ light: s?.light ?? null, smoke: sightSmoke(true, s?.smoke ?? null), blinded: this.blindMods('attack')[0] ?? null, blindFire: s?.blindFire ?? null, concealment: s?.concealment ?? null });
+    // v0.92.3 (COMBAT_V923.meleeVisibility 'half', Core p. 102): the Visibility Table at half, except full darkness.
+    const light = C923.meleeVisibility(s?.light ?? null, s?.light?.id === 'fullDarkness');
+    return attackVisibility({ light, smoke: C923.meleeVisibility(sightSmoke(true, s?.smoke ?? null)), blinded: this.blindMods('attack')[0] ?? null, blindFire: s?.blindFire ?? null, concealment: s?.concealment ?? null });
   }
 
   /** v0.50.0: a jumped-in rigger firing the vehicle's guns sees with its sensors (RULES.TN_AUTO.rigging.skipBodyStatuses). */
@@ -8378,8 +8437,11 @@ export class SR2Actor extends Actor {
     const fc = ctx.situational.includes('fullCover') ? RULES.SITUATIONAL_MODIFIERS.find((m) => m.id === 'fullCover') : null;
     const blinds = [sight.blindFire, fc ? { label: fc.label, value: fc.value } : null, legacyBlind].filter((m): m is TargetNumberModifier => Boolean(m && m.value));
     const blindFire = blinds.length ? blinds.reduce((a, b) => (b.value > a.value ? b : a)) : null;
+    // v0.92.3 (COMBAT_V923.meleeVisibility 'half', Core p. 102): in melee the Visibility Table at half, except full darkness.
+    const light0: TargetNumberModifier | null = sight.light ?? legacyLight, smoke0 = sightSmoke(ctx.melee, sight.smoke ?? null);
     const out = attackVisibility({
-      light: sight.light ?? legacyLight, smoke: sightSmoke(ctx.melee, sight.smoke ?? null),
+      light: ctx.melee ? C923.meleeVisibility(light0, light0?.id === 'fullDarkness' || v === 'darkness') : light0,
+      smoke: ctx.melee ? C923.meleeVisibility(smoke0) : smoke0,
       weather: ctx.melee ? null : this.weatherMods(vision)[0] ?? null,
       blindFire, blinded: this.#sensesAreVehicle(opts) ? null : this.blindMods('attack')[0] ?? null, concealment: sight.concealment ?? null,
     });
@@ -8552,7 +8614,7 @@ export class SR2Actor extends Actor {
     if (phase) await this.setFlag(SYSTEM_ID, 'recoil', { ...recordRounds(phase, earlier, rounds), firstSingle: plan.firstShotSingle ?? true });
     // v0.55.0: the targets shot at this phase (another target next costs TN), and an aim used up.
     const phaseNow = this.currentPhaseKey();
-    if (phaseNow && !melee) {
+    if (phaseNow && (!melee || C923.meleeTargetsBook())) {
       const f = this.getFlag?.(SYSTEM_ID, 'phaseTargets') as { phase: string; targets: string[] } | undefined;
       const before = f?.phase === phaseNow ? f.targets ?? [] : [];
       const chosen = opts.suppressive ? '' : (opts.targetUuid ?? opts.hits?.[0]?.targetUuid ?? '');
@@ -8665,8 +8727,10 @@ export class SR2Actor extends Actor {
       if (kind.effect !== 'blind' && ctx.toxin && caught.length) await this.exposeToxinState(ctx.toxin, caught.map((e) => e.h.targetUuid), tx('SR2E.Card.Actor.theGasCloud', { weaponName: ctx.weaponName }));
       return;
     }
+    // v0.92.3 (COMBAT_V923.blastStaging 'book', Core p. 97): each target's resistance is compared with the attack's successes.
+    const bt923 = C923.blastTally(Number(ctx.successes ?? 0));
     const damages: DamageState[] = caught
-      .map(({ h, p }) => ({ targetUuid: h.targetUuid, melee: false, damageType: ctx.damageType, power: p, level: ctx.level, armorKind: RULES.COMBAT.blast.armorKind, ...(h.barrierArmor ? { extraArmor: h.barrierArmor } : {}) }));
+      .map(({ h, p }) => ({ targetUuid: h.targetUuid, melee: false, damageType: ctx.damageType, power: p, level: ctx.level, armorKind: RULES.COMBAT.blast.armorKind, ...(h.barrierArmor ? { extraArmor: h.barrierArmor } : {}), ...(bt923 ? { cleanMiss80: bt923 } : {}) }));
     const rows = damages.map((d, i) => `<li>${escText(hits.find((h) => h.targetUuid === d.targetUuid)?.name ?? tx('SR2E.Card.Actor.target'))}: <strong>${d.power}${d.level}</strong> <button type="button" data-sr2e-action="resist" data-index="${i}">${tx('SR2E.Card.Actor.resist')}</button></li>`).join('');
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor: this }),
@@ -8711,7 +8775,8 @@ export class SR2Actor extends Actor {
     // v0.80.0 (URR_V80.cbtDefense 'cleanMiss', URR): full defense adds no dice and no pool to the melee test (the pool goes to the soak).
     const fullDice = full ? U80C.cbtFullDefenseDice(await this.#takeFullDefense()) : 0;
     // v0.80.0 (review #4): the defender's full defense rides on the snapshot, so a clean miss is allowed only then.
-    if (opposedMelee(attack) && !emptyBody && !down && !unaware) return this.#defendMelee(full && U80C.cbtCleanMissOn() ? { ...attack, fullDefense80: true } : attack, U80C.cbtMeleeDefensePool(full, pool), opts.weaponId ?? null, fullDice, Boolean(opts.subdue));
+    // v0.92.3 (COMBAT_V923.fullDefense 'book'): the book's full defense rides on the same flag.
+    if (opposedMelee(attack) && !emptyBody && !down && !unaware) return this.#defendMelee(full && (U80C.cbtCleanMissOn() || C923.fullDefenseBook()) ? { ...attack, fullDefense80: true } : attack, U80C.cbtMeleeDefensePool(full, pool), opts.weaponId ?? null, fullDice, Boolean(opts.subdue));
     const helpless = emptyBody || down || unaware || pinned;
     // Adept combat sense adds dice to dodging (v0.39.0).
     // v0.78.0 (RULES.BOOK_V78.combatSense 'pool'): Combat Sense is in the Combat Pool instead.
@@ -8766,7 +8831,9 @@ export class SR2Actor extends Actor {
     try {
       const c: any = game.combat;
       const combatant = c?.started ? this.myCombatant() : null;
-      if (combatant && typeof combatant.initiative === 'number') await c.updateEmbeddedDocuments('Combatant', [{ _id: combatant.id, initiative: combatant.initiative - f.initiativeCost }]);
+      // v0.92.3 (COMBAT_V923.fullDefense 'book', Core p. 102): no initiative cost.
+      const cost923 = C923.fullDefenseInitiativeCost();
+      if (cost923 && combatant && typeof combatant.initiative === 'number') await c.updateEmbeddedDocuments('Combatant', [{ _id: combatant.id, initiative: combatant.initiative - cost923 }]);
     } catch { /* no combat */ }
     return dice;
   }
@@ -9245,6 +9312,11 @@ export class SR2Actor extends Actor {
         content: `<p>${vuln ? `<strong>${tx('SR2E.Card.Actor.isVulnerableTo', { name: escText(this.name), damageMaterial: escText(damage.material) })}</strong> ${(RULES.CRITTERS.vulnerability.ignoresImmunity ? tx('SR2E.Card.Actor.theDamageStagesUpToAndWithAndIgnoresImmunity', { damageLevel: damage.level }) : tx('SR2E.Card.Actor.theDamageStagesUpToAndPlain', { damageLevel: damage.level }))}` : ''}${contact ? ` <strong>${tx('SR2E.Card.Actor.allergy')}</strong> ${tx('SR2E.Card.Actor.burnsUnresisted', { damageMaterial: escText(damage.material), name: escText(this.name), contact })}` : ''}</p>` });
       if (contact) await this.applyUnresisted({ targetUuid: this.uuid as string, melee: false, damageType: 'physical', power: 0, level: contact });
     }
+    // v0.92.3 (COMBAT_V923.barriers 'book', Core p. 98): a barrier rated above the Power stops the shot cold.
+    if (damage.barrierStopped && C923.barriersBook()) {
+      await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p><strong>${escText(this.name)}</strong> ${tx('SR2E.Card.Combat923.barrierStops')}</p>` });
+      return;
+    }
     const kind = damage.armorKind ?? armorKindFor(damage.melee);
     const opts = { ignoreImmunity: Boolean(damage.ignoreImmunity), noWorn: Boolean(damage.ignoreArmor), calledLocation: damage.calledLocation ?? '' };
     // v0.72.0 (O3): immunity to normal weapons stops an attack whose Power doesn't exceed it (RULES.COMBAT_V72.immunity).
@@ -9259,13 +9331,16 @@ export class SR2Actor extends Actor {
     }
     // v0.79.0 (RULES.DOCS_V79.rangedFlechette 'armor', SRII p. 93): +1 level only against no armor; against armor the higher of
     // ballistic and impact, doubled, instead of the attack's own kind.
-    const fl79 = damage.flechette && !damage.elemental ? flechetteSoak({ ballistic: this.armorRating('ballistic', opts), impact: this.armorRating('impact', opts), level: damage.level }) : null;
+    let fl79 = damage.flechette && !damage.elemental ? flechetteSoak({ ballistic: this.armorRating('ballistic', opts), impact: this.armorRating('impact', opts), level: damage.level }) : null;
+    // v0.92.3 (COMBAT_V923.flechette 'book', Core p. 93): against armor, the higher of double Impact and plain Ballistic.
+    const fl923 = fl79?.armored ? C923.flechetteArmorBook(this.armorRating('ballistic', opts), this.armorRating('impact', opts), RULES.DOCS_V79.rangedFlechette.armorMultiplier) : null;
+    if (fl79 && fl923) fl79 = { ...fl79, armor: fl923.armor, note: fl923.note };
     if (fl79) damage = { ...damage, level: fl79.level };
     const armor = damage.elemental
       ? elementalArmor({ ballistic: this.armorRating('ballistic', opts), impact: this.armorRating('impact', opts) })
       : fl79 ? fl79.armor + Math.max(0, damage.extraArmor ?? 0)
       : armorAfterAmmo(this.armorRating(kind, opts), damage.armorMultiplier ?? 1) + Math.max(0, damage.extraArmor ?? 0);
-    await this.resistDamage({ power: damage.power, level: damage.level, type: damage.damageType, armor, poolDice, knockdown: !damage.black, knockdownMelee: damage.melee, ...(damage.cleanMiss80 ? { cleanMiss80: damage.cleanMiss80 } : {}), ...(damage.ignoreArmor || damage.elemental ? {} : { armorKind: kind }), ...(vuln ? { noRegen: true } : {}),
+    await this.resistDamage({ power: damage.power, level: damage.level, type: damage.damageType, armor, poolDice, knockdown: !damage.black, knockdownMelee: damage.melee, ...(damage.gel ? { knockdownGel: true } : {}), ...(Number(damage.strength ?? 0) > 0 ? { knockdownStrength: Number(damage.strength) } : {}), ...(damage.cleanMiss80 ? { cleanMiss80: damage.cleanMiss80 } : {}), ...(damage.ignoreArmor || damage.elemental ? {} : { armorKind: kind }), ...(vuln ? { noRegen: true } : {}),
       ...(damage.black ? {} : { cyberCheck: { location: damage.calledLocation ?? '' } }), ...(damage.infection ? { infection: damage.infection } : {}), ...(damage.toxinHit ? { toxinHit: damage.toxinHit } : {}) });
   }
 
@@ -9280,7 +9355,10 @@ export class SR2Actor extends Actor {
     knockdown?: boolean;
     /** v0.80.0: a melee hit (the Revamp's knockdown TN), and the clean-miss tally (URR_V80.cbtDefense). */
     knockdownMelee?: boolean;
-    cleanMiss80?: { hits: number; net: number; noClean?: boolean };
+    /** v0.92.3 (COMBAT_V923.knockdown 'book'): gel rounds, and a melee attacker's Strength. */
+    knockdownGel?: boolean;
+    knockdownStrength?: number;
+    cleanMiss80?: { hits: number; net: number; noClean?: boolean; apart?: boolean };
     /** Damage regeneration can't heal (a vulnerability, v0.39.0). */
     noRegen?: boolean;
     /** Worn armor of this kind stopped it (the armor-degrading house rule, v0.37.0). */
@@ -9311,7 +9389,7 @@ export class SR2Actor extends Actor {
       kind: 'soak',
       soak: {
         mode: 'stage', noun: 'damage', level: opts.level, type, body: this.sys.attributes.body.total, before: { ...this.#monitor() },
-        ...(opts.knockdown && !opts.astral ? { knockdown: { power: opts.power, tn: U80C.cbtKnockdownTn({ power: opts.power, tn, melee: Boolean(opts.knockdownMelee) }) } } : {}),
+        ...(opts.knockdown && !opts.astral ? { knockdown: { power: opts.power, tn: U80C.cbtKnockdownTn({ power: opts.power, tn, melee: Boolean(opts.knockdownMelee), gel: Boolean(opts.knockdownGel), strength: opts.knockdownStrength ?? null }) } } : {}),
         ...(opts.cleanMiss80 ? { cleanMiss80: opts.cleanMiss80 } : {}),
         ...(opts.armorKind && (opts.armor ?? 0) > 0 ? { armorKind: opts.armorKind } : {}),
         ...(opts.noRegen ? { noRegen: true } : {}),
@@ -9371,6 +9449,11 @@ export class SR2Actor extends Actor {
 
   async #spendPool(pool: PoolKind, dice: number): Promise<void> {
     await this.update({ [`system.poolSpent.${pool}`]: ((this.sys.poolSpent[pool] as number | undefined) ?? 0) + dice });
+    // v0.92.3 (COMBAT_V923.delay 'book', Core pp. 80, 84): pool dice used while delaying break the delay.
+    if (dice > 0 && C923.delayBook() && this.isDelaying()) {
+      await clearFlag(this, 'delayed');
+      await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p><strong>${escText(this.name)}</strong> ${tx('SR2E.Card.Combat923.delayBroken')}</p>` });
+    }
   }
 
   /**
@@ -19181,10 +19264,19 @@ export class SR2Actor extends Actor {
     if (restoreDevices && RULES.SECURITY.bypass.unlocksDoor) for (const d of was) if (d.bypassed && d.wallId) await SR2Actor.#setDoor(d, 'locked');
   }
 
-  /** Refresh pools at the start of a Combat Turn. */
-  async refreshPools(): Promise<void> {
+  /**
+   * Refresh pools at the start of a Combat Turn. v0.92.3 (COMBAT_V923.poolRefresh 'action', Core pp. 78, 84): `keepCombat`
+   * leaves the Combat Pool's dice as they are (they last until the character's first action, see refreshCombatPool).
+   */
+  async refreshPools(opts: { keepCombat?: boolean } = {}): Promise<void> {
     if (!this.sys.poolSpent) return;
-    await this.update({ 'system.poolSpent.combat': 0, 'system.poolSpent.spell': 0, 'system.poolSpent.spellConc': 0, 'system.poolSpent.spellSpec': 0, 'system.poolSpent.hacking': 0, 'system.poolSpent.control': 0, 'system.poolSpent.task': 0, 'system.spellDefense': 0 });
+    await this.update({ ...(opts.keepCombat ? {} : { 'system.poolSpent.combat': 0 }), 'system.poolSpent.spell': 0, 'system.poolSpent.spellConc': 0, 'system.poolSpent.spellSpec': 0, 'system.poolSpent.hacking': 0, 'system.poolSpent.control': 0, 'system.poolSpent.task': 0, 'system.spellDefense': 0 });
+  }
+
+  /** v0.92.3 (COMBAT_V923.poolRefresh 'action', Core p. 84): the Combat Pool refreshes at the start of the character's action. */
+  async refreshCombatPool(): Promise<void> {
+    if (!this.sys.poolSpent || !(Number(this.sys.poolSpent.combat ?? 0) > 0)) return;
+    await this.update({ 'system.poolSpent.combat': 0 });
   }
 }
 
@@ -19463,10 +19555,12 @@ export class SR2Combat extends Combat {
       const sense = RULES.BOOK_V78.combatSense === 'pool' ? (senseLevel > 0 ? Math.max(0, Number(sys?.derived?.combatPoolLeft ?? 0)) : 0) : senseLevel * RULES.ADEPT.combatSense.dicePerLevel;
       const dice = (sp.attribute === 'reaction' ? (sys?.derived?.reaction ?? 0) : (sys?.attributes?.[sp.attribute]?.total ?? 0)) + sense;
       const rolls: any[] = [];
-      const r = await successTest({ dice, targetNumber: sp.tn, roll: foundryRoller(rolls) });
+      // v0.92.3 (COMBAT_V923.ambush 'book', Core p. 86): an ambusher waiting on a delayed action rolls at TN − 2.
+      const ambush = C923.ambushTn(Boolean(c.actor?.isDelaying?.()));
+      const r = await successTest({ dice, targetNumber: Math.max(RULES.MIN_TARGET_NUMBER, sp.tn + ambush), roll: foundryRoller(rolls) });
       const side = String(c.token?.disposition ?? c.actor?.prototypeToken?.disposition ?? 0);
       entries.push({ id: c.id, side, successes: r.successes, name: c.name });
-      rows.push(`<li>${tCount(r.successes, 'SR2E.Card.Actor.successesDice', { name: escText(c.name), dice: escText(dice) })}</li>`);
+      rows.push(`<li>${tCount(r.successes, 'SR2E.Card.Actor.successesDice', { name: escText(c.name), dice: escText(dice) })}${ambush ? tx('SR2E.Card.Combat923.ambusher', { tn: ambush }) : ''}</li>`);
     }
     // v0.79.0 (RULES.DOCS_V79.rangedSurprise 'order', SRII p. 86): the surprise turn: everyone acts once, most successes first,
     // and nobody may act against an opponent who rolled more successes; nobody loses a pass. Initiative is rolled as normal next turn.
@@ -19512,6 +19606,33 @@ export class SR2Combat extends Combat {
 
   get pass(): number {
     return (this.getFlag(SYSTEM_ID, 'pass') as number | undefined) ?? 0;
+  }
+
+  /** v0.92.3: a new Combat Turn is being set up (initiative re-rolled): the acting combatant isn't known yet. */
+  #roundTurning = false;
+  /** v0.92.3: the last action whose Combat Pool was refreshed, by combat (once per action). */
+  static #poolKeys = new Map<string, string>();
+
+  /**
+   * v0.92.3 (COMBAT_V923.poolRefresh 'action', Core pp. 78, 84): when a combatant's action comes up (a new turn, pass
+   * or Combat Turn), the lead GM refreshes their Combat Pool, once per action.
+   */
+  _onUpdate(changed: any, options: any, userId: string): void {
+    (super._onUpdate as any)?.(changed, options, userId);
+    if (this.#roundTurning || !C923.poolRefreshPerAction() || !isRelayGm()) return;
+    const c = changed ?? {};
+    if (!('turn' in c) && !('round' in c) && c?.flags?.[SYSTEM_ID]?.pass === undefined) return;
+    void this.refreshActingPool().catch((err) => console.warn('sr2e | Combat Pool refresh', err));
+  }
+
+  /** v0.92.3: refresh the acting combatant's Combat Pool (once per action). */
+  async refreshActingPool(): Promise<void> {
+    const c: any = (this as any).started ? (this as any).combatant : null;
+    if (!c?.actor || !this.id) return;
+    const key = C923.actionKey({ combatId: String(this.id), round: Number((this as any).round ?? 0), pass: this.pass, combatantId: String(c.id) });
+    if (SR2Combat.#poolKeys.get(String(this.id)) === key) return;
+    SR2Combat.#poolKeys.set(String(this.id), key);
+    await c.actor.refreshCombatPool?.();
   }
 
   /** v0.59.0: the initiative of the pass about to end, kept for Previous Round (set by nextTurn, read by nextRound). */
@@ -19568,7 +19689,8 @@ export class SR2Combat extends Combat {
     const started = Number((this as any).round ?? 0) > 0;
     const hist = this.#endingPass ?? { round: Number((this as any).round ?? 0), pass: this.pass, init: Object.fromEntries([...(this.combatants as any)].map((c: any) => [c.id, c.initiative ?? null])) };
     this.#endingPass = null;
-    await super.nextRound();
+    this.#roundTurning = Boolean(started);
+    try { await super.nextRound(); } catch (err) { this.#roundTurning = false; throw err; }
     if (!started) return this;
     await this.setFlag(SYSTEM_ID, 'lastPass', hist);
     // Foundry's rollAll() only rolls combatants whose initiative is null, so clear the
@@ -19579,8 +19701,13 @@ export class SR2Combat extends Combat {
     );
     await this.rollAll();
     await this.alignParties();
-    for (const c of this.combatants) await (c.actor as any)?.refreshPools?.();
+    // v0.92.3 (COMBAT_V923.poolRefresh 'action', Core pp. 78, 84): Combat Pool dice left over last until each
+    // character's first action, where they refresh (refreshActingPool).
+    const perAction = C923.poolRefreshPerAction();
+    for (const c of this.combatants) await (c.actor as any)?.refreshPools?.(perAction ? { keepCombat: true } : {});
     await this.update({ turn: 0, [`flags.${SYSTEM_ID}.pass`]: 0 });
+    this.#roundTurning = false;
+    if (perAction) await this.refreshActingPool();
     const round = Number((this as any).round ?? 0);
     if (isRelayGm() || !activeGm()) await SR2Combat.#awaitTicks(this.runRoundTicks(round));
     else {

@@ -2,6 +2,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { NETRIG_V73 } from '../config73/netrig.ts';
 import { RULES } from '../config.ts';
+import { oldWay } from './oldway.ts';
 import {
   logoffHoldCheck, personaInitiativePenalty, jackedInInitiativeMinus, initiativeWoundScore,
   hostKnowledge, learnHost, hostEntryKnowledge, hostTag, hostChoices,
@@ -60,7 +61,9 @@ describe('v0.73.0 O23: persona damage on Matrix initiative', () => {
     withPath(RULES, 'MATRIX_V57.wounds.enabled', false, () => assert.equal(jackedInInitiativeMinus(2, 6), 2));
     withPath(RULES, 'INITIATIVE_WOUNDS.enabled', false, () => assert.equal(personaInitiativePenalty(6), 0));
   });
-  test('the mid-turn score: persona damage taken while jacked in drops the score', () => {
+  test('the mid-turn score: persona damage taken while jacked in drops the score', (t) => {
+    // v0.92.3: INITIATIVE_WOUNDS.midTurn is off by default (Core p. 112); this is the house rule on.
+    t.after(oldWay({ 'INITIATIVE_WOUNDS.midTurn': true }));
     const before = initiativeWoundScore({ woundModifier: 1, jackedIn: true, matrixBoxes: 0 });
     const after = initiativeWoundScore({ woundModifier: 1, jackedIn: true, matrixBoxes: 3 });
     assert.equal(midTurnWoundDrop(before, after), 2);
