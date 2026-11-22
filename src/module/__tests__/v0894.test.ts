@@ -27,7 +27,8 @@ const files = (d: string, out: string[] = []): string[] => {
 const ALL = files(SRC).map((f) => ({ f, rel: relative(ROOT, f), src: readFileSync(f, 'utf8') }));
 // settings.ts defines Foundry windows: a stub base class is enough to import it (as settings.test.ts does)
 (globalThis as any).foundry ??= { applications: { api: { ApplicationV2: class {} } } };
-const run = (script: string, ...args: string[]) => execFileSync(script.endsWith('.ts') ? join(ROOT, 'node_modules', '.bin', 'tsx') : process.execPath, [join(ROOT, 'scripts', script), ...args], { cwd: ROOT, encoding: 'utf8' });
+// Node itself runs every script; a .ts one loads tsx first (node_modules/.bin/tsx is tsx.cmd on Windows, which execFileSync can't start).
+const run = (script: string, ...args: string[]) => execFileSync(process.execPath, [...(script.endsWith('.ts') ? ['--import', 'tsx'] : []), join(ROOT, 'scripts', script), ...args], { cwd: ROOT, encoding: 'utf8' });
 
 describe('v0.89.4 the house rules', () => {
   let S: any;

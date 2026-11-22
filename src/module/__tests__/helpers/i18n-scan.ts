@@ -5,7 +5,7 @@
  * ("Print", "Off") are not counted. Template literals over several lines count as one string.
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { join, relative, sep } from 'node:path';
 
 const ROOT = process.cwd();
 /** What comes just before a literal that makes it code, not text for a person (a selector, a log, an import). */
@@ -59,7 +59,7 @@ export function englishCounts(): Record<string, number> {
         if (CODE_BEFORE.test(before)) continue;
         if (looksEnglish(m[1] ?? m[2] ?? m[3] ?? '')) n++;
       }
-      if (n) out[relative(ROOT, p)] = n;
+      if (n) out[relative(ROOT, p).split(sep).join('/')] = n;
     }
   };
   walk(join(ROOT, 'src', 'module'));
