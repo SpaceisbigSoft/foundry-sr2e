@@ -2043,7 +2043,6 @@
       "pool": "{label} Pool {value}",
       "readiedWeaponClickToAttackWith": "Readied weapon: click to attack with it",
       "attackWith": "Attack with {name}",
-      "roundsLeft": "Rounds left",
       "roundsLeftRightClick": "Rounds left (right-click: one less)",
       "itSSActionPhaseLeft": "It's {name}'s action phase: {label} left. Buttons that need more are greyed.",
       "yourTurn": "Your turn",

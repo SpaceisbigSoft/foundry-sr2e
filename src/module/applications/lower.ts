@@ -63,7 +63,7 @@ export function lowerStep(target: Element | null | undefined, fields = ''): Lowe
   }
   const stepper = t.closest<HTMLElement>('.sr2e-stepper');
   // A field without − / + (the steppers setting is off) still lowers when it is one of the play numbers (`fields`).
-  const inStepper = stepper?.querySelector<HTMLInputElement>('input[type="number"]') ?? null;
+  const inStepper = (stepper?.querySelector('input[type="number"]') ?? null) as HTMLInputElement | null;
   const listed = fields && t.tagName === 'INPUT' && (t as HTMLInputElement).type === 'number' && t.matches(fields) ? t as HTMLInputElement : null;
   const input = inStepper ?? listed;
   return input ? { kind: 'input', el: input } : null;
