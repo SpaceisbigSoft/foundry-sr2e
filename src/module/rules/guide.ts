@@ -79,16 +79,16 @@ export const GUIDE_TOPICS: GuideTopic[] = [
   topic('summary-bar', 'both', [], ['p', 3, 'p', 5, 'p']),
   topic('layouts', 'both', ['Defense', 'Actions'], ['p', 3, 'p', 4, 'p', 'p', 'p']),
   // ---------------------------------------------------------------- rolling
-  topic('rolling', 'both', [], ['p', 'p', 'p', 'p', 'p', 'p', 'p']),
+  topic('rolling', 'both', [], ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p', 'p']),
   topic('targeting', 'both', [], ['p', 'p', 'p', 'p', 'p']),
   topic('chat-cards', 'both', [], ['p', 5, 'p', 'p', 'p', 3, 'p', 6, 'p', 'p', 'p']),
   topic('look', 'both', [], ['p', 6, 'p', 'p', 'p']),
   topic('karma-pool', 'both', [], ['p', 3, 'p', 'p', 'p', 'p']),
   topic('pools', 'both', ['Initiative and pools'], ['p', 'p', 'p', 'p', 'p']),
   topic('shortcuts', 'both', [], [12, 'p', 'p', 'p', 4, 'p', 'p', 'p', 'p']),
-  topic('inline-tests', 'both', [], ['p', 'p', 5]),
+  topic('inline-tests', 'both', [], ['p', 'p', 6]),
   // v0.93.2: Foundry's manual dice entry (every SR2e die goes through Foundry's dice fulfilment).
-  topic('physical-dice', 'both', [], ['p', 4, 'p']),
+  topic('physical-dice', 'both', [], ['p', 4, 'p', 'p']),
   // ---------------------------------------------------------------- Main tab
   topic('attributes', 'both', ['Attributes', 'Derived'], ['p', 'p', 'p', 'p', 'p', 'p', 'p']),
   topic('condition-monitor', 'both', ['Condition Monitor'], ['p', 'p', 'p', 'p', 4, 'p']),
@@ -153,7 +153,7 @@ export const GUIDE_TOPICS: GuideTopic[] = [
   topic('scene-builder', 'gm', [], ['p', 7, 'p', 'p']),
   topic('gm-undo', 'gm', ['Undo', "What undo can't do", 'Recent rolls'], ['p', 'p', 'p']),
   topic('gm-cards', 'gm', [], [8, 'p', 10]),
-  topic('house-rules', 'gm', [], ['p', 'p', 'p', 'p', 'p', 5, 'p']),
+  topic('house-rules', 'gm', [], ['p', 'p', 'p', 'p', 'p', 5, 'p', 'p', 'p']),
 ];
 
 // ---------------------------------------------------------------- categories

@@ -362,9 +362,11 @@ Skill dialogs have a *Use specialization* box; the **Sneak** dialog has *Use the
 
 **Shift-click** a roll button to skip the dialog and roll at once with its defaults. A spell or skill rolls without your remembered choices; a weapon uses its remembered firing mode and pool dice, but never fires twice.
 
-How many dice you roll and what the TN should be come from the rules: see your SR2 rulebook. You choose who sees each kind of test you roll (Configure Settings: **Set roll privacy**, under *Roll privacy by kind of test*). *Foundry's chat mode* follows the mode picked under the chat box. Cards someone else must answer (Defend, Resist, a blast) are always public. The GM can set a **table default** for each kind of test in the same window (*GM only* or *Blind*); players can then only make those cards more private, and the less private choices are greyed for them.
+How many dice you roll and what the TN should be come from the rules: see your SR2 rulebook. You choose who sees each kind of test you roll (Configure Settings: **Set roll privacy**, under *Roll privacy by kind of test*). *Foundry's chat mode* follows the mode picked under the chat box. Cards someone else must answer (Defend, Resist, a blast) are always public.
 
-Some numbers are kept for the GM: on the cards of tests no player owns (an NPC's attack, a guard's Perception), players see the successes but not the target number or its modifiers (the GM's setting *Hide NPC target numbers from players*, on by default). Floating damage shows for the GM and the token's owners only, unless the GM's setting *Who sees floating damage* shows it to everyone, and it waits for Dice So Nice's dice to stop. All of this hides things on screen; it isn't security, since the numbers are still in the chat message's data.
+The GM can set a **table default** for each kind of test in the same window (*GM only* or *Blind*); players can then only make those cards more private, and the less private choices are greyed for them.
+
+Some numbers are kept for the GM: on the cards of tests no player owns (an NPC's attack, a guard's Perception), players see the successes but not the target number or its modifiers (the GM's setting *Hide NPC target numbers from players*, on by default). Floating damage shows for the GM and the token's owners only, unless the GM's setting *Who sees floating damage* shows it to everyone, and it waits for Dice So Nice's dice to stop. This hides things on screen; it isn't security, since the numbers are still in the chat message's data.
 
 ## Targets and automatic modifiers
 
@@ -423,7 +425,7 @@ If the character has a Karma Pool, their test cards get Karma buttons:
 
 On an attack, use Karma before the target defends: once they have, the attack card's Karma buttons refuse.
 
-Each re-roll or bought success makes a new card and the old one is marked *Replaced*. A re-roll carries through: a re-rolled attack gives a fresh Defend button, a re-rolled resistance test corrects the condition monitor. If the thing changed in between, it is left alone.
+A re-roll, an avoided disaster or a bought success updates the same card: the re-rolled dice stay on it greyed and struck through, followed by the new ones (the GM's setting *Re-rolls update the same card* switches back to a new card each time, the old one marked *Replaced*; contest and street cards always make a new card). A re-roll carries through: a re-rolled attack prompts the targets to defend again, a re-rolled resistance test corrects the condition monitor. If the thing changed in between, it is left alone.
 
 Contest and street cards (haggle, fence, legwork, find, sneak, perceive, social tests, negotiating pay) get these buttons for each side that has a Karma Pool, with the side's name on the button. You can use your character's side even on a card the GM rolled.
 
@@ -451,8 +453,8 @@ In the chat, type `/sr2` (or `/sr2e`) and the same words, for example `/sr2 Fire
 - `tn 5`: the target number (4 when left out).
 - `mod -1`: a TN modifier. Several add up.
 - `pool 2`: pool dice (Combat Pool for attributes and skills, extra dice for a bare number of dice).
-- `secret` (after what to roll): only the GM sees the card, not even the roller (for a hidden Perception test in a journal, for example).
 - `label Climb the fence`: the card's title. Everything after `label` is the title.
+- `secret` (after what to roll): only the GM sees the card, not even the roller (a hidden Perception test in a journal, for example).
 
 ## Rolling physical dice
 
@@ -464,6 +466,8 @@ A table that rolls real dice can type them in. SR2e asks Foundry for every die i
 - **Pool dice and Karma re-rolls** ask the same way, each when it is rolled. Dice So Nice shows nothing for typed dice.
 
 The GM still sees every card and applies what needs a GM, as with digital dice. Typing a die is trusted like any roll in Foundry; a group that wants a check can roll where the GM can see.
+
+Or type only the successes: the skill, attribute, attack and spell windows have **I rolled the dice myself**. Tick it, type the successes, and tick *every die came up 1* for a disaster. The card says *Typed*; nothing on it applies by itself (the GM applies it), and a Karma re-roll or the GM's Change TN is refused, since there are no dice. The GM's setting *Typed physical-dice results* says who may type them: everyone (the default), the GM only, or no one.
 
 # Your character
 
@@ -1061,3 +1065,7 @@ Configure Settings itself is in sections:
 - *Look and layout*: each player's own look (see [Your look](#your-look-theme-colours-and-text-size)).
 
 Many values were first entered from memory; in v0.92.3 the defaults were checked against the SR2 books. Every value and its source is listed in `docs/VERIFY.md` in the project's source, for checking against your rulebook.
+
+**Presets** at the top of the window set many things in one click: *Book rules* (the book's rules, every house rule cleared, the automation settings at their defaults), *Revamp* (the Unified Rules Revamp as the rules source, house rules cleared) and *Light automation* (the book's rules with astral wards that warn instead of stopping a token). A window lists what will change before anything does; the preset that matches the world now is ticked.
+
+Configure Settings, SR2e system: **Automation** gathers everything the system does by itself (applying GM cards, NPCs resisting, the Defend window, floating damage, detection rolls, wards, the Karma refresh, the cyberware damage check, IC launches) in one window, apart from the rules. At its top, **Manual table** switches all of it off for a table that wants to do things by hand: rolls, cards and their buttons still work, and people click Apply themselves. Your stored settings aren't changed, so switching it off puts everything back.
