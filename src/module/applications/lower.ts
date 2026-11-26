@@ -43,7 +43,9 @@ export function lowerStep(target: Element | null | undefined, fields = ''): Lowe
   if (ammo) return { kind: 'ammo', itemId: String(ammo.dataset['itemId'] ?? '') };
   const box = t.closest<HTMLElement>('.sr2e-box[data-action][data-value], .sr2e-pip[data-action][data-value]');
   if (box) {
-    const holder = box.classList.contains('sr2e-pip') ? box.closest('.sr2e-strip-pool') : box.closest(TRACK_HOLDERS);
+    // Review 1: the whole monitor first (the Overflow row is a track of its own, with data-track="physical"), so a box
+    // in the main row finds the last filled Overflow box too; the data-track filter keeps Stun apart.
+    const holder = box.classList.contains('sr2e-pip') ? box.closest('.sr2e-strip-pool') : (box.closest('.sr2e-cm') ?? box.closest(TRACK_HOLDERS));
     const action = box.dataset['action'] ?? '';
     const track = box.dataset['track'], pool = box.dataset['pool'];
     const all = Array.from(holder?.querySelectorAll<HTMLElement>(`[data-action="${cssWord(action)}"][data-value]`) ?? [box])

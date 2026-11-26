@@ -231,9 +231,14 @@ export function migrationReport(ran: readonly { version: string; label: string }
   return `<p><strong>${tx('SR2E.Card.Migrations.reportTitle')}</strong></p>${ok}${bad}`;
 }
 
-/** v0.93.0: the card the lead GM gets when the world is another system's (nothing was changed). */
+/** v0.93.0: the console command that lets SR2e update a world the guard refuses (code, not text to translate). */
+export function overrideCommand(id: string): string {
+  return 'game.settings.set(' + JSON.stringify(String(id)).replace(/"/g, "'") + ", 'ignoreForeignWorld', true)";
+}
+
+/** v0.93.0: the window the lead GM gets when the world is another system's (nothing was changed). */
 export function foreignWorldHtml(signs: readonly string[]): string {
-  return `<p><strong>${tx('SR2E.Card.Migrations.foreignTitle')}</strong></p><p>${tx('SR2E.Card.Migrations.foreignBody', { id: escHtml(SYSTEM.id) })}</p><ul>${signs.map((x) => `<li><code>${escHtml(x)}</code></li>`).join("")}</ul><p>${tx('SR2E.Card.Migrations.foreignOverride', { command: `<code>${escHtml(`game.settings.set('${SYSTEM.id}', 'ignoreForeignWorld', true)`)}</code>` })}</p>`;
+  return `<p><strong>${tx('SR2E.Card.Migrations.foreignTitle')}</strong></p><p>${tx('SR2E.Card.Migrations.foreignBody', { id: escHtml(SYSTEM.id) })}</p><ul>${signs.map((x) => `<li><code>${escHtml(x)}</code></li>`).join("")}</ul><p>${tx('SR2E.Card.Migrations.foreignOverride', { command: `<code>${escHtml(overrideCommand(SYSTEM.id))}</code>` })}</p>`;
 }
 
 /** v0.93.0: ask the GM to back up before the updates run. True = go on; false = not now (asked again at the next load). */
@@ -265,8 +270,9 @@ export async function runMigrations(): Promise<void> {
   if (signs.length && !ignoringForeignWorld()) {
     console.warn(`${SYSTEM.LOG.HEAD}This world looks like another system's; no updates were run.`, signs);
     ui.notifications?.error?.(tx('SR2E.Notify.Migrations.foreignWorld', { id: SYSTEM.id }), { permanent: true });
-    const me = String((game as any).user?.id ?? "");
-    await (globalThis as any).ChatMessage?.create?.({ whisper: me ? [me] : [], content: foreignWorldHtml(signs) });
+    // Review 2: a window, not a chat message: nothing is written to the other system's world, not even a whisper.
+    const D: any = (foundry as any)?.applications?.api?.DialogV2;
+    void D?.prompt?.({ window: { title: tx('SR2E.Card.Migrations.foreignTitle') }, content: foreignWorldHtml(signs), rejectClose: false });
     return;
   }
   const stored = String(game.settings.get(SYSTEM.id, "migrationVersion") ?? "");

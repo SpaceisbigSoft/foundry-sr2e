@@ -129,12 +129,17 @@ export async function dropItemOnActor(sheet: any, event: DragEvent | any, item: 
   const moves = dropMoves(item.type, { fromActor, sameActor: false, copyKey: Boolean(event?.altKey) });
   if (moves && !source.isOwner) { ui.notifications?.warn?.(tx('SR2E.Notify.Drops.isSOnlyTheirOwnerOr', { itemName: escHtml(item.name), sourceName: escHtml(source.name) })); return null; }
   // v0.93.0: a stack asks how many move (Alt copies, and copies take the whole stack as before).
-  const have = stackSize(item.system);
+  let have = stackSize(item.system);
   let take = have;
   if (moves && have > 1) {
     const n = await askHowMany(item.name, have);
     if (n === null) return null;
-    take = n;
+    // Review 3: the stack may have changed while the dialog was open (spent, deleted, or moved from another sheet).
+    const now: any = source.items?.get?.(item.id);
+    if (!now) { ui.notifications?.warn?.(tx('SR2E.Notify.Drops.stackGone', { itemName: escHtml(item.name) })); return null; }
+    have = stackSize(now.system);
+    take = Math.min(n, have);
+    if (take < 1) return null;
   }
   const keepId = !actor.items.has(item.id);
   const data: any = item.inCompendium ? (game as any).items.fromCompendium(item, { clearFolder: true, keepId }) : item.toObject();
@@ -150,14 +155,23 @@ export async function dropItemOnActor(sheet: any, event: DragEvent | any, item: 
   }
   if (take !== have) data.system = { ...(data.system ?? {}), quantity: take };
   // v0.93.0: moved items join a matching stack the receiver has (same data apart from the count).
-  const stack: any = moves && have > 1 ? [...actor.items].find((i: any) => sameStack(i, { type: item.type, name: item.name, system: data.system })) : null;
+  // Review 5: compared on the stored data (_source), as the moved copy is plain data; any item with a count merges.
+  const counted = data.system && Object.hasOwn(data.system, 'quantity');
+  const stack: any = moves && counted ? [...actor.items].find((i: any) => sameStack({ type: i.type, name: i.name, system: i._source?.system ?? i.system }, { type: item.type, name: item.name, system: data.system })) : null;
+  const before = stack ? stackSize(stack.system) : 0;
   const made = stack
-    ? (await stack.update({ 'system.quantity': stackSize(stack.system) + take }), stack)
+    ? (await stack.update({ 'system.quantity': before + take }), stack)
     : await (Item as any).implementation.create(data, { parent: actor, keepId, sr2eComplexFormFrom: item.uuid });
   if (!made) return null;
   if (moves) {
-    // Part of a stack: the giver keeps the rest.
-    try { if (take < have) await item.update({ 'system.quantity': have - take }); else await source.deleteEmbeddedDocuments('Item', [item.id]); } catch (err) { console.warn('sr2e | move item', err); }
+    // Part of a stack: the giver keeps the rest. Review 4: if the giver can't be changed, the receiver's side is undone.
+    try { if (take < have) await item.update({ 'system.quantity': have - take }); else await source.deleteEmbeddedDocuments('Item', [item.id]); }
+    catch (err) {
+      console.warn('sr2e | move item', err);
+      try { if (stack) await stack.update({ 'system.quantity': before }); else await made.delete(); } catch (err2) { console.warn('sr2e | move item undo', err2); }
+      ui.notifications?.error?.(tx('SR2E.Notify.Drops.moveFailed', { itemName: escHtml(item.name) }));
+      return null;
+    }
   }
   const note = describe(reset);
   const what = moves ? tx('SR2E.Notify.Drops.handsTo', { source: source.name, made: take > 1 ? `${made.name} ×${take}` : made.name, actor: actor.name }) : tx('SR2E.Notify.Drops.addedTo', { made: made.name, actor: actor.name });

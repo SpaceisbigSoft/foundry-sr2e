@@ -67,6 +67,7 @@ describe('v0.93.0: the guard against another system\'s world', () => {
     assert.deepEqual(foreignWorldSigns({ settings: [{ key: FOREIGN_WORLD.setting, value: '"0.164"' }] }), ['sr2e.systemMigrationVersion']);
     const signs = foreignWorldSigns({ actors: [{ type: 'frame' }, { type: 'character', items: [{ type: 'quality' }, { type: 'quality' }, { type: 'bioware' }] }], items: [{ type: 'lifestyle' }] });
     assert.deepEqual(signs.sort(), ['Actor frame (1)', 'Item bioware (1)', 'Item lifestyle (1)', 'Item quality (2)']);
+    assert.deepEqual(foreignWorldSigns({ scenes: [{ tokens: [{ delta: { items: [{ type: 'contact' }] } }, { delta: null }] }] }), ['Item contact (1)'], 'an unlinked token\'s own items');
     // SR2e's own types never count (adeptpower is ours; adept_power is theirs).
     assert.deepEqual(foreignWorldSigns({ items: [{ type: 'adeptpower' }, { type: 'cyberdeck' }, { type: 'power' }] }), []);
   });
@@ -98,6 +99,11 @@ describe('v0.93.0: the guard against another system\'s world', () => {
     assert.match(mig, /"ignoreForeignWorld", \{ scope: "world", config: false, type: Boolean, default: false \}/);
     assert.match(SRC('applications/chat.ts'), /if \(isForeignWorld\(\) \|\| !sessionRefreshDue\(last, today\)\) return;/);
     assert.match(SRC('applications/canvas.ts'), /Hooks\.once\('ready', \(\) => \{ if \(isForeignWorld\(\)\) return;/);
+    // Review 2: the module look and the refused-house-rules report write settings too; the guard writes no chat message.
+    assert.match(SRC('applications/modules.ts'), /Hooks\.once\('ready', \(\) => \{ if \(!isForeignWorld\(\)\) void matchModuleLook\(\); \}\);/);
+    assert.match(SRC('settings.ts'), /if \(!isLeadGm\(\)\) return false;\n    \/\/ v0\.93\.0 \(review 2\)[^\n]*\n    if \(isForeignWorld\(\)\) return false;/);
+    const guard = mig.slice(at, mig.indexOf('const stored = String(game.settings.get'));
+    assert.doesNotMatch(guard, /ChatMessage/);
   });
 
   test('the GM\'s card escapes the signs and names the override for this system\'s id', async () => {
@@ -181,6 +187,17 @@ describe('v0.93.0: right-click lowers a value by one', () => {
     const empty = [1, 2].map((v) => el('a', { class: 'sr2e-box', 'data-action': 'setCondition', 'data-value': String(v) }));
     el('div', { class: 'sr2e-track' }, ...empty);
     assert.equal(lowerStep(empty[0] as any), null, 'nothing filled, nothing to lower');
+  });
+
+  test('review 1: with damage in Overflow, a main-row box finds the last filled Overflow box (one less, not two)', async () => {
+    const { lowerStep } = await import('../applications/lower.ts');
+    const main = Array.from({ length: 10 }, (_, i) => el('a', { class: 'sr2e-box filled', 'data-action': 'setMonitor', 'data-track': 'physical', 'data-value': String(i + 1) }));
+    const over = [11, 12, 13].map((v) => el('a', { class: `sr2e-box${v <= 12 ? ' filled' : ''}`, 'data-action': 'setMonitor', 'data-track': 'physical', 'data-value': String(v) }));
+    const stun = [1].map((v) => el('a', { class: 'sr2e-box filled', 'data-action': 'setMonitor', 'data-track': 'stun', 'data-value': String(v) }));
+    el('div', { class: 'sr2e-cm' }, el('div', { class: 'sr2e-cm-track' }, ...main), el('div', { class: 'sr2e-cm-track' }, ...stun), el('div', { class: 'sr2e-cm-track' }, ...over));
+    assert.equal((lowerStep(main[3] as any) as any)?.el, over[1]);
+    assert.equal((lowerStep(over[2] as any) as any)?.el, over[1]);
+    assert.equal((lowerStep(stun[0] as any) as any)?.el, stun[0]);
   });
 
   test('a pool pip: the last filled pip of that pool', async () => {
@@ -280,7 +297,13 @@ describe('v0.93.0: "how many?" when a stack moves', () => {
     const d = SRC('applications/drops.ts');
     assert.match(d, /if \(moves && have > 1\) \{\n    const n = await askHowMany\(item\.name, have\);\n    if \(n === null\) return null;/);
     assert.match(d, /if \(take < have\) await item\.update\(\{ 'system\.quantity': have - take \}\); else await source\.deleteEmbeddedDocuments/);
-    assert.match(d, /stack\.update\(\{ 'system\.quantity': stackSize\(stack\.system\) \+ take \}\)/);
+    assert.match(d, /stack\.update\(\{ 'system\.quantity': before \+ take \}\)/);
+    // Review 3: the stack is read again after the dialog, and never more than it holds moves.
+    assert.match(d, /const now: any = source\.items\?\.get\?\.\(item\.id\);\n    if \(!now\)[^\n]*return null; \}\n    have = stackSize\(now\.system\);\n    take = Math\.min\(n, have\);/);
+    // Review 4: a failed change on the giver undoes the receiver's side.
+    assert.match(d, /if \(stack\) await stack\.update\(\{ 'system\.quantity': before \}\); else await made\.delete\(\);/);
+    // Review 5: the receiver's stack is compared on its stored data.
+    assert.match(d, /system: i\._source\?\.system \?\? i\.system/);
   });
 });
 

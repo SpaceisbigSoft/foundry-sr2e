@@ -2605,7 +2605,9 @@
         "isSOnlyTheirOwnerOr": "{itemName} is {sourceName}'s: only their owner or the GM can hand it over.",
         "handsTo": "{source} hands {made} to {actor}",
         "addedTo": "{made} added to {actor}",
-        "howManyBad": "SR2e: nothing moved: give a number from 1 to {have}."
+        "howManyBad": "SR2e: nothing moved: give a number from 1 to {have}.",
+        "stackGone": "SR2e: {itemName} is no longer there to move.",
+        "moveFailed": "SR2e: {itemName} couldn't be taken from the giver, so nothing moved (see the console)."
       },
       "Gmlock": {
         "sr2eAGmActionIsWaiting": "SR2e: a GM action is waiting for an earlier one to finish. If nothing happens, reload this window."
@@ -3381,7 +3383,7 @@
       },
       "Migrations": {
         "sr2eMigrationToFailedSeeThe": "SR2e: migration to {version} failed; see the console. Later migrations were not run.",
-        "foreignWorld": "SR2e: this world looks like another system's (the same id, {id}), so it was not updated. See the chat card."
+        "foreignWorld": "SR2e: this world looks like another system's (the same id, {id}), so it was not updated."
       },
       "Settings": {
         "sr2eHouseRulesTheAdvancedBox": "SR2e house rules: the advanced box is not valid JSON ({errMessage}). Nothing was saved.",

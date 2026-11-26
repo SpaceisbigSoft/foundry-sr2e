@@ -15,7 +15,7 @@ export const FOREIGN_WORLD = {
  * Pure (v0.93.0): the signs that a world's stored data (Foundry's `game.data`: settings, actors with their items, items) is
  * another system's: the marker setting, and each foreign type found with how many documents have it. [] = none.
  */
-export function foreignWorldSigns(data: { settings?: any[]; actors?: any[]; items?: any[] } | null | undefined): string[] {
+export function foreignWorldSigns(data: { settings?: any[]; actors?: any[]; items?: any[]; scenes?: any[] } | null | undefined): string[] {
   const signs: string[] = [];
   if ((data?.settings ?? []).some((s: any) => s?.key === FOREIGN_WORLD.setting)) signs.push(FOREIGN_WORLD.setting);
   const count = new Map<string, number>();
@@ -28,6 +28,8 @@ export function foreignWorldSigns(data: { settings?: any[]; actors?: any[]; item
     for (const i of a?.items ?? []) see("Item", i?.type, FOREIGN_WORLD.itemTypes);
   }
   for (const i of data?.items ?? []) see("Item", i?.type, FOREIGN_WORLD.itemTypes);
+  // Unlinked tokens keep their own items in the token's delta.
+  for (const s of data?.scenes ?? []) for (const tk of s?.tokens ?? []) for (const i of tk?.delta?.items ?? []) see("Item", i?.type, FOREIGN_WORLD.itemTypes);
   for (const [k, n] of count) signs.push(`${k} (${n})`);
   return signs;
 }
