@@ -5,6 +5,7 @@
  *   Magic, armor, condition, Karma, nuyen, lifestyle, what's in effect, and a "Since creation" column.
  * - Creation: the frozen creation record, the advancement log under it, and what's waiting for the GM.
  */
+import { revertRow } from './revert942.ts';
 import { ATTRIBUTE_KEYS, augmentationsOf } from '../models/index.ts';
 import { RULES, sinceCreation, attributeSources, describeLine, advancementTotalsV73, isCreationRecord, priorityTable, drugsForBonuses, type CreationRecord } from '../rules/index.ts';
 import { creationRecordOf, inCreation, requestsOf, queueOn } from './approvals.ts';
@@ -114,7 +115,7 @@ export function creationContext(actor: any): any {
       checks: rec.checks,
     },
     log: [...log].reverse().map((l) => ({ ...l, text: describeLine(l), when: (() => { try { return new Date(l.at).toLocaleDateString(); } catch { return ''; } })(),
-      cost: [l.karma ? `${l.karma > 0 ? '+' : ''}${l.karma} K` : '', l.nuyen ? `${l.nuyen > 0 ? '+' : '−'}¥${Math.abs(l.nuyen).toLocaleString()}` : ''].filter(Boolean).join(' '), cls: l.kind })),
+      cost: [l.karma ? `${l.karma > 0 ? '+' : ''}${l.karma} K` : '', l.nuyen ? `${l.nuyen > 0 ? '+' : '−'}¥${Math.abs(l.nuyen).toLocaleString()}` : ''].filter(Boolean).join(' '), cls: l.kind, revert: revertRow(actor, l as any) })),
     totals: advancementTotalsV73(log),
   };
 }

@@ -23,6 +23,7 @@ import { safeAutoApply, gmApplyShapeOk, describeGmChange, cardTargetUuid, cardSo
 import { authorIsGm, authorOwns, cardAuthor, cardTrust, speakerActorUuid, nameOfUuid, playerMay, gmMay } from './trust.ts';
 import { disarmQuickRoll } from './hotkeys.ts';
 import { withGmLock } from './gmlock.ts';
+import { confirmAdvRevertCard, applyAdvRevertAsGm } from './revert942.ts';
 import { RULES, autoResists, blastRadius, blastLoss, scatter, damageLabel, scatterDiceFor, scatterMetres, confinedBlast, throwBackScatter, blastScatterDice, fusedScatter, canThrowBack, stopsAtWalls, grenadeKind, toxinOnsetLabel, scatterDirection, bearingDeg, type TargetNumberModifier } from '../rules/index.ts';
 import { modKey } from '../rules/dice.ts';
 import { isLeadGm, isPromptWindow, leadSettled } from './leader.ts';
@@ -1770,6 +1771,7 @@ export const GM_APPLY_ACTIONS: Record<string, string> = {
   applyHost: 'hostApplied', applyTally: 'tallyApplied', applyCleanse: 'cleanseApplied', applyPossession: 'possessionApplied',
   applyPowerEffect: 'powerEffectApplied', applyActorUpdate: 'actorUpdateApplied', applySurgery: 'surgeryApplied',
   applyHeal: 'healApplied', applyPatch: 'patchApplied', applyVehicleJob: 'vehicleJobApplied', applyTimedStatus: 'timedStatusApplied',
+  applyAdvRevert: 'advRevertApplied',
 };
 
 /** Pure: the Apply (GM) actions a card's content carries that are not yet done. */
@@ -2912,6 +2914,20 @@ async function onApplyTimedStatus(message: any, button: HTMLButtonElement): Prom
   });
 }
 
+/** v0.94.2 (item 31): a player's advancement revert under the rating lock; re-planned from the actor, confirmed, applied. */
+async function onApplyAdvRevert(message: any, button: HTMLButtonElement): Promise<void> {
+  if (!game.user?.isGM) return ui.notifications.warn(tx('SR2E.Notify.Chat.onlyTheGmCanApplyThis'));
+  if (message.getFlag(SYSTEM_ID, 'advRevertApplied')) return ui.notifications.warn(tx('SR2E.Notify.Chat.alreadyApplied'));
+  const f = await gmApplyFlag<{ actorUuid: string; lineId: string }>(message, 'applyAdvRevert');
+  const v = f ? await confirmAdvRevertCard(f, message) : null;
+  if (!v) return;
+  await gmLocked(message, button, async () => {
+    button.disabled = true;
+    if (await applyAdvRevertAsGm(v, message)) await message.setFlag(SYSTEM_ID, 'advRevertApplied', true);
+    else button.disabled = false;
+  });
+}
+
 /** v0.54.0 (GM): apply a surgery result for a surgeon's player who doesn't own the patient. */
 async function onApplySurgery(message: any, button: HTMLButtonElement): Promise<void> {
   if (!game.user?.isGM) return ui.notifications.warn(tx('SR2E.Notify.Chat.onlyTheGmCanApplyThis'));
@@ -3594,6 +3610,7 @@ function dispatch(message: any, button: HTMLButtonElement, action: string): Prom
   else if (action === 'applyPatch') return onApplyPatch(message, button);
   else if (action === 'applyVehicleJob') return onApplyVehicleJob(message, button);
   else if (action === 'applyTimedStatus') return onApplyTimedStatus(message, button);
+  else if (action === 'applyAdvRevert') return onApplyAdvRevert(message, button);
   else if (action === 'docwagonArrive') return onDocwagonArrive(message, button);
   else if (action === 'breakBinding') return onBreakBinding(message, button);
   else if (action === 'placeWard') return onPlaceWard(message);

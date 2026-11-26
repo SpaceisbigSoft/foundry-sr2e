@@ -10,7 +10,7 @@
  */
 import { SYSTEM } from '../config/system.ts';
 import {
-  creationRecordFrom, composeAdvancementV73, appendAdvancement, ledgerAdded, itemRaises, actorRaises, LOGGED_ITEM_TYPES, RULES_ADVANCEMENT,
+  creationRecordFrom, composeAdvancementV73, appendAdvancement, ledgerAdded, LOGGED_ITEM_TYPES, RULES_ADVANCEMENT,
   ratingLockApplies, lockedRaises, normalizeTweaks, type AdvanceEvent, type AdvanceLine, type CreationRecord, type BuildRow,
 } from '../rules/index.ts';
 import { creationRecordOf, approvalContext, queueOn, inCreation, RECORD_FLAG, DRAFT_FLAG } from './approvals.ts';
@@ -19,6 +19,7 @@ import { urrCoreStartPool } from '../rules/urr80-core.ts';
 import { startPoolPatch } from '../rules/core923.ts';
 import { madeHere } from './leader.ts';
 import { t as tx, tCount } from '../helpers/i18n.ts';
+import { keyedItemRaises, keyedActorRaises, attachUndo } from '../rules/revert942.ts';
 
 export const LOG_FLAG = 'advancement';
 
@@ -125,7 +126,8 @@ async function flush(actor: any, uuid: string): Promise<void> {
   const a: any = (fromUuidSync as any)?.(uuid) ?? actor;
   if (!a?.isOwner || !creationRecordOf(a)) return;
   // v0.73.0 (O42): nuyen refunds of logged purchases are logged too (RULES.CROSSCUT_V73.advancement).
-  const lines = composeAdvancementV73(b.events, { by: b.by, approvedBy: b.approvedBy, at: new Date().toISOString(), t: Number((game as any).time?.worldTime ?? 0), ids: () => foundry.utils.randomID(), log: advancementOf(a) } as any);
+  // v0.94.2 (item 31): each line keeps the fields it raised and their values before (what Revert puts back).
+  const lines = attachUndo(composeAdvancementV73(b.events, { by: b.by, approvedBy: b.approvedBy, at: new Date().toISOString(), t: Number((game as any).time?.worldTime ?? 0), ids: () => foundry.utils.randomID(), log: advancementOf(a) } as any), b.events);
   if (!lines.length) return;
   try { await a.update({ [`flags.${SYSTEM.id}.${LOG_FLAG}`]: appendAdvancement(advancementOf(a), lines) }, { sr2eNoAdvance: true }); } catch (err) { console.warn('sr2e | advancement log', err); }
 }
@@ -151,7 +153,7 @@ export function registerAdvancementHooks(): void {
   Hooks.on('preUpdateItem', (item: any, changes: any, options: any, userId: string) => {
     const actor = item?.parent;
     if (!watched(actor, options, userId)) return;
-    const raises = itemRaises(item.type, String(item.name), item.system, flat(changes));
+    const raises = keyedItemRaises(item.type, String(item.name), item.system, flat(changes));
     // Keyed by item: one batched update shares its options between all its items.
     if (raises.length) options.sr2eAdvRaises = { ...(options.sr2eAdvRaises ?? {}), [item.id]: raises };
   });
@@ -159,12 +161,12 @@ export function registerAdvancementHooks(): void {
     const actor = item?.parent;
     const raises = options?.sr2eAdvRaises?.[item?.id];
     if (!watched(actor, options, userId) || !Array.isArray(raises)) return;
-    note(actor, raises.map((r: any) => ({ kind: 'raise', label: String(r.label), from: Number(r.from), to: Number(r.to) })));
+    note(actor, raises.map((r: any) => ({ kind: 'raise', label: String(r.label), from: Number(r.from), to: Number(r.to), key: r.key, back: r.back, itemId: item.id }) as AdvanceEvent));
   });
   Hooks.on('preUpdateActor', (actor: any, changes: any, options: any, userId: string) => {
     if (!watched(actor, options, userId)) return;
     const f = flat(changes);
-    const events: AdvanceEvent[] = actorRaises(actor.system, f).map((r) => ({ kind: 'raise', ...r }));
+    const events: AdvanceEvent[] = keyedActorRaises(actor.system, f).map((r) => ({ kind: 'raise', ...r }));
     const next = changes?.system?.ledger ?? f['system.ledger'];
     if (Array.isArray(next)) for (const entry of ledgerAdded((actor.system?.ledger ?? []) as any[], next)) events.push({ kind: 'ledger', entry });
     if (events.length) options.sr2eAdvEvents = events;
