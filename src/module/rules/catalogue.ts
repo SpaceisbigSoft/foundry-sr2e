@@ -11,6 +11,8 @@ import { gradedAvailability } from './implants.ts';
 import { spellKarmaCost } from './thaumaturgy.ts';
 import { damageLabel } from './weapons.ts';
 import { itemWarnings } from './items.ts';
+import { normalizeTweaks } from './tweaks.ts';
+import { skillModMatches } from './kit.ts';
 import { guessSkillAttribute } from './statblock.ts';
 import { RULES } from './config.ts';
 import { own } from './util.ts';
@@ -317,7 +319,7 @@ export interface SetupInput {
   adeptOver: string[];
   magic: number;
   /** v0.71.0 (R4): `attribute` (the linked attribute), when known, for the Athletics check. */
-  skills: Array<{ name: string; attribute?: string }>;
+  skills: Array<{ name: string; attribute?: string; specialization?: string; concentration?: string }>;
   items: Array<{ id: string; type: string; name: string; system: any }>;
   build: Array<{ label: string; used: string | number; allowed: string | number; ok: boolean; note?: string }>;
 }
@@ -350,6 +352,11 @@ export function setupWarnings(i: SetupInput): SetupWarning[] {
     }
     if (it.type === 'cyberware' && s.installed === false) out.push({ text: tx('SR2E.Text.Catalogue.notInstalled', { name: it.name }), tab: 'gear', find: 'Cyberware', level: 'note' });
     if (it.type === 'focus' && s.bonded === false) out.push({ text: tx('SR2E.Text.Catalogue.notBonded', { name: it.name }), tab: 'magic', find: 'Foci', level: 'note' });
+    // v0.94.2 (item 29, 4.5): a custom skill tweak whose skill name matches no skill (or concentration or specialization) does nothing.
+    if (person && i.skills.length) for (const t of normalizeTweaks(s.tweaks, () => 'x')) {
+      if ((t.target !== 'skillDice' && t.target !== 'skillTn') || !t.key || t.key.trim() === '*') continue;
+      if (!i.skills.some((sk) => skillModMatches(t.key, sk))) out.push({ text: tx('SR2E.Text.Catalogue.tweakSkillUnknown', { name: it.name, skill: t.key }), tab: tabForType(it.type), find: findForType(it.type), level: 'warn' });
+    }
     for (const w of itemWarnings(it.type, s)) out.push({ text: `${it.name}: ${w}`, tab: tabForType(it.type), find: findForType(it.type), level: 'warn' });
   }
   return out.sort((a, b) => (a.level === b.level ? 0 : a.level === 'warn' ? -1 : 1));

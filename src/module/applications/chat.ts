@@ -19,6 +19,7 @@ import * as C923 from '../rules/combat923.ts';
 import { blastThroughWalls, crossingFraction, indirectScatterDice, indirectScatterMetres, barrierSpellRadius } from '../rules/index.ts';
 import { tokensNear, scatterPoint, blastBlocked, wallDistances, wallsBetweenPoints, sightBlockedBetweenPoints, wallsNear, scatterStop, tokenOf, drawArea, placeWardRegion } from './canvas.ts';
 import { escHtml } from '../rules/html.ts';
+import { foldDiceOn } from './fixes942.ts';
 import { safeAutoApply, gmApplyShapeOk, describeGmChange, cardTargetUuid, cardSourceUuids, safeInt, safePath, boundPower, boundLevel, safeStr, deepSafeKeys, trustedSource, GM_APPLY_SPECS } from '../rules/trust.ts';
 import { authorIsGm, authorOwns, cardAuthor, cardTrust, speakerActorUuid, nameOfUuid, playerMay, gmMay } from './trust.ts';
 import { disarmQuickRoll } from './hotkeys.ts';
@@ -1865,7 +1866,8 @@ function decorateCard(message: any, html: HTMLElement): void {
     html.querySelectorAll<HTMLButtonElement>(`button[data-sr2e-action="${a}"]`).forEach((b) => { b.disabled = true; b.textContent = tx('SR2E.Card.Chat.applied'); });
   }
   try {
-    if (game.settings.get(SYSTEM_ID, 'foldDice') === false) html.querySelectorAll<HTMLDetailsElement>('details.sr2e-fold').forEach((d) => { d.open = true; });
+    // v0.94.2 (item 29): the GM's world default unless this user set their own.
+    if (!foldDiceOn()) html.querySelectorAll<HTMLDetailsElement>('details.sr2e-fold').forEach((d) => { d.open = true; });
   } catch { /* setting not registered */ }
   addPanLinks(message, html);
   // v0.50.0: a card the GM replaced (a changed TN) keeps its record, but its buttons go dead.

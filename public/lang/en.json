@@ -2443,6 +2443,18 @@
           "gm": "The GM only",
           "all": "Everyone, for their own tests"
         }
+      },
+      "foldDiceDefault": {
+        "Name": "Fold dice on chat cards (table default)",
+        "Hint": "The GM's default for everyone at the table. A player who changes their own \"Fold dice on chat cards\" setting keeps their choice."
+      },
+      "areaSkipsAttacker": {
+        "Name": "Leave the attacker out of their own area",
+        "Hint": "When someone places an area spell or a blast on the map, their own token is not targeted even if it stands inside. They get a reminder and can target themselves by hand."
+      },
+      "clearTargetsEndTurn": {
+        "Name": "Clear my targets at the end of my turn",
+        "Hint": "When the turn of a combatant you control ends, your targets are released. For the GM this covers combatants no player owns."
       }
     },
     "Notify": {
@@ -2917,7 +2929,8 @@
         "makeTheTurretOrDroneAs": "Make the turret or drone as a Vehicle actor (drone ticked, a mounted weapon) first.",
         "statBlockImported": "Imported: {attributes} attributes, {skills} skills, {weapons} weapons, {cyberware} cyberware/bioware, {spells} spells, {powers} powers ({created} items created, {updated} updated).",
         "tweaksFull": "An item holds at most {max} tweaks.",
-        "pinsFull": "The pinned bar is full (12 pins): unpin one first."
+        "pinsFull": "The pinned bar is full (12 pins): unpin one first.",
+        "youAreInsideYourOwnArea": "{name} is inside their own area and was left out of the targets. Target your own token as well if the blast should hit you."
       },
       "Spendkarma": {
         "onlyCharactersSpendKarma": "Only characters spend Karma.",
@@ -3557,6 +3570,10 @@
         "typedNoReroll": "That result was typed from physical dice: there are no dice here to re-roll. Re-roll them at the table and roll again.",
         "typedNoRetarget": "That result was typed from physical dice: there are no dice to score against a new target number. Ask for the test again.",
         "typedUnused": "The typed result wasn't used (the test rolled its dice, or didn't happen): type it again if you need it."
+      },
+      "Fixes942": {
+        "nobodyToAdd": "Every character, NPC, spirit and vehicle is already in the combat.",
+        "addedToCombat": "Added {count} to the combat."
       }
     },
     "Dialog": {
@@ -5081,7 +5098,9 @@
       },
       "Canvas": {
         "noTarget": "(no target)",
-        "targeted": "{name} (targeted)"
+        "targeted": "{name} (targeted)",
+        "onThisScene": "On this scene",
+        "notOnThisScene": "Not on this scene"
       },
       "A11y": {
         "foldOrUnfold": "Fold or unfold: {heading}"
@@ -5199,6 +5218,12 @@
         "typedSuccesses": "Successes",
         "typedOnes": "Every die came up 1 (Rule of One)",
         "typedHint": "Count the successes yourself, Combat Pool and Karma dice included. The card is marked as typed, and the GM applies what follows from it."
+      },
+      "Fixes942": {
+        "addToCombatTitle": "Add to combat",
+        "addToCombatHint": "Put actors in the combat tracker without tokens, for play without a map. Player characters are ticked. A combat is started if there is none.",
+        "addToCombat": "Add",
+        "addToCombatButton": "Add to combat…"
       }
     },
     "Window": {
@@ -16703,7 +16728,8 @@
         "roll": "Roll",
         "use": "Use",
         "vehicleLine": "Handling {handling} · Speed {speed} · Body {body} · Armor {armor}",
-        "dronePilot": "Pilot {pilot}"
+        "dronePilot": "Pilot {pilot}",
+        "tweakSkillUnknown": "{name}: a custom tweak names the skill \"{skill}\", but no skill, concentration or specialization on this sheet has that name, so it does nothing."
       },
       "Hudactions": {
         "perception": "Perception",

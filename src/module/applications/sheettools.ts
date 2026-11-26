@@ -144,7 +144,7 @@ export function sheetToolsContext(actor: any, extra: { build?: Array<{ label: st
     cyberWarnings: d.cyberWarnings ?? [],
     adeptOver: (d.adeptOver ?? []).map((o: any) => o.name),
     magic: Number(d.magic ?? 0),
-    skills: items.filter((i: any) => i.type === 'skill').map((i: any) => ({ name: i.name, attribute: String(i.system?.attribute ?? '') })),
+    skills: items.filter((i: any) => i.type === 'skill').map((i: any) => ({ name: i.name, attribute: String(i.system?.attribute ?? ''), specialization: String(i.system?.specialization ?? ''), concentration: String(i.system?.concentration ?? '') })),
     items: items.map((i: any) => ({ id: i.id, type: i.type, name: i.name, system: i.system })),
     build: extra.build ?? [],
   }) : [];

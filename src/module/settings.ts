@@ -1618,6 +1618,20 @@ export function registerSettings(): void {
     name: "SR2E.Settings.foldDice.Name", hint: "SR2E.Settings.foldDice.Hint",
     scope: "client", config: true, type: Boolean, default: true,
   });
+  // v0.94.2 (item 29): the GM's default for Fold dice (each user's own choice above still wins once they set it),
+  // whether a placed area leaves its attacker out of the targets, and clearing your targets when your turn ends.
+  game.settings.register(SYSTEM.id, "foldDiceDefault", {
+    name: "SR2E.Settings.foldDiceDefault.Name", hint: "SR2E.Settings.foldDiceDefault.Hint",
+    scope: "world", config: true, type: Boolean, default: true,
+  });
+  game.settings.register(SYSTEM.id, "areaSkipsAttacker", {
+    name: "SR2E.Settings.areaSkipsAttacker.Name", hint: "SR2E.Settings.areaSkipsAttacker.Hint",
+    scope: "world", config: true, type: Boolean, default: true,
+  });
+  game.settings.register(SYSTEM.id, "clearTargetsEndTurn", {
+    name: "SR2E.Settings.clearTargetsEndTurn.Name", hint: "SR2E.Settings.clearTargetsEndTurn.Hint",
+    scope: "client", config: true, type: Boolean, default: false,
+  });
   game.settings.register(SYSTEM.id, "floatingDamage", {
     name: "SR2E.Settings.floatingDamage.Name", hint: "SR2E.Settings.floatingDamage.Hint",
     scope: "client", config: true, type: Boolean, default: true,

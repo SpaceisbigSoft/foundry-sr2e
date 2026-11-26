@@ -54,12 +54,12 @@ export function attackTargetOptions(actor: any, fromToken: any, targetToken: any
     tokens.set(a.uuid, t);
     sceneRows.push(`<option value="${esc(a.uuid)}">${esc(t.name)}</option>`);
   }
-  if (sceneRows.length) rows.push(`<optgroup label="On this scene">${sceneRows.join("")}</optgroup>`);
+  if (sceneRows.length) rows.push(`<optgroup label="${esc(tx('SR2E.Dialog.Canvas.onThisScene'))}">${sceneRows.join("")}</optgroup>`);
   const onScene = new Set(placeables.map((t: any) => t.document?.actorId).filter(Boolean));
   const worldRows = game.actors
     .filter((a: any) => a.id !== actor.id && types.includes(a.type) && !tokens.has(a.uuid) && !onScene.has(a.id))
     .map((a: any) => `<option value="${esc(a.uuid)}">${esc(a.name)}</option>`);
-  if (worldRows.length) rows.push(sceneRows.length ? `<optgroup label="Not on this scene">${worldRows.join("")}</optgroup>` : worldRows.join(""));
+  if (worldRows.length) rows.push(sceneRows.length ? `<optgroup label="${esc(tx('SR2E.Dialog.Canvas.notOnThisScene'))}">${worldRows.join("")}</optgroup>` : worldRows.join(""));
   return { options: rows.join(""), tokens };
 }
 
@@ -458,9 +458,12 @@ export function tokensInRegion(region: any): any[] {
   } catch { return []; }
 }
 
-/** Make the tokens inside a region this user's targets (others released). */
-export function targetInside(region: any): number {
-  const inside = tokensInRegion(region);
+/**
+ * Make the tokens inside a region this user's targets (others released).
+ * v0.94.2 (item 29, UI-9.5): `skip` leaves some out (the attacker's own tokens, unless the GM's `areaSkipsAttacker` is off).
+ */
+export function targetInside(region: any, skip?: (token: any) => boolean): number {
+  const inside = skip ? tokensInRegion(region).filter((t: any) => !skip(t)) : tokensInRegion(region);
   try {
     const ids = inside.map((t: any) => t.id);
     const u: any = (game as any).user;
@@ -468,6 +471,18 @@ export function targetInside(region: any): number {
     else { for (const t of canvas?.tokens?.placeables ?? []) (t as any).setTarget?.(ids.includes((t as any).id), { releaseOthers: false, groupSelection: true }); }
   } catch (err) { console.warn('sr2e | targets', err); }
   return inside.length;
+}
+
+/** v0.94.2: a test for the attacker's own tokens, or null when the GM's `areaSkipsAttacker` is off or there is no attacker. */
+export function attackerTokenTest(attacker: any): ((token: any) => boolean) | null {
+  if (!attacker) return null;
+  let on = true;
+  try { on = game.settings.get(SYSTEM.id, 'areaSkipsAttacker') !== false; } catch { /* not registered */ }
+  if (!on) return null;
+  const uuid = String(attacker.uuid ?? '');
+  const id = String(attacker.id ?? '');
+  // The sheet's actor itself (a synthetic token actor has the token's uuid), or a token linked to that world actor.
+  return (t: any) => Boolean(t?.actor) && (String(t.actor.uuid ?? '') === uuid || (Boolean(t.document?.actorLink) && String(t.document?.actorId ?? '') === id));
 }
 
 /** The data for a circular area of `radiusMetres` at `point`, as a Region. */
@@ -532,7 +547,7 @@ async function drawAreaNow(scene: any, point: { x: number; y: number }, radiusMe
 }
 
 /** Let the user place a circle of `radiusMetres` on the map; the tokens inside become their targets. */
-export async function placeArea(radiusMetres: number, name: string): Promise<{ region: any; count: number } | null> {
+export async function placeArea(radiusMetres: number, name: string, o: { attacker?: any } = {}): Promise<{ region: any; count: number; selfInside?: boolean } | null> {
   try {
     if (!canvas?.ready || !canvas?.regions?.placeRegion) { ui.notifications?.warn?.(tx('SR2E.Notify.Canvas.noSceneToPlaceItOn')); return null; }
     const user: any = (game as any).user;
@@ -543,7 +558,10 @@ export async function placeArea(radiusMetres: number, name: string): Promise<{ r
     const data = areaRegionData({ x: 0, y: 0 }, radiusMetres, { name, color: '#3aa0ff', flags: { placed: true, expires: { round: started ? Number(combat.round ?? 0) : null, combatId: started ? combat.id : null, at: Date.now() + 120000 } } });
     const region = await canvas.regions.placeRegion(data, { create: true, allowRotation: false });
     if (!region) return null;
-    return { region, count: targetInside(region) };
+    // v0.94.2 (item 29, UI-9.5): the attacker stays out of their own area's targets; the caller says if they were inside.
+    const own = attackerTokenTest(o.attacker);
+    const selfInside = own ? tokensInRegion(region).some(own) : false;
+    return { region, count: targetInside(region, own ?? undefined), selfInside };
   } catch (err) { console.warn('sr2e | place area', err); return null; }
 }
 
@@ -606,7 +624,10 @@ export function registerAreaHooks(): void {
     const ours = region?.getFlag?.(SYSTEM.id, 'area');
     if (!ours && (game as any).user?.isGM) return;
     if (ours && region.getFlag?.(SYSTEM.id, 'placed')) return; // placeArea targets it itself
-    setTimeout(() => { targetInside(region); }, 50);
+    // v0.94.2 (item 29): the placer's own runner (their one selected token, else their character) stays out.
+    const sel: any[] = [...new Set(((canvas as any)?.tokens?.controlled ?? []).map((t: any) => t.actor).filter(Boolean))];
+    const me = sel.length === 1 ? sel[0] : ((game as any).user?.character ?? null);
+    setTimeout(() => { targetInside(region, attackerTokenTest(me) ?? undefined); }, 50);
   });
   // v0.73.0 (O39): the undo log reads why (a timer sweep isn't a step; a clock or Combat Turn one joins that step).
   const sweep = (cause: AreaSweepCause = 'timer') => {

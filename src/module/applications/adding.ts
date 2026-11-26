@@ -72,8 +72,10 @@ export function shopActor(): { actor: any | null; pick: any[] } {
   const sel: any[] = [...new Set(((globalThis as any).canvas?.tokens?.controlled ?? []).map((t: any) => t.actor).filter(owned))];
   const token: any = sel.length === 1 ? sel[0] : null;
   if (user?.isGM) return { actor: token, pick: [] };
-  if (owned(user?.character)) return { actor: user.character, pick: [] };
+  // v0.94.2 (item 29, 16.6): a single selected token you own wins over your assigned character, so a shared login
+  // (one user, several runners) shops for the runner whose token is selected.
   if (token) return { actor: token, pick: [] };
+  if (owned(user?.character)) return { actor: user.character, pick: [] };
   const mine = [...((game as any).actors ?? [])].filter((a: any) => a.type === 'character' && a.isOwner);
   const named = mine.filter((a: any) => Number(a.ownership?.[user?.id] ?? 0) >= 3);
   const list = named.length ? named : mine;

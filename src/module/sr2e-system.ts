@@ -60,6 +60,7 @@ import { registerDefaultArtSettings, registerDefaultArt, applyDefaultArt, defaul
 import { registerInterfaceSettings, registerInterface } from "./applications/interface.ts";
 import { importCharacter, pasteCatalogueRows, sortCatalogueWithNotice } from "./applications/catalogue.ts";
 import { registerQuenchBatches } from "../quench/sr2e-quench.ts";
+import { registerFixes942 } from "./applications/fixes942.ts";
 
 export class SR2System {
   constructor() {
@@ -142,6 +143,8 @@ export class SR2System {
     registerSocket();
     registerItemTypeGuard();
     registerAreaHooks();
+    // v0.94.2 (item 29): Add to combat without tokens; clear my targets at the end of my turn.
+    registerFixes942();
     registerFloatingDamage();
     registerHiddenNumbers();
     registerQuickRolls();

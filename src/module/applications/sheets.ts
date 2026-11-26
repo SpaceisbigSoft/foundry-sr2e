@@ -406,7 +406,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     if (item.type === "spell") radius = areaRadius(Number(item.system.learnedForce ?? 0), Number(actor.system.derived?.magic ?? 0));
     else if (item.type === "weapon" && item.system.blast) radius = blastRadius(Number(item.system.damagePower ?? 0), blastFalloff(item.system.blastKind, Number(item.system.blastPerMetre ?? RULES.COMBAT.blast.powerPerMetre)));
     if (!(radius > 0)) return ui.notifications.warn(tx('SR2E.Notify.Sheet.hasNoArea', { itemName: escHtml(item.name) }));
-    const placed = await placeArea(radius, `${item.name} area`);
+    const placed = await placeArea(radius, `${item.name} area`, { attacker: actor });
+    if (placed?.selfInside) ui.notifications.warn(tx('SR2E.Notify.Sheet.youAreInsideYourOwnArea', { name: escHtml(actor.name) }));
     if (placed) ui.notifications.info(tx('SR2E.Notify.Sheet.tokenInsideSAreaNowTargeted', { placedCount: tCount(placed.count, 'SR2E.Count.token'), itemName: escHtml(item.name), plural2: placed.count === 1 ? tx('SR2E.Notify.Sheet.is') : tx('SR2E.Notify.Sheet.are') }));
   }
 
