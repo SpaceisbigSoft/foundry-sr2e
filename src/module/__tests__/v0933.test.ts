@@ -189,3 +189,47 @@ describe('v0.93.3 the Team Karma tracker (report item 38)', () => {
     assert.ok(key('SR2E.Tools.teamKarma.label') && key('SR2E.App.TeamKarma.spentNote'));
   });
 });
+
+describe('v0.93.3 review fixes', () => {
+  test('Karma Pool dice are spent once: the first target, the first shot, the acting grunt, the acting group member', () => {
+    const sh = read('src', 'module', 'applications', 'sheets.ts');
+    assert.ok(sh.includes('...common, ...(i > 0 ? { karmaDice: 0 } : {}), sight,'));
+    assert.ok(sh.includes('...common, karmaDice: 0, ...distance, targetUuid: choice.targetUuid, earlierRoundsThisPhase: choice.earlier + 1'));
+    const doc = read('src', 'module', 'documents', 'index.ts');
+    assert.ok(doc.includes('delete own.karmaDice;'));
+    assert.ok(doc.includes('...opts, ...(i > 0 ? { karmaDice: 0 } : {}), note: opts.note ?'));
+  });
+  test('Team Karma: one change at a time on a client', async () => {
+    const { oneAtATime } = await import('../rules/teamkarma.ts');
+    let runs = 0;
+    let release!: () => void;
+    const first = oneAtATime(() => new Promise<void>((r) => { runs++; release = r; }));
+    await oneAtATime(async () => { runs++; });
+    assert.equal(runs, 1, 'the second click is dropped while the first runs');
+    release(); await first;
+    await oneAtATime(async () => { runs++; });
+    assert.equal(runs, 2);
+  });
+  test('roll request: rows rolled here wait on their tally (no second roll), and a failed roll frees the row', () => {
+    const src = read('src', 'module', 'applications', 'rollrequest.ts');
+    assert.ok(src.includes('!sent.has(`${message.id}:${i}`)'));
+    assert.ok(src.includes('if (!done) sent.delete(key);'));
+    assert.ok(src.includes('if (ok) n++; else sent.delete(`${message.id}:${i}`);'));
+  });
+  test('the Resist preview takes the roll\'s vulnerability and barrier steps', () => {
+    const doc = read('src', 'module', 'documents', 'index.ts');
+    assert.ok(doc.includes("level: vulnerableLevel(damage.level), ...(RULES.CRITTERS.vulnerability.ignoresImmunity ? { ignoreImmunity: true } : {}) };\n    const allergyPower"));
+    assert.ok(doc.includes('threat: 0, barrier: true, occ: false };'));
+    assert.ok(key('SR2E.Dialog.Chat.resistPreviewBarrier'));
+  });
+  test('"Add the book\'s links" adds only missing links (no blank or comment lines piling up)', async () => {
+    const { missingWebLines } = await import('../rules/skills.ts');
+    const book = '# head\nA - B: 1\n\nC > D: 2\n';
+    assert.deepEqual(missingWebLines('', book), ['A - B: 1', 'C > D: 2']);
+    assert.deepEqual(missingWebLines('a  -  b: 1 # mine\n', book), ['C > D: 2']);
+    assert.deepEqual(missingWebLines('A - B: 1\nC > D: 2', book), []);
+  });
+  test('the creation wizard keeps the attribute on knowledge and language starters', () => {
+    assert.ok(read('src', 'module', 'applications', 'creation.ts').includes("s.kind === 'buildRepair' ? '' : ` (${attributeDisplayLabel(s.attribute)})`"));
+  });
+});

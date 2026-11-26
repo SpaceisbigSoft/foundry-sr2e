@@ -8,7 +8,7 @@ import { SYSTEM } from '../config/system.ts';
 import { escHtml } from '../rules/html.ts';
 import { t as tx } from '../helpers/i18n.ts';
 import { onRelay, requestGm } from './socket.ts';
-import { teamKarmaNext } from '../rules/teamkarma.ts';
+import { teamKarmaNext, oneAtATime } from '../rules/teamkarma.ts';
 
 const { ApplicationV2 } = foundry.applications.api;
 
@@ -27,17 +27,6 @@ async function store(next: number, who: string, change: number): Promise<void> {
   await (game as any).settings.set(SYSTEM.id, TEAM_KARMA, next);
   const line = change < 0 ? tx('SR2E.App.TeamKarma.spentNote', { who: escHtml(who), n: Number(next) || 0 }) : tx('SR2E.App.TeamKarma.setNote', { who: escHtml(who), n: Number(next) || 0 });
   await ChatMessage.create({ content: `<div class="sr2e-team-karma-note"><p>${line}</p></div>` });
-}
-
-/**
- * v0.93.3 review: one change at a time on this client (a double click spent two, or wrote the same count twice).
- * Exported for the tests.
- */
-let busy = false;
-export async function oneAtATime(fn: () => Promise<void>): Promise<void> {
-  if (busy) return;
-  busy = true;
-  try { await fn(); } finally { busy = false; }
 }
 
 /** The GM's − / + (a GM only). */

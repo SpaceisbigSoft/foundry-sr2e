@@ -13,3 +13,14 @@ export function teamKarmaNext(now: number, delta: number, gm: boolean): { ok: bo
   if (value < 0 || value > TEAM_KARMA_MAX) return { ok: false, value: cur };
   return { ok: true, value };
 }
+
+/**
+ * v0.93.3 review: one Team Karma change at a time on a client (a double click spent two, or wrote the same count
+ * twice); a click while one runs is dropped.
+ */
+let busy = false;
+export async function oneAtATime(fn: () => Promise<void>): Promise<void> {
+  if (busy) return;
+  busy = true;
+  try { await fn(); } finally { busy = false; }
+}
