@@ -88,7 +88,7 @@ export class CustomListsConfig extends foundry.applications.api.ApplicationV2 {
   }
 
   _replaceHTML(result: HTMLElement, content: HTMLElement): void {
-    content.replaceChildren(...result.childNodes);
+    content.replaceChildren(...Array.from(result.childNodes)); // v0.93.3: an array (the type-check has no DOM iterables)
   }
 
   static async #onSubmit(_event: Event, form: HTMLFormElement): Promise<void> {
