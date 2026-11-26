@@ -323,6 +323,15 @@ function colonless(line: string): { key: Key; label: string; value: string } | n
   return null;
 }
 
+/**
+ * v0.94.0 review: whether a list entry would be read as a colonless label line ("Nuyen 9999", "Karma 5", "Lifestyle
+ * High") if it started a line. The file converters (rules/nullsheen.ts, rules/fkimport.ts) keep such entries off the
+ * start of a line, so a gear item can't set Nuyen or end the list.
+ */
+export function startsLikeLabel(entry: string): boolean {
+  return colonless(String(entry ?? '')) !== null;
+}
+
 /** v0.81.1 (RC2-3): colonless labels that end a one-per-line list (see the section pass). */
 const STRONG_IN_LIST = /^(?:nuyen|karma|good karma|karma pool|total karma|career karma|unspent karma|street ?cred|notoriety|public awareness|lifestyle)$/i;
 

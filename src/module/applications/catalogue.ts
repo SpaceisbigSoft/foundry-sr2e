@@ -24,7 +24,7 @@ import { itemTypeProblem } from './drops.ts';
 import { t as tx, tKey, tCount, tNoun, type CountNoun } from '../helpers/i18n.ts';
 import { startProgress, type Progress } from './progress.ts';
 // v0.94.0: Nullsheen and futurekill files are turned into a write-up first (rules/imports094.ts).
-import { importInput, sameImport, type ImportInput } from '../rules/imports094.ts';
+import { importInput, sameImport, MAX_IMPORT_JSON, type ImportInput } from '../rules/imports094.ts';
 
 const { DialogV2 } = foundry.applications.api;
 /** A-15: the shared escape helper (rules/html.ts). */
@@ -525,7 +525,8 @@ export async function importCharacter(actor: any, text: string): Promise<{ lines
   if (!actor?.isOwner) throw new Error(tx('SR2E.App.Catalogue.onlyTheOwnerCanImportInto'));
   // v0.94.0: a Nullsheen or futurekill file becomes a write-up; a file that can't be read stops here, with why.
   const input: ImportInput = importInput(text);
-  if (input.source === 'writeup' && !input.text.trim() && input.warnings.length) throw new Error(input.warnings[0]);
+  // v0.94.0 review: whatever the source (a refused futurekill export too): nothing to read, nothing done.
+  if (!input.text.trim() && input.warnings.length) throw new Error(input.warnings.join(' '));
   text = input.text;
   // A player fills only a character that isn't finished, and not past the approval queue (the GM can).
   if (!(game as any).user?.isGM) {
@@ -614,7 +615,7 @@ async function importDialog(title: string, withRecord: boolean): Promise<{ text:
       file?.addEventListener('change', () => {
         const f = file.files?.[0];
         if (!f || !area) return;
-        if (f.size > 5_000_000) { ui.notifications.warn(tx('SR2E.Import.tooBig', { max: 5 })); return; }
+        if (f.size > MAX_IMPORT_JSON) { ui.notifications.warn(tx('SR2E.Import.tooBig', { max: Math.round(MAX_IMPORT_JSON / 1_000_000) })); return; }
         void f.text().then((txt) => { area.value = txt; preview(); }).catch(() => ui.notifications.warn(tx('SR2E.Import.unreadable')));
       });
     },
@@ -660,11 +661,13 @@ async function newCharacterFromBlock(): Promise<void> {
     if (earlier) {
       const update = await DialogV2.confirm({
         window: { title: tx('SR2E.Import.againTitle') },
-        content: `<p>${tx('SR2E.Import.againText', { name: esc(earlier.name) })}</p>`,
+        // v0.94.0 review: the players who own it, so the GM can tell two characters of the same name apart.
+        content: `<p>${tx('SR2E.Import.againText', { name: esc(earlier.name) })}</p><p class="hint">${tx('SR2E.Import.againOwners', { owners: esc([...((game as any).users ?? [])].filter((u: any) => !u.isGM && earlier.testUserPermission?.(u, 'OWNER')).map((u: any) => u.name).join(', ') || '—') })}</p>`,
         yes: { label: tx('SR2E.Import.againUpdate') }, no: { label: tx('SR2E.Import.againNew') }, rejectClose: false,
       });
       if (update === null || update === undefined) return;
-      if (update) { await runImport(earlier, r.text, r.record); return; }
+      // A character already recorded isn't recorded again.
+      if (update) { await runImport(earlier, r.text, r.record && !creationRecordOf(earlier)); return; }
     }
   }
   const parsed = parseCharacterSheet(input.text);

@@ -55,7 +55,7 @@ describe('v0.94.0 Nullsheen: a full SR2 file through the import', () => {
 
   test('result shape: source, key, name, edition; every line is read by the import', () => {
     assert.equal(r.source, 'nullsheen');
-    assert.equal(r.key, 'nullsheen:sample runner');
+    assert.match(r.key, /^nullsheen:sample runner#[0-9a-f]{8}$/);
     assert.equal(r.name, 'Sample Runner');
     assert.equal(r.edition, 'SR2');
     assert.deepEqual(unknown, [], 'no line the import does not recognise');
@@ -144,7 +144,7 @@ describe('v0.94.0 Nullsheen: an adept and an SR3 magician', () => {
   test('adept: tradition, powers (levels, the skill option), magical attribute bonus, initiative dice, foci', () => {
     const { r, plan, unknown } = run(fixture('nullsheen-sr2-adept.json'));
     assert.deepEqual(unknown, []);
-    assert.equal(r.key, 'nullsheen:example adept');
+    assert.match(r.key, /^nullsheen:example adept#[0-9a-f]{8}$/);
     assert.equal(plan.actorUpdate['system.tradition'], 'adept');
     assert.equal(plan.actorUpdate['system.magic'], 6);
     assert.equal(plan.actorUpdate['system.attributes.strength.base'], 4);
@@ -260,7 +260,7 @@ describe('v0.94.0 Nullsheen: forgiving reading', () => {
     const a = nullsheenToWriteUp(base);
     const b = nullsheenToWriteUp({ ...base, karma: 40, street_name: '  sample   RUNNER ', cash: 9999 });
     assert.equal(a.key, b.key);
-    assert.equal(nullsheenToWriteUp({ attributes: { Body: 3 }, name: 'Only Real', edition: 'SR2' }).key, 'nullsheen:only real');
+    assert.match(nullsheenToWriteUp({ attributes: { Body: 3 }, name: 'Only Real', edition: 'SR2' }).key, /^nullsheen:only real#[0-9a-f]{8}$/);
     const first = characterImportPlan(parseCharacterSheet(a.text));
     const second = characterImportPlan(parseCharacterSheet(b.text), { itemNames: first.items.map((i) => ({ type: i.type, name: i.name })), contacts: first.contacts });
     assert.ok(second.items.length > 0);

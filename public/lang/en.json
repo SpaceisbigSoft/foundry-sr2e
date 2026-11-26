@@ -19307,7 +19307,8 @@
       "againTitle": "Imported before",
       "againText": "This file's character was imported before as <strong>{name}</strong>. Update that character (items with the same name are updated, others added), or make a new one?",
       "againUpdate": "Update it",
-      "againNew": "Make a new one"
+      "againNew": "Make a new one",
+      "againOwners": "Owned by: {owners}"
     }
   },
   "TYPES": {

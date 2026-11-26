@@ -1,4 +1,5 @@
 import { t as tx } from '../helpers/i18n.ts';
+import { startsLikeLabel } from './charimport.ts';
 
 /**
  * v0.94.0: Nullsheen import. Nullsheen is a web character generator for SR2 and SR3 that saves a character as one
@@ -45,6 +46,12 @@ const MAX_OUT = 100_000;
 const withDetails = (base: string, toks: string[]) => (toks.length ? `${base} [${toks.join(', ')}]` : base);
 const UNNAMED = 'unnamed';
 const keyOf = (name: string) => `nullsheen:${name || UNNAMED}`;
+/** v0.94.0 review: a short, stable hash (FNV-1a, 32 bits, hex) for the re-import key. */
+function shortHash(text: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+  return h.toString(16).padStart(8, '0');
+}
 
 const isRec = (v: unknown): v is Rec => !!v && typeof v === 'object' && !Array.isArray(v);
 
@@ -273,10 +280,12 @@ function convert(d: Rec, warnings: string[], result: (text: string, name: string
   if (street) lines.push(`Alias: ${street}`);
   const name = street || real;
   if (!name) warn(tx('SR2E.Import.Nullsheen.noName'));
-  const key = keyOf(name.toLowerCase().replace(/\s+/g, ' '));
-
   const variant = field(d, 'isMetaVariant') === true ? clean(field(d, 'metaVariantType'), 60) : '';
   const race = variant || clean(field(d, 'race', 'metatype'), 60);
+  // v0.94.0 review: the name alone isn't enough to tell characters apart (Nullsheen's default is "New Runner", and two
+  // players may pick the same name): the key adds what a character keeps from its creation (real name, metatype,
+  // priorities, magic choice, age), as a short hash.
+  const key = keyOf(`${name.toLowerCase().replace(/\s+/g, ' ')}#${shortHash(JSON.stringify([real, race, field(d, 'priorities') ?? null, field(d, 'magicalChoice') ?? null, field(d, 'age') ?? null, edition ?? null]))}`);
   if (race) lines.push(`Metatype: ${race}`);
 
   const choice = clean(field(d, 'magicalChoice'), 80);
@@ -330,7 +339,9 @@ function convert(d: Rec, warnings: string[], result: (text: string, name: string
 
   const magic = isRec(attrs) ? num(field(attrs, 'Magic')) : undefined;
   const magical = field(d, 'magical') === true || (magic ?? 0) > 0 || !mundaneChoice;
-  if (magical && magic !== undefined) lines.push(`Magic: ${Math.max(0, Math.round(magic))}`);
+  // v0.94.0 review: Nullsheen may keep Magic unreduced beside the cyberware; the write-up's Magic is the one shown after
+  // the Essence loss, so no more than the whole Essence left.
+  if (magical && magic !== undefined) lines.push(`Magic: ${Math.max(0, Math.min(Math.round(magic), Math.floor(essence + 1e-9)))}`);
 
   // Reaction and initiative only when ware or powers change them.
   const reactionBonus = Math.round(bonus(cyberB, 'Reaction') + bonus(magB, 'Reaction'));
@@ -564,8 +575,10 @@ function convert(d: Rec, warnings: string[], result: (text: string, name: string
   // after another entry on the same line (or on the label's line when the list has nothing else).
   const section = (label: string, entries: string[]) => {
     if (!entries.length) return;
-    const safe = entries.filter((e) => !ATTR_START.test(e));
-    const risky = entries.filter((e) => ATTR_START.test(e));
+    // v0.94.0 review: also an entry that reads as a colonless label ("Nuyen 9999", "Lifestyle High").
+    const isRisky = (e: string) => ATTR_START.test(e) || startsLikeLabel(e);
+    const safe = entries.filter((e) => !isRisky(e));
+    const risky = entries.filter(isRisky);
     if (!safe.length) {
       lines.push('', `${label}: ${risky.join(', ')}`);
       return;

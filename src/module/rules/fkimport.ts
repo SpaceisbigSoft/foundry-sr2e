@@ -1,4 +1,5 @@
 import { t as tx, tKey } from '../helpers/i18n.ts';
+import { startsLikeLabel } from './charimport.ts';
 
 /**
  * v0.94.0: futurekill's SR2 system (futurekill/sr2e-foundryvtt) → SR2e's character write-up text.
@@ -103,8 +104,9 @@ function htmlToText(v: unknown): string {
   let s = str(v);
   if (!s) return '';
   if (s.length > MAX_TEXT * 2) s = s.slice(0, MAX_TEXT * 2);
-  s = s.replace(/<\s*br\s*\/?>/gi, '\n').replace(/<\/\s*(p|div|h[1-6]|li|tr|blockquote)\s*>/gi, '\n\n').replace(/<\s*li[^>]*>/gi, '- ');
-  s = s.replace(/<[^>]*>/g, '');
+  s = s.replace(/<\s*br\s*\/?>/gi, '\n').replace(/<\/\s*(p|div|h[1-6]|li|tr|blockquote)\s*>/gi, '\n\n').replace(/<\s*li[^<>]*>/gi, '- ');
+  // v0.94.0 review: [^<>] keeps these linear on a crafted text full of "<".
+  s = s.replace(/<[^<>]*>/g, '').replace(/[<>]/g, ' ');
   s = s.replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#0*39;|&apos;/g, "'")
     .replace(/&#(\d{1,6});/g, (_m, d: string) => { const c = Number(d); return c > 31 && c < 0x110000 ? String.fromCodePoint(c) : ' '; })
     .replace(/&amp;/g, '&');
@@ -248,9 +250,17 @@ export function futurekillToWriteUp(data: unknown): ConvertResult {
 function convert(data: Rec, sys: Rec, name: string, npc: boolean, W: (key: string, vars?: Rec) => void): { text: string } {
   const out: string[] = [];
   const notes: string[] = [];
+  // v0.94.0 review: an entry that reads as an attribute or colonless label line ("Nuyen 9999", "Body 5") would be read as
+  // one at the start of a line: it goes after another entry on the same line (or on the label's line).
   const section = (label: string, entries: string[]) => {
     if (!entries.length) return;
-    out.push(`${label}:`, ...entries, '');
+    const isRisky = (e: string) => startsLikeLabel(e) || /^\s*(?:body|quickness|strength|charisma|intelligence|willpower|essence|magic|reaction|initiative)\b\s*[:=]?\s*\d/i.test(e);
+    const safe = entries.filter((e) => !isRisky(e));
+    const risky = entries.filter(isRisky);
+    if (!safe.length) { out.push(`${label}: ${risky.join(', ')}`, ''); return; }
+    const lines = [...safe];
+    lines[0] = [lines[0], ...risky].join(', ');
+    out.push(`${label}:`, ...lines, '');
   };
 
   // ---- Items, by type (capped).
@@ -278,14 +288,14 @@ function convert(data: Rec, sys: Rec, name: string, npc: boolean, W: (key: strin
   const mv = rec(sys.metavariant);
   const variant = str(mv.name) && str(mv.base).toLowerCase() === race ? cleanName(mv.name) : '';
   let raceMods: Partial<Record<AttrKey, number>> = {};
-  if (RACE_LABEL[race]) {
-    out.push(['Metatype:', RACE_LABEL[race]].join(' '));
-    raceMods = RACE_MODS[race] ?? {};
+  if ((Object.hasOwn(RACE_LABEL, race) ? RACE_LABEL[race] : undefined)) {
+    out.push(['Metatype:', (Object.hasOwn(RACE_LABEL, race) ? RACE_LABEL[race] : undefined)].join(' '));
+    raceMods = (Object.hasOwn(RACE_MODS, race) ? RACE_MODS[race] : undefined) ?? {};
     if (variant) {
       const vm = rec(mv.attributeMods);
       raceMods = Object.fromEntries(ATTRS.map((k) => [k, int(vm[k])]));
       notes.push(tx('SR2E.Import.Futurekill.metavariantNote', { name: variant }));
-      W('metavariant', { name, variant, race: RACE_LABEL[race] });
+      W('metavariant', { name, variant, race: (Object.hasOwn(RACE_LABEL, race) ? RACE_LABEL[race] : undefined) });
     }
   } else if (!npc) {
     W(race === 'shapeshifter' ? 'shapeshifter' : 'unknownRace', { name, race: cleanName(race) });
@@ -323,7 +333,7 @@ function convert(data: Rec, sys: Rec, name: string, npc: boolean, W: (key: strin
     if (!Number.isFinite(base)) continue;
     const natural = npc ? base : base + (raceMods[k] ?? 0) + (edgeAttr[k] ?? 0);
     const aug = natural + int(a.mod) + (ware[k] ?? 0);
-    attrLines.push(aug !== natural ? `${ATTR_LABEL[k]} ${natural} (${aug})` : `${ATTR_LABEL[k]} ${natural}`);
+    attrLines.push(aug !== natural ? `${(Object.hasOwn(ATTR_LABEL, k) ? ATTR_LABEL[k] : undefined)} ${natural} (${aug})` : `${(Object.hasOwn(ATTR_LABEL, k) ? ATTR_LABEL[k] : undefined)} ${natural}`);
   }
   if (attrLines.length) out.push('', ...attrLines);
 
@@ -335,7 +345,17 @@ function convert(data: Rec, sys: Rec, name: string, npc: boolean, W: (key: strin
       : magicType === 'magical_adept' ? (magicSkill === 'sorcery' ? 'Sorcerer' : magicSkill === 'conjuring' ? 'Conjurer' : (tradition === 'shamanic' ? 'Shamanic' : 'Hermetic'))
         : magicType === 'full_magician' || (npc && tradition && tradition !== 'none') ? (tradition === 'shamanic' ? 'Shamanic' : tradition === 'hermetic' ? 'Hermetic' : '')
           : '';
-  const magic = int(magicSys.value, 0);
+  // v0.94.0 review: futurekill keeps magic.value unclamped in its data (it lowers Magic for lost Essence only when the
+  // sheet loads), and the write-up's Magic is the one shown after the loss: so no more than the whole Essence left.
+  let essLoss = 0;
+  for (const c of ofType('cyberware')) {
+    if (!installed(c)) continue;
+    const g = str(c.system.grade).toLowerCase();
+    const mult = (Object.hasOwn(GRADE_ESSENCE, g) ? GRADE_ESSENCE[g] : undefined) ?? 1;
+    const e = Math.max(0, num(c.system.essenceCost));
+    if (Number.isFinite(e)) essLoss += mult === 1 ? e : e * mult;
+  }
+  const magic = Math.min(int(magicSys.value, 0), Math.max(0, Math.floor(6 - essLoss + 1e-9)));
   const magicLines: string[] = [];
   if (magicType !== 'none' || magic > 0) magicLines.push(['Magic', String(Math.max(0, magic))].join(' '));
   if (tradWord) magicLines.push(['Tradition:', tradWord].join(' '));
@@ -352,12 +372,19 @@ function convert(data: Rec, sys: Rec, name: string, npc: boolean, W: (key: strin
   for (const s of ofType('skill')) {
     const cat = str(s.system.category);
     const label = cat === 'knowledge' ? 'Knowledge' : cat === 'language' ? 'Language' : cat === 'build_repair' ? 'B/R' : 'Skills';
-    const rating = Math.max(0, int(s.system.rating, 0));
+    let rating = Math.max(0, int(s.system.rating, 0));
     const spec = rec(s.system.specialization);
     const conc = rec(s.system.concentration);
     const specName = cleanName(spec.name);
     const concName = cleanName(conc.name);
     const pick = specName ? { n: specName, r: int(spec.rating) } : concName ? { n: concName, r: int(conc.rating) } : null;
+    // v0.94.0 review: a character still in futurekill's creation keeps its points in `allocated` until the ratings are
+    // finalized; work them out its way (specialization: skill -2 and +2; concentration: -1 and +1).
+    const allocated = int(s.system.allocated, 0);
+    if (s.system.ratingsFinalized === false && allocated > 0) {
+      rating = specName ? Math.max(0, allocated - 2) : concName ? Math.max(0, allocated - 1) : allocated;
+      if (pick) pick.r = specName ? allocated + 2 : allocated + 1;
+    }
     if (specName && concName) W('concentrationDropped', { name: s.name, concentration: concName, specialization: specName });
     let entry = `${s.name} ${rating}`;
     if (pick) entry += pick.r > 0 ? ` (${pick.n} ${pick.r})` : ` (${pick.n})`;
@@ -372,7 +399,7 @@ function convert(data: Rec, sys: Rec, name: string, npc: boolean, W: (key: strin
   for (const c of ofType('cyberware')) {
     if (!installed(c)) { notInstalled.push(c.name); continue; }
     const g = str(c.system.grade).toLowerCase();
-    const mult = GRADE_ESSENCE[g] ?? 1;
+    const mult = (Object.hasOwn(GRADE_ESSENCE, g) ? GRADE_ESSENCE[g] : undefined) ?? 1;
     const baseEss = Math.max(0, num(c.system.essenceCost));
     const ess = Number.isFinite(baseEss) ? (mult === 1 || baseEss === 0 ? baseEss : Math.max(0.05, Math.ceil(baseEss * mult * 100 - 1e-9) / 100)) : NaN;
     const rating = int(c.system.rating, 0);
@@ -514,7 +541,7 @@ function convert(data: Rec, sys: Rec, name: string, npc: boolean, W: (key: strin
   const life = ofType('lifestyle')[0];
   const level = life ? str(life.system.level) : str(sys.lifestyle);
   const LIFE: Record<string, string> = { streets: 'Street', street: 'Street', squatter: 'Squatter', low: 'Low', middle: 'Middle', high: 'High', luxury: 'Luxury' };
-  const lifeWord = LIFE[level.toLowerCase()];
+  const lifeWord = Object.hasOwn(LIFE, level.toLowerCase()) ? LIFE[level.toLowerCase()] : undefined;
   if (lifeWord) {
     const months = life ? int(life.system.monthsPaid, -1) : -1;
     out.push(months >= 0 ? ['Lifestyle:', lifeWord, `(${months}`, 'months)'].join(' ') : ['Lifestyle:', lifeWord].join(' '));
