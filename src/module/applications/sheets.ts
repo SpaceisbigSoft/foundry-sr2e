@@ -1,3 +1,5 @@
+import { kindMismatch } from "../rules/spiritkind.ts";
+import { attributeDisplayLabel, attrAbbr } from "../rules/customlists.ts";
 import { importIntoCharacter } from './catalogue.ts';
 import { sysNow } from '../helpers/clock.ts';
 import { nextInitiationGrade } from '../rules/sorcery923.ts';
@@ -7,6 +9,7 @@ import { teachersOn } from '../rules/formulas.ts';
 import { interpMark } from '../rules/interpretations.ts';
 import { castingPoolMax } from '../rules/docs79-drones-magic.ts';
 import { metamagicAllowed } from "../rules/sorcery.ts";
+import { orderAreaTargets } from "../rules/areatargets.ts";
 import { ATTRIBUTE_KEYS, type AttributeKey } from "../models/index.ts";
 import { dropItemOnActor } from "./drops.ts";
 import { allActors, actorLabel } from "../helpers/actors.ts";
@@ -447,12 +450,13 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       effects: effectsContext(actor),
       attributes: ATTRIBUTE_KEYS.map((key) => ({
         key,
-        label: game.i18n.localize(`SR2E.Attribute.${key}`),
+        // v0.93.3: the GM's own attribute labels (rules/customlists.ts; the default is the language file's).
+        label: attributeDisplayLabel(key),
         base: actor.system.attributes[key].base,
         mod: actor.system.attributes[key].mod,
         gear: actor.system.attributes[key].gear,
         total: actor.system.attributes[key].total,
-        abbr: key.charAt(0).toUpperCase(),
+        abbr: attrAbbr(key),
         racial: actor.system.attributes[key].racial ?? 0,
         augmented: actor.system.attributes[key].total !== actor.system.attributes[key].base,
         improve: actor.type === "character" ? actor.improveCost?.({ attribute: key }) : null,
@@ -1475,7 +1479,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const selects = BUILD_COLUMNS.map((k) => `<label>${escHtml(cap(k))} <select name="${k}"><option value="">–</option>${PRIORITY_LETTERS.map((l) => `<option value="${l}" ${saved[k] === l ? "selected" : ""}>${l}</option>`).join("")}</select></label>`).join(" ");
     const metas = Object.entries(RULES.METATYPES.types).map(([k, v]) => `<option value="${escHtml(k)}" ${k === base.metatype ? "selected" : ""}>${escHtml(v.label)}</option>`).join("");
     const magics = [["none", tx('SR2E.App.Sheets.mundane')], ["full", tx('SR2E.App.Sheets.fullMagician')], ["adept", tx('SR2E.App.Sheets.physicalAdept')], ["aspected", tx('SR2E.App.Sheets.aspectedMagician')]].map(([k, l]) => `<option value="${escHtml(k)}" ${k === base.magic ? "selected" : ""}>${escHtml(l)}</option>`).join("");
-    const attrs = ATTRIBUTE_KEYS.map((k) => `<label>${escHtml(cap(k))} <input name="attr-${k}" type="number" value="${base.attributes[k] ?? 1}" min="1" max="${RULES.CREATION.attributeMax}" style="width:3.5em"></label>`).join(" ");
+    const attrs = ATTRIBUTE_KEYS.map((k) => `<label>${escHtml(attributeDisplayLabel(k))} <input name="attr-${k}" type="number" value="${base.attributes[k] ?? 1}" min="1" max="${RULES.CREATION.attributeMax}" style="width:3.5em"></label>`).join(" ");
     const first = { priorities: saved, metatype: base.metatype, magic: base.magic, attributes: base.attributes };
     const b = RULES.STREET.builder;
     const tplNames = templates.filter((t) => Number((t.system as any)?.cost ?? 0) > 0).map((t) => t.name);
@@ -2634,7 +2638,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const left = usePool === "none" ? 0 : (actor.system.derived[`${usePool}PoolLeft`] as number);
     const choice = await foundry.applications.api.DialogV2.prompt({
       window: { title: tx('SR2E.Dialog.Sheet.use2', { powerName: power.name }) },
-      content: `${p.area ? areaTargetRows(others, game.user.targets) : `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.target')}</label><select name="target">${attackTargetOptions(actor, attackerToken(actor), game.user.targets?.first?.() ?? null, ["character", "npc", "spirit"]).options}</select></div>`}
+      content: `${p.area ? areaTargetRows(others, game.user.targets, undefined, game.user.targets?.first?.() ?? attackerToken(actor)) : `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.target')}</label><select name="target">${attackTargetOptions(actor, attackerToken(actor), game.user.targets?.first?.() ?? null, ["character", "npc", "spirit"]).options}</select></div>`}
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.otherTnModifier')}</label><input name="mod" type="number" value="0"></div>
         ${usePool === "none" ? "" : `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.poolDiceLeft', { left })}</label><input name="pool" type="number" value="0" min="0" max="${left}"></div>`}
         <div class="sr2e-preview" aria-live="polite"></div>
@@ -3051,40 +3055,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
   }
 
   static async #onRollAttribute(this: SR2CharacterSheet, _event: Event, target: HTMLElement) {
-    const key = target.dataset["attribute"] as AttributeKey;
-    const actor: any = this.document;
-    // Quickness with a cyberlimb (v0.43.0): which limb the test is made with.
-    const limbs = key === "quickness" && RULES.GEAR.cyberlimbs.quickness ? [...(actor.system.derived?.cyber?.limbs ?? [])] : [];
-    if (limbs.length) {
-      const c = await foundry.applications.api.DialogV2.prompt({
-        window: { title: tx('SR2E.Dialog.Sheet.rollQuickness') },
-        content: `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.targetNumber')}</label><input name="tn" type="number" value="4" min="2" autofocus></div>
-          <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.with')}</label><select name="limb"><option value="">${tx('SR2E.Dialog.Sheet.naturalQuickness', { quicknessTotal: escHtml(actor.system.attributes?.quickness?.total ?? 0) })}</option>${limbs.map((l: any) => `<option value="${escHtml(l.id)}">${tx('SR2E.Dialog.Sheet.quickness', { name: escHtml(l.name), quickness: escHtml(l.quickness) })}</option>`).join("")}</select></div>`,
-        ok: { callback: (_e: Event, b: any) => ({ tn: Number(b.form.elements.tn.value) || 4, limb: String(b.form.elements.limb.value || "") }) },
-        rejectClose: false,
-      }) as { tn: number; limb: string } | null;
-      if (c) await actor.rollAttribute(key, { targetNumber: c.tn, limbId: c.limb || null });
-      return;
-    }
-    const c2 = await foundry.applications.api.DialogV2.prompt({
-      window: { title: tx('SR2E.Dialog.Sheet.roll2', { key: cap(key) }) },
-      content: `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.targetNumber')}</label><input name="tn" type="number" value="4" min="2" autofocus></div>
-        ${urrCoreTnPresetRow()}${CO923.karmaDiceRow(Number(actor.system?.derived?.karmaPoolLeft ?? 0), true, Number(actor.system?.attributes?.[key]?.total ?? 0))}
-        <label class="sr2e-check"><input type="checkbox" name="open"> ${tx('SR2E.Dialog.Sheet.openTestNoTnTheHighest')}</label>
-        <div class="sr2e-preview" aria-live="polite"></div>`,
-      render: (_e: Event, dialog: any) => {
-        // v0.80.0 (RULES.URR_V80.coreTnPresets): a preset sets the TN (no such field in the book).
-        const f: any = dialog.element?.querySelector?.("form") ?? dialog.form;
-        f?.elements?.tnPreset?.addEventListener?.("change", () => { const v = f.elements.tnPreset.value; if (v) { f.elements.tn.value = v; f.elements.tn.dispatchEvent(new Event("input", { bubbles: true })); } });
-        livePreview(dialog, (form, excluded) => tnPreviewHtml({ base: Number((form.elements as any).tn?.value) || 4, baseLabel: tx('SR2E.Dialog.Sheet.targetNumber'), auto: actor.previewModifiers(), excluded }));
-      },
-      ok: { callback: (_e: Event, b: any) => ({ tn: Number(b.form.elements.tn.value) || 4, open: Boolean(b.form.elements.open.checked), exclude: excludedOf(b.form),
-        karmaDice: b.form.elements.karmaDice ? Math.max(0, Math.floor(Number(b.form.elements.karmaDice.value) || 0)) : 0 }) },
-      rejectClose: false,
-    }) as { tn: number; open: boolean; exclude: string[]; karmaDice: number } | null;
-    if (!c2) return;
-    if (c2.open) await actor.openAttributeTest(key);
-    else await actor.rollAttribute(key, { targetNumber: c2.tn, exclude: c2.exclude, ...(c2.karmaDice > 0 ? { karmaDice: c2.karmaDice } : {}) });
+    // v0.93.3: the window itself is rollAttributeWindow (a GM's roll request opens it too).
+    await rollAttributeWindow(this.document, target.dataset["attribute"] as AttributeKey);
   }
 
   static async #onRollSkill(this: SR2CharacterSheet, _event: Event, target: HTMLElement) {
@@ -3103,72 +3075,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       const social = Object.keys(RULES.SOCIAL.skills).find((k) => k.toLowerCase() === n);
       if (social) { SR2CharacterSheet.#socialSkill = social; return SR2CharacterSheet.#onSocialTest.call(this); }
     }
-    // v0.44.0: open tests, a complementary skill, helpers (teamwork).
-    const others = [...actor.items].filter((i: any) => i.type === "skill" && i.id !== item.id && (i.system.rating ?? 0) > 0);
-    // Not this character's own tokens (an unlinked token is a copy with the same id).
-    const helpers = [...(canvas?.tokens?.placeables ?? [])].map((t: any) => t.actor).filter((a: any) => a && a.uuid !== actor.uuid && a.id !== actor.id && ["character", "npc"].includes(a.type));
-    // v0.58.0: Build/Repair tools, a language's complexity and Read/Write, and the task's base time.
-    const c58 = RULES.CHARACTERS_V58;
-    const isBR = item.system?.kind === "buildRepair" || /\bB\/R$/i.test(String(item.name ?? ""));
-    const isLang = item.system?.kind === "language";
-    const toolsBest = isBR ? actor.toolsFor?.(item.name) ?? "none" : "none";
-    const levelOpts = (sel: string) => c58.tools.levels.map((l) => `<option value="${escHtml(l.id)}" ${l.id === sel ? "selected" : ""}>${escHtml(l.label)}</option>`).join("");
-    // v0.92.3 (RULES.CORE_V923.languageTns 'book', Core p. 184): the Language Skills Table and the dialect's +2.
-    const langTable = CO923.languageTable();
-    const langDefault = (langTable.find((x) => x.tn === 4) ?? langTable[0])?.id ?? "";
-    const dialectMod = isLang ? CO923.dialectModifier() : null;
-    const extra58 = `${isBR ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.theJobNeeds')}</label><select name="toolsNeed">${levelOpts("kit")}</select></div><div class="form-group"><label>${tx('SR2E.Dialog.Sheet.toolsAtHand')}</label><select name="toolsHave">${levelOpts(toolsBest)}</select></div>` : ""}
-        ${isLang ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.language')}</label><select name="langMode"><option value="speak">${tx('SR2E.Dialog.Sheet.speakingListening')}</option><option value="rw">${tx('SR2E.Dialog.Sheet.readingWritingRating', { readWriteRating: readWriteRating(Number(item.system?.rating ?? 0)) })}</option></select></div><div class="form-group"><label>${tx('SR2E.Dialog.Sheet.howComplex')}</label><select name="langCx">${langTable.map((x) => `<option value="${escHtml(x.id)}" data-tn="${x.tn}" ${x.id === langDefault ? "selected" : ""}>${tx('SR2E.Dialog.Sheet.tn2', { label: escHtml(x.label), tn: x.tn })}</option>`).join("")}</select></div>${dialectMod ? `<label class="sr2e-check"><input type="checkbox" name="dialect"> ${escHtml(dialectMod.label)} +${dialectMod.value}</label>` : ""}` : ""}
-        <div class="form-group"><label title="${tx('SR2E.Dialog.Sheet.timeSuccessesIsShownOnThe')}">${tx('SR2E.Dialog.Sheet.baseTimeOptional')}</label><input name="baseTime" type="number" min="0" step="0.5" value="0"> <select name="baseUnit">${c58.time.units.map((u) => `<option value="${escHtml(u.id)}" ${u.id === "hours" ? "selected" : ""}>${escHtml(u.label)}</option>`).join("")}</select></div>`;
-    // v0.78.0 (RULES.BOOK_V78.encephalon 'shadowtech'): an encephalon's Task Pool on the skills it helps.
-    const taskLeft = encephalonFits({ attribute: String(item.system?.attribute ?? ""), kind: String(item.system?.kind ?? "active") }) ? Number(actor.system?.derived?.taskPoolLeft ?? 0) : 0;
-    const taskRow = taskLeft > 0 ? `<div class="form-group"><label title="${tx('SR2E.Dialog.Sheet.refreshesEachCombatTurnNotUsed')}">${tx('SR2E.Dialog.Sheet.taskPoolDiceEncephalonLeft', { taskLeft })}</label><input name="taskPool" type="number" min="0" max="${taskLeft}" value="0"></div>` : "";
-    const choice = await foundry.applications.api.DialogV2.prompt({
-      window: { title: tx('SR2E.Dialog.Sheet.roll3', { itemName: item.name }) },
-      content: `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.targetNumber')}</label><input name="tn" type="number" value="${isLang ? (langTable.find((x) => x.id === langDefault)?.tn ?? 4) : 4}" min="2" autofocus></div>
-        ${urrCoreTnPresetRow(String(item.system?.kind ?? ""))}${extra58}${taskRow}${CO923.karmaDiceRow(Number(actor.system?.derived?.karmaPoolLeft ?? 0), Number(item.system?.rating ?? 0) > 0 || !RULES.URR_V80.coreKarmaDice, Number(item.system?.rating ?? 0) > 0 ? Number(item.system?.rating ?? 0) : Number(actor.system?.attributes?.[String(item.system?.attribute ?? '')]?.total ?? 0))}
-        ${skillChoiceRows(this.document, item, false)}
-        <label class="sr2e-check"><input type="checkbox" name="open"> ${tx('SR2E.Dialog.Sheet.openTestNoTnTheHighest')}</label>
-        ${others.length ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.complementarySkill1DiePerSuccesses', { complementarySuccessesPerDie: RULES.STREET.tests.complementary.successesPerDie })}</label><select name="comp"><option value="">${tx('SR2E.Dialog.Sheet.none')}</option>${others.map((o: any) => `<option value="${escHtml(o.id)}">${escHtml(o.name)} ${escHtml(o.system.rating)}</option>`).join("")}</select></div>` : ""}
-        ${rememberMarker(`skill|${actor.uuid}|${item.id ?? item.name}`, skillRollMemoryFields())}
-        ${helpers.length ? `<fieldset class="sr2e-situational"><legend>${tx('SR2E.Dialog.Sheet.helpersTeamworkTheirSuccessesAddDice', { part: RULES.STREET.tests.teamwork.cap === "rating" ? tx('SR2E.Dialog.Sheet.atMost', { itemRating: escHtml(item.system?.rating ?? 0) }) : "" })}</legend>${helpers.map((h: any) => `<label class="sr2e-check"><input type="checkbox" name="helper" value="${escHtml(h.uuid)}"> ${escHtml(h.name)}</label>`).join("")}</fieldset>` : ""}
-        <div class="sr2e-preview" aria-live="polite"></div>`,
-      render: (_e: Event, dialog: any) => {
-        // v0.58.0: a language's complexity sets the TN.
-        const f: any = dialog.element?.querySelector?.("form") ?? dialog.form;
-        f?.elements?.langCx?.addEventListener?.("change", () => { const o = f.elements.langCx.selectedOptions?.[0]; if (o?.dataset?.tn) { f.elements.tn.value = o.dataset.tn; f.elements.tn.dispatchEvent(new Event("input", { bubbles: true })); } });
-        // v0.80.0 (RULES.URR_V80.coreTnPresets / coreKnowledgeTest): a preset sets the TN (no such field in the book).
-        f?.elements?.tnPreset?.addEventListener?.("change", () => { const v = f.elements.tnPreset.value; if (v) { f.elements.tn.value = v; f.elements.tn.dispatchEvent(new Event("input", { bubbles: true })); } });
-        livePreview(dialog, (form, excluded) => {
-          const el: any = form.elements;
-          const t = el.toolsNeed ? toolsModifier(String(el.toolsNeed.value), String(el.toolsHave?.value ?? "none")) : null;
-          const dm = dialectMod && el.dialect?.checked ? [dialectMod] : [];
-          return tnPreviewHtml({ base: Number(el.tn?.value) || 4, baseLabel: tx('SR2E.Dialog.Sheet.targetNumber'), auto: actor.previewModifiers(), manual: [...(t?.modifier ? [t.modifier] : []), ...dm], excluded, note: tx('SR2E.Dialog.Sheet.edgesFlawsAndDefaultingAreAdded'), ...(t?.blocked ? { warn: tx('SR2E.Dialog.Sheet.canTDoItWithoutTools') } : {}) });
-        });
-      },
-      ok: {
-        callback: (_e: Event, button: any) => {
-          const el = button.form.elements;
-          return { tn: Number(el.tn.value) || 4, useSpec: Boolean(el.useSpec?.checked), useConc: Boolean(el.useConc?.checked), related: (el.related?.value as string) || null,
-            open: Boolean(el.open?.checked), comp: (el.comp?.value as string) || null, helpers: Array.from(button.form.querySelectorAll('input[name="helper"]:checked')).map((i: any) => i.value as string), exclude: excludedOf(button.form),
-            baseTime: Number(el.baseTime?.value) || 0, baseUnit: String(el.baseUnit?.value ?? "hours"), toolsNeed: el.toolsNeed ? String(el.toolsNeed.value) : null, toolsHave: el.toolsHave ? String(el.toolsHave.value) : null,
-            lang: el.langMode ? { readWrite: el.langMode.value === "rw", complexity: String(el.langCx?.value ?? langDefault) } : null,
-            dialect: Boolean(el.dialect?.checked),
-            taskPool: el.taskPool ? Math.max(0, Math.floor(Number(el.taskPool.value) || 0)) : 0,
-            karmaDice: el.karmaDice ? Math.max(0, Math.floor(Number(el.karmaDice.value) || 0)) : 0 };
-        },
-      },
-      rejectClose: false,
-    }) as any;
-    if (!choice) return;
-    if (choice.toolsNeed && toolsModifier(choice.toolsNeed, choice.toolsHave ?? "none").blocked) return ui.notifications.warn(tx('SR2E.Notify.Sheet.canTDoThisWithoutTools', { actorName: escHtml(actor.name) }));
-    await actor.rollSkill(item, { exclude: choice.exclude, targetNumber: choice.tn, useSpecialization: choice.useSpec, useConcentration: choice.useConc, relatedSkillId: choice.related, open: choice.open, complementarySkillId: choice.comp, helperUuids: choice.helpers,
-      ...(choice.baseTime > 0 ? { baseTime: { value: choice.baseTime, unit: choice.baseUnit } } : {}),
-      ...(choice.toolsNeed ? { tools: { need: choice.toolsNeed, have: choice.toolsHave ?? "none" } } : {}),
-      ...(choice.lang ? { language: choice.lang } : {}),
-      ...(choice.dialect && dialectMod ? { modifiers: [dialectMod] } : {}),
-      ...(choice.taskPool > 0 ? { pool: "task", poolDice: choice.taskPool } : {}),
-      ...(choice.karmaDice > 0 ? { karmaDice: choice.karmaDice } : {}) });
+    // v0.93.3: the window itself is rollSkillWindow (a GM's roll request opens it too).
+    await rollSkillWindow(actor, item);
   }
 
   static async #onResistDamage(this: SR2CharacterSheet) {
@@ -3462,6 +3370,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         superior: ((el.superior?.value as string) || "") as "" | "attacker" | "defender",
         mod: Number(el.mod?.value) || 0,
         pool: Math.max(0, Math.min(left, Math.floor(Number(el.pool?.value) || 0))),
+        // v0.93.3: Karma Pool dice in the attack window (a known limit until now; #runTest caps them).
+        karmaDice: el.karmaDice ? Math.max(0, Math.floor(Number(el.karmaDice.value) || 0)) : 0,
         useSpec: Boolean(el.useSpec?.checked),
         useConc: Boolean(el.useConc?.checked),
         related: (el.related?.value as string) || null,
@@ -3519,6 +3429,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         calledShot: c.calledShot,
         ...(c.ammoType ? { ammoType: c.ammoType } : {}),
         poolDice: c.pool,
+        ...(c.karmaDice > 0 ? { karmaDice: c.karmaDice } : {}),
         ...(melee ? { targetReach: here.targetReach, subdue: c.subdue, ...(c.superior ? { superior: c.superior } : {}) } : {}),
         ...(melee && U80C.cbtChargePower(c.charging) ? { chargePower80: U80C.cbtChargePower(c.charging) } : {}),
         ...(c.unaware ? { unaware: true } : {}),
@@ -3610,6 +3521,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         ${fireRows}
         ${groupRow}
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.combatPoolDiceLeft', { left })}</label><input name="pool" type="number" value="0" min="0" max="${left}"></div>
+        ${CO923.karmaDiceRow(Number(derived.karmaPoolLeft ?? 0), true, Number(actor.findSkill(w.skill)?.system?.rating ?? 0) || Number(actor.system?.attributes?.[String(actor.findSkill(w.skill)?.system?.attribute ?? (melee ? "strength" : "quickness"))]?.total ?? 0))}
         <div class="sr2e-preview" aria-live="polite"></div>
         <details class="sr2e-more"><summary>${tx('SR2E.Dialog.Sheet.moreOptions')}</summary>
           ${visibilityRow}
@@ -4041,7 +3953,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const unseenOf = (uuids: string[]) => casterToken ? uuids.filter((u) => { const t = tokenFor(u); return t && lineOfSight(casterToken, t) === false; }).map((u) => others.find((o) => o.uuid === u)?.name ?? "?") : [];
     const blind = unseenOf(others.map((o) => o.uuid));
     const targetRow = targeted && sp.area && !heals
-      ? areaTargetRows(others, game.user.targets, areaTicked)
+      ? areaTargetRows(others, game.user.targets, areaTicked, centre)
       : targeted
       ? `<div class="form-group"><label>${heals ? tx('SR2E.Dialog.Sheet.patient') : tx('SR2E.Dialog.Sheet.target')}</label><select name="target">
           ${attackTargetOptions(actor, casterToken, targetToken, types, heals ? tx('SR2E.Dialog.Sheet.self2', { actorName: escHtml(actor.name) }) : undefined).options}
@@ -4094,6 +4006,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         ${targetRow}
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.spellPoolDiceToCastLeft', { left, part: castingPoolMax(left, actor.system.derived.magic) < left ? tx('SR2E.Dialog.Sheet.atMostMagic', { castingPoolMax: castingPoolMax(left, actor.system.derived.magic) }) : "" })}</label><input name="pool" type="number" value="0" min="0" max="${castingPoolMax(left, actor.system.derived.magic)}"></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.spellPoolDiceForDrain')}</label><input name="drainPool" type="number" value="0" min="0" max="${drainLeft}"></div>
+        ${CO923.karmaDiceRow(Number(actor.system?.derived?.karmaPoolLeft ?? 0), true, Number(actor.findSkill?.("Sorcery")?.system?.rating ?? 0) || Number(actor.system?.derived?.magic ?? 0))}
         ${sustainRow}
         ${fetishRow}
         ${aidRow}
@@ -4119,6 +4032,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
             targetUuids: checkedTargets(button.form),
             pool: Math.min(pool, left),
             drainPool: Math.min(drainPool, drainLeft, Math.max(0, left - Math.min(pool, left))),
+            // v0.93.3: Karma Pool dice in the spell window (castSpell's #runTest caps them).
+            karmaDice: el.karmaDice ? Math.max(0, Math.floor(Number(el.karmaDice.value) || 0)) : 0,
             useFocus: Boolean(el.useFocus?.checked),
             fetish: el.fetish ? Boolean(el.fetish.checked) : true,
             ritual: el.ritual?.checked
@@ -4162,6 +4077,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       targetUuids: choice.targetUuids,
       poolDice: choice.pool,
       drainPoolDice: choice.drainPool,
+      ...(choice.karmaDice > 0 ? { karmaDice: choice.karmaDice } : {}),
       useSustainingFocus: choice.useFocus,
       fetishInHand: choice.fetish,
       ritual: choice.ritual,
@@ -4387,11 +4303,17 @@ function scenePeople(self: any, types: readonly string[]): Array<{ uuid: string;
   return out;
 }
 
-/** Checkbox list of targets for area spells and powers; the user's current targets are pre-ticked. */
-function areaTargetRows(actors: any[], userTargets: any, preTicked?: Set<string>): string {
+/**
+ * v0.93.3 (visual review 0.93.2, finding 4): the scene's tokens only, those in the area first (rules/areatargets.ts);
+ * world actors with no token here go behind a fold instead of ~40 rows that pushed the Cast button off screen.
+ * Checkbox list of targets for area spells and powers; the user's current targets are pre-ticked. */
+function areaTargetRows(actors: any[], userTargets: any, preTicked?: Set<string>, centre?: any): string {
   const ticked = preTicked ?? new Set([...(userTargets ?? [])].map((t: any) => t.actor?.uuid).filter(Boolean));
-  return `<fieldset class="sr2e-situational"><legend>${tx('SR2E.Dialog.Sheet.targetsArea')}</legend>${actors.map((a: any) =>
-    `<label class="sr2e-check"><input type="checkbox" name="areaTarget" value="${escHtml(a.uuid)}" ${ticked.has(a.uuid) ? "checked" : ""}> ${escHtml(a.name)}</label>`).join("")}</fieldset>`;
+  const people = actors.map((a: any) => ({ ...a, onScene: Boolean(a.token), distance: centre && a.token ? tokenDistance(centre, a.token) : null }));
+  const { shown, folded } = orderAreaTargets(people, ticked);
+  const row = (a: any) => `<label class="sr2e-check"><input type="checkbox" name="areaTarget" value="${escHtml(a.uuid)}" ${ticked.has(a.uuid) ? "checked" : ""}> ${escHtml(a.name)}</label>`;
+  const fold = folded.length ? `<details class="sr2e-area-off"><summary>${tx('SR2E.Dialog.Sheet.areaNotOnScene', { n: folded.length })}</summary>${folded.map(row).join("")}</details>` : "";
+  return `<fieldset class="sr2e-situational"><legend>${tx('SR2E.Dialog.Sheet.targetsArea')}</legend>${shown.map(row).join("")}${fold}</fieldset>`;
 }
 
 /** The ticked area targets in a dialog form. */
@@ -4714,9 +4636,12 @@ export class SR2SpiritSheet extends SR2CharacterSheet {
       ...context,
       summoner: summoner ? { uuid: summoner.uuid, name: summoner.name } : null,
       spiritKinds: SPIRIT_KINDS.map((k) => ({ key: k, label: SPIRIT_KIND_LABELS[k] ? tKey(SPIRIT_KIND_LABELS[k]!) : cap(k) })),
+      // v0.93.3 (visual review 0.93.2, finding 14): a nature spirit whose name or element says elemental.
+      kindWarning: ((why: string) => why === 'nameSaysElemental' ? tx('SR2E.Text.SpiritKind.nameSaysElemental', { name: (this.document as any).name })
+        : why === 'elementSet' ? tx('SR2E.Text.SpiritKind.elementSet', { name: (this.document as any).name, element: String(sys?.element || sys?.domain || '') }) : '')(kindMismatch({ kind: sys?.spiritKind, name: (this.document as any).name, element: sys?.element, domain: sys?.domain, spiritType: sys?.spiritType })),
       isFreeOrAlly: ["free", "ally"].includes(sys.spiritKind),
       elementChoices: elementChoices(),
-      offsetRows: ATTRIBUTE_KEYS.map((k) => ({ key: k, label: game.i18n.localize(`SR2E.Attribute.${k}`), value: sys.offsets[k] })),
+      offsetRows: ATTRIBUTE_KEYS.map((k) => ({ key: k, label: attributeDisplayLabel(k), value: sys.offsets[k] })),
       immunityArmor: sys.immuneNormalWeapons ? sys.force * RULES.CONJURING.immunityArmorPerForce : 0,
       greatForm: { attributes: RULES.OCCULT.metamagic.invoking.attributeBonus, powers: RULES.OCCULT.metamagic.invoking.powerBonus },
       // v0.56.0: a nature spirit's departure, and manifesting while unmaterialized.
@@ -5681,7 +5606,7 @@ export class SR2ItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
       sec: { ...sec, all: this.#showAll, vehicle: this.#showAll || item.parent?.type === "vehicle" || (item.system.mount && item.system.mount !== "none") },
       layoutChoices: Object.entries(WEAPON_LAYOUT_LABELS).map(([key, label]) => ({ key, label })),
       // v0.58.0: skills can link to Reaction (vehicle skills).
-      attributeChoices: [...ATTRIBUTE_KEYS.map((k) => ({ key: k, label: game.i18n.localize(`SR2E.Attribute.${k}`) })), ...(item.type === "skill" ? [{ key: "reaction", label: tx('SR2E.App.Sheets.reaction') }] : [])],
+      attributeChoices: [...ATTRIBUTE_KEYS.map((k) => ({ key: k, label: attributeDisplayLabel(k) })), ...(item.type === "skill" ? [{ key: "reaction", label: tx('SR2E.App.Sheets.reaction') }] : [])],
       damageLevels: [
         { key: "L", label: tx('SR2E.App.Sheets.light') },
         { key: "M", label: tx('SR2E.App.Sheets.moderate') },
@@ -7575,4 +7500,127 @@ export class SR2SiteSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const uuid = t.dataset["uuid"];
     if (uuid) fromUuidSync(uuid)?.sheet?.render(true);
   }
+}
+
+/** v0.93.3: a roll window's preset for a GM's roll request: the TN (read-only), hidden, and options for the test. */
+export interface RollWindowPreset { tn?: number; hideTn?: boolean; opts?: Record<string, unknown> }
+
+/** v0.93.3: the roll window's TN field: a hidden value for a hidden request, read-only for a request, else editable. */
+function tnField(preset: RollWindowPreset): string {
+  const tn0 = Math.max(2, Math.min(30, Math.floor(Number(preset.tn ?? 4)) || 4));
+  if (preset.hideTn) return `<input name="tn" type="hidden" value="${tn0}"><p class="hint">${tx('SR2E.Dialog.Sheet.requestTnHidden')}</p>`;
+  return `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.targetNumber')}</label><input name="tn" type="number" value="${tn0}" min="2" ${preset.tn !== undefined ? "readonly" : ""} autofocus></div>`;
+}
+
+/**
+ * v0.93.3 (report item 6): an attribute's roll window for an actor, opened from the sheet or for a GM's roll request
+ * (`preset`: the request's TN, hidden when the GM hid it, and options carried to the test such as its link).
+ */
+export async function rollAttributeWindow(actor: any, key: AttributeKey, preset: RollWindowPreset = {}): Promise<unknown> {
+    // Quickness with a cyberlimb (v0.43.0): which limb the test is made with.
+    const limbs = key === "quickness" && RULES.GEAR.cyberlimbs.quickness ? [...(actor.system.derived?.cyber?.limbs ?? [])] : [];
+    if (limbs.length) {
+      const c = await foundry.applications.api.DialogV2.prompt({
+        window: { title: tx('SR2E.Dialog.Sheet.rollQuickness') },
+        content: `${tnField(preset)}
+          <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.with')}</label><select name="limb"><option value="">${tx('SR2E.Dialog.Sheet.naturalQuickness', { quicknessTotal: escHtml(actor.system.attributes?.quickness?.total ?? 0) })}</option>${limbs.map((l: any) => `<option value="${escHtml(l.id)}">${tx('SR2E.Dialog.Sheet.quickness', { name: escHtml(l.name), quickness: escHtml(l.quickness) })}</option>`).join("")}</select></div>`,
+        ok: { callback: (_e: Event, b: any) => ({ tn: Number(b.form.elements.tn.value) || 4, limb: String(b.form.elements.limb.value || "") }) },
+        rejectClose: false,
+      }) as { tn: number; limb: string } | null;
+      if (c) return actor.rollAttribute(key, { targetNumber: c.tn, limbId: c.limb || null, ...(preset.opts ?? {}) });
+      return null;
+    }
+    const c2 = await foundry.applications.api.DialogV2.prompt({
+      window: { title: tx('SR2E.Dialog.Sheet.roll2', { key: cap(key) }) },
+      content: `${tnField(preset)}
+        ${preset.opts ? "" : urrCoreTnPresetRow()}${CO923.karmaDiceRow(Number(actor.system?.derived?.karmaPoolLeft ?? 0), true, Number(actor.system?.attributes?.[key]?.total ?? 0))}
+        ${preset.opts ? "" : `<label class="sr2e-check"><input type="checkbox" name="open"> ${tx('SR2E.Dialog.Sheet.openTestNoTnTheHighest')}</label>`}
+        ${preset.hideTn ? "" : `<div class="sr2e-preview" aria-live="polite"></div>`}`,
+      render: (_e: Event, dialog: any) => {
+        // v0.80.0 (RULES.URR_V80.coreTnPresets): a preset sets the TN (no such field in the book).
+        const f: any = dialog.element?.querySelector?.("form") ?? dialog.form;
+        f?.elements?.tnPreset?.addEventListener?.("change", () => { const v = f.elements.tnPreset.value; if (v) { f.elements.tn.value = v; f.elements.tn.dispatchEvent(new Event("input", { bubbles: true })); } });
+        livePreview(dialog, (form, excluded) => tnPreviewHtml({ base: Number((form.elements as any).tn?.value) || 4, baseLabel: tx('SR2E.Dialog.Sheet.targetNumber'), auto: actor.previewModifiers(), excluded }));
+      },
+      ok: { callback: (_e: Event, b: any) => ({ tn: Number(b.form.elements.tn.value) || 4, open: Boolean(b.form.elements.open?.checked), exclude: excludedOf(b.form),
+        karmaDice: b.form.elements.karmaDice ? Math.max(0, Math.floor(Number(b.form.elements.karmaDice.value) || 0)) : 0 }) },
+      rejectClose: false,
+    }) as { tn: number; open: boolean; exclude: string[]; karmaDice: number } | null;
+    if (!c2) return null;
+    if (c2.open) return actor.openAttributeTest(key);
+    return actor.rollAttribute(key, { targetNumber: c2.tn, exclude: c2.exclude, ...(c2.karmaDice > 0 ? { karmaDice: c2.karmaDice } : {}), ...(preset.opts ?? {}) });
+}
+
+/**
+ * v0.93.3 (report item 6): a skill's roll window for an actor (the sheet's, after its targeted-contest redirect, or a
+ * GM's roll request with its `preset`). `item` may be a defaulting stand-in (no id, rating 0).
+ */
+export async function rollSkillWindow(actor: any, item: any, preset: RollWindowPreset = {}): Promise<unknown> {
+    // v0.44.0: open tests, a complementary skill, helpers (teamwork).
+    const others = [...actor.items].filter((i: any) => i.type === "skill" && i.id !== item.id && (i.system.rating ?? 0) > 0);
+    // Not this character's own tokens (an unlinked token is a copy with the same id).
+    const helpers = [...(canvas?.tokens?.placeables ?? [])].map((t: any) => t.actor).filter((a: any) => a && a.uuid !== actor.uuid && a.id !== actor.id && ["character", "npc"].includes(a.type));
+    // v0.58.0: Build/Repair tools, a language's complexity and Read/Write, and the task's base time.
+    const c58 = RULES.CHARACTERS_V58;
+    const isBR = item.system?.kind === "buildRepair" || /\bB\/R$/i.test(String(item.name ?? ""));
+    const isLang = item.system?.kind === "language";
+    const toolsBest = isBR ? actor.toolsFor?.(item.name) ?? "none" : "none";
+    const levelOpts = (sel: string) => c58.tools.levels.map((l) => `<option value="${escHtml(l.id)}" ${l.id === sel ? "selected" : ""}>${escHtml(l.label)}</option>`).join("");
+    // v0.92.3 (RULES.CORE_V923.languageTns 'book', Core p. 184): the Language Skills Table and the dialect's +2.
+    const langTable = CO923.languageTable();
+    const langDefault = (langTable.find((x) => x.tn === 4) ?? langTable[0])?.id ?? "";
+    const dialectMod = isLang ? CO923.dialectModifier() : null;
+    const extra58 = `${isBR ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.theJobNeeds')}</label><select name="toolsNeed">${levelOpts("kit")}</select></div><div class="form-group"><label>${tx('SR2E.Dialog.Sheet.toolsAtHand')}</label><select name="toolsHave">${levelOpts(toolsBest)}</select></div>` : ""}
+        ${isLang ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.language')}</label><select name="langMode"><option value="speak">${tx('SR2E.Dialog.Sheet.speakingListening')}</option><option value="rw">${tx('SR2E.Dialog.Sheet.readingWritingRating', { readWriteRating: readWriteRating(Number(item.system?.rating ?? 0)) })}</option></select></div><div class="form-group"><label>${tx('SR2E.Dialog.Sheet.howComplex')}</label><select name="langCx">${langTable.map((x) => `<option value="${escHtml(x.id)}" data-tn="${x.tn}" ${x.id === langDefault ? "selected" : ""}>${tx('SR2E.Dialog.Sheet.tn2', { label: escHtml(x.label), tn: x.tn })}</option>`).join("")}</select></div>${dialectMod ? `<label class="sr2e-check"><input type="checkbox" name="dialect"> ${escHtml(dialectMod.label)} +${dialectMod.value}</label>` : ""}` : ""}
+        <div class="form-group"><label title="${tx('SR2E.Dialog.Sheet.timeSuccessesIsShownOnThe')}">${tx('SR2E.Dialog.Sheet.baseTimeOptional')}</label><input name="baseTime" type="number" min="0" step="0.5" value="0"> <select name="baseUnit">${c58.time.units.map((u) => `<option value="${escHtml(u.id)}" ${u.id === "hours" ? "selected" : ""}>${escHtml(u.label)}</option>`).join("")}</select></div>`;
+    // v0.78.0 (RULES.BOOK_V78.encephalon 'shadowtech'): an encephalon's Task Pool on the skills it helps.
+    const taskLeft = encephalonFits({ attribute: String(item.system?.attribute ?? ""), kind: String(item.system?.kind ?? "active") }) ? Number(actor.system?.derived?.taskPoolLeft ?? 0) : 0;
+    const taskRow = taskLeft > 0 ? `<div class="form-group"><label title="${tx('SR2E.Dialog.Sheet.refreshesEachCombatTurnNotUsed')}">${tx('SR2E.Dialog.Sheet.taskPoolDiceEncephalonLeft', { taskLeft })}</label><input name="taskPool" type="number" min="0" max="${taskLeft}" value="0"></div>` : "";
+    const choice = await foundry.applications.api.DialogV2.prompt({
+      window: { title: tx('SR2E.Dialog.Sheet.roll3', { itemName: item.name }) },
+      content: `${preset.tn !== undefined || preset.hideTn ? tnField(preset) : `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.targetNumber')}</label><input name="tn" type="number" value="${isLang ? (langTable.find((x) => x.id === langDefault)?.tn ?? 4) : 4}" min="2" autofocus></div>`}
+        ${preset.opts ? "" : urrCoreTnPresetRow(String(item.system?.kind ?? ""))}${extra58}${taskRow}${CO923.karmaDiceRow(Number(actor.system?.derived?.karmaPoolLeft ?? 0), Number(item.system?.rating ?? 0) > 0 || !RULES.URR_V80.coreKarmaDice, Number(item.system?.rating ?? 0) > 0 ? Number(item.system?.rating ?? 0) : Number(actor.system?.attributes?.[String(item.system?.attribute ?? '')]?.total ?? 0))}
+        ${skillChoiceRows(actor, item, false)}
+        ${preset.opts ? "" : `<label class="sr2e-check"><input type="checkbox" name="open"> ${tx('SR2E.Dialog.Sheet.openTestNoTnTheHighest')}</label>`}
+        ${others.length ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.complementarySkill1DiePerSuccesses', { complementarySuccessesPerDie: RULES.STREET.tests.complementary.successesPerDie })}</label><select name="comp"><option value="">${tx('SR2E.Dialog.Sheet.none')}</option>${others.map((o: any) => `<option value="${escHtml(o.id)}">${escHtml(o.name)} ${escHtml(o.system.rating)}</option>`).join("")}</select></div>` : ""}
+        ${rememberMarker(`skill|${actor.uuid}|${item.id ?? item.name}`, skillRollMemoryFields())}
+        ${helpers.length ? `<fieldset class="sr2e-situational"><legend>${tx('SR2E.Dialog.Sheet.helpersTeamworkTheirSuccessesAddDice', { part: RULES.STREET.tests.teamwork.cap === "rating" ? tx('SR2E.Dialog.Sheet.atMost', { itemRating: escHtml(item.system?.rating ?? 0) }) : "" })}</legend>${helpers.map((h: any) => `<label class="sr2e-check"><input type="checkbox" name="helper" value="${escHtml(h.uuid)}"> ${escHtml(h.name)}</label>`).join("")}</fieldset>` : ""}
+        ${preset.hideTn ? "" : `<div class="sr2e-preview" aria-live="polite"></div>`}`,
+      render: (_e: Event, dialog: any) => {
+        // v0.58.0: a language's complexity sets the TN.
+        const f: any = dialog.element?.querySelector?.("form") ?? dialog.form;
+        if (!preset.tn && !preset.hideTn) f?.elements?.langCx?.addEventListener?.("change", () => { const o = f.elements.langCx.selectedOptions?.[0]; if (o?.dataset?.tn) { f.elements.tn.value = o.dataset.tn; f.elements.tn.dispatchEvent(new Event("input", { bubbles: true })); } });
+        // v0.80.0 (RULES.URR_V80.coreTnPresets / coreKnowledgeTest): a preset sets the TN (no such field in the book).
+        f?.elements?.tnPreset?.addEventListener?.("change", () => { const v = f.elements.tnPreset.value; if (v) { f.elements.tn.value = v; f.elements.tn.dispatchEvent(new Event("input", { bubbles: true })); } });
+        livePreview(dialog, (form, excluded) => {
+          const el: any = form.elements;
+          const t = el.toolsNeed ? toolsModifier(String(el.toolsNeed.value), String(el.toolsHave?.value ?? "none")) : null;
+          const dm = dialectMod && el.dialect?.checked ? [dialectMod] : [];
+          return tnPreviewHtml({ base: Number(el.tn?.value) || 4, baseLabel: tx('SR2E.Dialog.Sheet.targetNumber'), auto: actor.previewModifiers(), manual: [...(t?.modifier ? [t.modifier] : []), ...dm], excluded, note: tx('SR2E.Dialog.Sheet.edgesFlawsAndDefaultingAreAdded'), ...(t?.blocked ? { warn: tx('SR2E.Dialog.Sheet.canTDoItWithoutTools') } : {}) });
+        });
+      },
+      ok: {
+        callback: (_e: Event, button: any) => {
+          const el = button.form.elements;
+          return { tn: Number(el.tn.value) || 4, useSpec: Boolean(el.useSpec?.checked), useConc: Boolean(el.useConc?.checked), related: (el.related?.value as string) || null,
+            open: Boolean(el.open?.checked), comp: (el.comp?.value as string) || null, helpers: Array.from(button.form.querySelectorAll('input[name="helper"]:checked')).map((i: any) => i.value as string), exclude: excludedOf(button.form),
+            baseTime: Number(el.baseTime?.value) || 0, baseUnit: String(el.baseUnit?.value ?? "hours"), toolsNeed: el.toolsNeed ? String(el.toolsNeed.value) : null, toolsHave: el.toolsHave ? String(el.toolsHave.value) : null,
+            lang: el.langMode ? { readWrite: el.langMode.value === "rw", complexity: String(el.langCx?.value ?? langDefault) } : null,
+            dialect: Boolean(el.dialect?.checked),
+            taskPool: el.taskPool ? Math.max(0, Math.floor(Number(el.taskPool.value) || 0)) : 0,
+            karmaDice: el.karmaDice ? Math.max(0, Math.floor(Number(el.karmaDice.value) || 0)) : 0 };
+        },
+      },
+      rejectClose: false,
+    }) as any;
+    if (!choice) return null;
+    if (choice.toolsNeed && toolsModifier(choice.toolsNeed, choice.toolsHave ?? "none").blocked) { ui.notifications.warn(tx('SR2E.Notify.Sheet.canTDoThisWithoutTools', { actorName: escHtml(actor.name) })); return null; }
+    return actor.rollSkill(item, { exclude: choice.exclude, targetNumber: choice.tn, useSpecialization: choice.useSpec, useConcentration: choice.useConc, relatedSkillId: choice.related, open: choice.open, complementarySkillId: choice.comp, helperUuids: choice.helpers,
+      ...(choice.baseTime > 0 ? { baseTime: { value: choice.baseTime, unit: choice.baseUnit } } : {}),
+      ...(choice.toolsNeed ? { tools: { need: choice.toolsNeed, have: choice.toolsHave ?? "none" } } : {}),
+      ...(choice.lang ? { language: choice.lang } : {}),
+      ...(choice.dialect && dialectMod ? { modifiers: [dialectMod] } : {}),
+      ...(choice.taskPool > 0 ? { pool: "task", poolDice: choice.taskPool } : {}),
+      ...(choice.karmaDice > 0 ? { karmaDice: choice.karmaDice } : {}),
+      ...(preset.opts ?? {}) });
 }

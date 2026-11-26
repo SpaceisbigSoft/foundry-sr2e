@@ -1,3 +1,5 @@
+import { DEFAULT_SKILL_WEB } from "./rules/skillweb-default.ts";
+import { registerCustomListSettings } from "./applications/customlists.ts";
 import { HOUSE_CORE_V923 } from "./rules/config923/core.ts";
 import { HOUSE_COMBAT_V923 } from "./rules/config923/combat.ts";
 import { isForeignWorld } from './helpers/foreign.ts';
@@ -1301,7 +1303,18 @@ export class SkillWebConfig extends foundry.applications.api.ApplicationV2 {
     window: { title: 'SR2E.Window.Settings.sr2eSkillWeb', icon: "fa-solid fa-diagram-project", resizable: true },
     position: { width: 480, height: 560 },
     form: { handler: SkillWebConfig.#onSubmit, closeOnSubmit: true },
+    // v0.93.3 (report item 7): add the book's links the system knows (rules/skillweb-default.ts) to the text.
+    actions: { loadDefaultWeb: SkillWebConfig.#onLoadDefault },
   };
+
+  /** v0.93.3: append the starter links (not yet saved: the GM reads them, edits and saves). Lines already there stay. */
+  static #onLoadDefault(this: SkillWebConfig): void {
+    const ta = (this as any).element?.querySelector?.('textarea[name="web"]') as HTMLTextAreaElement | null;
+    if (!ta) return;
+    const have = new Set(ta.value.split(/\r?\n/).map((l) => l.trim()).filter(Boolean));
+    const add = DEFAULT_SKILL_WEB.split(/\r?\n/).filter((l) => !have.has(l.trim()));
+    ta.value = `${ta.value.replace(/\s*$/, '')}${ta.value.trim() ? '\n' : ''}${add.join('\n')}\n`;
+  }
 
   async _renderHTML(): Promise<string> {
     const text = String(game.settings.get(SYSTEM.id, "skillWeb") ?? "");
@@ -1310,7 +1323,8 @@ export class SkillWebConfig extends foundry.applications.api.ApplicationV2 {
     return `<div class="standard-form">
       <p class="hint">${tx('SR2E.App.Settings.oneLinkPerLine')} <code>Firearms - Gunnery: 1</code> ${tCount(n, 'SR2E.App.Settings.theNumberIsTheStepsBetween', { perStep: w.perStep, maxSteps: w.maxSteps, part: w.unlinked === "flat" ? tx('SR2E.App.Settings.defaultAt', { skillDefaultTnMod: RULES.SKILL_DEFAULT_TN_MOD }) : tx('SR2E.App.Settings.canOnlyDefaultToTheAttribute'), skillDefaultTnMod: RULES.SKILL_DEFAULT_TN_MOD })}</p>
       <textarea name="web" rows="18" spellcheck="false" style="font-family: monospace">${esc(text)}</textarea>
-      <footer class="form-footer"><button type="submit"><i class="fa-solid fa-floppy-disk"></i> ${tx('SR2E.App.Settings.save')}</button></footer>
+      <p class="hint">${tx('SR2E.App.Settings.skillWebStarterHint')}</p>
+      <footer class="form-footer"><button type="button" data-action="loadDefaultWeb"><i class="fa-solid fa-diagram-project"></i> ${tx('SR2E.App.Settings.skillWebLoadStarter')}</button><button type="submit"><i class="fa-solid fa-floppy-disk"></i> ${tx('SR2E.App.Settings.save')}</button></footer>
     </div>`;
   }
 
@@ -1667,6 +1681,8 @@ export function registerSettings(): void {
     icon: "fa-solid fa-diagram-project", type: SkillWebConfig, restricted: true,
   });
   setSkillWeb(parseSkillWeb(String(game.settings.get(SYSTEM.id, "skillWeb") ?? "")));
+  // v0.93.3: the GM's skill and attribute lists (docs/CUSTOM-LISTS.md).
+  registerCustomListSettings();
   setRulesSource(game.settings.get(SYSTEM.id, "rulesSource"));
   const problems = applyHouseRules(game.settings.get(SYSTEM.id, "houseRules") as HouseRules);
   problemsNow = problems;

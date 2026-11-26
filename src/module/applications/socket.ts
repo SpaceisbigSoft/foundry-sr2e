@@ -17,7 +17,8 @@ import { isLeadGm, handlePeer, startPeers, registerWindowStamp, type PeerMessage
 
 export const SOCKET = `system.${SYSTEM_ID}`;
 
-export type RelayOp = 'nextTurn' | 'roundTicks' | 'drawArea' | 'spendSpellDefense' | 'dismissSpirit' | 'vehicleShop';
+// v0.93.3: 'teamKarma' (a player spends one Team Karma).
+export type RelayOp = 'nextTurn' | 'roundTicks' | 'drawArea' | 'spendSpellDefense' | 'dismissSpirit' | 'vehicleShop' | 'teamKarma';
 
 export interface RelayRequest { type: 'request'; id: string; op: RelayOp; userId: string; data: Record<string, any> }
 export interface RelayReply { type: 'reply'; id: string; to: string; ok: boolean; note?: string }

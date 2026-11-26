@@ -141,7 +141,10 @@ describe('v0.93.2: manual dice entry', () => {
     }
     // The engine's dice come through one adapter: a Foundry Roll per wave.
     const docs = read('src', 'module', 'documents', 'index.ts');
-    assert.match(docs, /function foundryRoller\(sink: any\[\]\): DiceRoller \{\n  return async \(count: number\) => \{\n    const roll = await new Roll\(`\$\{count\}d6`\)\.evaluate\(\);/);
+    // v0.93.3: a first wave may be split into coloured groups, still one Foundry Roll evaluated the normal way.
+    assert.match(docs, /function foundryRoller\(sink: any\[\], firstWave\?: Array<\{ n: number; colorset: string \}>\): DiceRoller \{/);
+    assert.ok(docs.includes("const roll = await new Roll(split.map((g) => `${g.n}d6`).join(' + ')).evaluate();"));
+    assert.ok(docs.includes('    const roll = await new Roll(`${count}d6`).evaluate();'));
     // A die from Math.random appears once in the test pipeline: the fallback when a Roll can't be made at all (the other
     // Math.random calls make ids).
     assert.equal((docs.match(/Math\.floor\(Math\.random\(\) \*/g) ?? []).length, 1);

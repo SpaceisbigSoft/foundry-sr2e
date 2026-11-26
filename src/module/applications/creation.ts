@@ -25,6 +25,7 @@ import { recordCreation } from './advancement.ts';
 import { SR2AddWindow, openSkillPicker } from './adding.ts';
 import { runSheetAction } from './tokens.ts';
 import { escHtml } from '../rules/html.ts';
+import { starterChoices, getCustomLists, attributeDisplayLabel } from '../rules/customlists.ts';
 import { t as tx, tCount } from '../helpers/i18n.ts';
 
 const { HandlebarsApplicationMixin, ApplicationV2, DialogV2 } = foundry.applications.api;
@@ -221,7 +222,7 @@ export class SR2CreationWizard extends HandlebarsApplicationMixin(ApplicationV2)
       metatypes: metatypeChoices(pr.race, mtypes).map((m) => ({ ...m, selected: m.key === String(sys.metatype ?? 'human'),
         mods: Object.entries(racialModsOf(m.key)).filter(([, v]) => Number(v)).map(([k, v]) => `${cap(k)} ${Number(v) > 0 ? '+' : ''}${v}`).join(', ') || 'no modifiers' })),
       // Attributes
-      attributes: ATTRIBUTE_KEYS.map((k) => ({ key: k, label: cap(k), base: Number(sys.attributes?.[k]?.base ?? 1), racial: Number(sys.attributes?.[k]?.racial ?? 0), natural: Number(sys.attributes?.[k]?.natural ?? 0), over: Number(sys.attributes?.[k]?.base ?? 1) > RULES.CREATION.attributeMax })),
+      attributes: ATTRIBUTE_KEYS.map((k) => ({ key: k, label: attributeDisplayLabel(k) /* v0.93.3: the GM's label */, base: Number(sys.attributes?.[k]?.base ?? 1), racial: Number(sys.attributes?.[k]?.racial ?? 0), natural: Number(sys.attributes?.[k]?.natural ?? 0), over: Number(sys.attributes?.[k]?.base ?? 1) > RULES.CREATION.attributeMax })),
       // v0.92.1 (RULES.SHEET_V921.wizard): 'advise' warns (the build check's rows) but never refuses; 'block' is the old way.
       blocks: RULES.SHEET_V921.wizard === 'block',
       attributeMax: RULES.CREATION.attributeMax,
@@ -244,7 +245,8 @@ export class SR2CreationWizard extends HandlebarsApplicationMixin(ApplicationV2)
         kind: k, label, skills: items.filter((i) => i.type === 'skill' && (i.system.kind ?? 'active') === k).map((i) => ({ id: i.id, name: i.name, rating: Number(i.system.rating ?? 0), spec: i.system.specialization ?? '', specRating: Number(i.system.specializationRating ?? 0), native: Boolean(i.system.native), ...paidOf(i) })),
       })),
       specTrade: trade ? tx('SR2E.App.Creation.aSpecializationIsPaidFor', { ratio: RULES.FIXES_V71.specialization.ratio, firearms: 5 - RULES.FIXES_V71.specialization.ratio }) : '',
-      starters: starterSkillsMissing(items.filter((i) => i.type === 'skill').map((i) => String(i.name))).slice(0, 12).map((s) => ({ ...s, label: `${s.name}${s.kind === 'buildRepair' ? '' : ` (${cap(s.attribute)})`}` })),
+      // v0.93.3: hidden book skills left out, the GM's custom skills added after the first 12 starters (rules/customlists.ts).
+      starters: ((names: string[]) => starterChoices(starterSkillsMissing(names), names, getCustomLists(), 12))(items.filter((i) => i.type === 'skill').map((i) => String(i.name))).map((s) => ({ ...s, label: `${s.name}${s.kind === 'active' ? ` (${attributeDisplayLabel(s.attribute)})` : ''}` })),
       // Resources
       allowance: chk.allowance.toLocaleString(), gearCost: Math.round(chk.gearCost).toLocaleString(), lifeCost: chk.life.toLocaleString(), contactsCost: chk.contacts.toLocaleString(), extraSpell: chk.extraSpell.toLocaleString(),
       cash: chk.cash === null ? null : chk.cash.toLocaleString(),
@@ -353,7 +355,8 @@ export class SR2CreationWizard extends HandlebarsApplicationMixin(ApplicationV2)
     const a = this.actor;
     const name = t.dataset['name'];
     if (!a || !name || this.#busy) return;
-    const s = starterSkillsMissing([...a.items].filter((i: any) => i.type === 'skill').map((i: any) => String(i.name))).find((x) => x.name === name);
+    // v0.93.3: a custom skill from the GM's world lists can be added here too.
+    const s = ((names: string[]) => starterChoices(starterSkillsMissing(names), names))([...a.items].filter((i: any) => i.type === 'skill').map((i: any) => String(i.name))).find((x) => x.name === name);
     if (!s) return;
     this.#busy = true;
     try { await a.createEmbeddedDocuments('Item', [{ name: s.name, type: 'skill', system: { kind: s.kind, attribute: s.kind === 'active' || s.kind === 'buildRepair' ? s.attribute : 'intelligence', rating: 1 } }]); } finally { this.#busy = false; }

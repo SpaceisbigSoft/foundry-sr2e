@@ -48,6 +48,9 @@ import { registerHelp, openHelp } from "./applications/help.ts";
 import { isLeadGm, isPromptWindow, otherWindows } from "./applications/leader.ts";
 import { registerTours, startTour } from "./applications/tours.ts";
 import { registerTools, openTools, runTool } from "./applications/tools.ts";
+import { registerTeamKarma, SR2TeamKarma } from './applications/teamkarma.ts';
+import { registerRollRequests, openRollRequestDialog, postRollRequest } from './applications/rollrequest.ts';
+import { rollAttributeWindow, rollSkillWindow } from './applications/sheets.ts';
 import { registerLookSettings, registerLook, applyLook, findAllPortraits, applyPortrait } from "./applications/look.ts";
 import { registerDefaultArtSettings, registerDefaultArt, applyDefaultArt, defaultArtForAll, defaultArtOf } from "./applications/tokenart.ts";
 import { registerInterfaceSettings, registerInterface } from "./applications/interface.ts";
@@ -112,6 +115,10 @@ export class SR2System {
           openTools, runTool,
           // v0.90.2: sort the "Catalogue (SR2e)" actor folder into subfolders (also runs after every catalogue load).
           sortCatalogue: () => sortCatalogueWithNotice(),
+          // v0.93.3: the GM's roll request card (the dialog, or post one directly).
+          requestRoll: (o: { actors?: any[] } = {}) => openRollRequestDialog(o), postRollRequest,
+          // v0.93.3: the shared Team Karma tracker's window.
+          teamKarma: () => SR2TeamKarma.open(),
         },
       };
       Hooks.callAll("sr2e.ready", (game as any).sr2e.api);
@@ -148,6 +155,10 @@ export class SR2System {
     registerQualityOfLife();
     registerTokenActionHud();
     registerInlineTests();
+    // v0.93.3: the GM's roll request card (report item 6): each player rolls in their own window, a live tally.
+    registerRollRequests({ openRollWindow: (actor, ask) => ask.kind === "attribute"
+      ? rollAttributeWindow(actor, ask.key as any, { tn: ask.tn, hideTn: ask.hideTn, opts: ask.opts })
+      : rollSkillWindow(actor, ask.skill, { tn: ask.tn, hideTn: ask.hideTn, opts: ask.opts }) });
     // v0.64.0
     registerAdvancementHooks();
     registerApprovalHooks();
@@ -155,6 +166,8 @@ export class SR2System {
     registerModuleSupport();
     registerHelp();
     registerTools();
+    // v0.93.3: the shared Team Karma tracker (report item 38).
+    registerTeamKarma();
     // v0.91.7: the Scene builder (its setting, the Scenes sidebar button and the scene menu).
     registerSceneBuilder();
     // v0.92.0: a † anywhere opens the rules interpretations.

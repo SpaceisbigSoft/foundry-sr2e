@@ -73,14 +73,35 @@ export function isTestDialog(form: { querySelector: (s: string) => unknown } | n
   return Boolean(form.querySelector('.sr2e-preview') || form.querySelector('input[name="mod"]') || form.querySelector('input[name="pool"]'));
 }
 
+/** v0.93.3: actions that keep their window under "Roll at once" (their pool dice are the choice; Shift still skips it). */
+const KEEP_WINDOW = /defend|resist|soak|dodge/i;
+
+/**
+ * v0.93.3 (report item 9): whether a click arms a quick roll. Shift arms one; with the player's "Roll at once" default
+ * on, a plain click arms one and Shift opens the window for that one roll. Defend and Resist keep their windows.
+ */
+export function quickWanted(o: { shift: boolean; atOnce: boolean; action: string }): boolean {
+  if (/delete|remove|drop|undo|evict|sell|edit|tab/i.test(o.action) || !QUICK_ACTIONS.test(o.action)) return false;
+  if (!o.atOnce) return o.shift;
+  if (KEEP_WINDOW.test(o.action)) return o.shift;
+  return !o.shift;
+}
+
+/** v0.93.3: this user's "Roll at once" default (a client setting; off when not registered). */
+function rollAtOnce(): boolean {
+  try { return Boolean(game.settings.get(SYSTEM_ID, 'rollAtOnce')); } catch { return false; }
+}
+
 export function registerQuickRolls(): void {
   // A Shift-click on any SR2 sheet, card, HUD or panel button arms a quick roll for a moment.
+  // v0.93.3: a plain click does when the user's "Roll at once" default is on (Shift then opens the window).
   document.addEventListener('click', (ev: MouseEvent) => {
-    if (!ev.shiftKey) return;
+    const atOnce = rollAtOnce();
+    if (!ev.shiftKey && !atOnce) return;
     const el = (ev.target as HTMLElement | null)?.closest?.('[data-action], [data-sr2e-action]') as HTMLElement | null;
     if (!el || !el.closest('.sr2e, .chat-message, #token-hud, .sr2e-gm-panel')) return;
     const act = String(el.dataset['action'] ?? el.dataset['sr2eAction'] ?? '');
-    if (/delete|remove|drop|undo|evict|sell|edit|tab/i.test(act) || !QUICK_ACTIONS.test(act)) return;
+    if (!quickWanted({ shift: ev.shiftKey, atOnce, action: act })) { quickUntil = 0; return; }
     quickUntil = Date.now() + 1500;
   }, true);
   Hooks.on('renderDialogV2', (app: any, html: HTMLElement) => {
@@ -108,7 +129,8 @@ function newestButton(action: 'defend' | 'resist'): HTMLButtonElement | null {
       : ((m.getFlag(SYSTEM_ID, 'damages') as any[] | undefined) ?? [m.getFlag(SYSTEM_ID, 'damage')].filter(Boolean));
     const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>(`#chat [data-message-id="${m.id}"] button[data-sr2e-action="${action}"], .chat-log [data-message-id="${m.id}"] button[data-sr2e-action="${action}"]`));
     for (const b of buttons) {
-      if (b.disabled) continue;
+      // v0.93.3: and skip a GM's buttons marked done (chat.ts markUsedButtons).
+      if (b.disabled || b.classList.contains('sr2e-used')) continue;
       const entry = list[Number(b.dataset['index'] ?? 0)];
       const target: any = entry ? (globalThis as any).fromUuidSync?.(entry.targetUuid) : null;
       if (target?.isOwner) return b;

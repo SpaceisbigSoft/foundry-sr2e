@@ -20,7 +20,7 @@ Four independent reviews (core and combat; health and gear; sorcery and spirits;
 ## Known limits
 
 - Only the Combat Pool refreshes per action; the Spell, Hacking and Control Pools stay per Combat Turn (refreshing the Spell Pool would wipe allotted spell defense; Rigger 2 keeps the Control Pool per turn).
-- Karma Pool dice are offered in the attribute and skill dialogs, not yet in attack and spell dialogs.
+- Karma Pool dice are offered in the attribute and skill dialogs, and since v0.93.3 in the attack and spell dialogs too.
 - A dispelled spell's effect is not rebuilt when its Force drops (effects come from successes).
 - A GM can't set Grade 0 by hand on the sheet; the Astral Combat Pool applies while projecting, not while only perceiving.
 - About 160 book rules the system doesn't model yet are listed under "Not built" in VERIFY.md (team Karma Pool, Maneuver Score chases, radiation, group perception and others).

@@ -76,6 +76,12 @@ export function registerInterfaceSettings(): void {
     name: 'SR2E.Settings.rememberRolls.Name', hint: 'SR2E.Settings.rememberRolls.Hint',
     scope: 'client', config: true, type: Boolean, default: true,
   });
+  // v0.93.3 (report item 9): "Roll at once" as this player's own default (Shift opens the window for one roll).
+  // User scope (Foundry v13+), so it follows the player to any browser; Defend and Resist keep their windows.
+  s.register(ID, 'rollAtOnce', {
+    name: 'SR2E.Settings.rollAtOnce.Name', hint: 'SR2E.Settings.rollAtOnce.Hint',
+    scope: 'user', config: true, type: Boolean, default: false,
+  });
   s.register(ID, 'rememberWindows', {
     name: 'SR2E.Settings.rememberWindows.Name', hint: 'SR2E.Settings.rememberWindows.Hint',
     scope: 'client', config: true, type: Boolean, default: true,

@@ -22,6 +22,7 @@ import { SR2NewEntry } from './newentry.ts';
 import { openShop } from './adding.ts';
 import { SR2Codex } from './codex.ts';
 import { SR2Interpretations } from './interpretations.ts';
+import { SR2TeamKarma } from './teamkarma.ts';
 
 const { HandlebarsApplicationMixin, ApplicationV2 } = foundry.applications.api;
 
@@ -78,6 +79,7 @@ export const TOOL_ACTIONS: Record<string, () => void> = {
   catalogue: () => { SR2Codex.open(); },
   newEntry: () => { SR2NewEntry.open({ actorUuid: String((game as any).user?.character?.uuid ?? '') }); },
   interpretations: () => { SR2Interpretations.open(); },
+  teamKarma: () => { SR2TeamKarma.open(); },
   gmPanel: () => { if (isGm()) SR2GmPanel.open(); },
   sceneBuilder: () => { if (isGm()) openSceneBuilder({ sceneId: '' }); },
   npcGenerator: () => { if (isGm()) SR2NpcGenerator.open(); },

@@ -2338,3 +2338,16 @@ Switches in `RULES.MAGIC_V920` (`rules/config92.ts`); the first choice is the ne
 | The pool in layers | Sorcery's rating for any magical action; the concentration's extra dice (its rating − Sorcery's) only inside it; the specialization's (its rating − the concentration's, or Sorcery's) only inside that; narrow dice spent first; the Magic cap per test holds | `MAGIC_V920.poolLayers` |
 | Casting inside a narrow use | A casting or dispelling test rolls the concentration's or specialization's rating, matched by name (a spell category, the spell's name, or Spellcasting / Spell Defense / Dispelling / Ritual) | `MAGIC_V920.castNarrow` |
 | Drain | The narrow dice left may pay for that casting's Drain | `MAGIC_V920.drainNarrow` |
+
+## v0.93.3 default Skill Web
+
+`DEFAULT_SKILL_WEB` (`rules/skillweb-default.ts`). Partial: the SR2 Core p. 69 diagram is only a page scan in the sources read, so only links the rules text gives are in it. **Check each row against the diagram (Core p. 69, with the errata to pp. 68-69) and Awakenings p. 94.**
+
+| Link | What the default has | Source |
+|---|---|---|
+| Car - Car B/R, Bike - Bike B/R | 1 step each (the "B/R is one circle from its general skill" rule); the book's B/R is grouped (Ground Vehicles B/R), the system names one per vehicle | Core pp. 70-75 |
+| Sorcery, Conjuring, Enchanting - Magical Theory | 1 step each (step count not in the text; 1 = the old flat +2) | Awakenings p. 94 |
+| Sorcery - Conjuring, Sorcery - Enchanting, Conjuring - Enchanting | 1 step each (step count not in the text) | Awakenings p. 94 |
+| Willpower > Sorcery / Conjuring / Enchanting | 2 steps each, one-way (step count not in the text; 2 = the old flat +4) | Awakenings p. 94 |
+| Combat and technical B/R (Armed Combat, Firearms, Gunnery, Projectile Weapons, Throwing Weapons, Computer, Electronics) | 1 step each; which skills have a B/R skill on the diagram is not confirmed | Core pp. 70-75; errata pp. 68-69 |
+| Missing | Every other skill-to-skill link and every other attribute link of the diagram; the Companion's revised web (p. 47) | Core p. 69 |

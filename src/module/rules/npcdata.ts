@@ -457,6 +457,51 @@ export const CRITTER_FLAVOUR: readonly string[] = [
   'guarding a cache of stolen shiny things',
 ];
 
+/**
+ * v0.93.3: descriptors that only fit some metatypes (a human must not be a "grey-skinned tusker"), by their English
+ * text. Untagged lines fit everyone. The tables are translated in place (texttables.ts, keyed by position), so the
+ * tags are turned into positions here, while the text is still English.
+ */
+const APPEARANCE_ONLY: ReadonlyArray<readonly [string, readonly string[]]> = [
+  ['grey-skinned tusker with filed tusks', ['ork']],
+  ['tall elf with angular features', ['elf']],
+  ['squat dwarf with a braided beard', ['dwarf']],
+  ['towering troll with stubby horns', ['troll']],
+  ['soft-spoken giant with huge hands', ['human', 'elf', 'ork', 'troll']],
+  ['petite with a pixie cut', ['human', 'elf', 'dwarf', 'ork']],
+];
+const DISTINCTIVE_ONLY: ReadonlyArray<readonly [string, readonly string[]]> = [
+  ['tusks capped in silver', ['ork', 'troll']],
+];
+
+function tagsByIndex(list: readonly string[], only: ReadonlyArray<readonly [string, readonly string[]]>): Readonly<Record<number, readonly string[]>> {
+  const out: Record<number, readonly string[]> = {};
+  for (const [text, metatypes] of only) {
+    const i = list.indexOf(text);
+    if (i >= 0) out[i] = metatypes;
+  }
+  return out;
+}
+
+/** v0.93.3: position in APPEARANCE / DISTINCTIVE → the only metatypes it may be picked for. */
+export const APPEARANCE_METATYPES = tagsByIndex(APPEARANCE, APPEARANCE_ONLY);
+export const DISTINCTIVE_METATYPES = tagsByIndex(DISTINCTIVE, DISTINCTIVE_ONLY);
+/** v0.93.3: the English lines tagged above (for tests: each must still be in its table). */
+export const METATYPE_TAGGED_TEXT: Readonly<Record<'APPEARANCE' | 'DISTINCTIVE', readonly string[]>> = {
+  APPEARANCE: APPEARANCE_ONLY.map(([s]) => s),
+  DISTINCTIVE: DISTINCTIVE_ONLY.map(([s]) => s),
+};
+
+/**
+ * v0.93.3: pick from a table, leaving out the lines tagged for other metatypes (`tags` by position). With no
+ * metatype (e.g. a critter or a bare name list) every line can come up. One rnd() call, like pick().
+ */
+export function pickForMetatype(list: readonly string[], tags: Readonly<Record<number, readonly string[]>>, metatype: string | null | undefined, rnd: () => number): string {
+  if (!metatype) return pick(list, rnd);
+  const fits = list.filter((_, i) => !tags[i] || tags[i]!.includes(metatype));
+  return pick(fits.length ? fits : list, rnd);
+}
+
 /** Pick a random element using rnd() in [0,1). Throws on an empty list. */
 export function pick<T>(list: readonly T[], rnd: () => number): T {
   if (list.length === 0) throw new Error('pick: empty list');

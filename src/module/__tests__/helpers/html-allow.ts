@@ -26,6 +26,9 @@ export const ALLOWED: Record<string, Record<string, string>> = {
   'src/module/applications/print.ts': {
     'withoutSecrets | innerHTML | html': 'v0.87.0: already-cleaned rich text (enrichFields) parsed into an inert <template> element (never rendered) to take out the secret sections.',
   },
+  'src/module/applications/teamkarma.ts': {
+    'SR2TeamKarma._replaceHTML | innerHTML | result': 'v0.93.3: the Team Karma window\'s own _renderHTML output, whose interpolations are scanned where they are written.',
+  },
   'src/module/applications/bugreport.ts': {
     'SR2BugReport._replaceHTML | innerHTML | result': 'v0.87.0: the window\'s own _renderHTML output, whose interpolations are scanned where they are written (the report text is escaped into the textarea).',
   },

@@ -458,8 +458,12 @@ describe('A-8 walls rated 0, A-4 migrations, A-17 quick rolls', () => {
     let clickHandler: any = null;
     doc.addEventListener = (_n: string, f: any) => { clickHandler = f; };
     hk.registerQuickRolls();
+    // v0.93.3: with the player's "Roll at once" off (this stub answers true to every setting).
+    const was = g.game.settings.get;
+    g.game.settings.get = (_s: string, k: string) => (k === 'rollAtOnce' ? false : true);
     const el: any = { dataset: { action: 'rollSkill' }, closest: (s: string) => (s.includes('[data-action]') ? el : el) };
     clickHandler({ shiftKey: true, target: { closest: () => el } });
+    g.game.settings.get = was;
     assert.equal(hk.quickRollArmed(), true);
     hk.disarmQuickRoll();
     assert.equal(hk.quickRollArmed(), false);

@@ -293,11 +293,17 @@ export function rollName(r: Rng, street: boolean): { name: string; streetName: s
   return { name: `${first} “${streetName}” ${rest.join(' ')}`, streetName, realName };
 }
 
-/** A one-paragraph description and private notes (motivation, secret). */
-export function rollDescription(r: Rng, metatypeLabel: string, roleLabel: string): { description: string; notes: string } {
+/**
+ * A one-paragraph description and private notes (motivation, secret). v0.93.3: `metatype` (the id, decided before
+ * this is rolled) keeps out looks that name another metatype; the same number of rolls either way.
+ */
+export function rollDescription(r: Rng, metatypeLabel: string, roleLabel: string, metatype?: string): { description: string; notes: string } {
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  const appearance = D.pickForMetatype(D.APPEARANCE, D.APPEARANCE_METATYPES, metatype, r);
+  const clothing = pick(D.CLOTHING, r);
+  const distinctive = D.pickForMetatype(D.DISTINCTIVE, D.DISTINCTIVE_METATYPES, metatype, r);
   return {
-    description: tx('SR2E.Text.Npcgen.description', { metatype: cap(metatypeLabel), role: roleLabel, appearance: cap(pick(D.APPEARANCE, r)), clothing: pick(D.CLOTHING, r), distinctive: cap(pick(D.DISTINCTIVE, r)), mannerism: cap(pick(D.MANNERISM, r)) }),
+    description: tx('SR2E.Text.Npcgen.description', { metatype: cap(metatypeLabel), role: roleLabel, appearance: cap(appearance), clothing, distinctive: cap(distinctive), mannerism: cap(pick(D.MANNERISM, r)) }),
     notes: tx('SR2E.Text.Npcgen.wantsSecret', { motivation: pick(D.MOTIVATION, r), secret: pick(D.SECRET, r) }),
   };
 }
@@ -392,7 +398,7 @@ export function generateNpc(opts: NpcOptions, r: Rng): NpcPlan {
   const { name, streetName, realName } = rollName(looks, arch.street);
   const mt = RULES.METATYPES.types[metatype]?.label ?? tx('SR2E.Text.Npcgen.human');
   const roleLabel = opts.role || (tradition !== 'none' && arch.magic === 'chance' ? (tradition === 'adept' ? tx('SR2E.Text.Npcgen.roleAdept', { label: arch.label }) : tx('SR2E.Text.Npcgen.roleMagician', { label: arch.label })) : arch.label);
-  const desc = rollDescription(looks, mt, roleLabel);
+  const desc = rollDescription(looks, mt, roleLabel, metatype);
   // v0.61.0: totems and vehicles come from a stream of their own, derived after everything else,
   // so earlier seeded results are unchanged.
   const kit = makeRng(Math.floor(looks() * 4294967296));

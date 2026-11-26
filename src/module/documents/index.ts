@@ -1,5 +1,7 @@
+import { guessSpiritKind } from '../rules/spiritkind.ts';
+import { attributeDisplayLabel } from '../rules/customlists.ts';
 import {
-  successTest, woundTnModifiers, privacyFor, legacyRollMode, regionBackgroundSources, regionWeather, regionEnvironmentTags,
+  successTest, tagDice, woundTnModifiers, privacyFor, legacyRollMode, regionBackgroundSources, regionWeather, regionEnvironmentTags,
   resistanceTargetNumber, resolveResistance, applyDamageToMonitor, addStun, parseDamageCode,
   RULES, attackBaseTargetNumber, armorKindFor, resolveAttack,
   spellResistAttribute, drainTargetNumber, drainDamageType, resolveCombatSpell, clampForce,
@@ -120,7 +122,7 @@ import {
 } from '../rules/index.ts';
 import { ATTRIBUTE_KEYS, adeptPowersOf, activeDeckOf, fociOf, type AttributeKey } from '../models/index.ts';
 import { sysNow } from '../helpers/clock.ts';
-import { dsnColoursOn, dsnColorsetFor } from '../applications/dice.ts';
+import { dsnColoursOn, dsnColorsetFor, dsnFirstWave } from '../applications/dice.ts';
 import { allActors } from '../helpers/actors.ts';
 import { initiativeFormula } from '../helpers/initiative.ts';
 import type { BarrierAttackKind } from '../rules/config78.ts';
@@ -198,8 +200,19 @@ import { SYSTEM_ID } from '../config/system.ts';
  * asks for is a real Foundry Roll, collected so the chat message can show them all
  * (and Dice So Nice animates them).
  */
-function foundryRoller(sink: any[]): DiceRoller {
+function foundryRoller(sink: any[], firstWave?: Array<{ n: number; colorset: string }>): DiceRoller {
   return async (count: number) => {
+    // v0.93.3 (report item 38): the first wave in coloured groups (base, Karma, pool) when it has more than one.
+    const split = !sink.length && firstWave && firstWave.length > 1 && dsnColoursOn() && firstWave.reduce((t, g) => t + g.n, 0) === count ? firstWave : null;
+    if (split) {
+      const roll = await new Roll(split.map((g) => `${g.n}d6`).join(' + ')).evaluate();
+      (roll.dice ?? []).forEach((term: any, i: number) => {
+        const colorset = split[i]?.colorset ?? 'sr2e-base';
+        term.options = { ...(term.options ?? {}), colorset, appearance: { ...(term.options?.appearance ?? {}), colorset } };
+      });
+      sink.push(roll);
+      return (roll.dice ?? []).flatMap((term: any) => term.results.map((r: any) => r.result as number));
+    }
     const roll = await new Roll(`${count}d6`).evaluate();
     // Dice So Nice (v0.41.0): the SR2e colour set, Rule of Six re-rolls (later waves) in gold.
     if (dsnColoursOn()) {
@@ -362,13 +375,26 @@ const RADIATION_TESTS_PER_CALL = 24;
 const MAX_TEST_DICE = 200;
 
 /**
+ * v0.93.3 (report item 38): a die's source as classes and a hover title: a Karma Pool die, or a pool's die. The kind
+ * comes from the snapshot (a flag), so only a short lowercase word is used, and the title is a fixed text.
+ */
+const DIE_POOLS = ['combat', 'spell', 'hacking', 'control', 'task', 'threat'] as const;
+function dieSource(d: { karma?: boolean; pool?: boolean; poolKind?: string }): { cls: string; title: string } {
+  if (d.karma) return { cls: ' sr2e-karma-die', title: tx('SR2E.Card.Actor.karmaDie') };
+  if (!d.pool) return { cls: '', title: '' };
+  const known = (DIE_POOLS as readonly string[]).includes(String(d.poolKind ?? '')) ? String(d.poolKind) : 'combat';
+  const titles: Record<string, string> = { combat: tx('SR2E.Card.Actor.poolDieCombat'), spell: tx('SR2E.Card.Actor.poolDieSpell'), hacking: tx('SR2E.Card.Actor.poolDieHacking'), control: tx('SR2E.Card.Actor.poolDieControl'), task: tx('SR2E.Card.Actor.poolDieTask'), threat: tx('SR2E.Card.Actor.poolDieThreat') };
+  return { cls: ` sr2e-pool-die sr2e-pool-${known}`, title: titles[known] ?? '' };
+}
+
+/**
  * A test card's body. `label` is plain text (names, typed text): it is escaped here, once (v0.81.0), so callers
  * pass it raw and never pre-escape it.
  */
 function describeResult(label: string, r: SuccessTestResult): string {
   const mods = escText(r.modifiers.map((m) => `${m.label} ${m.value >= 0 ? '+' : ''}${m.value}`).join(', '));
   const dice = r.dice
-    .map((d) => `<span class="sr2e-die ${d.success ? 'hit' : 'miss'}">${escText(d.faces.join('+'))}${d.faces.length > 1 ? `=${d.total}` : ''}</span>`)
+    .map((d) => { const src = dieSource(d); return `<span class="sr2e-die ${d.success ? 'hit' : 'miss'}${escText(src.cls)}" title="${escText(src.title)}">${escText(d.faces.join('+'))}${d.faces.length > 1 ? `=${d.total}` : ''}</span>`; })
     .join(' ');
   const outcome = r.botch
     ? `<strong class="sr2e-botch">${tx('SR2E.Card.Actor.disasterEveryDieIsA1')}</strong>`
@@ -472,6 +498,10 @@ export interface TestOptions {
   sightHandled?: boolean;
   /** v0.50.0: labels of modifiers the player or GM switched off in the dialog's preview (found-by-itself ones). */
   exclude?: string[];
+  /** v0.93.3: the GM's roll request card this test answers (its message id); the GM's client checks it (applications/rollrequest.ts). */
+  requestOf?: string;
+  /** v0.93.3: a hidden roll request: the test card is whispered to the GMs (its roller still sees it). */
+  requestPrivate?: boolean;
 }
 
 /** State carried on an attack chat card so the defender can respond. */
@@ -603,6 +633,8 @@ export interface DriveOptions {
 /** Options for SR2Actor.attackWith / planAttack / previewAttack. */
 export interface AttackOptions {
   targetUuid?: string | null; range?: RangeBand; modifiers?: TargetNumberModifier[]; poolDice?: number;
+  /** v0.93.3 (a known limit until now): Karma Pool dice bought for the attack (Core p. 191; capped like any test's). */
+  karmaDice?: number;
   /** Ranged only. Falls back to the weapon's first mode if not one it has. */
   mode?: FiringMode; fullAutoRounds?: number; earlierRoundsThisPhase?: number;
   /** Ids from RULES.SITUATIONAL_MODIFIERS, and a RULES.VISIBILITY id (or an explicit visibility modifier). */
@@ -1101,6 +1133,8 @@ export interface TestSnapshot {
   retargets?: number;
   /** v0.50.0: the test's id, the same on every card it gets (Karma re-rolls, TN changes). */
   testId?: string;
+  /** v0.93.3: the roll request card this test answers (checked by the GM's client, never trusted). */
+  requestOf?: string;
   /**
    * v0.58.0: a plain test's extras: the time taken (base ÷ successes), what the successes reveal (a plain
    * Perception test, a language, a listening device), a gear repair, and an instructor's test for training.
@@ -2468,7 +2502,7 @@ export class SR2Actor extends Actor {
     const { limbId: _l, ...rest } = opts;
     const qm = [...qualityModifiers(this.sys.qualities ?? [], { attribute: key }), ...(key === 'body' ? this.bodyShockMods() : [])];
     if (qm.length) rest.modifiers = [...(rest.modifiers ?? []), ...qm];
-    return this.#runTest(`${opts.label ?? game.i18n.localize(`SR2E.Attribute.${key}`)}${limb ? ` (${limb.name} ${limb.quickness})` : ''}`, rating, rest);
+    return this.#runTest(`${opts.label ?? attributeDisplayLabel(key)}${limb ? ` (${limb.name} ${limb.quickness})` : ''}`, rating, rest);
   }
 
   /**
@@ -2751,13 +2785,16 @@ export class SR2Actor extends Actor {
     if (threat) label = `${label}${tx('SR2E.Card.Actor.threatDice', { threat })}`;
     // Threat dice count as Combat Pool dice for a clean miss (Core p. 86; Core p. 187): rolled as pool-tagged dice,
     // never spent.
+    // v0.93.3 (report item 38): Karma and pool dice keep their colours (the card's dice, and Dice So Nice).
+    const groups = { base: Math.max(0, dice + aligned), karma: karmaDice, pool: poolDice, threat, poolKind: pool };
     const result = await successTest({
       dice: dice + aligned + karmaDice,
       poolDice: poolDice + threat,
       targetNumber: opts.targetNumber ?? 4,
       modifiers: this.#testModifiers(opts),
-      roll: foundryRoller(rolls),
+      roll: foundryRoller(rolls, dsnFirstWave(groups)),
     });
+    tagDice(result.dice, groups);
     // v0.56.0: a centering test is used up by the next magical test.
     if (opts.magical && context.kind !== 'centering' && this.centeredSuccesses() > 0) {
       try { await clearFlag(this, 'centered'); } catch { /* not saved */ }
@@ -2765,6 +2802,8 @@ export class SR2Actor extends Actor {
     // v0.78.0: the Task Pool refreshes each Combat Turn, so outside combat it isn't used up.
     if (poolDice > 0 && narrowSpend) await this.#spendSpellPool(poolDice, narrowSpend);
     else if (poolDice > 0 && !(pool === 'task' && !(game as any).combat?.started)) await this.#spendPool(pool, poolDice);
+    // v0.93.3: a roll request's link (and a hidden request's whisper to the GMs) on the test's card.
+    if (opts.requestOf) context = { ...context, requestOf: String(opts.requestOf).slice(0, 64), ...(opts.requestPrivate && !context.privateTo?.length ? { privateTo: [...((game as any).users ?? [])].filter((u: any) => u.isGM).map((u: any) => String(u.id)) } : {}) };
     await this.#post(this.#snapshot(label, result, context), result, rolls);
     return result;
   }
@@ -9119,7 +9158,7 @@ export class SR2Actor extends Actor {
       ? `, ${Math.round(opts.measuredMetres * 10) / 10} m${opts.outOfRange ? (melee ? tx('SR2E.Card.Actor.outOfReach') : tx('SR2E.Card.Actor.beyondExtreme')) : ''}`
       : '';
     const title = `${weapon.name}${modeLabel ? ` [${modeLabel}]` : ''} (${base.label}${measured}, ${power}${level}${damageType !== w.damageType ? ` ${damageType}` : ''})${notes.length ? ` [${notes.join(', ')}]` : ''}${blast ? tx('SR2E.Card.Actor.blast2') : ''}${suffix}`;
-    return this.#runTest(title, willOnly ? Number(this.sys.attributes?.willpower?.total ?? 0) : dice, { targetNumber: base.value, modifiers, poolDice: poolUsed, pool: plan.pool, sightHandled: true, ...(opts.exclude?.length ? { exclude: opts.exclude } : {}), ...(opts.mounted ? { vehicle: true } : {}) }, {
+    return this.#runTest(title, willOnly ? Number(this.sys.attributes?.willpower?.total ?? 0) : dice, { targetNumber: base.value, modifiers, poolDice: poolUsed, pool: plan.pool, sightHandled: true, ...(opts.karmaDice ? { karmaDice: opts.karmaDice } : {}), ...(opts.exclude?.length ? { exclude: opts.exclude } : {}), ...(opts.mounted ? { vehicle: true } : {}) }, {
       kind: 'attack', ...(weapon?.id && typeof weapon.update === 'function' ? { weaponId: weapon.id } : {}),
       ...(attackTargets.length === 1 ? { attack: attackTargets[0] } : {}),
       ...(attackTargets.length > 1 ? { attackTargets } : {}),
@@ -9770,7 +9809,47 @@ export class SR2Actor extends Actor {
   }
 
   /** Resist a damage card: armor is looked up from this actor's worn armor by attack type (none astrally). */
-  async resistFromState(damage: DamageState, poolDice = 0): Promise<void> {
+  /**
+   * v0.93.3 (report item 10): the armor side of a damage resistance, shared by resistFromState and the Resist window's
+   * preview (so the two can't drift apart): the damage after flechette, the armor counted, an occupant's extra TN, or
+   * the immunity that stops it. Reads only; `noArmor` (the window's switch) counts no armor for this one roll.
+   */
+  resistArmorPlan(damageIn: DamageState, noArmor = false): { stops?: number; damage: DamageState; kind: 'ballistic' | 'impact'; armor: number; occ: boolean; occTn: number; opts: { ignoreImmunity: boolean; noWorn: boolean; calledLocation: string; noSpiritImmunity?: boolean } } {
+    let damage = damageIn;
+    const kind = damage.armorKind ?? armorKindFor(damage.melee);
+    // v0.92.3 (RULES.SPIRITS_V923.immunityScope 'book', Core p. 142): a manifest spirit's immunity counts only against
+    // firearms, other ranged weapons and explosions: not melee, bows or throwing weapons.
+    const noSpirit = Boolean(damage.noSpiritImmunity) || (Boolean(damage.melee) && !SP923.spiritImmunityApplies({ melee: true }));
+    const opts = { ignoreImmunity: Boolean(damage.ignoreImmunity), noWorn: Boolean(damage.ignoreArmor), calledLocation: damage.calledLocation ?? '', ...(noSpirit ? { noSpiritImmunity: true } : {}) };
+    // v0.72.0 (O3): immunity to normal weapons stops an attack whose Power doesn't exceed it (RULES.COMBAT_V72.immunity).
+    if (!damage.elemental && !damage.ignoreImmunity && !damage.awakenedAttacker) {
+      const withImm = this.armorRating(kind, opts);
+      const without = this.armorRating(kind, { ...opts, ignoreImmunity: true });
+      const st = immunityStops({ power: damage.power, immunity: withImm - without, otherArmor: without, armorMultiplier: damage.armorMultiplier ?? 1 });
+      if (st.stops) return { stops: st.against, damage, kind, armor: 0, occ: false, occTn: 0, opts };
+    }
+    // v0.79.0 (RULES.DOCS_V79.rangedFlechette 'armor', SRII p. 93): +1 level only against no armor; against armor the higher of
+    // ballistic and impact, doubled, instead of the attack's own kind.
+    let fl79 = damage.flechette && !damage.elemental ? flechetteSoak({ ballistic: this.armorRating('ballistic', opts), impact: this.armorRating('impact', opts), level: damage.level }) : null;
+    // v0.92.3 (COMBAT_V923.flechette 'book', Core p. 93): against armor, the higher of double Impact and plain Ballistic.
+    const fl923 = fl79?.armored ? C923.flechetteArmorBook(this.armorRating('ballistic', opts), this.armorRating('impact', opts), RULES.DOCS_V79.rangedFlechette.armorMultiplier) : null;
+    if (fl79 && fl923) fl79 = { ...fl79, armor: fl923.armor, note: fl923.note };
+    // v0.92.3 (RULES.GEAR_V923.dermal 'body', CORE_V923.trollDermal 'body', Core p. 93): dermal armor (plating, pairs of
+    // cyberlimbs, a troll's own) stops flechette's extra Damage Level. (The old ways count it as armor, so armored.)
+    const dermalLevels = Number(this.sys.derived?.cyber?.dermal ?? 0) + CO923.dermalSoakDice(Number(this.sys.derived?.racialDermal ?? 0));
+    if (fl79) damage = { ...damage, level: !fl79.armored && dermalLevels > 0 ? damage.level : fl79.level };
+    const armor = damage.elemental
+      ? elementalArmor({ ballistic: this.armorRating('ballistic', opts), impact: this.armorRating('impact', opts) })
+      : fl79 ? fl79.armor + Math.max(0, damage.extraArmor ?? 0)
+      : armorAfterAmmo(this.armorRating(kind, opts), damage.armorMultiplier ?? 1) + Math.max(0, damage.extraArmor ?? 0);
+    // v0.92.3 (RULES.VEHICLES_V923.occupant 'book', Rigger 2 p. 53): shot inside a vehicle: no Combat Pool, and a rigger
+    // jacked in (their mind is in the machine) +3 TN.
+    const occ = Boolean(damage.occupantShot) && veh923('occupant') === 'book';
+    const occTn = occ && this.sys.rigging?.jumpedIn ? Math.max(0, Number(RULES.VEHICLES_V923.occupantRiggerTn) || 0) : 0;
+    return { damage, kind, armor: noArmor ? 0 : armor, occ, occTn, opts };
+  }
+
+  async resistFromState(damage: DamageState, poolDice = 0, noArmor = false): Promise<void> {
     if (this.type === 'vehicle') {
       await this.resistVehicleDamage(damage, poolDice);
       return;
@@ -9816,41 +9895,15 @@ export class SR2Actor extends Actor {
       await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p><strong>${escText(this.name)}</strong> ${tx('SR2E.Card.Combat923.barrierStops')}</p>` });
       return;
     }
-    const kind = damage.armorKind ?? armorKindFor(damage.melee);
-    // v0.92.3 (RULES.SPIRITS_V923.immunityScope 'book', Core p. 142): a manifest spirit's immunity counts only against
-    // firearms, other ranged weapons and explosions: not melee, bows or throwing weapons.
-    const noSpirit = Boolean(damage.noSpiritImmunity) || (Boolean(damage.melee) && !SP923.spiritImmunityApplies({ melee: true }));
-    const opts = { ignoreImmunity: Boolean(damage.ignoreImmunity), noWorn: Boolean(damage.ignoreArmor), calledLocation: damage.calledLocation ?? '', ...(noSpirit ? { noSpiritImmunity: true } : {}) };
-    // v0.72.0 (O3): immunity to normal weapons stops an attack whose Power doesn't exceed it (RULES.COMBAT_V72.immunity).
-    if (!damage.elemental && !damage.ignoreImmunity && !damage.awakenedAttacker) {
-      const withImm = this.armorRating(kind, opts);
-      const without = this.armorRating(kind, { ...opts, ignoreImmunity: true });
-      const st = immunityStops({ power: damage.power, immunity: withImm - without, otherArmor: without, armorMultiplier: damage.armorMultiplier ?? 1 });
-      if (st.stops) {
-        await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p><strong>${escText(this.name)}</strong> ${tx('SR2E.Card.Actor.shrugsItOffPowerDoesnT', { damagePower: damage.power, stAgainst: st.against })}</p>` });
-        return;
-      }
+    const ap = this.resistArmorPlan(damage, noArmor);
+    if (ap.stops !== undefined) {
+      await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p><strong>${escText(this.name)}</strong> ${tx('SR2E.Card.Actor.shrugsItOffPowerDoesnT', { damagePower: damage.power, stAgainst: ap.stops })}</p>` });
+      return;
     }
-    // v0.79.0 (RULES.DOCS_V79.rangedFlechette 'armor', SRII p. 93): +1 level only against no armor; against armor the higher of
-    // ballistic and impact, doubled, instead of the attack's own kind.
-    let fl79 = damage.flechette && !damage.elemental ? flechetteSoak({ ballistic: this.armorRating('ballistic', opts), impact: this.armorRating('impact', opts), level: damage.level }) : null;
-    // v0.92.3 (COMBAT_V923.flechette 'book', Core p. 93): against armor, the higher of double Impact and plain Ballistic.
-    const fl923 = fl79?.armored ? C923.flechetteArmorBook(this.armorRating('ballistic', opts), this.armorRating('impact', opts), RULES.DOCS_V79.rangedFlechette.armorMultiplier) : null;
-    if (fl79 && fl923) fl79 = { ...fl79, armor: fl923.armor, note: fl923.note };
-    // v0.92.3 (RULES.GEAR_V923.dermal 'body', CORE_V923.trollDermal 'body', Core p. 93): dermal armor (plating, pairs of
-    // cyberlimbs, a troll's own) stops flechette's extra Damage Level. (The old ways count it as armor, so armored.)
-    const dermalLevels = Number(this.sys.derived?.cyber?.dermal ?? 0) + CO923.dermalSoakDice(Number(this.sys.derived?.racialDermal ?? 0));
-    if (fl79) damage = { ...damage, level: !fl79.armored && dermalLevels > 0 ? damage.level : fl79.level };
-    const armor = damage.elemental
-      ? elementalArmor({ ballistic: this.armorRating('ballistic', opts), impact: this.armorRating('impact', opts) })
-      : fl79 ? fl79.armor + Math.max(0, damage.extraArmor ?? 0)
-      : armorAfterAmmo(this.armorRating(kind, opts), damage.armorMultiplier ?? 1) + Math.max(0, damage.extraArmor ?? 0);
-    // v0.92.3 (RULES.VEHICLES_V923.occupant 'book', Rigger 2 p. 53): shot inside a vehicle: no Combat Pool, and a rigger
-    // jacked in (their mind is in the machine) +3 TN.
-    const occ = Boolean(damage.occupantShot) && veh923('occupant') === 'book';
-    const occTn = occ && this.sys.rigging?.jumpedIn ? Math.max(0, Number(RULES.VEHICLES_V923.occupantRiggerTn) || 0) : 0;
+    damage = ap.damage;
+    const { kind, armor, occ, occTn, opts } = ap;
     if (occ || damage.noPool) poolDice = 0;
-    await this.resistDamage({ power: damage.power, level: damage.level, type: damage.damageType, armor, poolDice, ...(occTn ? { tnPlus: occTn } : {}), knockdown: !damage.black, ...(damage.spiritAttacker ? { spiritAttacker: true } : {}), knockdownMelee: damage.melee, ...(damage.gel ? { knockdownGel: true } : {}), ...(Number(damage.strength ?? 0) > 0 ? { knockdownStrength: Number(damage.strength) } : {}), ...(damage.cleanMiss80 ? { cleanMiss80: damage.cleanMiss80 } : {}), ...(damage.ignoreArmor || damage.elemental ? {} : { armorKind: kind }), ...(vuln ? { noRegen: true } : {}),
+    await this.resistDamage({ power: damage.power, level: damage.level, type: damage.damageType, armor, poolDice, ...(occTn ? { tnPlus: occTn } : {}), knockdown: !damage.black, ...(damage.spiritAttacker ? { spiritAttacker: true } : {}), knockdownMelee: damage.melee, ...(damage.gel ? { knockdownGel: true } : {}), ...(Number(damage.strength ?? 0) > 0 ? { knockdownStrength: Number(damage.strength) } : {}), ...(damage.cleanMiss80 ? { cleanMiss80: damage.cleanMiss80 } : {}), ...(damage.ignoreArmor || damage.elemental || noArmor ? {} : { armorKind: kind }), ...(noArmor ? { armorSkipped: true } : {}), ...(vuln ? { noRegen: true } : {}),
       ...(damage.black ? {} : { cyberCheck: { location: damage.calledLocation ?? '' } }), ...(damage.infection ? { infection: damage.infection } : {}), ...(damage.toxinHit ? { toxinHit: damage.toxinHit } : {}) });
     // v0.92.3 (RULES.HEALTH_V923.shock 'disorient', Core p. 103): a stun weapon's hit disorients the target.
     if (damage.shock) await this.shockDisorient(Number(damage.power) || 0, this.armorRating('impact', opts));
@@ -9877,6 +9930,51 @@ export class SR2Actor extends Actor {
     }
     await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), rolls, content: `<p><strong>${escText(this.name)}</strong> ${turns > 0 ? tCount(turns, 'SR2E.Card.Actor.shockDisoriented923', { attribute: escText(cap(attr)), successes: r.successes, tn }) : tx('SR2E.Card.Actor.shockShrugged923', { attribute: escText(cap(attr)), successes: r.successes })}</p>` });
     return turns;
+  }
+
+  /**
+   * v0.93.3 (report item 10): the dice of a damage resistance (shared by resistDamage and the Resist preview): Body with
+   * bone lacing, Toughness and dermal armor, or Conjuring against a spirit when that is better, and Threat dice.
+   */
+  resistDicePlan(type: DamageType, astral: boolean, spiritAttacker: boolean): { dice: number; lacing: number; tough: number; dermal: number; conjDice: number; threat: number } {
+    const lacing = astral ? 0 : Math.max(0, Number(this.sys.derived?.cyber?.lacing?.soakDice ?? 0));
+    // v0.72.0 (O11): Toughness adds dice to resist damage (not astral).
+    const tough = astral ? 0 : toughnessDice(this.sys.derived?.vitals ?? { toughnessDice: 0, toughnessOnStun: false, toughnessOnToxins: false }, type);
+    // v0.92.3 (RULES.SPIRITS_V923.conjuringDefense 'on', Core p. 143): against a spirit's attack a magician resists with
+    // Conjuring in place of the attribute, when that is better.
+    // v0.92.3 (RULES.CORE_V923.trollDermal 'body', Core p. 45): a troll's dermal armor is +1 Body here; (threat 'book',
+    // Core p. 187) an NPC's Threat Rating dice.
+    const dermalAll = CO923.dermalSoakDice(Number(this.sys.derived?.racialDermal ?? 0), astral);
+    // Review fix: Conjuring is taken only when it beats everything it replaces (Body with lacing, Toughness, dermal armor).
+    const bodyDice = astral ? Number(this.sys.derived.astral.body) : Number(this.sys.attributes.body.total) + lacing + tough + dermalAll;
+    const conjDice = spiritAttacker ? SP923.conjuringDefenseDice({ attackerType: 'spirit', conjuring: Number(this.findSkill?.('Conjuring')?.system?.rating ?? 0), attribute: bodyDice, magic: Number(this.sys.derived?.magic ?? 0) }) : 0;
+    const dermal = conjDice ? 0 : dermalAll;
+    const threat = this.#threatDice();
+    const dice = conjDice ? conjDice : (astral ? this.sys.derived.astral.body : this.sys.attributes.body.total + lacing + tough + dermal);
+    return { dice: Number(dice) || 0, lacing, tough, dermal, conjDice, threat };
+  }
+
+  /**
+   * v0.93.3 (report item 10): what a Resist from a card's damage would roll, without rolling: Power, armor, the TN and
+   * the dice, for the Resist window (null for vehicles, the Matrix and astral damage, which keep their own windows).
+   * Reads only. `noArmor` previews the window's "count no armor this time" switch.
+   */
+  resistPreview(damageIn: DamageState, noArmor = false): { power: number; level: string; type: DamageType; armor: number; tn: number; dice: number; threat: number; immune?: boolean; stops?: number; occ: boolean } | null {
+    if (this.type === 'vehicle' || damageIn.matrix || damageIn.astral || !this.sys.attributes?.body) return null;
+    let damage = damageIn;
+    if (damage.fire && damageImmunity(this.immunities() as Record<string, boolean>, { fire: true }).immune) {
+      return { power: Number(damage.power) || 0, level: String(damage.level), type: damage.damageType ?? 'physical', armor: 0, tn: 0, dice: 0, threat: 0, immune: true, occ: false };
+    }
+    const vuln = damage.material ? vulnerabilityTo(this.critterTraits(), damage.material) : null;
+    if (vuln) damage = { ...damage, level: vulnerableLevel(damage.level) };
+    const allergyPower = damage.material ? allergyWeaponPower(this.critterTraits(), damage.material) : 0;
+    if (allergyPower) damage = { ...damage, power: Number(damage.power ?? 0) + allergyPower };
+    const ap = this.resistArmorPlan(damage, noArmor);
+    const type: DamageType = ap.damage.damageType ?? 'physical';
+    const d = this.resistDicePlan(type, false, Boolean(ap.damage.spiritAttacker));
+    const power = Number(ap.damage.power) || 0;
+    const tn = resistanceTargetNumber(power, ap.armor) + ap.occTn;
+    return { power, level: String(ap.damage.level), type, armor: ap.armor, tn, dice: d.dice, threat: d.threat, occ: ap.occ, ...(ap.stops !== undefined ? { stops: ap.stops } : {}) };
   }
 
   /** Resist incoming damage: Body test against (Power - armor), then stage down and mark the monitor. */
@@ -9906,28 +10004,18 @@ export class SR2Actor extends Actor {
     tnPlus?: number;
     /** v0.92.3 (RULES.SPIRITS_V923.conjuringDefense, Core p. 143): a spirit's attack: a magician may resist with Conjuring. */
     spiritAttacker?: boolean;
+    /** v0.93.3: the Resist window's "count no armor this time" was ticked (said on the card). */
+    armorSkipped?: boolean;
   }): Promise<void> {
     const type: DamageType = opts.type ?? 'physical';
     const tn = resistanceTargetNumber(opts.power, opts.armor ?? 0) + Math.max(0, Number(opts.tnPlus ?? 0) || 0);
     const rolls: any[] = [];
     const poolType = this.poolFor({ astral: Boolean(opts.astral) });
     const poolDice = Math.max(0, Math.min(opts.poolDice ?? 0, this.sys.derived[`${poolType}PoolLeft`] as number));
-    const lacing = opts.astral ? 0 : Math.max(0, Number(this.sys.derived?.cyber?.lacing?.soakDice ?? 0));
-    // v0.72.0 (O11): Toughness adds dice to resist damage (not astral).
-    const tough = opts.astral ? 0 : toughnessDice(this.sys.derived?.vitals ?? { toughnessDice: 0, toughnessOnStun: false, toughnessOnToxins: false }, type);
-    // v0.92.3 (RULES.SPIRITS_V923.conjuringDefense 'on', Core p. 143): against a spirit's attack a magician resists with
-    // Conjuring in place of the attribute, when that is better.
-    // v0.92.3 (RULES.CORE_V923.trollDermal 'body', Core p. 45): a troll's dermal armor is +1 Body here; (threat 'book',
-    // Core p. 187) an NPC's Threat Rating dice.
-    const dermalAll = CO923.dermalSoakDice(Number(this.sys.derived?.racialDermal ?? 0), Boolean(opts.astral));
-    // Review fix: Conjuring is taken only when it beats everything it replaces (Body with lacing, Toughness, dermal armor).
-    const bodyDice = opts.astral ? Number(this.sys.derived.astral.body) : Number(this.sys.attributes.body.total) + lacing + tough + dermalAll;
-    const conjDice = opts.spiritAttacker ? SP923.conjuringDefenseDice({ attackerType: 'spirit', conjuring: Number(this.findSkill?.('Conjuring')?.system?.rating ?? 0), attribute: bodyDice, magic: Number(this.sys.derived?.magic ?? 0) }) : 0;
-    const dermal = conjDice ? 0 : dermalAll;
-    const threat = this.#threatDice();
+    const { lacing, tough, conjDice, dermal, threat, dice } = this.resistDicePlan(type, Boolean(opts.astral), Boolean(opts.spiritAttacker));
     const result = await successTest({
       // v0.58.0: bone lacing adds to Body for damage resistance only.
-      dice: conjDice ? conjDice : (opts.astral ? this.sys.derived.astral.body : this.sys.attributes.body.total + lacing + tough + dermal),
+      dice,
       // Threat dice count as Combat Pool dice for a clean miss (Core p. 86), never spent.
       poolDice: poolDice + threat,
       targetNumber: tn,
@@ -9936,7 +10024,7 @@ export class SR2Actor extends Actor {
       roll: foundryRoller(rolls),
     });
     if (poolDice > 0) await this.#spendPool(poolType, poolDice);
-    const armorNote = `${conjDice ? tx('SR2E.Card.Actor.conjuringVsSpirit', { dice: conjDice }) : ''}${opts.armor ? tx('SR2E.Card.Actor.armor', { armor: opts.armor }) : ''}${dermal ? tx('SR2E.Card.Actor.dermalBody', { dermal }) : ''}${threat ? tx('SR2E.Card.Actor.threatDice', { threat }) : ''}${!conjDice && lacing ? tx('SR2E.Card.Actor.boneLacing', { lacingLabel: this.sys.derived.cyber.lacing.label, lacing }) : ''}${!conjDice && tough ? tx('SR2E.Card.Actor.toughness2', { tough }) : ''}`;
+    const armorNote = `${conjDice ? tx('SR2E.Card.Actor.conjuringVsSpirit', { dice: conjDice }) : ''}${opts.armor ? tx('SR2E.Card.Actor.armor', { armor: opts.armor }) : ''}${opts.armorSkipped ? tx('SR2E.Card.Actor.armorSkipped') : ''}${dermal ? tx('SR2E.Card.Actor.dermalBody', { dermal }) : ''}${threat ? tx('SR2E.Card.Actor.threatDice', { threat }) : ''}${!conjDice && lacing ? tx('SR2E.Card.Actor.boneLacing', { lacingLabel: this.sys.derived.cyber.lacing.label, lacing }) : ''}${!conjDice && tough ? tx('SR2E.Card.Actor.toughness2', { tough }) : ''}`;
     await this.#post(this.#snapshot((opts.astral ? tx('SR2E.Card.Actor.resist7WithAstral', { power: opts.power, level: opts.level, type, armorNote }) : tx('SR2E.Card.Actor.resist7Plain', { power: opts.power, level: opts.level, type, armorNote })), result, {
       kind: 'soak',
       soak: {
@@ -10059,6 +10147,8 @@ export class SR2Actor extends Actor {
    */
   async castSpell(spell: any, opts: {
     force?: number; targetUuid?: string | null; poolDice?: number; drainPoolDice?: number;
+    /** v0.93.3: Karma Pool dice bought for the casting test (Core p. 191; capped like any test's). */
+    karmaDice?: number;
     /** Area spells: every target (the TN is the highest of their resisting attributes). */
     targetUuids?: string[];
     /** Sustained spells: hold it with a free sustaining focus instead of taking the TN penalty. */
@@ -10419,7 +10509,7 @@ export class SR2Actor extends Actor {
       // v0.80.0 (RULES.URR_V80.magCastDice 'force', URR): the spell's Force instead of Sorcery.
       Math.max(0, urrMagCastingDice({ dice: caster.dice, force, innate: caster.innate }) + extra.dice + teamDice + aidDice),
       // v0.79.0 (RULES.DOCS_V79.magicPool.castingCap 'magic', SR2 p85): at most Magic-rating Spell Pool dice on the success test.
-      { targetNumber, poolDice: castingPoolDice(opts.poolDice ?? 0, Number(this.sys.derived?.magic ?? 0)), pool: 'spell', spellUse: castUse, magical: true, sightHandled: true,
+      { targetNumber, poolDice: castingPoolDice(opts.poolDice ?? 0, Number(this.sys.derived?.magic ?? 0)), pool: 'spell', spellUse: castUse, magical: true, sightHandled: true, ...(opts.karmaDice ? { karmaDice: opts.karmaDice } : {}),
         modifiers: [...(touch ? [] : this.#spellEnvironment(elemental, targets[0] ?? vehicles[0]?.actor ?? null)), ...(combat || elemental || resistAttribute ? SR2Actor.attackedMods(targets) : []),
           ...(barrierTn ? [{ label: tx('SR2E.Card.Mod.across', { barrierName: barrier.name }), value: barrierTn }] : []),
           // v0.92.3 (RULES.HEALTH_V923.bodyIndexHealing 'magical', Shadowtech p. 6): bioware hinders magical healing.
@@ -11279,6 +11369,12 @@ export class SR2Actor extends Actor {
     // v0.73.0 (O35): a new hand-made NPC has no Karma Pool unless given one (RULES.CHARACTERS_V73.npcs.handMadeKarmaPool).
     const kp = npcStartingKarmaPool(String(data?.type ?? this.type), data);
     if (kp !== null) (this as any).updateSource({ 'system.karma.pool': kp });
+    // v0.93.3 (visual review 0.93.2, finding 14): a new spirit called an elemental (or a fire, water, air or earth one)
+    // left at the model's default kind (nature) is filed as an elemental.
+    if (String(data?.type ?? this.type) === 'spirit') {
+      const sys: any = data?.system ?? {};
+      if ((!sys.spiritKind || sys.spiritKind === 'nature') && guessSpiritKind(`${data?.name ?? ''} ${sys.spiritType ?? ''}`, String(sys.element ?? ''))) (this as any).updateSource({ 'system.spiritKind': 'elemental' });
+    }
     return (super._preCreate as any)?.(data, options, user);
   }
 

@@ -376,7 +376,8 @@ describe('v0.80.0 core: gear', () => {
 describe('v0.80.0 core: the roll dialogs (source)', () => {
   test('the skill and attribute dialogs show the Revamp rows only through urrCore helpers (empty in the book)', () => {
     const src = readFileSync(new URL('../applications/sheets.ts', import.meta.url), 'utf8');
-    assert.match(src, /\$\{urrCoreTnPresetRow\(String\(item\.system\?\.kind \?\? ""\)\)\}\$\{extra58\}/);
+    // v0.93.3: left out of a roll request's window (preset.opts).
+    assert.match(src, /\$\{preset\.opts \? "" : urrCoreTnPresetRow\(String\(item\.system\?\.kind \?\? ""\)\)\}\$\{extra58\}/);
     // v0.92.3: the Karma dice row comes through CO923.karmaDiceRow (core923.ts) (the Revamp's row when coreKarmaDice is on, the book's otherwise).
     // v0.92.3 review fix: shown when defaulting too in the book (capped by the linked attribute); the Revamp's row as before.
     assert.match(src, /CO923\.karmaDiceRow\(Number\(actor\.system\?\.derived\?\.karmaPoolLeft \?\? 0\), Number\(item\.system\?\.rating \?\? 0\) > 0 \|\| !RULES\.URR_V80\.coreKarmaDice, /);

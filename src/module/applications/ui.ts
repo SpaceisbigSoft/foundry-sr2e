@@ -3,6 +3,7 @@
  * and high-contrast), Dice So Nice colour sets, dropping a weapon or spell on a token, and the GM
  * panel (scene magic and light, world time, hosts and sites, the party, group rolls and damage).
  */
+import { openRollRequestDialog } from './rollrequest.ts';
 import { COUNTED_TIME, sysNow } from '../helpers/clock.ts';
 import { SYSTEM } from '../config/system.ts';
 import { applyFieldTooltips } from '../config/tooltips.ts';
@@ -115,6 +116,8 @@ export class SR2GmPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       award: () => void openAwardDialog(),
       openActor: SR2GmPanel.#onOpenActor,
       groupRoll: SR2GmPanel.#onGroupRoll,
+      // v0.93.3: the roll request card (each player rolls in their own window; a live tally).
+      rollRequest: () => { void openRollRequestDialog(); },
       groupDamage: SR2GmPanel.#onGroupDamage,
       resetHost: SR2GmPanel.#onResetHost,
       clearSmoke: SR2GmPanel.#onClearSmoke,

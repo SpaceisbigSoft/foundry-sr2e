@@ -54,7 +54,7 @@ Known gaps: 4 entries under "Not built" in `docs/VERIFY.md`, *Core mechanics and
 | Specializations and concentrations | **Partly** | A tick box in the dialog; a weapon can pre-tick its specialization. |
 | Combat, Spell, Hacking, Control and Task Pools | **Automatic** | Spent from the dialogs, shown as pips, refilled at the start of a combat and each Combat Turn (the Combat Pool at each action). |
 | Karma Pool: re-roll failures, avoid disaster, buy a success | **Partly** | Buttons on the card; re-roll costs rise each time; a new card replaces the old. |
-| Karma Pool dice added to a test | **Partly** | In attribute and skill dialogs only, not yet in attack and spell dialogs. |
+| Karma Pool dice added to a test | **Yes** | In the attribute, skill, attack and spell dialogs (v0.93.3), up to the test's own dice. |
 | Karma Pool refresh | **Automatic** | At combat end by default; house rule: each session or by hand. |
 | Open, complementary and teamwork tests, group rolls | **Partly** | The roller picks who helps; the card adds it up. |
 | Inline roll links (`@SR2Test[...]`) and `/sr2` | **Automatic** | In journals, item text and chat. |

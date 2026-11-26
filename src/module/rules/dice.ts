@@ -64,6 +64,24 @@ export interface DieResult {
   success: boolean;
   /** v0.78.0: a die that came from a dice pool (Combat Pool etc.), so a rule can tell pool successes apart. */
   pool?: boolean;
+  /** v0.93.3: which pool (combat, spell, hacking, control, task; threat for an NPC's Threat dice), for its colour. */
+  poolKind?: string;
+  /** v0.93.3: a die bought from the Karma Pool (Core p. 191), for its colour. */
+  karma?: boolean;
+}
+
+/**
+ * v0.93.3 (report item 38): mark which dice of a test came from the Karma Pool and which pool the pool dice came
+ * from, so the card and Dice So Nice can colour them. `base` dice come first, then `karma`, then `pool`, then `threat`
+ * (the order #runTest hands them to successTest). Changes the dice in place.
+ */
+export function tagDice(dice: DieResult[], o: { base: number; karma: number; pool: number; threat: number; poolKind: string }): void {
+  const kind = /^[a-z]{1,12}$/.test(o.poolKind) ? o.poolKind : 'combat';
+  dice.forEach((d, i) => {
+    if (i >= o.base && i < o.base + o.karma) d.karma = true;
+    else if (d.pool && i < o.base + o.karma + o.pool) d.poolKind = kind;
+    else if (d.pool) d.poolKind = 'threat';
+  });
 }
 
 export interface SuccessTestResult {
@@ -190,7 +208,13 @@ export async function rerollFailures(
   const rerolled = await rollOpenEnded(failed, roll);
   for (const d of rerolled) d.success = d.total >= result.targetNumber;
   // v0.78.0: a re-rolled pool die stays a pool die.
-  result.dice.filter((d) => !d.success).forEach((d, i) => { if (d.pool && rerolled[i]) rerolled[i]!.pool = true; });
+  result.dice.filter((d) => !d.success).forEach((d, i) => {
+    if (!rerolled[i]) return;
+    if (d.pool) rerolled[i]!.pool = true;
+    // v0.93.3: and keeps its colour (its pool, or the Karma Pool).
+    if (d.poolKind) rerolled[i]!.poolKind = d.poolKind;
+    if (d.karma) rerolled[i]!.karma = true;
+  });
   const kept = result.dice.filter((d) => d.success);
   const dice = [...kept, ...rerolled];
   return { ...result, dice, successes: dice.filter((d) => d.success).length, botch: false };

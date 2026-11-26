@@ -1518,3 +1518,44 @@ li.chat-message.sr2e-card.sr2e-card-note .message-content { font-size: 0.92em; }
 .application.sr2e-look.sr2e-reference .sr2e-ref-row > a > i { grid-row: span 2; align-self: center; color: var(--sr2e-muted); }
 .application.sr2e-look.sr2e-reference .sr2e-ref-name { font-weight: 600; }
 .application.sr2e-look.sr2e-reference .sr2e-ref-detail { font-size: 0.78rem; color: var(--sr2e-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* v0.93.3 (report item 38): pool dice in their own colours (a bar under the die, from the palette; its hover says
+   which pool), and Karma Pool dice (a dotted edge as well, so it isn't colour alone). Hit and miss keep their look. */
+:where(li.chat-message.sr2e-card) .sr2e-die.sr2e-pool-die { box-shadow: inset 0 -3px 0 var(--sr2e-pool-colour, var(--sr2e-combat)); }
+:where(li.chat-message.sr2e-card) .sr2e-die.sr2e-pool-combat, :where(li.chat-message.sr2e-card) .sr2e-die.sr2e-pool-threat { --sr2e-pool-colour: var(--sr2e-combat); }
+:where(li.chat-message.sr2e-card) .sr2e-die.sr2e-pool-spell { --sr2e-pool-colour: var(--sr2e-magic); }
+:where(li.chat-message.sr2e-card) .sr2e-die.sr2e-pool-hacking { --sr2e-pool-colour: var(--sr2e-matrix); }
+:where(li.chat-message.sr2e-card) .sr2e-die.sr2e-pool-control { --sr2e-pool-colour: var(--sr2e-rigging); }
+:where(li.chat-message.sr2e-card) .sr2e-die.sr2e-pool-task { --sr2e-pool-colour: var(--sr2e-street); }
+:where(li.chat-message.sr2e-card) .sr2e-die.sr2e-karma-die { box-shadow: inset 0 -3px 0 var(--sr2e-accent); border-style: dotted; }
+:where(li.chat-message.sr2e-card) .sr2e-die.hit.sr2e-pool-die { box-shadow: inset 0 -3px 0 var(--sr2e-pool-colour, var(--sr2e-combat)), 0 0 8px var(--sr2e-hit-glow); }
+:where(li.chat-message.sr2e-card) .sr2e-die.hit.sr2e-karma-die { box-shadow: inset 0 -3px 0 var(--sr2e-accent), 0 0 8px var(--sr2e-hit-glow); }
+
+/* v0.93.3 (visual review 0.93.2, findings 5 and 93): a Defend or Resist already used reads as done (muted, not faded). */
+:where(li.chat-message.sr2e-card) button.sr2e-used { color: var(--sr2e-muted); font-style: italic; }
+:where(li.chat-message.sr2e-card) button.sr2e-used:disabled { cursor: default; }
+
+/* v0.93.3 (visual review 0.93.2, finding 4): the area list's actors that aren't on this scene, folded away. */
+.application.sr2e-look details.sr2e-area-off { margin-top: 0.25rem; }
+.application.sr2e-look details.sr2e-area-off > summary { cursor: pointer; color: var(--sr2e-muted); }
+
+/* v0.93.3 (report item 10): the Resist window's preview line. */
+.application.sr2e-look .sr2e-resist-preview { margin: 0 0 0.5rem; padding: 0.3rem 0.5rem; border-left: 3px solid var(--sr2e-accent); }
+
+/* v0.93.3 (report item 38): the Team Karma window. */
+.application.sr2e-look .sr2e-team-karma-body { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; padding: 0.5rem; }
+.application.sr2e-look .sr2e-team-karma-count { display: flex; flex-direction: column; align-items: center; }
+.application.sr2e-look .sr2e-team-karma-count b { font-size: 2.4rem; line-height: 1; font-family: var(--sr2e-font-num); }
+.application.sr2e-look .sr2e-team-karma-buttons { display: flex; gap: 0.4rem; }
+.application.sr2e-look .sr2e-team-karma-buttons button { min-width: 2.25rem; min-height: 2rem; }
+
+/* v0.93.3: the GM's roll request card (applications/rollrequest.ts). The table is the group roll's (table.sr2e-group). */
+:where(li.chat-message.sr2e-card) .sr2e-rr .sr2e-rr-table td:last-child { text-align: right; white-space: nowrap; }
+:where(li.chat-message.sr2e-card) .sr2e-rr .sr2e-rr-table button { width: auto; min-width: 0; padding: 0 0.4rem; line-height: 1.5; font-size: 0.85rem; }
+:where(li.chat-message.sr2e-card) .sr2e-rr .sr2e-rr-wait, :where(li.chat-message.sr2e-card) .sr2e-rr .sr2e-rr-npc { color: var(--sr2e-muted); font-style: italic; }
+:where(li.chat-message.sr2e-card) .sr2e-rr .sr2e-rr-done { font-weight: 600; }
+:where(li.chat-message.sr2e-card) .sr2e-rr .sr2e-rr-row.sr2e-rr-rolled td:first-child { font-weight: 600; }
+:where(li.chat-message.sr2e-card) .sr2e-rr .sr2e-rr-sum { margin: 0.3rem 0 0.2rem; font-size: 0.9rem; }
+:where(li.chat-message.sr2e-card) .sr2e-rr .sr2e-rr-gm { margin: 0.2rem 0 0; display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
+:where(li.chat-message.sr2e-card) .sr2e-rr .sr2e-rr-gm em { font-size: 0.8rem; color: var(--sr2e-muted); }
+.application.sr2e-look .sr2e-rr-dialog .sr2e-rr-who { max-height: 14rem; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)); gap: 0.1rem 0.6rem; }

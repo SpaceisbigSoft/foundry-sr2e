@@ -20,6 +20,7 @@
     </label>
     <label>{{sr2eT "SR2E.UI.spiritType"}} <input type="text" name="system.spiritType" value="{{system.spiritType}}" placeholder="{{sr2eT "SR2E.UI.eGForestSpirit"}}"></label>
     {{#if (eq system.spiritKind "elemental")}}<label>{{sr2eT "SR2E.UI.element"}} <select name="system.element">{{selectOptions elementChoices selected=system.element valueAttr="key" labelAttr="label"}}</select></label>{{/if}}
+    {{#if kindWarning}}<p class="hint sr2e-warn">{{kindWarning}}</p>{{/if}}
     {{#if (eq system.spiritKind "nature")}}<label>{{sr2eT "SR2E.UI.domain"}} <input type="text" name="system.domain" value="{{system.domain}}" placeholder="{{sr2eT "SR2E.UI.eGForest"}}"></label>{{/if}}
     {{#if critter.outOfDomain}}<span class="sr2e-status sr2e-warn" title="{{sr2eT "SR2E.UI.theSceneSEnvironmentTagsDon"}}">{{sr2eT "SR2E.UI.outsideItsDomain"}}</span>{{/if}}
     <label title="{{sr2eT "SR2E.UI.invokedIntoAGreatFormTo" attributes=greatForm.attributes powers=greatForm.powers}}">{{sr2eT "SR2E.UI.greatForm"}} <input type="checkbox" name="system.greatForm" {{checked system.greatForm}}></label>

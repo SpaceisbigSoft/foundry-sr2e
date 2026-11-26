@@ -2,6 +2,20 @@
 
 This is the history of the unofficial Shadowrun 2nd Edition system for Foundry VTT (system id `shadowrun2e_unified`; `sr2e` until v0.93.0), newest version first. Every rules change since v0.70.0 has a house-rule switch that puts the old behaviour back. The system was built with AI (Anthropic's Claude) under human direction, and it has not yet been play-tested at a real table.
 
+## v0.93.3 — Table speed (26 Nov 2026)
+- **Ask the table to roll:** the GM panel's new **Roll request** (also `game.sr2e.api.requestRoll()`) asks chosen characters for a skill or attribute test at a TN, shown or hidden. One card lists everyone; each player clicks **Roll** on their own row and rolls in their normal window, and the card keeps a live tally (who has rolled, successes, the best). The GM can **Roll for them** on any row or **Roll the NPCs** at once. Hidden requests show players who has rolled, not the TN or the results.
+- **Roll at once:** a new setting of your own (it follows you to any browser). With it on, a roll button rolls straight away with the window's defaults, and Shift-click opens the window for that one roll. Defend and Resist still open their windows.
+- **The Resist window shows what you will roll** before you roll: Power − armor = TN and your dice, and a box to count no armor this one time (the card says so).
+- **Karma Pool dice in attack and spell windows** too, not only skill and attribute tests.
+- **Pool dice in their own colours** on the card (and in Dice So Nice): Combat, Spell, Hacking and Control Pool dice and Karma Pool dice each look different, and hovering a die says where it came from.
+- **A shared Team Karma tracker** (optional, Configure Settings): a count the whole table can see in SR2e tools → Team Karma. The GM sets it, a player spends one, and the chat says who. Characters' own Karma Pools are not affected.
+- **Your own skill and attribute lists:** Configure Settings → *Skill and attribute lists* lets the GM add custom skills (they appear in the pickers and the creation wizard), hide book skills from the pickers, and rename how attributes are labelled. Nothing on existing characters changes, and the rules keep working on the same attributes. See `docs/CUSTOM-LISTS.md`.
+- **The Skill Web window** has a new **Add the book's links** button: the links the system has from the rulebooks so far (Build/Repair skills and the magical skills). It doesn't yet hold the whole printed web, so it isn't the default; check it before you save.
+- Fixed: the spell window's area targets listed every actor in the world (the Cast button went off screen). It now lists the scene's tokens, those in the area first, with the rest folded away.
+- Fixed: a Defend or Resist button stayed live after it was used when a player defended against the GM's card. It now reads as done (✓) everywhere; the GM can still click it to roll again, after a question.
+- Fixed: the NPC generator could describe a human with an ork's tusks or an ork with a troll's horns; descriptions now fit the metatype. A new spirit named as an elemental (or given an element) is filed as an elemental, and the spirit sheet warns about a mismatch.
+- API changes: `requestRoll()`, `postRollRequest()` and `teamKarma()` were added (see `docs/API.md`); nothing was changed or removed.
+
 ## v0.93.2 — Docs, policy and CI (25 Nov 2026)
 - **Which Foundry versions work:** a table in the README. Foundry 14 is supported, and `system.json` now names 14 as the highest version, so Foundry v15 marks SR2e as not compatible rather than letting a world half-work; a release raises the limit after SR2e has run on v15. The README also says how to stay on an older release.
 - **What SR2e does for you:** a new page, `docs/AUTOMATION.md`, lists per area what is automatic, what is partly automatic and what stays by hand, and which optional modules add what. Outside testers can use it as a checklist.

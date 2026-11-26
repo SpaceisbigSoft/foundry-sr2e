@@ -2154,7 +2154,9 @@
       "strengthRating": "Strength rating",
       "recoveringAddiction": "· kicking it",
       "immuneToDrug": "immune",
-      "fetishExpendable": "Expendable fetish"
+      "fetishExpendable": "Expendable fetish",
+      "rollRequest": "Request a roll",
+      "rollRequestTitle": "Ask the players (and NPCs) for one test: each rolls their own, the card keeps the tally"
     },
     "Settings": {
       "rulesSource": {
@@ -2367,6 +2369,19 @@
       "shopForbidden": {
         "Name": "Shop: forbidden things on sale",
         "Hint": "Off: items whose legality is Forbidden are hidden from players in the shop. On: they are listed too (with their legality)."
+      },
+      "rollAtOnce": {
+        "Name": "Roll at once",
+        "Hint": "Your own default: a click on a roll button rolls straight away with the window's defaults, and Shift-click opens the window for that one roll. Defend and Resist still open their windows (Shift-click skips them). Off: the window opens, and Shift-click rolls at once."
+      },
+      "teamKarmaOn": {
+        "Name": "Team Karma tracker",
+        "Hint": "An optional table aid: a shared count the whole table can see (SR2e tools → Team Karma). The GM sets it; a player spends one, and the chat says who. Each character's own Karma Pool is not changed by it."
+      },
+      "customListsMenu": {
+        "Name": "Skill and attribute lists",
+        "Label": "Edit the lists",
+        "Hint": "World house rules: add custom skills to the pickers, hide book skills from them, and rename how attributes are labelled. Skills already on actors are never changed."
       }
     },
     "Notify": {
@@ -3459,6 +3474,19 @@
       "Reference": {
         "noActor": "Pick a character for the reference pane.",
         "notOwner": "Only the owner of {name} can open its reference pane."
+      },
+      "Request": {
+        "gmOnly": "Only a GM can request a roll.",
+        "nobody": "Nobody to ask: pick at least one character.",
+        "noSkill": "Name the skill to roll.",
+        "noActor": "{name} no longer exists.",
+        "notYours": "{name} isn't your character: its owner or the GM rolls it.",
+        "alreadyRolled": "{name} has already rolled for this request.",
+        "noNpcs": "No NPC on this request is still waiting."
+      },
+      "CustomLists": {
+        "saved": "Skill and attribute lists saved: {skills} custom skills, {hidden} hidden.",
+        "skipped": "Lists saved, but lines were skipped ({count}): {lines}"
       }
     },
     "Dialog": {
@@ -3637,7 +3665,11 @@
         "toResist": "{power}{level} {damageType} to resist",
         "castsForce": "{caster} casts {spellName} (Force {force})",
         "someone": "Someone",
-        "aWeapon": "a weapon"
+        "aWeapon": "a weapon",
+        "resistPreview": "Resist {power}{level} {type}: Power {power} − armor {armor} = TN {tn}, {dice} dice + {pool} pool",
+        "resistPreviewImmune": "Immune: this damage does nothing.",
+        "resistPreviewStops": "Shrugged off: the Power doesn't beat the immunity ({against}).",
+        "resistNoArmor": "Count no armor this time (armor {armor})"
       },
       "Creation": {
         "buildCheckNotMet": "{failedLength} not met:",
@@ -4854,7 +4886,9 @@
         "frameAttackHint923": "{frameName} rolls its {fd} vs a TN by the host's security code and the target's status.",
         "exclusiveForceWhenCast": "Exclusive (Force +{force} when cast)",
         "fetishForceWhenCast": "Fetish-limited (Force +{force} when cast, +{expendable} expendable)",
-        "designBookHint": "Magical Theory (at most your library's or lodge's rating; 1 die per 2 points it is higher) vs 2 × Force − Magic + the drain modifiers; 6, 18, 30 or 60 days by drain level ÷ successes. A success gives a formula card: learn it for Good Karma = Force, or offer it to your group's grimoire."
+        "designBookHint": "Magical Theory (at most your library's or lodge's rating; 1 die per 2 points it is higher) vs 2 × Force − Magic + the drain modifiers; 6, 18, 30 or 60 days by drain level ÷ successes. A success gives a formula card: learn it for Good Karma = Force, or offer it to your group's grimoire.",
+        "areaNotOnScene": "Not on this scene ({n})",
+        "requestTnHidden": "The GM keeps this test's target number hidden."
       },
       "Spendkarma": {
         "raise": "Raise",
@@ -5061,6 +5095,24 @@
         "howManyLabel": "How many to move (of {have})",
         "howManyMove": "Move",
         "howManyCancel": "Cancel"
+      },
+      "Request": {
+        "title": "Request a roll",
+        "kind": "Test",
+        "skill": "A skill",
+        "attribute": "An attribute",
+        "skillName": "Skill (when a skill)",
+        "skillPlaceholder": "e.g. Perception, Stealth, Etiquette",
+        "attributeName": "Attribute (when an attribute)",
+        "targetNumber": "Target number",
+        "tnModifier": "TN modifier",
+        "hidden": "Hide the TN and the results from the players",
+        "who": "Who rolls",
+        "hint": "One card is posted with a button for each character. Each player rolls their own in their usual roll window; the card keeps the tally. Characters without the skill default as usual.",
+        "post": "Post the request",
+        "roll": "Roll",
+        "rollTitle": "{name}: {what}",
+        "tnHidden": "The GM has set the target number."
       }
     },
     "Window": {
@@ -5093,7 +5145,8 @@
       "Settings": {
         "sr2eSkillWeb": "SR2e Skill Web",
         "sr2eRollPrivacy": "SR2e roll privacy",
-        "sr2eHouseRules": "SR2e house rules"
+        "sr2eHouseRules": "SR2e house rules",
+        "sr2eCustomLists": "SR2e skill and attribute lists"
       },
       "NewEntry": {
         "title": "New entry",
@@ -5431,7 +5484,9 @@
         "goesOffWhereItWasSet": "{name} goes off where it was set{part}.",
         "catchesFireKeepsBurning": "{name} catches fire: resists the flames and keeps burning each Combat Turn",
         "rollsPermanentDamage923": "{actorName} rolls a permanent damage test: a limb, organ or attribute may be lost for good",
-        "stillExposed923": "Still exposed to {name}"
+        "stillExposed923": "Still exposed to {name}",
+        "defendedDone": "Already defended (a GM can roll it again)",
+        "resistedDone": "Already resisted (a GM can roll it again)"
       },
       "Actor": {
         "aPlayer": "a player",
@@ -7784,7 +7839,15 @@
         "dermalBody": ", dermal armor +{dermal} Body",
         "threatDice": " [Threat +{threat}]",
         "iccm2": " (ICCM)",
-        "magicalTheory2": "Magical Theory"
+        "magicalTheory2": "Magical Theory",
+        "armorSkipped": ", no armor counted (chosen in the window)",
+        "karmaDie": "Karma Pool die",
+        "poolDieCombat": "Combat Pool die",
+        "poolDieSpell": "Spell Pool die",
+        "poolDieHacking": "Hacking Pool die",
+        "poolDieControl": "Control Pool die",
+        "poolDieTask": "Task Pool die",
+        "poolDieThreat": "Threat die (counts as a Combat Pool die)"
       },
       "Adding": {
         "buysFor": "buys {list} for ¥{planNuyen}.",
@@ -8356,6 +8419,30 @@
         "recognitionPublic": "Etiquette (else Charisma +4) vs {tn}: (1,000 − public rep {rep}) ÷ 50",
         "withdrawsWhy": "(Professional Rating {pr}, a {level} wound). The GM may let them test Willpower to stay.",
         "gruntWithdrawsWhy": "(Professional Rating {pr}, a {level} wound): the next steps in; {left} standing."
+      },
+      "Teamkarma": {
+        "gm": "GM"
+      },
+      "Request": {
+        "speaker": "Roll request",
+        "headTn": "{what} vs TN {tn}",
+        "headHidden": "{what} (TN hidden)",
+        "who": "Who",
+        "result": "Result",
+        "waiting": "waiting",
+        "rolled": "rolled",
+        "disaster": "Disaster",
+        "npc": "(NPC)",
+        "roll": "Roll",
+        "sent": "Rolled, waiting for the GM",
+        "rollFor": "Roll for them",
+        "rollForTitle": "Roll {name}'s test yourself",
+        "rollNpcs": "Roll the NPCs",
+        "rolledOf": "{rolled} of {rows} rolled",
+        "totalSuccesses": "total successes: {total}",
+        "best": "best: {names} ({successes})",
+        "botches": "disasters: {botches}",
+        "hiddenNote": "Hidden: players see who has rolled, not the TN or the results."
       }
     },
     "Privacy": {
@@ -14168,7 +14255,9 @@
         },
         "rulesSourceRevamp": "Rules source: {source} — it changes {value} rules under your house rules; {bySourceSize} of them are rows here (marked, and found by searching \"revamp\"). Your values below still win.",
         "rulesSourceConfigure": "Rules source: {source} (Configure Settings, SR2e system: Rules source).",
-        "sr2eHouseRulesTheAdvancedBox": "SR2e house rules: the advanced box is not valid JSON."
+        "sr2eHouseRulesTheAdvancedBox": "SR2e house rules: the advanced box is not valid JSON.",
+        "skillWebLoadStarter": "Add the book's links",
+        "skillWebStarterHint": "“Add the book's links” adds the links the system has from the rulebooks so far (Build/Repair skills and the magical skills; uncertain ones are marked VERIFY). It doesn't hold the whole printed web yet: once a web has links, a skill can only default along them, so check the list before you save."
       },
       "Tours": {
         "yourCharacterSheet": "Your character sheet",
@@ -15725,6 +15814,29 @@
       "Combat923": {
         "declareFullDefense": "Declare full defense: no Combat Pool on your melee tests, pool dice to your resistance tests (a clean miss if they beat the attacker's) until your next action",
         "fullDefenseDetail": "no Combat Pool on melee tests; pool dice to resistance tests until the next action"
+      },
+      "TeamKarma": {
+        "title": "Team Karma",
+        "label": "Team Karma",
+        "spend": "Spend one",
+        "minus": "One less",
+        "plus": "One more",
+        "none": "No Team Karma is left.",
+        "off": "The GM hasn't turned the Team Karma tracker on (Configure Settings).",
+        "spentNote": "{who} spends 1 Team Karma ({n} left).",
+        "setNote": "{who} sets Team Karma to {n}."
+      },
+      "CustomLists": {
+        "intro": "These lists change only what the pickers offer and what the attributes are called. No skill is taken off an actor, and every rule keeps using the same attribute keys. New attributes can't be added.",
+        "skillsHeading": "Custom skills",
+        "skillsHint": "One skill per line: name, then optionally the linked attribute, the kind (active, knowledge, language or build/repair) and a short note, separated by |. Knowledge and language skills always link to Intelligence. A name the book list already has is skipped. At most {max} skills. Example:",
+        "hiddenHeading": "Hidden skills",
+        "hiddenHint": "One skill name per line. Hidden skills are left out of the skill pickers and the creation wizard's suggestions; characters that have them keep them.",
+        "attributesHeading": "Attribute labels",
+        "attributesHint": "A display label and a short abbreviation per attribute. Leave a box empty for the default. The key on the right never changes.",
+        "labelFor": "Label for {name}",
+        "abbrFor": "Abbreviation for {name}",
+        "save": "Save"
       }
     },
     "Text": {
@@ -17583,6 +17695,21 @@
         "karmaDiceBook": "One Karma Pool point a die, up to the test's own skill, attribute or rating dice (not pool dice), spent until the pool refreshes (Core p. 191)",
         "moreFlawsThanEdges": "the flaws come to more than the edges",
         "qualitiesZero": "edges and flaws come to 0"
+      },
+      "CustomLists": {
+        "problemLine": "line {line} ({text}): {reason}",
+        "reason": {
+          "name": "no name, a name over 60 characters, or a | in it",
+          "attribute": "not an attribute a skill can link to",
+          "kind": "unknown kind",
+          "duplicate": "listed twice",
+          "book": "already a book skill",
+          "limit": "over the limit"
+        }
+      },
+      "SpiritKind": {
+        "nameSaysElemental": "{name} is called an elemental, but its Kind is Nature spirit.",
+        "elementSet": "{name} has the element {element}, but its Kind is Nature spirit."
       }
     },
     "Guide": {
@@ -18544,6 +18671,10 @@
       "interpretations": {
         "label": "Rules interpretations",
         "hint": "Every place the rules as written leave something unclear and the system uses the creator's reading, with the sources and the house rule to change it."
+      },
+      "teamKarma": {
+        "label": "Team Karma",
+        "hint": "The table's shared Team Karma count (when the GM has turned the tracker on)."
       }
     },
     "SceneBuilder": {

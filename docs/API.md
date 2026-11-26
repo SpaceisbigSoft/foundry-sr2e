@@ -105,6 +105,8 @@ The system registers itself with Token Action HUD Core 2.x (`tokenActionHudSyste
 | `createDemo()`, `removeDemo({confirm})` | v0.88.0, GM: make the starter demo (runners, a scene, a journal), or remove it. Both resolve to a short report. |
 | `openTools()`, `runTool(id)` | v0.89.8: the SR2e tools window, or run one of its tools by id (false when there is no such tool or you may not use it). |
 | `sortCatalogue()` | v0.90.2, GM: sort the "Catalogue (SR2e)" actor folder into subfolders; resolves to how many moved. |
+| `requestRoll({ actors? })`, `postRollRequest({ kind, key, tn, hidden?, actors })` | v0.93.3, GM: the roll request dialog (preselecting `actors`), or post a request card directly (`kind` `'skill'` or `'attribute'`, `key` the skill's name or the attribute's key); each player rolls in their own window and the card keeps a live tally. |
+| `teamKarma()` | v0.93.3: open the shared Team Karma window (when the GM has turned the tracker on). |
 | `openShop(actor?)` | v0.91.1: the shop for an actor (else your character, or the GM's selected token). |
 | `newEntry({kind, actorUuid})` | v0.91.1: the new-entry form. |
 | `openCatalogue({type, key})` | v0.91.3: the Catalogue window, at a tab and an entry. |
@@ -117,4 +119,5 @@ The system registers itself with Token Action HUD Core 2.x (`tokenActionHudSyste
 
 The interface's history from v0.93.2, newest first. Each version's `CHANGELOG.md` entry repeats its line.
 
+- **v0.93.3:** added `requestRoll({ actors? })`, `postRollRequest({ kind, key, tn, hidden?, actors })` and `teamKarma()`. Nothing was changed or removed.
 - **v0.93.2:** the stability rules above. Nothing changed; the calls added in v0.87.0–v0.92.1 are listed here for the first time. Since v0.93.1 (the system id change) the flags and settings live under `shadowrun2e_unified`; the names `game.sr2e` and the `sr2e.*` hooks stayed.

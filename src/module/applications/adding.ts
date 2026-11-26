@@ -25,6 +25,7 @@ import { approvalNeeded, fileRequest, registerRequestRunner, inCreation } from '
 import { kits } from './setup.ts';
 import { kitSummary, kitPrice, kitLinesFor } from '../rules/setup.ts';
 import { escHtml } from '../rules/html.ts';
+import { worldSkillChoices, customSkillAttribute, attributeDisplayLabel } from '../rules/customlists.ts';
 import { shopLegalTitle } from '../rules/legalbuy.ts';
 import { t as tx, tKey } from '../helpers/i18n.ts';
 import { headingName } from '../helpers/heading.ts';
@@ -732,7 +733,8 @@ async function skillPicker(actor: any, kind: SkillKind): Promise<any | null> {
   const kinds = (Object.keys(SKILL_KIND_LABELS) as SkillKind[]);
   const attrs = ['body', 'quickness', 'strength', 'charisma', 'intelligence', 'willpower', 'reaction'];
   // v0.73.0 (O37): one name per skill (the vehicle tests' names; RULES.CHARACTERS_V73.skillNames).
-  const list = (k: SkillKind) => canonicalSkillNames(COMMON_SKILLS[k]).map((n) => `<option value="${esc(n)}"></option>`).join('');
+  // v0.93.3: the GM's world lists: hidden book skills left out, custom skills added (rules/customlists.ts).
+  const list = (k: SkillKind) => worldSkillChoices(canonicalSkillNames(COMMON_SKILLS[k]), k).map((n) => `<option value="${esc(n)}"></option>`).join('');
   const have = new Set([...actor.items].filter((i: any) => i.type === 'skill').map((i: any) => i.name.toLowerCase()));
   const cost = (f: any) => {
     const k = f.kind.value as SkillKind;
@@ -745,7 +747,7 @@ async function skillPicker(actor: any, kind: SkillKind): Promise<any | null> {
     content: `<div class="sr2e-skill-picker">
       <div class="form-group"><label>${tx('SR2E.Dialog.Adding.kind')}</label><select name="kind">${kinds.map((k) => `<option value="${k}" ${k === kind ? 'selected' : ''}>${esc(SKILL_KIND_LABELS[k])}</option>`).join('')}</select></div>
       <div class="form-group"><label>${tx('SR2E.Dialog.Adding.name')}</label><input name="name" type="text" list="${esc(listId)}" autofocus placeholder="${tx('SR2E.Dialog.Adding.typeOrPickASkill')}"><datalist id="${esc(listId)}">${list(kind)}</datalist></div>
-      <div class="form-group"><label>${tx('SR2E.Dialog.Adding.linkedAttribute')}</label><select name="attribute">${attrs.map((a) => `<option value="${esc(a)}">${esc(a.charAt(0).toUpperCase() + a.slice(1))}</option>`).join('')}</select></div>
+      <div class="form-group"><label>${tx('SR2E.Dialog.Adding.linkedAttribute')}</label><select name="attribute">${attrs.map((a) => `<option value="${esc(a)}">${esc(attributeDisplayLabel(a))}</option>`).join('')}</select></div>
       <div class="form-group"><label>${tx('SR2E.Dialog.Adding.rating')}</label><input name="rating" type="number" min="0" max="12" value="1"${trade ? ` title="${tx('SR2E.Dialog.Adding.theRatingPaidWithSkillPoints')}"` : ''}></div>
       <div class="form-group"><label>${tx('SR2E.Dialog.Adding.specialization')}</label><input name="spec" type="text" placeholder="${tx('SR2E.Dialog.Adding.optionalEGPistols')}"></div>
       <div class="form-group"><label>${tx('SR2E.Dialog.Adding.specializationRating')}</label><input name="specRating" type="number" min="0" max="14" value="0" title="${tx('SR2E.Dialog.Adding.n0TheRating1WhenA')}"></div>
@@ -769,7 +771,8 @@ async function skillPicker(actor: any, kind: SkillKind): Promise<any | null> {
       let attrTouched = false;
       const upd = () => {
         const k = f.kind.value as SkillKind;
-        if (!attrTouched) f.attribute.value = skillAttributeFor(String(f.name.value ?? ''), k);
+        // v0.93.3: a custom skill's own linked attribute comes first.
+        if (!attrTouched) f.attribute.value = (k === 'active' || k === 'buildRepair' ? customSkillAttribute(String(f.name.value ?? '')) : null) ?? skillAttributeFor(String(f.name.value ?? ''), k);
         f.attribute.disabled = k === 'knowledge' || k === 'language';
         const out = form.querySelector('[data-skill-cost]');
         const name = String(f.name.value ?? '').trim();

@@ -186,6 +186,44 @@ export async function promptPoolDice(actor: any, title: string, pool: PoolKind =
   return typeof result === 'number' && Number.isFinite(result) ? Math.max(0, Math.min(left, Math.floor(result))) : null;
 }
 
+/**
+ * v0.93.3 (report item 10): the Resist window with a preview: Power − armor = TN and the dice before the roll, and a
+ * switch to count no armor for this one roll (the preview follows it). Skipped, as before, when no pool dice are
+ * left and there is no armor to untick. Returns the pool dice and the switch, or null when closed.
+ */
+async function promptResist(target: any, damage: DamageState, title: string, poolKind: PoolKind): Promise<{ pool: number; noArmor: boolean } | null> {
+  const plan = target.resistPreview?.(damage, false) as { power: number; armor: number; tn: number; dice: number; threat: number; immune?: boolean; stops?: number; type: string; level: string } | null | undefined;
+  if (!plan) { const p = await promptPoolDice(target, title, poolKind); return p === null ? null : { pool: p, noArmor: false }; }
+  const left = Math.max(0, Number(target.system?.derived?.[`${poolKind}PoolLeft`] ?? 0) || 0);
+  if (!(left > 0) && !(plan.armor > 0)) return { pool: 0, noArmor: false };
+  const line = (noArmor: boolean, pool: number): string => {
+    const p = target.resistPreview?.(damage, noArmor) ?? plan;
+    if (p.immune) return tx('SR2E.Dialog.Chat.resistPreviewImmune');
+    if (p.stops !== undefined) return tx('SR2E.Dialog.Chat.resistPreviewStops', { against: Number(p.stops) || 0 });
+    return tx('SR2E.Dialog.Chat.resistPreview', { power: Number(p.power) || 0, armor: Number(p.armor) || 0, tn: Number(p.tn) || 0, dice: (Number(p.dice) || 0) + (Number(p.threat) || 0), pool: Math.max(0, Math.min(left, Math.floor(pool) || 0)), level: escHtml(p.level), type: escHtml(p.type) });
+  };
+  const result = await foundry.applications.api.DialogV2.prompt({
+    window: { title },
+    content: `<div class="sr2e-preview sr2e-resist-preview" aria-live="polite">${line(false, 0)}</div>
+      ${left > 0 ? `<div class="form-group"><label>${tx('SR2E.Dialog.Chat.diceLeft', { poolLabels: escHtml(POOL_LABELS()[poolKind]), left })}</label>
+      <input name="pool" type="number" value="0" min="0" max="${left}" autofocus></div>` : ''}
+      ${plan.armor > 0 ? `<label class="sr2e-check"><input type="checkbox" name="noArmor"> ${tx('SR2E.Dialog.Chat.resistNoArmor', { armor: Number(plan.armor) || 0 })}</label>` : ''}`,
+    ok: { callback: (_e: Event, button: any) => ({ pool: Number(button.form.elements.pool?.value ?? 0), noArmor: Boolean(button.form.elements.noArmor?.checked) }) },
+    render: (_e: Event, dialog: any) => {
+      const form: any = dialog?.element?.querySelector('form');
+      const box = form?.querySelector('.sr2e-resist-preview');
+      if (!form || !box) return;
+      const upd = () => { box.innerHTML = line(Boolean(form.elements.noArmor?.checked), Number(form.elements.pool?.value ?? 0)); };
+      form.addEventListener('input', upd);
+      form.addEventListener('change', upd);
+    },
+    rejectClose: false,
+  } as any) as any;
+  if (!result || typeof result !== 'object') return null;
+  const pool = Number.isFinite(Number(result.pool)) ? Math.max(0, Math.min(left, Math.floor(Number(result.pool)))) : 0;
+  return { pool, noArmor: Boolean(result.noArmor) };
+}
+
 /** v0.58.0: take a bug a sweep found off (its owner or the GM). */
 async function onRemoveBug(message: any, button: HTMLButtonElement): Promise<void> {
   const uuid = button.dataset['bugUuid'] ?? '';
@@ -661,12 +699,44 @@ function deadenOlderCards(message: any): void {
 export function defendedOn(message: any, defender?: any): number[] {
   return usedOn(message, 'defended', defender);
 }
+/** v0.93.3: the target actor of a Defend or Resist button's row (the card's own list; null when gone). */
+function rowTarget(message: any, action: 'defend' | 'resist', index: number): any {
+  const list: any[] = action === 'defend'
+    ? listFlag<any>(message.getFlag?.(SYSTEM_ID, 'attacks')).length ? listFlag<any>(message.getFlag?.(SYSTEM_ID, 'attacks')) : [message.getFlag?.(SYSTEM_ID, 'attack')]
+    : listFlag<any>(message.getFlag?.(SYSTEM_ID, 'damages')).length ? listFlag<any>(message.getFlag?.(SYSTEM_ID, 'damages')) : [message.getFlag?.(SYSTEM_ID, 'damage')];
+  const uuid = safeStr(list[index]?.targetUuid, 400);
+  try { return uuid ? (globalThis as any).fromUuidSync?.(uuid) ?? null : null; } catch { return null; }
+}
+
+/**
+ * v0.93.3: Defend and Resist buttons whose row's target already used them: dead for players (the hotkeys skip them),
+ * and for the GM marked done with a ✓ (still clickable: gmDefendAgain/gmResistAgain ask before a second roll).
+ */
+export function markUsedButtons(message: any, html: ParentNode): void {
+  for (const action of ['defend', 'resist'] as const) {
+    html.querySelectorAll<HTMLButtonElement>(`button[data-sr2e-action="${action}"]`).forEach((b) => {
+      const index = Number(b.dataset['index'] ?? 0);
+      const target = rowTarget(message, action, index);
+      const used = action === 'defend' ? defendedOn(message, target) : resistedOn(message, target);
+      if (!used.includes(index)) return;
+      b.classList.add('sr2e-used');
+      if (!b.textContent?.startsWith('✓')) b.textContent = `✓ ${b.textContent ?? ''}`;
+      b.title = action === 'defend' ? tx('SR2E.Card.Chat.defendedDone') : tx('SR2E.Card.Chat.resistedDone');
+      if (!game.user?.isGM) b.disabled = true;
+    });
+  }
+}
+
 /** Defenses running right now on this client (`<message id>:<index>`): a second click waits out the first. */
 const defending = new Set<string>();
 /** v0.70.0: every shown copy of a card's button for this index goes dead (the chat log and the pop-up). */
 function deadenCopies(message: any, action: string, index: number): void {
   document.querySelectorAll<HTMLButtonElement>(`[data-message-id="${message.id}"] button[data-sr2e-action="${action}"]`).forEach((b) => {
-    if (Number(b.dataset['index'] ?? 0) === index) b.disabled = true;
+    if (Number(b.dataset['index'] ?? 0) !== index) return;
+    b.disabled = true;
+    // v0.93.3: and reads as done (visual review 0.93.2, finding 93: a dimmed button carried no "done" label).
+    b.classList.add('sr2e-used');
+    if (!b.textContent?.startsWith('✓')) b.textContent = `✓ ${b.textContent ?? ''}`;
   });
 }
 async function markDefended(message: any, defender: any, index: number): Promise<void> {
@@ -862,16 +932,18 @@ async function onResist(message: any, button: HTMLButtonElement): Promise<void> 
   const noPool = (Boolean(damage.occupantShot) && veh923('occupant') === 'book') || Boolean(damage.noPool)
     // and black IC's damage to a decker (RULES.MATRIX_V923.blackIc: no Hacking Pool, VR2 p. 47).
     || (Boolean((damage as any).black) && target.type !== 'ic' && RULES.MATRIX_V923.blackIc !== 'v922');
-  const pool = noPool ? 0 : cpRigger
-    ? await promptPoolDice(cpRigger, tx('SR2E.Dialog.Chat.resistDamage', { targetName: target.name }), 'control', RULES.URR_V80.vehCpResist ? undefined : cpRigger.vehicleSkillRating?.(target))
-    : await promptPoolDice(target, tx('SR2E.Dialog.Chat.resistDamage', { targetName: target.name }), target.poolFor?.(damage) ?? 'combat');
-  if (pool === null) return;
+  // v0.93.3 (report item 10): a person's Resist window previews the TN and dice, and can leave armor out this once.
+  const chosen = noPool ? { pool: 0, noArmor: false } : cpRigger
+    ? await promptPoolDice(cpRigger, tx('SR2E.Dialog.Chat.resistDamage', { targetName: target.name }), 'control', RULES.URR_V80.vehCpResist ? undefined : cpRigger.vehicleSkillRating?.(target)).then((p) => (p === null ? null : { pool: p, noArmor: false }))
+    : await promptResist(target, damage, tx('SR2E.Dialog.Chat.resistDamage', { targetName: target.name }), target.poolFor?.(damage) ?? 'combat');
+  if (chosen === null) return;
+  const pool = chosen.pool;
   if (resistedOn(message, target).includes(index) && !game.user?.isGM) return ui.notifications.warn(tx('SR2E.Notify.Chat.thatTargetHasAlreadyResistedThis'));
   button.disabled = true;
   const rolled = await gmRoll(message, button, async () => {
     // v0.85.0: checked again inside the lock: the GM's click may have queued behind the NPC's own resistance.
     if (!resistedBefore && game.user?.isGM && resistedOn(message, target).includes(index)) { button.disabled = false; ui.notifications.warn(tx('SR2E.Notify.Chat.thatTargetHasAlreadyResistedThis')); return false; }
-    await target.resistFromState(damage, pool);
+    await target.resistFromState(damage, pool, chosen.noArmor);
     return true;
   });
   if (!rolled) return;
@@ -1689,12 +1761,9 @@ function decorateCard(message: any, html: HTMLElement): void {
     return;
   }
   // v0.70.0: players see Defend and Resist go dead for targets who already used them (the hotkeys skip them too).
-  if (!game.user?.isGM) {
-    const defended = defendedOn(message, game.user?.character);
-    const resisted = resistedOn(message, game.user?.character);
-    html.querySelectorAll<HTMLButtonElement>('button[data-sr2e-action="defend"]').forEach((b) => { if (defended.includes(Number(b.dataset['index'] ?? 0))) b.disabled = true; });
-    html.querySelectorAll<HTMLButtonElement>('button[data-sr2e-action="resist"]').forEach((b) => { if (resisted.includes(Number(b.dataset['index'] ?? 0))) b.disabled = true; });
-  }
+  // v0.93.3 (visual review 0.93.2, findings 5 and 93): checked per button against that row's own target (a player's
+  // defence is kept on the target actor when they can't flag the card), for the GM too, and marked done.
+  markUsedButtons(message, html);
   if (message.getFlag?.(SYSTEM_ID, 'retargetOf') && !html.querySelector('.sr2e-retargeted')) {
     const c = html.querySelector('.message-content') ?? html;
     const p = document.createElement('p');
@@ -3218,6 +3287,20 @@ export function registerChatHandlers(): void {
     quietly('auto-apply', () => autoApplyGmCard(message));
     // v0.60.0: and rolls NPCs' resistance by itself (setting autoResistNpc), once the card has rendered.
     setTimeout(() => quietly('auto-resist', () => autoResistCard(message)), 200);
+  });
+  // v0.93.3 (visual review 0.93.2, finding 5): a player's Defend or Resist on someone else's card is kept on the
+  // target actor (cardRolls), which doesn't re-render the card: mark the shown copies on every other client too.
+  Hooks.on('updateActor', (_actor: any, change: any) => {
+    quietly('used buttons', () => {
+      const rolls = change?.flags?.[SYSTEM_ID]?.cardRolls;
+      if (!Array.isArray(rolls)) return;
+      const ids = new Set(rolls.map((k: unknown) => String(k)).filter((k) => /:(defended|resisted):\d+$/.test(k)).map((k) => k.split(':')[0]));
+      for (const id of ids) {
+        const m = (game as any).messages?.get?.(id);
+        if (!m) continue;
+        document.querySelectorAll(`[data-message-id="${CSS.escape(String(id))}"]`).forEach((el) => markUsedButtons(m, el));
+      }
+    });
   });
   Hooks.on('renderChatMessageHTML', (message: any, html: HTMLElement) => {
     // v0.81.0: a player's card loses the inline styles that place or hide things (Foundry's cleaner keeps them, so a
