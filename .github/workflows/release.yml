@@ -26,6 +26,8 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      # v0.93.1: the macro pack is rebuilt from scripts/build-packs.mjs, so it always carries the system id's flags.
+      - run: npm run packs
       - name: Release addresses in system.json
         run: |
           node -e "
