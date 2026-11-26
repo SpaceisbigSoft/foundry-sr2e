@@ -97,7 +97,7 @@ describe('v0.93.0: the guard against another system\'s world', () => {
     assert.ok(at > 0 && at < mig.indexOf('const todo = MIGRATIONS.filter'), 'the guard comes before any step');
     assert.match(mig, /if \(signs\.length && !ignoringForeignWorld\(\)\) \{[\s\S]{0,600}?return;\n  \}/);
     assert.match(mig, /"ignoreForeignWorld", \{ scope: "world", config: false, type: Boolean, default: false \}/);
-    assert.match(SRC('applications/chat.ts'), /if \(isForeignWorld\(\) \|\| needsMove\([^)]*\) \|\| !sessionRefreshDue\(last, today\)\) return;/);
+    assert.match(SRC('applications/chat.ts'), /if \(isForeignWorld\(\) \|\| needsMove\(\(game as any\)\.data\?\.settings, SYSTEM_ID\) \|\| !sessionRefreshDue\(last, today\)\) return;/);
     assert.match(SRC('applications/canvas.ts'), /Hooks\.once\('ready', \(\) => \{ if \(isForeignWorld\(\)\) return;/);
     // Review 2: the module look and the refused-house-rules report write settings too; the guard writes no chat message.
     assert.match(SRC('applications/modules.ts'), /Hooks\.once\('ready', \(\) => \{ if \(!isForeignWorld\(\)\) void matchModuleLook\(\); \}\);/);
