@@ -1997,3 +1997,16 @@ li.chat-message.sr2e-card .sr2e-banner ~ .sr2e-roll details.sr2e-fold .sr2e-sum-
 .application.sr2e-look .sr2e-progress { display: flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0.6rem; font-size: 0.85rem; }
 .application.sr2e-look .sr2e-progress[hidden] { display: none; }
 .application.sr2e-look .sr2e-progress progress { flex: 1 1 auto; height: 0.75rem; accent-color: var(--sr2e-accent); }
+
+/* v0.94.1: the Automation window (Manual table greys what it overrides, in muted colours) and the house rules' presets row. */
+.application.sr2e-look .sr2e-automation fieldset { margin-bottom: 0.6rem; }
+.application.sr2e-look .sr2e-automation .sr2e-auto-master { border-left: 3px solid var(--sr2e-accent); padding-left: 0.4rem; }
+.application.sr2e-look .sr2e-automation .sr2e-auto-master label { font-weight: bold; }
+.application.sr2e-look .sr2e-automation .sr2e-auto-scope { font-size: 0.75em; font-weight: normal; color: var(--sr2e-muted); margin-left: 0.3rem; }
+.application.sr2e-look .sr2e-automation .sr2e-auto-offnote { display: none; font-style: italic; }
+.application.sr2e-look .sr2e-automation.sr2e-auto-manual .sr2e-auto-affected,
+.application.sr2e-look .sr2e-automation.sr2e-auto-manual .sr2e-auto-affected label { color: var(--sr2e-muted); }
+.application.sr2e-look .sr2e-automation.sr2e-auto-manual .sr2e-auto-offnote { display: block; }
+.application.sr2e-look .sr2e-automation .sr2e-auto-rule code { white-space: nowrap; }
+.application.sr2e-look .sr2e-house-rules .sr2e-hr-presets .form-fields { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.application.sr2e-look .sr2e-house-rules .sr2e-hr-presets .sr2e-preset-current { border-color: var(--sr2e-accent); font-weight: bold; }

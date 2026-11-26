@@ -73,7 +73,7 @@ const GM = { id: 'gm', name: 'GM', isGM: true };
 const P1 = { id: 'p1', name: 'Player One', isGM: false };
 const P2 = { id: 'p2', name: 'Player Two', isGM: false };
 const users = Object.assign([GM, P1, P2], { activeGM: { id: 'gm', isSelf: true }, get: (id: string) => [GM, P1, P2].find((u) => u.id === id) });
-g.game = { user: GM, users, settings: { get: () => true }, messages: { contents: [] }, actors: [], scenes: [] };
+g.game = { user: GM, users, settings: { get: (_s: string, k: string) => k !== 'manualTable' }, messages: { contents: [] }, actors: [], scenes: [] };
 
 /** A stub actor owned by `owners` (user ids). */
 function actor(id: string, owners: string[], extra: any = {}): any {

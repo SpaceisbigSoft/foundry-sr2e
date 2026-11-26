@@ -5,6 +5,7 @@ import { socialDesiredRows, socialDesiredPick } from './docs79-social-core.ts';
 import { own } from './util.ts';
 import { perceptionRows } from './core923.ts';
 import { t as tx } from '../helpers/i18n.ts';
+import { ruleAuto } from './automation941.ts';
 
 /** v0.92.3: the Driving Test rows in force (rules/vehicles.ts drivingRows; inline here to keep the imports one way). */
 const drivingRowsNow = () => (RULES.URR_V80.active || RULES.VEHICLES_V923.drivingRows !== 'old' ? RULES.VEHICLES.drivingModifiers : RULES.VEHICLES_V923.oldDrivingRows);
@@ -106,7 +107,7 @@ export function perceptionSightModifiers(o: SightInput): { modifiers: TargetNumb
   const out: TargetNumberModifier[] = [];
   const range = perceptionRangeModifier(o.metres);
   if (unseen) {
-    if (p.noSight === 'block') return { modifiers: [], unseen: true, blocked: true, why };
+    if (ruleAuto('TN_AUTO.perception.noSight', p.noSight) === 'block') return { modifiers: [], unseen: true, blocked: true, why };
     out.push({ label: tx('SR2E.Card.Mod.canTSeeThemByEar', { why }), value: p.hearingTn });
     if (range) out.push(range);
     return { modifiers: out, unseen: true, blocked: false, why };

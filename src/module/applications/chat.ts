@@ -9,6 +9,8 @@ import { sysNow, toSysTime } from '../helpers/clock.ts';
 import { allActors } from '../helpers/actors.ts';
 import { playCue, decorateItemDrags } from './qol.ts';
 import { SYSTEM_ID } from '../config/system.ts';
+import { auto } from '../helpers/automation.ts';
+import { ruleAuto } from '../rules/automation941.ts';
 import { pxPerMetre } from './canvas.ts';
 import { retargetGroupsV73, sessionRefreshDue, localDateKey, veh80ResistPoolOn, veh923 } from '../rules/index.ts';
 import { scatterDiceV79 } from '../rules/docs79-ranged.ts';
@@ -1142,7 +1144,7 @@ function playerOwned(t: any): boolean {
 }
 
 function autoResistOn(): boolean {
-  try { return Boolean(game.settings.get(SYSTEM_ID, 'autoResistNpc')); } catch { return false; }
+  return Boolean(auto('autoResistNpc', false));
 }
 
 /** v0.60.0: whether the active GM's client resists this card entry by itself (setting autoResistNpc). */
@@ -1761,7 +1763,7 @@ const autoApplied = new Set<string>();
 async function autoApplyGmCard(message: any): Promise<void> {
   try {
     if (!game.user?.isGM || !isLeadGm()) return;
-    if (game.settings.get(SYSTEM_ID, 'autoApplyGm') === false) return;
+    if (auto('autoApplyGm', false) === false) return;
   } catch { return; }
   if (autoApplied.has(message.id) || message.getFlag?.(SYSTEM_ID, 'supersededBy')) return;
   // A-12: only a card with an Apply (GM) button left is copied at all.
@@ -2149,7 +2151,7 @@ function registerKarmaRefresh(): void {
         if (Object.keys(upd).length) void v.update(upd, { sr2eSpeedOk: true }).catch(() => undefined);
       }
     }
-    if (RULES.KARMA.refresh !== 'combat' || !isLeadGm()) return;
+    if (ruleAuto('KARMA.refresh', RULES.KARMA.refresh) !== 'combat' || !isLeadGm()) return;
     void cls().refreshAllKarma(tx('SR2E.Card.Chat.theCombatEnded'));
   });
 }
@@ -2698,7 +2700,7 @@ async function promptForCard(message: any): Promise<void> {
   // v0.50.0: a card the GM re-scored (a changed TN) doesn't ask anyone to defend or resist again.
   if (message.getFlag?.(SYSTEM_ID, 'retargetOf')) return;
   let mode = 'dialog';
-  try { mode = String(game.settings.get(SYSTEM_ID, 'defendPrompt') ?? 'dialog'); } catch { /* not registered */ }
+  mode = String(auto('defendPrompt', 'dialog'));
   const { entries, more } = promptPlan(message);
   const gm = (game.users as any)?.activeGM?.id ?? null;
   // Round 2 (E): the targets past the cap get one notification on the clients that answer for them.
