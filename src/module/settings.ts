@@ -1639,6 +1639,16 @@ export function registerSettings(): void {
     name: "SR2E.Settings.autoResistNpc.Name", hint: "SR2E.Settings.autoResistNpc.Hint",
     scope: "world", config: true, type: Boolean, default: false,
   });
+  // v0.94.1: a Karma re-roll updates its own card (report item 24); typed physical-dice results (report item 30).
+  game.settings.register(SYSTEM.id, "rerollInPlace", {
+    name: "SR2E.Settings.rerollInPlace.Name", hint: "SR2E.Settings.rerollInPlace.Hint",
+    scope: "world", config: true, type: Boolean, default: true,
+  });
+  game.settings.register(SYSTEM.id, "typedDice", {
+    name: "SR2E.Settings.typedDice.Name", hint: "SR2E.Settings.typedDice.Hint",
+    scope: "world", config: true, type: String, default: "all",
+    choices: { off: "SR2E.Settings.typedDice.Choices.off", gm: "SR2E.Settings.typedDice.Choices.gm", all: "SR2E.Settings.typedDice.Choices.all" },
+  });
   // v0.91.0: what players see in the shop (the Add window), and whether forbidden things are among it.
   game.settings.register(SYSTEM.id, "shopList", {
     name: "SR2E.Settings.shopList.Name",

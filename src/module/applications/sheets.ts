@@ -18,6 +18,8 @@ import { effectsContext } from "./effects.ts";
 import { postItemToChat } from "./richtext.ts";
 import { SYSTEM } from "../config/system.ts";
 import { SR2Actor } from "../documents/index.ts";
+// v0.94.1 (report item 30): typed physical-dice results in the main roll windows.
+import { typedDiceRow, readTypedDice, withTypedDice, armTypedDice, typedScoped } from "./typed941.ts";
 import { tokenOf, tokenDistance, attackerToken, attackTargetOptions, measureTokens, lineOfSight, sightCover, movedThisTurn, tokensNear, targetLight, barriersBetween, tokensInCone, friendsInMelee, isProne, scatterPoint, wallsBetweenPoints, smokeBetweenTokens, placeArea } from "./canvas.ts";
 import { wardsBetween } from "./regions.ts";
 import {
@@ -182,12 +184,12 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       rollAttribute: SR2CharacterSheet.#onRollAttribute,
       rollSkill: SR2CharacterSheet.#onRollSkill,
       resistDamage: SR2CharacterSheet.#onResistDamage,
-      attackWeapon: SR2CharacterSheet.#onAttackWeapon,
+      attackWeapon: typedScoped(SR2CharacterSheet.#onAttackWeapon),
       firstAid: SR2CharacterSheet.#onFirstAid,
       naturalHeal: SR2CharacterSheet.#onNaturalHeal,
       tab: SR2CharacterSheet.#onTab,
       setPool: SR2CharacterSheet.#onSetPool,
-      quickAttack: SR2CharacterSheet.#onQuickAttack,
+      quickAttack: typedScoped(SR2CharacterSheet.#onQuickAttack),
       quickCast: SR2CharacterSheet.#onQuickCast,
       quickReload: SR2CharacterSheet.#onQuickReload,
       rollInit: SR2CharacterSheet.#onRollInit,
@@ -3553,6 +3555,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         ${groupRow}
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.combatPoolDiceLeft', { left })}</label><input name="pool" type="number" value="0" min="0" max="${left}"></div>
         ${CO923.karmaDiceRow(Number(derived.karmaPoolLeft ?? 0), true, Number(actor.findSkill(w.skill)?.system?.rating ?? 0) || Number(actor.system?.attributes?.[String(actor.findSkill(w.skill)?.system?.attribute ?? (melee ? "strength" : "quickness"))]?.total ?? 0))}
+        ${typedDiceRow(actor)}
         <div class="sr2e-preview" aria-live="polite"></div>
         <details class="sr2e-more"><summary>${tx('SR2E.Dialog.Sheet.moreOptions')}</summary>
           ${visibilityRow}
@@ -3579,7 +3582,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         window: { title: tx('SR2E.Dialog.Sheet.attack2', { weaponName: weapon.name, ammoNote }) },
         position: { width: 480 },
         content,
-        ok: { label: tx('SR2E.Dialog.Sheet.attack'), callback: (_e: Event, button: any) => readChoice(button.form) },
+        // v0.94.1: a typed result waits for this attack's test (dropped when the action ends: typedScoped).
+        ok: { label: tx('SR2E.Dialog.Sheet.attack'), callback: (_e: Event, button: any) => { armTypedDice(actor, readTypedDice(button.form)); return readChoice(button.form); } },
         // Re-measure (distance, cover, light, barriers, prone, allies) whenever another target is picked; keep the preview live.
         render: (_e: Event, dialog: any) => {
           const root: HTMLElement | null = dialog?.element ?? null;
@@ -4051,6 +4055,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         ${losHint}
         ${elementalHint}
         ${bonusHint}
+        ${typedDiceRow(actor)}
         <div class="sr2e-preview" aria-live="polite"></div>
         ${rememberMarker(`cast|${actor.uuid}|${spell.id}`, ["force", "pool", "drainPool", "useFocus"])}
         <p class="hint">${tx('SR2E.Dialog.Sheet.drainWillpowerVsFloorForce2', { part: sp.drainModifier ? ` ${sp.drainModifier > 0 ? "+" : "−"} ${Math.abs(sp.drainModifier)}` : "", spDrainLevel: escHtml(sp.drainLevel) })}</p>`,
@@ -4077,6 +4082,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
             barrier: (el.barrier?.value as string) || null,
             anchor: el.anchor?.checked ? { trigger: String(el.trigger?.value ?? "").trim() } : null,
             exclude: excludedOf(button.form),
+            typed: readTypedDice(button.form),
           };
         },
       },
@@ -4105,7 +4111,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     } as any) as any;
     if (!choice) return;
     if (!(await actor.useAction("cast", tx('SR2E.Card.Sheet.casting', { spellName: spell.name })))) return;
-    await actor.castSpell(spell, {
+    await withTypedDice(actor, choice.typed, () => actor.castSpell(spell, {
       force: choice.force,
       targetUuid: choice.targetUuid,
       targetUuids: choice.targetUuids,
@@ -4119,7 +4125,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       barrierUuid: choice.barrier,
       anchor: choice.anchor,
       ...(choice.exclude?.length ? { exclude: choice.exclude } : {}),
-    });
+    }));
   }
 
   /** Cast a physical spell at an object or a wall (v0.47.0): the selected walls, or those between the caster and the target. */
@@ -7682,6 +7688,7 @@ export async function rollAttributeWindow(actor: any, key: AttributeKey, preset:
       content: `${tnField(preset)}
         ${preset.opts ? "" : urrCoreTnPresetRow()}${CO923.karmaDiceRow(Number(actor.system?.derived?.karmaPoolLeft ?? 0), true, Number(actor.system?.attributes?.[key]?.total ?? 0))}
         ${preset.opts ? "" : `<label class="sr2e-check"><input type="checkbox" name="open"> ${tx('SR2E.Dialog.Sheet.openTestNoTnTheHighest')}</label>`}
+        ${typedDiceRow(actor)}
         ${preset.hideTn ? "" : `<div class="sr2e-preview" aria-live="polite"></div>`}`,
       render: (_e: Event, dialog: any) => {
         // v0.80.0 (RULES.URR_V80.coreTnPresets): a preset sets the TN (no such field in the book).
@@ -7690,12 +7697,12 @@ export async function rollAttributeWindow(actor: any, key: AttributeKey, preset:
         livePreview(dialog, (form, excluded) => tnPreviewHtml({ base: Number((form.elements as any).tn?.value) || 4, baseLabel: tx('SR2E.Dialog.Sheet.targetNumber'), auto: actor.previewModifiers(), excluded }));
       },
       ok: { callback: (_e: Event, b: any) => ({ tn: Number(b.form.elements.tn.value) || 4, open: Boolean(b.form.elements.open?.checked), exclude: excludedOf(b.form),
-        karmaDice: b.form.elements.karmaDice ? Math.max(0, Math.floor(Number(b.form.elements.karmaDice.value) || 0)) : 0 }) },
+        karmaDice: b.form.elements.karmaDice ? Math.max(0, Math.floor(Number(b.form.elements.karmaDice.value) || 0)) : 0, typed: readTypedDice(b.form) }) },
       rejectClose: false,
-    }) as { tn: number; open: boolean; exclude: string[]; karmaDice: number } | null;
+    }) as { tn: number; open: boolean; exclude: string[]; karmaDice: number; typed: ReturnType<typeof readTypedDice> } | null;
     if (!c2) return null;
     if (c2.open) return actor.openAttributeTest(key);
-    return actor.rollAttribute(key, { targetNumber: c2.tn, exclude: c2.exclude, ...(c2.karmaDice > 0 ? { karmaDice: c2.karmaDice } : {}), ...(preset.opts ?? {}) });
+    return withTypedDice(actor, c2.typed, () => actor.rollAttribute(key, { targetNumber: c2.tn, exclude: c2.exclude, ...(c2.karmaDice > 0 ? { karmaDice: c2.karmaDice } : {}), ...(preset.opts ?? {}) }));
 }
 
 /**
@@ -7732,6 +7739,7 @@ export async function rollSkillWindow(actor: any, item: any, preset: RollWindowP
         ${others.length ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.complementarySkill1DiePerSuccesses', { complementarySuccessesPerDie: RULES.STREET.tests.complementary.successesPerDie })}</label><select name="comp"><option value="">${tx('SR2E.Dialog.Sheet.none')}</option>${others.map((o: any) => `<option value="${escHtml(o.id)}">${escHtml(o.name)} ${escHtml(o.system.rating)}</option>`).join("")}</select></div>` : ""}
         ${rememberMarker(`skill|${actor.uuid}|${item.id ?? item.name}`, skillRollMemoryFields())}
         ${helpers.length ? `<fieldset class="sr2e-situational"><legend>${tx('SR2E.Dialog.Sheet.helpersTeamworkTheirSuccessesAddDice', { part: RULES.STREET.tests.teamwork.cap === "rating" ? tx('SR2E.Dialog.Sheet.atMost', { itemRating: escHtml(item.system?.rating ?? 0) }) : "" })}</legend>${helpers.map((h: any) => `<label class="sr2e-check"><input type="checkbox" name="helper" value="${escHtml(h.uuid)}"> ${escHtml(h.name)}</label>`).join("")}</fieldset>` : ""}
+        ${typedDiceRow(actor)}
         ${preset.hideTn ? "" : `<div class="sr2e-preview" aria-live="polite"></div>`}`,
       render: (_e: Event, dialog: any) => {
         // v0.58.0: a language's complexity sets the TN.
@@ -7755,19 +7763,19 @@ export async function rollSkillWindow(actor: any, item: any, preset: RollWindowP
             lang: el.langMode ? { readWrite: el.langMode.value === "rw", complexity: String(el.langCx?.value ?? langDefault) } : null,
             dialect: Boolean(el.dialect?.checked),
             taskPool: el.taskPool ? Math.max(0, Math.floor(Number(el.taskPool.value) || 0)) : 0,
-            karmaDice: el.karmaDice ? Math.max(0, Math.floor(Number(el.karmaDice.value) || 0)) : 0 };
+            karmaDice: el.karmaDice ? Math.max(0, Math.floor(Number(el.karmaDice.value) || 0)) : 0, typed: readTypedDice(button.form) };
         },
       },
       rejectClose: false,
     }) as any;
     if (!choice) return null;
     if (choice.toolsNeed && toolsModifier(choice.toolsNeed, choice.toolsHave ?? "none").blocked) { ui.notifications.warn(tx('SR2E.Notify.Sheet.canTDoThisWithoutTools', { actorName: escHtml(actor.name) })); return null; }
-    return actor.rollSkill(item, { exclude: choice.exclude, targetNumber: choice.tn, useSpecialization: choice.useSpec, useConcentration: choice.useConc, relatedSkillId: choice.related, open: choice.open, complementarySkillId: choice.comp, helperUuids: choice.helpers,
+    return withTypedDice(actor, choice.typed, () => actor.rollSkill(item, { exclude: choice.exclude, targetNumber: choice.tn, useSpecialization: choice.useSpec, useConcentration: choice.useConc, relatedSkillId: choice.related, open: choice.open, complementarySkillId: choice.comp, helperUuids: choice.helpers,
       ...(choice.baseTime > 0 ? { baseTime: { value: choice.baseTime, unit: choice.baseUnit } } : {}),
       ...(choice.toolsNeed ? { tools: { need: choice.toolsNeed, have: choice.toolsHave ?? "none" } } : {}),
       ...(choice.lang ? { language: choice.lang } : {}),
       ...(choice.dialect && dialectMod ? { modifiers: [dialectMod] } : {}),
       ...(choice.taskPool > 0 ? { pool: "task", poolDice: choice.taskPool } : {}),
       ...(choice.karmaDice > 0 ? { karmaDice: choice.karmaDice } : {}),
-      ...(preset.opts ?? {}) });
+      ...(preset.opts ?? {}) }));
 }

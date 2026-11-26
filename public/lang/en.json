@@ -2430,6 +2430,19 @@
         "Name": "Automation",
         "Label": "Automation",
         "Hint": "What the system does by itself (dice and chat, combat and damage, tokens, bookkeeping) in one window, with the master switch Manual table. Apart from the house rules."
+      },
+      "rerollInPlace": {
+        "Name": "Re-rolls update the same card",
+        "Hint": "A Karma Pool re-roll, Avoid Disaster or a bought success updates the test's own chat card, keeping the replaced dice greyed. Off: each posts a new card that replaces the old one (as before)."
+      },
+      "typedDice": {
+        "Name": "Typed physical-dice results",
+        "Hint": "Who may type the successes of real dice rolled at the table in a roll window instead of letting Foundry roll. The card is marked as typed, and nothing from it applies by itself: the GM applies.",
+        "Choices": {
+          "off": "Nobody",
+          "gm": "The GM only",
+          "all": "Everyone, for their own tests"
+        }
       }
     },
     "Notify": {
@@ -3537,6 +3550,11 @@
         "notYours": "{name} isn't your character: its owner or the GM rolls it.",
         "alreadyRolled": "{name} has already rolled for this request.",
         "noNpcs": "No NPC on this request is still waiting."
+      },
+      "Dice941": {
+        "typedNotAllowed": "You can't type a dice result for this test here: the dice were rolled.",
+        "typedNoReroll": "That result was typed from physical dice: there are no dice here to re-roll. Re-roll them at the table and roll again.",
+        "typedNoRetarget": "That result was typed from physical dice: there are no dice to score against a new target number. Ask for the test again."
       }
     },
     "Dialog": {
@@ -5172,6 +5190,13 @@
         "touch": "Touch",
         "taste": "Taste",
         "other": "Other"
+      },
+      "Dice941": {
+        "typedSummary": "I rolled the dice myself",
+        "typedOn": "Use my own dice result instead of rolling",
+        "typedSuccesses": "Successes",
+        "typedOnes": "Every die came up 1 (Rule of One)",
+        "typedHint": "Count the successes yourself, Combat Pool and Karma dice included. The card is marked as typed, and the GM applies what follows from it."
       }
     },
     "Window": {
@@ -8518,6 +8543,14 @@
       },
       "Hidden": {
         "tnForTheGm": "The target number is for the GM to know."
+      },
+      "Dice941": {
+        "replacedDie": "Replaced by a Karma Pool re-roll",
+        "replaced": "(replaced)",
+        "typedMark": {
+          "one": "Typed: {count} success (physical dice)",
+          "other": "Typed: {count} successes (physical dice)"
+        }
       }
     },
     "Privacy": {

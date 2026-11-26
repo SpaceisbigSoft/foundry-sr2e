@@ -1143,12 +1143,22 @@ function playerOwned(t: any): boolean {
   return Boolean(t && [...((game as any).users ?? [])].some((u: any) => !u.isGM && u.active && t.testUserPermission?.(u, 'OWNER')));
 }
 
+/**
+ * v0.94.1 (report item 30): a card from a typed physical-dice result (its test, or a card posted while it resolved).
+ * Read from the card's flags, which its author could forge: the mark only ever takes automation away.
+ */
+export function typedCard(message: any): boolean {
+  return Boolean(message?.getFlag?.(SYSTEM_ID, 'typedDice') || (message?.getFlag?.(SYSTEM_ID, 'test') as TestSnapshot | undefined)?.typed);
+}
+
 function autoResistOn(): boolean {
   return Boolean(auto('autoResistNpc', false));
 }
 
 /** v0.60.0: whether the active GM's client resists this card entry by itself (setting autoResistNpc). */
 export function autoResistPlanned(message: any, kind: 'resist' | 'resistSpell', index: number, target: any): boolean {
+  // v0.94.1 (report item 30): a card from a typed physical-dice result waits for the GM.
+  if (typedCard(message)) return false;
   const content = String(message?.content ?? '');
   // A blast waits for the GM (cover, combining blasts): use Resist all… there.
   if (kind === 'resist' && /data-sr2e-action="(combineBlast|takeCover)"/.test(content)) return false;
@@ -1257,8 +1267,9 @@ async function onKarma(message: any, button: HTMLButtonElement, action: 'karmaRe
   if (!(await playerMay(message, actor))) { button.disabled = false; return; }
   const before = actor.system.karma?.poolSpent ?? 0;
   // v0.81.1 (SEC1-1, design 1): a GM's click on a player's card re-resolves it as that player.
-  if (action === 'karmaReroll') await asCardAuthor(message, tx('SR2E.Card.Chat.karmaReRoll'), () => actor.karmaReroll(snap));
-  else await asCardAuthor(message, tx('SR2E.Card.Chat.avoidDisaster'), () => actor.avoidDisaster(snap));
+  // v0.94.1 (report item 24): the card itself goes along, so the re-roll can update it in place.
+  if (action === 'karmaReroll') await asCardAuthor(message, tx('SR2E.Card.Chat.karmaReRoll'), () => actor.karmaReroll(snap, message));
+  else await asCardAuthor(message, tx('SR2E.Card.Chat.avoidDisaster'), () => actor.avoidDisaster(snap, message));
   // If nothing was spent (not enough Karma, nothing to re-roll), let them try again later.
   if ((actor.system.karma?.poolSpent ?? 0) === before) button.disabled = false;
 }
@@ -1766,6 +1777,8 @@ async function autoApplyGmCard(message: any): Promise<void> {
     if (auto('autoApplyGm', false) === false) return;
   } catch { return; }
   if (autoApplied.has(message.id) || message.getFlag?.(SYSTEM_ID, 'supersededBy')) return;
+  // v0.94.1 (report item 30): nothing from a typed physical-dice result applies by itself: the GM applies it.
+  if (typedCard(message)) return;
   // A-12: only a card with an Apply (GM) button left is copied at all.
   const pending = pendingGmApplies(String(message.content ?? ''), (f) => Boolean(message.getFlag?.(SYSTEM_ID, f)));
   if (!pending.length) return;
@@ -1958,7 +1971,7 @@ async function onBuySuccess(message: any, button: HTMLButtonElement): Promise<vo
   if (snap.kind === 'attack' && defendedAgainst(message)) return ui.notifications.warn(tx('SR2E.Notify.Chat.theTargetHasAlreadyDefendedAgainst'));
   button.disabled = true;
   // v0.81.1 (SEC1-1, design 1): a GM's click on a player's card re-resolves it as that player.
-  if (!(await asCardAuthor(message, tx('SR2E.Card.Chat.buyASuccess'), () => actor.buySuccess(snap)))) button.disabled = false;
+  if (!(await asCardAuthor(message, tx('SR2E.Card.Chat.buyASuccess'), () => actor.buySuccess(snap, message)))) button.disabled = false;
 }
 
 /** v0.71.0 (R1): Karma Pool on one side of a contest or street card (re-roll, avoid disaster, buy a success). */
@@ -3378,6 +3391,13 @@ export function registerChatHandlers(): void {
     quietly('auto-apply', () => autoApplyGmCard(message));
     // v0.60.0: and rolls NPCs' resistance by itself (setting autoResistNpc), once the card has rendered.
     setTimeout(() => quietly('auto-resist', () => autoResistCard(message)), 200);
+  });
+  // v0.94.1 (report item 24): a re-roll that updated its own card asks its targets again, as the new card it replaces
+  // would have (a missed attack that now hits has Defend buttons). The option only re-runs the usual prompt rules.
+  Hooks.on('updateChatMessage', (message: any, _change: any, options: any) => {
+    if (!options?.sr2eReroll) return;
+    prompted.delete(message.id);
+    setTimeout(() => quietly('prompt', () => promptForCard(message)), 300);
   });
   // v0.93.3 (visual review 0.93.2, finding 5): a player's Defend or Resist on someone else's card is kept on the
   // target actor (cardRolls), which doesn't re-render the card: mark the shown copies on every other client too.

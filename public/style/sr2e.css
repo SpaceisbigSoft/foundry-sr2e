@@ -2010,3 +2010,10 @@ li.chat-message.sr2e-card .sr2e-banner ~ .sr2e-roll details.sr2e-fold .sr2e-sum-
 .application.sr2e-look .sr2e-automation .sr2e-auto-rule code { white-space: nowrap; }
 .application.sr2e-look .sr2e-house-rules .sr2e-hr-presets .form-fields { display: flex; flex-wrap: wrap; gap: 0.3rem; }
 .application.sr2e-look .sr2e-house-rules .sr2e-hr-presets .sr2e-preset-current { border-color: var(--sr2e-accent); font-weight: bold; }
+/* v0.94.1 (report item 24): dice a Karma re-roll replaced on the same card: muted, dashed and struck, their pool colour kept (dimmed). */
+:where(li.chat-message.sr2e-card) .sr2e-die.sr2e-die-replaced { color: var(--sr2e-muted); border-style: dashed; text-decoration: line-through; box-shadow: none; font-weight: 400; filter: saturate(0.4); }
+.sr2e-card .sr2e-dice-then { color: var(--sr2e-muted); margin: 0 0.15rem; }
+/* v0.94.1 (report item 30): a result typed from physical dice, and the roll window's row for typing it. */
+.sr2e-card .sr2e-typed-mark { margin: 0.25rem 0; padding: 0.15rem 0.4rem; border-left: 3px solid var(--sr2e-accent); font-style: italic; }
+.application.sr2e-look .sr2e-typed-dice { margin: 0.4rem 0; }
+.application.sr2e-look .sr2e-typed-dice > summary { cursor: pointer; }

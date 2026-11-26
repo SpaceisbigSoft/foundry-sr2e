@@ -76,6 +76,7 @@ export const ALLOWED: Record<string, Record<string, string>> = {
   // "The 37 allowed documents/index.ts rows" for most reasons). Snapshot numbers and words that the resolvers print
   // raw are coerced by SR2Actor.#cleanSnapshot before #resolve (SEC2b-2, v0.81.1).
   'src/module/documents/index.ts': {
+    'SR2Actor.#updateInPlace | content | data.content': "v0.94.1: the card HTML #post just built for this test (the same `data.content` it would pass to ChatMessage.create; its parts are scanned where they are built), written onto the test's own card by a re-roll in place.",
     // v0.89.5: outcome words and the "Takes …" line, marked with ids for the banner (outcomeWord, takenMark)
     'outcomeWord | html | text': 'v0.89.5: a fixed outcome text from lang/en.json (OUTCOME_KEYS, the system\'s own text) in a tag with a fixed id.',
     'takenMark | html | inner': 'v0.89.5: the "Takes X …" sentence built by the caller from a tx() text whose values are escaped there (scanned at the call); the level is escaped here.',
