@@ -247,6 +247,8 @@ export const GEAR_STACK_FIELDS: readonly string[] = [
   'formula.spell', 'formula.force', 'formula.tradition', 'formula.category',
   // v0.92.1: carried or left behind, and custom tweaks (a piece left behind or tweaked is its own).
   'carried', 'tweaks',
+  // v0.94.2: a container or a weapon accessory (rules/nesting942.ts) is its own.
+  'nest942.container', 'nest942.capacity', 'nest942.accessory', 'nest942.rating', 'nest942.option',
 ];
 
 /**

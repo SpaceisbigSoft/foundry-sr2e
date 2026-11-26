@@ -200,6 +200,7 @@ import { GEAR_V923_TABLES } from '../rules/config923/gear.ts';
 
 import { SYSTEM_ID } from '../config/system.ts';
 import { ruleAuto } from '../rules/automation941.ts';
+import { programMayLoad, programDeck, lookupOf } from '../rules/nesting942.ts';
 
 /**
  * Adapter between the pure rules engine and Foundry's dice: every wave the engine
@@ -16187,6 +16188,8 @@ export class SR2Actor extends Actor {
       return false;
     }
     if (Boolean(p.system.loaded) === load) return true;
+    // v0.94.2 (rules/nesting942.ts): a program stored on a deck loads only while that deck is in use.
+    if (load && !programMayLoad(p, lookupOf(this.items))) { ui.notifications?.warn?.(tx('SR2E.Gear942.programOffDeck', { name: escHtml(p.name), deck: escHtml(programDeck(p, lookupOf(this.items))?.name ?? '') })); return false; }
     const deck: any = this.activeDeck();
     // v0.71.0 (R8): it has to fit in active memory (RULES.FIXES_V71.activeMemory 'block'); R7: say if it runs capped.
     if (load) {

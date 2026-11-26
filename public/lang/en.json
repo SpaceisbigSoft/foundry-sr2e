@@ -2443,6 +2443,10 @@
           "gm": "The GM only",
           "all": "Everyone, for their own tests"
         }
+      },
+      "nestOnDrop": {
+        "Name": "Drop on a row to attach",
+        "Hint": "On a sheet, dropping an item's row onto another item's row puts it on or in that item (an accessory on a weapon, a program on a deck, gear in a container; a clip on a gun loads it). Off: dropping sorts the list, as before."
       }
     },
     "Notify": {
@@ -18845,6 +18849,10 @@
       "partyView": {
         "label": "Party view",
         "hint": "The party at a glance: your characters' vitals, and the others as far as you may see them."
+      },
+      "accessoryItems": {
+        "label": "Accessory items",
+        "hint": "Turn weapons' accessory fields into attached accessory items, or put them back."
       }
     },
     "SceneBuilder": {
@@ -19449,6 +19457,96 @@
         "setting": "{name}: {from} → {to}",
         "thisBrowser": "(this browser only)"
       }
+    },
+    "Gear942": {
+      "legend": "Attached and inside",
+      "accessory": "Weapon accessory",
+      "accessoryHint": "Make this item a weapon accessory: drop it on a weapon (its row or its sheet) and the weapon gets its value.",
+      "attached": "Attached",
+      "cancel": "Cancel",
+      "cantGoThere": "{child} can't go on or in {parent}.",
+      "capacity": "Capacity (kg, 0 = no limit)",
+      "clipLeftBehind": "{name} isn't carried.",
+      "container": "Container",
+      "containerHint": "A bag, a boot or a stash: weapons, armor and gear can go inside. What is inside is carried only while the container is, and isn't at hand.",
+      "contents": "Contents",
+      "contentsCount": "{n} items inside",
+      "convert": "Make accessory items",
+      "convertHint": "Turn this weapon's accessory fields into attached accessory items (the fields are cleared; the weapon's values don't change). Back to fields undoes it.",
+      "converted": "{name}: {n} accessory items made.",
+      "convertedMany": "{weapons} weapons converted, {items} accessory items made.",
+      "delete": "Delete",
+      "deleteBody": "Delete {name}? Anything attached to it or inside it becomes a free item.",
+      "deleteTitle": "Delete item",
+      "detach": "Detach",
+      "detached": "{name} is a free item again.",
+      "dropHint": "Drop an item of the same character here to attach it or put it inside.",
+      "effective": "From attached items:",
+      "fold": "Show or hide what is attached or inside",
+      "free": "Free (not on or in anything)",
+      "gmOnly": "Only the GM can do that.",
+      "isInside": "Inside {name}.",
+      "isMountedOn": "Attached to {name}.",
+      "kg": "{kg} kg",
+      "kind": {
+        "gyro": "Gyro mount",
+        "laserSight": "Laser sight",
+        "muzzle": "Silencer or suppressor",
+        "quickDraw": "Quick-draw holster",
+        "recoilComp": "Recoil compensation",
+        "scope": "Scope",
+        "shockPad": "Shock pad",
+        "smartGrenade": "Smart grenade guidance",
+        "smartgun": "Smartgun link",
+        "support": "Bipod or tripod"
+      },
+      "kindInside": "inside",
+      "kindMounted": "attached",
+      "load": "{kg} kg",
+      "loadOf": "{kg} / {capacity} kg",
+      "loaded": "{weapon} loaded with {clip}: {rounds} rounds.",
+      "mountedOn": "{child} attached to {parent}.",
+      "nameWith": "{name} ({extra})",
+      "noClipsLeft": "No {name} left.",
+      "noMagazine": "{name} doesn't track ammunition.",
+      "none": "None",
+      "notAClipFeed": "{name} isn't loaded from clips: use Reload.",
+      "notAnAccessory": "Not an accessory",
+      "nothing": "Nothing yet.",
+      "nothingToConvert": "{name} has no accessory fields set.",
+      "ok": "OK",
+      "optionLabel": "Type",
+      "option": {
+        "bipod": "Bipod",
+        "lowLight": "Low-light",
+        "silencer": "Silencer",
+        "suppressor": "Sound suppressor",
+        "thermographic": "Thermographic",
+        "tripod": "Tripod"
+      },
+      "overCapacity": "{name} is over capacity: {kg} of {capacity} kg.",
+      "parentGone": "{name} was deleted: {n} items attached to it or inside it are free items now.",
+      "programOffDeck": "{name} is stored on {deck}, which isn't in use: put that deck in use, or detach the program.",
+      "programsStored": "Programs stored on this deck",
+      "putIn": "{child} put in {parent}.",
+      "putInControl": "Put in or attach to…",
+      "putInLabel": "Put it on or in",
+      "putInTitle": "Where does {name} go?",
+      "rating": "Rating",
+      "revert": "Back to fields",
+      "revertHint": "Put the accessory items made from this weapon's fields back into its fields, and delete those items.",
+      "reverted": "{name}: {n} accessory items back in its fields.",
+      "revertedMany": "{weapons} weapons: {items} accessory items back in their fields.",
+      "sameActorOnly": "Only an item of the same character can go on this one.",
+      "stash": "Stash",
+      "stashHint": "Drop weapons, armor and gear here to keep them in the safehouse. Mark a gear item as a container to sort things into it.",
+      "stashEmpty": "Nothing stashed.",
+      "takeOut": "Take out",
+      "toolBody": "{pending} weapons have accessory fields that can become accessory items; {made} weapons have accessory items made this way.",
+      "toolConvert": "Make accessory items",
+      "toolHint": "Converting makes an attached gear item for each accessory field and clears the field; the weapons' values stay the same. Back to fields undoes it. Nothing converts by itself.",
+      "toolRevert": "Back to fields",
+      "toolTitle": "Accessory items"
     }
   },
   "TYPES": {

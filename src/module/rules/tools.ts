@@ -54,6 +54,8 @@ export const TOOLS: readonly ToolDef[] = [
   { id: 'houseRules', icon: 'fa-solid fa-scale-balanced', who: 'gm', toolbar: true },
   { id: 'skillWeb', icon: 'fa-solid fa-diagram-project', who: 'gm', toolbar: false },
   { id: 'macros', icon: 'fa-solid fa-scroll', who: 'gm', toolbar: false },
+  // v0.94.2: weapons' accessory fields into attached accessory items, or back (applications/nesting942.ts).
+  { id: 'accessoryItems', icon: 'fa-solid fa-puzzle-piece', who: 'gm', toolbar: false },
   { id: 'tourGm', icon: 'fa-solid fa-person-chalkboard', who: 'gm', toolbar: false },
 ];
 

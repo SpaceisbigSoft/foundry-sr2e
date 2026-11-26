@@ -893,3 +893,19 @@ Foundry's own world backup (setup screen: **Worlds**, then **Backups**) keeps al
 | `ignoreForeignWorld` | yes/no, default no | Lets SR2e update a world that looks like another Shadowrun 2e system's (see `docs/TROUBLESHOOTING.md`). |
 
 Each player's own choices (theme, text size, layout, sounds, roll privacy and the like) are client settings, kept in that player's browser, not in the world.
+
+## Nested items: accessories, programs on decks, containers (v0.94.2)
+
+How to use them:
+- **Weapon accessories.** On a gear item's sheet, pick a *Weapon accessory* kind (laser sight, scope, bipod or tripod, silencer or suppressor, gyro mount, recoil compensation, smartgun link, shock pad, quick-draw holster, smart grenade guidance) with its rating or type. Drag its row onto a weapon's row, or onto the weapon's sheet, to attach it. The weapon counts it in every roll: yes/no accessories are added to what the weapon already has, ratings take the higher, a tripod beats a bipod, a suppressor beats a silencer. The weapon's own fields keep their values. A broken accessory gives nothing.
+- **Make accessory items** on a weapon's sheet turns its accessory fields into attached items and clears the fields, so the weapon works as before. **Back to fields** undoes it. The GM tool **Accessory items** (SR2e tools) or `game.sr2e.api.nesting.convertAccessories()` does every weapon at once. Nothing converts by itself.
+- **Ammunition.** A clip dropped on a gun loads it, as Reload does: its action, and one clip used.
+- **Programs on decks.** A program dropped on a deck is stored on it, and loads only while that deck is in use. A program on no deck works as before.
+- **Containers.** Tick *Container* on any gear item (a bag, a vehicle's boot, a safehouse stash), with a capacity in kg (0 means no limit, and going over only warns). Drop weapons, armor and gear on it, or use the box icon (*Put in or attach to…*). The contents fold under it. What is inside is carried only while the container is. It weighs, but it isn't at hand: a packed weapon has to be drawn (drawing takes it out), packed armor isn't worn (wearing it takes it out), packed goggles give no vision and a packed chip isn't slotted.
+- The chain-link icon detaches an item. Deleting a parent makes its children free items. Dragging a parent to another sheet takes its children with it. Duplicating a weapon copies its accessories, and a duplicated container is empty. Safehouse sheets have a **Stash** list.
+- The client setting *Drop on a row to attach* turns row-on-row drops back into sorting.
+
+What is stored:
+- The link is a flag on the child: `flags.shadowrun2e_unified.nest942 = { parent: "<item id>", kind: "mounted" | "inside", conv?: true }`. `conv` marks an accessory made by *Make accessory items*, which is what *Back to fields* takes back.
+- A link counts only while its parent is on the same actor, still takes that kind of item and no loop forms. Otherwise the item is simply free (an item given away alone keeps a dangling link that is ignored).
+- A gear item's `system.nest942`: `container` (yes/no), `capacity` (kg), `accessory` (the kind, or empty), `rating`, `option` (`lowLight`/`thermographic` for a scope, `bipod`/`tripod`, `silencer`/`suppressor`).
