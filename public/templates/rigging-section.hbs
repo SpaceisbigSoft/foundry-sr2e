@@ -1,4 +1,5 @@
 {{#if rigging}}
+{{!-- v0.93.5 (plan item 48): Jump in shows greyed with the reason when the rule needs a control rig and there is none. --}}
 <section class="sr2e-rigging">
   <h2 data-heading="Rigging">{{sr2eT "SR2E.UI.rigging"}}{{#if rigging.vehicle}} <span class="sr2e-status">{{rigging.vehicle.modeLabel}} · {{rigging.vehicle.name}}</span>{{/if}}</h2>
   <div class="sr2e-row">
@@ -31,7 +32,7 @@
   </div>
   <div class="sr2e-row">
     <button type="button" data-action="driveVehicle"><i class="fa-solid fa-car"></i> {{sr2eT "SR2E.UI.drivingTest"}}</button>
-    {{#if rigging.canJump}}<button type="button" data-action="toggleJump">{{#if rigging.jumpedIn}}{{sr2eT "SR2E.UI.jumpOutKeepDriving"}}{{else}}{{sr2eT "SR2E.UI.jumpIn"}}{{/if}}</button>{{/if}}
+    {{#if rigging.canJump}}<button type="button" data-action="toggleJump">{{#if rigging.jumpedIn}}{{sr2eT "SR2E.UI.jumpOutKeepDriving"}}{{else}}{{sr2eT "SR2E.UI.jumpIn"}}{{/if}}</button>{{/if}}{{#unless rigging.canJump}}<button type="button" data-action="toggleJump" class="sr2e-cant" aria-disabled="true" data-sr2e-unavailable data-tooltip="{{rigging.jump.tip}}" data-tooltip-text="{{rigging.jump.why}}">{{sr2eT "SR2E.UI.jumpIn"}}</button>{{/unless}}
     <button type="button" data-action="releaseVehicle">{{sr2eT "SR2E.UI.letGo"}}</button>
   </div>
   {{else}}

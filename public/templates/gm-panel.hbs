@@ -42,9 +42,12 @@
   <nav class="sr2e-tabs sr2e-gm-tabs">
     {{#each tabs}}<a data-action="gmTab" data-tab="{{id}}" class="{{#if active}}active{{/if}}" title="{{label}}"><i class="{{icon}}"></i> {{label}}{{#if count}} <span class="sr2e-badge">{{count}}</span>{{/if}}</a>{{/each}}
   </nav>
+  {{!-- v0.93.5: the top row on every tab: Undo, then History (the undo log and recent rolls), Setup and the SR2e tools window
+       (they left the tab row: ui.ts GM_VIEWS). --}}
   <div class="sr2e-row sr2e-gm-undobar">
     <button type="button" data-action="undo" {{#unless undo.next}}disabled{{/unless}} title="{{#if undo.next}}{{sr2eT "SR2E.UI.undoCtrlShiftZ" next=undo.next}}{{else}}{{sr2eT "SR2E.UI.nothingToUndo"}}{{/if}}"><i class="fa-solid fa-rotate-left"></i> {{sr2eT "SR2E.UI.undo"}}</button>
     <span class="hint">{{#if undo.next}}{{undo.next}}{{else}}{{sr2eT "SR2E.UI.nothingToUndoYet"}}{{/if}}</span>
+    <span class="sr2e-gm-views">{{#each views}}<button type="button" data-action="{{action}}" data-tab="{{id}}" class="{{#if active}}active{{/if}}" {{#unless tool}}aria-pressed="{{#if active}}true{{else}}false{{/if}}"{{/unless}}><i class="{{icon}}" aria-hidden="true"></i> {{label}}</button>{{/each}}</span>
   </div>
 
   {{#if tab.scene}}
@@ -274,6 +277,31 @@
       {{#each people}}{{> personRow}}{{else}}<li><em>{{sr2eT "SR2E.UI.noNpcTokensOnTheViewed"}}</em></li>{{/each}}
     </ul>
   </section>
+  {{!-- v0.93.5: from the old Tools tab (the rest of it was the SR2e tools window's list). --}}
+  <section data-gm-focus="npcgen">
+    <h2 data-heading="NPC generator">{{sr2eT "SR2E.UI.npcGenerator"}}</h2>
+    <p class="hint">{{sr2eT "SR2E.UI.peopleGroupsOrganisationsContactsSpirits"}}</p>
+    <button type="button" data-action="npcGenerator"><i class="fa-solid fa-user-plus"></i> {{sr2eT "SR2E.UI.openTheNpcGenerator"}}</button>
+  </section>
+  <section data-gm-focus="calc">
+    <h2 data-heading="Dice and TN calculator">{{sr2eT "SR2E.UI.diceAndTnCalculator"}}</h2>
+    <div class="sr2e-row">
+      <label>{{sr2eT "SR2E.UI.dice"}} <input type="number" data-calc="dice" value="{{calc.dice}}" min="0" max="60"></label>
+      <label>{{sr2eT "SR2E.UI.baseTn"}} <input type="number" data-calc="tn" value="{{calc.tn}}" min="2"></label>
+      <label class="sr2e-wide">{{sr2eT "SR2E.UI.label"}} <input type="text" data-calc="label" value="{{calc.label}}" placeholder="{{sr2eT "SR2E.UI.eGGuardSPerception"}}"></label>
+    </div>
+    <label>{{sr2eT "SR2E.UI.modifiersOnePerLine"}} <code>{{sr2eT "SR2E.UI.smoke4"}}</code>, <code>{{sr2eT "SR2E.UI.smartlink2"}}</code>)</label>
+    <textarea data-calc="mods" rows="3" aria-label="{{sr2eT "SR2E.UI.modifiers"}}">{{calc.mods}}</textarea>
+    <div data-gm="calcOut" class="sr2e-gm-calc">
+      <p><strong>{{sr2eT "SR2E.UI.tn7" tn=calc.result.tn}}</strong>{{#if calc.result.mods}} <span class="hint">({{calc.result.mods}})</span>{{/if}} {{sr2eT "SR2E.UI.eachDieAbout" perDie=calc.result.perDie}} <strong>{{calc.result.expected}}</strong> {{sr2eT "SR2E.UI.successesDisaster" disaster=calc.result.disaster}}</p>
+      <table class="sr2e-group"><tr><th>{{sr2eT "SR2E.UI.atLeast"}}</th>{{#each calc.result.rows}}<th>{{k}}</th>{{/each}}</tr><tr><td>{{sr2eT "SR2E.UI.chance"}}</td>{{#each calc.result.rows}}<td>{{p}}</td>{{/each}}</tr></table>
+    </div>
+    <div class="sr2e-row">
+      <label class="sr2e-check"><input type="checkbox" data-calc="public" {{#if calc.public}}checked{{/if}}> {{sr2eT "SR2E.UI.showTheCardToThePlayers"}}</label>
+      <button type="button" data-action="calcRoll"><i class="fa-solid fa-dice"></i> {{sr2eT "SR2E.UI.rollIt"}}</button>
+    </div>
+    <p class="hint">{{sr2eT "SR2E.UI.ruleOfSixCountedTn7"}}</p>
+  </section>
   {{/if}}
 
   {{#if tab.world}}
@@ -327,32 +355,6 @@
   </section>
   {{/if}}
 
-  {{#if tab.tools}}
-  <section>
-    <h2 data-heading="NPC generator">{{sr2eT "SR2E.UI.npcGenerator"}}</h2>
-    <p class="hint">{{sr2eT "SR2E.UI.peopleGroupsOrganisationsContactsSpirits"}}</p>
-    <button type="button" data-action="npcGenerator"><i class="fa-solid fa-user-plus"></i> {{sr2eT "SR2E.UI.openTheNpcGenerator"}}</button>
-  </section>
-  <section>
-    <h2 data-heading="Dice and TN calculator">{{sr2eT "SR2E.UI.diceAndTnCalculator"}}</h2>
-    <div class="sr2e-row">
-      <label>{{sr2eT "SR2E.UI.dice"}} <input type="number" data-calc="dice" value="{{calc.dice}}" min="0" max="60"></label>
-      <label>{{sr2eT "SR2E.UI.baseTn"}} <input type="number" data-calc="tn" value="{{calc.tn}}" min="2"></label>
-      <label class="sr2e-wide">{{sr2eT "SR2E.UI.label"}} <input type="text" data-calc="label" value="{{calc.label}}" placeholder="{{sr2eT "SR2E.UI.eGGuardSPerception"}}"></label>
-    </div>
-    <label>{{sr2eT "SR2E.UI.modifiersOnePerLine"}} <code>{{sr2eT "SR2E.UI.smoke4"}}</code>, <code>{{sr2eT "SR2E.UI.smartlink2"}}</code>)</label>
-    <textarea data-calc="mods" rows="3" aria-label="{{sr2eT "SR2E.UI.modifiers"}}">{{calc.mods}}</textarea>
-    <div data-gm="calcOut" class="sr2e-gm-calc">
-      <p><strong>{{sr2eT "SR2E.UI.tn7" tn=calc.result.tn}}</strong>{{#if calc.result.mods}} <span class="hint">({{calc.result.mods}})</span>{{/if}} {{sr2eT "SR2E.UI.eachDieAbout" perDie=calc.result.perDie}} <strong>{{calc.result.expected}}</strong> {{sr2eT "SR2E.UI.successesDisaster" disaster=calc.result.disaster}}</p>
-      <table class="sr2e-group"><tr><th>{{sr2eT "SR2E.UI.atLeast"}}</th>{{#each calc.result.rows}}<th>{{k}}</th>{{/each}}</tr><tr><td>{{sr2eT "SR2E.UI.chance"}}</td>{{#each calc.result.rows}}<td>{{p}}</td>{{/each}}</tr></table>
-    </div>
-    <div class="sr2e-row">
-      <label class="sr2e-check"><input type="checkbox" data-calc="public" {{#if calc.public}}checked{{/if}}> {{sr2eT "SR2E.UI.showTheCardToThePlayers"}}</label>
-      <button type="button" data-action="calcRoll"><i class="fa-solid fa-dice"></i> {{sr2eT "SR2E.UI.rollIt"}}</button>
-    </div>
-    <p class="hint">{{sr2eT "SR2E.UI.ruleOfSixCountedTn7"}}</p>
-  </section>
-  {{/if}}
 
   {{#if tab.requests}}
   <section>
@@ -367,7 +369,7 @@
     </ul>
   </section>
   {{!-- v0.91.0: the shop's open orders: bought, on their way (Under way on each sheet). --}}
-  <section class="sr2e-orders">
+  <section class="sr2e-orders" data-gm-focus="orders">
     <h2 data-heading="Open orders" data-help="adding">{{sr2eT "SR2E.UI.openOrders"}}</h2>
     <ul class="sr2e-list sr2e-underway">
       {{#each orders}}<li class="{{#if due}}sr2e-due{{/if}}"><span><a data-action="openActor" data-uuid="{{uuid}}"><strong>{{actorName}}</strong></a> · {{label}} · {{left}}{{#if paid}} <span class="hint">{{sr2eT "SR2E.UI.paid" paid=paid}}</span>{{/if}}</span>

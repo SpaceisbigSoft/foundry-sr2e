@@ -20,6 +20,7 @@ import { DEFAULT_STATE, planFor, createFromPlan, generatorChoices, type GenState
 import { palette } from '../rules/look.ts';
 import { escHtml } from '../rules/html.ts';
 import { t as tx, tKey, tHtml } from '../helpers/i18n.ts';
+import { startProgress, type Progress } from './progress.ts';
 
 const { HandlebarsApplicationMixin, ApplicationV2, DialogV2 } = foundry.applications.api;
 const esc = escHtml;
@@ -368,7 +369,9 @@ export class SR2SceneBuilder extends HandlebarsApplicationMixin(ApplicationV2) {
     }
     this.#busy = true;
     try {
-      const out = this.editing ? await applyToScene(this.sceneId, this.spec) : await buildScene(this.spec);
+      // v0.93.5 (UI-13.6): the build's progress in this window's bar (and Foundry's progress notification).
+      const root = () => (this as any).element as HTMLElement | null;
+      const out = this.editing ? await applyToScene(this.sceneId, this.spec, { root }) : await buildScene(this.spec, { root });
       if (advance > 0) await (game as any).time.advance(advance);
       ui.notifications?.info?.(esc(out.message));
       if (out.sceneId) { this.load(out.sceneId); this.step = 'finish'; }
@@ -406,20 +409,31 @@ function exclusive<T>(fn: () => Promise<T>): Promise<T> {
 interface BuildResult { sceneId: string; message: string }
 
 /** Build a new scene from a spec (GM only). */
-export function buildScene(raw: SceneSpec | Record<string, unknown>): Promise<BuildResult> {
-  return exclusive(() => build(normalizeSpec(raw), null));
+export function buildScene(raw: SceneSpec | Record<string, unknown>, o: { root?: () => HTMLElement | null } = {}): Promise<BuildResult> {
+  return exclusive(() => withProgress(normalizeSpec(raw), o, (spec, pr) => build(spec, null, pr)));
+}
+
+/** v0.93.5 (UI-13.6): the steps a build reports: the scene, walls, host and site, ward, each people row, tokens, morale, journal, combat, view. */
+export function buildSteps(spec: Pick<SceneSpec, 'people'>): number {
+  return 9 + (spec.people?.length ?? 0);
+}
+
+/** v0.93.5: run a build with a progress bar ("Building the scene 3 of 12"), gone when it ends. */
+async function withProgress<T>(spec: SceneSpec, o: { root?: () => HTMLElement | null }, fn: (spec: SceneSpec, pr: Progress) => Promise<T>): Promise<T> {
+  const pr = startProgress(tx('SR2E.SceneBuilder.progress'), buildSteps(spec), { root: o.root });
+  try { return await fn(spec, pr); } finally { pr.done(); }
 }
 
 /** Change an existing scene's settings and add what the spec adds (GM only; nothing on the scene is deleted). */
-export function applyToScene(sceneId: string, raw: SceneSpec | Record<string, unknown>): Promise<BuildResult> {
+export function applyToScene(sceneId: string, raw: SceneSpec | Record<string, unknown>, o: { root?: () => HTMLElement | null } = {}): Promise<BuildResult> {
   return exclusive(async () => {
     const scene: any = (game as any).scenes?.get?.(sceneId);
     if (!scene) throw new Error(tx('SR2E.SceneBuilder.sceneGone'));
-    return build(normalizeSpec(raw), scene);
+    return withProgress(normalizeSpec(raw), o, (spec, pr) => build(spec, scene, pr));
   });
 }
 
-async function build(spec: SceneSpec, existing: any): Promise<BuildResult> {
+async function build(spec: SceneSpec, existing: any, pr?: Progress): Promise<BuildResult> {
   const g: any = game;
   if (!g.user?.isGM) throw new Error(tx('SR2E.SceneBuilder.gmOnly'));
   const problems = specProblems(spec, { edit: Boolean(existing), known });
@@ -469,6 +483,7 @@ async function build(spec: SceneSpec, existing: any): Promise<BuildResult> {
   if (imagePath && !pictured) { try { await scene.update({ 'background.src': imagePath }); } catch (err) { console.warn('sr2e | scene builder picture', err); } }
   const sceneId = scene.id;
   const tag = { [SYSTEM.id]: { [SB_FLAG]: { sceneId } } };
+  pr?.tick();
 
   // The backdrop's walls, doors and lamps (a new scene, or one with no walls yet).
   const doors: Array<{ wallId: string; name: string }> = [];
@@ -487,6 +502,7 @@ async function build(spec: SceneSpec, existing: any): Promise<BuildResult> {
     }
     if (docs.lights.length) await scene.createEmbeddedDocuments('AmbientLight', docs.lights);
   }
+  pr?.tick();
 
   // An actor folder for what the builder makes (only when it makes something).
   let folderId: string | null | undefined;
@@ -514,6 +530,7 @@ async function build(spec: SceneSpec, existing: any): Promise<BuildResult> {
   } else if (site && host && !site.system?.hostUuid) {
     try { await site.update({ 'system.hostUuid': host.uuid }); } catch { /* the GM's site */ }
   }
+  pr?.tick();
 
   // A ward over the scene or the NPCs' area.
   let ward: any = null;
@@ -525,6 +542,7 @@ async function build(spec: SceneSpec, existing: any): Promise<BuildResult> {
       } catch (err) { console.warn('sr2e | scene builder ward', err); }
     }
   }
+  pr?.tick();
 
   // Who's there.
   const zones = zonesFor(spec, geo);
@@ -538,6 +556,7 @@ async function build(spec: SceneSpec, existing: any): Promise<BuildResult> {
     if (row.source === 'actor') {
       const a: any = await worldActor(row.uuid);
       if (a) groups.push({ actors: Array.from({ length: row.linked ? 1 : row.count }, () => a), row });
+      pr?.tick();
       continue;
     }
     const state: GenState = {
@@ -549,6 +568,7 @@ async function build(spec: SceneSpec, existing: any): Promise<BuildResult> {
     await createFromPlan(planFor(state) as any, state, { made: list, folderId: await folder(), flags: tag[SYSTEM.id] });
     made.actors.push(...list);
     groups.push({ actors: list, row });
+    pr?.tick();
   }
   const tokenData = async (a: any, at: { x: number; y: number }, row: PeopleRow | null, gi = -1): Promise<any> => {
     const t = (await a.getTokenDocument({ x: at.x, y: at.y })).toObject();
@@ -572,6 +592,7 @@ async function build(spec: SceneSpec, existing: any): Promise<BuildResult> {
   if (hostToken) docs.push({ ...(await host.getTokenDocument({ x: npcSpots[k]!.x, y: npcSpots[k]!.y })).toObject(), hidden: false });
   const toks: any[] = docs.length ? ((await scene.createEmbeddedDocuments('Token', docs)) ?? []) : [];
   made.tokens = toks.length;
+  pr?.tick();
   // Morale groups: everyone from one row (people only).
   for (const [gi, gr] of groups.entries()) {
     if (!gr.row?.morale) continue;
@@ -580,6 +601,7 @@ async function build(spec: SceneSpec, existing: any): Promise<BuildResult> {
       .filter((t: any) => ['npc', 'character'].includes(t.actor?.type) && !/principal/i.test(String(t.actor?.flags?.[SYSTEM.id]?.generated?.role ?? '')));
     if (people.length > 1) { try { await A.setMoraleGroup?.(people, true); } catch { /* no morale groups */ } }
   }
+  pr?.tick();
 
   // The GM journal: the notes, what was made, links.
   let journal: any = null;
@@ -595,6 +617,7 @@ async function build(spec: SceneSpec, existing: any): Promise<BuildResult> {
   if (journal) sceneLinks['journal'] = journal.id;
   if (spec.playlist) sceneLinks['playlist'] = spec.playlist;
   if (Object.keys(sceneLinks).length) { try { await scene.update(sceneLinks); } catch (err) { console.warn('sr2e | scene builder links', err); } }
+  pr?.tick();
 
   // The combat tracker.
   if (spec.combat !== 'none' && toks.length) {
@@ -605,9 +628,11 @@ async function build(spec: SceneSpec, existing: any): Promise<BuildResult> {
       if (spec.combat === 'roll') await combat?.rollNPC?.();
     } catch (err) { console.warn('sr2e | scene builder combat', err); }
   }
+  pr?.tick();
 
   if (spec.show === 'view') await scene.view?.();
   else if (spec.show === 'activate') await scene.activate?.();
+  pr?.tick();
 
   const message = existing
     ? tx('SR2E.SceneBuilder.changed', { name: scene.name, tokens: made.tokens, actors: made.actors.length })

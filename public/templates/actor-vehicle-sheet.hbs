@@ -5,6 +5,22 @@
       <input type="text" name="name" value="{{actor.name}}" placeholder="{{sr2eT "SR2E.UI.name"}}">
     </div>
   </header>
+  {{!-- v0.93.5 (plan item 51): the vehicle's status strip, as the character sheets have (rules/vstrip935.ts): the damage track
+       as text, speed and Handling now, the autopilot and Sensor ratings, who drives it, a mounted gun's rounds, what's wrong. --}}
+  <div class="sr2e-stuck">
+  <div class="sr2e-strip sr2e-vstrip" role="group" aria-label="{{sr2eT "SR2E.UI.status"}}">
+    <span class="sr2e-strip-item sr2e-strip-track sr2e-strip-physical{{#if vstrip.damage.hurt}} hurt{{/if}}" title="{{sr2eT "SR2E.UI.vstripDamageTip" filled=vstrip.damage.filled boxes=vstrip.damage.boxes}}"><small>{{sr2eT "SR2E.UI.damage"}}</small> <b>{{vstrip.damage.filled}}</b><i>/{{vstrip.damage.boxes}}</i>{{#if vstrip.damage.mod}} <em>({{vstrip.damage.mod}})</em>{{/if}}</span>
+    {{#if vstrip.destroyed}}<span class="sr2e-strip-item sr2e-strip-danger">{{sr2eT "SR2E.UI.vstripDestroyed"}}</span>{{/if}}
+    <span class="sr2e-strip-item{{#if vstrip.speed.over}} sr2e-strip-danger{{/if}}" title="{{sr2eT "SR2E.UI.vstripSpeedTip"}}"><small>{{sr2eT "SR2E.UI.speed"}}</small> <b>{{vstrip.speed.now}}</b><i>/{{vstrip.speed.max}}</i></span>
+    <span class="sr2e-strip-item" title="{{sr2eT "SR2E.UI.handlingNow"}}"><small>{{sr2eT "SR2E.UI.handling"}}</small> <b>{{vstrip.handling}}</b></span>
+    <span class="sr2e-strip-item"><small>{{vstrip.pilotLabel}}</small> <b>{{vstrip.autopilot}}</b></span>
+    <span class="sr2e-strip-item"><small>{{sr2eT "SR2E.UI.sensor"}}</small> <b>{{vstrip.sensor}}</b></span>
+    {{#if vstrip.driver}}<span class="sr2e-strip-item sr2e-vstrip-driver{{#if vstrip.driver.jumped}} sr2e-vstrip-jumped{{/if}}"><i class="fa-solid {{#if vstrip.driver.jumped}}fa-plug{{else}}fa-car{{/if}}" aria-hidden="true"></i> {{vstrip.driver.name}} <small>{{vstrip.driverMode}}</small></span>{{else}}<span class="sr2e-strip-item"><i class="fa-solid fa-robot" aria-hidden="true"></i> <small>{{sr2eT "SR2E.UI.autopilot"}}</small></span>{{/if}}
+    {{#if vstrip.gun}}<span class="sr2e-strip-weapon{{#if vstrip.gun.out}} out{{/if}}"><a data-action="fireMounted" data-item-id="{{vstrip.gun.id}}" aria-label="{{sr2eT "SR2E.UI.attackWith" name=vstrip.gun.name}}"><i class="fa-solid fa-crosshairs" aria-hidden="true"></i> {{vstrip.gun.name}}</a> <b class="{{#if vstrip.gun.low}}low{{/if}}" title="{{sr2eT "SR2E.UI.vstripRoundsLeft"}}">{{vstrip.gun.ammo}}</b>{{#if vstrip.gun.more}} <small>{{sr2eT "SR2E.UI.vstripMoreGuns" count=vstrip.gun.more}}</small>{{/if}}</span>{{/if}}
+    {{#if vstrip.occupants}}<span class="sr2e-strip-item" title="{{sr2eT "SR2E.UI.aboard"}}"><i class="fa-solid fa-user-group" aria-hidden="true"></i> <b>{{vstrip.occupants}}</b></span>{{/if}}
+    {{#if vstrip.alertText}}<strong class="sr2e-strip-item sr2e-strip-danger">{{vstrip.alertText}}</strong>{{/if}}
+  </div>
+  </div>
   <div class="sr2e-row">
     <label>{{sr2eT "SR2E.UI.category"}}
       <select name="system.category">{{selectOptions categories selected=system.category valueAttr="key" labelAttr="label"}}</select>

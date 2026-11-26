@@ -1,17 +1,29 @@
 <div class="sr2e-summary">
-  {{!-- v0.68.0: the condition, wounds, initiative, actions and pools moved to the always-visible status strip (status-strip.hbs). --}}
+  {{!-- v0.68.0: the condition, wounds, initiative, actions and pools moved to the always-visible status strip (status-strip.hbs).
+       v0.93.5: no metatype chip (the Metatype field above shows it). --}}
   {{#if summary.showRow}}
   <div class="sr2e-summary-row">
-    {{#if summary.meta}}<span class="sr2e-chip sr2e-chip-soft sr2e-chip-meta">{{summary.meta}}</span>{{/if}}{{#each summary.chips}}<span class="sr2e-chip sr2e-chip-soft">{{this}}</span>{{/each}}
+    {{#each summary.chips}}<span class="sr2e-chip sr2e-chip-soft">{{this}}</span>{{/each}}
   </div>
   {{/if}}
-  {{#if tools.pins.length}}
-  <div class="sr2e-pinbar" aria-label="{{sr2eT "SR2E.UI.pinned"}}">
-    {{#each tools.pins}}<button type="button" data-action="{{action}}" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.unpinItWithItsRowS" verb=verb name=name}}"><i class="{{icon}}"></i> {{name}}</button>{{/each}}
+  {{!-- v0.93.5 (plan item 51): drag a skill, weapon, spell, power or effect row here to pin it; drag a pin along the bar to move it,
+       off the bar (or its ✕) to unpin it. The bar is there while dragging even with no pins (owners only). --}}
+  {{#if tools.showPinbar}}
+  <div class="sr2e-pinbar" role="group"{{#unless tools.pins.length}} data-sr2e-pin-empty{{/unless}} aria-label="{{sr2eT "SR2E.UI.pinned"}}"{{#if tools.canPin}} data-sr2e-pinbar{{/if}}>
+    {{#each tools.pins}}<span class="sr2e-pin-chip" data-pin-key="{{key}}"><button type="button" data-action="{{action}}"{{#if id}} data-item-id="{{id}}"{{/if}}{{#if (eq kind "effect")}} data-tab="effects" data-sr2e-pin-effect="{{key}}" title="{{#if detail}}{{name}} · {{detail}}{{else}}{{name}}{{/if}}"{{else}} title="{{sr2eT "SR2E.UI.unpinItWithItsRowS" verb=verb name=name}}"{{/if}}><i class="{{icon}}" aria-hidden="true"></i> {{name}}</button>{{#if ../tools.canPin}}<a class="sr2e-unpin" role="button" tabindex="0" data-sr2e-unpin="{{key}}" aria-label="{{sr2eT "SR2E.UI.unpinNamed" name=name}}" title="{{sr2eT "SR2E.UI.unpinNamed" name=name}}"><i class="fa-solid fa-xmark" aria-hidden="true"></i></a>{{/if}}</span>{{/each}}
+    {{#unless tools.pins.length}}<span class="sr2e-pin-hint">{{sr2eT "SR2E.UI.dropHereToPin"}}</span>{{/unless}}
   </div>
   {{/if}}
-  <div class="sr2e-quickbar">
-    {{#each quickActions}}<button type="button" data-action="{{action}}" title="{{title}}"{{#if itemId}} data-item-id="{{itemId}}"{{/if}}><i class="{{icon}}"></i> {{label}}</button>{{/each}}
+  {{!-- v0.93.5 (plan item 48, the visual review): one fixed order; what applies to this character but can't be used now is
+       greyed with the reason (aria-disabled, Foundry's tooltip). In a narrow window the rest go behind More…;
+       the buttons for something that has happened (a jam, fire, a hold, prone) come last and always show. --}}
+  <div class="sr2e-quickbar sr2e-actionbar" role="toolbar" aria-label="{{sr2eT "SR2E.UI.actions"}}">
+    <span class="sr2e-qa-group sr2e-qa-main">{{#each actionBar.main}}<button type="button" data-action="{{action}}"{{#if itemId}} data-item-id="{{itemId}}"{{/if}}{{#if enabled}} title="{{title}}"{{else}} class="sr2e-cant" aria-disabled="true" data-sr2e-unavailable data-tooltip="{{tip}}" data-tooltip-text="{{title}} · {{why}}" aria-description="{{why}}"{{/if}}><i class="{{icon}}" aria-hidden="true"></i> {{label}}</button>{{/each}}</span>
+    <span class="sr2e-qa-more-wrap">
+      <button type="button" class="sr2e-qa-more-btn" aria-expanded="false" aria-controls="{{actor.id}}-qa-rest" title="{{sr2eT "SR2E.UI.moreActions"}}"><i class="fa-solid fa-ellipsis" aria-hidden="true"></i> {{sr2eT "SR2E.UI.more"}}</button>
+      <span class="sr2e-qa-group sr2e-qa-rest" id="{{actor.id}}-qa-rest">{{#each actionBar.rest}}<button type="button" data-action="{{action}}"{{#if itemId}} data-item-id="{{itemId}}"{{/if}}{{#if enabled}} title="{{title}}"{{else}} class="sr2e-cant" aria-disabled="true" data-sr2e-unavailable data-tooltip="{{tip}}" data-tooltip-text="{{title}} · {{why}}" aria-description="{{why}}"{{/if}}><i class="{{icon}}" aria-hidden="true"></i> {{label}}</button>{{/each}}</span>
+    </span>
+    <span class="sr2e-qa-group sr2e-qa-urgent">{{#each actionBar.urgent}}<button type="button" data-action="{{action}}"{{#if itemId}} data-item-id="{{itemId}}"{{/if}}{{#if enabled}} title="{{title}}"{{else}} class="sr2e-cant" aria-disabled="true" data-sr2e-unavailable data-tooltip="{{tip}}" data-tooltip-text="{{title}} · {{why}}" aria-description="{{why}}"{{/if}}><i class="{{icon}}" aria-hidden="true"></i> {{label}}</button>{{/each}}</span>
   </div>
   {{#if tools.warnings.length}}
   <details class="sr2e-setup">

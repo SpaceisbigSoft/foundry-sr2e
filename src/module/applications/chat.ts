@@ -24,7 +24,9 @@ import { withGmLock } from './gmlock.ts';
 import { RULES, autoResists, blastRadius, blastLoss, scatter, damageLabel, scatterDiceFor, scatterMetres, confinedBlast, throwBackScatter, blastScatterDice, fusedScatter, canThrowBack, stopsAtWalls, grenadeKind, toxinOnsetLabel, scatterDirection, bearingDeg, type TargetNumberModifier } from '../rules/index.ts';
 import { modKey } from '../rules/dice.ts';
 import { isLeadGm, isPromptWindow, leadSettled } from './leader.ts';
-import { t as tx, tCount } from '../helpers/i18n.ts';
+import { t as tx, tCount, tKey } from '../helpers/i18n.ts';
+// v0.93.5: the next step on a card, and the attack banner's waiting state (rules/cards935.ts).
+import { STEP_ACTIONS, nextStepKeys, stepKey, doneLabelKey, attackWaitState, attackWaitKey, type StepAction, type StepRow } from '../rules/cards935.ts';
 
 /**
  * v0.81.0 (security review SEC1): every handler below reads the card's flags, which any player can forge (and a forged
@@ -721,10 +723,10 @@ export function defendedOn(message: any, defender?: any): number[] {
   return usedOn(message, 'defended', defender);
 }
 /** v0.93.3: the target actor of a Defend or Resist button's row (the card's own list; null when gone). */
-function rowTarget(message: any, action: 'defend' | 'resist', index: number): any {
-  const list: any[] = action === 'defend'
-    ? listFlag<any>(message.getFlag?.(SYSTEM_ID, 'attacks')).length ? listFlag<any>(message.getFlag?.(SYSTEM_ID, 'attacks')) : [message.getFlag?.(SYSTEM_ID, 'attack')]
-    : listFlag<any>(message.getFlag?.(SYSTEM_ID, 'damages')).length ? listFlag<any>(message.getFlag?.(SYSTEM_ID, 'damages')) : [message.getFlag?.(SYSTEM_ID, 'damage')];
+function rowTarget(message: any, action: StepAction, index: number): any {
+  // v0.93.5: a spell's Resist rows too (the card's spells list).
+  const [many, one] = action === 'defend' ? ['attacks', 'attack'] : action === 'resistSpell' ? ['spells', 'spell'] : ['damages', 'damage'];
+  const list: any[] = listFlag<any>(message.getFlag?.(SYSTEM_ID, many)).length ? listFlag<any>(message.getFlag?.(SYSTEM_ID, many)) : [message.getFlag?.(SYSTEM_ID, one)];
   // safeStr checks a string (it returns true/false); the uuid itself is the row's.
   const raw = list[index]?.targetUuid;
   const uuid = safeStr(raw, 400) ? String(raw) : '';
@@ -736,17 +738,75 @@ function rowTarget(message: any, action: 'defend' | 'resist', index: number): an
  * and for the GM marked done with a ✓ (still clickable: gmDefendAgain/gmResistAgain ask before a second roll).
  */
 export function markUsedButtons(message: any, html: ParentNode): void {
-  for (const action of ['defend', 'resist'] as const) {
+  // v0.93.5: a spell's Resist too, and a done row reads "✓ {name} defended" (its target's own name).
+  for (const action of STEP_ACTIONS) {
     html.querySelectorAll<HTMLButtonElement>(`button[data-sr2e-action="${action}"]`).forEach((b) => {
       const index = Number(b.dataset['index'] ?? 0);
       const target = rowTarget(message, action, index);
-      const used = action === 'defend' ? defendedOn(message, target) : resistedOn(message, target);
+      const used = usedFor(message, action, target);
       if (!used.includes(index)) return;
       b.classList.add('sr2e-used');
-      if (!b.textContent?.startsWith('✓')) b.textContent = `✓ ${b.textContent ?? ''}`;
+      doneText(b, action, target);
       b.title = action === 'defend' ? tx('SR2E.Card.Chat.defendedDone') : tx('SR2E.Card.Chat.resistedDone');
       if (!game.user?.isGM) b.disabled = true;
     });
+  }
+  // v0.93.5 (plan item 45): and the next step for this user stands out.
+  markNextSteps(message, html);
+}
+
+/** v0.93.5: the rows of a card's per-target action its targets have used (the card's flag or their cardRolls). */
+function usedFor(message: any, action: StepAction, target: any): number[] {
+  return action === 'defend' ? defendedOn(message, target) : action === 'resistSpell' ? spellResistedOn(message, target) : resistedOn(message, target);
+}
+
+/** v0.93.5: a used row's button reads as a done line: "✓ {name} defended" (the target's name), else "✓ <its label>". */
+function doneText(b: HTMLButtonElement, action: StepAction, target: any): void {
+  const name = target && typeof target.name === 'string' ? target.name.slice(0, 80) : '';
+  if (name) { b.textContent = `✓ ${tKey(doneLabelKey(action), { name })}`; return; }
+  if (!b.textContent?.startsWith('✓')) b.textContent = `✓ ${b.textContent ?? ''}`;
+}
+
+/**
+ * v0.93.5 (plan item 45, UI-13.5): the button that is the next step for the user viewing the card gets
+ * `sr2e-next`: for a player, the Defend or Resist rows not yet done whose target they own; for a GM, the Apply (GM)
+ * buttons not yet applied and the rows whose target no player owns (rules/cards935.ts nextStepKeys). Decided from
+ * the row's target actor (its ownership) and the card's own flags, never from the button's text. The attack banner
+ * follows the Defend rows: awaiting, some defended, all defended.
+ */
+export function markNextSteps(message: any, html: ParentNode): void {
+  const rows: StepRow[] = [];
+  const buttons = new Map<string, HTMLButtonElement[]>();
+  const add = (key: string, b: HTMLButtonElement) => { if (!buttons.has(key)) buttons.set(key, []); buttons.get(key)!.push(b); };
+  const isGM = Boolean(game.user?.isGM);
+  const replaced = Boolean(cardReplaced(message));
+  for (const action of STEP_ACTIONS) {
+    html.querySelectorAll<HTMLButtonElement>(`button[data-sr2e-action="${action}"]`).forEach((b) => {
+      const index = safeInt(b.dataset['index'], 0, 99, 0);
+      const key = stepKey(action, index);
+      add(key, b);
+      if (rows.some((r) => r.action === action && r.index === index)) return;
+      const target = rowTarget(message, action, index);
+      rows.push({ action, index, done: usedFor(message, action, target).includes(index), mine: Boolean(target?.isOwner), playerOwned: Boolean(target?.hasPlayerOwner) });
+    });
+  }
+  const gmApplies: string[] = [];
+  for (const [a, f] of Object.entries(GM_APPLY_ACTIONS)) {
+    const bs = html.querySelectorAll<HTMLButtonElement>(`button[data-sr2e-action="${a}"]`);
+    if (!bs.length) continue;
+    bs.forEach((b) => add(stepKey(a), b));
+    if (!message.getFlag?.(SYSTEM_ID, f)) gmApplies.push(a);
+  }
+  const next = replaced ? new Set<string>() : nextStepKeys(rows, { isGM, gmApplies });
+  for (const [key, list] of buttons) for (const b of list) b.classList.toggle('sr2e-next', next.has(key) && !b.disabled);
+  // The attack card's banner: how many of its targets have defended (in this client's language).
+  const banner = html.querySelector<HTMLElement>('.sr2e-banner.sr2e-banner-awaiting');
+  const defends = rows.filter((r) => r.action === 'defend');
+  if (banner && defends.length) {
+    const state = attackWaitState(defends.length, defends.filter((r) => r.done).length);
+    const successes = safeInt((message.getFlag?.(SYSTEM_ID, 'test') as any)?.successes, 0, 999, 0);
+    banner.dataset['sr2eWait'] = state;
+    banner.textContent = tKey(attackWaitKey(state, successes), { successes, done: defends.filter((r) => r.done).length, total: defends.length });
   }
 }
 
@@ -754,12 +814,17 @@ export function markUsedButtons(message: any, html: ParentNode): void {
 const defending = new Set<string>();
 /** v0.70.0: every shown copy of a card's button for this index goes dead (the chat log and the pop-up). */
 function deadenCopies(message: any, action: string, index: number): void {
+  // v0.93.5: the done line names the row's target ("✓ {name} defended").
+  const step = (STEP_ACTIONS as readonly string[]).includes(action) ? action as StepAction : null;
+  const target = step ? rowTarget(message, step, index) : null;
   document.querySelectorAll<HTMLButtonElement>(`[data-message-id="${message.id}"] button[data-sr2e-action="${action}"]`).forEach((b) => {
     if (Number(b.dataset['index'] ?? 0) !== index) return;
     b.disabled = true;
     // v0.93.3: and reads as done (visual review 0.93.2, finding 93: a dimmed button carried no "done" label).
     b.classList.add('sr2e-used');
-    if (!b.textContent?.startsWith('✓')) b.textContent = `✓ ${b.textContent ?? ''}`;
+    b.classList.remove('sr2e-next');
+    if (step) doneText(b, step, target);
+    else if (!b.textContent?.startsWith('✓')) b.textContent = `✓ ${b.textContent ?? ''}`;
   });
 }
 async function markDefended(message: any, defender: any, index: number): Promise<void> {
@@ -3318,7 +3383,7 @@ export function registerChatHandlers(): void {
     quietly('used buttons', () => {
       const rolls = change?.flags?.[SYSTEM_ID]?.cardRolls;
       if (!Array.isArray(rolls)) return;
-      const ids = new Set(rolls.map((k: unknown) => String(k)).filter((k) => /:(defended|resisted):\d+$/.test(k)).map((k) => k.split(':')[0]));
+      const ids = new Set(rolls.map((k: unknown) => String(k)).filter((k) => /:(defended|resisted|spellResisted):\d+$/.test(k)).map((k) => k.split(':')[0]));
       for (const id of ids) {
         const m = (game as any).messages?.get?.(id);
         if (!m) continue;

@@ -1,0 +1,32 @@
+{{!-- v0.93.5 (UI-16.2): the party view (applications/party.ts). Read-only: a row per party member this user may see.
+     kind full: the user's own (or the GM's view): the monitor as text, wound modifier, status, initiative, pools.
+     kind coarse: another member's name, portrait and coarse wound state (when the world allows it). kind name: name and portrait. --}}
+<div class="sr2e-sheet sr2e-party">
+  {{#if rows.length}}
+  <ul class="sr2e-list sr2e-pv-list">
+    {{#each rows}}
+    <li class="sr2e-pv-row sr2e-pv-{{kind}}{{#if acting}} sr2e-acting{{/if}}{{#if hurt}} sr2e-hurt{{/if}}">
+      <img class="sr2e-pv-portrait" src="{{img}}" alt="" loading="lazy">
+      <div class="sr2e-pv-body">
+        <div class="sr2e-pv-head">
+          {{#if canOpen}}<a class="sr2e-pv-name" data-action="pvOpen" data-uuid="{{uuid}}" data-tooltip="{{sr2eT "SR2E.UI.openTheSheet"}}">{{name}}</a>{{else}}<span class="sr2e-pv-name">{{name}}</span>{{/if}}
+          {{#if player}}<span class="sr2e-pv-player hint">{{player}}</span>{{/if}}
+          {{#if hasInit}}<span class="sr2e-pv-init" data-tooltip="{{sr2eT "SR2E.UI.initiativeThisPass"}}">{{initiative}}</span>{{/if}}
+        </div>
+        {{#if full}}
+        <div class="sr2e-pv-vitals">
+          <span class="sr2e-pv-monitor" aria-label="{{sr2eT "SR2E.UI.partyViewMonitor"}}">{{monitorText}}</span>
+          {{#if woundText}}<span class="sr2e-pv-woundmod" data-tooltip="{{sr2eT "SR2E.UI.woundModifierToTargetNumbers"}}">{{woundText}}</span>{{/if}}
+          {{#if statusText}}<strong class="sr2e-warn">{{statusText}}</strong>{{/if}}
+          {{#if acting}}<em>{{sr2eT "SR2E.UI.actingNow"}}</em>{{/if}}
+        </div>
+        {{#if pools}}<div class="sr2e-pv-pools hint">{{pools}}</div>{{/if}}
+        {{/if}}
+        {{#if coarse}}<div class="sr2e-pv-vitals"><span class="sr2e-pv-wound sr2e-pv-wound-{{wound}}">{{woundText}}</span></div>{{/if}}
+      </div>
+    </li>
+    {{/each}}
+  </ul>
+  {{else}}<p><em>{{sr2eT "SR2E.UI.noPlayerCharacters"}}</em></p>{{/if}}
+  {{#unless isGM}}<p class="hint">{{#if wounds}}{{sr2eT "SR2E.UI.partyViewHint"}}{{else}}{{sr2eT "SR2E.UI.partyViewHintNoWounds"}}{{/if}}</p>{{/unless}}
+</div>

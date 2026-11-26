@@ -60,7 +60,7 @@
       },
       "Undo": {
         "Name": "Undo the last change (SR2e GM log)",
-        "Hint": "Takes back the newest step in the GM panel's undo log (Log tab)."
+        "Hint": "Takes back the newest step in the GM panel's undo log (History, in the panel's top row)."
       },
       "UndoNewest": {
         "Name": "Undo the newest change, canvas or SR2e log (Ctrl+Z)",
@@ -69,6 +69,10 @@
       "OpenTools": {
         "Name": "SR2e tools",
         "Hint": "Open the window with every SR2e tool."
+      },
+      "PartyView": {
+        "Name": "Open the party view",
+        "Hint": "Opens the party view: your characters' vitals, and the rest of the party as far as you may see them."
       }
     },
     "UI": {
@@ -2157,7 +2161,20 @@
       "fetishExpendable": "Expendable fetish",
       "rollRequest": "Request a roll",
       "rollRequestTitle": "Ask the players (and NPCs) for one test: each rolls their own, the card keeps the tally",
-      "wizNotReady": "Not ready: set the priorities first."
+      "wizNotReady": "Not ready: set the priorities first.",
+      "unpinNamed": "Unpin {name}",
+      "dropHereToPin": "Drop a skill, weapon, spell, power or effect here to pin it",
+      "moreActions": "More actions",
+      "firingMode": "Firing mode",
+      "vstripDamageTip": "Damage: {filled} of {boxes} boxes",
+      "vstripDestroyed": "Destroyed",
+      "vstripSpeedTip": "Current speed / Speed",
+      "vstripRoundsLeft": "Rounds left",
+      "vstripMoreGuns": "+{count} more",
+      "spendKarmaBroke": "0 Good Karma: nothing can be bought yet. Each button says what it needs.",
+      "partyViewMonitor": "Condition monitor",
+      "partyViewHint": "Your own characters in full; the others by name, with how hurt they look.",
+      "partyViewHintNoWounds": "Your own characters in full; the others by name."
     },
     "Settings": {
       "rulesSource": {
@@ -2388,6 +2405,10 @@
       "oneRollWindow": {
         "Name": "Roll dialogs: one at a time",
         "Hint": "Opening a roll dialog closes the one already open, as if you had cancelled it. Defend and Resist windows always stay open."
+      },
+      "partyWounds": {
+        "Name": "Players see party members' wounds",
+        "Hint": "In the party view, players see how hurt the party members they don't own look (unhurt, hurt, badly hurt, down), never their boxes. Off: only names and portraits."
       }
     },
     "Notify": {
@@ -2860,7 +2881,8 @@
         "nobodyYouOwnHasAControl": "Nobody you own has a control rig.",
         "makeTheTurretOrDroneAs": "Make the turret or drone as a Vehicle actor (drone ticked, a mounted weapon) first.",
         "statBlockImported": "Imported: {attributes} attributes, {skills} skills, {weapons} weapons, {cyberware} cyberware/bioware, {spells} spells, {powers} powers ({created} items created, {updated} updated).",
-        "tweaksFull": "An item holds at most {max} tweaks."
+        "tweaksFull": "An item holds at most {max} tweaks.",
+        "pinsFull": "The pinned bar is full (12 pins): unpin one first."
       },
       "Spendkarma": {
         "onlyCharactersSpendKarma": "Only characters spend Karma.",
@@ -4978,7 +5000,7 @@
         "strictureBroken": "Stricture broken: {name}",
         "moveWorldTimeOn": "Move world time on",
         "to": ", to {worldTime}?",
-        "everythingTimedComesDueOnceDrugs": "Everything timed comes due once: drugs and statuses wear off, diseases test, surgery recoveries end, rent falls due, signatures fade, fires burn (at most 50 turns). The Log tab's Undo moves the time back.",
+        "everythingTimedComesDueOnceDrugs": "Everything timed comes due once: drugs and statuses wear off, diseases test, surgery recoveries end, rent falls due, signatures fade, fires burn (at most 50 turns). The GM panel's Undo moves the time back.",
         "advance": "Advance {span}?",
         "whoRepairsIt": "Who repairs it",
         "selected": " (selected)",
@@ -5121,6 +5143,14 @@
         "roll": "Roll",
         "rollTitle": "{name}: {what}",
         "tnHidden": "The GM has set the target number."
+      },
+      "Sense": {
+        "observer": "Observer and surroundings",
+        "sound": "Sound",
+        "smell": "Smell",
+        "touch": "Touch",
+        "taste": "Taste",
+        "other": "Other"
       }
     },
     "Window": {
@@ -5169,6 +5199,9 @@
       "Reference": {
         "title": "Reference",
         "titleFor": "Reference: {name}"
+      },
+      "Party": {
+        "title": "Party"
       }
     },
     "Count": {
@@ -8337,7 +8370,13 @@
         "takesMatrix": "Takes {level} Matrix damage ({plural}): {resultAfter}/{matrixMonitorBoxes}.",
         "takesVehicle": "Takes {level} damage ({plural}): {resultAfter}/{max}.",
         "diseaseTakesPhysical": "Takes {level} physical damage ({plural}). Status: {status}.",
-        "diseaseTakesStun": "Takes {level} stun damage ({plural}). Status: {status}."
+        "diseaseTakesStun": "Takes {level} stun damage ({plural}). Status: {status}.",
+        "hitAwaiting": "Hit ({successes}): awaiting defense",
+        "zeroAwaiting": "No successes: awaiting defense",
+        "hitPartial": "Hit ({successes}): {done} of {total} defended",
+        "zeroPartial": "No successes: {done} of {total} defended",
+        "hitDefended": "Hit ({successes}): every target defended",
+        "zeroDefended": "No successes: every target defended"
       },
       "Status": {
         "ok": "OK",
@@ -8451,6 +8490,10 @@
         "best": "best: {names} ({successes})",
         "botches": "disasters: {botches}",
         "hiddenNote": "Hidden: players see who has rolled, not the TN or the results."
+      },
+      "Next": {
+        "defended": "{name} defended",
+        "resisted": "{name} resisted"
       }
     },
     "Privacy": {
@@ -14302,7 +14345,7 @@
         "everythingForRunningTheGame": "Everything for running the game, in tabs: the scene, combat, the party, NPCs, the world, tools, the log, players' requests and setup.",
         "undo": "Undo",
         "theSystemLogsItsOwn": "The system logs its own changes while you have the world open: undo takes them back one step at a time (",
-        "theLogTabSays": "). The Log tab says what it can't undo.",
+        "theLogTabSays": "). History, in the top row, says what it can't undo.",
         "scene": "Scene",
         "backgroundCountWeatherTerrain": "Background count, weather, terrain, darkness and environment for the viewed scene, regions with an SR2e environment, and presets to put it all back in one click.",
         "party": "Party",
@@ -14573,7 +14616,7 @@
         "tabNpcs": "NPCs",
         "tabWorld": "World",
         "tabTools": "Tools",
-        "tabLog": "Log",
+        "tabLog": "History",
         "tabRequests": "Requests",
         "tabSetup": "Setup",
         "stepsKept": {
@@ -15635,7 +15678,18 @@
         "icAttributeDeck923": "The host's Security Value in dice vs the code's TN, opposed by the persona program vs {rating}; each {successes} net successes take a point off the deck (the chip must be replaced).",
         "icAttributePersona923": "The host's Security Value in dice vs the code's TN, opposed by the persona program vs {rating}; each {successes} net successes take a point off the persona (never below 1, until the decker jacks out).",
         "icTrace923": "The host's Security Value in dice vs the decker's Trace Factor: a hit locks on; the trace locates the jackpoint in {turns} ÷ successes Combat Turns (rounded down) and reports it.",
-        "icDefault923": "The host's Security Value in dice vs a TN by its code and the target's status; the net successes are reported.{defend}"
+        "icDefault923": "The host's Security Value in dice vs a TN by its code and the target's status; the net successes are reported.{defend}",
+        "whyNoSpells": "No spells on the sheet yet",
+        "whyNoConjuring": "Needs the Conjuring skill",
+        "whyNotAstral": "Perceive or project astrally first (Magic tab)",
+        "whyNoAmmoWeapon": "No weapon that takes ammunition",
+        "whyNotInCombat": "Only in combat",
+        "whyNotYourAction": "Only in your own action phase",
+        "whyNoEncounter": "There is no combat encounter",
+        "whyNoVehicle": "Not driving a vehicle: take the controls on the Rigging tab",
+        "whyNoDeckInUse": "No cyberdeck in use: tick one In use on the Matrix tab",
+        "whyNotJackedIn": "Jack in first",
+        "whyNoControlRig": "Jumping in needs a vehicle control rig"
       },
       "Shop": {
         "streetIndexTitle": "The price with its Street Index (×{si})",
@@ -15866,6 +15920,16 @@
         "off": "The GM hasn't turned the Team Karma tracker on (Configure Settings).",
         "spentNote": "{who} spends 1 Team Karma ({n} left).",
         "setNote": "{who} sets Team Karma to {n}."
+      },
+      "Progress": {
+        "nOfTotal": "{label} {done} of {total}"
+      },
+      "Party": {
+        "button": "Party",
+        "woundUnhurt": "Unhurt",
+        "woundHurt": "Hurt",
+        "woundBadly": "Badly hurt",
+        "woundDown": "Down"
       }
     },
     "Text": {
@@ -17965,7 +18029,8 @@
             "i8": "<kbd>Alt</kbd>+<kbd>H</kbd>: open this guide.",
             "i9": "<kbd>Alt</kbd>+<kbd>G</kbd>: open the GM panel (GM only).",
             "i10": "<kbd>Alt</kbd>+<kbd>T</kbd>: open the <a href=\"#tools\">SR2e tools</a> window, with every tool in one place.",
-            "i11": "Drag a row (a weapon, a spell, a skill, a critter power) onto Foundry's hotbar to make a macro that uses it."
+            "i11": "Drag a row (a weapon, a spell, a skill, a critter power) onto Foundry's hotbar to make a macro that uses it.",
+            "i12": "<kbd>Alt</kbd>+<kbd>P</kbd>: open the <strong>party view</strong>: your own characters in full, the others as far as you may see them (also a button in the SR2e tools and at the bottom of the Actors sidebar)."
           },
           "b2": "The <strong>SR2e Macros</strong> compendium (Compendium Packs sidebar) has ready macros: <em>SR2 test…</em> (type a test such as <code>Firearms tn 5</code>), <em>Attack</em>, <em>Cast a spell</em>, <em>Perception</em>, <em>Full defense</em> and <em>Roll initiative</em> for your selected token, and <em>Defend against the newest attack</em>. Drag one to your hotbar. The others (the GM panel, the NPC generator, undo, a smoke cloud, exporting item templates) are for the GM.",
           "b3": "Change the keys in Foundry's <strong>Configure Controls</strong> (they are listed under the system's name there).",
@@ -18397,7 +18462,7 @@
           "b2": "<strong>Money and Karma</strong> shows each character's nuyen, Good Karma, Karma Pool, career Karma and lifestyle, with the party's totals, and warns when rent is due within a week. <a href=\"#under-way\">Under way</a> lists their things that take time."
         },
         "gmTools": {
-          "title": "Tools tab: NPC generator and calculator",
+          "title": "NPCs tab: NPC generator and calculator",
           "b1": {
             "i1": "<strong>Open the NPC generator</strong> (also a button in the Actors sidebar): choose what to generate (a person, a group, an organisation, a contact, a spirit, a critter, a fixer's job, street names), a Threat Level from 0 to 5 and the options for that kind. People can arrive as tokens on the viewed scene, hidden from the players, and a group can be grouped for morale.",
             "i2": "The <strong>Preview</strong> shows the result first; the line beside the buttons says what <strong>Create</strong> will do. <strong>Re-roll</strong> rolls again, and <strong>Post to GM</strong> whispers the preview. <strong>Create</strong> makes the actors in a <em>Generated (SR2e)</em> folder; an organisation or a job becomes a GM journal entry (plus its people if ticked), street names are posted to the GMs, and a contact can go straight onto a character's Contacts.",
@@ -18655,11 +18720,11 @@
       },
       "calculator": {
         "label": "Dice and TN calculator",
-        "hint": "The odds of a test and the target number with its modifiers (GM panel, Tools tab)."
+        "hint": "The odds of a test and the target number with its modifiers (GM panel, NPCs tab)."
       },
       "undoLog": {
         "label": "Undo and the log",
-        "hint": "Undo the system's own changes, step by step, and see the recent rolls (GM panel, Log tab)."
+        "hint": "Undo the system's own changes, step by step, and see the recent rolls (GM panel, History)."
       },
       "requests": {
         "label": "Requests from players",
@@ -18704,6 +18769,10 @@
       "teamKarma": {
         "label": "Team Karma",
         "hint": "The table's shared Team Karma count (when the GM has turned the tracker on)."
+      },
+      "partyView": {
+        "label": "Party view",
+        "hint": "The party at a glance: your characters' vitals, and the others as far as you may see them."
       }
     },
     "SceneBuilder": {
@@ -18955,7 +19024,8 @@
       "sumFinish": "Then",
       "journalShort": "a GM journal",
       "removeTokensAsk": "Tokens of these actors on other scenes are deleted too: {tokens}.",
-      "sizeFromBackdrop": "The backdrop sets the size: its picture and walls are drawn for it. Pick a plain colour or your own picture for another size."
+      "sizeFromBackdrop": "The backdrop sets the size: its picture and walls are drawn for it. Pick a plain colour or your own picture for another size.",
+      "progress": "Building the scene"
     },
     "Backdrop": {
       "street": {

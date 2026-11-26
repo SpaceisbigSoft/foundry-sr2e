@@ -287,7 +287,8 @@ describe('templates and the stylesheet', () => {
     const src = read('src', 'module', 'documents', 'index.ts');
     assert.ok(src.includes('<div class="sr2e-count"><b>${r.successes}</b>'));
     assert.ok(src.includes('<div class="sr2e-count sr2e-count-botch">'));
-    assert.ok(src.includes('<span class="sr2e-sum-out"> · ${outcome}</span>'));
+    // v0.93.5: the fold's line leads with the count ("4 successes · 5 dice vs TN 3"), shown under a banner.
+    assert.ok(src.includes('<span class="sr2e-sum-out">${outcome} · </span>'));
     assert.ok(read('public', 'style', 'sr2e.css').includes('.sr2e-count ~ details.sr2e-fold .sr2e-sum-out { display: none; }'));
   });
 

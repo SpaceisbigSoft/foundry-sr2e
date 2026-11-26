@@ -1614,6 +1614,12 @@ export function registerSettings(): void {
     hint: "SR2E.Settings.approvalQueue.Hint",
     scope: "world", config: true, type: Boolean, default: false,
   });
+  // v0.93.5 (UI-16.2): the party view shows players how hurt the members they don't own look (coarse only).
+  game.settings.register(SYSTEM.id, "partyWounds", {
+    name: "SR2E.Settings.partyWounds.Name",
+    hint: "SR2E.Settings.partyWounds.Hint",
+    scope: "world", config: true, type: Boolean, default: true,
+  });
   game.settings.register(SYSTEM.id, "rollPrivacy", { scope: "client", config: false, type: Object, default: {} });
   game.settings.registerMenu(SYSTEM.id, "rollPrivacyMenu", {
     name: "SR2E.Settings.rollPrivacyMenu.Name", label: "SR2E.Settings.rollPrivacyMenu.Label", hint: "SR2E.Settings.rollPrivacyMenu.Hint",

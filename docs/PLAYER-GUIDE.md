@@ -97,7 +97,7 @@ How to use the unofficial Shadowrun 2nd Edition system for Foundry VTT: what the
 - [Setup tab: players, tokens, kits and the catalogue](#setup-tab-players-tokens-kits-and-the-catalogue)
 - [Scene builder](#scene-builder)
 - [World tab, hosts, sites and safehouses](#world-tab-hosts-sites-and-safehouses)
-- [Tools tab: NPC generator and calculator](#tools-tab-npc-generator-and-calculator)
+- [NPCs tab: NPC generator and calculator](#npcs-tab-npc-generator-and-calculator)
 - [House rules and settings](#house-rules-and-settings)
 
 # Start here
@@ -270,6 +270,7 @@ The GM can name a **Portrait folder** (for example `avatars`): a character named
 - <kbd>Alt</kbd>+<kbd>G</kbd>: open the GM panel (GM only).
 - <kbd>Alt</kbd>+<kbd>T</kbd>: open the [SR2e tools](#all-the-tools) window, with every tool in one place.
 - Drag a row (a weapon, a spell, a skill, a critter power) onto Foundry's hotbar to make a macro that uses it.
+- <kbd>Alt</kbd>+<kbd>P</kbd>: open the **party view**: your own characters in full, the others as far as you may see them (also a button in the SR2e tools and at the bottom of the Actors sidebar).
 
 The **SR2e Macros** compendium (Compendium Packs sidebar) has ready macros: *SR2 test…* (type a test such as `Firearms tn 5`), *Attack*, *Cast a spell*, *Perception*, *Full defense* and *Roll initiative* for your selected token, and *Defend against the newest attack*. Drag one to your hotbar. The others (the GM panel, the NPC generator, undo, a smoke cloud, exporting item templates) are for the GM.
 
@@ -1032,7 +1033,7 @@ The **World** tab lists **Magical groups** (new, edit, a broken stricture, the g
 
 Hover a button for what it does. The rules behind them are in your SR2 rulebook and its supplements.
 
-## Tools tab: NPC generator and calculator
+## NPCs tab: NPC generator and calculator
 
 - **Open the NPC generator** (also a button in the Actors sidebar): choose what to generate (a person, a group, an organisation, a contact, a spirit, a critter, a fixer's job, street names), a Threat Level from 0 to 5 and the options for that kind. People can arrive as tokens on the viewed scene, hidden from the players, and a group can be grouped for morale.
 - The **Preview** shows the result first; the line beside the buttons says what **Create** will do. **Re-roll** rolls again, and **Post to GM** whispers the preview. **Create** makes the actors in a *Generated (SR2e)* folder; an organisation or a job becomes a GM journal entry (plus its people if ticked), street names are posted to the GMs, and a contact can go straight onto a character's Contacts.

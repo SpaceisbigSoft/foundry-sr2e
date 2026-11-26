@@ -236,7 +236,8 @@ describe('v0.81.0 FX-SHEET: sheet handler fixes', () => {
       assert.ok(!SRC.includes(dead), dead);
     }
     const sum = fnSource('summaryContext');
-    assert.match(sum, /return \{ pools, chips, meta, showRow: Boolean\(meta \|\| chips\.length\) \};/);
+    // v0.93.5: no metatype chip (it repeated the Metatype field).
+    assert.match(sum, /return \{ pools, chips, showRow: chips\.length > 0 \};/);
     assert.match(fnSource('#onSetPool'), /poolsOf\(actor\)/);
   });
 

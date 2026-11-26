@@ -32,6 +32,7 @@ import { moveClientSettings } from "./helpers/move.ts";
 import { registerClockSetting } from "./helpers/clock.ts";
 import { registerSettings } from "./settings.ts";
 import { registerUiHooks, SR2GmPanel } from "./applications/ui.ts";
+import { registerPartyView, SR2PartyView } from "./applications/party.ts";
 import { registerUndoHooks, registerUndoKeybinding, SR2Undo } from "./applications/undo.ts";
 import { SR2NpcGenerator } from "./applications/npcgen.ts";
 import { withRichText, postItemToChat } from "./applications/richtext.ts";
@@ -73,7 +74,9 @@ export class SR2System {
       void runMigrations();
       // Macros and other modules: game.sr2e.useItem(uuid) opens an item's dialog (v0.36.0).
       (game as any).sr2e = {
-        useItem, runSheetAction, syncTokenVision, gmPanel: () => SR2GmPanel.open(), undo: () => SR2Undo.undoLast(), undoLog: SR2Undo, npcGenerator: (kind?: any) => SR2NpcGenerator.open(kind), postItem: postItemToChat,
+        useItem, runSheetAction, syncTokenVision, gmPanel: (tab?: string) => SR2GmPanel.open(tab), undo: () => SR2Undo.undoLast(), undoLog: SR2Undo, npcGenerator: (kind?: any) => SR2NpcGenerator.open(kind), postItem: postItemToChat,
+        // v0.93.5: the party view (every user; only what they may see), and gmPanel(tab) opens a tab or view by name.
+        partyView: () => SR2PartyView.open(),
         // v0.60.0: an API for macros and other modules (see docs/API.md).
         api: {
           version: String((game as any).system?.version ?? ''),
@@ -121,6 +124,8 @@ export class SR2System {
           requestRoll: (o: { actors?: any[] } = {}) => openRollRequestDialog(o), postRollRequest,
           // v0.93.3: the shared Team Karma tracker's window.
           teamKarma: () => SR2TeamKarma.open(),
+          // v0.93.5: the party view.
+          partyView: () => SR2PartyView.open(),
         },
       };
       Hooks.callAll("sr2e.ready", (game as any).sr2e.api);
@@ -148,6 +153,8 @@ export class SR2System {
     registerStateStatusHooks();
     registerEssenceHoleHooks();
     registerUiHooks();
+    // v0.93.5 (UI-16.2): the party view (its refresh hooks, the Actors sidebar button, Alt+P).
+    registerPartyView();
     registerUndoHooks();
     registerUndoKeybinding();
     registerMigrationSetting();

@@ -12,6 +12,7 @@ import { openSkillPicker, SR2AddWindow } from './adding.ts';
 import { runSheetAction } from './tokens.ts';
 import { escHtml } from '../rules/html.ts';
 import { t as tx } from '../helpers/i18n.ts';
+import { spendRow } from '../rules/gm935.ts';
 
 const { HandlebarsApplicationMixin, ApplicationV2, DialogV2 } = foundry.applications.api;
 const cap = (s: string) => String(s ?? '').charAt(0).toUpperCase() + String(s ?? '').slice(1);
@@ -77,7 +78,10 @@ export class SR2SpendKarma extends HandlebarsApplicationMixin(ApplicationV2) {
     const a = this.actor;
     if (!a) return {};
     const good = Number(a.system.karma?.good ?? 0);
-    const row = (c: any) => ({ ...c, afford: c.ok && c.cost <= good, why: !c.ok ? c.reason : c.cost > good ? tx('SR2E.App.Spendkarma.needsHas', { cost: c.cost, good }) : '' });
+    // v0.93.5: each row's buy button shows, disabled with its reason as a tooltip when it can't be bought; with no Good
+    // Karma one banner says so instead of every row repeating "needs N, has 0" (rules/gm935.ts spendRow).
+    const needs = (cost: number, g: number) => tx('SR2E.App.Spendkarma.needsHas', { cost, good: g });
+    const row = (c: any) => ({ ...c, ...spendRow(c, good, needs) });
     const attributes = ATTRIBUTE_KEYS.map((k) => ({ key: k, label: cap(k), ...row(a.improveCost({ attribute: k })) }));
     const skills = [...a.items].filter((i: any) => i.type === 'skill').sort((x: any, y: any) => String(x.system.kind).localeCompare(String(y.system.kind)) || x.name.localeCompare(y.name)).map((i: any) => ({
       id: i.id, name: i.name, kind: i.system.kind ?? 'active', rating: i.system.rating ?? 0,
@@ -88,14 +92,14 @@ export class SR2SpendKarma extends HandlebarsApplicationMixin(ApplicationV2) {
     const magician = Number(a.system.derived?.magic ?? 0) > 0 && String(a.system.tradition ?? 'none') !== 'adept';
     const spells = magician ? [...a.items].filter((i: any) => i.type === 'spell').map((i: any) => {
       const force = Number(i.system.learnedForce ?? 0), cost = spellKarmaCost(force + 1);
-      return { id: i.id, name: i.name, force, to: force + 1, cost, afford: cost <= good, why: cost > good ? tx('SR2E.App.Spendkarma.needsHas', { cost, good }) : '' };
+      return { id: i.id, name: i.name, force, to: force + 1, cost, ...spendRow({ ok: true, cost }, good, needs) };
     }) : [];
     const flaws = RULES.STREET.qualities.enabled ? (a.system.qualities ?? []).filter((q: any) => q.kind === 'flaw').map((q: any) => ({ id: q.id, name: q.name, points: q.points, cost: qualityKarmaCost('flaw', q.points) })) : [];
     const me = String(game.user?.id ?? '');
     const pending = requestsOf(a).filter((r) => game.user?.isGM || r.userId === me).map((r) => ({ id: r.id, label: r.label, cost: [r.karma ? `${r.karma} Karma` : '', r.nuyen ? `¥${r.nuyen.toLocaleString()}` : ''].filter(Boolean).join(' + ') || 'free', who: r.userName }));
     const recent = [...(a.system.ledger ?? [])].filter((l: any) => l.kind === 'karma').slice(-6).reverse().map((l: any) => ({ text: `${l.amount > 0 ? '+' : ''}${l.amount} · ${l.reason}` }));
     return {
-      name: a.name, good, career: Number(a.system.karma?.career ?? 0), pool: Number(a.system.karma?.pool ?? 0),
+      name: a.name, good, broke: good <= 0, career: Number(a.system.karma?.career ?? 0), pool: Number(a.system.karma?.pool ?? 0),
       attributes, skills, spells, magician, flaws,
       canInitiate: Number(a.system.derived?.magic ?? 0) > 0,
       edgesOn: RULES.STREET.qualities.enabled,

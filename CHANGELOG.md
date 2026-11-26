@@ -2,6 +2,22 @@
 
 This is the history of the unofficial Shadowrun 2nd Edition system for Foundry VTT (system id `shadowrun2e_unified`; `sr2e` until v0.93.0), newest version first. Every rules change since v0.70.0 has a house-rule switch that puts the old behaviour back. The system was built with AI (Anthropic's Claude) under human direction, and it has not yet been play-tested at a real table.
 
+## v0.93.5 — Interface polish (26 Nov 2026)
+- **The next step stands out on chat cards:** the button you should press next is highlighted for you (your character's Defend or Resist; for the GM, an Apply (GM) button or the NPCs' rows), and each target's row reads "✓ Raptor defended" once it is done. The attack card's banner now says where things stand: "Hit (2): awaiting defense", then "1 of 2 defended", then "every target defended".
+- **Cards say the result once:** under the banner, the big success count gives way to one line such as "4 successes · 5 dice vs TN 3", in the normal text colour, so red and green no longer clash on one card.
+- **The attack window shows only what applies:** the full-auto rounds and the spray list appear only while FA is the firing mode (what you typed in them is kept). **The Perception modifiers** in the sneak and perceive windows are grouped by sense (observer and surroundings; sound, smell, touch and taste folded until you need them).
+- **Actions greyed with a reason instead of hidden:** Full defense, Hold and Delay outside combat, Initiative with no encounter, Reload with nothing to reload, a magician's Cast, Summon or Assense without spells or the skill, Jack in with no deck in use, Drive with no vehicle, the Matrix buttons before you jack in, Jump in without the control rig the rules need. Hover a greyed button to see why.
+- **The action bar keeps its order:** the buttons no longer move when a combat starts. In a window narrower than about 1100 px the bar shows the main actions in one row and the rest behind **More…** (arrow keys inside it; Esc or a click outside closes it).
+- **Firing-mode chips** on weapon rows show which mode is active (the one you last fired), filled and bold.
+- **Pin by dragging:** drag a skill, weapon, spell, power or active effect onto the pinned bar to pin it, drag pins to reorder them (or Alt+← / →), and unpin with the ✕. Only the sheet's owners can change pins. The pin buttons still work.
+- **The vehicle sheet has a status strip:** damage as text with its modifier, speed and handling, the pilot or autonav and sensor ratings, who is driving (and whether they are jumped in), the mounted gun lowest on ammunition, people aboard, and a jammed link or shot-out systems.
+- **A party view for players** (SR2e tools, the button at the bottom of the Actors sidebar, or Alt+P): your own characters in full (monitor, pools, initiative), the rest of the party by name and picture, with a coarse wound state (unhurt, hurt, badly hurt, down) if the GM's new setting *Players see party members' wounds* allows it (on by default). It never shows more than you could see on that character's sheet. The GM sees everyone.
+- **Progress bars on long jobs:** loading the catalogue and building a scene show a bar with "n of N".
+- **The GM panel has 6 tabs instead of 9:** Scene, Combat, Party, NPCs, World and Requests. The Log (now **History**), **Setup** and **Tools** are buttons in the top row beside Undo, and the calculator and NPC generator moved to the NPCs tab. Old links and macros that open a tab by its old name still work.
+- **Spend Karma with no Good Karma** shows one line saying nothing can be bought yet, greys the rows, and shows each buy button disabled with the reason on hover.
+- The sheet no longer repeats the metatype as a chip above the action bar (the Metatype field shows it).
+- API changes: `partyView()` was added, and `gmPanel()` takes an optional tab; nothing was changed or removed.
+
 ## v0.93.4 — Readability (26 Nov 2026)
 - **Checkboxes and radio buttons you can see:** an unticked box now has a clear edge in every theme (white on High contrast), a ticked one a filled box with a tick. Before, unticked boxes almost disappeared, so many options looked like plain labels.
 - **High contrast is really high contrast:** labels, hints, help marks and the monitor's labels are near-white; fields and sections have 2 px edges; the selected tab is filled. **Corp** has a light title bar like its body, and its grey secondary text is darker.

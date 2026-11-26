@@ -22,6 +22,7 @@ import { creationRecordOf, approvalNeeded } from './approvals.ts';
 import { escHtml } from '../rules/html.ts';
 import { itemTypeProblem } from './drops.ts';
 import { t as tx, tKey, tCount, tNoun, type CountNoun } from '../helpers/i18n.ts';
+import { startProgress, type Progress } from './progress.ts';
 
 const { DialogV2 } = foundry.applications.api;
 /** A-15: the shared escape helper (rules/html.ts). */
@@ -310,7 +311,7 @@ export async function catalogueFolderFor(a: { type: string; system: Record<strin
  * `fill`, the missing values (fields still at their default) of world items and actors with the same type and name.
  * Values someone set are never changed, and actors already in the world are never replaced.
  */
-export async function loadCatalogue(text: string, mode: 'replace' | 'skip' | 'copy', o: { fill?: boolean; parsed?: ReturnType<typeof parseCatalogueJson> } = {}): Promise<CatalogueLoadResult> {
+export async function loadCatalogue(text: string, mode: 'replace' | 'skip' | 'copy', o: { fill?: boolean; parsed?: ReturnType<typeof parseCatalogueJson>; progress?: Progress } = {}): Promise<CatalogueLoadResult> {
   const p = o.parsed ?? parseCatalogueJson(text);
   const res: CatalogueLoadResult = { templates: 0, kits: 0, actorsCreated: 0, actorsFilled: 0, itemsFilled: 0, valuesFilled: 0, errors: [...p.errors] };
   if (!(game as any).user?.isGM) { res.errors.push(tx('SR2E.App.Catalogue.onlyTheGmCanLoadA')); return res; }
@@ -322,12 +323,19 @@ export async function loadCatalogue(text: string, mode: 'replace' | 'skip' | 'co
   let mk = { added: 0, replaced: 0 };
   if (incoming.length) await changeKits((now) => { const r = mergeKits(now, incoming, mode === 'replace' ? 'replace' : 'skip', () => randomId()); mk = r; return r.list; });
   res.kits = mk.added + mk.replaced;
-  if (p.actors.length) await loadActors(p.actors, o.fill !== false, res);
-  if (o.fill !== false && p.templates.length) await fillWorldItems(p.templates, res);
+  // v0.93.5 (UI-13.6): one step for the templates and kits, one per actor, one for filling world items.
+  o.progress?.tick();
+  if (p.actors.length) await loadActors(p.actors, o.fill !== false, res, o.progress);
+  if (o.fill !== false && p.templates.length) { await fillWorldItems(p.templates, res); o.progress?.tick(); }
   return res;
 }
 
-async function loadActors(list: readonly CatalogueActor[], fill: boolean, res: CatalogueLoadResult): Promise<void> {
+/** v0.93.5: the steps a catalogue load reports (see loadCatalogue). */
+export function catalogueLoadSteps(p: { templates: readonly unknown[]; actors: readonly unknown[] }, fill: boolean): number {
+  return 1 + p.actors.length + (fill && p.templates.length ? 1 : 0);
+}
+
+async function loadActors(list: readonly CatalogueActor[], fill: boolean, res: CatalogueLoadResult, progress?: Progress): Promise<void> {
   const ActorCls: any = (CONFIG as any).Actor.documentClass;
   const fresh: any[] = [];
   const blocks: CatalogueActor[] = [];
@@ -342,6 +350,7 @@ async function loadActors(list: readonly CatalogueActor[], fill: boolean, res: C
     if (old) {
       // NPCs from a stat block are left as they are (the import would change what is there).
       if (fill && !a.statBlock) await fillActor(old, a, res);
+      progress?.tick();
       continue;
     }
     if (a.statBlock) { blocks.push(a); continue; }
@@ -363,11 +372,14 @@ async function loadActors(list: readonly CatalogueActor[], fill: boolean, res: C
         try { if (await ActorCls.create(d)) res.actorsCreated++; else res.errors.push(tx('SR2E.App.Catalogue.notCreatedSeeTheConsole', { name: d.name })); } catch (e) { res.errors.push(`${d.name}: ${(e as Error).message}`); }
       }
     }
+    progress?.tick(undefined, chunk.length);
   }
   // NPCs from a stat block: an empty NPC, then the character import fills it (a failed import removes it again).
   let done = 0;
   for (const a of blocks) {
-    if (++done % 25 === 0) ui.notifications.info(tx('SR2E.Notify.Catalogue.catalogueNpcsFromStatBlocksOf', { done, blocksLength: blocks.length }));
+    // v0.93.5 (UI-13.6): the progress bar counts them (an info note every 25 only where there is no bar).
+    progress?.tick();
+    if (++done % 25 === 0 && !progress) ui.notifications.info(tx('SR2E.Notify.Catalogue.catalogueNpcsFromStatBlocksOf', { done, blocksLength: blocks.length }));
     let actor: any = null;
     try {
       const sf = await subfolder({ name: a.name, type: 'npc', system: a.system, critter: a.critter });
@@ -470,8 +482,10 @@ async function importCatalogueDialog(): Promise<void> {
       <p>${tx('SR2E.Dialog.Catalogue.loadItABigFileTakes')}</p>`,
   });
   if (!ok) return;
-  ui.notifications.info(tx('SR2E.Notify.Catalogue.loadingTheCatalogue'));
-  const res = await loadCatalogue(text, r.mode as any, { fill: r.fill, parsed });
+  // v0.93.5 (UI-13.6): a progress bar ("Loading the catalogue: 12 of 40") instead of a plain note.
+  const progress = startProgress(tx('SR2E.Notify.Catalogue.loadingTheCatalogue'), catalogueLoadSteps(parsed, r.fill));
+  let res: CatalogueLoadResult;
+  try { res = await loadCatalogue(text, r.mode as any, { fill: r.fill, parsed, progress }); } finally { progress.done(); }
   for (const e of res.errors.slice(0, 5)) ui.notifications.warn(tx('SR2E.Notify.Catalogue.catalogueFile', { e: esc(e) }));
   if (res.errors.length) console.warn('sr2e | catalogue load:', res.errors);
   ui.notifications.info(tx('SR2E.Notify.Catalogue.loadedSummary', {

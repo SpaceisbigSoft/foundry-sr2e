@@ -85,7 +85,7 @@ export const GUIDE_TOPICS: GuideTopic[] = [
   topic('look', 'both', [], ['p', 6, 'p', 'p', 'p']),
   topic('karma-pool', 'both', [], ['p', 3, 'p', 'p', 'p', 'p']),
   topic('pools', 'both', ['Initiative and pools'], ['p', 'p', 'p', 'p', 'p']),
-  topic('shortcuts', 'both', [], [11, 'p', 'p', 'p', 4, 'p', 'p', 'p', 'p']),
+  topic('shortcuts', 'both', [], [12, 'p', 'p', 'p', 4, 'p', 'p', 'p', 'p']),
   topic('inline-tests', 'both', [], ['p', 'p', 5]),
   // v0.93.2: Foundry's manual dice entry (every SR2e die goes through Foundry's dice fulfilment).
   topic('physical-dice', 'both', [], ['p', 4, 'p']),

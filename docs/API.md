@@ -20,7 +20,8 @@ A test (`src/module/__tests__/v0932.test.ts`) checks that every call the system 
 |---|---|
 | `useItem(uuid)` | Opens an item's dialog on its owner's sheet (attack with a weapon, cast a spell, roll a skill, use a power). |
 | `runSheetAction(actor, action, dataset)` | Runs one of an actor sheet's buttons as if clicked (e.g. `quickAttack`, `quickCast`, `perceive`, `rollAttribute` with `{attribute: 'body'}`). |
-| `gmPanel()`, `npcGenerator(kind?)` | Open the GM panel or the NPC generator. |
+| `gmPanel(tab?)`, `npcGenerator(kind?)` | Open the GM panel (v0.93.5: optionally at a tab: `'scene'`, `'combat'`, `'party'`, `'npcs'`, `'world'`, `'requests'`, or the views `'log'` and `'setup'`; older names such as `'tools'` still work) or the NPC generator. |
+| `partyView()` | v0.93.5: open the party view (also `game.sr2e.partyView()`, Alt+P): a player sees their own characters in full and the others only as far as their permission and the GM's *Players see party members' wounds* setting allow. |
 | `undo()`, `undoLog` | Undo the system's newest change (GM); the undo log. |
 | `postItem(item)` | Post an item to chat. |
 | `syncTokenVision(actor)` | Bring an actor's tokens' senses in line with its eyes. |
@@ -38,6 +39,7 @@ A test (`src/module/__tests__/v0932.test.ts`) checks that every call the system 
 | `wardsBetween(tokenA, tokenB)` | The ward or barrier actors whose region edge lies between two tokens. |
 | `playCue(id)` | Play a sound cue (`turn`, `attacked`, `disaster`, `alarm`) if the player has sound cues on. |
 | `exportTemplates()`, `importTemplates()` | GM: item templates to a world compendium, or from one. |
+| `partyView()` | v0.93.5: open the party view, as `game.sr2e.partyView()` does. |
 | `actorClass`, `combatClass` | `SR2Actor` and `SR2Combat` (static helpers such as `SR2Actor.backgroundCount()`). |
 
 ## Hooks
@@ -120,5 +122,6 @@ The system registers itself with Token Action HUD Core 2.x (`tokenActionHudSyste
 The interface's history from v0.93.2, newest first. Each version's `CHANGELOG.md` entry repeats its line.
 
 - **v0.93.4:** none.
+- **v0.93.5:** added `partyView()`; `gmPanel()` takes an optional tab. Nothing was changed or removed.
 - **v0.93.3:** added `requestRoll({ actors? })`, `postRollRequest({ kind, key, tn, hidden?, actors })` and `teamKarma()`. Nothing was changed or removed.
 - **v0.93.2:** the stability rules above. Nothing changed; the calls added in v0.87.0–v0.92.1 are listed here for the first time. Since v0.93.1 (the system id change) the flags and settings live under `shadowrun2e_unified`; the names `game.sr2e` and the `sr2e.*` hooks stayed.

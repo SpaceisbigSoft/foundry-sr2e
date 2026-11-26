@@ -623,7 +623,8 @@ describe('O28 (5-A9) intercepting and spoofing a drone\'s link', () => {
       assert.equal(await h.interceptDroneLink(d.uuid), null);
       assert.equal(await h.spoofDroneLink(d.uuid), null);
     });
-    assert.ok(sheets.includes('if (RULES.DRONES_V73.link.enabled && (actor.type === "character" || actor.type === "npc") && allActors().some((a: any) => a.type === "vehicle")) out.push({ action: "droneLink"'));
+    // v0.93.5: the bar's facts (rules/actions935.ts shows Drone link only when this is true).
+    assert.ok(sheets.includes('droneLink: RULES.DRONES_V73.link.enabled && (actor.type === "character" || actor.type === "npc") && allActors().some((a: any) => a.type === "vehicle"),'));
     assert.ok(sheets.includes('droneLink: SR2CharacterSheet.#onDroneLink'));
     assert.ok(sheets.includes('clearDroneLink: SR2VehicleSheet.#onClearDroneLink'));
     assert.match(sheets, /#onClearDroneLink\(this: SR2VehicleSheet\) \{\s*if \(!game\.user\?\.isGM\) return ui\.notifications\.warn/);

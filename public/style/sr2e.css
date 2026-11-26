@@ -1835,3 +1835,160 @@ body.sr2e-theme-contrast :is(.sr2e-look, .sr2e-card, .sr2e-hover-card) .sr2e-cm-
 .sr2e-look.sr2e.sheet a.sr2e-sort:focus-visible { outline: 2px solid var(--sr2e-accent); outline-offset: 1px; }
 .sr2e-look.sr2e.sheet input.sr2e-list-filter { display: block; width: 100%; max-width: 18rem; height: 1.6rem; margin: 0.2rem 0 0.3rem; font-size: 0.8rem; }
 .sr2e-look.sr2e.sheet li.sr2e-filtered { display: none !important; }
+
+/* ---- v0.93.5: interface polish ---- */
+
+/* v0.93.5 (agent A, "interface polish"): cards and roll dialogs. */
+
+/* The next step on a card for this user (plan item 45): the button to press now stands out (filled accent, a "next"
+   mark), with a soft pulse that stops for reduced motion. Done rows read "✓ {name} defended" (v0.93.3's sr2e-used). */
+:where(li.chat-message.sr2e-card) button.sr2e-next { background: var(--sr2e-accent-tint); border: 2px solid var(--sr2e-accent); color: var(--sr2e-accent-ink); font-weight: 700; min-height: 24px; box-shadow: 0 0 0 0 var(--sr2e-accent); animation: sr2e-next-pulse 1.8s ease-out 3; }
+:where(li.chat-message.sr2e-card) button.sr2e-next::before { content: "➤ "; }
+:where(li.chat-message.sr2e-card) button.sr2e-next:hover { background: var(--sr2e-accent); color: var(--sr2e-page); }
+:where(li.chat-message.sr2e-card) button.sr2e-used { border-style: dashed; }
+@keyframes sr2e-next-pulse { 0% { box-shadow: 0 0 0 0 var(--sr2e-accent); } 70% { box-shadow: 0 0 0 6px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+@media (prefers-reduced-motion: reduce) { :where(li.chat-message.sr2e-card) button.sr2e-next { animation: none; } }
+body.sr2e-dice-contrast :where(li.chat-message.sr2e-card) button.sr2e-next { background: black; color: white; border: 3px solid white; }
+
+/* The attack card's banner (visual review theme 5): filled with an icon and words while it waits for the Defend,
+   like the other outcome banners; a plain attack's success count (no one to defend) filled too. */
+li.chat-message.sr2e-card .sr2e-banner-awaiting { background: var(--sr2e-accent-tint); border: 2px solid var(--sr2e-accent); color: var(--sr2e-accent-ink); }
+li.chat-message.sr2e-card .sr2e-banner-awaiting::before { content: "⌛ "; }
+li.chat-message.sr2e-card .sr2e-banner-awaiting[data-sr2e-wait="partial"]::before { content: "◐ "; }
+li.chat-message.sr2e-card .sr2e-banner-awaiting[data-sr2e-wait="defended"] { background: var(--sr2e-raised); border-color: var(--sr2e-rule-strong); color: var(--sr2e-ink); }
+li.chat-message.sr2e-card .sr2e-banner-awaiting[data-sr2e-wait="defended"]::before { content: "✓ "; }
+li.chat-message.sr2e-card .sr2e-banner-neutral { background: var(--sr2e-raised); border: 2px solid var(--sr2e-neutral-line); color: var(--sr2e-ink); }
+li.chat-message.sr2e-card .sr2e-banner-neutral::before { content: "◎ "; }
+body.sr2e-dice-contrast li.chat-message.sr2e-card .sr2e-banner-awaiting { background: black !important; color: white !important; border: 2px solid white; }
+
+/* The verdict once (visual review, low): under an outcome banner the big count gives way to the fold's one line
+   "4 successes · 5 dice vs TN 3", in the card's ink (no red/green next to the banner's colour). A contest card (no
+   banner, two counts) keeps its big numbers. */
+li.chat-message.sr2e-card .sr2e-banner ~ .sr2e-roll > .sr2e-count { display: none; }
+li.chat-message.sr2e-card .sr2e-banner ~ .sr2e-roll details.sr2e-fold .sr2e-sum-out { display: inline; }
+li.chat-message.sr2e-card .sr2e-banner ~ .sr2e-roll details.sr2e-fold > summary { font-size: 0.95rem; }
+li.chat-message.sr2e-card .sr2e-banner ~ .sr2e-roll details.sr2e-fold .sr2e-sum-out > strong { color: var(--sr2e-ink); }
+
+/* The Perception modifiers by sense (Sneak, Perceive): headed groups, the rare ones folded, box and label aligned.
+   The groups stack (the plain .sr2e-situational is a two-column grid, itself unscoped: this overrides only ours). */
+.application.sr2e-look .sr2e-situational.sr2e-senses { display: block; }
+.application.sr2e-look .sr2e-senses .sr2e-sense-group { margin: 0.2rem 0 0.35rem; }
+.application.sr2e-look .sr2e-senses .sr2e-sense-head { margin: 0.25rem 0 0.15rem; font-family: var(--sr2e-font-head); font-size: 0.8rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--sr2e-muted); border: 0; }
+.application.sr2e-look .sr2e-senses summary.sr2e-sense-head { cursor: pointer; min-height: 24px; display: list-item; }
+.application.sr2e-look .sr2e-senses .sr2e-sense-count { font-weight: 400; text-transform: none; letter-spacing: 0; }
+.application.sr2e-look .sr2e-senses .sr2e-sense-rows { display: grid; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: 0.1rem 0.6rem; }
+.application.sr2e-look .sr2e-senses label.sr2e-sense-row { display: flex; align-items: flex-start; gap: 0.35rem; min-height: 24px; font-size: 0.85rem; line-height: 1.25; }
+.application.sr2e-look .sr2e-senses label.sr2e-sense-row > input { flex: 0 0 auto; margin: 0.1rem 0 0; }
+
+/* ---------------------------------------------------------------- v0.93.5 (Agent B): sheets */
+
+/* --- The action bar (sheet-summary.hbs): one fixed order. The groups take no room of their own in a wide window, so
+   the bar lays out as it always has; greyed buttons use .sr2e-cant (the "your turn" look). */
+.application.sr2e-look .sr2e-actionbar .sr2e-qa-group,
+.application.sr2e-look .sr2e-actionbar .sr2e-qa-more-wrap { display: contents; }
+.application.sr2e-look .sr2e-actionbar .sr2e-qa-more-btn { display: none; }
+.application.sr2e-look .sr2e-actionbar button[aria-disabled="true"] { cursor: help; }
+
+/* A narrow window (1024 px) or a narrow sheet: the primary buttons on one row, the rest behind More…. */
+@media (max-width: 1100px) {
+  .application.sr2e-look .sr2e-actionbar:not(.sr2e-qa-nomore) { flex-wrap: nowrap; overflow: visible; }
+  .application.sr2e-look .sr2e-actionbar:not(.sr2e-qa-nomore) .sr2e-qa-main,
+  .application.sr2e-look .sr2e-actionbar:not(.sr2e-qa-nomore) .sr2e-qa-urgent { display: inline-flex; flex: 0 1 auto; flex-wrap: wrap; gap: inherit; min-width: 0; }
+  .application.sr2e-look .sr2e-actionbar:not(.sr2e-qa-nomore) .sr2e-qa-more-wrap { display: inline-flex; position: relative; flex: 0 0 auto; }
+  .application.sr2e-look .sr2e-actionbar:not(.sr2e-qa-nomore) .sr2e-qa-more-btn { display: inline-flex; align-items: center; gap: 0.25rem; min-height: 24px; }
+  .application.sr2e-look .sr2e-actionbar:not(.sr2e-qa-nomore) .sr2e-qa-rest { display: none; }
+  .application.sr2e-look .sr2e-actionbar .sr2e-qa-more-wrap.sr2e-qa-open > .sr2e-qa-rest {
+    display: flex; flex-direction: column; align-items: stretch; gap: 0.15rem; position: absolute; top: calc(100% + 2px); left: 0; z-index: 20;
+    min-width: 12rem; max-height: 60vh; overflow-y: auto; padding: 0.3rem; background: var(--sr2e-window); color: var(--sr2e-ink);
+    border: 1px solid var(--sr2e-accent); border-radius: 4px; box-shadow: 0 4px 14px color-mix(in srgb, black 35%, transparent);
+  }
+  .application.sr2e-look .sr2e-actionbar .sr2e-qa-more-wrap.sr2e-qa-open > .sr2e-qa-rest > button { justify-content: flex-start; text-align: left; width: 100%; min-height: 24px; font-size: 0.8rem; }
+  .application.sr2e-look .sr2e-actionbar .sr2e-qa-more-btn[aria-expanded="true"] { border-color: var(--sr2e-accent); background: var(--sr2e-accent-tint); }
+}
+@container (max-width: 30rem) {
+  .application.sr2e-look .sr2e-actionbar:not(.sr2e-qa-nomore) .sr2e-qa-main,
+  .application.sr2e-look .sr2e-actionbar:not(.sr2e-qa-nomore) .sr2e-qa-urgent { display: inline-flex; flex: 0 1 auto; flex-wrap: wrap; gap: inherit; min-width: 0; }
+  .application.sr2e-look .sr2e-actionbar:not(.sr2e-qa-nomore) .sr2e-qa-more-wrap { display: inline-flex; position: relative; flex: 0 0 auto; }
+  .application.sr2e-look .sr2e-actionbar:not(.sr2e-qa-nomore) .sr2e-qa-more-btn { display: inline-flex; align-items: center; gap: 0.25rem; min-height: 24px; }
+  .application.sr2e-look .sr2e-actionbar:not(.sr2e-qa-nomore) .sr2e-qa-rest { display: none; }
+  .application.sr2e-look .sr2e-actionbar .sr2e-qa-more-wrap.sr2e-qa-open > .sr2e-qa-rest {
+    display: flex; flex-direction: column; align-items: stretch; gap: 0.15rem; position: absolute; top: calc(100% + 2px); left: 0; z-index: 20;
+    min-width: 12rem; max-height: 60vh; overflow-y: auto; padding: 0.3rem; background: var(--sr2e-window); color: var(--sr2e-ink);
+    border: 1px solid var(--sr2e-accent); border-radius: 4px; box-shadow: 0 4px 14px color-mix(in srgb, black 35%, transparent);
+  }
+  .application.sr2e-look .sr2e-actionbar .sr2e-qa-more-wrap.sr2e-qa-open > .sr2e-qa-rest > button { justify-content: flex-start; text-align: left; width: 100%; min-height: 24px; font-size: 0.8rem; }
+}
+/* The summary must not clip the open panel. */
+.application.sr2e-look .sr2e-summary:has(.sr2e-qa-open) { overflow: visible; position: relative; z-index: 7; }
+
+/* --- Firing-mode chips: the selected mode filled with the accent, in bold (aria-pressed). */
+.application.sr2e-look .sr2e-mode-group { display: inline-flex; gap: 1px; vertical-align: baseline; }
+.application.sr2e-look.sr2e.sheet button.sr2e-mode.active,
+.application.sr2e-look.sr2e.sheet button.sr2e-mode[aria-pressed="true"] {
+  --button-background-color: var(--sr2e-accent); --button-text-color: var(--sr2e-accent-ink); --button-border-color: var(--sr2e-accent);
+  background: var(--sr2e-accent); color: var(--sr2e-accent-ink); border-color: var(--sr2e-accent); font-weight: 700;
+}
+.application.sr2e-look.sr2e.sheet button.sr2e-mode:focus-visible { outline: 2px solid var(--sr2e-accent); outline-offset: 1px; }
+
+/* --- Pins by dragging: each pin with its ✕; the empty bar shows only while a row is dragged. */
+.application.sr2e-look .sr2e-pinbar .sr2e-pin-chip { display: inline-flex; align-items: stretch; }
+.application.sr2e-look .sr2e-pinbar .sr2e-pin-chip[draggable="true"] { cursor: grab; }
+.application.sr2e-look .sr2e-pinbar .sr2e-pin-chip > button { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.application.sr2e-look .sr2e-pinbar .sr2e-unpin {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 24px; min-height: 24px; padding: 0 0.25rem;
+  border: 1px solid color-mix(in srgb, var(--sr2e-accent) 55%, transparent); border-left: 0; border-radius: 0 3px 3px 0; color: var(--sr2e-muted); cursor: pointer;
+}
+.application.sr2e-look .sr2e-pinbar .sr2e-unpin:hover, .application.sr2e-look .sr2e-pinbar .sr2e-unpin:focus-visible { color: var(--sr2e-danger); outline: none; background: var(--sr2e-accent-tint); }
+.application.sr2e-look .sr2e-pinbar[data-sr2e-pin-empty] { display: none; }
+.application.sr2e-look .sr2e-sheet.sr2e-pin-dragging .sr2e-pinbar[data-sr2e-pin-empty] { display: flex; }
+.application.sr2e-look .sr2e-sheet.sr2e-pin-dragging .sr2e-pinbar { min-height: 28px; padding: 0.15rem 0.3rem; border: 1px dashed var(--sr2e-accent); border-radius: 4px; }
+.application.sr2e-look .sr2e-pinbar.sr2e-pin-over { background: var(--sr2e-accent-tint); border-style: solid; }
+.application.sr2e-look .sr2e-pinbar .sr2e-pin-hint { align-self: center; font-size: 0.8rem; color: var(--sr2e-muted); }
+.application.sr2e-look .sr2e-effects li[draggable="true"] { cursor: grab; }
+
+/* --- The vehicle sheet's status strip (actor-vehicle-sheet.hbs): the character strip's look, kept on one or two lines. */
+.application.sr2e-look .sr2e-vehicle > .sr2e-stuck { padding-bottom: 0.35rem; }
+.application.sr2e-look .sr2e-vstrip .sr2e-strip-track em { font-style: normal; color: var(--sr2e-danger); }
+.application.sr2e-look .sr2e-vstrip .sr2e-vstrip-jumped { color: var(--sr2e-accent); font-weight: 700; }
+.application.sr2e-look .sr2e-vstrip .sr2e-strip-danger { color: var(--sr2e-danger); font-weight: 700; }
+@media (max-width: 1100px), (max-height: 820px) {
+  .application.sr2e-look .sr2e-vstrip { padding: 0.2rem 0.45rem; gap: 0.2rem 0.6rem; }
+}
+
+/* v0.93.5 (Agent C): the GM panel's top row, the party view, Spend Karma with no Good Karma, progress bars. Our windows only. */
+
+/* The GM panel's top row: Undo, then History, Setup and Tools (they left the tab row). */
+.application.sr2e-look.sr2e-gm-panel .sr2e-gm-undobar { flex-wrap: wrap; }
+.application.sr2e-look.sr2e-gm-panel .sr2e-gm-views { display: inline-flex; gap: 0.3rem; flex: 0 0 auto; margin-left: auto; }
+.application.sr2e-look.sr2e-gm-panel .sr2e-gm-views button { min-height: 1.5rem; padding: 0 0.5rem; width: auto; white-space: nowrap; }
+.application.sr2e-look.sr2e-gm-panel .sr2e-gm-views button.active { border-color: var(--sr2e-accent); box-shadow: inset 0 -2px 0 var(--sr2e-accent); }
+
+/* The party view. */
+.application.sr2e-look.sr2e-party-view .sr2e-pv-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.35rem; }
+.application.sr2e-look.sr2e-party-view .sr2e-pv-row { display: flex; gap: 0.5rem; align-items: flex-start; padding: 0.35rem 0.4rem; border: 1px solid var(--sr2e-rule); background: var(--sr2e-raised); }
+.application.sr2e-look.sr2e-party-view .sr2e-pv-row.sr2e-acting { border-color: var(--sr2e-accent); box-shadow: inset 3px 0 0 var(--sr2e-accent); }
+.application.sr2e-look.sr2e-party-view .sr2e-pv-portrait { flex: 0 0 auto; width: 2.6rem; height: 2.6rem; object-fit: cover; object-position: top; border: 1px solid var(--sr2e-rule-strong); background: var(--sr2e-chip); }
+.application.sr2e-look.sr2e-party-view .sr2e-pv-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 0.15rem; }
+.application.sr2e-look.sr2e-party-view .sr2e-pv-head { display: flex; align-items: baseline; gap: 0.4rem; flex-wrap: wrap; }
+.application.sr2e-look.sr2e-party-view .sr2e-pv-name { font-weight: 700; color: var(--sr2e-ink); min-height: 1.5rem; display: inline-flex; align-items: center; }
+.application.sr2e-look.sr2e-party-view a.sr2e-pv-name { cursor: pointer; text-decoration: underline; text-decoration-color: var(--sr2e-rule-strong); }
+.application.sr2e-look.sr2e-party-view a.sr2e-pv-name:hover, .application.sr2e-look.sr2e-party-view a.sr2e-pv-name:focus-visible { color: var(--sr2e-accent); }
+.application.sr2e-look.sr2e-party-view .sr2e-pv-init { margin-left: auto; font-family: var(--sr2e-font-num); font-weight: 700; padding: 0 0.35rem; border: 1px solid var(--sr2e-accent); color: var(--sr2e-accent); }
+.application.sr2e-look.sr2e-party-view .sr2e-pv-vitals { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: baseline; font-size: 0.85rem; }
+.application.sr2e-look.sr2e-party-view .sr2e-pv-monitor { font-family: var(--sr2e-font-num); }
+.application.sr2e-look.sr2e-party-view .sr2e-pv-pools { font-size: 0.8rem; }
+.application.sr2e-look.sr2e-party-view .sr2e-pv-wound { padding: 0 0.4rem; border: 1px solid var(--sr2e-rule); background: var(--sr2e-chip); font-size: 0.8rem; }
+.application.sr2e-look.sr2e-party-view .sr2e-pv-wound-hurt { border-color: var(--sr2e-health); }
+.application.sr2e-look.sr2e-party-view .sr2e-pv-wound-badly { border-color: var(--sr2e-danger); color: var(--sr2e-danger); }
+.application.sr2e-look.sr2e-party-view .sr2e-pv-wound-down { border-color: var(--sr2e-danger); background: var(--sr2e-danger); color: var(--sr2e-on-fill); font-weight: 700; }
+
+/* Spend Karma: the no-Good-Karma banner, greyed rows, disabled buy buttons (the span carries the tooltip). */
+.application.sr2e-look .sr2e-spend .sr2e-spend-broke { margin: 0.4rem 0; padding: 0.4rem 0.6rem; border: 1px solid var(--sr2e-accent); border-left-width: 4px; background: var(--sr2e-accent-tint); color: var(--sr2e-ink); font-weight: 600; }
+.application.sr2e-look .sr2e-spend.sr2e-spend-none .sr2e-spend-table td { color: var(--sr2e-muted); }
+.application.sr2e-look .sr2e-spend .sr2e-spend-off { display: inline-block; cursor: help; }
+.application.sr2e-look .sr2e-spend .sr2e-spend-off button[disabled] { pointer-events: none; min-height: 1.5rem; color: var(--sr2e-muted); border-style: dashed; }
+
+/* Progress bars on long jobs (the scene builder's build). */
+.application.sr2e-look .sr2e-progress { display: flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0.6rem; font-size: 0.85rem; }
+.application.sr2e-look .sr2e-progress[hidden] { display: none; }
+.application.sr2e-look .sr2e-progress progress { flex: 1 1 auto; height: 0.75rem; accent-color: var(--sr2e-accent); }

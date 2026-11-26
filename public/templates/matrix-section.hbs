@@ -44,6 +44,13 @@
   </div>
   <div class="sr2e-row sr2e-matrix-actions">
     {{#if matrix.canMove}}<button type="button" data-action="jackIn"{{#if matrix.jackedIn}} title="{{sr2eT "SR2E.UI.gmGoStraightToAHost"}}"{{/if}}>{{#if matrix.jackedIn}}{{sr2eT "SR2E.UI.move"}}{{else}}{{sr2eT "SR2E.UI.jackIn"}}{{/if}}</button>{{/if}}
+    {{!-- v0.93.5 (plan item 48): until jacked in, the Matrix actions show greyed with the reason (they were hidden). --}}
+    {{#unless matrix.jackedIn}}
+      <button type="button" data-action="systemTest" class="sr2e-cant" aria-disabled="true" data-sr2e-unavailable data-tooltip="{{matrix.inMatrix.tip}}" data-tooltip-text="{{matrix.inMatrix.why}}">{{sr2eT "SR2E.UI.logOn"}}</button>
+      <button type="button" data-action="matrixAttack" class="sr2e-cant" aria-disabled="true" data-sr2e-unavailable data-tooltip="{{matrix.inMatrix.tip}}" data-tooltip-text="{{matrix.inMatrix.why}}">{{sr2eT "SR2E.UI.attack"}}</button>
+      <button type="button" data-action="matrixPerceive" class="sr2e-cant" aria-disabled="true" data-sr2e-unavailable data-tooltip="{{matrix.inMatrix.tip}}" data-tooltip-text="{{matrix.inMatrix.why}}">{{sr2eT "SR2E.UI.perceive"}}</button>
+      <button type="button" data-action="matrixManeuver" class="sr2e-cant" aria-disabled="true" data-sr2e-unavailable data-tooltip="{{matrix.inMatrix.tip}}" data-tooltip-text="{{matrix.inMatrix.why}}">{{sr2eT "SR2E.UI.maneuver"}}</button>
+    {{/unless}}
     {{#if matrix.jackedIn}}
       <button type="button" data-action="systemTest">{{#if matrix.host}}{{sr2eT "SR2E.UI.operation"}}{{else}}{{sr2eT "SR2E.UI.logOn"}}{{/if}}</button>
       <button type="button" data-action="matrixAttack">{{sr2eT "SR2E.UI.attack"}}</button>

@@ -6,7 +6,7 @@
  */
 import { SYSTEM } from '../config/system.ts';
 import {
-  systemWithAmount, copiesOf, gearStackKey, setupWarnings, pinAction, cleanPins, foldKey, matchesSearch,
+  systemWithAmount, copiesOf, gearStackKey, setupWarnings, pinAction, foldKey, matchesSearch,
   type BasketLine, type SetupWarning,
 } from '../rules/index.ts';
 import { arrivalReset } from './drops.ts';
@@ -15,6 +15,7 @@ import { creationRecordOf } from './approvals.ts';
 import { sortRows, nextSort, isSortMode, rowsHaveValue, LIST_FILTER_MIN, LIST_SORT_MIN } from '../rules/lists0934.ts';
 import type { SortMode, SortRow } from '../rules/lists0934.ts';
 import { headingName } from '../helpers/heading.ts';
+import { pinButtons, type PinEffect } from '../rules/pins935.ts';
 import { t as tx } from '../helpers/i18n.ts';
 
 /** What "ready to use" means for a type ('' = nothing to set). */
@@ -126,11 +127,13 @@ export function setSheetMode(doc: any, mode: 'edit' | 'play'): void {
 }
 
 /** What the templates need for the tools: pins (with their actions), a pin lookup, the setup warnings. */
-export function sheetToolsContext(actor: any, extra: { build?: Array<{ label: string; used: any; allowed: any; ok: boolean; note?: string }> } = {}): any {
+export function sheetToolsContext(actor: any, extra: { build?: Array<{ label: string; used: any; allowed: any; ok: boolean; note?: string }>; effects?: PinEffect[] } = {}): any {
   const items: any[] = [...(actor.items ?? [])];
-  const byId = new Map(items.map((i: any) => [i.id, i]));
-  const pinIds = cleanPins(actor.getFlag?.(SYSTEM.id, 'pins'), (id) => byId.has(id) && Boolean(pinAction(byId.get(id).type)));
-  const pins = pinIds.map((id) => { const i = byId.get(id); const a = pinAction(i.type)!; return { id, name: i.name, ...a }; });
+  // v0.93.5 (plan item 51): pins of pinnable items (as before) and of Effects-view rows (`fx:` keys).
+  const pins = pinButtons(actor.getFlag?.(SYSTEM.id, 'pins'), items.map((i: any) => ({ id: String(i.id), type: String(i.type), name: String(i.name) })), extra.effects ?? [],
+    (type) => pinAction(type));
+  const pinIds = pins.map((p) => p.key);
+  const canPin = Boolean(actor.isOwner) && ['character', 'npc'].includes(String(actor.type));
   const sys = actor.system ?? {};
   const d = sys.derived ?? {};
   const warnings: SetupWarning[] = ['character', 'npc'].includes(actor.type) ? setupWarnings({
@@ -146,7 +149,7 @@ export function sheetToolsContext(actor: any, extra: { build?: Array<{ label: st
     build: extra.build ?? [],
   }) : [];
   return {
-    pins, pinSet: Object.fromEntries(pinIds.map((id) => [id, true])),
+    pins, pinSet: Object.fromEntries(pinIds.map((id) => [id, true])), canPin, showPinbar: pins.length > 0 || canPin,
     warnings: warnings.slice(0, 30), warnMore: Math.max(0, warnings.length - 30),
     warnCount: warnings.filter((w) => w.level === 'warn').length, noteCount: warnings.filter((w) => w.level === 'note').length,
     mode: sheetMode(actor),

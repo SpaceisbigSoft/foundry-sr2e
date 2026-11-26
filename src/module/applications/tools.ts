@@ -59,6 +59,7 @@ function gmPanelAt(tab: string): void {
 /** What each tool does. A GM tool does nothing for a player (the window and toolbar never show it to one). */
 export const TOOL_ACTIONS: Record<string, () => void> = {
   guide: () => { openHelp(); },
+  partyView: () => { void (game as any).sr2e?.partyView?.(); },
   sheet: () => { runHotkey('openSheet'); },
   defend: () => { runHotkey('defendNewest'); },
   resist: () => { runHotkey('resistNewest'); },

@@ -22,6 +22,8 @@ export const TOOLS: readonly ToolDef[] = [
   { id: 'sheet', icon: 'fa-solid fa-id-card', who: 'player', toolbar: true, hotkey: 'openSheet' },
   // v0.91.1: the shop (the Add window, set to buy) for your character (the GM: the selected token).
   { id: 'shop', icon: 'fa-solid fa-store', who: 'player', toolbar: true },
+  // v0.93.5: the players' party view (report item 47).
+  { id: 'partyView', icon: 'fa-solid fa-users-viewfinder', who: 'player', toolbar: true },
   // v0.91.3: the Catalogue: browse everything you can get, a page per entry.
   { id: 'catalogue', icon: 'fa-solid fa-book-atlas', who: 'player', toolbar: true },
   { id: 'defend', icon: 'fa-solid fa-shield-halved', who: 'player', toolbar: true, hotkey: 'defendNewest' },

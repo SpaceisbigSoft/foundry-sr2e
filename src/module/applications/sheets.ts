@@ -73,6 +73,11 @@ import { promptPoolDice } from "./chat.ts";
 import { SHEET_TOOL_ACTIONS } from "./adding.ts";
 import { sheetToolsContext, decorateSheet, decorateItemSheet } from "./sheettools.ts";
 import { fitWindowSize } from "../rules/fit0934.ts";
+// v0.93.5: the action bar, pins by dragging, the vehicle strip.
+import { actionBar, enabledActions, modeChips, matrixActionState, jumpState, WHY, type ActionFacts, type BarAction } from "../rules/actions935.ts";
+import { vehicleStrip } from "../rules/vstrip935.ts";
+import { effectPinKey } from "../rules/pins935.ts";
+import { decorateSheet935, pinDropOnSheet } from "./sheets935.ts";
 // v0.68.0: layouts, the status strip, your turn, steppers, roll memory.
 import { stripContext, decorateInterface, currentLayout, rememberMarker } from "./interface.ts";
 import { tabIcon, FEEDS } from "../rules/index.ts";
@@ -93,6 +98,8 @@ import { openHelp } from "./help.ts";
 import { artSheetContext, useDefaultArt } from "./tokenart.ts";
 import { t as tx, tCount, tList, tKey } from '../helpers/i18n.ts';
 import { SYSTEM_ID } from "../config/system.ts";
+// v0.93.5: firing-mode-only rows and the Perception boxes by sense (agent A's dialog helpers).
+import { wireFireModeRows, senseChecksHtml } from './dialogs935.ts';
 
 /** v0.73.0 (O24): the known-hosts context for this decker and the viewing user. */
 function knowledgeCtx(actor: any): any {
@@ -149,6 +156,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     let data: any = null;
     try { data = TE?.getDragEventData?.(event) ?? null; } catch { data = null; }
     if (data?.type === REFERENCE_DRAG_TYPE) return dropReferenceEntry(this.document, data);
+    // v0.93.5 (plan item 51): a pin dragged off the pinned bar onto the rest of its sheet is unpinned.
+    if (await pinDropOnSheet(this, data)) return;
     return (super._onDrop as any)(event);
   }
 
@@ -428,6 +437,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     decorateSheet(this);
     // v0.68.0: the layout, section icons, your turn, the monitor's keyboard, steppers.
     decorateInterface(this);
+    // v0.93.5: greyed actions do nothing, the action bar's More…, pins by dragging.
+    decorateSheet935(this);
   }
 
   /** v0.64.0: after creation, a player raises ratings with Spend Karma, not by typing them. */
@@ -445,6 +456,10 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const actor: any = this.document;
     const items: any[] = [...actor.items];
     const summary = summaryContext(actor);
+    // v0.93.5 (plan item 51): the Effects view's rows carry their pin key (drag one onto the pinned bar).
+    const effects = effectsContext(actor);
+    for (const g of effects.groups) for (const r of g.rows as any[]) r.pinKey = effectPinKey(r);
+    const effectPins = effects.groups.flatMap((g) => g.rows.map((r: any) => ({ key: String(r.pinKey), name: String(r.name), detail: String(r.detail ?? "") })));
     return {
       ...context,
       actor,
@@ -455,7 +470,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       inCombat: Boolean(game.combat?.started),
       fullDefense: Boolean(actor.fullDefenseUp?.()),
       // v0.59.0: the Effects view.
-      effects: effectsContext(actor),
+      effects,
       attributes: ATTRIBUTE_KEYS.map((key) => ({
         key,
         // v0.93.3: the GM's own attribute labels (rules/customlists.ts; the default is the language file's).
@@ -474,7 +489,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       current: actor.type === "character" ? currentContext(actor) : null,
       creation: actor.type === "character" ? creationContext(actor) : null,
       // v0.63.0: pins, the setup warnings (with the saved build's failed checks), Edit/Play.
-      tools: sheetToolsContext(actor, { build: buildRowsFor(actor) }),
+      tools: sheetToolsContext(actor, { build: buildRowsFor(actor), effects: effectPins }),
       // v0.44.0
       // v0.58.0: Essence holes, training, unlicensed gear, the listening TN.
       essenceHoles: RULES.GEAR_V58.essenceHoles.enabled && actor.type !== "spirit",
@@ -513,6 +528,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       ...sheetLayout(actor, this.tabGroups?.primary),
       summary,
       quickActions: quickActions(actor, items),
+      // v0.93.5: the summary's bar (fixed order, greyed with the reason, More… in a narrow window).
+      actionBar: actionBarContext(actor, items),
       unarmed: { damageLabel: damageLabel(SR2Actor.unarmed().system), damageType: SR2Actor.unarmed().system.damageType },
       metatypeChoices: metatypeOptions(actor.system.metatype),
       // v0.83.0: the default token art (figure, archetype badge, the Use the default art button).
@@ -1095,7 +1112,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
           : `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.howObvious')}</label><select name="obv">${n.obviousness.map((o) => `<option value="${escHtml(o.id)}" ${o.id === "normal" ? "selected" : ""}>${escHtml(o.label)}${o.value ? ` (${o.value > 0 ? "+" : ""}${o.value})` : ""}</option>`).join("")}</select></div>`}
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.by')}</label><select name="sense"><option value="sight">${tx('SR2E.Dialog.Sheet.sightLightSmokeAndWeatherCount')}</option><option value="hearing">${tx('SR2E.Dialog.Sheet.hearingTheyDonT')}</option></select></div>
         ${targeted?.actor ? `<label class="sr2e-check"><input type="checkbox" name="at" checked> ${tx('SR2E.Dialog.Sheet.atItsLightWallsAndDistance', { targetedName: escHtml(targeted.name) })}</label>` : ""}
-        ${tableChecks(CO923.perceptionRows(), "per")}
+        ${senseChecksHtml(CO923.perceptionRows(), "per")}
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.otherTnModifier')}</label><input name="mod" type="number" value="0"></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.searchingTakesOptional')}</label><input name="time" type="number" min="0" step="0.5" value="0"> <select name="unit">${units.map((u) => `<option value="${escHtml(u.id)}" ${u.id === "minutes" ? "selected" : ""}>${escHtml(u.label)}</option>`).join("")}</select></div>
         <label class="sr2e-check"><input type="checkbox" name="whisper" ${game.user?.isGM ? "checked" : ""}> ${tx('SR2E.Dialog.Sheet.whisperTheResultToTheGm')}</label>
@@ -1250,7 +1267,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
   static async #onPerceive(this: SR2CharacterSheet) {
     const actor: any = this.document;
     const r = await SR2CharacterSheet.#pickPerson(actor, tx('SR2E.Dialog.Sheet.perceive', { actorName: actor.name }), `<label class="sr2e-check"><input type="checkbox" name="whisper" ${game.user?.isGM ? "checked" : ""}> ${tx('SR2E.Dialog.Sheet.whisperTheResultToTheGm')}</label>
-      ${tableChecks(CO923.perceptionRows(), "per")}
+      ${senseChecksHtml(CO923.perceptionRows(), "per")}
       <p class="hint">${CO923.perceptionMode() === 'opposed' ? tx('SR2E.Dialog.Sheet.sOrVsTheirStealthTheir', { actorName: escHtml(actor.name), perceptionSkill: escHtml(cap(RULES.PERCEPTION.skill)), perceptionAttribute: escHtml(cap(RULES.PERCEPTION.attribute)) })
         : CO923.perceptionMode() === 'companion' ? tx('SR2E.Dialog.Core923.perceiveCompanion', { actorName: escHtml(actor.name), tn: CO923.bookPerceptionTargets({}).observerTn, stealth: escHtml(RULES.PERCEPTION.stealthSkill) })
         : tx('SR2E.Dialog.Core923.perceiveBook', { actorName: escHtml(actor.name), tn: CO923.bookPerceptionTargets({}).observerTn })}</p>`,
@@ -1318,7 +1335,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const r = await foundry.applications.api.DialogV2.prompt({
       window: { title: tx('SR2E.Dialog.Sheet.sneak2', { actorName: actor.name }) },
       content: `<fieldset class="sr2e-situational"><legend>${tx('SR2E.Dialog.Sheet.pastWhom')}</legend>${near.map((t: any) => `<label class="sr2e-check"><input type="checkbox" name="who" value="${escHtml(t.actor.uuid)}" ${targeted.has(t.actor.uuid) || !targeted.size ? "checked" : ""}> ${escHtml(t.name)}</label>`).join("")}</fieldset>
-        ${tableChecks(CO923.perceptionRows(), "per")}${spec}
+        ${senseChecksHtml(CO923.perceptionRows(), "per")}${spec}
         <label class="sr2e-check"><input type="checkbox" name="whisper" ${game.user?.isGM ? "checked" : ""}> ${tx('SR2E.Dialog.Sheet.whisperTheResultToTheGm')}</label>
         <p class="hint">${CO923.perceptionMode() === 'opposed' ? tx('SR2E.Dialog.Sheet.onceAgainstTheSharpestEachObserver', { perceptionStealthSkill: RULES.PERCEPTION.stealthSkill, perceptionAttribute: escHtml(cap(RULES.PERCEPTION.attribute)), perceptionSkill: escHtml(cap(RULES.PERCEPTION.skill)) })
           : CO923.perceptionMode() === 'companion' ? tx('SR2E.Dialog.Core923.sneakCompanion', { tn: CO923.bookPerceptionTargets({}).observerTn, stealth: escHtml(RULES.PERCEPTION.stealthSkill) })
@@ -3242,8 +3259,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       ? ""
       : `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.firingMode')}</label>
           <select name="mode">${modes.map((m) => `<option value="${m}">${m}</option>`).join("")}</select></div>
-        ${modes.includes("FA") ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.fullAutoRounds', { firingFullAutoMin: RULES.FIRING.fullAutoMin, firingFullAutoMax: RULES.FIRING.fullAutoMax })}</label><input name="faRounds" type="number" value="${RULES.FIRING.fullAutoMin}" min="${RULES.FIRING.fullAutoMin}" max="${RULES.FIRING.fullAutoMax}"></div>` : ""}
-        ${extraTargets ? `<fieldset class="sr2e-situational"><legend>${tx('SR2E.Dialog.Sheet.fullAutoAlsoSprayRoundsSplit', { spreadFireWastedRoundsPerMetre: RULES.COMBAT.spreadFire.wastedRoundsPerMetre })}</legend>${extraTargets}</fieldset>` : ""}
+        ${modes.includes("FA") ? `<div class="form-group" data-sr2e-fire-modes="FA"><label>${tx('SR2E.Dialog.Sheet.fullAutoRounds', { firingFullAutoMin: RULES.FIRING.fullAutoMin, firingFullAutoMax: RULES.FIRING.fullAutoMax })}</label><input name="faRounds" type="number" value="${RULES.FIRING.fullAutoMin}" min="${RULES.FIRING.fullAutoMin}" max="${RULES.FIRING.fullAutoMax}"></div>` : ""}
+        ${extraTargets ? `<fieldset class="sr2e-situational" data-sr2e-fire-modes="FA"><legend>${tx('SR2E.Dialog.Sheet.fullAutoAlsoSprayRoundsSplit', { spreadFireWastedRoundsPerMetre: RULES.COMBAT.spreadFire.wastedRoundsPerMetre })}</legend>${extraTargets}</fieldset>` : ""}
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.roundsAlreadyFiredThisPhaseRecoil', { part: w.heavy ? tx('SR2E.Dialog.Sheet.heavy', { combatHeavyRecoilMultiplier: RULES.COMBAT.heavyRecoilMultiplier }) : "", part2: w.gyro ? tx('SR2E.Dialog.Sheet.gyro', { gyro: escHtml(w.gyro) }) : "", part3: tracked.phase ? tx('SR2E.Dialog.Sheet.tracked') : "" })}</label><input name="earlier" type="number" value="${escHtml(tracked.rounds)}" min="0"></div>
         ${ammoRow}
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.barrierArmorWallsShotThrough')}</label><input name="barrier" type="number" value="${here.barrierArmor}" min="0"></div>
@@ -3563,6 +3580,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
           const form = root?.querySelector("form") ?? null;
           if (!form) return;
           applyPrefs(form);
+          wireFireModeRows(form);
           const select = form.querySelector<HTMLSelectElement>('select[name="target"]');
           select?.addEventListener("change", () => {
             latest = check(select.value || null);
@@ -4565,6 +4583,8 @@ function matrixContext(actor: any) {
     // v0.73.0 (O24): the code shows once the character has analyzed the host (the GM always).
     host: host ? { uuid: host.uuid, name: host.name, code: host.system.securityCode, value: host.system.securityValue, known: actor.hostKnowledgeOf ? actor.hostKnowledgeOf(host) === "analyzed" : true } : null,
     jackedIn: actor.isJackedIn?.() ?? false,
+    // v0.93.5 (plan item 48): the in-the-Matrix buttons show greyed, with the reason, until the decker is jacked in.
+    inMatrix: (() => { const st = matrixActionState(Boolean(actor.isJackedIn?.())); return { enabled: st.enabled, why: whyText(st.why), tip: escHtml(whyText(st.why)) }; })(),
     // v0.70.0: Move (straight to a host, no test) is the GM's shortcut once jacked in; players log on through Operation.
     canMove: !(actor.isJackedIn?.() ?? false) || Boolean(game.user?.isGM) || !RULES.FIXES_V70.matrixMoveGmOnly,
     isGM: Boolean(game.user?.isGM),
@@ -6079,8 +6099,7 @@ function summaryContext(actor: any): any {
   const sys = actor.system, d = sys.derived ?? {};
   const pools = poolsOf(actor);
   const chips: string[] = [];
-  // v0.93.4: the metatype is its own chip (the compact top at 1024×768 hides it: the Metatype field shows it).
-  const meta = d.metatype && d.metatype !== "Human" ? String(d.metatype) : "";
+  // v0.93.5 (the visual review): no metatype chip: it repeated the Metatype field just above it.
   if (d.astralMode && d.astralMode !== "physical") chips.push(d.astralMode);
   if (d.matrix?.jackedIn) chips.push(tx('SR2E.App.Sheets.jackedIn'));
   if (actor.isBroken?.()) chips.push(tx('SR2E.App.Sheets.broken'));
@@ -6119,51 +6138,123 @@ function summaryContext(actor: any): any {
     if (["unconscious", "bleeding", "dead"].includes(st) || String(st).startsWith("sr2eWound")) continue;
     chips.push(statusLabel(String(st)));
   }
-  return { pools, chips, meta, showRow: Boolean(meta || chips.length) };
+  return { pools, chips, showRow: chips.length > 0 };
 }
 
-/** The quick-action bar: the actions that apply to this character. */
-function quickActions(actor: any, items: any[]): Array<{ action: string; label: string; icon: string; title: string; itemId?: string }> {
+/**
+ * v0.93.5 (plan item 48; the visual review): the bar in one fixed order (rules/actions935.ts), with the actions that
+ * apply to this kind of character but can't be used now greyed with the reason, instead of hidden. `quickActions` keeps
+ * the buttons that can be used now (the Combat column's list); `actionBarContext` gives the summary's bar.
+ */
+export function actionFactsOf(actor: any, items: any[]): ActionFacts {
   const d = actor.system.derived ?? {};
-  const out: Array<{ action: string; label: string; icon: string; title: string; itemId?: string }> = [{ action: "quickAttack", label: tx('SR2E.App.Sheets.attack'), icon: "fa-solid fa-crosshairs", title: tx('SR2E.App.Sheets.pickAWeaponAndAttack') }];
-  if (items.some((i) => i.type === "spell")) out.push({ action: "quickCast", label: tx('SR2E.App.Sheets.cast'), icon: "fa-solid fa-wand-sparkles", title: tx('SR2E.App.Sheets.pickASpellAndCast') });
-  if (actor.findSkill?.("Conjuring")) out.push({ action: "summonSpirit", label: tx('SR2E.App.Sheets.summon'), icon: "fa-solid fa-ghost", title: tx('SR2E.App.Sheets.summonASpirit') });
-  if (actor.isAstral?.()) out.push({ action: "assense", label: tx('SR2E.App.Sheets.assense'), icon: "fa-solid fa-eye", title: tx('SR2E.App.Sheets.assense') }, { action: "astralAttack", label: tx('SR2E.App.Sheets.astralAttack'), icon: "fa-solid fa-hand-sparkles", title: tx('SR2E.App.Sheets.astralAttack') });
-  if (items.some((i) => i.type === "weapon" && i.system.ammoMax > 0)) out.push({ action: "quickReload", label: tx('SR2E.App.Sheets.reload'), icon: "fa-solid fa-rotate", title: tx('SR2E.App.Sheets.reloadAWeapon') });
-  out.push({ action: "firstAid", label: tx('SR2E.App.Sheets.firstAid'), icon: "fa-solid fa-kit-medical", title: tx('SR2E.App.Sheets.firstAidOnYourselfOr') });
-  out.push({ action: "naturalHeal", label: tx('SR2E.App.Sheets.rest'), icon: "fa-solid fa-bed", title: tx('SR2E.App.Sheets.restAndHeal') });
-  if (game.combat?.started) out.push(actor.fullDefenseUp?.() ? { action: "fullDefense", label: tx('SR2E.App.Sheets.onFullDefense'), icon: "fa-solid fa-shield-halved", title: tx('SR2E.App.Sheets.alreadyOnFullDefenseUntil') }
-    : { action: "fullDefense", label: tx('SR2E.App.Sheets.fullDefense'), icon: "fa-solid fa-shield-halved", title: C923.fullDefenseBook() ? tx('SR2E.App.Combat923.declareFullDefense') : tx('SR2E.App.Sheets.declareFullDefense', { attribute: RULES.COMBAT.fullDefense.attribute, cost: RULES.COMBAT.fullDefense.initiativeCost }) });
-  if (actor.isDelaying?.()) out.push({ action: "actNow", label: tx('SR2E.App.Sheets.actNow'), icon: "fa-solid fa-forward", title: tx('SR2E.App.Sheets.takeYourDelayedActionNow') });
-  else if (actor.actingNow?.()) out.push({ action: "endDelayed", label: tx('SR2E.App.Sheets.done'), icon: "fa-solid fa-check", title: tx('SR2E.App.Sheets.finishYourDelayedAction') });
-  else if (actor.isActing?.() && game.combat?.started) out.push({ action: "delayAction", label: tx('SR2E.App.Sheets.delay'), icon: "fa-solid fa-hourglass-half", title: tx('SR2E.App.Sheets.holdYourActionUntilLater') });
-  for (const w of items.filter((i: any) => i.type === "weapon" && i.system.jammed)) out.push({ action: "clearJam", label: tx('SR2E.App.Sheets.clearJam'), icon: "fa-solid fa-wrench", title: tx('SR2E.App.Sheets.clearTheJamIn', { name: w.name }), itemId: w.id });
-  out.push({ action: "perceive", label: tx('SR2E.App.Sheets.perceive'), icon: "fa-solid fa-magnifying-glass", title: tx('SR2E.App.Sheets.opposedPerceptionAgainstSomeoneSneaking') });
-  // v0.58.0: a plain Perception test, and negotiating pay.
-  out.push({ action: "notice", label: tx('SR2E.App.Sheets.notice'), icon: "fa-solid fa-eye", title: tx('SR2E.App.Sheets.aPlainPerceptionTestNotice') });
-  if (actor.type === "character") out.push({ action: "negotiatePay", label: tx('SR2E.App.Sheets.pay'), icon: "fa-solid fa-handshake", title: tx('SR2E.App.Sheets.negotiateAJobsPayWith') });
-  out.push({ action: "sneak", label: tx('SR2E.App.Sheets.sneak'), icon: "fa-solid fa-user-secret", title: tx('SR2E.App.Sheets.sneakPastOneOrMore') });
-  out.push({ action: "athletics", label: tx('SR2E.App.Sheets.athletics'), icon: "fa-solid fa-person-swimming", title: tx('SR2E.App.Sheets.climbSwimOrJump') });
-  if (actor.findSkill?.(RULES.STREET.rally.skill)) out.push({ action: "rally", label: tx('SR2E.App.Sheets.rally'), icon: "fa-solid fa-bullhorn", title: tx('SR2E.App.Sheets.rallyABrokenGroupLeadership') });
-  out.push({ action: "searchPerson", label: tx('SR2E.App.Sheets.search'), icon: "fa-solid fa-hand", title: tx('SR2E.App.Sheets.lookSomeoneOverFriskThem') });
-  out.push({ action: "socialTest", label: tx('SR2E.App.Sheets.social'), icon: "fa-solid fa-comments", title: tx('SR2E.App.Sheets.aSocialTestNegotiationEtiquette') });
-  if ((actor.system.grunts?.size ?? 1) > 1 || (actor.system.professionalRating ?? 0) > 0) out.push({ action: "moraleTest", label: tx('SR2E.App.Sheets.morale'), icon: "fa-solid fa-flag", title: tx('SR2E.App.Sheets.moraleTestProfessionalRating') });
-  // v0.55.0: burning, held, holding.
-  if (actor.getFlag?.(SYSTEM.id, "onFire")) out.push({ action: "putOutFire", label: tx('SR2E.App.Sheets.putOutFire'), icon: "fa-solid fa-fire-extinguisher", title: tx('SR2E.App.Sheets.putOutTheFlames', { action: RULES.COMBAT.burning.putOut }) });
-  if (actor.getFlag?.(SYSTEM.id, "heldBy")) out.push({ action: "breakFree", label: tx('SR2E.App.Sheets.breakFree'), icon: "fa-solid fa-person-running", title: tx('SR2E.App.Sheets.breakFreeOfTheHold') });
-  if (game.combat?.started) out.push({ action: "holdTarget", label: tx('SR2E.App.Sheets.hold'), icon: "fa-solid fa-hand-fist", title: tx('SR2E.App.Sheets.grabAndPinTheTargeted') });
-  if (actor.hasStatus?.("prone")) out.push({ action: "standUp", label: tx('SR2E.App.Sheets.standUp'), icon: "fa-solid fa-person-arrow-up-from-line", title: tx('SR2E.App.Sheets.standUpAction', { action: RULES.STATUSES.prone.standAction }) });
-  if (allActors().some((a: any) => a.type === "site" && (a.system.devices ?? []).some((d: any) => DEVICE_LOCKS.includes(d.kind) && !d.bypassed))) out.push({ action: "quickBypass", label: tx('SR2E.App.Sheets.bypass'), icon: "fa-solid fa-lock-open", title: tx('SR2E.App.Sheets.bypassAMaglockOrDoor') });
-  if (game.combat) out.push({ action: "rollInit", label: tx('SR2E.App.Sheets.initiative'), icon: "fa-solid fa-dice", title: tx('SR2E.App.Sheets.rollInitiativeIntoTheCurrent') });
-  if (d.rigging?.vehicleUuid) out.push({ action: "driveVehicle", label: tx('SR2E.App.Sheets.drive'), icon: "fa-solid fa-car", title: tx('SR2E.App.Sheets.drivingTestWithTheVehicle') });
-  if ((actor.jammerRating?.() ?? 0) > 0) out.push({ action: "jamLink", label: tx('SR2E.App.Sheets.jam'), icon: "fa-solid fa-tower-broadcast", title: tx('SR2E.App.Sheets.jamADronesRemoteLink') });
-  // v0.73.0 (O28): intercept or spoof a drone's link.
-  if (RULES.DRONES_V73.link.enabled && (actor.type === "character" || actor.type === "npc") && allActors().some((a: any) => a.type === "vehicle")) out.push({ action: "droneLink", label: tx('SR2E.App.Sheets.droneLink'), icon: "fa-solid fa-satellite-dish", title: tx('SR2E.App.Sheets.interceptADronesRemoteLink') });
-  if (d.matrix) out.push(d.matrix.jackedIn ? { action: "jackOut", label: tx('SR2E.App.Sheets.jackOut'), icon: "fa-solid fa-plug-circle-xmark", title: tx('SR2E.App.Sheets.jackOut') } : { action: "jackIn", label: tx('SR2E.App.Sheets.jackIn'), icon: "fa-solid fa-plug", title: tx('SR2E.App.Sheets.jackIn') });
-  // v0.57.0: riding a decker's hitcher jack.
-  if (actor.system.matrix?.ridingWith) out.push({ action: "hitchRide", label: tx('SR2E.App.Sheets.unhitch'), icon: "fa-solid fa-link-slash", title: tx('SR2E.App.Sheets.unplugFromHitcherJack', { name: fromUuidSync(actor.system.matrix.ridingWith)?.name ?? tx('SR2E.App.Sheets.theDecker') }) });
-  else if (!d.matrix && allActors().some((a: any) => a !== actor && (a.activeDeck?.()?.system?.hitchers ?? 0) > 0)) out.push({ action: "hitchRide", label: tx('SR2E.App.Sheets.hitch'), icon: "fa-solid fa-link", title: tx('SR2E.App.Sheets.rideAlongOnADeckers') });
-  return out;
+  const sys = actor.system ?? {};
+  return {
+    actorType: String(actor.type ?? ""),
+    combat: Boolean(game.combat), combatStarted: Boolean(game.combat?.started),
+    acting: Boolean(actor.isActing?.()), delaying: Boolean(actor.isDelaying?.()), actingNow: Boolean(actor.actingNow?.()),
+    fullDefenseUp: Boolean(actor.fullDefenseUp?.()),
+    spells: items.filter((i) => i.type === "spell").length,
+    caster: Number(d.magic ?? 0) > 0 && String(sys.tradition ?? "none") !== "adept",
+    conjuring: Boolean(actor.findSkill?.("Conjuring")),
+    astral: Boolean(actor.isAstral?.()),
+    ammoWeapons: items.filter((i) => i.type === "weapon" && i.system.ammoMax > 0).length,
+    jammed: items.filter((i: any) => i.type === "weapon" && i.system.jammed).map((w: any) => ({ id: w.id, name: w.name })),
+    rigger: Boolean(d.rigging), vehicle: Boolean(d.rigging?.vehicleUuid),
+    jammer: (actor.jammerRating?.() ?? 0) > 0,
+    droneLink: RULES.DRONES_V73.link.enabled && (actor.type === "character" || actor.type === "npc") && allActors().some((a: any) => a.type === "vehicle"),
+    decks: items.filter((i) => i.type === "cyberdeck").length, deckActive: Boolean(d.matrix), jackedIn: Boolean(d.matrix?.jackedIn),
+    riding: Boolean(sys.matrix?.ridingWith),
+    hitchAvailable: !d.matrix && !sys.matrix?.ridingWith && allActors().some((a: any) => a !== actor && (a.activeDeck?.()?.system?.hitchers ?? 0) > 0),
+    onFire: Boolean(actor.getFlag?.(SYSTEM.id, "onFire")), held: Boolean(actor.getFlag?.(SYSTEM.id, "heldBy")), prone: Boolean(actor.hasStatus?.("prone")),
+    bypass: allActors().some((a: any) => a.type === "site" && (a.system.devices ?? []).some((dv: any) => DEVICE_LOCKS.includes(dv.kind) && !dv.bypassed)),
+    rallySkill: Boolean(actor.findSkill?.(RULES.STREET.rally.skill)),
+    morale: (sys.grunts?.size ?? 1) > 1 || (sys.professionalRating ?? 0) > 0,
+  };
+}
+
+/** v0.93.5: a greyed action's reason (rules/actions935.ts WHY) in the user's language ('' for none). */
+function whyText(key: string): string {
+  switch (key) {
+    case WHY.noSpells: return tx('SR2E.App.Sheets.whyNoSpells');
+    case WHY.noConjuring: return tx('SR2E.App.Sheets.whyNoConjuring');
+    case WHY.notAstral: return tx('SR2E.App.Sheets.whyNotAstral');
+    case WHY.noAmmoWeapon: return tx('SR2E.App.Sheets.whyNoAmmoWeapon');
+    case WHY.notInCombat: return tx('SR2E.App.Sheets.whyNotInCombat');
+    case WHY.notYourAction: return tx('SR2E.App.Sheets.whyNotYourAction');
+    case WHY.noEncounter: return tx('SR2E.App.Sheets.whyNoEncounter');
+    case WHY.noVehicle: return tx('SR2E.App.Sheets.whyNoVehicle');
+    case WHY.noDeckInUse: return tx('SR2E.App.Sheets.whyNoDeckInUse');
+    case WHY.notJackedIn: return tx('SR2E.App.Sheets.whyNotJackedIn');
+    case WHY.noControlRig: return tx('SR2E.App.Sheets.whyNoControlRig');
+    default: return "";
+  }
+}
+
+type QuickButton = { action: string; label: string; icon: string; title: string; itemId?: string; enabled?: boolean; why?: string; tip?: string; group?: string };
+
+/** A bar action's label, icon and tooltip (the texts the bar has always had). */
+function quickButton(actor: any, a: BarAction): QuickButton {
+  const b = (label: string, icon: string, title: string): QuickButton => ({ action: a.action, label, icon, title, ...(a.itemId ? { itemId: a.itemId } : {}) });
+  switch (a.variant) {
+    case "quickAttack": return b(tx('SR2E.App.Sheets.attack'), "fa-solid fa-crosshairs", tx('SR2E.App.Sheets.pickAWeaponAndAttack'));
+    case "quickCast": return b(tx('SR2E.App.Sheets.cast'), "fa-solid fa-wand-sparkles", tx('SR2E.App.Sheets.pickASpellAndCast'));
+    case "summonSpirit": return b(tx('SR2E.App.Sheets.summon'), "fa-solid fa-ghost", tx('SR2E.App.Sheets.summonASpirit'));
+    case "assense": return b(tx('SR2E.App.Sheets.assense'), "fa-solid fa-eye", tx('SR2E.App.Sheets.assense'));
+    case "astralAttack": return b(tx('SR2E.App.Sheets.astralAttack'), "fa-solid fa-hand-sparkles", tx('SR2E.App.Sheets.astralAttack'));
+    case "quickReload": return b(tx('SR2E.App.Sheets.reload'), "fa-solid fa-rotate", tx('SR2E.App.Sheets.reloadAWeapon'));
+    case "firstAid": return b(tx('SR2E.App.Sheets.firstAid'), "fa-solid fa-kit-medical", tx('SR2E.App.Sheets.firstAidOnYourselfOr'));
+    case "naturalHeal": return b(tx('SR2E.App.Sheets.rest'), "fa-solid fa-bed", tx('SR2E.App.Sheets.restAndHeal'));
+    case "fullDefenseUp": return b(tx('SR2E.App.Sheets.onFullDefense'), "fa-solid fa-shield-halved", tx('SR2E.App.Sheets.alreadyOnFullDefenseUntil'));
+    case "fullDefense": return b(tx('SR2E.App.Sheets.fullDefense'), "fa-solid fa-shield-halved", C923.fullDefenseBook() ? tx('SR2E.App.Combat923.declareFullDefense') : tx('SR2E.App.Sheets.declareFullDefense', { attribute: RULES.COMBAT.fullDefense.attribute, cost: RULES.COMBAT.fullDefense.initiativeCost }));
+    case "actNow": return b(tx('SR2E.App.Sheets.actNow'), "fa-solid fa-forward", tx('SR2E.App.Sheets.takeYourDelayedActionNow'));
+    case "endDelayed": return b(tx('SR2E.App.Sheets.done'), "fa-solid fa-check", tx('SR2E.App.Sheets.finishYourDelayedAction'));
+    case "delayAction": return b(tx('SR2E.App.Sheets.delay'), "fa-solid fa-hourglass-half", tx('SR2E.App.Sheets.holdYourActionUntilLater'));
+    case "clearJam": return b(tx('SR2E.App.Sheets.clearJam'), "fa-solid fa-wrench", tx('SR2E.App.Sheets.clearTheJamIn', { name: a.name ?? "" }));
+    case "perceive": return b(tx('SR2E.App.Sheets.perceive'), "fa-solid fa-magnifying-glass", tx('SR2E.App.Sheets.opposedPerceptionAgainstSomeoneSneaking'));
+    // v0.58.0: a plain Perception test, and negotiating pay.
+    case "notice": return b(tx('SR2E.App.Sheets.notice'), "fa-solid fa-eye", tx('SR2E.App.Sheets.aPlainPerceptionTestNotice'));
+    case "negotiatePay": return b(tx('SR2E.App.Sheets.pay'), "fa-solid fa-handshake", tx('SR2E.App.Sheets.negotiateAJobsPayWith'));
+    case "sneak": return b(tx('SR2E.App.Sheets.sneak'), "fa-solid fa-user-secret", tx('SR2E.App.Sheets.sneakPastOneOrMore'));
+    case "athletics": return b(tx('SR2E.App.Sheets.athletics'), "fa-solid fa-person-swimming", tx('SR2E.App.Sheets.climbSwimOrJump'));
+    case "rally": return b(tx('SR2E.App.Sheets.rally'), "fa-solid fa-bullhorn", tx('SR2E.App.Sheets.rallyABrokenGroupLeadership'));
+    case "searchPerson": return b(tx('SR2E.App.Sheets.search'), "fa-solid fa-hand", tx('SR2E.App.Sheets.lookSomeoneOverFriskThem'));
+    case "socialTest": return b(tx('SR2E.App.Sheets.social'), "fa-solid fa-comments", tx('SR2E.App.Sheets.aSocialTestNegotiationEtiquette'));
+    case "moraleTest": return b(tx('SR2E.App.Sheets.morale'), "fa-solid fa-flag", tx('SR2E.App.Sheets.moraleTestProfessionalRating'));
+    // v0.55.0: burning, held, holding.
+    case "putOutFire": return b(tx('SR2E.App.Sheets.putOutFire'), "fa-solid fa-fire-extinguisher", tx('SR2E.App.Sheets.putOutTheFlames', { action: RULES.COMBAT.burning.putOut }));
+    case "breakFree": return b(tx('SR2E.App.Sheets.breakFree'), "fa-solid fa-person-running", tx('SR2E.App.Sheets.breakFreeOfTheHold'));
+    case "holdTarget": return b(tx('SR2E.App.Sheets.hold'), "fa-solid fa-hand-fist", tx('SR2E.App.Sheets.grabAndPinTheTargeted'));
+    case "standUp": return b(tx('SR2E.App.Sheets.standUp'), "fa-solid fa-person-arrow-up-from-line", tx('SR2E.App.Sheets.standUpAction', { action: RULES.STATUSES.prone.standAction }));
+    case "quickBypass": return b(tx('SR2E.App.Sheets.bypass'), "fa-solid fa-lock-open", tx('SR2E.App.Sheets.bypassAMaglockOrDoor'));
+    case "rollInit": return b(tx('SR2E.App.Sheets.initiative'), "fa-solid fa-dice", tx('SR2E.App.Sheets.rollInitiativeIntoTheCurrent'));
+    case "driveVehicle": return b(tx('SR2E.App.Sheets.drive'), "fa-solid fa-car", tx('SR2E.App.Sheets.drivingTestWithTheVehicle'));
+    case "jamLink": return b(tx('SR2E.App.Sheets.jam'), "fa-solid fa-tower-broadcast", tx('SR2E.App.Sheets.jamADronesRemoteLink'));
+    // v0.73.0 (O28): intercept or spoof a drone's link.
+    case "droneLink": return b(tx('SR2E.App.Sheets.droneLink'), "fa-solid fa-satellite-dish", tx('SR2E.App.Sheets.interceptADronesRemoteLink'));
+    case "jackOut": return b(tx('SR2E.App.Sheets.jackOut'), "fa-solid fa-plug-circle-xmark", tx('SR2E.App.Sheets.jackOut'));
+    case "jackIn": return b(tx('SR2E.App.Sheets.jackIn'), "fa-solid fa-plug", tx('SR2E.App.Sheets.jackIn'));
+    // v0.57.0: riding a decker's hitcher jack.
+    case "unhitch": return b(tx('SR2E.App.Sheets.unhitch'), "fa-solid fa-link-slash", tx('SR2E.App.Sheets.unplugFromHitcherJack', { name: fromUuidSync(actor.system.matrix?.ridingWith)?.name ?? tx('SR2E.App.Sheets.theDecker') }));
+    case "hitch": return b(tx('SR2E.App.Sheets.hitch'), "fa-solid fa-link", tx('SR2E.App.Sheets.rideAlongOnADeckers'));
+    default: return b(a.action, "fa-solid fa-circle", a.action);
+  }
+}
+
+function quickActions(actor: any, items: any[]): QuickButton[] {
+  return enabledActions(actionFactsOf(actor, items)).map((a) => quickButton(actor, a));
+}
+
+/** v0.93.5: the summary's bar: the primary row, the rest (behind More… in a narrow window) and the urgent ones last. */
+function actionBarContext(actor: any, items: any[]): { main: QuickButton[]; rest: QuickButton[]; urgent: QuickButton[] } {
+  const all = actionBar(actionFactsOf(actor, items)).map((a) => {
+    const q = quickButton(actor, a);
+    if (a.enabled) return { ...q, enabled: true, group: a.group };
+    const why = whyText(a.why);
+    // Foundry renders data-tooltip as HTML: the template escapes this escaped copy once more (rules/html.ts).
+    return { ...q, enabled: false, why, tip: escHtml(`${q.title} · ${why}`), group: a.group };
+  });
+  return { main: all.filter((a) => a.group === "main"), rest: all.filter((a) => a.group === "rest"), urgent: all.filter((a) => a.group === "urgent") };
 }
 
 /** v0.58.0: a gear row's extras: tools, vision gear, surveillance gear and legality, and which buttons it gets. */
@@ -6277,6 +6368,8 @@ export function weaponRow(actor: any, i: any): any {
     // v0.37.0: ammo as pips (up to 40 rounds), and a button per firing mode.
     pips: !w.melee && w.ammoMax > 0 && w.ammoMax <= 40 ? Array.from({ length: w.ammoMax }, (_x, k) => k < (w.ammo ?? 0)) : null,
     modeButtons: w.melee ? [] : parseFiringModes(w.modes ?? ""),
+    // v0.93.5 (the visual review): the selected mode (the last attack's, else the first) shows pressed.
+    modeActive: w.melee ? "" : (modeChips(parseFiringModes(w.modes ?? "") as string[], (actor.getFlag?.(SYSTEM.id, "attackPrefs") as any)?.[i.id]?.mode).find((c) => c.active)?.mode ?? ""),
     // v0.43.0: accessories, and a bipod or tripod to set up.
     accessoryLabel: w.melee ? "" : [w.laserSight ? tx('SR2E.App.Sheets.laser') : "", (w.scope ?? 0) > 0 ? tx('SR2E.App.Sheets.scopeValue', { scope: w.scope }) : "", w.shockPad ? tx('SR2E.App.Sheets.shockPad') : "", w.fuse ? tx('SR2E.App.Sheets.fuseValue', { fuse: w.fuse }) : "", w.smartGrenade ? tx('SR2E.App.Sheets.smart') : ""].filter(Boolean).join(", "),
     support: !w.melee && ["bipod", "tripod"].includes(w.support) ? w.support : "",
@@ -6338,6 +6431,8 @@ function riggingContext(actor: any) {
     vcr: r.vcr, reaction: r.reaction, initiativeDice: r.initiativeDice, jumpedIn: r.jumpedIn,
     pool: actor.system.derived.controlPool ?? 0, poolLeft: actor.system.derived.controlPoolLeft ?? 0,
     canJump: r.vcr > 0 || !RULES.RIGGING.jumpInNeedsVcr,
+    // v0.93.5 (plan item 48): Jump in shows greyed without a control rig (when the rule needs one), with the reason.
+    jump: (() => { const st = jumpState(Number(r.vcr ?? 0), Boolean(RULES.RIGGING.jumpInNeedsVcr)); return { enabled: st.enabled, why: whyText(st.why), tip: escHtml(whyText(st.why)) }; })(),
     rcd: r.rcd ?? 0, rcdCapacity: rcdCapacity(r.rcd ?? 0),
     // v0.91.4: the vehicles and drones this character bought or was given from the shop.
     owned: owned.map((a: any) => ({ uuid: a.uuid, name: a.name, drone: Boolean(a.system?.drone) })),
@@ -6516,6 +6611,7 @@ export class SR2VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     await (super._onRender as any)?.(context, options);
     decorateSheet(this);
     decorateInterface(this);
+    decorateSheet935(this);
   }
 
   async _prepareContext(options: any): Promise<any> {
@@ -6534,6 +6630,22 @@ export class SR2VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       priceLabel: Number(sys.cost ?? 0) > 0 ? itemPrice({ cost: Number(sys.cost ?? 0), streetIndex: Number(sys.streetIndex ?? 1) || 1, quantity: 1 }).toLocaleString() : "",
       boxes: Array.from({ length: RULES.VEHICLES.conditionBoxes }, (_, i) => ({ value: i + 1, filled: (sys.condition ?? 0) >= i + 1 })),
       controller: ctl ? { uuid: ctl.uuid, name: ctl.name } : null,
+      // v0.93.5 (plan item 51): the vehicle's status strip (rules/vstrip935.ts).
+      vstrip: (() => {
+        const w = sys.derived?.working ?? sys;
+        const v = vehicleStrip({
+          condition: Number(sys.condition ?? 0), boxes: Number(RULES.VEHICLES.conditionBoxes ?? 0), damageModifier: Number(sys.derived?.damageModifier ?? 0),
+          destroyed: Boolean(sys.derived?.destroyed), currentSpeed: Number(sys.currentSpeed ?? 0), speed: Number(w.speed ?? sys.speed ?? 0),
+          handling: Number(handlingFor(w, Boolean(sys.offroad)) ?? 0), drone: Boolean(sys.drone), autopilot: Number(sys.derived?.autopilotRating ?? 0),
+          sensor: Number(w.sensor ?? sys.sensor ?? 0), controller: ctl ? String(ctl.name) : "", mode: String(sys.controlMode ?? "autopilot"),
+          guns: [...actor.items].filter((i: any) => i.type === "weapon" && i.system.mount && i.system.mount !== "none").map((i: any) => ({ id: String(i.id), name: String(i.name), ammo: Number(i.system.ammo ?? 0), ammoMax: Number(i.system.ammoMax ?? 0) })),
+          jammed: Boolean(sys.jammed?.active), spoofed: Boolean(droneLinkOf(sys).spoofed.active),
+          systemsOut: (["tires", "sensors", "engine"] as const).filter((k) => sys.systems?.[k]), occupants: (sys.occupants ?? []).length,
+        });
+        const alertLabel = (k: string) => k === "jammed" ? tx('SR2E.UI.linkJammed') : k === "spoofed" ? tx('SR2E.UI.linkSpoofed') : k === "tires" ? tx('SR2E.UI.tires') : k === "sensors" ? tx('SR2E.UI.sensors') : k === "engine" ? tx('SR2E.UI.engine') : k;
+        return { ...v, alertText: v.alerts.map(alertLabel).join(" · "), pilotLabel: v.pilotKind === "pilot" ? tx('SR2E.UI.pilot') : tx('SR2E.UI.autonav'),
+          driverMode: v.driver ? (modeLabel(sys.controlMode) ?? "") : "" };
+      })(),
       modeLabel: modeLabel(sys.controlMode) ?? sys.controlMode,
       autopilotLabel: sys.drone ? tx('SR2E.App.Sheets.pilotRating', { rating: sys.derived?.autopilotRating ?? 0 }) : tx('SR2E.App.Sheets.autonavRating', { rating: sys.derived?.autopilotRating ?? 0 }),
       initiative: ctl && sys.controlMode === "jumped" && ctl.system.derived?.rigging?.jumpedIn
@@ -7048,7 +7160,7 @@ async function mountedFireDialog(vehicle: any, weapon: any): Promise<void> {
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.range')}</label><select name="range">${RANGE_BANDS.map((b) => `<option value="${b}" ${b === first.band ? "selected" : ""}>${tx('SR2E.Dialog.Sheet.mTn', { b: escHtml(cap(b)), limits: limits[b], rangeTn: RULES.RANGE_TN[b] })}</option>`).join("")}</select></div>
         <p class="hint sr2e-range-note">${escHtml(first.note)}</p>
         ${modes.length > 1 ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.mode')}</label><select name="mode">${modes.map((m) => `<option value="${m}">${m}</option>`).join("")}</select></div>` : ""}
-        ${modes.includes("FA" as FiringMode) ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.fullAutoRounds2')}</label><input name="fa" type="number" value="${RULES.FIRING.fullAutoMin}" min="${RULES.FIRING.fullAutoMin}" max="${RULES.FIRING.fullAutoMax}"></div>` : ""}
+        ${modes.includes("FA" as FiringMode) ? `<div class="form-group" data-sr2e-fire-modes="FA"><label>${tx('SR2E.Dialog.Sheet.fullAutoRounds2')}</label><input name="fa" type="number" value="${RULES.FIRING.fullAutoMin}" min="${RULES.FIRING.fullAutoMin}" max="${RULES.FIRING.fullAutoMax}"></div>` : ""}
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.poolDice')}</label><input name="pool" type="number" value="0" min="0"></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.otherTnModifier')}</label><input name="mod" type="number" value="0"></div>
         ${vehiclePartRow(vehicle.uuid)}
@@ -7067,6 +7179,7 @@ async function mountedFireDialog(vehicle: any, weapon: any): Promise<void> {
       },
       render: (_e: Event, dialog: any) => {
         const form = dialog?.element?.querySelector("form");
+        if (form) wireFireModeRows(form);
         const sel = form?.querySelector('select[name="target"]');
         sel?.addEventListener("change", () => {
           const r = bandFor(sel.value || "");
@@ -7421,7 +7534,7 @@ export class SR2SiteSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const r = await foundry.applications.api.DialogV2.prompt({
       window: { title: tx('SR2E.Dialog.Sheet.guardsLook', { siteName: site.name }) },
       content: `<fieldset class="sr2e-situational"><legend>${tx('SR2E.Dialog.Sheet.whoMightTheySee')}</legend>${near.map((t: any) => `<label class="sr2e-check"><input type="checkbox" name="who" value="${escHtml(t.actor.uuid)}" ${targeted.has(t.actor.uuid) || (!targeted.size && t.actor.hasPlayerOwner) ? "checked" : ""}> ${escHtml(t.name)}</label>`).join("")}</fieldset>
-        ${tableChecks(CO923.perceptionRows(), "per")}
+        ${senseChecksHtml(CO923.perceptionRows(), "per")}
         <p class="hint">${RULES.SECURITY.guards.alert ? tx('SR2E.Dialog.Sheet.eachIntruderSOnceAgainstEveryAlert', { perceptionStealthSkill: RULES.PERCEPTION.stealthSkill, perceptionSkill: RULES.PERCEPTION.skill, guardsTallyPerGuard: RULES.SECURITY.guards.tallyPerGuard, guardsAlert: RULES.SECURITY.guards.alert }) : tx('SR2E.Dialog.Sheet.eachIntruderSOnceAgainstEvery', { perceptionStealthSkill: RULES.PERCEPTION.stealthSkill, perceptionSkill: RULES.PERCEPTION.skill, guardsTallyPerGuard: RULES.SECURITY.guards.tallyPerGuard })}</p>`,
       ok: { label: tx('SR2E.Dialog.Sheet.look'), callback: (_e2: Event, b: any) => ({ who: Array.from(b.form.querySelectorAll('input[name="who"]:checked')).map((i: any) => i.value as string), per: checkedIds(b.form, "per") }) },
       rejectClose: false,

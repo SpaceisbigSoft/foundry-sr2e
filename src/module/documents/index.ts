@@ -190,6 +190,8 @@ import type { Veh80Hit } from '../rules/urr80-vehicles.ts';
 import { METAMAGIC } from '../rules/arcana.ts';
 import { isLeadGm, madeHere } from '../applications/leader.ts';
 import { t as tx, tCount, tKey, tNoun, tList, type CountNoun } from '../helpers/i18n.ts';
+// v0.93.5: the attack card's waiting banner (rules/cards935.ts).
+import { attackWaitKey } from '../rules/cards935.ts';
 import { gearBook, housedEssenceCost, awakenedBioEssence, culturedBodyCost, surgeryEssenceCost, systemsHit, systemDamage, gradeResistTn, systemStops, adrenalCrashBook, systemShockTn, isDermalPlating } from '../rules/gear923.ts';
 import { GEAR_V923_TABLES } from '../rules/config923/gear.ts';
 
@@ -401,14 +403,16 @@ function describeResult(label: string, r: SuccessTestResult): string {
     : `<strong>${tCount(r.successes, 'SR2E.Card.Actor.successes')}</strong>`;
   // v0.35.0: the dice fold away (click to open); the TN's breakdown shows on hover.
   const breakdown = tx('SR2E.Card.Actor.base', { baseTargetNumber: r.baseTargetNumber, part: mods ? `; ${mods}` : '', part2: r.targetNumberClamped ? tx('SR2E.Card.Actor.tnMinimum2') : '' });
-  // v0.67.0: the big success count under the title (the look's chat cards).
+  // v0.67.0: the big success count under the title (the look's chat cards). v0.93.5 (visual review, verdict shown
+  // twice): under an outcome banner the look hides it and the fold's line reads "4 successes · 5 dice vs TN 3"
+  // instead (the count stays in the card: the look reads it for a contest's colours).
   const count = r.botch
     ? `<div class="sr2e-count sr2e-count-botch"><b>✕</b><span>${tx('SR2E.Card.Actor.disaster')}</span></div>`
     : `<div class="sr2e-count"><b>${r.successes}</b><span>${tCount(r.successes, 'SR2E.Card.Actor.successes2')}</span></div>`;
   return `<div class="sr2e-roll">
     <h3>${escContent(label)}</h3>
     ${count}
-    <details class="sr2e-fold"><summary title="${tx('SR2E.Card.Actor.tn', { breakdown })}">${tx('SR2E.Card.Actor.diceVsTn', { totalDice: r.totalDice })} <strong>${r.targetNumber}</strong><span class="sr2e-sum-out"> · ${outcome}</span></summary>
+    <details class="sr2e-fold"><summary title="${tx('SR2E.Card.Actor.tn', { breakdown })}"><span class="sr2e-sum-out">${outcome} · </span>${tx('SR2E.Card.Actor.diceVsTn', { totalDice: r.totalDice })} <strong>${r.targetNumber}</strong></summary>
     ${mods || r.targetNumberClamped ? `<p class="sr2e-breakdown"><em>${breakdown}</em></p>` : ''}
     <p class="sr2e-dice">${dice || `<em>${tx('SR2E.Card.Actor.noDice')}</em>`}</p></details>
   </div>`;
@@ -432,6 +436,12 @@ function outcomeBanner(snap: { kind: string; botch: boolean; disasterAvoided?: b
     const m = /data-sr2e-taken="([LMSD])" data-sr2e-track="(physical|stun|matrix|vehicle)"/.exec(html);
     if (m) return b('taken', tKey(TAKEN_BANNER[m[2] as TakenTrack], { level: m[1] }));
     if (has('fullyResisted') || has('noDrain') || has('resisted') || has('cleanMiss')) return b('ok', tx('SR2E.Card.Actor.resisted'));
+  }
+  // v0.93.5 (visual review theme 5): an attack card waiting for its targets' Defend says so in a filled banner (the
+  // viewing clients update it as the targets defend: applications/chat.ts markNextSteps). The Defend buttons are
+  // this card's own, built just now; a melee defender may still roll at 0 successes.
+  if (snap.kind === 'attack' && html.includes('data-sr2e-action="defend"')) {
+    return `<div class="sr2e-banner sr2e-banner-awaiting" data-sr2e-wait="awaiting">${escText(tKey(attackWaitKey('awaiting', snap.successes), { successes: snap.successes }))}</div>`;
   }
   if (snap.kind === 'attack') return snap.successes > 0 ? b('neutral', tCount(snap.successes, 'SR2E.Card.Actor.successes')) : b('miss', tx('SR2E.Card.Actor.miss'));
   return snap.successes > 0 ? b('ok', tx('SR2E.Card.Actor.success', { successes: snap.successes })) : b('miss', tx('SR2E.Card.Actor.failed'));

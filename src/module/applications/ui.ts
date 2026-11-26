@@ -50,6 +50,7 @@ import { applyDiceColours } from '../helpers/dicecolours.ts';
 import { t as tx, tCount, tKey } from '../helpers/i18n.ts';
 import { SYSTEM_ID } from '../config/system.ts';
 import { fitWindowSize } from '../rules/fit0934.ts';
+import { gmViewFor, gmFocusFor } from '../rules/gm935.ts';
 
 // ---------------------------------------------------------------- Drop a weapon or spell on a token
 
@@ -90,6 +91,9 @@ export class SR2GmPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     actions: {
       // v0.51.0
       gmTab: SR2GmPanel.#onTab,
+      // v0.93.5: the top row's History and Setup (views, not tabs) and Tools (the SR2e tools window).
+      gmView: SR2GmPanel.#onTab,
+      gmTools: () => { void (game as any).sr2e?.api?.openTools?.(); },
       combatNext: SR2GmPanel.#onCombatNext,
       combatPrev: SR2GmPanel.#onCombatPrev,
       combatStart: SR2GmPanel.#onCombatStart,
@@ -217,9 +221,10 @@ export class SR2GmPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   static #instance: SR2GmPanel | null = null;
-  /** Open the GM panel (null for a player: A-19). */
-  static open(): SR2GmPanel | null {
+  /** Open the GM panel (null for a player: A-19); v0.93.5: at a tab or view by name (old names map: 'tools', 'log'…). */
+  static open(tab?: string): SR2GmPanel | null {
     if (!game.user?.isGM) { ui.notifications.warn(tx('SR2E.Notify.Ui.theGmPanelIsForGms')); return null; }
+    if (typeof tab === 'string' && tab) SR2GmPanel.tab = tab;
     SR2GmPanel.#instance ??= new SR2GmPanel();
     void SR2GmPanel.#instance.render({ force: true });
     return SR2GmPanel.#instance;
@@ -353,22 +358,34 @@ export class SR2GmPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 
   // ---- v0.51.0: tabs, combat overview, quick actions, presets, notes, calculator, undo, recent rolls
 
-  /** v0.89.8: labels are keys (shown with tKey). */
+  /**
+   * v0.89.8: labels are keys (shown with tKey). v0.93.5: six tabs (rules/gm935.ts GM_PANEL_TABS): the Tools tab's
+   * calculator and NPC generator moved to the NPCs tab (the rest was the SR2e tools window's list), Log and Setup are
+   * views opened from the top row (GM_VIEWS), and Tools there opens the SR2e tools window.
+   */
   static GM_TABS = [
     { id: 'scene', label: 'SR2E.App.Ui.tabScene', icon: 'fa-solid fa-map' },
     { id: 'combat', label: 'SR2E.App.Ui.tabCombat', icon: 'fa-solid fa-burst' },
     { id: 'party', label: 'SR2E.App.Ui.tabParty', icon: 'fa-solid fa-users' },
     { id: 'npcs', label: 'SR2E.App.Ui.tabNpcs', icon: 'fa-solid fa-user-ninja' },
     { id: 'world', label: 'SR2E.App.Ui.tabWorld', icon: 'fa-solid fa-globe' },
-    { id: 'tools', label: 'SR2E.App.Ui.tabTools', icon: 'fa-solid fa-calculator' },
-    { id: 'log', label: 'SR2E.App.Ui.tabLog', icon: 'fa-solid fa-clock-rotate-left' },
     // v0.64.0: the approval queue.
     { id: 'requests', label: 'SR2E.App.Ui.tabRequests', icon: 'fa-solid fa-user-check' },
-    // v0.66.0: kits, catalogue, players, tokens, the session checklist, modules.
-    { id: 'setup', label: 'SR2E.App.Ui.tabSetup', icon: 'fa-solid fa-screwdriver-wrench' },
   ];
-  /** The open tab (kept across refreshes). */
-  static tab = 'scene';
+  /** v0.93.5: the top row's buttons: the undo history and the setup (views of the panel), and the SR2e tools window. */
+  static GM_VIEWS = [
+    // v0.51.0: the undo log and the recent rolls (the old Log tab).
+    { id: 'log', label: 'SR2E.App.Ui.tabLog', icon: 'fa-solid fa-clock-rotate-left', action: 'gmView' },
+    // v0.66.0: kits, catalogue, players, tokens, the session checklist, modules (the old Setup tab).
+    { id: 'setup', label: 'SR2E.App.Ui.tabSetup', icon: 'fa-solid fa-screwdriver-wrench', action: 'gmView' },
+    { id: 'tools', label: 'SR2E.App.Ui.tabTools', icon: 'fa-solid fa-toolbox', action: 'gmTools' },
+  ];
+  static #tab: string = 'scene';
+  /** v0.93.5: a section to scroll to after the next render ('calc' for the old Tools tab's calculator). */
+  static #focus = '';
+  /** The open tab or view (kept across refreshes). v0.93.5: any name maps to where it lives now (rules/gm935.ts gmViewFor), so tools.ts, the tours and the checklist that set an old tab id keep working. */
+  static get tab(): string { return SR2GmPanel.#tab; }
+  static set tab(v: string) { SR2GmPanel.#tab = gmViewFor(v); SR2GmPanel.#focus = gmFocusFor(v); }
   /** The calculator's inputs (kept across refreshes). */
   static calc = { dice: 6, tn: 4, mods: '', label: '', public: false };
 
@@ -432,8 +449,9 @@ export class SR2GmPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       underway, orders,
       setup: SR2GmPanel.tab === 'setup' ? setupContext() : null,
       tabs: SR2GmPanel.GM_TABS.map((t) => ({ ...t, label: tKey(t.label), active: t.id === SR2GmPanel.tab, ...(t.id === 'requests' ? { count: requests.length } : {}) })),
+      views: SR2GmPanel.GM_VIEWS.map((t) => ({ ...t, label: tKey(t.label), active: t.id === SR2GmPanel.tab, tool: t.action === 'gmTools' })),
       requests, queueOn: queueOn(),
-      tab: Object.fromEntries(SR2GmPanel.GM_TABS.map((t) => [t.id, t.id === SR2GmPanel.tab])),
+      tab: Object.fromEntries([...SR2GmPanel.GM_TABS, ...SR2GmPanel.GM_VIEWS].map((t) => [t.id, t.id === SR2GmPanel.tab])),
       timeSteps: timeSteps().map((t) => ({ ...t, big: t.seconds >= RULES.GM_TOOLS.confirmFrom && RULES.GM_TOOLS.confirmFrom > 0 })),
       presets: SR2GmPanel.presets().map((p) => ({ ...p, text: describePreset({ ...p, weather: RULES.HEALTH.weather.find((w) => w.id === p.weather)?.label ?? p.weather,
         terrain: RULES.VEHICLES.terrain.find((t: any) => t.id === p.terrain)?.label ?? p.terrain }) })),
@@ -679,6 +697,12 @@ export class SR2GmPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     // v0.66.0: the Setup tab's ticks, kit drops and checklist buttons.
     setSetupRefresh(() => SR2GmPanel.refresh());
     if (SR2GmPanel.tab === 'setup') bindSetupTab(root, (act) => this.#runChecklistAction(act));
+    // v0.93.5: opened at the old Tools tab (the tools window's Calculator): the calculator comes into view.
+    if (SR2GmPanel.#focus) {
+      const f = SR2GmPanel.#focus;
+      SR2GmPanel.#focus = '';
+      try { root.querySelector<HTMLElement>(`[data-gm-focus="${f}"]`)?.scrollIntoView?.({ block: 'start' }); } catch { /* no layout */ }
+    }
     const on = (sel: string, fn: (el: any) => Promise<unknown> | void) => root.querySelectorAll<HTMLElement>(sel).forEach((el) => el.addEventListener('change', () => void fn(el)));
     on('[data-gm="background"]', (el) => cls.setBackgroundCount(Math.max(0, Math.floor(Number(el.value) || 0))));
     on('[data-gm="sources"]', (el) => cls.setBackgroundSources(String(el.value ?? '')));

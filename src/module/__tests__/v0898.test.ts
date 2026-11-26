@@ -63,7 +63,10 @@ describe('v0.89.8 the SR2e tools', () => {
   test('the GM panel\'s tab labels are keys, shown translated', () => {
     const ui = read('src', 'module', 'applications', 'ui.ts');
     const tabs = ui.slice(ui.indexOf('static GM_TABS = ['), ui.indexOf('];', ui.indexOf('static GM_TABS = [')));
-    const labels = [...tabs.matchAll(/label: '([^']+)'/g)].map((m) => m[1]!);
+    // v0.93.5: six tabs; History (Log), Setup and Tools moved to the top row (GM_VIEWS), with keys too.
+    const views = ui.slice(ui.indexOf('static GM_VIEWS = ['), ui.indexOf('];', ui.indexOf('static GM_VIEWS = [')));
+    const labels = [...tabs.matchAll(/label: '([^']+)'/g), ...views.matchAll(/label: '([^']+)'/g)].map((m) => m[1]!);
+    assert.equal([...tabs.matchAll(/label: '/g)].length, 6);
     assert.equal(labels.length, 9);
     for (const k of labels) assert.equal(typeof get(k), 'string', k);
     assert.match(ui, /label: tKey\(t\.label\)/);
