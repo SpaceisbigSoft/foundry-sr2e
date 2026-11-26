@@ -225,16 +225,18 @@ describe('v0.93.5 progress on long jobs', () => {
 describe('v0.93.5 Spend Karma with no Good Karma', () => {
   const needs = (c: number, g: number) => `needs ${c}, has ${g}`;
   test('one banner instead of "needs N, has 0" on every row; other reasons stay; the tooltip always has the reason', () => {
-    assert.deepEqual(spendRow({ ok: true, cost: 10 }, 0, needs), { afford: false, why: 'needs 10, has 0', hint: '' });
-    assert.deepEqual(spendRow({ ok: true, cost: 10 }, 4, needs), { afford: false, why: 'needs 10, has 4', hint: 'needs 10, has 4' });
-    assert.deepEqual(spendRow({ ok: false, cost: 0, reason: 'at its maximum' }, 0, needs), { afford: false, why: 'at its maximum', hint: 'at its maximum' });
-    assert.deepEqual(spendRow({ ok: true, cost: 3 }, 4, needs), { afford: true, why: '', hint: '' });
+    assert.deepEqual(spendRow({ ok: true, cost: 10 }, 0, needs), { afford: false, why: 'needs 10, has 0', hint: '', tip: 'needs 10, has 0' });
+    assert.deepEqual(spendRow({ ok: true, cost: 10 }, 4, needs), { afford: false, why: 'needs 10, has 4', hint: 'needs 10, has 4', tip: 'needs 10, has 4' });
+    assert.deepEqual(spendRow({ ok: false, cost: 0, reason: 'at its maximum' }, 0, needs), { afford: false, why: 'at its maximum', hint: 'at its maximum', tip: 'at its maximum' });
+    assert.deepEqual(spendRow({ ok: true, cost: 3 }, 4, needs), { afford: true, why: '', hint: '', tip: '' });
+    // v0.93.5 review: the tooltip copy is escaped (Foundry renders data-tooltip as HTML).
+    assert.equal(spendRow({ ok: false, cost: 0, reason: '<b>x</b>' }, 0, needs).tip, '&lt;b&gt;x&lt;/b&gt;');
   });
   test('the template: the banner, and a disabled button with its reason as a Foundry tooltip on every kind of row', () => {
     const t = tpl('spend-karma.hbs');
     assert.ok(balanced(t));
     assert.match(t, /\{\{#if broke\}\}<p class="sr2e-spend-broke" role="status">.*\{\{sr2eT "SR2E\.UI\.spendKarmaBroke"\}\}/);
-    assert.equal((t.match(/<span class="sr2e-spend-off" data-tooltip="\{\{(raise\.|spec\.|conc\.)?why\}\}"><button type="button" disabled/g) ?? []).length, 5);
+    assert.equal((t.match(/<span class="sr2e-spend-off" tabindex="0" data-tooltip="\{\{(raise\.|spec\.|conc\.)?tip\}\}"><button type="button" disabled/g) ?? []).length, 5);
     assert.ok(!/<span class="hint">\{\{(raise\.|spec\.|conc\.)?why\}\}<\/span>/.test(t), 'the old per-row text is gone');
     assert.match(src('spendkarma.ts'), /broke: good <= 0/);
   });

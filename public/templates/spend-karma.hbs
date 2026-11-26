@@ -22,7 +22,7 @@
     <tbody>
       {{#each attributes}}
       <tr class="{{#unless afford}}sr2e-dim{{/unless}}"><td>{{label}}</td><td>{{from}}</td><td>{{#if ok}}{{to}}{{else}}–{{/if}}</td><td>{{#if ok}}{{cost}}{{/if}}</td>
-        <td>{{#if afford}}<button type="button" data-action="spendRaise" data-attribute="{{key}}" title="{{sr2eT "SR2E.UI.raiseToForKarma" label=label to=to cost=cost}}"><i class="fa-solid fa-circle-plus"></i> {{sr2eT "SR2E.UI.raise2"}}</button>{{else}}<span class="sr2e-spend-off" data-tooltip="{{why}}"><button type="button" disabled aria-label="{{why}}"><i class="fa-solid fa-circle-plus"></i> {{sr2eT "SR2E.UI.raise2"}}</button></span>{{#if hint}} <span class="hint">{{hint}}</span>{{/if}}{{/if}}</td></tr>
+        <td>{{#if afford}}<button type="button" data-action="spendRaise" data-attribute="{{key}}" title="{{sr2eT "SR2E.UI.raiseToForKarma" label=label to=to cost=cost}}"><i class="fa-solid fa-circle-plus"></i> {{sr2eT "SR2E.UI.raise2"}}</button>{{else}}<span class="sr2e-spend-off" tabindex="0" data-tooltip="{{tip}}"><button type="button" disabled aria-label="{{why}}"><i class="fa-solid fa-circle-plus"></i> {{sr2eT "SR2E.UI.raise2"}}</button></span>{{#if hint}} <span class="hint">{{hint}}</span>{{/if}}{{/if}}</td></tr>
       {{/each}}
     </tbody>
   </table>
@@ -33,11 +33,11 @@
     <tbody>
       {{#each skills}}
       <tr class="{{#unless raise.afford}}sr2e-dim{{/unless}}"><td>{{name}} <span class="hint">{{kind}}</span></td><td>{{rating}}</td><td>{{#if raise.ok}}{{raise.to}}{{/if}}</td><td>{{#if raise.ok}}{{raise.cost}}{{/if}}</td>
-        <td>{{#if raise.afford}}<button type="button" data-action="spendRaise" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.raiseToForKarma2" name=name to=raise.to cost=raise.cost}}"><i class="fa-solid fa-circle-plus"></i> {{sr2eT "SR2E.UI.raise2"}}</button>{{else}}<span class="sr2e-spend-off" data-tooltip="{{raise.why}}"><button type="button" disabled aria-label="{{raise.why}}"><i class="fa-solid fa-circle-plus"></i> {{sr2eT "SR2E.UI.raise2"}}</button></span>{{#if raise.hint}} <span class="hint">{{raise.hint}}</span>{{/if}}{{/if}}</td></tr>
+        <td>{{#if raise.afford}}<button type="button" data-action="spendRaise" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.raiseToForKarma2" name=name to=raise.to cost=raise.cost}}"><i class="fa-solid fa-circle-plus"></i> {{sr2eT "SR2E.UI.raise2"}}</button>{{else}}<span class="sr2e-spend-off" tabindex="0" data-tooltip="{{raise.tip}}"><button type="button" disabled aria-label="{{raise.why}}"><i class="fa-solid fa-circle-plus"></i> {{sr2eT "SR2E.UI.raise2"}}</button></span>{{#if raise.hint}} <span class="hint">{{raise.hint}}</span>{{/if}}{{/if}}</td></tr>
       {{#if spec}}<tr class="sr2e-spend-sub {{#unless spec.afford}}sr2e-dim{{/unless}}"><td>{{sr2eT "SR2E.UI.specialization4" name=spec.name}}</td><td>{{spec.from}}</td><td>{{#if spec.ok}}{{spec.to}}{{/if}}</td><td>{{#if spec.ok}}{{spec.cost}}{{/if}}</td>
-        <td>{{#if spec.afford}}<button type="button" data-action="spendRaise" data-item-id="{{id}}" data-part="spec"><i class="fa-solid fa-square-plus"></i> {{sr2eT "SR2E.UI.raise2"}}</button>{{else}}<span class="sr2e-spend-off" data-tooltip="{{spec.why}}"><button type="button" disabled aria-label="{{spec.why}}"><i class="fa-solid fa-square-plus"></i> {{sr2eT "SR2E.UI.raise2"}}</button></span>{{#if spec.hint}} <span class="hint">{{spec.hint}}</span>{{/if}}{{/if}}</td></tr>{{/if}}
+        <td>{{#if spec.afford}}<button type="button" data-action="spendRaise" data-item-id="{{id}}" data-part="spec"><i class="fa-solid fa-square-plus"></i> {{sr2eT "SR2E.UI.raise2"}}</button>{{else}}<span class="sr2e-spend-off" tabindex="0" data-tooltip="{{spec.tip}}"><button type="button" disabled aria-label="{{spec.why}}"><i class="fa-solid fa-square-plus"></i> {{sr2eT "SR2E.UI.raise2"}}</button></span>{{#if spec.hint}} <span class="hint">{{spec.hint}}</span>{{/if}}{{/if}}</td></tr>{{/if}}
       {{#if conc}}<tr class="sr2e-spend-sub {{#unless conc.afford}}sr2e-dim{{/unless}}"><td>{{sr2eT "SR2E.UI.concentration2" name=conc.name}}</td><td>{{conc.from}}</td><td>{{#if conc.ok}}{{conc.to}}{{/if}}</td><td>{{#if conc.ok}}{{conc.cost}}{{/if}}</td>
-        <td>{{#if conc.afford}}<button type="button" data-action="spendRaise" data-item-id="{{id}}" data-part="conc"><i class="fa-solid fa-square-caret-up"></i> {{sr2eT "SR2E.UI.raise2"}}</button>{{else}}<span class="sr2e-spend-off" data-tooltip="{{conc.why}}"><button type="button" disabled aria-label="{{conc.why}}"><i class="fa-solid fa-square-caret-up"></i> {{sr2eT "SR2E.UI.raise2"}}</button></span>{{#if conc.hint}} <span class="hint">{{conc.hint}}</span>{{/if}}{{/if}}</td></tr>{{/if}}
+        <td>{{#if conc.afford}}<button type="button" data-action="spendRaise" data-item-id="{{id}}" data-part="conc"><i class="fa-solid fa-square-caret-up"></i> {{sr2eT "SR2E.UI.raise2"}}</button>{{else}}<span class="sr2e-spend-off" tabindex="0" data-tooltip="{{conc.tip}}"><button type="button" disabled aria-label="{{conc.why}}"><i class="fa-solid fa-square-caret-up"></i> {{sr2eT "SR2E.UI.raise2"}}</button></span>{{#if conc.hint}} <span class="hint">{{conc.hint}}</span>{{/if}}{{/if}}</td></tr>{{/if}}
       {{else}}<tr><td colspan="5"><em>{{sr2eT "SR2E.UI.noSkillsYetTheLearnsOne"}}</em></td></tr>
       {{/each}}
     </tbody>
@@ -51,7 +51,7 @@
     <tbody>
       {{#each spells}}
       <tr class="{{#unless afford}}sr2e-dim{{/unless}}"><td>{{name}}</td><td>{{force}}</td><td>{{to}}</td><td>{{cost}}</td>
-        <td>{{#if afford}}<button type="button" data-action="spendSpell" data-item-id="{{id}}"><i class="fa-solid fa-circle-plus"></i> {{sr2eT "SR2E.UI.raise2"}}</button>{{else}}<span class="sr2e-spend-off" data-tooltip="{{why}}"><button type="button" disabled aria-label="{{why}}"><i class="fa-solid fa-circle-plus"></i> {{sr2eT "SR2E.UI.raise2"}}</button></span>{{#if hint}} <span class="hint">{{hint}}</span>{{/if}}{{/if}}</td></tr>
+        <td>{{#if afford}}<button type="button" data-action="spendSpell" data-item-id="{{id}}"><i class="fa-solid fa-circle-plus"></i> {{sr2eT "SR2E.UI.raise2"}}</button>{{else}}<span class="sr2e-spend-off" tabindex="0" data-tooltip="{{tip}}"><button type="button" disabled aria-label="{{why}}"><i class="fa-solid fa-circle-plus"></i> {{sr2eT "SR2E.UI.raise2"}}</button></span>{{#if hint}} <span class="hint">{{hint}}</span>{{/if}}{{/if}}</td></tr>
       {{else}}<tr><td colspan="5"><em>{{sr2eT "SR2E.UI.noSpellsYetTheLearnsOne"}}</em></td></tr>
       {{/each}}
     </tbody>

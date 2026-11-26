@@ -3,6 +3,7 @@
  * tabs), applications/party.ts (the party view), applications/spendkarma.ts (the Spend Karma rows) and
  * applications/progress.ts (progress bars on long jobs).
  */
+import { escHtml } from './html.ts';
 import { RULES } from './config.ts';
 
 // ---------------------------------------------------------------- The GM panel's tabs and views
@@ -121,14 +122,16 @@ export function monitorTextOf(cm: { tracks: ReadonlyArray<{ short: string; fille
 // ---------------------------------------------------------------- Spend Karma rows
 
 /** v0.93.5: one Spend Karma row: whether it can be bought, its disabled reason (a tooltip), and the hint shown in the row. */
-export function spendRow(c: { ok: boolean; cost: number; reason?: string }, good: number, needsText: (cost: number, good: number) => string): { afford: boolean; why: string; hint: string } {
+export function spendRow(c: { ok: boolean; cost: number; reason?: string }, good: number, needsText: (cost: number, good: number) => string): { afford: boolean; why: string; hint: string; tip: string } {
   const cost = Number(c.cost) || 0;
   const g = Number(good) || 0;
   const afford = Boolean(c.ok) && cost <= g;
   const why = !c.ok ? String(c.reason ?? '') : cost > g ? needsText(cost, g) : '';
   // With no Good Karma at all, one banner says so: the rows don't each repeat "needs N, has 0". Other reasons stay.
   const hint = afford ? '' : !c.ok ? why : g <= 0 ? '' : why;
-  return { afford, why, hint };
+  // v0.93.5 review: Foundry renders data-tooltip as HTML, so the tooltip gets its own escaped copy (the template escapes
+  // it once more, as the action bar's does).
+  return { afford, why, hint, tip: escHtml(why) };
 }
 
 // ---------------------------------------------------------------- Progress on long jobs

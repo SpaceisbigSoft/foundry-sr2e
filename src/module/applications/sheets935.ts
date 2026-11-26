@@ -12,6 +12,7 @@ import { SYSTEM } from '../config/system.ts';
 import { PIN_DRAG_TYPE, pinKeyOfDrop, placePin, unpin, isEffectPin } from '../rules/pins935.ts';
 import { pinAction } from '../rules/catalogue.ts';
 import { t as tx } from '../helpers/i18n.ts';
+import { escHtml } from '../rules/html.ts';
 
 function dragData(ev: DragEvent): any {
   try { return JSON.parse(ev.dataTransfer?.getData('text/plain') ?? ''); } catch { return null; }
@@ -24,6 +25,11 @@ function storedPins(actor: any): string[] {
 }
 function gone(actor: any): (k: string) => boolean {
   return (k) => !isEffectPin(k) && !actor.items?.get?.(k);
+}
+/** v0.93.5 review: the keys the pinned bar shows now (the ones that count towards the limit). */
+export function shownPins(root: ParentNode | null | undefined): (k: string) => boolean {
+  const keys = new Set(Array.from(root?.querySelectorAll<HTMLElement>('.sr2e-pinbar .sr2e-pin-chip') ?? []).map((c) => c.dataset['pinKey'] ?? ''));
+  return (k) => keys.has(k);
 }
 
 async function savePins(actor: any, pins: string[]): Promise<void> {
@@ -107,6 +113,28 @@ function pinDrag(sheet: any, body: HTMLElement): void {
     if (!key || li.draggable) continue;
     li.draggable = true;
     li.addEventListener('dragstart', (ev) => { ev.dataTransfer?.setData('text/plain', JSON.stringify({ type: PIN_DRAG_TYPE, actorUuid: uuid, key })); });
+    // v0.93.5 review: a pin toggle on the row too, so an effect can be pinned without dragging (keyboard users).
+    const pinned = storedPins(actor).includes(key);
+    const name = li.querySelector('strong')?.textContent ?? '';
+    const tog = document.createElement('a');
+    tog.className = 'sr2e-fx-pin';
+    tog.setAttribute('role', 'button');
+    tog.tabIndex = 0;
+    tog.setAttribute('aria-pressed', String(pinned));
+    const tip = pinned ? tx('SR2E.UI.unpinNamed', { name }) : tx('SR2E.UI.pinItToTheTopOf');
+    tog.setAttribute('aria-label', tip);
+    tog.dataset['tooltip'] = escHtml(tip);
+    tog.innerHTML = '<i class="fa-solid fa-thumbtack" aria-hidden="true"></i>';
+    const go = (ev: Event) => {
+      ev.preventDefault(); ev.stopPropagation();
+      if (storedPins(actor).includes(key)) { void savePins(actor, unpin(storedPins(actor), key)); return; }
+      const r = placePin(storedPins(actor), key, null, gone(actor), shownPins(body));
+      if (r.full) { ui.notifications?.warn?.(tx('SR2E.Notify.Sheet.pinsFull')); return; }
+      void savePins(actor, r.pins);
+    };
+    tog.addEventListener('click', go);
+    tog.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') go(ev); });
+    li.appendChild(tog);
   }
   // The pins: dragged along the bar, or off it.
   for (const chip of Array.from(bar.querySelectorAll<HTMLElement>('.sr2e-pin-chip'))) {
@@ -129,7 +157,7 @@ function pinDrag(sheet: any, body: HTMLElement): void {
       if (ev.key === 'ArrowLeft' && at <= 0) return;
       if (ev.key === 'ArrowRight' && at >= keys.length - 1) return;
       sheet._sr2eFocusPin = key;
-      void savePins(actor, placePin(storedPins(actor), key, before, gone(actor)).pins);
+      void savePins(actor, placePin(storedPins(actor), key, before, gone(actor), shownPins(body)).pins);
     });
   }
   if (sheet._sr2eFocusPin) {
@@ -165,7 +193,7 @@ function pinDrag(sheet: any, body: HTMLElement): void {
     if (!hit) return;
     ev.preventDefault();
     ev.stopPropagation();
-    const r = placePin(storedPins(actor), hit.key, dropBefore(bar, ev), gone(actor));
+    const r = placePin(storedPins(actor), hit.key, dropBefore(bar, ev), gone(actor), shownPins(body));
     if (r.full) { ui.notifications?.warn?.(tx('SR2E.Notify.Sheet.pinsFull')); return; }
     void savePins(actor, r.pins);
   });

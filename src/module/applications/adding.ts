@@ -36,6 +36,9 @@ import { formulasRequired } from '../rules/formulas.ts';
 import { SR2NewEntry, entryKindFor } from './newentry.ts';
 import { entriesFor, entryData, entryShown, shopSettings, toggleShopMark, kitShopKeys, shopTab, setShopAdder, vehicleListChange, vehicleForSale, type Entry } from './shop.ts';
 import { buysByFinding, shopRowInfo, retryFlagKey, retryHoursLeft, timeLabel, soldInShop, shopGroupOf, shopGroupRank, shopGroupsFor, passesGroups, SHOP_GROUP_KEYS, isCodexType, parseShopKey } from '../rules/index.ts';
+// v0.93.5 review: pinning refuses when the bar is full (rules/pins935.ts).
+import { placePin, isEffectPin } from '../rules/pins935.ts';
+import { shownPins } from './sheets935.ts';
 
 const { HandlebarsApplicationMixin, ApplicationV2, DialogV2 } = foundry.applications.api;
 
@@ -867,7 +870,13 @@ export const SHEET_TOOL_ACTIONS: Record<string, (this: any, e: Event, t: HTMLEle
     const actor: any = this.document;
     const id = t.dataset['itemId'];
     if (!id || !actor.isOwner) return;
-    await actor.setFlag(SYSTEM.id, 'pins', togglePin(actor.getFlag(SYSTEM.id, 'pins'), id));
+    const pins = actor.getFlag(SYSTEM.id, 'pins');
+    if (Array.isArray(pins) && pins.map(String).includes(id)) { await actor.setFlag(SYSTEM.id, 'pins', togglePin(pins, id)); return; }
+    // v0.93.5 review: pinning goes through placePin, which refuses when the bar is full instead of dropping the oldest
+    // pin (only the pins on show count; an ended effect's hidden key doesn't).
+    const r = placePin(pins, id, null, (k) => !isEffectPin(k) && !actor.items?.get?.(k), shownPins(this.element));
+    if (r.full) { ui.notifications?.warn?.(tx('SR2E.Notify.Sheet.pinsFull')); return; }
+    await actor.setFlag(SYSTEM.id, 'pins', r.pins);
   },
   sheetMode: function (this: any, _e: Event, t?: HTMLElement) {
     const doc: any = this.document;

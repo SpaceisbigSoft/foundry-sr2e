@@ -26,11 +26,18 @@ function listOf(pins: unknown): string[] {
  * Pin `key` before `before` (null: at the end). A pin already there moves; a new one past PIN_MAX is refused
  * (`full`). `drop` says which keys no longer exist (an item deleted) and are tidied away on the way.
  */
-export function placePin(pins: unknown, key: string, before: string | null, drop: (k: string) => boolean = () => false): { pins: string[]; full: boolean } {
-  const list = listOf(pins).filter((k) => !drop(k));
+export function placePin(pins: unknown, key: string, before: string | null, drop: (k: string) => boolean = () => false, shown: (k: string) => boolean = () => true): { pins: string[]; full: boolean } {
+  let list = listOf(pins).filter((k) => !drop(k));
   if (!key) return { pins: list, full: false };
   const had = list.includes(key);
-  if (!had && list.length >= PIN_MAX) return { pins: list, full: true };
+  // v0.93.5 review: only the pins on show count towards PIN_MAX (an effect that has ended keeps its key, unseen, so
+  // it shows again when it comes back); past twice that, the oldest unseen keys make room.
+  if (!had && list.filter(shown).length >= PIN_MAX) return { pins: list, full: true };
+  while (!had && list.length >= PIN_MAX * 2) {
+    const old = list.findIndex((k) => !shown(k));
+    if (old < 0) return { pins: list, full: true };
+    list = list.filter((_, i) => i !== old);
+  }
   // Dropped on itself: it stays where it is.
   if (had && before === key) return { pins: list, full: false };
   const rest = list.filter((k) => k !== key);

@@ -746,7 +746,12 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const actor: any = this.document;
     const v: any = actor.riggedVehicle?.();
     if (!v) return;
-    await v.setController(actor, actor.system.rigging?.jumpedIn ? "manual" : "jumped");
+    // v0.93.5 review: the greyed button isn't the only guard (a macro's runSheetAction reaches here too): no jumping in
+    // without a control rig when the rule needs one. Jumping out always works.
+    const jumped = Boolean(actor.system.rigging?.jumpedIn);
+    const st = jumpState(Number(actor.system.derived?.rigging?.vcr ?? 0), Boolean(RULES.RIGGING.jumpInNeedsVcr));
+    if (!jumped && !st.enabled) { ui.notifications?.warn?.(whyText(st.why)); return; }
+    await v.setController(actor, jumped ? "manual" : "jumped");
   }
 
   static async #onDriveVehicle(this: SR2CharacterSheet) {

@@ -11,7 +11,7 @@ import { SYSTEM } from '../config/system.ts';
 import { monitorView } from '../rules/look.ts';
 import { partyAccess, partyRow, monitorTextOf, OWNERSHIP, type PartyRow, type CoarseWound } from '../rules/gm935.ts';
 import { groupActors, overflowBody, poolsLine } from './groups.ts';
-import { t as tx } from '../helpers/i18n.ts';
+import { t as tx, tKey } from '../helpers/i18n.ts';
 
 const { HandlebarsApplicationMixin, ApplicationV2 } = foundry.applications.api;
 
@@ -53,17 +53,22 @@ function rowFor(a: any, user: any, combat: any): PartyRow | null {
   const status = String(d.status ?? 'ok');
   // The full-vitals facts are read only for a full row (an owner or the GM).
   const full = access.full;
+  // v0.93.5 review: the status and the wound modifier in the language file's words.
+  const statusKey = `SR2E.Text.Interface.${status}`;
+  const statusWords = (game as any).i18n?.has?.(statusKey) ? tKey(statusKey) : status.charAt(0).toUpperCase() + status.slice(1);
+  const wound = full ? Number(d.woundModifier ?? 0) : 0;
   const cm = full ? monitorView(a.system?.monitor, overflowBody(a.system), { overflow: a.type !== 'spirit' }) : null;
-  return partyRow({
+  const row = partyRow({
     uuid: a.uuid, name: a.name, img: a.img, player: player?.name ?? '',
     physical: Number(a.system?.monitor?.physical ?? 0), stun: Number(a.system?.monitor?.stun ?? 0), status,
     monitorText: cm ? monitorTextOf(cm, tx('SR2E.UI.of2')) : '',
-    wound: full ? Number(d.woundModifier ?? 0) : 0,
+    wound,
     pools: full ? poolsLine(a) : '',
     initiative: full && cb ? cb.initiative ?? null : null,
     acting: Boolean(full && cb && combat?.combatant?.id === cb.id),
-    statusText: full && status !== 'ok' ? status.charAt(0).toUpperCase() + status.slice(1) : '',
+    statusText: full && status !== 'ok' ? statusWords : '',
   }, access, { canOpen: isGM || level >= OWNERSHIP.OBSERVER });
+  return row && row.kind === 'full' && wound ? { ...row, woundText: tx('SR2E.Card.Actor.tn12', { tn: wound }) } : row;
 }
 
 /** The template's view of a row (flags for Handlebars, the coarse wound's words). */

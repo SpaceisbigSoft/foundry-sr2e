@@ -268,3 +268,25 @@ describe('v0.93.5 strings', () => {
     }
   });
 });
+
+describe('v0.93.5 review: pins on show count, hidden ones make room', () => {
+  test('an ended effect\'s hidden key does not fill the bar', () => {
+    const hidden = Array.from({ length: PIN_MAX }, (_, i) => `fx:s:gone${i}`);
+    const shown = (k: string) => !k.startsWith('fx:s:gone');
+    const r = placePin([...hidden, 'a'], 'b', null, () => false, shown);
+    assert.equal(r.full, false);
+    assert.deepEqual(r.pins.slice(-2), ['a', 'b']);
+  });
+  test('past twice the limit the oldest hidden key goes; never a pin on show', () => {
+    const hidden = Array.from({ length: PIN_MAX * 2 - 1 }, (_, i) => `fx:h${i}`);
+    const shown = (k: string) => !k.startsWith('fx:h');
+    const r = placePin([...hidden, 'a'], 'b', null, () => false, shown);
+    assert.equal(r.full, false);
+    assert.ok(!r.pins.includes('fx:h0') && r.pins.includes('a') && r.pins.includes('b'));
+    assert.equal(r.pins.length, PIN_MAX * 2);
+  });
+  test('the visible limit still refuses', () => {
+    const vis = Array.from({ length: PIN_MAX }, (_, i) => `i${i}`);
+    assert.equal(placePin(vis, 'new', null, () => false, () => true).full, true);
+  });
+});

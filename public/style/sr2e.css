@@ -1955,6 +1955,11 @@ li.chat-message.sr2e-card .sr2e-banner ~ .sr2e-roll details.sr2e-fold .sr2e-sum-
   .application.sr2e-look .sr2e-vstrip { padding: 0.2rem 0.45rem; gap: 0.2rem 0.6rem; }
 }
 
+/* --- v0.93.5 review: the pin toggle on an Effects-view row (pinning without dragging). */
+.application.sr2e-look .sr2e-effects li .sr2e-fx-pin { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; min-height: 24px; margin-left: 0.3rem; color: var(--sr2e-muted); cursor: pointer; }
+.application.sr2e-look .sr2e-effects li .sr2e-fx-pin[aria-pressed="true"] { color: var(--sr2e-accent); }
+.application.sr2e-look .sr2e-effects li .sr2e-fx-pin:focus-visible { outline: 2px solid var(--sr2e-accent); outline-offset: 1px; }
+
 /* v0.93.5 (Agent C): the GM panel's top row, the party view, Spend Karma with no Good Karma, progress bars. Our windows only. */
 
 /* The GM panel's top row: Undo, then History, Setup and Tools (they left the tab row). */
