@@ -471,6 +471,7 @@ function outcomeBanner(snap: { kind: string; botch: boolean; disasterAvoided?: b
 }
 
 import { takeSecret, secretArmed, worldFloor, flooredMode } from '../rules/hidden941.ts';
+import { sharedRoll942 } from '../applications/groups942.ts';
 
 /** v0.94.1 (review): a side card of a secret test (a complementary skill) goes to the GMs only too, without taking the arming. */
 export function blindIfSecret(key: string, data: any): any {
@@ -21267,7 +21268,10 @@ export class SR2Combat extends Combat {
   }
 
   async rollInitiative(ids: any, options: any = {}): Promise<any> {
-    const r = await (super.rollInitiative as any)(ids, options);
+    // v0.94.2 (item 27): with shared grunt-group initiative, one roll per group (applications/groups942.ts).
+    const shared = sharedRoll942(this, ids);
+    const r = await (super.rollInitiative as any)(shared.ids, options);
+    try { await shared.after(); } catch (err) { console.warn('sr2e | shared group initiative', err); }
     try { await this.alignParties(); } catch (err) { console.warn('sr2e | party initiative', err); }
     return r;
   }

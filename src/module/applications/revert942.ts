@@ -62,11 +62,18 @@ function planFor(actor: any, lineId: string): RevertPlan {
   return planRevert(logOf(actor), lineId, currentOf(actor), { karma: Number(actor?.system?.karma?.good ?? 0), nuyen: Number(actor?.system?.nuyen ?? 0) });
 }
 
+const li = (l: string): string => `<li>${escHtml(l)}</li>`;
+
 async function confirmPlan(actor: any, plan: RevertPlan, what: string, who = ''): Promise<boolean> {
   const dlg: any = foundry.applications.api.DialogV2;
   return Boolean(await dlg.confirm({
     window: { title: tx('SR2E.Revert.confirmTitle', { name: actor.name }) },
-    content: `${who ? `<p>${tx('SR2E.Revert.askedBy', { who: escHtml(who) })}</p>` : ''}<p><strong>${escHtml(what)}</strong></p><ul>${planLines(plan).map((l) => `<li>${escHtml(l)}</li>`).join('')}</ul><p class="hint">${tx('SR2E.Revert.confirmHint')}</p>`,
+    content: [
+      who ? `<p>${tx('SR2E.Revert.askedBy', { who: escHtml(who) })}</p>` : '',
+      `<p><strong>${escHtml(what)}</strong></p>`,
+      `<ul>${planLines(plan).map(li).join('')}</ul>`,
+      `<p class="hint">${tx('SR2E.Revert.confirmHint')}</p>`,
+    ].join(''),
     rejectClose: false,
   }));
 }
@@ -77,7 +84,7 @@ async function confirmPlan(actor: any, plan: RevertPlan, what: string, who = '')
  */
 export async function applyRevert(actor: any, lineId: string, by: string): Promise<boolean> {
   const plan = planFor(actor, lineId);
-  if (!plan.ok) { ui.notifications?.warn?.(revertWhyText(plan, logOf(actor))); return false; }
+  if (!plan.ok) { ui.notifications?.warn?.(escHtml(revertWhyText(plan, logOf(actor)))); return false; }
   const line = logOf(actor).find((l) => l.id === lineId)!;
   for (const [id, changes] of Object.entries(plan.items)) {
     const item = actor.items?.get?.(id);
@@ -104,7 +111,7 @@ export async function revertFromSheet(actor: any, lineId: string): Promise<void>
   const route = revertRoute({ isGM: Boolean(game.user?.isGM), isOwner: Boolean(actor.isOwner), locked: ratingLocked(actor) });
   if (route === 'none') return;
   const plan = planFor(actor, lineId);
-  if (!plan.ok) { ui.notifications?.warn?.(revertWhyText(plan, logOf(actor))); return; }
+  if (!plan.ok) { ui.notifications?.warn?.(escHtml(revertWhyText(plan, logOf(actor)))); return; }
   const what = String(logOf(actor).find((l) => l.id === lineId)?.what ?? '');
   if (!(await confirmPlan(actor, plan, what))) return;
   if (route === 'direct') { await applyRevert(actor, lineId, String(game.user?.name ?? '')); return; }
@@ -112,7 +119,7 @@ export async function revertFromSheet(actor: any, lineId: string): Promise<void>
   const gms = [...((game as any).users ?? [])].filter((u: any) => u.isGM).map((u: any) => u.id);
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }), whisper: [...new Set([...gms, game.user?.id].filter(Boolean))],
-    content: `<p>${tx('SR2E.Revert.cardAsk', { name: escHtml(actor.name), what: escHtml(what) })}</p><ul>${planLines(plan).map((l) => `<li>${escHtml(l)}</li>`).join('')}</ul><p><button type="button" data-sr2e-action="applyAdvRevert">${tx('SR2E.Revert.applyGm')}</button></p>`,
+    content: `<p>${tx('SR2E.Revert.cardAsk', { name: escHtml(actor.name), what: escHtml(what) })}</p><ul>${planLines(plan).map(li).join('')}</ul><p><button type="button" data-sr2e-action="applyAdvRevert">${tx('SR2E.Revert.applyGm')}</button></p>`,
     flags: { [SYSTEM_ID]: { advRevert: { actorUuid: String(actor.uuid), lineId: String(lineId) } } },
   });
   ui.notifications?.info?.(tx('SR2E.Revert.sentToGm'));
@@ -125,7 +132,7 @@ export async function confirmAdvRevertCard(v: { actorUuid?: unknown; lineId?: un
   try { actor = await fromUuid(actorUuid); } catch { actor = null; }
   if (!actor || actor.documentName !== 'Actor') { ui.notifications?.warn?.(tx('SR2E.Revert.Why.missing')); return null; }
   const plan = planFor(actor, lineId);
-  if (!plan.ok) { ui.notifications?.warn?.(revertWhyText(plan, logOf(actor))); return null; }
+  if (!plan.ok) { ui.notifications?.warn?.(escHtml(revertWhyText(plan, logOf(actor)))); return null; }
   const what = String(logOf(actor).find((l) => l.id === lineId)?.what ?? '');
   return (await confirmPlan(actor, plan, what, String(message?.author?.name ?? ''))) ? { actorUuid, lineId } : null;
 }

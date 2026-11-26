@@ -19,6 +19,7 @@ import { registerItemTypeGuard } from "./applications/drops.ts";
 import { registerAreaHooks } from "./applications/canvas.ts";
 import { registerFloatingDamage, registerQuickRolls, registerHotkeys } from "./applications/hotkeys.ts";
 import { registerHiddenNumbers } from "./applications/hidden941.ts";
+import { registerGruntGroups } from "./applications/groups942.ts";
 import { registerAccessibility } from "./applications/a11y.ts";
 import { registerFoundryTooltips } from "./applications/tooltips.ts";
 import { registerPopOutWatch } from "./helpers/docs.ts";
@@ -144,6 +145,7 @@ export class SR2System {
     registerAreaHooks();
     registerFloatingDamage();
     registerHiddenNumbers();
+    registerGruntGroups();
     registerQuickRolls();
     registerHotkeys();
     registerAccessibility();

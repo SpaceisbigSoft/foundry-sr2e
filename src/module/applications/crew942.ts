@@ -145,13 +145,16 @@ onRelay('crewStation', async (d, user) => {
 /** Which tab each open sheet shows (by the sheet's id), kept across re-renders. */
 const openTab = new Map<string, string>();
 
+/** One HTML attribute, with a leading space and its value escaped. */
+const attr = (name: string, value: string): string => ` ${name}="${escHtml(value)}"`;
+
 const btn = (action: string, icon: string, label: string, extra = ''): string =>
   `<button type="button" data-action="${action}"${extra}><i class="fa-solid ${icon}" aria-hidden="true"></i> ${escHtml(label)}</button>`;
 
 /** One station's actions: the sheet's own buttons. */
 function stationActions(vehicle: any, s: Station, gunnerCount: number): string {
   const weapons = mountedWeapons(vehicle);
-  const guns = stationGuns(s, weapons, gunnerCount).map((w) => btn('fireMounted', 'fa-crosshairs', tx('SR2E.Crew.fire', { name: w.name }), ` data-item-id="${escHtml(w.id)}"`)).join(' ');
+  const guns = stationGuns(s, weapons, gunnerCount).map((w) => btn('fireMounted', 'fa-crosshairs', tx('SR2E.Crew.fire', { name: w.name }), attr('data-item-id', w.id))).join(' ');
   if (s.role === 'driver') {
     return [btn('driveVehicle', 'fa-car', tx('SR2E.Crew.drive')), btn('pushSpeed', 'fa-gauge-high', tx('SR2E.Crew.push')), btn('crashTest', 'fa-triangle-exclamation', tx('SR2E.Crew.crashTest')),
       btn('ramVehicle', 'fa-car-side', tx('SR2E.Crew.ram')), guns].filter(Boolean).join(' ');
@@ -190,9 +193,9 @@ export function crewPanelHtml(vehicle: any, sheetId = ''): string {
     const mayLeave = Boolean(uuid) && crewMay('leave', { isGM, ownsVehicle: Boolean(vehicle.isOwner), ownsActor: Boolean(who?.isOwner), aboard: false, free: false });
     const mayClaim = free && seatable(vehicle).some((a: any) => crewOpAllowed(vehicle, user, { vehicleUuid: vehicle.uuid, op: 'seat', station: s.id, actorUuid: a.uuid }));
     const controls = [
-      mayClaim ? btn('crewClaim', 'fa-chair', tx('SR2E.Crew.claim'), ` data-station="${s.id}"`) : '',
-      (isGM || vehicle.isOwner) ? btn('crewAssign', 'fa-user-plus', tx('SR2E.Crew.assign'), ` data-station="${s.id}"`) : '',
-      mayLeave ? btn('crewLeave', 'fa-person-walking-arrow-right', tx('SR2E.Crew.leave'), ` data-station="${s.id}"`) : '',
+      mayClaim ? btn('crewClaim', 'fa-chair', tx('SR2E.Crew.claim'), attr('data-station', s.id)) : '',
+      (isGM || vehicle.isOwner) ? btn('crewAssign', 'fa-user-plus', tx('SR2E.Crew.assign'), attr('data-station', s.id)) : '',
+      mayLeave ? btn('crewLeave', 'fa-person-walking-arrow-right', tx('SR2E.Crew.leave'), attr('data-station', s.id)) : '',
       mayReady ? `<a class="sr2e-crew-readybox${ready ? ' on' : ''}" data-action="crewReady" data-station="${s.id}" data-on="${ready ? '' : '1'}" role="button" aria-pressed="${ready}"><i class="fa-regular ${ready ? 'fa-square-check' : 'fa-square'}" aria-hidden="true"></i> ${tx('SR2E.Crew.readyMark')}</a>` : (who ? `<span class="hint">${ready ? tx('SR2E.Crew.ready') : tx('SR2E.Crew.notReady')}</span>` : ''),
     ].filter(Boolean).join(' ');
     return `<div class="sr2e-crew-panel${s.id === active ? ' active' : ''}" data-station="${s.id}" role="tabpanel">
