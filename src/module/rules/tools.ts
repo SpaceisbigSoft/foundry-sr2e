@@ -42,6 +42,8 @@ export const TOOLS: readonly ToolDef[] = [
   { id: 'interpretations', icon: 'fa-solid fa-scale-unbalanced', who: 'player', toolbar: false },
   // v0.93.3: the shared Team Karma tracker (when the GM turns it on).
   { id: 'teamKarma', icon: 'fa-solid fa-people-group', who: 'player', toolbar: false },
+  // v0.94.2: the Loot window (take from the lootable tokens on the scene).
+  { id: 'loot', icon: 'fa-solid fa-sack-dollar', who: 'player', toolbar: false },
   // GM
   { id: 'gmPanel', icon: 'fa-solid fa-sliders', who: 'gm', toolbar: true, hotkey: 'gmPanel' },
   { id: 'sceneBuilder', icon: 'fa-solid fa-map-location-dot', who: 'gm', toolbar: true },

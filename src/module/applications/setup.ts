@@ -20,6 +20,7 @@ import {
   type StarterKit, type SessionChecklist, type TokenSetupOptions, type ChecklistAction,
 } from '../rules/index.ts';
 import { ITEM_TYPES_FOR } from './drops.ts';
+import { catalogueTemplates, oldCatalogueCopy, catalogueInPack } from './catalogue942.ts';
 import { createFromBasket } from './sheettools.ts';
 import { groupActors } from './groups.ts';
 import { syncTokenVision } from './tokens.ts';
@@ -102,7 +103,8 @@ export function setupContext(): Record<string, unknown> {
   const opts = tokenOptions();
   const k = kits();
   let templates: any[] = [];
-  try { templates = (game.settings.get(SYSTEM.id, 'itemTemplates') as any[]) ?? []; } catch { templates = []; }
+  // v0.94.2 (item 32): the world compendium (applications/catalogue942.ts).
+  templates = catalogueTemplates();
   const byType = new Map<string, number>();
   for (const t of templates) byType.set(t.type, (byType.get(t.type) ?? 0) + 1);
   const mod = (id: string) => { const m: any = (game as any).modules?.get?.(id); return m ? (m.active ? tx('SR2E.App.Setup.active') : tx('SR2E.App.Setup.installedNotActive')) : tx('SR2E.App.Setup.notInstalled'); };
@@ -134,6 +136,8 @@ export function setupContext(): Record<string, unknown> {
     kits: k.map((x) => { const pr = kitPrice(x); return { id: x.id, name: x.name, notes: x.notes, count: x.lines.length, summary: kitSummary(x), price: pr.nuyen ? `¥${pr.nuyen.toLocaleString()}` : '', unpriced: pr.unpriced.length }; }),
     templateCounts: [...byType.entries()].map(([t, n]) => `${typeLabel(t, n !== 1)} ${n}`).join(' · '),
     templateTotal: templates.length,
+    // v0.94.2 (item 32): where the catalogue lives, and the old setting's copy kept until the GM removes it.
+    catalogue942: { inPack: catalogueInPack(), oldCopy: oldCatalogueCopy() },
     modules: [
       { name: 'Item Piles', state: mod('item-piles'), note: tx('SR2E.App.Setup.lootPilesMerchantsAndTrading') },
       { name: 'Health Estimate', state: mod('healthEstimate'), note: tx('SR2E.App.Setup.aTokensHealthInWords') },

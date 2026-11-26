@@ -24,6 +24,7 @@ import { SR2Codex } from './codex.ts';
 import { SR2Interpretations } from './interpretations.ts';
 import { SR2TeamKarma } from './teamkarma.ts';
 import { openConversionTool } from './nesting942.ts';
+import { openLoot942 } from './trade942.ts';
 
 const { HandlebarsApplicationMixin, ApplicationV2 } = foundry.applications.api;
 
@@ -82,6 +83,7 @@ export const TOOL_ACTIONS: Record<string, () => void> = {
   newEntry: () => { SR2NewEntry.open({ actorUuid: String((game as any).user?.character?.uuid ?? '') }); },
   interpretations: () => { SR2Interpretations.open(); },
   teamKarma: () => { SR2TeamKarma.open(); },
+  loot: () => { openLoot942(); },
   gmPanel: () => { if (isGm()) SR2GmPanel.open(); },
   sceneBuilder: () => { if (isGm()) openSceneBuilder({ sceneId: '' }); },
   npcGenerator: () => { if (isGm()) SR2NpcGenerator.open(); },

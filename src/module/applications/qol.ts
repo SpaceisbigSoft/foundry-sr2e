@@ -9,6 +9,7 @@ import { postItemToChat } from './richtext.ts';
 import { escHtml } from '../rules/html.ts';
 import { madeHere } from './leader.ts';
 import { t as tx, tCount } from '../helpers/i18n.ts';
+import { catalogueTemplates, saveCatalogueTemplates, catalogueCollection, migrateCatalogue942, openCataloguePack, cataloguePack } from './catalogue942.ts';
 
 /** A-15: the shared escape helper (rules/html.ts). */
 const esc = escHtml;
@@ -163,50 +164,33 @@ export function decorateItemDrags(message: any, html: HTMLElement): void {
 
 // ---------------------------------------------------------------- compendiums (item templates)
 
-const TEMPLATE_PACK = 'sr2e-item-templates';
-
-/** GM: write the world's item templates into a world compendium (made if missing). Returns how many. */
+/**
+ * GM: the world's item templates in the world compendium. v0.94.2 (item 32): the compendium is the catalogue's home
+ * (applications/catalogue942.ts), so this makes sure the catalogue has moved there and opens it. Returns how many
+ * templates it holds.
+ */
 export async function exportTemplatesToCompendium(): Promise<number> {
   if (!(game as any).user?.isGM) { ui.notifications?.warn?.(tx('SR2E.Notify.Qol.onlyTheGmCanExportTemplates')); return 0; }
-  let list: ItemTemplate[] = [];
-  try { list = ((game as any).settings.get(SYSTEM_ID, 'itemTemplates') as ItemTemplate[]) ?? []; } catch { list = []; }
-  if (!list.length) { ui.notifications?.info?.(tx('SR2E.Notify.Qol.noWorldItemTemplatesToExport')); return 0; }
-  const packs: any = (game as any).packs;
-  let pack: any = packs?.get?.(`world.${TEMPLATE_PACK}`);
-  if (!pack) {
-    const CC: any = (foundry as any).documents?.collections?.CompendiumCollection ?? (globalThis as any).CompendiumCollection;
-    pack = await CC?.createCompendium?.({ type: 'Item', label: 'SR2e item templates', name: TEMPLATE_PACK, package: 'world' });
-  }
+  await migrateCatalogue942();
+  const pack = cataloguePack();
   if (!pack) { ui.notifications?.error?.(tx('SR2E.Notify.Qol.couldNotMakeTheCompendium')); return 0; }
-  const wasLocked = Boolean(pack.locked);
-  if (wasLocked) await pack.configure?.({ locked: false });
-  const index: any[] = [...((await pack.getIndex?.()) ?? [])];
-  const ItemCls: any = (CONFIG as any).Item.documentClass;
-  const make: any[] = [];
-  const update: any[] = [];
-  const unique = [...new Map(list.map((t) => [`${t.type}|${t.name}`, t])).values()];
-  for (const t of unique) {
-    const existing = index.find((e: any) => e.name === t.name && e.type === t.type);
-    const data = { name: t.name, type: t.type, system: foundry.utils.deepClone(t.system), flags: { [SYSTEM_ID]: { templateId: t.id } } };
-    if (existing) update.push({ _id: existing._id, ...data });
-    else make.push(data);
-  }
-  if (make.length) await ItemCls.createDocuments(make, { pack: pack.collection });
-  if (update.length) await ItemCls.updateDocuments(update, { pack: pack.collection });
-  if (wasLocked) await pack.configure?.({ locked: true });
-  ui.notifications?.info?.(tx('SR2E.Notify.Qol.exportedTemplateToTheCompendium', { uniqueLength: tCount(unique.length, 'SR2E.Count.template'), metadataLabel: escHtml(pack.metadata?.label ?? TEMPLATE_PACK) }));
-  return unique.length;
+  await openCataloguePack();
+  const n = catalogueTemplates().length;
+  if (!n) ui.notifications?.info?.(tx('SR2E.Notify.Qol.noWorldItemTemplatesToExport'));
+  else ui.notifications?.info?.(tx('SR2E.Notify.Qol.exportedTemplateToTheCompendium', { uniqueLength: tCount(n, 'SR2E.Count.template'), metadataLabel: escHtml(pack.metadata?.label ?? pack.collection) }));
+  return n;
 }
 
 /** GM: take the items of an Item compendium in as world item templates (same type and name: replaced). Returns how many. */
 export async function importTemplatesFromCompendium(collection: string): Promise<number> {
   if (!(game as any).user?.isGM) return 0;
   const pack: any = (game as any).packs?.get?.(collection);
+  // v0.94.2 (item 32): the catalogue's own compendium is the catalogue already.
+  if (collection === catalogueCollection()) return catalogueTemplates().length;
   if (!pack || pack.documentName !== 'Item') { ui.notifications?.warn?.(tx('SR2E.Notify.Qol.pickAnItemCompendium')); return 0; }
   const docs: any[] = await pack.getDocuments();
   const types = Object.keys((CONFIG as any).Item?.dataModels ?? {});
-  let list: ItemTemplate[] = [];
-  try { list = [...(((game as any).settings.get(SYSTEM_ID, 'itemTemplates') as ItemTemplate[]) ?? [])]; } catch { list = []; }
+  let list: ItemTemplate[] = catalogueTemplates();
   let n = 0;
   for (const d of docs) {
     if (types.length && !types.includes(d.type)) continue;
@@ -218,14 +202,14 @@ export async function importTemplatesFromCompendium(collection: string): Promise
     list.push({ id: old?.id ?? `w-${foundry.utils.randomID()}`, type: d.type, name: d.name, system, ...(old?.shop ? { shop: true } : {}) });
     n++;
   }
-  await (game as any).settings.set(SYSTEM_ID, 'itemTemplates', list);
+  await saveCatalogueTemplates(list);
   ui.notifications?.info?.(tx('SR2E.Notify.Qol.tookInItemTemplateFrom', { n: tCount(n, 'SR2E.Count.itemTemplate'), metadataLabel: escHtml(pack.metadata?.label ?? collection) }));
   return n;
 }
 
 /** GM: pick an Item compendium and import it as templates. */
 export async function promptImportTemplates(): Promise<number> {
-  const packs: any[] = [...((game as any).packs ?? [])].filter((p: any) => p.documentName === 'Item');
+  const packs: any[] = [...((game as any).packs ?? [])].filter((p: any) => p.documentName === 'Item' && p.collection !== catalogueCollection());
   if (!packs.length) { ui.notifications?.info?.(tx('SR2E.Notify.Qol.thereAreNoItemCompendiums')); return 0; }
   const pick = await (foundry as any).applications.api.DialogV2.prompt({
     window: { title: tx('SR2E.Dialog.Qol.itemTemplatesFromACompendium') },

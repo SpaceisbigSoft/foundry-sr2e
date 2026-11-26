@@ -106,6 +106,7 @@ import { SYSTEM_ID } from "../config/system.ts";
 import { ruleAuto } from '../rules/automation941.ts';
 // v0.93.5: firing-mode-only rows and the Perception boxes by sense (agent A's dialog helpers).
 import { wireFireModeRows, senseChecksHtml } from './dialogs935.ts';
+import { catalogueTemplates, saveCatalogueTemplates } from './catalogue942.ts';
 
 /** v0.73.0 (O24): the known-hosts context for this decker and the viewing user. */
 function knowledgeCtx(actor: any): any {
@@ -5583,7 +5584,7 @@ export class SR2ItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
     const old = worldTemplates().find((t) => t.type === item.type && t.name === name);
     const list = worldTemplates().filter((t) => !(t.type === item.type && t.name === name));
     list.push({ id: old?.id ?? `w-${foundry.utils.randomID()}`, type: item.type, name, system, ...(old?.shop ? { shop: true } : {}) });
-    await game.settings.set(SYSTEM.id, "itemTemplates", list);
+    await saveCatalogueTemplates(list);
     ui.notifications.info(tx('SR2E.Notify.Sheet.savedTheTemplate', { name: escHtml(name) }));
     this.render();
   }
@@ -5592,7 +5593,7 @@ export class SR2ItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
     if (!game.user?.isGM) return;
     const t = SR2ItemSheet.#picked(this);
     if (!t?.world) return ui.notifications.warn(tx('SR2E.Notify.Sheet.pickAWorldTemplateToDelete'));
-    await game.settings.set(SYSTEM.id, "itemTemplates", worldTemplates().filter((x) => x.id !== t.id));
+    await saveCatalogueTemplates(worldTemplates().filter((x) => x.id !== t.id));
     this.render();
   }
 
@@ -6051,7 +6052,7 @@ function upkeepContext(actor: any): any {
 
 /** v0.49.0: the GM's saved item templates (world setting). */
 function worldTemplates(): ItemTemplate[] {
-  try { return (game.settings.get(SYSTEM.id, "itemTemplates") as ItemTemplate[]) ?? []; } catch { return []; }
+  return catalogueTemplates();
 }
 
 /** Tabs: which exist for this actor, and which is open. */

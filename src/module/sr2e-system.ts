@@ -55,6 +55,8 @@ import { isLeadGm, isPromptWindow, otherWindows } from "./applications/leader.ts
 import { registerTours, startTour } from "./applications/tours.ts";
 import { registerTools, openTools, runTool } from "./applications/tools.ts";
 import { registerTeamKarma, SR2TeamKarma } from './applications/teamkarma.ts';
+import { registerTrade942, TRADE_API } from './applications/trade942.ts';
+import { registerCatalogue942, removeOldCatalogueCopy, openCataloguePack } from './applications/catalogue942.ts';
 import { registerRollRequests, openRollRequestDialog, postRollRequest } from './applications/rollrequest.ts';
 import { rollAttributeWindow, rollSkillWindow } from './applications/sheets.ts';
 import { registerLookSettings, registerLook, applyLook, findAllPortraits, applyPortrait } from "./applications/look.ts";
@@ -128,6 +130,8 @@ export class SR2System {
           requestRoll: (o: { actors?: any[] } = {}) => openRollRequestDialog(o), postRollRequest,
           // v0.93.3: the shared Team Karma tracker's window.
           teamKarma: () => SR2TeamKarma.open(),
+          // v0.94.2: give, stash and loot; the catalogue compendium.
+          trade: TRADE_API, catalogueCompendium: openCataloguePack, removeOldCatalogue: removeOldCatalogueCopy,
           // v0.93.5: the party view.
           partyView: () => SR2PartyView.open(),
         },
@@ -190,6 +194,9 @@ export class SR2System {
     registerTools();
     // v0.93.3: the shared Team Karma tracker (report item 38).
     registerTeamKarma();
+    // v0.94.2: give, stash and loot (item 28); the GM's catalogue in a world compendium (item 32).
+    registerTrade942();
+    registerCatalogue942();
     // v0.91.7: the Scene builder (its setting, the Scenes sidebar button and the scene menu).
     registerSceneBuilder();
     // v0.92.0: a † anywhere opens the rules interpretations.

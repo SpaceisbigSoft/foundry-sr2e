@@ -18,6 +18,7 @@ import { escHtml } from '../rules/html.ts';
 import { permitsBought } from '../rules/legalbuy.ts';
 import { parseFormulaKey, formulaGearSystem } from '../rules/formulas.ts';
 import { SYSTEM_ID } from '../config/system.ts';
+import { catalogueTemplates, saveCatalogueTemplates, catalogueCollection } from './catalogue942.ts';
 
 /** Fields a compendium index is asked for, so the list can show a summary and a price without loading every item. */
 export const INDEX_FIELDS = ['system.cost', 'system.availability', 'system.streetIndex', 'system.grade', 'system.bioware', 'system.cultured', 'system.damagePower', 'system.damageLevel',
@@ -172,7 +173,8 @@ let adder: Adder | null = null;
 export function setShopAdder(fn: Adder): void { adder = fn; }
 
 export function worldTemplates(): ItemTemplate[] {
-  try { return ((game.settings.get(SYSTEM.id, 'itemTemplates') as ItemTemplate[]) ?? []); } catch { return []; }
+  // v0.94.2 (item 32): the GM's catalogue lives in a world compendium (applications/catalogue942.ts).
+  return catalogueTemplates();
 }
 
 /** The shop list's settings (what players see). */
@@ -219,6 +221,8 @@ export async function entriesFor(type: string): Promise<Entry[]> {
   }
   for (const pack of ((game as any).packs ?? [])) {
     if (pack.documentName !== 'Item' || pack.visible === false) continue;
+    // v0.94.2 (item 32): the GM's catalogue compendium is listed above, as templates.
+    if (pack.collection === catalogueCollection()) continue;
     let index: any;
     try { index = await pack.getIndex({ fields: INDEX_FIELDS }); } catch { continue; }
     for (const e of index ?? []) {
@@ -385,7 +389,7 @@ export async function toggleShopMark(key: string): Promise<boolean | null> {
     if (!t) return null;
     t.shop = !t.shop;
     if (!t.shop) delete t.shop;
-    await game.settings.set(SYSTEM.id, 'itemTemplates', list.map(({ world: _w, ...x }: any) => x));
+    await saveCatalogueTemplates(list);
     return Boolean(t.shop);
   }
   // v0.91.4: a world vehicle in or out of the shop.
