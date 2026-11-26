@@ -734,6 +734,8 @@ Once a character has a record (or, with the approval queue on, once they are out
 
 The GM also has **Log note…** (write a line), a trash icon on each line (only the log changes) and **Reopen creation** (throws the record away and opens the wizard again; the log stays).
 
+**Revert** (the arrow on a raise's line, from 0.94.2) puts the rating back where it was and refunds the Good Karma and nuyen the line spent. The line stays in the log, crossed out and marked *reverted*, and a refund line follows it. Only the latest raise of a rating can be reverted: if a later line raised the same rating, revert that one first. A greyed arrow's tooltip says why it can't be used (a later raise, the rating changed by hand since, the item gone). Lines logged before 0.94.2 can't be reverted. The GM reverts at once; a player does too while ratings stay editable for them, otherwise their Revert posts an **Apply (GM)** card, and the GM's client works the revert out again from the character before applying it.
+
 ## Karma and Spend Karma
 
 The Upkeep tab's **Karma** shows Good Karma (what you spend), Karma earned in all, and the Karma Pool. The GM awards Karma and nuyen.
@@ -915,6 +917,7 @@ A vehicle or drone sheet has its ratings (Handling, Speed, Accel, Body, Armor, S
 - **Cargo**: the + loads gear. With *Load (kg)* or *Cargo Factor* set, the sheet counts what it carries and warns when overloaded.
 - **Chase**: **Give chase…**, then the gap in metres, **Chase turn** and **End chase**. A won maneuver shows its TN bonus for the Combat Turn.
 - **Aboard**: **Put someone aboard**; the × takes them off.
+- **Crew stations** (under the status strip; world setting *Crew stations on vehicle sheets*): a tab per station: **Driver** (driving test, Push, crash test, Ram and the guns a driver fires), a **Gunner** for each turret, pintle or ring mount (the guns that station works), **Sensors** (sensor test, Jam, the locks) and **Commander**. Your own station's tab comes first. **Take it** seats one of your characters at a free station when you own the vehicle or your character is aboard (a gunner who isn't aboard is put aboard); the GM and the vehicle's owner **Assign…** anyone; **Leave** frees it. Each crew member ticks **Ready**; the heading says *All ready* when every occupied station is, and the GMs get a whispered line. The GM's eraser clears the marks. The buttons are the sheet's own, so the same rules decide who may fire what.
 
 A drone's **Link encryption** guards its remote link against [Drone link](#rigging). Guided missiles fired at a vehicle lock on to its Signature, and sensor locks run out after a few Combat Turns without a new sensor test.
 
@@ -959,6 +962,8 @@ On both tabs, NPC rows show as compact stat cards (attributes, armor, initiative
 Foundry's combat tracker gets a banner with the Combat Turn, the pass, who is acting and how many are on full defense or delaying. The acting row is highlighted, delaying combatants are listed last under *Delaying*, and full defense shows as a badge. IC, frames and agents get an act button there.
 
 The tracker's header has **Surprise test** (every combatant rolls; hover it for how the result is used) and, when Foundry's own button isn't there, **Roll NPCs**. Rows you own have **Delay**, **Act now** or **Done**, a shield to declare full defense (out of turn it costs initiative only under the old full-defense house rule), and a line with the pools left.
+
+**Grunt groups in the tracker**: grunts of one morale group (or one split grunt group) share a Foundry combatant group in the combat tracker, named with how many still stand (*Goon (3/5)*; no count when a member is hidden). The GM's tracker also shows the count and a red *broken* once the group has broken. World setting *Group grunts in the combat tracker*: as they are added (the default), only with the GM's **Group grunts** button at the top of the tracker, or off. **Ungroup** undoes the system's groups; groups you make by hand are never touched. *Grunt group initiative*: each grunt rolls their own (the default, as the book rolls each character), or one roll for the group that every member takes.
 
 ## Party tab
 

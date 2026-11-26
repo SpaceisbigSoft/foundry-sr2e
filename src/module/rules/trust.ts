@@ -124,6 +124,8 @@ export const GM_APPLY_SPECS: Record<string, { flag: string; keys: readonly strin
   // v0.81.1 (D1-3, D2-5): a mechanic's timed job on someone else's vehicle; a flash's blindness on someone else.
   applyVehicleJob: { flag: 'vehicleJob', keys: ['actorUuid', 'method', 'args', 'jobId', 'sourceUuid'], target: '', sources: ['actorUuid', 'sourceUuid'] },
   applyTimedStatus: { flag: 'timedStatus', keys: ['targetUuid', 'status', 'seconds', 'flashTn', 'sourceUuid'], target: 'targetUuid', sources: ['sourceUuid'] },
+  // v0.94.2 (item 31): a player's advancement revert under the rating lock (only ids; the GM's client re-plans it).
+  applyAdvRevert: { flag: 'advRevert', keys: ['actorUuid', 'lineId'], target: 'actorUuid', sources: ['actorUuid'] },
 };
 
 function at(obj: any, path: string): unknown {
@@ -199,6 +201,7 @@ export function gmApplyShapeOk(action: string, flags: Record<string, any>): bool
     // v0.81.1 (D1-3): the documents check the job's arguments again when it is applied (applyVehicleJobAsGm).
     case 'applyVehicleJob': return safeStr(f.actorUuid, 400) && ['finishVehicleRepair', 'finishModInstall'].includes(String(f.method)) && Array.isArray(f.args) && f.args.length <= 6 && deepSafeKeys(f.args) && safeStr(f.jobId, 65);
     // v0.81.1 (D2-5): only blindness, bounded.
+    case 'applyAdvRevert': return safeStr(f.actorUuid, 400) && typeof f.lineId === 'string' && /^[A-Za-z0-9]{1,40}$/.test(f.lineId);
     case 'applyTimedStatus': return safeStr(f.targetUuid, 400) && f.status === 'blind' && intIn(f.seconds, 1, 600) && (f.flashTn === undefined || intIn(f.flashTn, 0, 10));
     default: return false;
   }
@@ -580,6 +583,7 @@ export function describeGmChange(action: string, flags: Record<string, any>, nam
         : (src ? tx('SR2E.Text.Trust.blindedFlash', { target, seconds, source: src }) : tx('SR2E.Text.Trust.blinded', { target, seconds })));
       break;
     }
+    case 'applyAdvRevert': out.push(tx('SR2E.Revert.describe', { name: nm(f.actorUuid) })); break;
     default: out.push(action);
   }
   return out;

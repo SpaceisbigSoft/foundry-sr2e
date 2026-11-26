@@ -2459,6 +2459,27 @@
       "nestOnDrop": {
         "Name": "Drop on a row to attach",
         "Hint": "On a sheet, dropping an item's row onto another item's row puts it on or in that item (an accessory on a weapon, a program on a deck, gear in a container; a clip on a gun loads it). Off: dropping sorts the list, as before."
+      },
+      "crewStations": {
+        "Name": "Crew stations on vehicle sheets",
+        "Hint": "Show a Crew stations panel on vehicle sheets: driver, gunners, sensors and commander, each with its own actions and a ready mark."
+      },
+      "gruntGroups": {
+        "Name": "Group grunts in the combat tracker",
+        "Hint": "Grunts of one morale group share a combatant group in the tracker, showing how many still stand.",
+        "Choices": {
+          "auto": "As they are added",
+          "manual": "Only with the GM's Group grunts button",
+          "off": "Off"
+        }
+      },
+      "gruntGroupInitiative": {
+        "Name": "Grunt group initiative",
+        "Hint": "Each grunt rolls their own initiative (the book), or the group rolls once and every member takes that score.",
+        "Choices": {
+          "each": "Each grunt rolls",
+          "shared": "One roll for the group"
+        }
       }
     },
     "Notify": {
@@ -18434,7 +18455,8 @@
           "b1": "After Finish, the Creation tab shows the record: the build, attributes, skills, spells, adept powers, ware, gear, contacts, edges and flaws, and the folded <strong>Build checks at the finish</strong> (click to open).",
           "b2": "The <strong>Advancement log</strong> lists every gain since: Karma in, raises, purchases and approvals, with who and when. A line above it adds them up.",
           "b3": "Once a character has a record (or, with the approval queue on, once they are out of the wizard), a player raises ratings through <a href=\"#spend-karma\">Spend Karma</a>. Typing a higher rating, Force or level is refused; lowering is allowed. Essence can't be typed at all. With the queue on, typing more nuyen or Karma is refused too: the GM awards them. The GM can type anything.",
-          "b4": "The GM also has <strong>Log note…</strong> (write a line), a trash icon on each line (only the log changes) and <strong>Reopen creation</strong> (throws the record away and opens the wizard again; the log stays)."
+          "b4": "The GM also has <strong>Log note…</strong> (write a line), a trash icon on each line (only the log changes) and <strong>Reopen creation</strong> (throws the record away and opens the wizard again; the log stays).",
+          "b5": "<strong>Revert</strong> (the arrow on a raise's line, from 0.94.2) puts the rating back where it was and refunds the Good Karma and nuyen the line spent. The line stays in the log, crossed out and marked <em>reverted</em>, and a refund line follows it. Only the latest raise of a rating can be reverted: if a later line raised the same rating, revert that one first. A greyed arrow's tooltip says why it can't be used (a later raise, the rating changed by hand since, the item gone). Lines logged before 0.94.2 can't be reverted. The GM reverts at once; a player does too while ratings stay editable for them, otherwise their Revert posts an <strong>Apply (GM)</strong> card, and the GM's client works the revert out again from the character before applying it."
         },
         "approval": {
           "title": "The approval queue",
@@ -18499,7 +18521,8 @@
             "i4": "<strong>Modifications</strong>: <strong>Add</strong> one, then <strong>Install…</strong> (a mechanic's test that takes time and charges the cost) or <strong>Take out</strong>. Work on a vehicle your players don't own finishes on a GM card.",
             "i5": "<strong>Cargo</strong>: the + loads gear. With <em>Load (kg)</em> or <em>Cargo Factor</em> set, the sheet counts what it carries and warns when overloaded.",
             "i6": "<strong>Chase</strong>: <strong>Give chase…</strong>, then the gap in metres, <strong>Chase turn</strong> and <strong>End chase</strong>. A won maneuver shows its TN bonus for the Combat Turn.",
-            "i7": "<strong>Aboard</strong>: <strong>Put someone aboard</strong>; the × takes them off."
+            "i7": "<strong>Aboard</strong>: <strong>Put someone aboard</strong>; the × takes them off.",
+            "i8": "<strong>Crew stations</strong> (under the status strip; world setting <em>Crew stations on vehicle sheets</em>): a tab per station: <strong>Driver</strong> (driving test, Push, crash test, Ram and the guns a driver fires), a <strong>Gunner</strong> for each turret, pintle or ring mount (the guns that station works), <strong>Sensors</strong> (sensor test, Jam, the locks) and <strong>Commander</strong>. Your own station's tab comes first. <strong>Take it</strong> seats one of your characters at a free station when you own the vehicle or your character is aboard (a gunner who isn't aboard is put aboard); the GM and the vehicle's owner <strong>Assign…</strong> anyone; <strong>Leave</strong> frees it. Each crew member ticks <strong>Ready</strong>; the heading says <em>All ready</em> when every occupied station is, and the GMs get a whispered line. The GM's eraser clears the marks. The buttons are the sheet's own, so the same rules decide who may fire what."
           },
           "b3": "A drone's <strong>Link encryption</strong> guards its remote link against <a href=\"#rigging\">Drone link</a>. Guided missiles fired at a vehicle lock on to its Signature, and sensor locks run out after a few Combat Turns without a new sensor test."
         },
@@ -18553,7 +18576,8 @@
           "b2": "<strong>NPCs</strong> tab: <strong>Group roll…</strong> (one test, one card), <strong>Damage several…</strong> and <strong>Heal several…</strong> each ask who: the selected tokens, every NPC token on the scene, or the party. <strong>Group for morale</strong> and <strong>Ungroup</strong> work on the selected tokens; each morale group is then listed with a flag (its morale test) and an × (break it up). <strong>On this scene</strong> lists the tokens no player owns (up to 40) with the same quick icons.",
           "b3": "On both tabs, NPC rows show as compact stat cards (attributes, armor, initiative, weapon and damage). The card icon beside the heading switches to plain rows and back; the panel remembers.",
           "b4": "Foundry's combat tracker gets a banner with the Combat Turn, the pass, who is acting and how many are on full defense or delaying. The acting row is highlighted, delaying combatants are listed last under <em>Delaying</em>, and full defense shows as a badge. IC, frames and agents get an act button there.",
-          "b5": "The tracker's header has <strong>Surprise test</strong> (every combatant rolls; hover it for how the result is used) and, when Foundry's own button isn't there, <strong>Roll NPCs</strong>. Rows you own have <strong>Delay</strong>, <strong>Act now</strong> or <strong>Done</strong>, a shield to declare full defense (out of turn it costs initiative only under the old full-defense house rule), and a line with the pools left."
+          "b5": "The tracker's header has <strong>Surprise test</strong> (every combatant rolls; hover it for how the result is used) and, when Foundry's own button isn't there, <strong>Roll NPCs</strong>. Rows you own have <strong>Delay</strong>, <strong>Act now</strong> or <strong>Done</strong>, a shield to declare full defense (out of turn it costs initiative only under the old full-defense house rule), and a line with the pools left.",
+          "b6": "<strong>Grunt groups in the tracker</strong>: grunts of one morale group (or one split grunt group) share a Foundry combatant group in the combat tracker, named with how many still stand (<em>Goon (3/5)</em>; no count when a member is hidden). The GM's tracker also shows the count and a red <em>broken</em> once the group has broken. World setting <em>Group grunts in the combat tracker</em>: as they are added (the default), only with the GM's <strong>Group grunts</strong> button at the top of the tracker, or off. <strong>Ungroup</strong> undoes the system's groups; groups you make by hand are never touched. <em>Grunt group initiative</em>: each grunt rolls their own (the default, as the book rolls each character), or one roll for the group that every member takes."
         },
         "gmParty": {
           "title": "Party tab",
@@ -19573,6 +19597,75 @@
       "toolHint": "Converting makes an attached gear item for each accessory field and clears the field; the weapons' values stay the same. Back to fields undoes it. Nothing converts by itself.",
       "toolRevert": "Back to fields",
       "toolTitle": "Accessory items"
+    },
+    "Revert": {
+      "title": "Revert this raise and refund what it cost",
+      "reverted": "reverted",
+      "Why": {
+        "missing": "That log line is gone.",
+        "reverted": "Already reverted.",
+        "notRevertable": "This line can't be reverted automatically (nothing it raised was recorded, or it was logged before 0.94.2).",
+        "later": "A later raise of the same rating builds on this one: revert \"{what}\" first.",
+        "changed": "{label} is {now} now, not {expected} as this raise left it: it was changed since.",
+        "itemGone": "{label} is no longer on the character."
+      },
+      "stepLine": "{label}: {from} → {to}",
+      "refundKarma": "Refund {karma} Good Karma",
+      "refundNuyen": "Refund ¥{nuyen}",
+      "confirmTitle": "Revert a raise: {name}",
+      "confirmHint": "The log line stays, marked reverted, and a refund line is added.",
+      "askedBy": "Asked for by {who}.",
+      "ledgerReason": "Refund: reverted {what}",
+      "logLine": "Reverted: {what}",
+      "cardAsk": "{name} asks to revert \"{what}\":",
+      "applyGm": "Apply (GM)",
+      "sentToGm": "Sent to the GM to apply.",
+      "describe": "Revert an advancement-log line on {name} (worked out again from the character when applied)"
+    },
+    "Crew": {
+      "title": "Crew stations",
+      "Station": {
+        "driver": "Driver",
+        "gunner": "Gunner",
+        "sensors": "Sensors",
+        "commander": "Commander"
+      },
+      "numbered": "{label} {n}",
+      "free": "Free",
+      "claim": "Take it",
+      "assign": "Assign…",
+      "leave": "Leave",
+      "ready": "Ready",
+      "notReady": "Not ready",
+      "readyMark": "Ready",
+      "allReadyChip": "All ready",
+      "allReady": "Every crew station on {name} is ready (last marked by {by}).",
+      "clearReady": "Clear the ready marks (GM)",
+      "drive": "Driving test",
+      "push": "Push",
+      "crashTest": "Crash test",
+      "ram": "Ram",
+      "fire": "Fire {name}",
+      "noGuns": "No mounted weapon for this station.",
+      "sensorTest": "Sensor test",
+      "jam": "Jam",
+      "dropLock": "Drop the lock",
+      "commanderHint": "Keeps the crew together: sees every station's ready mark.",
+      "notAllowed": "You can't change that station.",
+      "nobodyToSeat": "Nobody you may seat at that station.",
+      "pickTitle": "Crew station: {name}",
+      "who": "Who",
+      "seatIt": "Seat"
+    },
+    "Groups": {
+      "grunts": "Grunts",
+      "nameCount": "{name} ({standing}/{total})",
+      "standing": "{standing}/{total} standing",
+      "broken": "broken",
+      "group": "Group grunts",
+      "groupHint": "Put the grunts of each morale group into one combatant group",
+      "ungroup": "Ungroup",
+      "unsupported": "This Foundry version has no combatant groups."
     }
   },
   "TYPES": {

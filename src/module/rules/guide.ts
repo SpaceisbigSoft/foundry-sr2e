@@ -128,14 +128,14 @@ export const GUIDE_TOPICS: GuideTopic[] = [
   topic('catalogue', 'both', ['Stats and details'], ['p', 4, 'p']),
   // ---------------------------------------------------------------- creation
   topic('creation-wizard', 'both', ['Character creation', 'Totals', 'Shopping'], ['p', 8, 'p', 'p', 'p', 'p']),
-  topic('creation-record', 'both', ['Creation record', 'Advancement log', 'Build checks at the finish'], ['p', 'p', 'p', 'p']),
+  topic('creation-record', 'both', ['Creation record', 'Advancement log', 'Build checks at the finish'], ['p', 'p', 'p', 'p', 'p']),
   topic('approval', 'both', ['Waiting for the GM', 'Requests from players'], ['p', 'p', 'p', 'p', 3, 'p']),
   // ---------------------------------------------------------------- Bio tab
   topic('bio', 'both', ['Edges and flaws', 'Reputation', 'Biography', 'Notes'], [3, 'p']),
   // ---------------------------------------------------------------- other sheets
   topic('token-art', 'both', ['Picture and token', 'Default token art'], ['p', 4, 'p', 8]),
   topic('npc-sheets', 'both', ['Powers, weaknesses and notes', 'Critter', 'Adjustments'], ['p', 4]),
-  topic('vehicles', 'both', ['Control', 'Sensors', 'Chase', 'Aboard', 'Modifications', 'Cargo'], ['p', 7, 'p']),
+  topic('vehicles', 'both', ['Control', 'Sensors', 'Chase', 'Aboard', 'Modifications', 'Cargo'], ['p', 8, 'p']),
 
   topic('printing', 'both', [], ['p', 3, 'p', 'p', 'p']),
   // v0.93.2: common problems and fixes (the full page is docs/TROUBLESHOOTING.md).
@@ -144,7 +144,7 @@ export const GUIDE_TOPICS: GuideTopic[] = [
   topic('credits', 'both', [], ['p', 'p', 'p', 'p', 'p']),
   topic('gm-panel', 'gm', ['Scene', 'Regions with an SR2e environment', 'Presets', 'Encounter notes', 'Charges on a timer', 'Fires', 'Damaged walls'], ['p', 'p', 'p', 9]),
   topic('gm-time', 'gm', ['Time'], ['p', 'p', 'p', 'p']),
-  topic('gm-combat', 'gm', ['Combat', 'NPCs and groups', 'On this scene'], ['p', 'p', 'p', 'p', 'p']),
+  topic('gm-combat', 'gm', ['Combat', 'NPCs and groups', 'On this scene'], ['p', 'p', 'p', 'p', 'p', 'p']),
   topic('gm-party', 'gm', ['Party', 'Money and Karma'], ['p', 'p']),
   topic('gm-tools', 'gm', ['NPC generator', 'Preview', 'Dice and TN calculator'], [3]),
   topic('gm-setup', 'gm', ['Start of the session', 'End of the session', 'Players and characters', 'Token setup', 'Starter kits', 'Item catalogue', 'Characters from a stat block', 'Modules', 'Rules source', 'Portraits by name', 'Starter demo'], [10]),
