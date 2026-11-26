@@ -23,6 +23,9 @@ import { keyedItemRaises, keyedActorRaises, attachUndo } from '../rules/revert94
 
 export const LOG_FLAG = 'advancement';
 
+/** v0.94.2: the world time a log line records (the log, like the undo log, keeps Foundry's clock). */
+export const advancementTime = (): number => Number((game as any).time?.worldTime ?? 0);
+
 /** The character's log (oldest first). */
 export function advancementOf(actor: any): AdvanceLine[] {
   const l = actor?.flags?.[SYSTEM.id]?.[LOG_FLAG];

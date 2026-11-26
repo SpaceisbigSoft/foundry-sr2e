@@ -49,7 +49,7 @@ const controllerOf = (vehicle: any): string => String(vehicle?.system?.controlle
 
 /** The station's label ("Gunner 2"). */
 export function stationLabel(s: Station, count: number): string {
-  const base = tx(`SR2E.Crew.Station.${s.role}`);
+  const base = s.role === 'driver' ? tx('SR2E.Crew.Station.driver') : s.role === 'gunner' ? tx('SR2E.Crew.Station.gunner') : s.role === 'sensors' ? tx('SR2E.Crew.Station.sensors') : tx('SR2E.Crew.Station.commander');
   return s.role === 'gunner' && count > 1 ? tx('SR2E.Crew.numbered', { label: base, n: s.n }) : base;
 }
 
@@ -181,7 +181,7 @@ export function crewPanelHtml(vehicle: any, sheetId = ''): string {
   const tabs = ordered.map((s) => {
     const who = fromUuidQuiet(seatOf(state, s.id, ctl));
     const ready = state.ready[s.id] === true;
-    return `<a class="sr2e-crew-tab${s.id === active ? ' active' : ''}${mine.includes(s.id) ? ' mine' : ''}" data-action="crewTab" data-station="${s.id}" role="tab" aria-selected="${s.id === active}">${escHtml(stationLabel(s, gunnerCount))}${who ? ` <small>${escHtml(who.name)}</small>` : ''}${ready ? ` <i class="fa-solid fa-circle-check sr2e-crew-ready" title="${tx('SR2E.Crew.ready')}"></i>` : ''}</a>`;
+    return `<a class="sr2e-crew-tab${s.id === active ? ' active' : ''}${mine.includes(s.id) ? ' mine' : ''}" data-action="crewTab" data-station="${escHtml(s.id)}" role="tab" aria-selected="${s.id === active}">${escHtml(stationLabel(s, gunnerCount))}${who ? ` <small>${escHtml(who.name)}</small>` : ''}${ready ? ` <i class="fa-solid fa-circle-check sr2e-crew-ready" title="${tx('SR2E.Crew.ready')}"></i>` : ''}</a>`;
   }).join('');
   const panels = ordered.map((s) => {
     const uuid = seatOf(state, s.id, ctl);
@@ -196,13 +196,13 @@ export function crewPanelHtml(vehicle: any, sheetId = ''): string {
       mayClaim ? btn('crewClaim', 'fa-chair', tx('SR2E.Crew.claim'), attr('data-station', s.id)) : '',
       (isGM || vehicle.isOwner) ? btn('crewAssign', 'fa-user-plus', tx('SR2E.Crew.assign'), attr('data-station', s.id)) : '',
       mayLeave ? btn('crewLeave', 'fa-person-walking-arrow-right', tx('SR2E.Crew.leave'), attr('data-station', s.id)) : '',
-      mayReady ? `<a class="sr2e-crew-readybox${ready ? ' on' : ''}" data-action="crewReady" data-station="${s.id}" data-on="${ready ? '' : '1'}" role="button" aria-pressed="${ready}"><i class="fa-regular ${ready ? 'fa-square-check' : 'fa-square'}" aria-hidden="true"></i> ${tx('SR2E.Crew.readyMark')}</a>` : (who ? `<span class="hint">${ready ? tx('SR2E.Crew.ready') : tx('SR2E.Crew.notReady')}</span>` : ''),
+      mayReady ? `<a class="sr2e-crew-readybox${ready ? ' on' : ''}" data-action="crewReady" data-station="${escHtml(s.id)}" data-on="${ready ? '' : '1'}" role="button" aria-pressed="${ready}"><i class="fa-regular ${ready ? 'fa-square-check' : 'fa-square'}" aria-hidden="true"></i> ${tx('SR2E.Crew.readyMark')}</a>` : (who ? `<span class="hint">${ready ? tx('SR2E.Crew.ready') : tx('SR2E.Crew.notReady')}</span>` : ''),
     ].filter(Boolean).join(' ');
-    return `<div class="sr2e-crew-panel${s.id === active ? ' active' : ''}" data-station="${s.id}" role="tabpanel">
+    return `<div class="sr2e-crew-panel${s.id === active ? ' active' : ''}" data-station="${escHtml(s.id)}" role="tabpanel">
       <p class="sr2e-crew-seat">${who ? `<a data-action="openActor" data-uuid="${escHtml(who.uuid)}"><strong>${escHtml(who.name)}</strong></a>` : `<em>${tx('SR2E.Crew.free')}</em>`} ${controls}</p>
       <div class="sr2e-row sr2e-crew-actions">${stationActions(vehicle, s, gunnerCount)}</div></div>`;
   }).join('');
-  const head = `<h3 data-heading="Crew stations">${tx('SR2E.Crew.title')}${everyone ? ` <span class="sr2e-chip sr2e-crew-allready">${tx('SR2E.Crew.allReadyChip')}</span>` : ''}${isGM ? ` <a data-action="crewClearReady" title="${tx('SR2E.Crew.clearReady')}"><i class="fa-solid fa-eraser"></i></a>` : ''}</h3>`;
+  const head = `<h3 data-help="vehicles" data-heading="Crew stations">${tx('SR2E.Crew.title')}${everyone ? ` <span class="sr2e-chip sr2e-crew-allready">${tx('SR2E.Crew.allReadyChip')}</span>` : ''}${isGM ? ` <a data-action="crewClearReady" title="${tx('SR2E.Crew.clearReady')}"><i class="fa-solid fa-eraser"></i></a>` : ''}</h3>`;
   return `${head}<nav class="sr2e-crew-tabs" role="tablist">${tabs}</nav>${panels}`;
 }
 

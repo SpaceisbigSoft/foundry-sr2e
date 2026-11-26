@@ -13,7 +13,7 @@
 import { SYSTEM_ID } from '../config/system.ts';
 import { t as tx } from '../helpers/i18n.ts';
 import { escHtml } from '../rules/html.ts';
-import { advancementOf, ratingLocked, LOG_FLAG } from './advancement.ts';
+import { advancementOf, advancementTime, ratingLocked, LOG_FLAG } from './advancement.ts';
 import { planRevert, revertCheck, revertRoute, revertedLog, type RevertLine, type UndoStep, type RevertCheck, type RevertPlan } from '../rules/revert942.ts';
 
 /** A step's field on the actor now (null when its item is gone). */
@@ -36,7 +36,9 @@ export function revertWhyText(c: RevertCheck, log: ReadonlyArray<RevertLine> = [
   if (c.why === 'later') return tx('SR2E.Revert.Why.later', { what: String(log.find((l) => l.id === c.laterId)?.what ?? '') });
   if (c.why === 'changed') return tx('SR2E.Revert.Why.changed', { label: String(c.label ?? ''), now: Number(c.now ?? 0), expected: Number(c.expected ?? 0) });
   if (c.why === 'itemGone') return tx('SR2E.Revert.Why.itemGone', { label: String(c.label ?? '') });
-  return tx(`SR2E.Revert.Why.${c.why || 'notRevertable'}`);
+  if (c.why === 'missing') return tx('SR2E.Revert.Why.missing');
+  if (c.why === 'reverted') return tx('SR2E.Revert.Why.reverted');
+  return tx('SR2E.Revert.Why.notRevertable');
 }
 
 /** For the sheet's log rows: whether to show Revert, whether it works now, and why not. */
@@ -91,7 +93,7 @@ export async function applyRevert(actor: any, lineId: string, by: string): Promi
     if (!item) return false;
     await item.update(changes, { sr2eNoAdvance: true });
   }
-  const at = new Date().toISOString(), t = Number((game as any).time?.worldTime ?? 0);
+  const at = new Date().toISOString(), t = advancementTime();
   const reason = tx('SR2E.Revert.ledgerReason', { what: line.what });
   const ledger = [...((actor.system?.ledger ?? []) as any[]).map((l: any) => ({ ...l }))];
   if (plan.refund.karma) ledger.push({ t, kind: 'karma', amount: plan.refund.karma, reason });
