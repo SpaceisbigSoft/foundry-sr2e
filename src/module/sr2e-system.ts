@@ -19,6 +19,8 @@ import { registerItemTypeGuard } from "./applications/drops.ts";
 import { registerAreaHooks } from "./applications/canvas.ts";
 import { registerFloatingDamage, registerQuickRolls, registerHotkeys } from "./applications/hotkeys.ts";
 import { registerAccessibility } from "./applications/a11y.ts";
+import { registerFoundryTooltips } from "./applications/tooltips.ts";
+import { registerPopOutWatch } from "./helpers/docs.ts";
 import { registerI18nHelpers } from "./helpers/i18n.ts";
 import { RULES } from "./rules/index.ts";
 import { SR2SafehouseSheet } from "./applications/safehouse.ts";
@@ -138,6 +140,9 @@ export class SR2System {
     registerQuickRolls();
     registerHotkeys();
     registerAccessibility();
+    // v0.93.4: Foundry's tooltips in our windows; listeners follow windows into popped-out browser windows.
+    registerFoundryTooltips();
+    registerPopOutWatch();
     registerCombatRelay();
     registerTokenHooks();
     registerStateStatusHooks();

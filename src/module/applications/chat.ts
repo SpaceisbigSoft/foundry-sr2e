@@ -2663,7 +2663,8 @@ async function promptForCard(message: any): Promise<void> {
     // A-17: a Shift-click armed just before this arrived must not answer this prompt's dialogs with their defaults.
     disarmQuickRoll();
     const ok = await foundry.applications.api.DialogV2.confirm({
-      window: { title: `${target.name}: ${e.kind === 'resist' ? tx('SR2E.Dialog.Chat.hit') : e.kind === 'resistSpell' ? tx('SR2E.Dialog.Chat.aSpell') : tx('SR2E.Dialog.Chat.attacked')}` },
+      // v0.93.4: the title says what to do ("Soot: resist the spell?"); the body what came and where the button stays.
+      window: { title: tx('SR2E.Dialog.Chat.promptTitle', { name: target.name, verb }) },
       // A-3: names and weapon / spell names are escaped (this runs on the target's client: the GM's for an NPC).
       content: `<p><strong>${escHtml(target.name)}</strong>: ${escHtml(e.what)}.</p><p>${tx('SR2E.Dialog.Chat.now', { verb })}</p>`,
       yes: { label: verb }, no: { label: tx('SR2E.Dialog.Chat.laterUseTheCard') },

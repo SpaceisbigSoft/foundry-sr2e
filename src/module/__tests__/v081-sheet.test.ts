@@ -236,7 +236,7 @@ describe('v0.81.0 FX-SHEET: sheet handler fixes', () => {
       assert.ok(!SRC.includes(dead), dead);
     }
     const sum = fnSource('summaryContext');
-    assert.match(sum, /return \{ pools, chips \};/);
+    assert.match(sum, /return \{ pools, chips, meta, showRow: Boolean\(meta \|\| chips\.length\) \};/);
     assert.match(fnSource('#onSetPool'), /poolsOf\(actor\)/);
   });
 

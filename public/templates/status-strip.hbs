@@ -2,9 +2,11 @@
      wound modifier, initiative, pools left (click a pip to set), the readied weapon and its ammo, and "your turn" with the
      actions left this phase. It stays at the top of the sheet with the tabs. Context: strip, cm.
      v0.86.0: a group, not a live region (it re-renders with every change and would talk over everything); each pool's
-     pips are one Tab stop moved with the arrow keys (applications/a11y.ts). --}}
+     pips are one Tab stop moved with the arrow keys (applications/a11y.ts).
+     v0.93.4: the monitor is text here (monitor-mini.hbs stays for the GM panel). --}}
 <div class="sr2e-strip{{#if strip.turn}} sr2e-strip-myturn{{/if}}" role="group" aria-label="{{sr2eT "SR2E.UI.status"}}">
-  {{#if cm}}<span class="sr2e-strip-cm">{{> "systems/shadowrun2e_unified/templates/monitor-mini.hbs"}}</span>{{/if}}
+  {{!-- v0.93.4: the monitor as text in the strip's font ("P 3/10 (+2) · S 0/10"); the boxes stay on the Main tab. --}}
+  {{#if cm}}<span class="sr2e-strip-cm">{{#each cm.tracks}}<span class="sr2e-strip-item sr2e-strip-track sr2e-strip-{{track}}{{#if filled}} hurt{{/if}}" title="{{sr2eT "SR2E.UI.of" label=label filled=filled boxes=boxes}}{{#each groups}}{{#if now}} · {{title}}{{/if}}{{/each}}"><small aria-hidden="true">{{short}}</small><span class="sr2e-sr-only">{{label}}</span> <b>{{filled}}</b><i>/{{boxes}}</i>{{#if reached}} <em>({{reached}})</em>{{/if}}</span>{{/each}}{{#if cm.overflow}}{{#unless cm.overflow.idle}}<span class="sr2e-strip-item sr2e-strip-track sr2e-strip-overflow" title="{{sr2eT "SR2E.UI.overflowOf" filled=cm.overflow.filled body=cm.overflow.body}}"><small>{{sr2eT "SR2E.UI.of2"}}</small> <b>{{cm.overflow.filled}}</b><i>/{{cm.overflow.body}}</i></span>{{/unless}}{{/if}}</span>{{/if}}
   {{#if strip.wound}}<span class="sr2e-strip-item sr2e-strip-wound" title="{{sr2eT "SR2E.UI.woundModifierAddedToTheTarget"}}">{{strip.wound}}<small>{{sr2eT "SR2E.UI.tn"}}</small></span>{{/if}}
   {{#if strip.status}}<span class="sr2e-strip-item{{#if strip.danger}} sr2e-strip-danger{{/if}}">{{strip.status}}</span>{{/if}}
   <span class="sr2e-strip-item" title="{{#if strip.initNow}}{{sr2eT "SR2E.UI.initiativeThisPass"}}{{else}}{{sr2eT "SR2E.UI.initiativeReactionDice"}}{{/if}}"><small>{{sr2eT "SR2E.UI.init"}}</small> <b>{{strip.init}}</b></span>

@@ -22,7 +22,7 @@ import { t as tx, tKey } from '../helpers/i18n.ts';
 export type WizardStep = 'priorities' | 'metatype' | 'attributes' | 'magic' | 'skills' | 'resources' | 'contacts' | 'review';
 
 export const WIZARD_STEPS: ReadonlyArray<{ id: WizardStep; label: string; hint: string }> = [
-  { id: 'priorities', label: 'Priorities', hint: 'Give each column one letter, A to E.' },
+  { id: 'priorities', label: 'Priorities', hint: 'Pick one letter for each row; use each letter A–E once.' },
   { id: 'metatype', label: 'Metatype', hint: 'Metahumans need a Race priority high enough for them.' },
   { id: 'attributes', label: 'Attributes', hint: 'Base ratings before racial modifiers, each 1 to the maximum.' },
   { id: 'magic', label: 'Magic', hint: 'Mundane, a full magician, an adept or an aspected magician, as the Magic priority allows.' },

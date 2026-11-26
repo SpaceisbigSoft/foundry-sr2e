@@ -134,7 +134,8 @@ describe('v0.86.0 review fixes', () => {
   });
   test('R3/R5: mouse users are left alone; tab rows and core windows', () => {
     const src = read('src', 'module', 'applications', 'a11y.ts');
-    assert.ok(src.includes("document.addEventListener('pointerdown', () => { pending = null; }, true);"));
+    // v0.93.4: on every document (popped-out windows too).
+    assert.ok(src.includes("d.addEventListener('pointerdown', () => { pending = null; }, true)"));
     assert.ok(src.includes("safeMatches(target, ':focus-visible')") && src.includes("safeMatches(a, ':focus-visible')"));
     assert.ok(src.includes("group: '[role=\"tablist\"][data-sr2e-tabs]'"));
     assert.ok(src.includes('else enhanceParts(root);'));

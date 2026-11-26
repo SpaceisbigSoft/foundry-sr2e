@@ -13,6 +13,7 @@ import { escHtml } from '../rules/html.ts';
 import { openBugReport } from './bugreport.ts';
 import { headingName } from '../helpers/heading.ts';
 import { t as tx } from '../helpers/i18n.ts';
+import { onEveryDocument } from '../helpers/docs.ts';
 
 const { HandlebarsApplicationMixin, ApplicationV2 } = foundry.applications.api;
 /** A-15: the shared escape helper (rules/html.ts). */
@@ -130,13 +131,13 @@ export function registerHelp(): void {
     try { decorateHelp(root); } catch (err) { console.warn('sr2e | help links', err); }
   });
   // Capture: the heading's own click (folding the section) mustn't run when the ? is clicked.
-  document.addEventListener('click', (ev) => {
+  onEveryDocument((d) => d.addEventListener('click', (ev) => {
     const a = (ev.target as HTMLElement | null)?.closest?.('[data-sr2e-help]') as HTMLElement | null;
     if (!a) return;
     ev.preventDefault();
     ev.stopPropagation();
     openHelp(a.dataset['sr2eHelp']);
-  }, true);
+  }, true));
 }
 
 export { esc as helpEscape };

@@ -22,6 +22,7 @@
  */
 
 import { t as tx } from '../helpers/i18n.ts';
+import { onEveryDocument, docOf, activeIn } from '../helpers/docs.ts';
 
 /** The controls the system wires up itself (Foundry's `data-action`, our chat-card buttons, and a few made in code). */
 export const KB_SELECTOR = [
@@ -219,15 +220,17 @@ export function rememberFocus(el: HTMLElement): void {
 }
 
 /** Whether the keyboard focus is lost (on the page itself, or on an element a re-render removed). */
-function focusLost(): boolean {
-  const a = document.activeElement as HTMLElement | null;
+function focusLost(within?: Node | null): boolean {
+  // v0.93.4: the document the window lives in (a popped-out window has its own).
+  const d = docOf(within) ?? document;
+  const a = d.activeElement as HTMLElement | null;
   // A button disabled after its press keeps no focus in some browsers and a stale one in others.
-  return !a || a === document.body || a === document.documentElement || !a.isConnected || Boolean((a as HTMLButtonElement).disabled);
+  return !a || a === d.body || a === d.documentElement || !a.isConnected || Boolean((a as HTMLButtonElement).disabled);
 }
 
 /** Put the focus back on the remembered control inside this root, if the focus was lost meanwhile. */
 function restoreInto(root: HTMLElement | null | undefined, p: Pending | null): boolean {
-  if (!root || !p || Date.now() > p.until || !focusLost()) return false;
+  if (!root || !p || Date.now() > p.until || !focusLost(root)) return false;
   // In order of preference (querySelector with a list would take document order: the message's Delete link first).
   const picks = ['.message-content button:not([disabled])', '.window-content button:not([disabled])', '.message-content [data-sr2e-kb][tabindex="0"]',
     '.window-content [data-sr2e-kb][tabindex="0"]', 'button:not([disabled]):not(.header-control)'];
@@ -242,7 +245,7 @@ function restoreInto(root: HTMLElement | null | undefined, p: Pending | null): b
   }
   if (!target) return false;
   try { target.focus({ preventScroll: false }); } catch { return false; }
-  return document.activeElement === target;
+  return activeIn(target) === target;
 }
 
 /** After every other render hook (the help links, the HUD and tracker buttons are added by hooks of their own). */
@@ -318,7 +321,7 @@ export function isOurWindow(root: { classList?: { contains(c: string): boolean }
 
 /** The first field a keyboard user wants in a freshly opened dialog: an input, else the default button. */
 function focusDialog(root: HTMLElement): void {
-  if (root.contains(document.activeElement)) return;
+  if (root.contains(activeIn(root))) return;
   const field = root.querySelector<HTMLElement>('.window-content input:not([type="hidden"]):not([disabled]), .window-content select:not([disabled]), .window-content textarea:not([disabled])');
   const button = root.querySelector<HTMLElement>('footer button[autofocus], footer button.default, footer button[data-action="ok"], footer button');
   (field ?? button)?.focus?.();
@@ -335,7 +338,7 @@ export function registerAccessibility(): void {
     // A dialog that just opened from one of our controls: remember the control, and give the dialog the focus.
     const isDialog = app instanceof (foundry as any).applications.api.DialogV2;
     if (isDialog && root.id && !openers.has(root.id)) {
-      const a = document.activeElement as HTMLElement | null;
+      const a = activeIn(root) as HTMLElement | null;
       // Only after keyboard use: a pending press (made by a key), or a focused control that shows its focus ring
       // (:focus-visible; a button merely clicked with the mouse doesn't), so mouse users' focus is never moved.
       const from: Pending | null = pending && Date.now() <= pending.until ? pending
@@ -361,7 +364,7 @@ export function registerAccessibility(): void {
     // Back to the control that opened the dialog, and keep watching: the roll usually re-renders its window.
     pending = { ...from, until: Date.now() + FOCUS_HOLD_MS };
     setTimeout(() => {
-      if (!focusLost()) return;
+      if (!focusLost(from.el)) return;
       const root = from.appId ? document.getElementById(from.appId)
         : from.messageId ? document.querySelector<HTMLElement>(`.chat-log [data-message-id="${from.messageId}"]`) : null;
       if (from.el.isConnected) { try { from.el.focus(); return; } catch { /* gone */ } }
@@ -372,14 +375,14 @@ export function registerAccessibility(): void {
     // Checked after the other hooks: the target links and inline tests are added by them.
     later(() => { if (html?.querySelector?.('[data-sr2e-action], [class*="sr2e"]')) onCardRender(message, html); });
   });
-  document.addEventListener('keydown', onKeydown);
+  onEveryDocument((d) => d.addEventListener('keydown', onKeydown));
   // A mouse or touch press ends any keyboard focus bookkeeping: nothing moves a mouse user's focus.
-  document.addEventListener('pointerdown', () => { pending = null; }, true);
+  onEveryDocument((d) => d.addEventListener('pointerdown', () => { pending = null; }, true));
   // Tab rows follow a switch made either way (a click, or Enter on a tab).
-  document.addEventListener('click', (ev) => {
+  onEveryDocument((d) => d.addEventListener('click', (ev) => {
     const tab = (ev.target as HTMLElement | null)?.closest?.('[data-sr2e-tabs] > [role="tab"]') as HTMLElement | null;
     if (tab) syncTabs(tab);
-  });
+  }));
 }
 
 /** The scope where Space and the arrow keys belong to our controls, not to Foundry's canvas keys. */

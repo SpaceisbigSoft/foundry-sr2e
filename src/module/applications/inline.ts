@@ -12,6 +12,7 @@ import { withRollMode } from '../documents/index.ts';
 import { escHtml } from '../rules/html.ts';
 import { t as tx, tCount } from '../helpers/i18n.ts';
 import { SYSTEM_ID } from '../config/system.ts';
+import { onEveryDocument } from '../helpers/docs.ts';
 
 let registered = false;
 
@@ -231,7 +232,7 @@ export function registerInlineTests(): void {
     enricher: async (match: RegExpMatchArray, _options: any) => inlineTestElement(match[1] ?? '', match[2] ?? null),
   });
 
-  document.addEventListener('click', (ev) => { void onClick(ev); });
+  onEveryDocument((d) => d.addEventListener('click', (ev) => { void onClick(ev); }));
 
   Hooks.on('chatMessage', (_chatLog: any, message: string, chatData: any) => {
     const spec = chatCommandSpec(message);

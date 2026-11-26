@@ -6,6 +6,7 @@
 import { SYSTEM_ID } from "../config/system.ts";
 import { rememberFocus } from "./a11y.ts";
 import { t as tx } from '../helpers/i18n.ts';
+import { onEveryDocument } from '../helpers/docs.ts';
 
 // ---------------------------------------------------------------- floating damage numbers
 
@@ -95,7 +96,7 @@ function rollAtOnce(): boolean {
 export function registerQuickRolls(): void {
   // A Shift-click on any SR2 sheet, card, HUD or panel button arms a quick roll for a moment.
   // v0.93.3: a plain click does when the user's "Roll at once" default is on (Shift then opens the window).
-  document.addEventListener('click', (ev: MouseEvent) => {
+  onEveryDocument((d) => d.addEventListener('click', (ev: MouseEvent) => {
     const atOnce = rollAtOnce();
     if (!ev.shiftKey && !atOnce) return;
     const el = (ev.target as HTMLElement | null)?.closest?.('[data-action], [data-sr2e-action]') as HTMLElement | null;
@@ -103,7 +104,7 @@ export function registerQuickRolls(): void {
     const act = String(el.dataset['action'] ?? el.dataset['sr2eAction'] ?? '');
     if (!quickWanted({ shift: ev.shiftKey, atOnce, action: act })) { quickUntil = 0; return; }
     quickUntil = Date.now() + 1500;
-  }, true);
+  }, true));
   Hooks.on('renderDialogV2', (app: any, html: HTMLElement) => {
     if (Date.now() > quickUntil) return;
     const root: HTMLElement | null = (html as any)?.querySelector ? html : app?.element ?? null;

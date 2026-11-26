@@ -49,6 +49,7 @@ export { applyDiceColours } from '../helpers/dicecolours.ts';
 import { applyDiceColours } from '../helpers/dicecolours.ts';
 import { t as tx, tCount, tKey } from '../helpers/i18n.ts';
 import { SYSTEM_ID } from '../config/system.ts';
+import { fitWindowSize } from '../rules/fit0934.ts';
 
 // ---------------------------------------------------------------- Drop a weapon or spell on a token
 
@@ -169,6 +170,13 @@ export class SR2GmPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static PARTS: Record<string, any> = { main: { template: `${SYSTEM.PATH.TEMPLATES}/gm-panel.hbs`, scrollable: [''] } };
 
+  /** v0.93.4: the starting size fits the screen (at most about 80% of its height), so the map and hotbar stay in view. */
+  _initializeApplicationOptions(options: any): any {
+    const o: any = (super._initializeApplicationOptions as any)(options);
+    try { o.position = fitWindowSize({ ...(o.position ?? {}) }, { width: globalThis.innerWidth, height: globalThis.innerHeight }); } catch { /* no window */ }
+    return o;
+  }
+
   /** v0.64.0: approve a player's request (it runs now, on this client). */
   static #requestBusy = new Set<string>();
   static async #onApproveRequest(this: SR2GmPanel, _e: Event, t: HTMLElement) {
@@ -226,7 +234,7 @@ export class SR2GmPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       SR2GmPanel.#timer = null;
       // v0.51.0: don't re-render under someone typing (notes, calculator); catch up when they leave the field.
       const el: HTMLElement | null = (p as any).element ?? null;
-      const active = document.activeElement as HTMLElement | null;
+      const active = (el?.ownerDocument ?? document).activeElement as HTMLElement | null;
       const typing = active?.tagName === 'TEXTAREA' || (active?.tagName === 'INPUT' && ['text', 'number', 'search', ''].includes((active as HTMLInputElement).type));
       if (el && active && el.contains(active) && typing) {
         active.addEventListener('blur', () => SR2GmPanel.refresh(), { once: true });

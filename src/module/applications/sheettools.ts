@@ -11,6 +11,9 @@ import {
 } from '../rules/index.ts';
 import { arrivalReset } from './drops.ts';
 import { refuseLockedRaises } from './advancement.ts';
+import { creationRecordOf } from './approvals.ts';
+import { sortRows, nextSort, isSortMode, rowsHaveValue, LIST_FILTER_MIN, LIST_SORT_MIN } from '../rules/lists0934.ts';
+import type { SortMode, SortRow } from '../rules/lists0934.ts';
 import { headingName } from '../helpers/heading.ts';
 import { t as tx } from '../helpers/i18n.ts';
 
@@ -96,9 +99,30 @@ export function store(key: string, value: unknown): void {
   try { globalThis.localStorage?.setItem(`sr2e.${key}`, JSON.stringify(value)); } catch { /* storage blocked */ }
 }
 
+/**
+ * v0.93.4: the mode a sheet opens in before its player has chosen one: Play for a character whose creation is
+ * finished (it has a creation record), Edit otherwise. An item follows the actor it belongs to.
+ */
+export function defaultSheetMode(doc: any): 'edit' | 'play' {
+  if (doc?.documentName === 'Item' || doc?.parent?.documentName === 'Actor') return doc?.parent ? sheetMode(doc.parent) : 'edit';
+  if (doc?.type === 'character') { try { return creationRecordOf(doc) ? 'play' : 'edit'; } catch { return 'edit'; } }
+  return 'edit';
+}
+
 export function sheetMode(actor: any): 'edit' | 'play' {
   const m = remember<Record<string, string>>('sheetMode', {});
-  return m[actor?.uuid] === 'play' ? 'play' : 'edit';
+  const v = m[actor?.uuid];
+  return v === 'play' || v === 'edit' ? v : defaultSheetMode(actor);
+}
+
+/** v0.93.4: sets a sheet's mode for this browser (the last 200 sheets are kept). */
+export function setSheetMode(doc: any, mode: 'edit' | 'play'): void {
+  const m = remember<Record<string, string>>('sheetMode', {});
+  delete m[doc.uuid];
+  m[doc.uuid] = mode;
+  const keys = Object.keys(m);
+  if (keys.length > 200) for (const k of keys.slice(0, keys.length - 200)) delete m[k];
+  store('sheetMode', m);
 }
 
 /** What the templates need for the tools: pins (with their actions), a pin lookup, the setup warnings. */
@@ -129,7 +153,59 @@ export function sheetToolsContext(actor: any, extra: { build?: Array<{ label: st
   };
 }
 
-const PLAY_LOCK = ['.sr2e-header input', '.sr2e-header select', '.sr2e-attributes input', '.sr2e-statgrid input', '.sr2e-rowedit'].map((x) => `${x}:not(.sr2e-play-ok)`).join(', ');
+const PLAY_LOCK = ['.sr2e-header input', '.sr2e-header select', '.sr2e-attributes input', '.sr2e-statgrid input', '.sr2e-rowedit',
+  // v0.93.4: the Karma Pool's size and the career Karma are set at creation or by the GM, not in play.
+  'input[name="system.karma.pool"]', 'input[name="system.karma.career"]'].map((x) => `${x}:not(.sr2e-play-ok)`).join(', ');
+/** v0.93.4: on an item sheet Play locks every field but the ones used in play (`.sr2e-play-ok`, carried, drawn, rounds, notes). */
+const ITEM_PLAY_OK = ['system.carried', 'system.ready', 'system.active', 'system.loaded', 'system.ammo', 'system.ammoType', 'system.rounds',
+  'system.quantity', 'system.notes', 'system.sustained', 'system.worn', 'system.optics.worn', 'system.protection.worn', 'system.stealth.worn',
+  'system.chip.slotted', 'system.damaged', 'system.degraded', 'system.surveillance.active', 'system.simchip.minutes'];
+const ITEM_PLAY_LOCK = 'form input[name], form select[name], form textarea[name]';
+
+/** v0.93.4: the Edit | Play switch (two buttons, the current one pressed). */
+export function modeSwitchHtml(mode: 'edit' | 'play'): string {
+  const b = (m: 'edit' | 'play', icon: string, label: string, tip: string) =>
+    `<button type="button" class="sr2e-mode-btn${mode === m ? ' active' : ''}" data-action="sheetMode" data-mode="${m}" aria-pressed="${mode === m}" data-tooltip="${tip}"><i class="fa-solid fa-${icon}" aria-hidden="true"></i> ${label}</button>`;
+  return `<span class="sr2e-mode-switch" role="group" aria-label="${tx('SR2E.App.Sheettools.modeGroup')}">${b('edit', 'pen-to-square', tx('SR2E.App.Sheettools.edit'), tx('SR2E.App.Sheettools.editModeTip'))}${b('play', 'lock', tx('SR2E.App.Sheettools.play'), tx('SR2E.App.Sheettools.playModeTip'))}</span>`;
+}
+
+function lockField(el: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement, play: boolean, editable: boolean): void {
+  const box = el instanceof HTMLSelectElement || (el as HTMLInputElement).type === 'checkbox' || (el as HTMLInputElement).type === 'radio';
+  if (play) {
+    el.dataset['sr2eLocked'] = '1';
+    if (box) (el as HTMLInputElement).disabled = true; else (el as HTMLInputElement).readOnly = true;
+    // v0.93.4: say why it can't be changed (Foundry's tooltip; the field's own hint comes back in Edit).
+    if (el.dataset['tooltip'] !== undefined && !el.dataset['sr2eLockTip']) el.dataset['sr2eTipWas'] = el.dataset['tooltip'];
+    el.dataset['tooltip'] = tx('SR2E.App.Sheettools.lockedInPlay');
+    el.dataset['sr2eLockTip'] = '1';
+  } else if (el.dataset['sr2eLocked']) {
+    delete el.dataset['sr2eLocked'];
+    if (box) (el as HTMLInputElement).disabled = !editable; else (el as HTMLInputElement).readOnly = !editable;
+    if (el.dataset['sr2eLockTip']) {
+      delete el.dataset['sr2eLockTip'];
+      if (el.dataset['sr2eTipWas'] !== undefined) { el.dataset['tooltip'] = el.dataset['sr2eTipWas']; delete el.dataset['sr2eTipWas']; } else delete el.dataset['tooltip'];
+    }
+  }
+}
+
+/**
+ * v0.93.4: an item sheet gets the Edit | Play switch too (at the top). Play keeps the fields used in play and hides the
+ * template bar; an item on an actor starts in that actor's mode.
+ */
+export function decorateItemSheet(sheet: any): void {
+  const root: HTMLElement | null = sheet.element ?? null;
+  const item: any = sheet.document;
+  const body = root?.querySelector<HTMLElement>('.sr2e-sheet');
+  if (!root || !item || !body || !item.isOwner) return;
+  if (!body.querySelector(':scope > .sr2e-sheet-tools')) {
+    const bar = document.createElement('div');
+    bar.className = 'sr2e-sheet-tools sr2e-item-tools';
+    bar.innerHTML = modeSwitchHtml(sheetMode(item));
+    const head = body.querySelector(':scope > .sr2e-header');
+    if (head) head.insertAdjacentElement('afterend', bar); else body.prepend(bar);
+  }
+  applyMode(sheet, root);
+}
 
 export function applyMode(sheet: any, root: HTMLElement | null): void {
   if (!root) return;
@@ -137,16 +213,15 @@ export function applyMode(sheet: any, root: HTMLElement | null): void {
   const play = sheetMode(actor) === 'play';
   const body = root.querySelector<HTMLElement>('.sr2e-sheet') ?? root;
   body.classList.toggle('sr2e-play', play);
-  for (const el of Array.from(root.querySelectorAll<HTMLInputElement | HTMLSelectElement>(PLAY_LOCK))) {
-    const box = el instanceof HTMLSelectElement || (el as HTMLInputElement).type === 'checkbox';
-    if (play) { el.dataset['sr2eLocked'] = '1'; if (box) el.disabled = true; else (el as HTMLInputElement).readOnly = true; }
-    else if (el.dataset['sr2eLocked']) { delete el.dataset['sr2eLocked']; if (box) el.disabled = !(sheet.isEditable ?? actor.isOwner); else (el as HTMLInputElement).readOnly = !(sheet.isEditable ?? actor.isOwner); }
-  }
-  const btn = root.querySelector<HTMLElement>('[data-action="sheetMode"]');
-  if (btn) {
-    btn.innerHTML = play ? `<i class="fa-solid fa-lock"></i> ${tx('SR2E.App.Sheettools.play')}` : `<i class="fa-solid fa-pen-to-square"></i> ${tx('SR2E.App.Sheettools.edit')}`;
-    btn.title = play ? tx('SR2E.App.Sheettools.playModeSetupControlsHidden') : tx('SR2E.App.Sheettools.editModeAddDeleteAnd');
-  }
+  body.classList.toggle('sr2e-edit', !play);
+  const editable = Boolean(sheet.isEditable ?? actor.isOwner);
+  const isItem = actor?.documentName === 'Item';
+  const fields = isItem
+    ? Array.from(root.querySelectorAll<HTMLInputElement>(ITEM_PLAY_LOCK)).filter((el) => !el.classList.contains('sr2e-play-ok') && !ITEM_PLAY_OK.includes(el.name) && !el.closest('.sr2e-play-ok, .editor, prose-mirror'))
+    : Array.from(root.querySelectorAll<HTMLInputElement | HTMLSelectElement>(PLAY_LOCK));
+  for (const el of fields) lockField(el, play, editable);
+  const sw = root.querySelector<HTMLElement>('.sr2e-mode-switch');
+  if (sw) sw.outerHTML = modeSwitchHtml(play ? 'play' : 'edit');
 }
 
 function tabOf(el: HTMLElement): string { return el.closest<HTMLElement>('[data-tab].sr2e-tab')?.dataset['tab'] ?? 'all'; }
@@ -200,6 +275,102 @@ function runSearch(root: HTMLElement, q: string): void {
   }
 }
 
+// ---------------------------------------------------------------- v0.93.4: list sort and filter
+
+/** A list row's name (its item link) and number (rating, Force, quantity: the first number field or `data-sort-value`). */
+function rowOf(li: HTMLElement): SortRow {
+  const link = li.querySelector<HTMLElement>('a[data-item-id], [data-action="editItem"], [data-action="rollSkill"]');
+  const name = (link?.textContent ?? li.textContent ?? '').trim();
+  const tagged = li.querySelector<HTMLElement>('[data-sort-value]')?.dataset['sortValue'];
+  const input = li.querySelector<HTMLInputElement>('input[type="number"].sr2e-rowedit');
+  const raw = tagged ?? input?.value ?? '';
+  const n = raw === '' ? NaN : Number(raw);
+  return { name, value: Number.isFinite(n) ? n : null };
+}
+
+const SORT_ICON: Record<SortMode, string> = { sheet: 'arrow-down-short-wide', name: 'arrow-down-a-z', nameDesc: 'arrow-down-z-a', value: 'arrow-down-9-1' };
+function sortTip(mode: SortMode): string {
+  if (mode === 'name') return tx('SR2E.App.Sheettools.sortName');
+  if (mode === 'nameDesc') return tx('SR2E.App.Sheettools.sortNameDesc');
+  if (mode === 'value') return tx('SR2E.App.Sheettools.sortValue');
+  return tx('SR2E.App.Sheettools.sortSheet');
+}
+
+function sortedRows(ul: HTMLElement): HTMLElement[] {
+  return Array.from(ul.children).filter((c): c is HTMLElement => c instanceof HTMLElement && c.tagName === 'LI' && !c.classList.contains('sr2e-empty'));
+}
+
+function applySort(ul: HTMLElement, mode: SortMode): void {
+  const rows = sortedRows(ul);
+  // The sheet's own order is kept on the rows, so "Sheet order" can put it back.
+  rows.forEach((li, i) => { if (li.dataset['sr2eOrder'] === undefined) li.dataset['sr2eOrder'] = String(i); });
+  const base = [...rows].sort((a, b) => Number(a.dataset['sr2eOrder']) - Number(b.dataset['sr2eOrder']));
+  const order = sortRows(base.map(rowOf), mode);
+  const tail = rows.length ? rows[rows.length - 1]!.nextSibling : null;
+  for (const i of order) ul.insertBefore(base[i]!, tail);
+}
+
+function sortButton(mode: SortMode): string {
+  return `<a class="sr2e-sort${mode === 'sheet' ? '' : ' on'}" role="button" tabindex="0" data-sort="${mode}" data-tooltip="${sortTip(mode)}" aria-label="${sortTip(mode)}"><i class="fa-solid fa-${SORT_ICON[mode]}" aria-hidden="true"></i></a>`;
+}
+
+/** The sort button on each list heading (three rows or more), and a filter box on long lists (ten rows or more). */
+export function decorateLists(body: HTMLElement, sheet: any = {}): void {
+  const filters: Record<string, string> = (sheet._sr2eListFilter ??= {});
+  const sorts = remember<Record<string, string>>('listSort', {});
+  for (const h of Array.from(body.querySelectorAll<HTMLElement>('h2[data-fold-key], h3[data-fold-key]'))) {
+    const ul = h.nextElementSibling as HTMLElement | null;
+    if (!ul || ul.tagName !== 'UL') continue;
+    const rows = sortedRows(ul);
+    if (rows.length < LIST_SORT_MIN || !rows.some((li) => li.querySelector('a[data-item-id]'))) continue;
+    const key = h.dataset['foldKey'] ?? '';
+    const saved = sorts[key];
+    const mode: SortMode = isSortMode(saved) ? saved : 'sheet';
+    if (!h.querySelector(':scope > .sr2e-sort')) {
+      const add = h.querySelector(':scope > a.sr2e-add');
+      if (add) add.insertAdjacentHTML('beforebegin', sortButton(mode)); else h.insertAdjacentHTML('beforeend', sortButton(mode));
+      const btn = () => h.querySelector<HTMLElement>(':scope > .sr2e-sort');
+      const go = (ev: Event) => {
+        ev.preventDefault(); ev.stopPropagation();
+        const cur = btn()?.dataset['sort'];
+        const next = nextSort(isSortMode(cur) ? cur : 'sheet', rowsHaveValue(sortedRows(ul).map(rowOf)));
+        const all = remember<Record<string, string>>('listSort', {});
+        if (next === 'sheet') delete all[key]; else all[key] = next;
+        store('listSort', all);
+        btn()!.outerHTML = sortButton(next);
+        bind();
+        applySort(ul, next);
+      };
+      const bind = () => {
+        const b = btn();
+        if (!b) return;
+        b.addEventListener('click', go);
+        b.addEventListener('keydown', (ev) => { if ((ev as KeyboardEvent).key === 'Enter' || (ev as KeyboardEvent).key === ' ') go(ev); });
+      };
+      bind();
+    }
+    if (mode !== 'sheet') applySort(ul, mode);
+    if (rows.length >= LIST_FILTER_MIN && !(ul.previousElementSibling?.classList.contains('sr2e-list-filter'))) {
+      const box = document.createElement('input');
+      box.type = 'search';
+      box.className = 'sr2e-list-filter';
+      box.placeholder = tx('SR2E.App.Sheettools.filterList');
+      box.setAttribute('aria-label', tx('SR2E.App.Sheettools.filterListNamed', { list: (h.dataset['heading'] ?? h.textContent ?? '').trim() }));
+      ul.insertAdjacentElement('beforebegin', box);
+      // Not part of the sheet's form data; Escape clears it.
+      box.addEventListener('change', (ev) => ev.stopPropagation());
+      box.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') ev.preventDefault(); if (ev.key === 'Escape' && box.value) { ev.stopPropagation(); box.value = ''; filters[key] = ''; filterList(ul, ''); } });
+      box.addEventListener('input', () => { filters[key] = box.value; filterList(ul, box.value); });
+      // A re-render keeps what was typed.
+      if (filters[key]) { box.value = filters[key]!; filterList(ul, box.value); }
+    }
+  }
+}
+
+function filterList(ul: HTMLElement, q: string): void {
+  for (const li of sortedRows(ul)) li.classList.toggle('sr2e-filtered', Boolean(q.trim()) && !matchesSearch(li.textContent ?? '', q));
+}
+
 /** After each render of an actor sheet: the toolbar (search, Edit/Play), folding, row edits, the setup banner. */
 export function decorateSheet(sheet: any): void {
   const root: HTMLElement | null = sheet.element ?? null;
@@ -211,10 +382,11 @@ export function decorateSheet(sheet: any): void {
   if (!body.querySelector('.sr2e-sheet-tools')) {
     const bar = document.createElement('div');
     bar.className = 'sr2e-sheet-tools';
-    bar.innerHTML = `<input type="search" class="sr2e-sheet-search" placeholder="Find on this sheet…" aria-label="Find on this sheet">${actor.isOwner ? '<button type="button" class="sr2e-mode-btn" data-action="sheetMode"></button>' : ''}`;
-    // v0.68.0: after the stuck strip and tabs (.sr2e-stuck) where the sheet has them.
-    const after = body.querySelector(':scope > .sr2e-stuck') ?? body.querySelector(':scope > .sr2e-tabs') ?? body.querySelector(':scope > .sr2e-summary') ?? body.querySelector(':scope > .sr2e-header');
-    if (after) after.insertAdjacentElement('afterend', bar); else body.prepend(bar);
+    bar.innerHTML = `<input type="search" class="sr2e-sheet-search" placeholder="${tx('SR2E.App.Sheettools.findPlaceholder')}" aria-label="${tx('SR2E.App.Sheettools.findPlaceholder')}">${actor.isOwner ? modeSwitchHtml(sheetMode(actor)) : ''}`;
+    // v0.93.4: inside the stuck strip where the sheet has one, so the Edit | Play switch and the find box stay in view.
+    const stuck = body.querySelector<HTMLElement>(':scope > .sr2e-stuck');
+    const after = body.querySelector(':scope > .sr2e-tabs') ?? body.querySelector(':scope > .sr2e-summary') ?? body.querySelector(':scope > .sr2e-header');
+    if (stuck) stuck.appendChild(bar); else if (after) after.insertAdjacentElement('afterend', bar); else body.prepend(bar);
     const input = bar.querySelector<HTMLInputElement>('.sr2e-sheet-search')!;
     input.value = sheet._sr2eQuery ?? '';
     input.addEventListener('input', () => { sheet._sr2eQuery = input.value; runSearch(root, input.value); });
@@ -278,6 +450,7 @@ export function decorateSheet(sheet: any): void {
     if (sheet._sr2eSetupOpen) setup.open = true;
     setup.addEventListener('toggle', () => { sheet._sr2eSetupOpen = setup.open; });
   }
+  try { decorateLists(body, sheet); } catch (err) { console.warn('sr2e | list tools', err); }
   applyMode(sheet, root);
   if (sheet._sr2eQuery) runSearch(root, sheet._sr2eQuery);
 }

@@ -20,7 +20,7 @@ import {
 import { magicKindOf } from '../rules/advancement.ts';
 import { ITEM_TYPES_FOR, arrivalReset } from './drops.ts';
 import { openCompactTab } from './interface.ts';
-import { readyNote, readyPatch, createFromBasket, remember, store, sheetMode, applyMode, toggleFold, foldedPart } from './sheettools.ts';
+import { readyNote, readyPatch, createFromBasket, sheetMode, setSheetMode, applyMode, toggleFold, foldedPart } from './sheettools.ts';
 import { approvalNeeded, fileRequest, registerRequestRunner, inCreation } from './approvals.ts';
 import { kits } from './setup.ts';
 import { kitSummary, kitPrice, kitLinesFor } from '../rules/setup.ts';
@@ -869,13 +869,12 @@ export const SHEET_TOOL_ACTIONS: Record<string, (this: any, e: Event, t: HTMLEle
     if (!id || !actor.isOwner) return;
     await actor.setFlag(SYSTEM.id, 'pins', togglePin(actor.getFlag(SYSTEM.id, 'pins'), id));
   },
-  sheetMode: function (this: any) {
-    const actor: any = this.document;
-    const m = remember<Record<string, string>>('sheetMode', {});
-    m[actor.uuid] = sheetMode(actor) === 'play' ? 'edit' : 'play';
-    const keys = Object.keys(m);
-    if (keys.length > 200) for (const k of keys.slice(0, keys.length - 200)) delete m[k];
-    store('sheetMode', m);
+  sheetMode: function (this: any, _e: Event, t?: HTMLElement) {
+    const doc: any = this.document;
+    // v0.93.4: the switch's two buttons say which mode; a bare call (a hotkey) toggles.
+    const want = t?.dataset?.['mode'];
+    const mode: 'edit' | 'play' = want === 'edit' || want === 'play' ? want : (sheetMode(doc) === 'play' ? 'edit' : 'play');
+    setSheetMode(doc, mode);
     applyMode(this, (this as any).element);
   },
   jumpTo: async function (this: any, _e: Event, t: HTMLElement) {

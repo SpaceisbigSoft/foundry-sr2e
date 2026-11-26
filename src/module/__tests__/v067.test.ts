@@ -208,7 +208,8 @@ describe('templates and the stylesheet', () => {
     const gm = read('public', 'templates', 'gm-panel.hbs');
     assert.equal((gm.match(/monitor-mini\.hbs/g) ?? []).length, 2, 'party and people rows');
     // v0.68.0: the small monitor moved from the summary to the always-visible status strip.
-    assert.ok(read('public', 'templates', 'status-strip.hbs').includes('monitor-mini.hbs'));
+    // v0.93.4: there it is text now ("P 3/10 (+2) · S 0/10"), from the same monitor view.
+    assert.ok(read('public', 'templates', 'status-strip.hbs').includes('{{#each cm.tracks}}<span class="sr2e-strip-item sr2e-strip-track'));
     const sys = read('src', 'module', 'sr2e-system.ts');
     for (const p of ['monitor.hbs', 'monitor-track.hbs', 'monitor-mini.hbs']) assert.ok(sys.includes(`/${p}\``), p);
   });

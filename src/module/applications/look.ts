@@ -15,12 +15,14 @@
  */
 import { SYSTEM } from '../config/system.ts';
 import {
-  THEME_LABELS, PRESET_LABELS, OPACITY_RANGE, TEXT_SCALE_RANGE, LOOK_DEFAULTS, normalizeLook, lookBody, palette, paletteCss,
-  cardArea, cardKindLabel, portraitFor, portraitReplaceable, cleanFolder,
+  THEME_CHOICE_LABELS, DEFAULT_THEME_CHOICE, PRESET_LABELS, OPACITY_RANGE, TEXT_SCALE_RANGE, LOOK_DEFAULTS, normalizeLook, lookBody, palette, paletteCss,
+  cardArea, cardKindLabel, portraitFor, portraitReplaceable, cleanFolder, normalizeThemeChoice, foundrySchemeFrom, resolveTheme, windowTheme,
+  WINDOW_THEME_PREFIX, THEMES,
 } from '../rules/index.ts';
-import type { LookSettings } from '../rules/index.ts';
+import type { LookSettings, ThemeChoice, ThemeId } from '../rules/index.ts';
 import { isLeadGm } from './leader.ts';
 import { t as tx, tCount } from '../helpers/i18n.ts';
+import { onEveryDocument, everyDocument } from '../helpers/docs.ts';
 
 const ID = SYSTEM.id;
 const STYLE_ID = 'sr2e-palette';
@@ -31,10 +33,60 @@ function setting<T>(key: string, fallback: T): T {
   try { const v = game.settings.get(ID, key); return (v ?? fallback) as T; } catch { return fallback; }
 }
 
-/** The current player's look (cleaned). */
+/** v0.93.4: the player's theme choice (a theme, or 'follow' for Foundry's own scheme; the default). */
+export function readThemeChoice(): ThemeChoice {
+  return normalizeThemeChoice(setting('lookTheme', DEFAULT_THEME_CHOICE));
+}
+
+/** v0.93.4: whether the browser asks for dark (null when it can't tell). */
+function prefersDark(): boolean | null {
+  try {
+    const mm = (globalThis as any).matchMedia;
+    return typeof mm === 'function' ? Boolean(mm.call(globalThis, '(prefers-color-scheme: dark)')?.matches) : null;
+  } catch { return null; }
+}
+
+/** v0.93.4: Foundry's colour scheme for its windows (its setting, or the browser's when it follows that; dark if unknown). */
+export function foundryScheme(): 'light' | 'dark' {
+  let raw: unknown = '';
+  try { raw = (game as any).settings.get('core', 'uiConfig')?.colorScheme?.applications ?? ''; } catch { raw = ''; }
+  try { return foundrySchemeFrom(raw, prefersDark()); } catch { return 'dark'; }
+}
+
+/**
+ * v0.93.4: the light or dark theme Foundry gives one sheet of its own (the sheet settings' Theme), or null when it
+ * gives none. Read from Foundry's sheet configuration where it offers that, else from the classes Foundry built
+ * the window with (never from the element: our own theme classes are on it).
+ */
+export function sheetScheme(app: any): 'light' | 'dark' | null {
+  const pick = (v: unknown): 'light' | 'dark' | null => {
+    const s = String(v ?? '').replace(/^theme-/, '').trim().toLowerCase();
+    return s === 'light' || s === 'dark' ? s : null;
+  };
+  try {
+    const DSC: any = (foundry as any)?.applications?.apps?.DocumentSheetConfig;
+    const doc = app?.document;
+    if (doc && typeof DSC?.getSheetThemeForDocument === 'function') {
+      const v = pick(DSC.getSheetThemeForDocument(doc));
+      if (v) return v;
+    }
+  } catch { /* not in this Foundry */ }
+  try {
+    const cls: unknown = app?.options?.classes;
+    if (Array.isArray(cls)) {
+      if (cls.includes('theme-light')) return 'light';
+      if (cls.includes('theme-dark')) return 'dark';
+    }
+  } catch { /* keep going */ }
+  return null;
+}
+
+/** The current player's look (cleaned). v0.93.4: "Follow Foundry" is resolved here to Street or Corp. */
 export function readLook(): LookSettings {
+  let theme: ThemeId = LOOK_DEFAULTS.theme;
+  try { theme = resolveTheme(readThemeChoice(), foundryScheme()); } catch { /* keep Street */ }
   return normalizeLook({
-    theme: setting('lookTheme', LOOK_DEFAULTS.theme), preset: setting('lookPreset', LOOK_DEFAULTS.preset),
+    theme, preset: setting('lookPreset', LOOK_DEFAULTS.preset),
     opacity: setting('windowOpacity', LOOK_DEFAULTS.opacity), textScale: setting('textScale', LOOK_DEFAULTS.textScale),
     reducedMotion: setting('reducedMotion', LOOK_DEFAULTS.reducedMotion),
   });
@@ -45,19 +97,48 @@ export function lookScheme(v: LookSettings = readLook()): 'dark' | 'light' {
   return palette(v.theme, v.preset).scheme;
 }
 
-function ensurePaletteStyle(): void {
-  if (typeof document === 'undefined' || document.getElementById(STYLE_ID)) return;
-  const style = document.createElement('style');
+function ensurePaletteStyle(doc: Document | null = typeof document === 'undefined' ? null : document): void {
+  if (!doc?.head || doc.getElementById(STYLE_ID)) return;
+  const style = doc.createElement('style');
   style.id = STYLE_ID;
   style.textContent = paletteCss();
-  document.head.appendChild(style);
+  doc.head.appendChild(style);
 }
 
-/** One of our windows takes the theme's scheme (Foundry's inputs and checkboxes key on theme-dark / theme-light). */
-export function themeWindow(root: HTMLElement, scheme: 'dark' | 'light' = lookScheme()): void {
+/**
+ * v0.93.4: a popped-out window's own page gets the palette and the player's look classes too (they live on the
+ * main page's body, which that page doesn't have).
+ */
+function syncPoppedLook(doc: Document): void {
+  if (typeof document === 'undefined' || doc === document || !doc?.body) return;
+  ensurePaletteStyle(doc);
+  const body = doc.body, main = document.body;
+  for (const c of Array.from(body.classList)) if (BODY_PREFIXES.some((p) => c.startsWith(p)) || BODY_FLAGS.includes(c)) body.classList.remove(c);
+  for (const c of Array.from(main.classList)) if (BODY_PREFIXES.some((p) => c.startsWith(p)) || BODY_FLAGS.includes(c)) body.classList.add(c);
+  for (let i = 0; i < main.style.length; i++) { const k = main.style.item(i); if (k.startsWith('--sr2e')) body.style.setProperty(k, main.style.getPropertyValue(k)); }
+}
+let poppedHooked = false;
+
+/**
+ * One of our windows takes the theme's scheme (Foundry's inputs and checkboxes key on theme-dark / theme-light).
+ * v0.93.4: and the window's theme as a class (`sr2e-wtheme-<id>`), which the palette keys on, so a sheet can follow
+ * its own Foundry theme while the player follows Foundry.
+ */
+export function themeWindow(root: HTMLElement, scheme: 'dark' | 'light' = lookScheme(), theme?: ThemeId): void {
   root.classList.add('sr2e-look', 'themed');
   root.classList.remove(scheme === 'dark' ? 'theme-light' : 'theme-dark');
   root.classList.add(`theme-${scheme}`);
+  if (theme) {
+    for (const t of THEMES) if (t !== theme) root.classList.remove(`${WINDOW_THEME_PREFIX}${t}`);
+    root.classList.add(`${WINDOW_THEME_PREFIX}${theme}`);
+  }
+}
+
+/** v0.93.4: themes one of our windows: the player's theme, or (following Foundry) the sheet's own Foundry theme. */
+export function themeApp(app: any, root: HTMLElement, v: LookSettings = readLook()): void {
+  let theme: ThemeId = v.theme;
+  try { theme = windowTheme(readThemeChoice(), foundryScheme(), sheetScheme(app)); } catch { theme = v.theme; }
+  themeWindow(root, palette(theme, v.preset).scheme, theme);
 }
 
 /** Whether a rendered application is one of SR2e's own windows. */
@@ -79,13 +160,30 @@ export function applyLook(): void {
   for (const c of Array.from(body.classList)) if (BODY_PREFIXES.some((p) => c.startsWith(p)) || BODY_FLAGS.includes(c)) body.classList.remove(c);
   body.classList.add(...classes);
   for (const [k, val] of Object.entries(style)) body.style.setProperty(k, val);
-  const scheme = lookScheme(v);
   const instances: any = (foundry as any).applications?.instances;
   const apps: any[] = instances?.values ? [...instances.values()] : Object.values(instances ?? {});
   for (const app of apps) {
     const el: HTMLElement | null = app?.element ?? null;
-    if (el && isOurWindow(app, el)) themeWindow(el, scheme);
+    if (el && isOurWindow(app, el)) themeApp(app, el, v);
   }
+  for (const d of everyDocument()) syncPoppedLook(d);
+  if (!poppedHooked) { poppedHooked = true; onEveryDocument((d) => syncPoppedLook(d)); }
+}
+
+/** v0.93.4: the look follows Foundry's colour scheme (its setting, or the browser's) while the player follows Foundry. */
+let followHooked = false;
+function hookFoundryScheme(): void {
+  if (followHooked) return;
+  followHooked = true;
+  const again = () => { try { if (readThemeChoice() === 'follow') applyLook(); } catch (err) { console.warn('sr2e | look', err); } };
+  Hooks.on('clientSettingChanged', (key: string) => { if (key === 'core.uiConfig') again(); });
+  // Older builds announce a changed setting with the document hook only.
+  Hooks.on('updateSetting', (doc: any) => { if (doc?.key === 'core.uiConfig') again(); });
+  try {
+    const mq = (globalThis as any).matchMedia?.('(prefers-color-scheme: dark)');
+    if (mq?.addEventListener) mq.addEventListener('change', again);
+    else if (mq?.addListener) mq.addListener(again);
+  } catch { /* no media queries */ }
 }
 
 // ---------------------------------------------------------------- Our dialogs
@@ -306,7 +404,8 @@ export function registerLookSettings(): void {
   const s = game.settings;
   s.register(ID, 'lookTheme', {
     name: "SR2E.Settings.lookTheme.Name", hint: "SR2E.Settings.lookTheme.Hint",
-    scope: 'client', config: true, type: String, default: LOOK_DEFAULTS.theme, choices: { ...THEME_LABELS }, onChange: () => applyLook(),
+    // v0.93.4: "Follow Foundry" is the default for players who never chose; a stored choice is kept.
+    scope: 'client', config: true, type: String, default: DEFAULT_THEME_CHOICE, choices: { ...THEME_CHOICE_LABELS }, onChange: () => applyLook(),
   });
   s.register(ID, 'lookPreset', {
     name: "SR2E.Settings.lookPreset.Name", hint: "SR2E.Settings.lookPreset.Hint",
@@ -338,8 +437,9 @@ export function registerLook(): void {
   markSystemDialogs();
   Hooks.on('renderApplicationV2', (app: any, el: HTMLElement) => {
     const root: HTMLElement | null = el instanceof HTMLElement ? el : app?.element ?? null;
-    if (root && isOurWindow(app, root)) themeWindow(root);
+    if (root && isOurWindow(app, root)) themeApp(app, root);
   });
+  hookFoundryScheme();
   Hooks.on('renderChatMessageHTML', (message: any, html: HTMLElement) => {
     try { decorateLookCard(message, html); } catch (err) { console.warn('sr2e | card look', err); }
   });

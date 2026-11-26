@@ -60,13 +60,14 @@ describe('palettes and contrast (WCAG AA)', () => {
     assert.notEqual(palette('corp', 'green').areas.matrix.base, palette('corp', 'cyan').areas.matrix.base);
   });
 
-  test('Corp is shaded, never flat white, and keeps a dark title bar', () => {
+  test('Corp is shaded, never flat white, and (v0.93.4) has a light title bar like its body', () => {
     for (const p of PRESETS) {
       const c = palette('corp', p);
       for (const k of ['page', 'window', 'raised', 'chip', 'sunk'] as const) assert.notEqual(c[k].toLowerCase(), '#ffffff', `${p} ${k}`);
       assert.ok(contrast(c.window, '#ffffff') > 1.2, `${p} window is shaded`);
       assert.equal(c.scheme, 'light');
-      assert.ok(contrast(c.header, '#000000') < 2, 'the title bar is dark');
+      // v0.93.4 (visual review T1): one theme per window: the title bar is light, its text dark.
+      assert.ok(contrast(c.header, '#000000') > 7, 'the title bar is light');
     }
     assert.equal(palette('corp', 'cyan').window, '#d6dbe1');
     assert.equal(palette('street', 'cyan').scheme, 'dark');

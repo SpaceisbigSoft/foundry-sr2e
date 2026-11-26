@@ -195,6 +195,20 @@ li[data-combatant-id].combatant.sr2e-delayed { border-left: 3px dashed var(--col
 li.sr2e-tracker-group { display: block; margin: 0.35rem 0.25rem 0.1rem; padding: 0.1rem 0.4rem; list-style: none; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-text-secondary, #bbb); border-bottom: 1px solid var(--color-border, #444); }
 .sr2e-badge-fd { display: inline-flex; align-items: center; justify-content: center; margin-left: 0.3rem; padding: 0 0.25rem; font-size: 0.7rem; line-height: 1.1rem; color: var(--color-text-primary, #ddd); border: 1px solid var(--color-cool-3, var(--color-border, #666)); border-radius: 3px; background: var(--color-cool-4, rgba(0, 0, 0, 0.2)); vertical-align: middle; }
 /* (end of the v0.68.0 tracker part) */
+/* v0.93.4 (report item 15): the tracker's pool words, wound chip and 24 px buttons. */
+/* The combat tracker's own buttons that the system adds. */
+button.sr2e-fulldef, button.sr2e-delay { min-height: 1.5rem; }
+button.sr2e-fulldef { min-width: 1.5rem; }
+a.sr2e-ic-act { display: inline-block; min-width: 1.5rem; min-height: 1.5rem; padding: 0.25rem 0.2rem; box-sizing: border-box; text-align: center; line-height: 1; }
+/* ---------------------------------------------------------------- The combat tracker (Foundry's window: its own colours) */
+.sr2e-tracker-pools { font-size: 0.8rem; opacity: 1; line-height: 1.3; color: var(--color-text-primary, inherit); }
+.sr2e-tracker-wound { display: inline-block; margin: 0.1rem 0 0 0.35rem; padding: 0 0.35rem; border: 1px solid #111; border-radius: 3px; font-size: 0.78rem; font-weight: 700; line-height: 1.35; white-space: nowrap; vertical-align: middle; cursor: help; }
+.sr2e-tracker-wound.sr2e-wound-L { background: #f2c94c; color: #1a1a1a; }
+.sr2e-tracker-wound.sr2e-wound-M { background: #f2994a; color: #1a1a1a; }
+.sr2e-tracker-wound.sr2e-wound-S { background: #eb5757; color: #111; }
+.sr2e-tracker-wound.sr2e-wound-D { background: #7b0000; color: #fff; border-color: #fff; }
+/* The chip says it in words: the bare wound dot beside it goes. */
+li[data-combatant-id]:has(.sr2e-tracker-wound) img[src*="/wound-"] { display: none; }
 
 /* v0.37.0: ammo pips and firing-mode buttons */
 .sr2e-ammo { display: inline-flex; flex-wrap: wrap; gap: 1px; align-items: center; max-width: 9rem; vertical-align: middle; }
@@ -1559,3 +1573,265 @@ li.chat-message.sr2e-card.sr2e-card-note .message-content { font-size: 0.92em; }
 :where(li.chat-message.sr2e-card) .sr2e-rr .sr2e-rr-gm { margin: 0.2rem 0 0; display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
 :where(li.chat-message.sr2e-card) .sr2e-rr .sr2e-rr-gm em { font-size: 0.8rem; color: var(--sr2e-muted); }
 .application.sr2e-look .sr2e-rr-dialog .sr2e-rr-who { max-height: 14rem; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)); gap: 0.1rem 0.6rem; }
+
+/* ==========================================================================
+   v0.93.4 (readability, report item 16): the themes. At the end of sr2e.css, so these rules override the
+   ones above. Only SR2e's own windows and cards (LOOK_SCOPE in rules/look.ts); Foundry's own windows are untouched.
+   Colours come from the palette (rules/look.ts paletteVars), so the contrast test checks them for every theme and preset.
+   ========================================================================== */
+
+/* --- Checkboxes and radios: a visible edge when unticked (--sr2e-control-edge, at least 3:1 on every panel), the
+   accent fill and a tick when ticked, a 16 px box. The doubled :is() outranks the sheet rules above. */
+:is(.sr2e-look, .sr2e-card, .sr2e-hover-card):is(.sr2e-look, .sr2e-card, .sr2e-hover-card) input:is([type="checkbox"], [type="radio"]) {
+  -webkit-appearance: none; appearance: none;
+  box-sizing: border-box; position: relative; flex: 0 0 auto;
+  width: 16px; height: 16px; min-width: 16px; min-height: 16px; margin: 0; padding: 0;
+  border: var(--sr2e-control-edge-width, 1.5px) solid var(--sr2e-control-edge, var(--sr2e-box-line));
+  border-radius: 2px; background: var(--sr2e-sunk); box-shadow: none;
+  color: var(--sr2e-control-mark, var(--sr2e-window)); font-size: 16px; line-height: 1;
+  vertical-align: middle; cursor: pointer;
+  --checkbox-size: 16px; --checkbox-background-color: var(--sr2e-sunk); --checkbox-checked-color: var(--sr2e-accent);
+}
+:is(.sr2e-look, .sr2e-card, .sr2e-hover-card):is(.sr2e-look, .sr2e-card, .sr2e-hover-card) input[type="radio"] { border-radius: 50%; }
+/* Foundry draws its boxes with glyphs in ::before / ::after: ours are drawn here instead. */
+:is(.sr2e-look, .sr2e-card, .sr2e-hover-card):is(.sr2e-look, .sr2e-card, .sr2e-hover-card) input:is([type="checkbox"], [type="radio"])::before { content: none; display: none; }
+:is(.sr2e-look, .sr2e-card, .sr2e-hover-card):is(.sr2e-look, .sr2e-card, .sr2e-hover-card) input:is([type="checkbox"], [type="radio"])::after { content: none; }
+:is(.sr2e-look, .sr2e-card, .sr2e-hover-card):is(.sr2e-look, .sr2e-card, .sr2e-hover-card) input:is([type="checkbox"], [type="radio"]):hover:not(:disabled) { border-color: var(--sr2e-accent); }
+/* Ticked: the accent fill, the edge in the accent, the tick (or the dot) in --sr2e-control-mark. */
+:is(.sr2e-look, .sr2e-card, .sr2e-hover-card):is(.sr2e-look, .sr2e-card, .sr2e-hover-card) input:is([type="checkbox"], [type="radio"]):is(:checked, :indeterminate) { background: var(--sr2e-accent); border-color: var(--sr2e-accent); }
+:is(.sr2e-look, .sr2e-card, .sr2e-hover-card):is(.sr2e-look, .sr2e-card, .sr2e-hover-card) input[type="checkbox"]:checked::after {
+  content: ""; display: block; position: absolute; left: 50%; top: 45%; width: 4px; height: 8px;
+  border: solid var(--sr2e-control-mark, var(--sr2e-window)); border-width: 0 2px 2px 0; background: none;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+:is(.sr2e-look, .sr2e-card, .sr2e-hover-card):is(.sr2e-look, .sr2e-card, .sr2e-hover-card) input[type="checkbox"]:indeterminate::after {
+  content: ""; display: block; position: absolute; left: 50%; top: 50%; width: 8px; height: 2px; border: 0;
+  background: var(--sr2e-control-mark, var(--sr2e-window)); transform: translate(-50%, -50%);
+}
+:is(.sr2e-look, .sr2e-card, .sr2e-hover-card):is(.sr2e-look, .sr2e-card, .sr2e-hover-card) input[type="radio"]:checked::after {
+  content: ""; display: block; position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; border: 0; border-radius: 50%;
+  background: var(--sr2e-control-mark, var(--sr2e-window)); transform: translate(-50%, -50%);
+}
+/* Disabled: a dashed edge and a dimmed fill, the state still readable. */
+:is(.sr2e-look, .sr2e-card, .sr2e-hover-card):is(.sr2e-look, .sr2e-card, .sr2e-hover-card) input:is([type="checkbox"], [type="radio"]):disabled { border-style: dashed; cursor: not-allowed; }
+:is(.sr2e-look, .sr2e-card, .sr2e-hover-card):is(.sr2e-look, .sr2e-card, .sr2e-hover-card) input:is([type="checkbox"], [type="radio"]):disabled:is(:checked, :indeterminate) { background: color-mix(in srgb, var(--sr2e-accent) 55%, var(--sr2e-window)); }
+:is(.sr2e-look, .sr2e-card, .sr2e-hover-card):is(.sr2e-look, .sr2e-card, .sr2e-hover-card) input:is([type="checkbox"], [type="radio"]):focus-visible { outline: 2px solid var(--sr2e-accent); outline-offset: 2px; box-shadow: none; }
+
+/* --- Overflow: an ordinary panel (normal text), marked by a dashed combat edge and a light hatch, not greyed as if disabled. */
+.sr2e-cm-track.sr2e-cm-overflow.idle {
+  filter: none; opacity: 1; border-style: dashed; border-color: var(--sr2e-combat);
+  background-color: var(--sr2e-chip);
+  background-image: repeating-linear-gradient(135deg, transparent 0 6px, color-mix(in srgb, var(--sr2e-combat) 14%, transparent) 6px 8px);
+}
+.sr2e-cm-overflow.idle .sr2e-cm-label { color: var(--sr2e-combat-text); }
+.sr2e-cm-overflow.idle .sr2e-cm-group > i, .sr2e-cm-bar.sr2e-cm-overflow.idle .sr2e-cm-seg > i { color: var(--sr2e-ink); }
+.sr2e-cm-bar.sr2e-cm-overflow.idle { filter: none; opacity: 1; }
+.sr2e-cm-bar.sr2e-cm-overflow.idle .sr2e-cm-seg s:not(.filled) { border-style: dashed; }
+
+/* --- High contrast: really higher. White edges on unticked boxes (the palette), a thicker focus ring, the selected tab
+   inverted, 2 px edges on fields and sections, and no secondary text, icon or panel dimmed by opacity or a faint mix. */
+body.sr2e-theme-contrast :is(.sr2e-look, .sr2e-card, .sr2e-hover-card) :is(input, select, textarea, button, a, summary, [tabindex]):focus-visible {
+  outline: 3px solid var(--sr2e-ink); outline-offset: 2px; box-shadow: 0 0 0 5px var(--sr2e-accent);
+}
+body.sr2e-theme-contrast .application.sr2e-look :is(.sr2e-tabs .item.active, .sr2e-gm-tabs a.active, .sr2e-add-tab.active, .sr2e-wiz-step.active, .sr2e-codex-tab.active, .sr2e-help-topics a.active, nav.tabs > [data-tab].active) {
+  background: var(--sr2e-ink); color: var(--sr2e-window); border-bottom-color: var(--sr2e-ink); text-decoration: none;
+}
+body.sr2e-theme-contrast .application.sr2e-look :is(.sr2e-tabs .item.active, .sr2e-gm-tabs a.active, .sr2e-add-tab.active, .sr2e-wiz-step.active, .sr2e-codex-tab.active, .sr2e-help-topics a.active, nav.tabs > [data-tab].active) :is(i, span:not(.sr2e-tab-hits)) { color: inherit; }
+body.sr2e-theme-contrast .application.sr2e-look :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"]), select, textarea):not([data-sr2e-locked], [name="name"]) { border-width: 2px; border-color: var(--sr2e-rule-strong); }
+body.sr2e-theme-contrast .application.sr2e-look :is(fieldset, .sr2e-summary, .sr2e-preview, .sr2e-sh-cat, .sr2e-sh-grid > div, .sr2e-npcgen-preview, .sr2e-stat, .sr2e-cm-track, .sr2e-rich, .sr2e-template, .sr2e-layout, .sr2e-wiz-totals, .sr2e-chip) { border-width: 2px; border-color: var(--sr2e-rule-strong); }
+body.sr2e-theme-contrast .application.sr2e-look .sr2e-cm-track.sr2e-cm-overflow { border-color: var(--sr2e-combat); }
+body.sr2e-theme-contrast .application.sr2e-look :is(.sr2e-tabs, .sr2e-gm-tabs, .sr2e-add-tabs, .sr2e-wiz-steps, .sr2e-codex-tabs) { border-bottom: 2px solid var(--sr2e-rule-strong); }
+body.sr2e-theme-contrast .application.sr2e-look :is(.sr2e-help-topics, .sr2e-help-topics ul, .sr2e-codex-browse, .sr2e-wiz-totals, .sr2e-ne-foot, .sr2e-add-groupchip, .sr2e-tools-key, kbd) { border-color: var(--sr2e-rule-strong); }
+/* Secondary text, the help marks, the monitor's group labels and the GM panel's undo line: the text colour itself. */
+body.sr2e-theme-contrast :is(.sr2e-look, .sr2e-card, .sr2e-hover-card) :is(a.sr2e-help, a.sr2e-help > i, .sr2e-cm-group > i, .sr2e-cm-seg > i, .sr2e-gm-undobar .hint, .sr2e-strip small, .sr2e-cm-label) { color: var(--sr2e-ink); }
+body.sr2e-theme-contrast :is(.sr2e-look, .sr2e-card, .sr2e-hover-card) :is(.sr2e-cm-physical, .sr2e-cm-overflow) .sr2e-cm-label { color: var(--sr2e-combat-text); }
+body.sr2e-theme-contrast :is(.sr2e-look, .sr2e-card, .sr2e-hover-card) .sr2e-cm-stun .sr2e-cm-label { color: var(--sr2e-health-text); }
+body.sr2e-theme-contrast :is(.sr2e-look, .sr2e-card, .sr2e-hover-card) .sr2e-cm-matrix .sr2e-cm-label { color: var(--sr2e-matrix-text); }
+body.sr2e-theme-contrast :is(.sr2e-look, .sr2e-card, .sr2e-hover-card) :is(.sr2e-pip, .sr2e-pass, .sr2e-cm-mini, .hint, .sr2e-muted, .sr2e-dim) { opacity: 1; }
+body.sr2e-theme-contrast :is(.sr2e-look, .sr2e-card, .sr2e-hover-card) .sr2e-cm-track.sr2e-cm-overflow.idle { background-image: repeating-linear-gradient(135deg, transparent 0 6px, color-mix(in srgb, var(--sr2e-combat) 22%, transparent) 6px 8px); }
+
+/* ================================================================================================================
+   v0.93.4 ("readability", report item 15): sizes and the 1024×768 fit. At the end of sr2e.css, so these
+   rules override earlier ones of the same weight. Sizes are in rem/em (the text-scale setting zooms the window).
+   - Hit areas of at least 24 px (1.5rem) without changing the look: padding and min sizes, glyphs stay their size.
+   - Small text (hints, descriptions, monitor and tracker lines) at about 12–13 px (0.78–0.8rem).
+   - The vitals strip as text; the GM panel's monitors and − / +; the tracker's pool words and wound chip.
+   - A short screen: a compact sheet top, a tab bar that scrolls sideways, sticky dialog footers, the wizard's
+     priority grid.
+   ================================================================================================================ */
+
+/* ---------------------------------------------------------------- The vitals strip: the monitor as text */
+.application.sr2e-look .sr2e-strip { font-size: 0.82rem; }
+.application.sr2e-look .sr2e-strip small { font-size: 0.72rem; }
+.application.sr2e-look .sr2e-strip .sr2e-strip-cm { display: inline-flex; align-items: baseline; gap: 0.2rem 0.6rem; flex-wrap: wrap; }
+.application.sr2e-look .sr2e-strip-track { cursor: help; }
+.application.sr2e-look .sr2e-strip-track > small { margin-right: 0.15rem; }
+.application.sr2e-look .sr2e-strip-physical > small, .application.sr2e-look .sr2e-strip-overflow > small { color: var(--sr2e-combat-text); }
+.application.sr2e-look .sr2e-strip-stun > small { color: var(--sr2e-health-text); }
+.application.sr2e-look .sr2e-strip-track > i { font-style: normal; font-family: var(--sr2e-font-num); color: var(--sr2e-muted); }
+.application.sr2e-look .sr2e-strip-track > em { font-style: normal; font-family: var(--sr2e-font-num); font-weight: 700; color: var(--sr2e-combat-text); }
+.application.sr2e-look .sr2e-strip-stun > em { color: var(--sr2e-health-text); }
+.application.sr2e-look .sr2e-strip-overflow > b { color: var(--sr2e-danger); }
+.application.sr2e-look .sr2e-strip-cm + .sr2e-strip-item, .application.sr2e-look .sr2e-strip-cm + .sr2e-strip-wound { padding-left: 0.6rem; border-left: 1px solid var(--sr2e-rule-strong); }
+/* The pool pips: a 24 px tall target around each 8 px dot. */
+.application.sr2e-look .sr2e-strip-pool .sr2e-pip { position: relative; width: 0.55rem; height: 0.55rem; margin: 0 1px; }
+.application.sr2e-look .sr2e-strip-pool .sr2e-pip::after { content: ""; position: absolute; left: -2px; right: -2px; top: calc(50% - 0.75rem); height: 1.5rem; }
+
+/* ---------------------------------------------------------------- 24 px targets */
+/* − / + steppers (sheets and roll dialogs). */
+.application.sr2e-look.sr2e-look.sr2e-look .sr2e-stepper > button.sr2e-step { width: 1.5rem; min-height: 1.5rem; }
+/* The monitor's − / + per track. */
+.sr2e-cm .sr2e-cm-steps { gap: 3px; }
+.sr2e-cm .sr2e-cm-steps > a { width: 1.5rem; height: 1.5rem; }
+/* Icon-only row actions (pin, edit, delete, reload, draw, raise…): a 24 px box round the same glyph. */
+.application.sr2e-look :is(li, td, .sr2e-row, .sr2e-col-acts, .sr2e-gm-acts, .sr2e-device-actions, h2, h3) > a:is([data-action], .sr2e-improve, .sr2e-pin):has(> i:only-child) {
+  display: inline-block; min-width: 1.5rem; min-height: 1.5rem; padding: 0.25rem 0.2rem; box-sizing: border-box; text-align: center; line-height: 1; vertical-align: middle; border-radius: 3px;
+}
+.application.sr2e-look :is(li, td, .sr2e-row, .sr2e-col-acts, .sr2e-gm-acts, .sr2e-device-actions) > a:is([data-action], .sr2e-improve, .sr2e-pin):has(> i:only-child):hover { background: var(--sr2e-chip); }
+.application.sr2e-look .sr2e-gm-acts, .sr2e-gm-panel .sr2e-gm-acts { gap: 0.25rem; }
+
+/* ---------------------------------------------------------------- Small text at about 12–13 px */
+.sr2e-look.sr2e.sheet .hint, .sr2e-look .sr2e-add .hint { font-size: 0.8rem; }
+.application.sr2e-look .sr2e-tools .sr2e-tools-hint, .application.sr2e-look .sr2e-tools .sr2e-tools-note { font-size: max(0.8em, 0.78rem); }
+.application.sr2e-look.sr2e-new-entry .sr2e-ne-body .form-group > .hint { font-size: max(0.75em, 0.78rem); }
+.application.sr2e-look.sr2e-new-entry .sr2e-ne-paste .hint, .application.sr2e-look.sr2e-new-entry .sr2e-ne-intro { font-size: max(0.8em, 0.8rem); }
+.sr2e-cm-group > i { font-size: 0.72rem; }
+.application.dialog.sr2e-dialog.sr2e-look .hint, .application.dialog.sr2e-dialog.sr2e-look p.notes { font-size: max(0.8em, 0.78rem); }
+
+/* ---------------------------------------------------------------- The GM panel's rows */
+/* The small monitor: boxes of at least 8 px, labels at least 11 px, Overflow in the normal text colour. */
+.sr2e.sr2e-gm-panel .sr2e-cm-mini { gap: 0.3rem 0.7rem; }
+.sr2e.sr2e-gm-panel .sr2e-cm-bar { min-width: 9.5rem; gap: 4px; }
+.sr2e.sr2e-gm-panel .sr2e-cm-bar > b { font-size: 0.78rem; }
+.sr2e.sr2e-gm-panel .sr2e-cm-seg { gap: 2px; }
+.sr2e.sr2e-gm-panel .sr2e-cm-seg > i { font-size: 0.7rem; color: var(--sr2e-ink); }
+.sr2e.sr2e-gm-panel .sr2e-cm-seg > span { gap: 2px; }
+.sr2e.sr2e-gm-panel .sr2e-cm-seg s { min-width: 0.55rem; height: 0.6rem; }
+.sr2e.sr2e-gm-panel .sr2e-cm-mini .sr2e-cm-div { height: 1.1rem; }
+.sr2e.sr2e-gm-panel .sr2e-cm-bar.sr2e-cm-overflow { min-width: 4.5rem; }
+.sr2e.sr2e-gm-panel .sr2e-cm-bar.sr2e-cm-overflow.idle { filter: none; opacity: 1; }
+.sr2e.sr2e-gm-panel .sr2e-cm-bar.sr2e-cm-overflow.idle > b, .sr2e.sr2e-gm-panel .sr2e-cm-bar.sr2e-cm-overflow .sr2e-cm-seg > i { color: var(--sr2e-ink); }
+.sr2e.sr2e-gm-panel .sr2e-cm-bar.sr2e-cm-overflow.idle .sr2e-cm-seg s { border-style: dashed; }
+/* − / + on each track: 24 px buttons, the value in the normal text colour. */
+.sr2e.sr2e-gm-panel .sr2e-gm-track, .sr2e.sr2e-gm-panel .sr2e-pc-track { display: inline-flex; align-items: center; gap: 0.25rem; white-space: nowrap; color: var(--sr2e-ink); font-size: 0.85rem; }
+.sr2e.sr2e-gm-panel .sr2e-gm-track > b { min-width: 1.1rem; text-align: center; font-family: var(--sr2e-font-num); font-variant-numeric: tabular-nums; color: var(--sr2e-ink); }
+.sr2e.sr2e-gm-panel a.sr2e-gm-step, .sr2e.sr2e-gm-panel .sr2e-pc-track a.sr2e-gm-step {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 1.5rem; height: 1.5rem; padding: 0; box-sizing: border-box; line-height: 1;
+  font-weight: 700; color: var(--sr2e-ink); border: 1px solid var(--sr2e-rule-strong); background: var(--sr2e-chip); border-radius: 3px; cursor: pointer;
+}
+.sr2e.sr2e-gm-panel a.sr2e-gm-step:hover { border-color: var(--sr2e-accent); color: var(--sr2e-accent-ink); background: var(--sr2e-accent-tint); }
+.sr2e.sr2e-gm-panel .sr2e-gm-line { row-gap: 0.3rem; }
+/* The stat card's letters (B Q S C I W R) and the pool line. */
+.sr2e.sr2e-gm-panel .sr2e-mook-stats b { font-size: 0.75rem; }
+.sr2e.sr2e-gm-panel .sr2e-gm-people > li .hint { font-size: 0.8rem; }
+
+
+/* ---------------------------------------------------------------- Sheets: the find bar and Edit on one line */
+.application.sr2e-look .sr2e-sheet-tools { flex-wrap: nowrap; }
+.application.sr2e-look .sr2e-sheet-tools input.sr2e-sheet-search { flex: 1 1 8rem; width: auto; min-width: 6rem; }
+.application.sr2e-look .sr2e-sheet-tools > :not(input) { flex: 0 0 auto; }
+@container (max-width: 26rem) { .application.sr2e-look .sr2e-sheet-tools { flex-wrap: wrap; } }
+
+/* ---------------------------------------------------------------- A short or narrow screen (1024×768): a compact sheet top */
+@media (max-width: 1100px), (max-height: 820px) {
+  .sr2e-look.sr2e.sheet .sr2e-header { gap: 0.5rem; align-items: center; }
+  .sr2e-look.sr2e.sheet .sr2e-header > img { width: 44px; height: 44px; }
+  .sr2e-look.sr2e.sheet .sr2e-header-main { gap: 0.2rem; }
+  .sr2e-look.sr2e.sheet .sr2e-header input[name="name"] { height: 1.9rem; font-size: 1.1rem; }
+  .sr2e-look.sr2e.sheet .sr2e-summary { gap: 0.25rem; padding: 0.3rem 0.45rem; margin: 0.25rem 0; }
+  /* The metatype chip repeats the Metatype field above it (the chip is marked sr2e-chip-meta by the sheet). */
+  .sr2e-look.sr2e.sheet .sr2e-summary .sr2e-chip-meta { display: none; }
+  .sr2e-look.sr2e.sheet .sr2e-summary-row:not(:has(.sr2e-chip:not(.sr2e-chip-meta))) { display: none; }
+  .sr2e-look.sr2e.sheet .sr2e-quickbar { gap: 0.2rem; }
+  .sr2e-look.sr2e.sheet .sr2e-quickbar button { height: 1.5rem; padding: 0 0.4rem; font-size: 0.75rem; }
+  .application.sr2e-look .sr2e-sheet > .sr2e-stuck { margin-top: 0.25rem; padding-top: 0.25rem; }
+  .application.sr2e-look .sr2e-strip { padding: 0.2rem 0.45rem; gap: 0.2rem 0.6rem; }
+  /* The tab bar scrolls sideways instead of wrapping onto a second line. */
+  .application.sr2e-look .sr2e-sheet .sr2e-tabs { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
+  .application.sr2e-look .sr2e-sheet .sr2e-tabs > .item { flex: 0 0 auto; white-space: nowrap; padding-left: 0.45rem; padding-right: 0.45rem; }
+  .application.sr2e-look .sr2e-sheet-tools { margin: 0.25rem 0 0.15rem; }
+  /* The creation wizard's step tabs, the same. */
+  .sr2e-look .sr2e-wizard .sr2e-wiz-steps { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
+}
+
+/* ---------------------------------------------------------------- Dialogs: the body scrolls, the footer stays in view */
+.application.dialog.sr2e-dialog.sr2e-look { max-height: calc(100vh - 0.5rem); }
+.application.dialog.sr2e-dialog.sr2e-look > .window-content:has(.form-footer) { display: flex; flex-direction: column; min-height: 0; max-height: calc(100vh - 3.5rem); overflow: hidden; }
+.application.dialog.sr2e-dialog.sr2e-look > .window-content > form:has(> .form-footer) { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; max-height: 100%; }
+.application.dialog.sr2e-dialog.sr2e-look :is(.window-content, .window-content > form) > .dialog-content { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: 0.25rem; }
+.application.dialog.sr2e-dialog.sr2e-look :is(.window-content, .window-content > form) > .form-footer { flex: 0 0 auto; margin-top: 0.4rem; padding-top: 0.45rem; border-top: 1px solid var(--sr2e-rule); }
+/* Long labels: a wider label column and normal line spacing (Foundry gives labels the input's line height). */
+.application.dialog.sr2e-dialog.sr2e-look .form-group > label { flex: 1.25 1 0; min-width: 0; line-height: 1.25; align-self: center; padding: 0.15rem 0; }
+.application.dialog.sr2e-dialog.sr2e-look .form-group > :is(.form-fields, input:not([type="checkbox"], [type="radio"]), select, .sr2e-stepper) { flex: 1.6 1 0; min-width: 0; }
+.application.dialog.sr2e-dialog.sr2e-look .form-group > .hint, .application.dialog.sr2e-dialog.sr2e-look .form-group > p.hint { flex: 1 0 100%; margin: 0.1rem 0 0; }
+.application.dialog.sr2e-dialog.sr2e-look .form-group { flex-wrap: wrap; row-gap: 0.15rem; }
+
+/* ---------------------------------------------------------------- The creation wizard */
+/* Step tabs: not ready (grey, no mark), needs attention (warning), done (tick). */
+.sr2e-look .sr2e-wizard .sr2e-wiz-step.sr2e-wiz-wait { color: var(--sr2e-muted); }
+.sr2e-look .sr2e-wizard .sr2e-wiz-step.sr2e-wiz-wait .sr2e-wiz-n { background: transparent; box-shadow: inset 0 0 0 1px currentColor; }
+.sr2e-look .sr2e-wizard .sr2e-wiz-step.sr2e-wiz-wait.active { color: var(--sr2e-ink); }
+/* The priority grid: a table of A–E columns in a wide window. */
+.sr2e-look .sr2e-wizard .sr2e-wiz-body { container: sr2ewiz / inline-size; }
+.sr2e-look .sr2e-wizard .sr2e-wiz-prio { display: grid; grid-template-columns: max-content repeat(5, minmax(0, 1fr)); margin: 0.3rem 0; font-size: 0.8rem; }
+.sr2e-look .sr2e-wizard .sr2e-wiz-prio-head, .sr2e-look .sr2e-wizard .sr2e-wiz-prow { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; }
+.sr2e-look .sr2e-wizard .sr2e-wiz-prio-head > span { padding: 0.2rem 0.3rem; font-weight: 700; text-align: center; background: var(--sr2e-raised, color-mix(in srgb, currentColor 8%, transparent)); }
+.sr2e-look .sr2e-wizard .sr2e-wiz-plabel { padding: 0.3rem 0.5rem 0.3rem 0.3rem; font-weight: 700; border-bottom: 1px solid color-mix(in srgb, currentColor 10%, transparent); }
+.sr2e-look .sr2e-wizard .sr2e-wiz-pcell { position: relative; display: flex; gap: 0.3rem; align-items: flex-start; min-width: 0; margin: 0; padding: 0.3rem; cursor: pointer; border-bottom: 1px solid color-mix(in srgb, currentColor 10%, transparent); overflow-wrap: anywhere; }
+.sr2e-look .sr2e-wizard .sr2e-wiz-pcell > input[type="radio"] { flex: 0 0 auto; margin: 0.05rem 0 0; }
+.sr2e-look .sr2e-wizard .sr2e-wiz-pcell:hover { background: color-mix(in srgb, var(--sr2e-accent) 10%, transparent); }
+.sr2e-look .sr2e-wizard .sr2e-wiz-pcell.sr2e-picked { background: var(--sr2e-accent-tint, color-mix(in srgb, var(--sr2e-accent) 18%, transparent)); color: var(--sr2e-accent-ink, inherit); font-weight: 600; }
+.sr2e-look .sr2e-wizard .sr2e-wiz-pcell.sr2e-taken:not(.sr2e-picked) > .sr2e-wiz-ptext { color: var(--sr2e-muted); }
+/* The letter is in the head row here: kept for screen readers only. */
+.sr2e-look .sr2e-wizard .sr2e-wiz-pletter { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* A narrow window: each row is five segmented A–E buttons with the option texts under them. */
+@container sr2ewiz (max-width: 40rem) {
+  .sr2e-look .sr2e-wizard .sr2e-wiz-prio { display: block; }
+  .sr2e-look .sr2e-wizard .sr2e-wiz-prio-head { display: none; }
+  .sr2e-look .sr2e-wizard .sr2e-wiz-prow { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; margin: 0 0 0.55rem; }
+  .sr2e-look .sr2e-wizard .sr2e-wiz-plabel { grid-column: 1 / -1; padding: 0.15rem 0; border: 0; }
+  .sr2e-look .sr2e-wizard .sr2e-wiz-pcell { display: grid; grid-template-columns: auto 1fr; grid-template-areas: "radio letter" "text text"; align-items: center; gap: 0.2rem 0.3rem; padding: 0.3rem 0.35rem; border: 1px solid var(--sr2e-rule-strong, color-mix(in srgb, currentColor 30%, transparent)); background: var(--sr2e-chip, transparent); }
+  .sr2e-look .sr2e-wizard .sr2e-wiz-pcell + .sr2e-wiz-pcell { border-left-width: 0; }
+  .sr2e-look .sr2e-wizard .sr2e-wiz-prow > .sr2e-wiz-pcell:nth-child(2) { border-radius: 4px 0 0 4px; }
+  .sr2e-look .sr2e-wizard .sr2e-wiz-prow > .sr2e-wiz-pcell:last-child { border-radius: 0 4px 4px 0; }
+  .sr2e-look .sr2e-wizard .sr2e-wiz-pcell > input[type="radio"] { grid-area: radio; margin: 0; }
+  .sr2e-look .sr2e-wizard .sr2e-wiz-pletter { position: static; width: auto; height: auto; margin: 0; overflow: visible; clip-path: none; grid-area: letter; font-size: 0.95rem; }
+  .sr2e-look .sr2e-wizard .sr2e-wiz-ptext { grid-area: text; align-self: start; font-size: 0.78rem; line-height: 1.25; }
+  .sr2e-look .sr2e-wizard .sr2e-wiz-pcell.sr2e-picked { border-color: var(--sr2e-accent); box-shadow: inset 0 0 0 1px var(--sr2e-accent); }
+}
+/* Totals: the priorities as a checklist, the contacts as a sentence. */
+.sr2e-look .sr2e-wizard .sr2e-wiz-totals { font-size: 0.8rem; }
+.sr2e-look .sr2e-wizard .sr2e-wiz-totals ul.sr2e-wiz-prio-list { flex: 1 0 100%; box-sizing: border-box; margin: 0.15rem 0 0.1rem; padding: 0 0 0 0.9rem; list-style: none; }
+.sr2e-look .sr2e-wizard .sr2e-wiz-totals ul.sr2e-wiz-prio-list > li { display: flex; justify-content: space-between; padding: 0.05rem 0; font-weight: 400; color: var(--sr2e-ink, inherit); }
+.sr2e-look .sr2e-wizard .sr2e-wiz-totals ul.sr2e-wiz-prio-list > li > b { font-family: var(--sr2e-font-num, inherit); color: var(--sr2e-ink, inherit); }
+.sr2e-look .sr2e-wizard .sr2e-wiz-totals ul.sr2e-wiz-prio-list > li:not(.sr2e-set) > b { color: var(--sr2e-danger); }
+.sr2e-look .sr2e-wizard .sr2e-wiz-totals li > small { flex: 1 0 100%; font-size: 0.78rem; color: var(--sr2e-ink, inherit); }
+.sr2e-look .sr2e-wizard .sr2e-wiz-totals li > small.sr2e-wiz-sentence { font-weight: 400; }
+
+/* ==========================================================================
+   v0.93.4: Play/Edit finished, list sort and filter.
+   ========================================================================== */
+/* The Edit | Play switch: two joined buttons, the current mode filled. */
+.sr2e-look.sr2e.sheet .sr2e-mode-switch { display: inline-flex; flex: 0 0 auto; border: 1px solid var(--sr2e-accent); border-radius: 4px; overflow: hidden; }
+.sr2e-look.sr2e.sheet .sr2e-mode-switch > button.sr2e-mode-btn { margin: 0; border: 0; border-radius: 0; min-height: 1.7rem; padding: 0 0.6rem; background: transparent; color: var(--sr2e-ink); font-size: 0.8rem; line-height: 1.7rem; box-shadow: none; }
+.sr2e-look.sr2e.sheet .sr2e-mode-switch > button.sr2e-mode-btn + button.sr2e-mode-btn { border-left: 1px solid var(--sr2e-accent); }
+.sr2e-look.sr2e.sheet .sr2e-mode-switch > button.sr2e-mode-btn.active { background: var(--sr2e-accent); color: var(--sr2e-accent-ink); font-weight: 700; }
+.sr2e-look.sr2e.sheet .sr2e-mode-switch > button.sr2e-mode-btn:focus-visible { outline: 2px solid var(--sr2e-accent); outline-offset: -3px; }
+/* Inside the stuck strip the toolbar sits under the tabs. */
+.sr2e-look.sr2e.sheet .sr2e-stuck > .sr2e-sheet-tools { margin: 0.3rem 0 0.35rem; }
+/* The item sheet's switch, under its header. */
+.sr2e-look.sr2e.sheet.item .sr2e-item-tools { justify-content: flex-end; margin: 0.2rem 0 0.4rem; }
+/* Play mode on an item: the template bar is a build tool. */
+.sr2e-look .sr2e-sheet.sr2e-play .sr2e-template { display: none !important; }
+.sr2e-look .sr2e-sheet.sr2e-play :is(input, select, textarea)[data-sr2e-locked] { cursor: default; }
+.sr2e-look .sr2e-sheet.sr2e-play textarea[data-sr2e-locked] { border-color: transparent; background: transparent; }
+/* A locked checkbox still shows its state (Foundry greys disabled boxes out). */
+.sr2e-look .sr2e-sheet.sr2e-play input[type="checkbox"][data-sr2e-locked]:disabled { opacity: 1; }
+
+/* List sort button on the heading, and the filter box over long lists. */
+.sr2e-look.sr2e.sheet a.sr2e-sort { display: inline-flex; align-items: center; justify-content: center; min-width: 1.6rem; min-height: 1.6rem; margin-left: auto; color: var(--sr2e-muted); text-transform: none; cursor: pointer; }
+.sr2e-look.sr2e.sheet a.sr2e-sort + a.sr2e-add { margin-left: 0.2rem; }
+.sr2e-look.sr2e.sheet a.sr2e-sort.on { color: var(--sr2e-accent); }
+.sr2e-look.sr2e.sheet a.sr2e-sort:focus-visible { outline: 2px solid var(--sr2e-accent); outline-offset: 1px; }
+.sr2e-look.sr2e.sheet input.sr2e-list-filter { display: block; width: 100%; max-width: 18rem; height: 1.6rem; margin: 0.2rem 0 0.3rem; font-size: 0.8rem; }
+.sr2e-look.sr2e.sheet li.sr2e-filtered { display: none !important; }

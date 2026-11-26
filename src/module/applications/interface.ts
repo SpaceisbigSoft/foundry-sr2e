@@ -76,6 +76,11 @@ export function registerInterfaceSettings(): void {
     name: 'SR2E.Settings.rememberRolls.Name', hint: 'SR2E.Settings.rememberRolls.Hint',
     scope: 'client', config: true, type: Boolean, default: true,
   });
+  // v0.93.4 (report item 50): a new roll window takes the place of one already open (closing it is a cancel).
+  s.register(ID, 'oneRollWindow', {
+    name: 'SR2E.Settings.oneRollWindow.Name', hint: 'SR2E.Settings.oneRollWindow.Hint',
+    scope: 'client', config: true, type: Boolean, default: true,
+  });
   // v0.93.3 (report item 9): "Roll at once" as this player's own default (Shift opens the window for one roll).
   // User scope (Foundry v13+), so it follows the player to any browser; Defend and Resist keep their windows.
   s.register(ID, 'rollAtOnce', {
@@ -369,7 +374,7 @@ export function bindWheel(scope: HTMLElement): void {
   let timer: ReturnType<typeof setTimeout> | null = null;
   scope.addEventListener('wheel', (ev: WheelEvent) => {
     const t = ev.target as HTMLInputElement | null;
-    if (!t || t.tagName !== 'INPUT' || t.type !== 'number' || document.activeElement !== t || t.readOnly || t.disabled) return;
+    if (!t || t.tagName !== 'INPUT' || t.type !== 'number' || t.ownerDocument.activeElement !== t || t.readOnly || t.disabled) return;
     ev.preventDefault();
     if (!bump(t, ev.deltaY < 0 ? 1 : -1, false)) return;
     if (timer) clearTimeout(timer);
@@ -446,6 +451,25 @@ function rollMemory(form: HTMLFormElement, marker: HTMLElement, okButton: HTMLEl
   form.addEventListener('submit', (ev: Event) => { const by = (ev as SubmitEvent).submitter; if (!by || by === okButton) keep(); }, { capture: true });
 }
 
+/** v0.93.4: the other roll windows open on this client (each one a dialog with the TN preview). */
+export function otherRollWindows(app: any, apps: Iterable<any>): any[] {
+  const out: any[] = [];
+  for (const a of apps) {
+    if (!a || a === app || a.id === app?.id) continue;
+    const el: HTMLElement | null = a.element ?? null;
+    if (el?.classList?.contains('sr2e-roll-dialog') && el.isConnected !== false) out.push(a);
+  }
+  return out;
+}
+
+function closeOtherRollWindows(app: any): void {
+  try {
+    const all: any = (foundry as any).applications?.instances;
+    const list = all?.values ? Array.from(all.values()) : [];
+    for (const a of otherRollWindows(app, list)) void Promise.resolve(a.close?.()).catch(() => { /* already closing */ });
+  } catch (err) { console.warn('sr2e | one roll window', err); }
+}
+
 /**
  * A system dialog with a TN preview becomes a roll dialog: choices on the left, the TN breakdown on the
  * right, and one big Roll button. Numbers get − / +; a remember marker brings the last choices back.
@@ -464,6 +488,7 @@ export function enhanceRollDialog(app: any, root: HTMLElement | null): void {
   const preview = content.querySelector<HTMLElement>('.sr2e-preview');
   if (!preview || content.querySelector('.sr2e-roll-grid')) return;
   root.classList.add('sr2e-roll-dialog');
+  if (setting('oneRollWindow', true)) closeOtherRollWindows(app);
   for (const name of ['pool', 'drainPool', 'hackingPool', 'controlPool', 'poolDice']) {
     content.querySelector<HTMLElement>(`[name="${name}"]`)?.closest('.form-group')?.classList.add('sr2e-pool-field');
   }

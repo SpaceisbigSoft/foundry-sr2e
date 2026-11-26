@@ -8,6 +8,7 @@ import { SYSTEM } from '../config/system.ts';
 import { RULES } from '../rules/index.ts';
 import { INTERPRETATIONS, interpText, ruleValue, interpretation } from '../rules/interpretations.ts';
 import { t as tx, tKey } from '../helpers/i18n.ts';
+import { onEveryDocument } from '../helpers/docs.ts';
 
 const { HandlebarsApplicationMixin, ApplicationV2 } = foundry.applications.api;
 const TEMPLATE = 'interpretations.hbs';
@@ -81,8 +82,8 @@ export function registerInterpretations(): void {
     ev.preventDefault(); ev.stopPropagation();
     SR2Interpretations.open(String(el.dataset['sr2eInterp'] ?? ''));
   };
-  document.addEventListener('click', go, true);
-  document.addEventListener('keydown', go, true);
+  onEveryDocument((d) => d.addEventListener('click', go, true));
+  onEveryDocument((d) => d.addEventListener('keydown', go, true));
 }
 
 /** For the guide and the tools window: a line saying what the window is. */

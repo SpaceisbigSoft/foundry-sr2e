@@ -1,8 +1,8 @@
 <div class="sr2e-summary">
   {{!-- v0.68.0: the condition, wounds, initiative, actions and pools moved to the always-visible status strip (status-strip.hbs). --}}
-  {{#if summary.chips.length}}
+  {{#if summary.showRow}}
   <div class="sr2e-summary-row">
-    {{#each summary.chips}}<span class="sr2e-chip sr2e-chip-soft">{{this}}</span>{{/each}}
+    {{#if summary.meta}}<span class="sr2e-chip sr2e-chip-soft sr2e-chip-meta">{{summary.meta}}</span>{{/if}}{{#each summary.chips}}<span class="sr2e-chip sr2e-chip-soft">{{this}}</span>{{/each}}
   </div>
   {{/if}}
   {{#if tools.pins.length}}

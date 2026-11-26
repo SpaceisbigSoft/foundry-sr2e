@@ -985,8 +985,8 @@
       "steps": "Steps",
       "checkNotMet": "check not met",
       "checksMet": "checks met",
-      "pickingALetterAnotherColumnHolds": "Picking a letter another column holds swaps the two.",
-      "giveEveryColumnADifferentLetter": "Give every column a different letter.",
+      "pickingALetterAnotherColumnHolds": "Picking a letter another row holds swaps the two.",
+      "giveEveryColumnADifferentLetter": "Give every row a different letter.",
       "needsRaceOrBetter": "needs Race {need} or better · {mods}",
       "ofPoints": "of {allowed} points",
       "left2": "· {left} left",
@@ -2156,7 +2156,8 @@
       "immuneToDrug": "immune",
       "fetishExpendable": "Expendable fetish",
       "rollRequest": "Request a roll",
-      "rollRequestTitle": "Ask the players (and NPCs) for one test: each rolls their own, the card keeps the tally"
+      "rollRequestTitle": "Ask the players (and NPCs) for one test: each rolls their own, the card keeps the tally",
+      "wizNotReady": "Not ready: set the priorities first."
     },
     "Settings": {
       "rulesSource": {
@@ -2280,11 +2281,12 @@
       },
       "lookTheme": {
         "Name": "Look: theme",
-        "Hint": "SR2e's own windows and chat cards: Street (dark), Corp (shaded light) or High contrast. Foundry's sidebar keeps its own look.",
+        "Hint": "SR2e's own windows and chat cards: Follow Foundry (the default: Corp while Foundry shows its windows light, Street while dark, and a sheet given its own light or dark theme in Foundry's sheet settings follows that), Street (dark), Corp (shaded light) or High contrast. Foundry's sidebar keeps its own look.",
         "Choices": {
           "street": "Street (dark)",
           "corp": "Corp (shaded light)",
-          "contrast": "High contrast"
+          "contrast": "High contrast",
+          "follow": "Follow Foundry (Corp when Foundry is light, Street when dark)"
         }
       },
       "lookPreset": {
@@ -2382,6 +2384,10 @@
       "teamKarmaOn": {
         "Name": "Team Karma tracker",
         "Hint": "An optional table aid: a shared count the whole table can see (SR2e tools → Team Karma). The GM sets it; a player spends one, and the chat says who. Each character's own Karma Pool is not changed by it."
+      },
+      "oneRollWindow": {
+        "Name": "Roll dialogs: one at a time",
+        "Hint": "Opening a roll dialog closes the one already open, as if you had cancelled it."
       }
     },
     "Notify": {
@@ -3562,7 +3568,7 @@
         "opposedTestWhoeverScoresMoreSuccesses": "Opposed test: whoever scores more successes hits{part}.{part2}",
         "defend": "Defend",
         "meleeDefense": "Melee defense: {defenderName}",
-        "noDodgePoolSuccessesAboveThe": "No dodge: pool successes above the attack's make it a clean miss.",
+        "noDodgePoolSuccessesAboveThe": "You are not dodging: Combat Pool dice add to the resistance roll, and if their successes beat the attack's, the attack misses.",
         "defend2": "Defend: {defenderName}",
         "thisTargetHasAlreadyDefendedAgainst": "This target has already defended against this attack. Defend again?",
         "alreadyDefended": "Already defended",
@@ -3599,11 +3605,9 @@
         "teamAwardsGoToEveryoneTicked": "Team awards go to everyone ticked above; tick the individual awards each one earned.",
         "award": "Award",
         "awardKarmaAndNuyen": "Award Karma and nuyen",
-        "now": "{verb} now?",
-        "laterUseTheCard": "Later (use the card)",
-        "hit": "hit",
+        "now": "{verb} now? If not, the button stays on the chat card.",
+        "laterUseTheCard": "Later",
         "aSpell": "a spell",
-        "attacked": "attacked",
         "radiusMetres": "Radius (metres)",
         "clickOnTheMapToDrop": "Click on the map to drop it. Edit its shape later in the region's settings.",
         "place": "Place",
@@ -3672,7 +3676,8 @@
         "resistPreviewStops": "Shrugged off: the Power doesn't beat the immunity ({against}).",
         "resistNoArmor": "Count no armor this time (armor {armor})",
         "resistPreviewBarrier": "Stopped: the barrier is rated above the Power.",
-        "defendPreview": "Resistance test: Power {power} − armor {armor} = TN {tn}, {dice} dice + the pool dice you add ({left} left); the attacker's net successes then stage the damage."
+        "defendPreview": "Resistance test: Power {power} − armor {armor} = TN {tn}, {dice} dice + the pool dice you add ({left} left); the attacker's net successes then stage the damage.",
+        "promptTitle": "{name}: {verb}?"
       },
       "Creation": {
         "buildCheckNotMet": "{failedLength} not met:",
@@ -3952,7 +3957,7 @@
         "sweep": "Sweep",
         "targetATokenToSweepSomeone": " (target a token to sweep someone else)",
         "sweepForBugs": "Sweep for bugs",
-        "pastWhom": "Past whom",
+        "pastWhom": "Observers",
         "useTheSpecialization": "Use the specialization ({stSpecialization} {stSpecializationRating})",
         "onceAgainstTheSharpestEachObserver": "{perceptionStealthSkill} once against the sharpest {perceptionAttribute}; each observer's {perceptionSkill} against the {perceptionStealthSkill} rating. The ticked conditions make it harder for the observers.",
         "sneak": "Sneak",
@@ -4165,9 +4170,9 @@
         "heavy": ", heavy ×{combatHeavyRecoilMultiplier}",
         "gyro": ", gyro {gyro}",
         "tracked": " — tracked",
-        "roundsAlreadyFiredThisPhaseRecoil": "Rounds already fired this phase (recoil{part}{part2}){part3}",
+        "roundsAlreadyFiredThisPhaseRecoil": "Recoil: rounds fired this phase{part}{part2}{part3}",
         "ammunition": "Ammunition",
-        "barrierArmorWallsShotThrough": "Barrier armor (walls shot through)",
+        "barrierArmorWallsShotThrough": "Barrier armor",
         "fireTwiceTwoSimpleActionsOnly": "Fire twice (two simple actions; {twiceModes} only)",
         "theWholeGroupAttacksGruntsOne": "The whole group attacks ({standingGrunts} grunts, one card each)",
         "theWholeGroupAttacksTokensOne": "The whole group attacks ({standingLength} tokens, one card each)",
@@ -4538,7 +4543,7 @@
         "forceMaxMagic": "Force (max {spLearnedForce}, Magic {derivedMagic})",
         "self2": "{actorName} (self)",
         "atMostMagic": ", at most {castingPoolMax}: Magic",
-        "spellPoolDiceToCastLeft": "Spell Pool dice to cast ({left} left{part})",
+        "spellPoolDiceToCastLeft": "Spell Pool ({left} left{part})",
         "aFocus": "a focus",
         "sustainWithNoTnPenalty": "Sustain with {part} (no TN penalty)",
         "sustainedWillTakeTnOnAll": "Sustained: {actorName} will take +{magicSustainedTnMod} TN on all tests while it lasts.",
@@ -4563,7 +4568,7 @@
         "noLineOfSightTo": "No line of sight to: {blind}{part}.",
         "elementalSpellTnResistPowerWith": "Elemental spell: TN {spTargetNumber}; targets resist Power {spLearnedForce} with Body and half their {elementalArmorKind} armor.",
         "extraSorceryDice": "Extra Sorcery dice: {value}.",
-        "drainWillpowerVsFloorForce2": "Drain: Willpower vs floor(Force/2){part}, {spDrainLevel}. Physical if Force exceeds Magic.",
+        "drainWillpowerVsFloorForce2": "Drain: Willpower against half the Force, rounded down{part}; {spDrainLevel}. It is Physical damage when the Force is higher than your Magic.",
         "cast": "Cast",
         "noLineOfSightTo2": "No line of sight to {pvUnseen}.",
         "cast2": "Cast: {spellName}",
@@ -5079,7 +5084,7 @@
       "Core923": {
         "perceiveBook": "{actorName}'s Intelligence vs {tn} with the modifiers; one success notices them (SR2 has no Perception skill and no Stealth roll here). Light, walls, smoke, weather, distance and what they wear are read from the scene. (Alt-click a skill for a plain roll.)",
         "perceiveCompanion": "Their {stealth} ({tn}) first, each success +1 to the TN; then {actorName}'s Intelligence vs {tn} with the modifiers, one success notices them. Light, walls, smoke, weather, distance and what they wear are read from the scene. (Alt-click a skill for a plain roll.)",
-        "sneakBook": "No Stealth roll: each observer's Intelligence vs {tn} with the modifiers; one success notices. The ticked conditions make it harder for the observers.",
+        "sneakBook": "Observers roll Intelligence against TN {tn} plus the ticked modifiers; one success spots you. You make no Stealth roll.",
         "sneakCompanion": "{stealth} ({tn}) once; each success adds +1 to every observer's Intelligence test vs {tn}; one success notices. The ticked conditions make it harder for the observers.",
         "publicRep": "Public rep (blank: private rep, the career Karma)",
         "recognitionHint": "Each picked character's Etiquette (else Charisma at +4) vs (1,000 − rep) ÷ 50: private rep {rep} gives TN {tn} (whispered to the GM).",
@@ -13904,7 +13909,7 @@
       "wizardSteps": {
         "priorities": {
           "label": "Priorities",
-          "hint": "Give each column one letter, A to E."
+          "hint": "Pick one letter for each row; use each letter A–E once."
         },
         "metatype": {
           "label": "Metatype",
@@ -14782,7 +14787,12 @@
         "cyberBioware": "Cyber/bioware",
         "cyberdecks": "Cyberdecks",
         "programs": "Programs",
-        "foci2": "Foci"
+        "foci2": "Foci",
+        "contactsSentence": {
+          "one": "Contacts: {chosen} chosen; the first one is free.",
+          "other": "Contacts: {chosen} chosen; the first {count} are free."
+        },
+        "contactsNoneFree": "Contacts: {chosen} chosen; each one costs nuyen."
       },
       "Charinfo": {
         "armorEncumbrance": "Armor encumbrance −{encumbrance}",
@@ -14831,7 +14841,14 @@
         "delaying": "delaying",
         "fullDefense": "Full defense",
         "delaying2": "Delaying",
-        "holdingADelayedActionOr": "Holding a delayed action (or acting on it now)"
+        "holdingADelayedActionOr": "Holding a delayed action (or acting on it now)",
+        "poolCombat": "Combat {left}/{max}",
+        "poolSpell": "Spell {left}/{max}",
+        "poolHacking": "Hacking {left}/{max}",
+        "poolControl": "Control {left}/{max}",
+        "poolKarma": "Karma {left}/{max}",
+        "woundChip": "{word} +{mod}",
+        "woundChipTitle": "{word} wound"
       },
       "Demo": {
         "theDemoIsBeingChangedAlready": "The demo is being changed already: wait a moment.",
@@ -14919,8 +14936,17 @@
       "Sheettools": {
         "play": "Play",
         "edit": "Edit",
-        "playModeSetupControlsHidden": "Play mode: setup controls hidden. Click for Edit mode.",
-        "editModeAddDeleteAnd": "Edit mode: add, delete and change everything. Click for Play mode."
+        "modeGroup": "Sheet mode",
+        "editModeTip": "Edit: add, delete and change everything.",
+        "playModeTip": "Play: the build is locked; damage, pools, Karma, ammo and modifiers stay editable.",
+        "lockedInPlay": "Locked in Play mode. Switch to Edit at the top of the sheet to change it.",
+        "findPlaceholder": "Find on this sheet…",
+        "sortSheet": "In the sheet's order. Click to sort A to Z.",
+        "sortName": "Sorted A to Z. Click to sort Z to A.",
+        "sortNameDesc": "Sorted Z to A. Click for the next order.",
+        "sortValue": "Highest number first. Click for the sheet's order.",
+        "filterList": "Filter this list…",
+        "filterListNamed": "Filter {list}"
       },
       "Advancement": {
         "creationFinished": "Creation finished",
@@ -17464,7 +17490,7 @@
         "noPoolUntilNextAction": "no pool on the melee test; pool dice to the resistance test, until your next action",
         "diceAlreadyDeclared": "+{attr} dice (already declared)",
         "diceAgainstEveryAttack": "+{attr} dice against every attack until your next action",
-        "combatPoolDiceForResistance": "Combat Pool dice for the resistance test ({left} left)",
+        "combatPoolDiceForResistance": "Combat Pool for resistance ({left} left)",
         "combatPoolDiceLeft": "Combat Pool dice ({left} left)"
       },
       "Urr80Core": {

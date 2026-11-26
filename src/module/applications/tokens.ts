@@ -4,6 +4,7 @@ import { clearFlag } from '../helpers/flags.ts';
 import { RULES, tokenVision, visionMatches, WOUND_STATUS_IDS, midTurnWoundDrop, tokenInvisible, STATE_STATUSES, V61_STATUSES, SR2_CORE_STATUSES, stateStatusChanges, prunedStatusEffects, movementBand, movementColour, metresPerUnit, type StateFlags, trackerGroups, passBanner, astralWoundRules, combatEndUnsets, initiativeWoundScore } from '../rules/index.ts';
 import { isLeadGm, madeHere } from './leader.ts';
 import { t as tx } from '../helpers/i18n.ts';
+import { trackerPoolParts, trackerWoundChip, woundLetterOf } from '../rules/fit0934.ts';
 
 /**
  * Tokens and the canvas (v0.36.0): token vision from the character's eyes, Physical and Stun bars,
@@ -414,14 +415,12 @@ function decorateTracker(htmlIn: HTMLElement): void {
       });
       (li.querySelector('.token-name, .name') ?? li).appendChild(b);
     }
+    // v0.93.4: the wound dot gets a text chip ("Light +1") with hover text, for everyone who sees the dot.
+    try { woundChipFor(li, a); } catch (err) { console.warn('sr2e | tracker wound', err); }
     if (!a?.isOwner || li.querySelector('.sr2e-tracker-pools')) continue;
     const d = a.system?.derived ?? {};
-    const parts: string[] = [];
-    if (d.combatPool) parts.push(`C ${d.combatPoolLeft}/${d.combatPool}`);
-    if (d.spellPool) parts.push(`Sp ${d.spellPoolLeft}/${d.spellPool}`);
-    if (d.hackingPool) parts.push(`H ${d.hackingPoolLeft}/${d.hackingPool}`);
-    if (d.controlPool) parts.push(`Ct ${d.controlPoolLeft}/${d.controlPool}`);
-    if (a.system?.karma?.pool) parts.push(`K ${d.karmaPoolLeft}/${a.system.karma.pool}`);
+    // v0.93.4: short words, not letters ("Combat 7/7 · Karma 3/3").
+    const parts: string[] = trackerPoolParts(d, a.system?.karma?.pool);
     if (a.fullDefenseUp?.()) parts.push(tx('SR2E.App.Tokens.fullDef'));
     if (a.isDelaying?.()) parts.push(tx('SR2E.App.Tokens.delaying'));
     if (!parts.length) continue;
@@ -430,6 +429,22 @@ function decorateTracker(htmlIn: HTMLElement): void {
     div.textContent = parts.join(' · ');
     (li.querySelector('.token-name, .name') ?? li).appendChild(div);
   }
+}
+
+/** v0.93.4: a text chip beside the system's wound icon in a tracker row (the icon itself is hidden by CSS). */
+function woundChipFor(li: HTMLElement, actor: any): void {
+  const img = Array.from(li.querySelectorAll<HTMLImageElement>('img')).find((i) => woundLetterOf(i.getAttribute('src')));
+  const old = li.querySelector<HTMLElement>('.sr2e-tracker-wound');
+  const chip = img ? trackerWoundChip(woundLetterOf(img.getAttribute('src')), actor?.system?.derived?.woundModifier) : null;
+  if (!img || !chip) { old?.remove(); return; }
+  // A-3: Foundry's tooltip renders data-tooltip as HTML; the text is escaped.
+  img.dataset['tooltip'] = escHtml(chip.title);
+  const el = old ?? document.createElement('span');
+  el.className = `sr2e-tracker-wound sr2e-wound-${chip.level}`;
+  el.textContent = chip.text;
+  el.dataset['tooltip'] = escHtml(chip.title);
+  el.setAttribute('aria-label', chip.title);
+  if (!old) (li.querySelector('.token-name, .name') ?? li).appendChild(el);
 }
 
 /**

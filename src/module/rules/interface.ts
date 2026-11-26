@@ -341,7 +341,7 @@ export function placeWindow(mem: WinMemory | null | undefined, id: string, kind:
 /** The section each of the system's own settings sits in (in Foundry's settings window). */
 export const SETTING_SECTIONS: Array<{ id: string; label: string; match: RegExp }> = [
   { id: 'look', label: 'Look and layout', match: /^(look|preset|windowOpacity|textScale|reducedMotion|sheetLayout|portrait|groupNotes|rememberWindows|numberSteppers)/i },
-  { id: 'rolls', label: 'Rolls, dice and chat', match: /^(rollPrivacy|foldDice|dice|defendPrompt|autoResist|soundCues|soundVolume|sound\.|rememberRolls|showTn)/i },
+  { id: 'rolls', label: 'Rolls, dice and chat', match: /^(rollPrivacy|foldDice|dice|defendPrompt|autoResist|soundCues|soundVolume|sound\.|rememberRolls|oneRollWindow|showTn)/i },
   { id: 'tokens', label: 'Tokens and the map', match: /^(token|hoverCard|turnPing|wards|regionDetect|movement|floating|vision)/i },
   { id: 'gm', label: 'GM and world', match: /^(houseRules|approvalQueue|moduleSupport|starterKits|sessionChecklist|itemTemplates|migration|skillWeb)/i },
 ];

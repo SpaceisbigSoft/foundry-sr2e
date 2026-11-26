@@ -3,7 +3,8 @@
   <p>{{sr2eT "SR2E.UI.sCreationIsFinishedSeeThe" name=name}}</p>
   {{else}}
   <nav class="sr2e-wiz-steps" aria-label="{{sr2eT "SR2E.UI.steps"}}">
-    {{#each steps}}<a data-action="wizStep" data-step="{{id}}" class="sr2e-wiz-step{{#if active}} active{{/if}} sr2e-wiz-{{state}}" title="{{hint}}"><span class="sr2e-wiz-n">{{n}}</span> {{label}}{{#if (eq state "bad")}} <i class="fa-solid fa-triangle-exclamation" aria-label="{{sr2eT "SR2E.UI.checkNotMet"}}"></i>{{/if}}{{#if (eq state "ok")}} <i class="fa-solid fa-check" aria-label="{{sr2eT "SR2E.UI.checksMet"}}"></i>{{/if}}</a>{{/each}}
+    {{!-- v0.93.4: three states: not ready (grey, no mark) until the steps it needs are done, needs attention, done. --}}
+    {{#each steps}}<a data-action="wizStep" data-step="{{id}}" class="sr2e-wiz-step{{#if active}} active{{/if}} sr2e-wiz-{{state}}" title="{{#if (eq state "wait")}}{{sr2eT "SR2E.UI.wizNotReady"}} {{/if}}{{hint}}"><span class="sr2e-wiz-n">{{n}}</span> {{label}}{{#if (eq state "bad")}} <i class="fa-solid fa-triangle-exclamation" aria-label="{{sr2eT "SR2E.UI.checkNotMet"}}"></i>{{/if}}{{#if (eq state "ok")}} <i class="fa-solid fa-check" aria-label="{{sr2eT "SR2E.UI.checksMet"}}"></i>{{/if}}{{#if (eq state "wait")}}<span class="sr2e-sr-only">{{sr2eT "SR2E.UI.wizNotReady"}}</span>{{/if}}</a>{{/each}}
   </nav>
   <div class="sr2e-wiz-main">
     <div class="sr2e-wiz-body">
@@ -11,16 +12,17 @@
       <p class="hint">{{hint}}</p>
 
       {{#if is.priorities}}
-      <table class="sr2e-wiz-priorities">
-        <thead><tr><th></th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th></tr></thead>
-        <tbody>
-          {{#each columns}}
-          <tr><th scope="row">{{label}}</th>
-            {{#each cells}}<td class="{{#if checked}}sr2e-picked{{/if}}"><label><input type="radio" name="wiz-{{../key}}" value="{{letter}}" data-wiz="priority" data-column="{{../key}}" {{checked checked}}> <span>{{text}}</span></label></td>{{/each}}
-          </tr>
-          {{/each}}
-        </tbody>
-      </table>
+      {{!-- v0.93.4: one grid for both widths: a table of A–E columns in a wide window; in a narrow one each row is five
+           segmented letter buttons with the option texts under them (CSS only, _0934-fit.css). --}}
+      <div class="sr2e-wiz-prio">
+        <div class="sr2e-wiz-prio-head" aria-hidden="true"><span></span><span>A</span><span>B</span><span>C</span><span>D</span><span>E</span></div>
+        {{#each columns}}
+        <div class="sr2e-wiz-prow" role="radiogroup" aria-labelledby="sr2e-wiz-pl-{{key}}">
+          <span class="sr2e-wiz-plabel" id="sr2e-wiz-pl-{{key}}">{{label}}</span>
+          {{#each cells}}<label class="sr2e-wiz-pcell{{#if checked}} sr2e-picked{{/if}}{{#if taken}} sr2e-taken{{/if}}"><input type="radio" name="wiz-{{../key}}" value="{{letter}}" data-wiz="priority" data-column="{{../key}}" {{checked checked}}> <b class="sr2e-wiz-pletter">{{letter}}</b> <span class="sr2e-wiz-ptext">{{text}}</span></label>{{/each}}
+        </div>
+        {{/each}}
+      </div>
       <p class="hint">{{sr2eT "SR2E.UI.pickingALetterAnotherColumnHolds"}} {{#unless prioritiesDone}}<strong>{{sr2eT "SR2E.UI.giveEveryColumnADifferentLetter"}}</strong>{{/unless}}</p>
       {{/if}}
 
@@ -130,7 +132,10 @@
     <aside class="sr2e-wiz-totals" aria-label="{{sr2eT "SR2E.UI.runningTotals"}}">
       <h3 data-heading="Totals">{{sr2eT "SR2E.UI.totals"}}</h3>
       <ul>
-        {{#each checks}}<li class="{{#unless ok}}sr2e-warn{{/unless}}{{#if here}} sr2e-here{{/if}}" title="{{note}}">{{#if ok}}✓{{else}}✗{{/if}} {{label}} <span>{{used}} / {{allowed}}</span></li>{{/each}}
+        {{!-- v0.93.4: the priorities as a five-row checklist and the contacts as a plain sentence. --}}
+        {{#each checks}}<li class="{{#unless ok}}sr2e-warn{{/unless}}{{#if here}} sr2e-here{{/if}}" title="{{note}}">{{#if ok}}✓{{else}}✗{{/if}} {{label}}{{#if (eq stepId "priorities")}}
+          <ul class="sr2e-wiz-prio-list">{{#each @root.prioList}}<li class="{{#if set}}sr2e-set{{/if}}">{{label}} <b>{{#if set}}{{letter}}{{else}}–{{/if}}</b></li>{{/each}}</ul>{{#if note}}<small>{{note}}</small>{{/if}}
+          {{else if (eq stepId "contacts")}} <small class="sr2e-wiz-sentence">{{@root.contactsLine}}</small>{{else}} <span>{{used}} / {{allowed}}</span>{{/if}}</li>{{/each}}
       </ul>
     </aside>
   </div>

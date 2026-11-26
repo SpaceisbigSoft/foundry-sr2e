@@ -71,7 +71,8 @@ import { socialDesiredPick, socialDesiredRows, socialDesiredModifiers, socialOne
 import { socialExtraRows, deathBoxExtra } from "../rules/index.ts";
 import { promptPoolDice } from "./chat.ts";
 import { SHEET_TOOL_ACTIONS } from "./adding.ts";
-import { sheetToolsContext, decorateSheet } from "./sheettools.ts";
+import { sheetToolsContext, decorateSheet, decorateItemSheet } from "./sheettools.ts";
+import { fitWindowSize } from "../rules/fit0934.ts";
 // v0.68.0: layouts, the status strip, your turn, steppers, roll memory.
 import { stripContext, decorateInterface, currentLayout, rememberMarker } from "./interface.ts";
 import { tabIcon, FEEDS } from "../rules/index.ts";
@@ -134,6 +135,13 @@ export function registerGuideButton(): void {
 
 /** Full character sheet (also selectable for NPCs). */
 export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
+  /** v0.93.4: the starting size fits the screen (at most about 80% of its height), so the hotbar stays clear. */
+  _initializeApplicationOptions(options: any): any {
+    const o: any = (super._initializeApplicationOptions as any)(options);
+    try { o.position = fitWindowSize({ ...(o.position ?? {}) }, { width: globalThis.innerWidth, height: globalThis.innerHeight }); } catch { /* no window */ }
+    return o;
+  }
+
   /** v0.59.0: dropped items arrive uninstalled / unbonded / unloaded, move between actors, and only fitting types (applications/drops.ts). */
   /** v0.92.1: a Catalogue entry dragged from the reference pane opens the shop with it ticked (applications/reference.ts). */
   async _onDrop(event: any): Promise<any> {
@@ -5348,6 +5356,13 @@ export class SR2IcSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
 /** One generic item sheet; the template shows the fields for the item type. */
 export class SR2ItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
+  /** v0.93.4: the starting size fits the screen (at most about 80% of its height), so the hotbar stays clear. */
+  _initializeApplicationOptions(options: any): any {
+    const o: any = (super._initializeApplicationOptions as any)(options);
+    try { o.position = fitWindowSize({ ...(o.position ?? {}) }, { width: globalThis.innerWidth, height: globalThis.innerHeight }); } catch { /* no window */ }
+    return o;
+  }
+
   static DEFAULT_OPTIONS = {
     classes: ["sr2e", "sheet", "item"],
     position: { width: 520, height: 640 },
@@ -5370,6 +5385,8 @@ export class SR2ItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
       addTweak: SR2ItemSheet.#onAddTweak,
       deleteTweak: SR2ItemSheet.#onDeleteTweak,
       undoDescription: SR2ItemSheet.#onUndoDescription,
+      // v0.93.4: the Edit | Play switch.
+      sheetMode: SHEET_TOOL_ACTIONS.sheetMode,
     },
   };
 
@@ -5549,6 +5566,7 @@ export class SR2ItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
   /** The weapon Kind select sets the flags behind it (v0.41.0). */
   _onRender(context: any, options: any): void {
     (super._onRender as any)?.call(this, context, options);
+    try { decorateItemSheet(this); } catch (err) { console.warn("sr2e | item sheet mode", err); }
     const sel = this.element?.querySelector?.("select[data-weapon-layout]") as HTMLSelectElement | null;
     sel?.addEventListener("change", () => {
       const item: any = this.document;
@@ -6061,7 +6079,8 @@ function summaryContext(actor: any): any {
   const sys = actor.system, d = sys.derived ?? {};
   const pools = poolsOf(actor);
   const chips: string[] = [];
-  if (d.metatype && d.metatype !== "Human") chips.push(d.metatype);
+  // v0.93.4: the metatype is its own chip (the compact top at 1024×768 hides it: the Metatype field shows it).
+  const meta = d.metatype && d.metatype !== "Human" ? String(d.metatype) : "";
   if (d.astralMode && d.astralMode !== "physical") chips.push(d.astralMode);
   if (d.matrix?.jackedIn) chips.push(tx('SR2E.App.Sheets.jackedIn'));
   if (actor.isBroken?.()) chips.push(tx('SR2E.App.Sheets.broken'));
@@ -6100,7 +6119,7 @@ function summaryContext(actor: any): any {
     if (["unconscious", "bleeding", "dead"].includes(st) || String(st).startsWith("sr2eWound")) continue;
     chips.push(statusLabel(String(st)));
   }
-  return { pools, chips };
+  return { pools, chips, meta, showRow: Boolean(meta || chips.length) };
 }
 
 /** The quick-action bar: the actions that apply to this character. */
@@ -6414,6 +6433,13 @@ async function driveDialog(driver: any | null, vehicle: any): Promise<any | null
 
 /** Vehicles and drones: stats, damage track, driver and mode, people aboard, driving and crash. */
 export class SR2VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
+  /** v0.93.4: the starting size fits the screen (at most about 80% of its height), so the hotbar stays clear. */
+  _initializeApplicationOptions(options: any): any {
+    const o: any = (super._initializeApplicationOptions as any)(options);
+    try { o.position = fitWindowSize({ ...(o.position ?? {}) }, { width: globalThis.innerWidth, height: globalThis.innerHeight }); } catch { /* no window */ }
+    return o;
+  }
+
   /** v0.59.0: dropped items arrive uninstalled / unbonded / unloaded, move between actors, and only fitting types (applications/drops.ts). */
   async _onDropItem(event: any, item: any): Promise<any> {
     return dropItemOnActor(this, event, item, () => (super._onDropItem as any)(event, item));

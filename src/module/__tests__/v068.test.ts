@@ -101,7 +101,7 @@ describe('templates', () => {
   });
   test('the strip shows the monitor, wounds, initiative, pools with pips, the readied weapon and your turn', () => {
     const s = tpl('status-strip.hbs');
-    for (const want of ['monitor-mini.hbs', 'strip.wound', 'strip.init', 'data-action="setPool"', 'data-action="attackWeapon" data-item-id="{{strip.weapon.id}}"', 'strip.turn.label', 'sr2e-act-pip']) assert.ok(s.includes(want), want);
+    for (const want of ['sr2e-strip-track' /* v0.93.4: the monitor as text */, 'strip.wound', 'strip.init', 'data-action="setPool"', 'data-action="attackWeapon" data-item-id="{{strip.weapon.id}}"', 'strip.turn.label', 'sr2e-act-pip']) assert.ok(s.includes(want), want);
   });
   test('the summary no longer repeats what the strip shows', () => {
     const s = tpl('sheet-summary.hbs');
@@ -164,7 +164,8 @@ describe('wiring', () => {
     for (const [, fields] of marks) assert.ok(!/"tn"|"mod"|"target"/.test(fields!), fields);
   });
   test('the toolbar sits after the stuck block; a jump link opens a compact section', () => {
-    assert.ok(read('src', 'module', 'applications', 'sheettools.ts').includes("body.querySelector(':scope > .sr2e-stuck') ?? body.querySelector(':scope > .sr2e-tabs')"));
+    // v0.93.4: inside the stuck block (so the Edit | Play switch stays in view), else after the tabs.
+    assert.ok(read('src', 'module', 'applications', 'sheettools.ts').includes("if (stuck) stuck.appendChild(bar); else if (after)"));
     assert.ok(read('src', 'module', 'applications', 'adding.ts').includes('openCompactTab(root, tab);'));
   });
   test('the house rules window re-renders open windows from the v14 Map', () => {

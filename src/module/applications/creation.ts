@@ -27,6 +27,7 @@ import { runSheetAction } from './tokens.ts';
 import { escHtml } from '../rules/html.ts';
 import { starterChoices, getCustomLists, attributeDisplayLabel } from '../rules/customlists.ts';
 import { t as tx, tCount } from '../helpers/i18n.ts';
+import { wizardStepMarks, priorityChecklist, contactsSentence, fitWindowSize } from '../rules/fit0934.ts';
 
 const { HandlebarsApplicationMixin, ApplicationV2, DialogV2 } = foundry.applications.api;
 const cap = (s: string) => String(s ?? '').charAt(0).toUpperCase() + String(s ?? '').slice(1);
@@ -110,6 +111,13 @@ export class SR2CreationWizard extends HandlebarsApplicationMixin(ApplicationV2)
   };
   static PARTS: Record<string, any> = { main: { template: `${SYSTEM.PATH.TEMPLATES}/creation-wizard.hbs`, scrollable: ['.sr2e-wiz-body'] } };
 
+  /** v0.93.4: the starting size fits the screen (at most about 80% of its height), so the hotbar stays clear. */
+  _initializeApplicationOptions(options: any): any {
+    const o: any = (super._initializeApplicationOptions as any)(options);
+    try { o.position = fitWindowSize({ ...(o.position ?? {}) }, { width: globalThis.innerWidth, height: globalThis.innerHeight }); } catch { /* no window */ }
+    return o;
+  }
+
   static #open = new Map<string, SR2CreationWizard>();
   static #hooked = false;
 
@@ -155,7 +163,7 @@ export class SR2CreationWizard extends HandlebarsApplicationMixin(ApplicationV2)
       this.#timer = null;
       // Not while someone is typing in the wizard (a change event re-renders it anyway).
       const el: HTMLElement | null = (this as any).element ?? null;
-      const act = document.activeElement as HTMLElement | null;
+      const act = (el?.ownerDocument ?? document).activeElement as HTMLElement | null;
       if (el && act && el.contains(act) && ['INPUT', 'TEXTAREA'].includes(act.tagName) && (act as HTMLInputElement).type !== 'checkbox' && (act as HTMLInputElement).type !== 'radio') {
         act.addEventListener('blur', () => this.soon(), { once: true });
         return;
@@ -188,7 +196,8 @@ export class SR2CreationWizard extends HandlebarsApplicationMixin(ApplicationV2)
     if (creationRecordOf(a)) return { finished: true, name: a.name };
     const pr = prioritiesOf(a);
     const chk = wizardChecks(a);
-    const states = stepStates(chk.rows);
+    // v0.93.4: three states: not ready until the priorities are set, needs attention, done.
+    const states = wizardStepMarks(stepStates(chk.rows), { priorities: prioritiesComplete(pr) });
     const step = d.step;
     const steps = WIZARD_STEPS.map((s, i) => ({ ...s, n: i + 1, active: s.id === step, state: states[s.id] }));
     const here = WIZARD_STEPS.find((s) => s.id === step)!;
@@ -216,7 +225,11 @@ export class SR2CreationWizard extends HandlebarsApplicationMixin(ApplicationV2)
       failed: chk.rows.filter((r) => !r.ok).length,
       isGM: Boolean(game.user?.isGM),
       // Priorities
-      columns: BUILD_COLUMNS.map((k) => ({ key: k, label: cap(k), cells: (['A', 'B', 'C', 'D', 'E'] as Priority[]).map((l) => ({ letter: l, text: colText(k, l), checked: pr[k] === l })) })),
+      // v0.93.4: `taken`, a letter another row holds (picking it swaps the two).
+      columns: BUILD_COLUMNS.map((k) => ({ key: k, label: cap(k), cells: (['A', 'B', 'C', 'D', 'E'] as Priority[]).map((l) => ({ letter: l, text: colText(k, l), checked: pr[k] === l, taken: pr[k] !== l && BUILD_COLUMNS.some((o) => o !== k && pr[o] === l) })) })),
+      // v0.93.4: the Totals panel's five-row checklist and the contacts sentence.
+      prioList: priorityChecklist(pr, (k) => cap(k)),
+      contactsLine: contactsSentence((sys.contacts ?? []).length, RULES.CHARACTERS_V58.creation.freeContacts),
       prioritiesDone: prioritiesComplete(pr),
       // Metatype
       metatypes: metatypeChoices(pr.race, mtypes).map((m) => ({ ...m, selected: m.key === String(sys.metatype ?? 'human'),

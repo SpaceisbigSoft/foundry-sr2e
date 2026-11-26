@@ -19,6 +19,14 @@ export type ThemeId = typeof THEMES[number];
 export const THEME_LABELS: Record<ThemeId, string> = {
   street: 'SR2E.Settings.lookTheme.Choices.street', corp: 'SR2E.Settings.lookTheme.Choices.corp', contrast: 'SR2E.Settings.lookTheme.Choices.contrast',
 };
+/**
+ * v0.93.4: what a player picks: a theme, or "Follow Foundry" (Corp while Foundry shows its windows light, Street
+ * while dark). The default for anyone who never chose; a stored choice is kept.
+ */
+export const THEME_CHOICES = ['follow', ...THEMES] as const;
+export type ThemeChoice = typeof THEME_CHOICES[number];
+export const DEFAULT_THEME_CHOICE: ThemeChoice = 'follow';
+export const THEME_CHOICE_LABELS: Record<ThemeChoice, string> = { follow: 'SR2E.Settings.lookTheme.Choices.follow', ...THEME_LABELS };
 export const PRESETS = ['cyan', 'green', 'magenta', 'amber'] as const;
 export type PresetId = typeof PRESETS[number];
 export const PRESET_LABELS: Record<PresetId, string> = {
@@ -37,6 +45,10 @@ export interface Palette {
   accent: string; accentTint: string; accentInk: string;
   hitBg: string; hitInk: string; oneInk: string; oneLine: string;
   danger: string; dangerTint: string; dangerInk: string;
+  /** v0.93.4: the edge of an unticked checkbox or radio (≥ 3:1 on every panel), and the tick drawn on the accent fill. */
+  controlEdge: string; controlMark: string;
+  /** v0.93.4: the least contrast for text in this theme (4.5 is WCAG AA; High contrast asks 7, AAA). */
+  textMin: number;
   /** Whether Foundry's own controls inside our windows should use its dark or light theme. */
   scheme: 'dark' | 'light';
   areas: Record<AreaId, AreaColours>;
@@ -49,16 +61,20 @@ type Accent = Pick<Palette, 'accent' | 'accentTint' | 'accentInk' | 'hitBg' | 'h
 const STREET_BASE: Record<PresetId, Base> = {
   cyan: { page: '#0f1215', window: '#1b1f25', header: '#232931', headerText: '#e6e9ed', raised: '#232931', chip: '#252a31', sunk: '#15181c',
     line: '#343b45', lineStrong: '#3a424d', boxLine: '#6a7480', text: '#e6e9ed', muted: '#a3adb9', oneInk: '#f0a49a', oneLine: '#8a4a42',
-    danger: '#ef6b5f', dangerTint: '#3a1d19', dangerInk: '#ffd2cb', scheme: 'dark' },
+    danger: '#ef6b5f', dangerTint: '#3a1d19', dangerInk: '#ffd2cb', 
+    controlEdge: '#8e99a6', controlMark: '#1b1f25', textMin: 4.5, scheme: 'dark' },
   green: { page: '#0d110f', window: '#1a201d', header: '#212925', headerText: '#e4ece7', raised: '#212925', chip: '#232b27', sunk: '#121815',
     line: '#33403a', lineStrong: '#3a4842', boxLine: '#6a7a72', text: '#e4ece7', muted: '#a4b3ab', oneInk: '#f0a49a', oneLine: '#8a4a42',
-    danger: '#ef6b5f', dangerTint: '#3a1d19', dangerInk: '#ffd2cb', scheme: 'dark' },
+    danger: '#ef6b5f', dangerTint: '#3a1d19', dangerInk: '#ffd2cb', 
+    controlEdge: '#8c9c94', controlMark: '#1a201d', textMin: 4.5, scheme: 'dark' },
   magenta: { page: '#0f0f14', window: '#1c1c24', header: '#24242e', headerText: '#e9e8f0', raised: '#24242e', chip: '#25262f', sunk: '#14141a',
     line: '#363847', lineStrong: '#3d3f50', boxLine: '#6c6e84', text: '#e9e8f0', muted: '#a7a9bd', oneInk: '#f0a49a', oneLine: '#8a4a42',
-    danger: '#ef6b5f', dangerTint: '#3a1d19', dangerInk: '#ffd2cb', scheme: 'dark' },
+    danger: '#ef6b5f', dangerTint: '#3a1d19', dangerInk: '#ffd2cb', 
+    controlEdge: '#9294aa', controlMark: '#1c1c24', textMin: 4.5, scheme: 'dark' },
   amber: { page: '#12100e', window: '#1c1916', header: '#26221d', headerText: '#eee6da', raised: '#26221d', chip: '#29251f', sunk: '#141210',
     line: '#3b352d', lineStrong: '#433c33', boxLine: '#7a7062', text: '#eee6da', muted: '#b8ad9c', oneInk: '#f0a49a', oneLine: '#8a4a42',
-    danger: '#ef6b5f', dangerTint: '#3a1d19', dangerInk: '#ffd2cb', scheme: 'dark' },
+    danger: '#ef6b5f', dangerTint: '#3a1d19', dangerInk: '#ffd2cb', 
+    controlEdge: '#a09584', controlMark: '#1c1916', textMin: 4.5, scheme: 'dark' },
 };
 const STREET_ACCENT: Record<PresetId, Accent> = {
   cyan: { accent: '#4fd1d9', accentTint: '#1a3236', accentInk: '#dff8fa', hitBg: '#14373b', hitInk: '#e9fdff' },
@@ -77,11 +93,13 @@ const STREET_AREAS: Record<AreaId, AreaColours> = {
 /** On the Phosphor green preset the Matrix area turns cyan, so it doesn't vanish into the accent. */
 const STREET_MATRIX_CYAN: AreaColours = { base: '#50d6de', text: '#6bedf5', tint: '#123236', ink: '#d0f7f9' };
 
-// Corp: option F, the same layout in daylight, shaded (never flat white), with the dark title bar kept.
+// Corp: option F, the same layout in daylight, shaded (never flat white).
+// v0.93.4: the title bar is light too (the body's dark text and its accent line: one theme per window), the
+// secondary text a step darker, and an unticked box gets a dark edge.
 const CORP_BASE: Base = {
-  page: '#a9b1ba', window: '#d6dbe1', header: '#232931', headerText: '#e6e9ed', raised: '#c9d0d7', chip: '#cad1d8', sunk: '#dde2e7',
-  line: '#a9b2bc', lineStrong: '#97a1ac', boxLine: '#6b7682', text: '#151b22', muted: '#3f4955', oneInk: '#86281a', oneLine: '#a86a60',
-  danger: '#9e2418', dangerTint: '#e0c9c4', dangerInk: '#5e1d13', scheme: 'light',
+  page: '#a9b1ba', window: '#d6dbe1', header: '#c3cad2', headerText: '#151b22', raised: '#c9d0d7', chip: '#cad1d8', sunk: '#dde2e7',
+  line: '#a9b2bc', lineStrong: '#97a1ac', boxLine: '#6b7682', text: '#151b22', muted: '#353f4a', oneInk: '#86281a', oneLine: '#a86a60',
+  danger: '#9e2418', dangerTint: '#e0c9c4', dangerInk: '#5e1d13', controlEdge: '#4f5a66', controlMark: '#ffffff', textMin: 4.5, scheme: 'light',
 };
 const CORP_ACCENT: Record<PresetId, Accent> = {
   cyan: { accent: '#085a63', accentTint: '#b4d4d8', accentInk: '#06363c', hitBg: '#a6ced3', hitInk: '#052c31' },
@@ -89,8 +107,6 @@ const CORP_ACCENT: Record<PresetId, Accent> = {
   magenta: { accent: '#8e2470', accentTint: '#e2bfd6', accentInk: '#4d0f3a', hitBg: '#dcb0cd', hitInk: '#3d0b2e' },
   amber: { accent: '#6e4800', accentTint: '#e6d2a8', accentInk: '#3d2800', hitBg: '#dcc48f', hitInk: '#2e1e00' },
 };
-/** The light theme keeps a dark title bar, so its accent line there is the dark theme's accent. */
-const CORP_HEADER_ACCENT: Record<PresetId, string> = { cyan: '#4fd1d9', green: '#5fd68f', magenta: '#ec6fc5', amber: '#f0b35a' };
 const CORP_AREAS: Record<AreaId, AreaColours> = {
   combat: { base: '#7f0c0a', text: '#620002', tint: '#ddc2bd', ink: '#5e1c17' },
   magic: { base: '#5e3fb4', text: '#4c289d', tint: '#cbc7ea', ink: '#2c1b59' },
@@ -102,10 +118,11 @@ const CORP_AREAS: Record<AreaId, AreaColours> = {
 const CORP_MATRIX_CYAN: AreaColours = { base: '#13575e', text: '#004349', tint: '#b4d4d8', ink: '#06363c' };
 
 // High contrast: built from A, black panels, bright lines and white text.
+// v0.93.4: secondary text near white, brighter rules, white edges on unticked boxes, and text held to 7:1.
 const CONTRAST_BASE: Base = {
   page: '#000000', window: '#0a0c0f', header: '#000000', headerText: '#ffffff', raised: '#14171b', chip: '#14171b', sunk: '#000000',
-  line: '#7d8894', lineStrong: '#c3ccd5', boxLine: '#c3ccd5', text: '#ffffff', muted: '#dfe5eb', oneInk: '#ffb3a8', oneLine: '#ff8a7a',
-  danger: '#ff8a7a', dangerTint: '#4a130b', dangerInk: '#ffffff', scheme: 'dark',
+  line: '#a7b1bc', lineStrong: '#dde3ea', boxLine: '#dde3ea', text: '#ffffff', muted: '#f2f5f8', oneInk: '#ffb3a8', oneLine: '#ff8a7a',
+  danger: '#ff8a7a', dangerTint: '#4a130b', dangerInk: '#ffffff', controlEdge: '#ffffff', controlMark: '#000000', textMin: 7, scheme: 'dark',
 };
 const CONTRAST_ACCENT: Record<PresetId, Accent> = {
   cyan: { accent: '#6ff0f7', accentTint: '#00383c', accentInk: '#ffffff', hitBg: '#00494f', hitInk: '#ffffff' },
@@ -125,6 +142,43 @@ const CONTRAST_MATRIX_CYAN: AreaColours = { base: '#65cfd3', text: '#6fd9dd', ti
 
 export function isTheme(v: unknown): v is ThemeId { return (THEMES as readonly string[]).includes(String(v)); }
 export function isPreset(v: unknown): v is PresetId { return (PRESETS as readonly string[]).includes(String(v)); }
+export function isThemeChoice(v: unknown): v is ThemeChoice { return (THEME_CHOICES as readonly string[]).includes(String(v)); }
+
+/** v0.93.4: a stored theme choice, cleaned: the old 'dark' / 'light' values are Street / Corp, anything unknown follows Foundry. */
+export function normalizeThemeChoice(v: unknown): ThemeChoice {
+  const s = String(v ?? '').trim().toLowerCase();
+  if (isThemeChoice(s)) return s;
+  if (s === 'dark') return 'street';
+  if (s === 'light') return 'corp';
+  return DEFAULT_THEME_CHOICE;
+}
+
+/**
+ * v0.93.4: Foundry's colour scheme for its windows: 'light' or 'dark' as set, or (unset: it follows the browser)
+ * the browser's preference; dark when nothing is known.
+ */
+export function foundrySchemeFrom(setting: unknown, prefersDark: boolean | null | undefined): 'light' | 'dark' {
+  const s = String(setting ?? '').trim().toLowerCase();
+  if (s === 'light' || s === 'dark') return s;
+  return prefersDark === false ? 'light' : 'dark';
+}
+
+/** v0.93.4: the theme a choice shows: "Follow Foundry" is Corp on a light scheme and Street on a dark one. */
+export function resolveTheme(choice: unknown, scheme: 'light' | 'dark' | null | undefined): ThemeId {
+  const c = normalizeThemeChoice(choice);
+  if (c !== 'follow') return c;
+  return scheme === 'light' ? 'corp' : 'street';
+}
+
+/**
+ * v0.93.4: the theme of one window. While the player follows Foundry, a sheet given its own light or dark theme in
+ * Foundry's sheet settings takes Corp or Street; a theme the player chose applies to every window.
+ */
+export function windowTheme(choice: unknown, foundryScheme: 'light' | 'dark' | null | undefined, sheetScheme?: 'light' | 'dark' | null): ThemeId {
+  const c = normalizeThemeChoice(choice);
+  if (c === 'follow' && (sheetScheme === 'light' || sheetScheme === 'dark')) return resolveTheme(c, sheetScheme);
+  return resolveTheme(c, foundryScheme);
+}
 
 /** The full palette of a theme and colour preset (unknown values fall back to Street / Gunmetal cyan). */
 export function palette(theme: string, preset: string): Palette {
@@ -132,7 +186,7 @@ export function palette(theme: string, preset: string): Palette {
   const p: PresetId = isPreset(preset) ? preset : 'cyan';
   if (t === 'corp') {
     const areas = { ...CORP_AREAS, ...(p === 'green' ? { matrix: CORP_MATRIX_CYAN } : {}) };
-    return { ...CORP_BASE, ...CORP_ACCENT[p], headerAccent: CORP_HEADER_ACCENT[p], areas };
+    return { ...CORP_BASE, ...CORP_ACCENT[p], headerAccent: CORP_ACCENT[p].accent, areas };
   }
   if (t === 'contrast') {
     const areas = { ...CONTRAST_AREAS, ...(p === 'green' ? { matrix: CONTRAST_MATRIX_CYAN } : {}) };
@@ -175,8 +229,9 @@ export interface ContrastPair { fg: string; bg: string; min: number; what: strin
  * 3 for the parts of controls you need to see (box outlines, filled boxes, the accent edge).
  */
 export function contrastPairs(p: Palette): ContrastPair[] {
+  // v0.93.4: text pairs (4.5 by default) take the theme's own floor: 7 on High contrast.
   const t = (fg: keyof Palette, bg: keyof Palette, what: string, min = 4.5): ContrastPair =>
-    ({ fg: p[fg] as string, bg: p[bg] as string, min, what: `${what} (${String(fg)} on ${String(bg)})` });
+    ({ fg: p[fg] as string, bg: p[bg] as string, min: min === 4.5 ? Math.max(4.5, p.textMin ?? 4.5) : min, what: `${what} (${String(fg)} on ${String(bg)})` });
   const pairs: ContrastPair[] = [
     t('text', 'window', 'body text'), t('text', 'raised', 'text in a panel'), t('text', 'chip', 'text in a chip'), t('text', 'sunk', 'text in a field'),
     t('headerText', 'header', 'window and card titles'),
@@ -187,12 +242,20 @@ export function contrastPairs(p: Palette): ContrastPair[] {
     t('dangerInk', 'dangerTint', 'disaster and danger strips'),
     t('accent', 'window', 'the window edge and focus ring', 3), t('boxLine', 'sunk', 'empty monitor boxes', 3),
     t('boxLine', 'window', 'monitor box outlines', 3), t('headerAccent', 'header', 'the accent line on the title bar', 3),
+    // v0.93.4: unticked checkboxes and radios on every surface they sit on, the ticked fill against the empty box, the tick.
+    t('controlEdge', 'sunk', 'an unticked box\'s edge on its own fill', 3), t('controlEdge', 'window', 'an unticked box\'s edge', 3),
+    t('controlEdge', 'raised', 'an unticked box\'s edge in a panel', 3), t('controlEdge', 'chip', 'an unticked box\'s edge on a chip', 3),
+    t('accent', 'sunk', 'a ticked box against an empty one', 3), t('accent', 'raised', 'a ticked box in a panel', 3),
+    t('controlMark', 'accent', 'the tick on a ticked box', 4.5),
+    // v0.93.4: the selected tab shown inverted (High contrast) and the secondary text on a field.
+    t('window', 'text', 'the selected tab, inverted'), t('muted', 'sunk', 'hints in a field'),
   ];
+  const textMin = Math.max(4.5, p.textMin ?? 4.5);
   for (const a of AREAS) {
     const c = p.areas[a];
-    pairs.push({ fg: c.text, bg: p.window, min: 4.5, what: `${a} headings` });
-    pairs.push({ fg: c.text, bg: p.raised, min: 4.5, what: `${a} headings in a panel` });
-    pairs.push({ fg: c.ink, bg: c.tint, min: 4.5, what: `${a} card header strip` });
+    pairs.push({ fg: c.text, bg: p.window, min: textMin, what: `${a} headings` });
+    pairs.push({ fg: c.text, bg: p.raised, min: textMin, what: `${a} headings in a panel` });
+    pairs.push({ fg: c.ink, bg: c.tint, min: textMin, what: `${a} card header strip` });
     pairs.push({ fg: c.base, bg: p.window, min: 3, what: `${a} filled boxes and borders` });
     pairs.push({ fg: c.base, bg: p.sunk, min: 3, what: `${a} filled box against an empty one` });
   }
@@ -223,6 +286,8 @@ export function paletteVars(p: Palette): Record<string, string> {
     '--sr2e-danger-ink': p.dangerInk, '--sr2e-edge': rgba(p.accent, 0.45), '--sr2e-glow': rgba(p.accent, p.scheme === 'light' ? 0.1 : 0.14),
     '--sr2e-edge-soft': rgba(p.accent, 0.12), '--sr2e-hit-glow': rgba(p.accent, p.scheme === 'light' ? 0 : 0.35),
     '--sr2e-accent-wash': rgba(p.accent, 0.16), '--sr2e-scheme': p.scheme,
+    // v0.93.4: checkboxes and radios (the edge of an unticked one, the tick on the accent fill, the edge's width).
+    '--sr2e-control-edge': p.controlEdge, '--sr2e-control-mark': p.controlMark, '--sr2e-control-edge-width': p.textMin >= 7 ? '2px' : '1.5px',
     // v0.74.0: outcome colours for the success count (text on the card's own background).
     '--sr2e-good': p.scheme === 'light' ? '#17692f' : '#4cd982', '--sr2e-bad': p.danger,
     // Solid outcome fills (white text on each is at least 4.5:1) and the colourblind set (Okabe-Ito).
@@ -246,6 +311,8 @@ export function paletteVars(p: Palette): Record<string, string> {
  * Elsewhere the variables follow Foundry's interface scheme (Street on dark, Corp on light).
  */
 export const LOOK_SCOPE = ':is(.sr2e-look, .sr2e-card, .sr2e-hover-card)';
+/** v0.93.4: the class of a window that shows another theme than the body's (see paletteCss). */
+export const WINDOW_THEME_PREFIX = 'sr2e-wtheme-';
 
 export function paletteCss(): string {
   const block = (sel: string, p: Palette) => `${sel} {\n${Object.entries(paletteVars(p)).map(([k, v]) => `  ${k}: ${v};`).join('\n')}\n}`;
@@ -257,6 +324,9 @@ export function paletteCss(): string {
   ];
   // Inside them, the player's own theme and preset.
   for (const t of THEMES) for (const pr of PRESETS) parts.push(block(`body.sr2e-theme-${t}.sr2e-preset-${pr} ${LOOK_SCOPE}`, palette(t, pr)));
+  // v0.93.4: a window that follows its own Foundry sheet theme (applications/look.ts themeWindow) carries
+  // `sr2e-wtheme-<id>`; these blocks come later with the same weight, so they win over the body's.
+  for (const t of THEMES) for (const pr of PRESETS) parts.push(block(`body.sr2e-preset-${pr} .sr2e-look.${WINDOW_THEME_PREFIX}${t}`, palette(t, pr)));
   return `@layer system {\n${parts.join('\n')}\n}`;
 }
 

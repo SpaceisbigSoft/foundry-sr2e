@@ -114,7 +114,7 @@ describe('v0.80.0 combat: the clean-miss defense flow', () => {
     assert.equal(C.cbtMeleeDefensePool(false, 3), 3);
     assert.deepEqual(C.cbtMeleeDamage('M', 3, 2), { level: 'M', cleanMiss80: { hits: 3, net: 2, noClean: true } });
     assert.deepEqual(C.cbtMeleeDamage('M', 3, 2, true), { level: 'M', cleanMiss80: { hits: 3, net: 2 } });
-    assert.match(C.cbtDefendPoolLabel(4, true), /resistance test \(4 left\)/);
+    assert.match(C.cbtDefendPoolLabel(4, true), /Combat Pool for resistance \(4 left\)/);
   });
   test('clean miss: pool successes must beat the attack successes', () => {
     assert.equal(C.cbtCleanMiss(3, 2), true);
