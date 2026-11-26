@@ -642,12 +642,12 @@ function batchCardFlow(ctx: Ctx): void {
 
 const DIALOGS = 'dialog, .application.dialog';
 /** The dialogs open now (so only ones that open later are confirmed). */
-function openDialogs(): Set<Element> { return new Set(document.querySelectorAll(DIALOGS)); }
+function openDialogs(): Set<Element> { return new Set(Array.from(document.querySelectorAll(DIALOGS))); }
 /** Click OK on the dialogs that opened after `before` (a pool or weapon prompt), a few times over; never on one open earlier. */
 async function confirmDialogs(before: Set<Element>): Promise<void> {
   for (let i = 0; i < 4; i++) {
     await wait(300);
-    const fresh = [...document.querySelectorAll(DIALOGS)].filter((d) => !before.has(d));
+    const fresh = Array.from(document.querySelectorAll(DIALOGS)).filter((d) => !before.has(d));
     const ok = fresh.map((d) => d.querySelector('button[data-action="ok"]')).filter(Boolean).pop() as HTMLElement | undefined;
     if (!ok) return;
     before.add(ok.closest(DIALOGS)!);
