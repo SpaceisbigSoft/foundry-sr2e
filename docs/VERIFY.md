@@ -2341,13 +2341,14 @@ Switches in `RULES.MAGIC_V920` (`rules/config92.ts`); the first choice is the ne
 
 ## v0.93.3 default Skill Web
 
-`DEFAULT_SKILL_WEB` (`rules/skillweb-default.ts`). Partial: the SR2 Core p. 69 diagram is only a page scan in the sources read, so only links the rules text gives are in it. **Check each row against the diagram (Core p. 69, with the errata to pp. 68-69) and Awakenings p. 94.**
+`DEFAULT_SKILL_WEB` (`rules/skillweb-default.ts`), the world setting's default: the SR2 Core p. 69 diagram read from the page scan (26 Nov 2026), each line a pair of names the diagram's lines join and the circles between them (`scripts/skillweb-core69.py` holds the transcription and does the counting). **Check against the diagram:**
 
-| Link | What the default has | Source |
+| What | The default's reading | Source |
 |---|---|---|
-| Car - Car B/R, Bike - Bike B/R | 1 step each (the "B/R is one circle from its general skill" rule); the book's B/R is grouped (Ground Vehicles B/R), the system names one per vehicle | Core pp. 70-75 |
-| Sorcery, Conjuring, Enchanting - Magical Theory | 1 step each (step count not in the text; 1 = the old flat +2) | Awakenings p. 94 |
-| Sorcery - Conjuring, Sorcery - Enchanting, Conjuring - Enchanting | 1 step each (step count not in the text) | Awakenings p. 94 |
-| Willpower > Sorcery / Conjuring / Enchanting | 2 steps each, one-way (step count not in the text; 2 = the old flat +4) | Awakenings p. 94 |
-| Combat and technical B/R (Armed Combat, Firearms, Gunnery, Projectile Weapons, Throwing Weapons, Computer, Electronics) | 1 step each; which skills have a B/R skill on the diagram is not confirmed | Core pp. 70-75; errata pp. 68-69 |
-| Missing | Every other skill-to-skill link and every other attribute link of the diagram; the Companion's revised web (p. 47) | Core p. 69 |
+| Passing through a skill | Allowed: a path may go on through a skill's name (the search adds the steps up); never through an attribute's name | Core p. 68 (not stated either way) |
+| Arrows | One way: from the needed skill toward the one you have, and from an attribute toward the skill (Quickness's arrow into Armed and Unarmed Combat, Strength's and Body's, Intelligence's into the knowledge skills, Demolitions, Willpower's, Psychology's into the Charisma skills) | Core p. 68 |
+| Circles counted | Every circle on the path, the skill's own end circles included | Core p. 68 |
+| Vehicle B/R | The book's Ground Vehicles (B/R) is written as Car B/R, Bike B/R and Hovercraft B/R (the same place on the web); Boats (B/R) as Boat B/R | Core p. 69 |
+| Names | The system's: Projectile Weapons, Throwing Weapons, Rotorcraft (Rotor), Fixed-wing Aircraft (Winged), Vectored Thrust; Sailboat kept | Core p. 69 |
+| A known gap | An attribute's path that runs through other skills uses each skill link's arrow the skill-to-skill way, so it can cross an arrow the book's attribute tracing would stop at (e.g. Charisma to Sorcery through Psychology, +22: far past any useful TN) | Core p. 68 |
+| Not included | The Awakenings p. 94 magical web (Enchanting and the revised links) and the Companion's revised web | Awakenings p. 94; Companion p. 47 |

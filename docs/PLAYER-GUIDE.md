@@ -430,7 +430,7 @@ Karma Pool left shows under **Derived** on the Main tab. The circular arrow besi
 
 The pools are the Combat Pool, Spell Pool, Hacking Pool (Matrix), Control Pool (rigging) and Karma Pool. The [status strip](#layouts-the-status-strip-and-your-turn) shows each as pips; click a pip to set how many are left (clicking the last filled pip takes one die off).
 
-A test dialog that can take pool dice has a box for them. What you use comes off what is left. The Main tab shows the Combat Pool spent; the Matrix and Rigging tabs show theirs, with a box to correct the spent number. Skill, attribute, attack and spell dialogs also have a box for **Karma Pool dice**: one point a die, up to the test's own dice. On the card, pool dice have a coloured bar under them (red Combat, violet Spell, green Hacking, orange Control) and Karma dice a dotted edge; hover a die to see where it came from. With Dice So Nice, the 3D dice take the same colours.
+A test dialog that can take pool dice has a box for them. What you use comes off what is left. The Main tab shows the Combat Pool spent; the Matrix and Rigging tabs show theirs, with a box to correct the spent number. Skill, attribute, attack and spell dialogs also have a box for **Karma Pool dice**: one point a die, up to the test's own dice. On a card, pool dice have a coloured bar under them (one colour per pool) and Karma Pool dice a dotted edge; hover a die to see where it came from. With Dice So Nice, the 3D dice take the same colours.
 
 An encephalon gives a small **Task Pool** for Intelligence, knowledge and Build/Repair skills: the skill dialog has a box for it (used up only in combat). An adept's Combat Sense adds to the Combat Pool, and a power focus adds its rating to the Spell Pool.
 

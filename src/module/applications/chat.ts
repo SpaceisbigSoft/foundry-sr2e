@@ -192,13 +192,14 @@ export async function promptPoolDice(actor: any, title: string, pool: PoolKind =
  * left and there is no armor to untick. Returns the pool dice and the switch, or null when closed.
  */
 async function promptResist(target: any, damage: DamageState, title: string, poolKind: PoolKind): Promise<{ pool: number; noArmor: boolean } | null> {
-  const plan = target.resistPreview?.(damage, false) as { power: number; armor: number; tn: number; dice: number; threat: number; immune?: boolean; stops?: number; type: string; level: string } | null | undefined;
+  const plan = target.resistPreview?.(damage, false) as { power: number; armor: number; tn: number; dice: number; threat: number; immune?: boolean; stops?: number; barrier?: boolean; type: string; level: string } | null | undefined;
   if (!plan) { const p = await promptPoolDice(target, title, poolKind); return p === null ? null : { pool: p, noArmor: false }; }
   const left = Math.max(0, Number(target.system?.derived?.[`${poolKind}PoolLeft`] ?? 0) || 0);
   if (!(left > 0) && !(plan.armor > 0)) return { pool: 0, noArmor: false };
   const line = (noArmor: boolean, pool: number): string => {
     const p = target.resistPreview?.(damage, noArmor) ?? plan;
     if (p.immune) return tx('SR2E.Dialog.Chat.resistPreviewImmune');
+    if (p.barrier) return tx('SR2E.Dialog.Chat.resistPreviewBarrier');
     if (p.stops !== undefined) return tx('SR2E.Dialog.Chat.resistPreviewStops', { against: Number(p.stops) || 0 });
     return tx('SR2E.Dialog.Chat.resistPreview', { power: Number(p.power) || 0, armor: Number(p.armor) || 0, tn: Number(p.tn) || 0, dice: (Number(p.dice) || 0) + (Number(p.threat) || 0), pool: Math.max(0, Math.min(left, Math.floor(pool) || 0)), level: escHtml(p.level), type: escHtml(p.type) });
   };

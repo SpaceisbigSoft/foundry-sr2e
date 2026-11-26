@@ -29,17 +29,34 @@ async function store(next: number, who: string, change: number): Promise<void> {
   await ChatMessage.create({ content: `<div class="sr2e-team-karma-note"><p>${line}</p></div>` });
 }
 
+/**
+ * v0.93.3 review: one change at a time on this client (a double click spent two, or wrote the same count twice).
+ * Exported for the tests.
+ */
+let busy = false;
+export async function oneAtATime(fn: () => Promise<void>): Promise<void> {
+  if (busy) return;
+  busy = true;
+  try { await fn(); } finally { busy = false; }
+}
+
 /** The GM's − / + (a GM only). */
 export async function adjustTeamKarma(delta: number): Promise<void> {
   if (!(game as any).user?.isGM) return;
-  const r = teamKarmaNext(teamKarmaNow(), delta, true);
-  if (!r.ok) return;
-  await store(r.value, String((game as any).user?.name ?? tx('SR2E.Card.Teamkarma.gm')), delta);
+  await oneAtATime(async () => {
+    const r = teamKarmaNext(teamKarmaNow(), delta, true);
+    if (!r.ok) return;
+    await store(r.value, String((game as any).user?.name ?? tx('SR2E.Card.Teamkarma.gm')), delta);
+  });
 }
 
 /** A player spends one (asks the GM's client); a GM spends one directly. */
 export async function spendTeamKarma(): Promise<void> {
   if (!teamKarmaOn()) return;
+  await oneAtATime(() => spendOne());
+}
+
+async function spendOne(): Promise<void> {
   if ((game as any).user?.isGM) {
     const r = teamKarmaNext(teamKarmaNow(), -1, true);
     if (!r.ok) { ui.notifications.warn(tx('SR2E.App.TeamKarma.none')); return; }

@@ -246,7 +246,7 @@ export class SR2CreationWizard extends HandlebarsApplicationMixin(ApplicationV2)
       })),
       specTrade: trade ? tx('SR2E.App.Creation.aSpecializationIsPaidFor', { ratio: RULES.FIXES_V71.specialization.ratio, firearms: 5 - RULES.FIXES_V71.specialization.ratio }) : '',
       // v0.93.3: hidden book skills left out, the GM's custom skills added after the first 12 starters (rules/customlists.ts).
-      starters: ((names: string[]) => starterChoices(starterSkillsMissing(names), names, getCustomLists(), 12))(items.filter((i) => i.type === 'skill').map((i) => String(i.name))).map((s) => ({ ...s, label: `${s.name}${s.kind === 'active' ? ` (${attributeDisplayLabel(s.attribute)})` : ''}` })),
+      starters: ((names: string[]) => starterChoices(starterSkillsMissing(names), names, getCustomLists(), 12))(items.filter((i) => i.type === 'skill').map((i) => String(i.name))).map((s) => ({ ...s, label: `${s.name}${s.kind === 'buildRepair' ? '' : ` (${attributeDisplayLabel(s.attribute)})`}` })),
       // Resources
       allowance: chk.allowance.toLocaleString(), gearCost: Math.round(chk.gearCost).toLocaleString(), lifeCost: chk.life.toLocaleString(), contactsCost: chk.contacts.toLocaleString(), extraSpell: chk.extraSpell.toLocaleString(),
       cash: chk.cash === null ? null : chk.cash.toLocaleString(),

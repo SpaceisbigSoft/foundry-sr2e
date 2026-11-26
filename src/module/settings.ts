@@ -1,4 +1,5 @@
 import { DEFAULT_SKILL_WEB } from "./rules/skillweb-default.ts";
+import { missingWebLines } from "./rules/skills.ts";
 import { registerCustomListSettings } from "./applications/customlists.ts";
 import { HOUSE_CORE_V923 } from "./rules/config923/core.ts";
 import { HOUSE_COMBAT_V923 } from "./rules/config923/combat.ts";
@@ -1307,12 +1308,15 @@ export class SkillWebConfig extends foundry.applications.api.ApplicationV2 {
     actions: { loadDefaultWeb: SkillWebConfig.#onLoadDefault },
   };
 
-  /** v0.93.3: append the starter links (not yet saved: the GM reads them, edits and saves). Lines already there stay. */
+  /**
+   * v0.93.3: add the book's links that aren't in the text yet (not saved: the GM reads them, edits and saves). Only
+   * links are compared and added (review: blank and comment lines piled up on every click); nothing new, nothing added.
+   */
   static #onLoadDefault(this: SkillWebConfig): void {
     const ta = (this as any).element?.querySelector?.('textarea[name="web"]') as HTMLTextAreaElement | null;
     if (!ta) return;
-    const have = new Set(ta.value.split(/\r?\n/).map((l) => l.trim()).filter(Boolean));
-    const add = DEFAULT_SKILL_WEB.split(/\r?\n/).filter((l) => !have.has(l.trim()));
+    const add = missingWebLines(ta.value, DEFAULT_SKILL_WEB);
+    if (!add.length) { ui.notifications.info(tx('SR2E.Notify.Settings.skillWebNothingToAdd')); return; }
     ta.value = `${ta.value.replace(/\s*$/, '')}${ta.value.trim() ? '\n' : ''}${add.join('\n')}\n`;
   }
 
@@ -1672,8 +1676,10 @@ export function registerSettings(): void {
     scope: "client", config: true, type: Boolean, default: true,
   });
   // The Skill Web (v0.38.0): the GM's links between skills, one per line.
+  // v0.93.3 (report item 7): the book's web (SR2 Core p. 69) by default; a GM who saved a web keeps theirs, and an
+  // empty text still means no web (every related skill +2, an attribute +4).
   game.settings.register(SYSTEM.id, "skillWeb", {
-    scope: "world", config: false, type: String, default: "",
+    scope: "world", config: false, type: String, default: DEFAULT_SKILL_WEB,
     onChange: (v: string) => setSkillWeb(parseSkillWeb(v)),
   });
   game.settings.registerMenu(SYSTEM.id, "skillWebMenu", {

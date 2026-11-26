@@ -91,6 +91,16 @@ export function parseSkillWeb(text: string): WebLink[] {
   return out;
 }
 
+/**
+ * v0.93.3: the link lines of `from` that `text` doesn't have yet (compared without comments and spaces, so a GM's own
+ * notes and blank lines never come back). Pure.
+ */
+export function missingWebLines(text: string, from: string): string[] {
+  const key = (l: string) => l.replace(/#.*$/, '').trim().replace(/\s+/g, ' ').toLowerCase();
+  const have = new Set(String(text ?? '').split(/\r?\n/).map(key).filter(Boolean));
+  return String(from ?? '').split(/\r?\n/).filter((l) => key(l) && !have.has(key(l)));
+}
+
 /** Steps along the shortest path between two skills (null = not linked within maxSteps). */
 export function webDistance(links: readonly WebLink[], from: string, to: string): number | null {
   const a = norm(from), b = norm(to);

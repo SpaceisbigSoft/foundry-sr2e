@@ -149,7 +149,12 @@ export async function rollRequestFor(message: any, button: HTMLElement): Promise
     rejectClose: false,
   }) as { tn: number; mod: number } | null;
   if (!r) return;
-  await withGmLock(() => rollRequestTest(actor, state, String(message.id), { tn: r.tn, modifier: r.mod }));
+  // v0.93.3 review: once rolled here, the row waits on its tally (no second roll from this client meanwhile).
+  const key = `${message.id}:${at.index}`;
+  if (sent.has(key)) return;
+  sent.add(key);
+  const done = await withGmLock(() => rollRequestTest(actor, state, String(message.id), { tn: r.tn, modifier: r.mod }));
+  if (!done) sent.delete(key);
 }
 
 /** v0.93.3: the GM's "Roll the NPCs": every waiting row whose actor has no player owner, at the request's TN, one by one. */
@@ -157,12 +162,18 @@ export async function rollRequestNpcs(message: any): Promise<number> {
   if (!(game as any).user?.isGM) return 0;
   const state = requestOf(message);
   if (!state) return 0;
-  const todo = state.rows.filter((r) => !r.result && liveNpc(r)).map((r) => actorOf(r.actorUuid)).filter(Boolean);
+  // v0.93.3 review: rows already rolled here and waiting on their tally are skipped (a second click rolled them again).
+  const rows = state.rows.map((r, i) => ({ r, i })).filter(({ r, i }) => !r.result && liveNpc(r) && !sent.has(`${message.id}:${i}`));
+  const todo = rows.map(({ r }) => actorOf(r.actorUuid)).filter(Boolean);
   if (!todo.length) { ui.notifications?.info?.(tx('SR2E.Notify.Request.noNpcs')); return 0; }
+  for (const { i } of rows) sent.add(`${message.id}:${i}`);
   return withGmLock(async () => {
     let n = 0;
-    for (const a of todo) {
-      try { if (await rollRequestTest(a, state, String(message.id))) n++; } catch (err) { console.warn('sr2e | roll request npc', err); }
+    for (const { r, i } of rows) {
+      const a = actorOf(r.actorUuid);
+      let ok = false;
+      try { ok = Boolean(a && (await rollRequestTest(a, state, String(message.id)))); } catch (err) { console.warn('sr2e | roll request npc', err); }
+      if (ok) n++; else sent.delete(`${message.id}:${i}`);
     }
     return n;
   });

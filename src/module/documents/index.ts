@@ -5890,6 +5890,8 @@ export class SR2Actor extends Actor {
    */
   #ownAttackOptions(weapon: any, opts: AttackOptions): AttackOptions {
     const own: AttackOptions = { ...opts };
+    // v0.93.3 review: Karma Pool dice are the acting character's own, not every group member's.
+    delete own.karmaDice;
     delete own.sight;
     delete own.measuredMetres;
     delete own.outOfRange;
@@ -6309,7 +6311,8 @@ export class SR2Actor extends Actor {
     const n = gruntsStanding(this.sys.grunts?.size ?? 1, this.sys.grunts?.down ?? 0);
     let made = 0;
     for (let i = 0; i < n; i++) {
-      const r = await this.attackWith(weapon, { ...opts, note: opts.note ? tx('SR2E.Card.Actor.noteGruntOf', { note: opts.note, i: i + 1, n }) : tx('SR2E.Card.Actor.gruntOf', { i: i + 1, n }) });
+      // v0.93.3 review: Karma Pool dice on the first grunt's test only (the group shares one Karma Pool).
+      const r = await this.attackWith(weapon, { ...opts, ...(i > 0 ? { karmaDice: 0 } : {}), note: opts.note ? tx('SR2E.Card.Actor.noteGruntOf', { note: opts.note, i: i + 1, n }) : tx('SR2E.Card.Actor.gruntOf', { i: i + 1, n }) });
       if (r) made++;
       else break;
     }
@@ -9959,16 +9962,19 @@ export class SR2Actor extends Actor {
    * the dice, for the Resist window (null for vehicles, the Matrix and astral damage, which keep their own windows).
    * Reads only. `noArmor` previews the window's "count no armor this time" switch.
    */
-  resistPreview(damageIn: DamageState, noArmor = false): { power: number; level: string; type: DamageType; armor: number; tn: number; dice: number; threat: number; immune?: boolean; stops?: number; occ: boolean } | null {
+  resistPreview(damageIn: DamageState, noArmor = false): { power: number; level: string; type: DamageType; armor: number; tn: number; dice: number; threat: number; immune?: boolean; stops?: number; barrier?: boolean; occ: boolean } | null {
     if (this.type === 'vehicle' || damageIn.matrix || damageIn.astral || !this.sys.attributes?.body) return null;
     let damage = damageIn;
     if (damage.fire && damageImmunity(this.immunities() as Record<string, boolean>, { fire: true }).immune) {
       return { power: Number(damage.power) || 0, level: String(damage.level), type: damage.damageType ?? 'physical', armor: 0, tn: 0, dice: 0, threat: 0, immune: true, occ: false };
     }
+    // As resistFromState does (review): a vulnerability stages the level up and may pass immunity; the allergy's Power.
     const vuln = damage.material ? vulnerabilityTo(this.critterTraits(), damage.material) : null;
-    if (vuln) damage = { ...damage, level: vulnerableLevel(damage.level) };
+    if (vuln) damage = { ...damage, level: vulnerableLevel(damage.level), ...(RULES.CRITTERS.vulnerability.ignoresImmunity ? { ignoreImmunity: true } : {}) };
     const allergyPower = damage.material ? allergyWeaponPower(this.critterTraits(), damage.material) : 0;
     if (allergyPower) damage = { ...damage, power: Number(damage.power ?? 0) + allergyPower };
+    // A barrier rated above the Power stops the shot cold (COMBAT_V923.barriers 'book').
+    if (damage.barrierStopped && C923.barriersBook()) return { power: Number(damage.power) || 0, level: String(damage.level), type: damage.damageType ?? 'physical', armor: 0, tn: 0, dice: 0, threat: 0, barrier: true, occ: false };
     const ap = this.resistArmorPlan(damage, noArmor);
     const type: DamageType = ap.damage.damageType ?? 'physical';
     const d = this.resistDicePlan(type, false, Boolean(ap.damage.spiritAttacker));

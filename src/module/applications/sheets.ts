@@ -3700,7 +3700,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
           sight = sightFor(visFor(h), h.smoke?.kind ?? "none", h);
         }
         await actor.attackWith(weapon, {
-          ...common, sight, ...(i > 0 && c.band ? { range: c.band } : {}), situational, targetUuid: all[i], rounds: split[i], spreadExtraTargets: all.length - 1, spreadIndex: i, earlierRoundsThisPhase: earlier,
+          // v0.93.3 review: Karma Pool dice go on the first target's test only (each test would spend them again).
+          ...common, ...(i > 0 ? { karmaDice: 0 } : {}), sight, ...(i > 0 && c.band ? { range: c.band } : {}), situational, targetUuid: all[i], rounds: split[i], spreadExtraTargets: all.length - 1, spreadIndex: i, earlierRoundsThisPhase: earlier,
           barrierArmor: i === 0 ? choice.barrier : h.barrierArmor,
           ...(c.metres != null ? { measuredMetres: c.metres } : {}),
           // Rounds wasted walking the fire to the next target: ammo and recoil, no damage.
@@ -3723,7 +3724,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     // A second semi-automatic shot: another simple action; the first round counts for recoil.
     if (twice && (await actor.useAction(actKind, tx('SR2E.Card.Sheet.aSecondShotWith', { weaponName: weapon.name })))) {
       await actor.attackWith(actor.items.get(weapon.id) ?? weapon, {
-        ...common, ...distance, targetUuid: choice.targetUuid, earlierRoundsThisPhase: choice.earlier + 1, modifiers: otherMods,
+        // v0.93.3 review: the Karma Pool dice were bought for the first shot only.
+        ...common, karmaDice: 0, ...distance, targetUuid: choice.targetUuid, earlierRoundsThisPhase: choice.earlier + 1, modifiers: otherMods,
         barrierArmor: choice.barrier, note: tx('SR2E.App.Sheets.secondShot'),
       });
     }

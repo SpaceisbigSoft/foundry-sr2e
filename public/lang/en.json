@@ -2370,6 +2370,11 @@
         "Name": "Shop: forbidden things on sale",
         "Hint": "Off: items whose legality is Forbidden are hidden from players in the shop. On: they are listed too (with their legality)."
       },
+      "customListsMenu": {
+        "Name": "Skill and attribute lists",
+        "Label": "Edit the lists",
+        "Hint": "World house rules: add custom skills to the pickers, hide book skills from them, and rename how attributes are labelled. Skills already on actors are never changed."
+      },
       "rollAtOnce": {
         "Name": "Roll at once",
         "Hint": "Your own default: a click on a roll button rolls straight away with the window's defaults, and Shift-click opens the window for that one roll. Defend and Resist still open their windows (Shift-click skips them). Off: the window opens, and Shift-click rolls at once."
@@ -2377,11 +2382,6 @@
       "teamKarmaOn": {
         "Name": "Team Karma tracker",
         "Hint": "An optional table aid: a shared count the whole table can see (SR2e tools → Team Karma). The GM sets it; a player spends one, and the chat says who. Each character's own Karma Pool is not changed by it."
-      },
-      "customListsMenu": {
-        "Name": "Skill and attribute lists",
-        "Label": "Edit the lists",
-        "Hint": "World house rules: add custom skills to the pickers, hide book skills from them, and rename how attributes are labelled. Skills already on actors are never changed."
       }
     },
     "Notify": {
@@ -3403,7 +3403,8 @@
       "Settings": {
         "sr2eHouseRulesTheAdvancedBox": "SR2e house rules: the advanced box is not valid JSON ({errMessage}). Nothing was saved.",
         "sr2eHouseRulesIgnored": "SR2e house rules: ignored {problems}",
-        "sr2eHouseRulesSavedChanged": "SR2e house rules saved ({value} changed)."
+        "sr2eHouseRulesSavedChanged": "SR2e house rules saved ({value} changed).",
+        "skillWebNothingToAdd": "Every link of the book's web is already in the text."
       },
       "Shop": {
         "onlyTheGm": "Only the GM can change what is in the shop.",
@@ -3475,6 +3476,10 @@
         "noActor": "Pick a character for the reference pane.",
         "notOwner": "Only the owner of {name} can open its reference pane."
       },
+      "CustomLists": {
+        "saved": "Skill and attribute lists saved: {skills} custom skills, {hidden} hidden.",
+        "skipped": "Lists saved, but lines were skipped ({count}): {lines}"
+      },
       "Request": {
         "gmOnly": "Only a GM can request a roll.",
         "nobody": "Nobody to ask: pick at least one character.",
@@ -3483,10 +3488,6 @@
         "notYours": "{name} isn't your character: its owner or the GM rolls it.",
         "alreadyRolled": "{name} has already rolled for this request.",
         "noNpcs": "No NPC on this request is still waiting."
-      },
-      "CustomLists": {
-        "saved": "Skill and attribute lists saved: {skills} custom skills, {hidden} hidden.",
-        "skipped": "Lists saved, but lines were skipped ({count}): {lines}"
       }
     },
     "Dialog": {
@@ -3669,7 +3670,8 @@
         "resistPreview": "Resist {power}{level} {type}: Power {power} − armor {armor} = TN {tn}, {dice} dice + {pool} pool",
         "resistPreviewImmune": "Immune: this damage does nothing.",
         "resistPreviewStops": "Shrugged off: the Power doesn't beat the immunity ({against}).",
-        "resistNoArmor": "Count no armor this time (armor {armor})"
+        "resistNoArmor": "Count no armor this time (armor {armor})",
+        "resistPreviewBarrier": "Stopped: the barrier is rated above the Power."
       },
       "Creation": {
         "buildCheckNotMet": "{failedLength} not met:",
@@ -14257,7 +14259,7 @@
         "rulesSourceConfigure": "Rules source: {source} (Configure Settings, SR2e system: Rules source).",
         "sr2eHouseRulesTheAdvancedBox": "SR2e house rules: the advanced box is not valid JSON.",
         "skillWebLoadStarter": "Add the book's links",
-        "skillWebStarterHint": "“Add the book's links” adds the links the system has from the rulebooks so far (Build/Repair skills and the magical skills; uncertain ones are marked VERIFY). It doesn't hold the whole printed web yet: once a web has links, a skill can only default along them, so check the list before you save."
+        "skillWebStarterHint": "The book's web (SR2 Core p. 69) is the default. “Add the book's links” puts back any of its links that aren't in the text (your own lines stay). An empty text means no web: any related skill at +2, an attribute at +4."
       },
       "Tours": {
         "yourCharacterSheet": "Your character sheet",
@@ -15815,17 +15817,6 @@
         "declareFullDefense": "Declare full defense: no Combat Pool on your melee tests, pool dice to your resistance tests (a clean miss if they beat the attacker's) until your next action",
         "fullDefenseDetail": "no Combat Pool on melee tests; pool dice to resistance tests until the next action"
       },
-      "TeamKarma": {
-        "title": "Team Karma",
-        "label": "Team Karma",
-        "spend": "Spend one",
-        "minus": "One less",
-        "plus": "One more",
-        "none": "No Team Karma is left.",
-        "off": "The GM hasn't turned the Team Karma tracker on (Configure Settings).",
-        "spentNote": "{who} spends 1 Team Karma ({n} left).",
-        "setNote": "{who} sets Team Karma to {n}."
-      },
       "CustomLists": {
         "intro": "These lists change only what the pickers offer and what the attributes are called. No skill is taken off an actor, and every rule keeps using the same attribute keys. New attributes can't be added.",
         "skillsHeading": "Custom skills",
@@ -15837,6 +15828,17 @@
         "labelFor": "Label for {name}",
         "abbrFor": "Abbreviation for {name}",
         "save": "Save"
+      },
+      "TeamKarma": {
+        "title": "Team Karma",
+        "label": "Team Karma",
+        "spend": "Spend one",
+        "minus": "One less",
+        "plus": "One more",
+        "none": "No Team Karma is left.",
+        "off": "The GM hasn't turned the Team Karma tracker on (Configure Settings).",
+        "spentNote": "{who} spends 1 Team Karma ({n} left).",
+        "setNote": "{who} sets Team Karma to {n}."
       }
     },
     "Text": {
@@ -17918,7 +17920,7 @@
         "pools": {
           "title": "Dice pools",
           "b1": "The pools are the Combat Pool, Spell Pool, Hacking Pool (Matrix), Control Pool (rigging) and Karma Pool. The <a href=\"#layouts\">status strip</a> shows each as pips; click a pip to set how many are left (clicking the last filled pip takes one die off).",
-          "b2": "A test dialog that can take pool dice has a box for them. What you use comes off what is left. The Main tab shows the Combat Pool spent; the Matrix and Rigging tabs show theirs, with a box to correct the spent number. Skill and attribute dialogs also have a box for <strong>Karma Pool dice</strong>: one point a die, up to the test's own dice.",
+          "b2": "A test dialog that can take pool dice has a box for them. What you use comes off what is left. The Main tab shows the Combat Pool spent; the Matrix and Rigging tabs show theirs, with a box to correct the spent number. Skill, attribute, attack and spell dialogs also have a box for <strong>Karma Pool dice</strong>: one point a die, up to the test's own dice. On a card, pool dice have a coloured bar under them (one colour per pool) and Karma Pool dice a dotted edge; hover a die to see where it came from. With Dice So Nice, the 3D dice take the same colours.",
           "b3": "An encephalon gives a small <strong>Task Pool</strong> for Intelligence, knowledge and Build/Repair skills: the skill dialog has a box for it (used up only in combat). An adept's Combat Sense adds to the Combat Pool, and a power focus adds its rating to the Spell Pool.",
           "b4": "The Combat Pool refills at the start of each of your actions (by the book; a house rule can refill it at each new Combat Turn instead). The Spell, Hacking, Control and Task Pools refill when a combat starts and at each new Combat Turn. The GM can also refill them from the GM panel (Party tab: <strong>Refresh pools</strong>). The Karma Pool refills by itself when a combat ends; between other scenes use the circular arrow beside <strong>Karma Pool left</strong> on the Main tab, or the GM's <strong>Refresh Karma Pools</strong>. A house rule can refill Karma Pools at the start of each session instead, or only by hand.",
           "b5": "On the Current tab, <strong>Initiative and pools</strong> lists the initiative (and Matrix or rigged initiative) and each pool, read only. Your combatants in the combat tracker show their pools too."
