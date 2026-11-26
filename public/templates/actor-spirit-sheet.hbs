@@ -10,9 +10,9 @@
     </div>
   </header>
   <div class="sr2e-stuck">
-    {{> "systems/sr2e/templates/status-strip.hbs"}}
+    {{> "systems/shadowrun2e_unified/templates/status-strip.hbs"}}
   </div>
-  {{#if (eq layout "combat")}}{{> "systems/sr2e/templates/combat-column.hbs"}}{{/if}}
+  {{#if (eq layout "combat")}}{{> "systems/shadowrun2e_unified/templates/combat-column.hbs"}}{{/if}}
 
   <div class="sr2e-row sr2e-spirit-meta">
     <label>{{sr2eT "SR2E.UI.kind"}}
@@ -63,7 +63,7 @@
   </div>
 
   <section class="sr2e-monitor">
-    {{> "systems/sr2e/templates/monitor.hbs"}}
+    {{> "systems/shadowrun2e_unified/templates/monitor.hbs"}}
     <button type="button" data-action="resistDamage">{{sr2eT "SR2E.UI.resistDamage"}}</button>
   </section>
 
@@ -99,7 +99,7 @@
       {{/each}}
     </ul>
     {{/if}}
-    {{> "systems/sr2e/templates/power-effects.hbs"}}
+    {{> "systems/shadowrun2e_unified/templates/power-effects.hbs"}}
     {{#if allyPanel}}
     {{!-- v0.72.0 (O21): an ally's extras, bought by its master with Good Karma (house rule MAGIC_V72.ally). --}}
     <h2 data-heading="Ally">{{sr2eT "SR2E.UI.ally"}}</h2>
@@ -128,7 +128,7 @@
 
   <details class="sr2e-details" {{#unless effects.empty}}open{{/unless}}>
     <summary data-heading="Effects">{{sr2eT "SR2E.UI.effects"}}</summary>
-    {{> "systems/sr2e/templates/effects-section.hbs"}}
+    {{> "systems/shadowrun2e_unified/templates/effects-section.hbs"}}
   </details>
 
   <details class="sr2e-details" open>

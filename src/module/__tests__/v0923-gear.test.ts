@@ -255,7 +255,7 @@ describe('v0.92.3 gear glue: Essence, bioware', () => {
     await a.setAdrenalPump('ap', true);
     await a.setAdrenalPump('ap', false);
     assert.match(chat.at(-1).content, /Body vs 2, D Stun/);
-    assert.equal(chat.at(-1).flags.sr2e.adrenalCrash.turns, 5);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.adrenalCrash.turns, 5);
     t.after(oldWay({ 'GEAR_V923.adrenalCrash': 'old' }));
     await a.setAdrenalPump('ap', true);
     await a.setAdrenalPump('ap', false);

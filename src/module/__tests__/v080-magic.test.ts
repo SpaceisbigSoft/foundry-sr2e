@@ -207,7 +207,7 @@ describe('v0.80.0 casting (magCastDice, magRuleOfOneDrain, magExclusiveForce, ma
     const r = await m.castSpell(spell(), { force: 3 });
     assert.equal(r.totalDice, 5);
     assert.equal(faces.length, 0);
-    assert.equal(drainCard().flags.sr2e.test.targetNumber, 2);
+    assert.equal(drainCard().flags.shadowrun2e_unified.test.targetNumber, 2);
   });
   test('the Revamp: the Force as dice; a disaster adds 2 to the drain TN', async (t) => {
     t.after(magicMode());
@@ -217,7 +217,7 @@ describe('v0.80.0 casting (magCastDice, magRuleOfOneDrain, magExclusiveForce, ma
     const r = await m.castSpell(spell(), { force: 3 });
     assert.equal(r.totalDice, 3);
     assert.equal(faces.length, 0);
-    assert.equal(drainCard().flags.sr2e.test.targetNumber, 4);
+    assert.equal(drainCard().flags.shadowrun2e_unified.test.targetNumber, 4);
   });
   test('the Revamp: an exclusive spell takes effect 2 Force higher, drain at the chosen Force, no drain cut', async (t) => {
     t.after(magicMode());
@@ -227,7 +227,7 @@ describe('v0.80.0 casting (magCastDice, magRuleOfOneDrain, magExclusiveForce, ma
     const r = await m.castSpell(spell({ learnedForce: 4, exclusive: true }), { force: 4 });
     assert.equal(r.totalDice, 6);
     assert.match(chat[0].content, /Force 6/);
-    assert.equal(drainCard().flags.sr2e.test.targetNumber, 2);
+    assert.equal(drainCard().flags.shadowrun2e_unified.test.targetNumber, 2);
     assert.doesNotMatch(drainCard().content, /physical/);
   });
   test('the book: an exclusive spell is cast at its Force, drain TN −2', async (t) => {
@@ -238,8 +238,8 @@ describe('v0.80.0 casting (magCastDice, magRuleOfOneDrain, magExclusiveForce, ma
     faces.push(5, 5, 1, 1, 1);
     const r = await m.castSpell(spell({ learnedForce: 4, exclusive: true }), { force: 4 });
     assert.equal(r.totalDice, 5);
-    assert.equal(drainCard().flags.sr2e.test.targetNumber, 2);       // max(2, 2 − 2)
-    assert.ok(drainCard().flags.sr2e.test.modifiers.some((x: any) => x.label === 'Exclusive' && x.value === -2));
+    assert.equal(drainCard().flags.shadowrun2e_unified.test.targetNumber, 2);       // max(2, 2 − 2)
+    assert.ok(drainCard().flags.shadowrun2e_unified.test.modifiers.some((x: any) => x.label === 'Exclusive' && x.value === -2));
   });
   test('sustaining: the Revamp stops at the Sorcery rating; the book has no limit', async (t) => {
     // v0.92.3: 'the book' here is the v0.92.2 reading (RULES.SORCERY_V923 at its old way); the book's way is in v0923-sorcery.test.ts.
@@ -297,7 +297,7 @@ describe('v0.80.0 spell resistance: a tie (magSpellTie) and a ritual leader (mag
     assert.match(chat.at(-1).content, /takes effect/);
     faces.push(6, 1, 1, 1, 1); faces.push(1);                         // vs the leader's 7: the 6 + 1 = 7 succeeds
     await tg.resistSpell(state(tg, { resistTn: 7, casterSuccesses: 3 }), 0);
-    assert.equal(chat.at(-1).flags.sr2e.test.targetNumber, 7);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.test.targetNumber, 7);
   });
 });
 
@@ -320,7 +320,7 @@ describe('v0.80.0 astral (magAstralReaction, magAspectedNoAstral, magAstralDamag
     const m = mage({ astral: 'perceiving' }); const foe = mage({ name: 'Foe', astral: 'projecting' });
     faces.push(5, 5, 1, 1, 1);                                        // Sorcery 5
     await m.astralAttack({ targetUuid: foe.uuid });
-    assert.deepEqual([chat.at(-1).flags.sr2e.attack.power, chat.at(-1).flags.sr2e.attack.level], [4, 'M']);
+    assert.deepEqual([chat.at(-1).flags.shadowrun2e_unified.attack.power, chat.at(-1).flags.shadowrun2e_unified.attack.level], [4, 'M']);
   });
   test('the Revamp: unarmed L; a weapon focus adds its rating to the Power at M', async (t) => {
     t.after(magicMode());
@@ -328,11 +328,11 @@ describe('v0.80.0 astral (magAstralReaction, magAspectedNoAstral, magAstralDamag
     const m = mage({ astral: 'perceiving' });
     faces.push(5, 5, 1, 1, 1);
     await m.astralAttack({ targetUuid: foe.uuid });
-    assert.deepEqual([chat.at(-1).flags.sr2e.attack.power, chat.at(-1).flags.sr2e.attack.level], [4, 'L']);
+    assert.deepEqual([chat.at(-1).flags.shadowrun2e_unified.attack.power, chat.at(-1).flags.shadowrun2e_unified.attack.level], [4, 'L']);
     const armed = mage({ astral: 'perceiving' }, [wf]);
     faces.push(5, 5, 1, 1, 1, 1, 1, 1);                               // Sorcery 5 + focus 3
     await armed.astralAttack({ targetUuid: foe.uuid });
-    assert.deepEqual([chat.at(-1).flags.sr2e.attack.power, chat.at(-1).flags.sr2e.attack.level], [7, 'M']);
+    assert.deepEqual([chat.at(-1).flags.shadowrun2e_unified.attack.power, chat.at(-1).flags.shadowrun2e_unified.attack.level], [7, 'M']);
     assert.equal(faces.length, 0);
   });
   test('projection: the book allows Essence × 2 hours; the Revamp costs each full hour', (t) => {
@@ -345,13 +345,13 @@ describe('v0.80.0 astral (magAstralReaction, magAspectedNoAstral, magAstralDamag
     const m1 = mage({ astral: 'perceiving' });
     faces.push(5, 1, 1, 1, 1);
     await m1.track({ signature: sig as any });
-    assert.equal(chat.at(-1).flags.sr2e.test.targetNumber, 4);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.test.targetNumber, 4);
     t.after(magicMode());
     const m2 = mage({ astral: 'perceiving' });
     faces.push(5, 1, 1, 1, 1);
     await m2.track({ signature: sig as any });
-    assert.equal(chat.at(-1).flags.sr2e.test.targetNumber, 2);
-    assert.equal(chat.at(-1).flags.sr2e.test.track.baseHours, 12);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.test.targetNumber, 2);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.test.track.baseHours, 12);
   });
 });
 
@@ -376,7 +376,7 @@ describe('v0.80.0 conjuring, wards, learning, sites and traditions', () => {
     faces.push(5, 5, 5, 5, 5);                                        // drain: Willpower 5 vs 3 + 2
     await m.raiseWardRitual({ force: 3, payMaterials: false });
     const d = drainCard();
-    assert.equal(d.flags.sr2e.test.targetNumber, 5);
+    assert.equal(d.flags.shadowrun2e_unified.test.targetNumber, 5);
     assert.match(d.content, /Ward drain L/);
     assert.equal(wardPlan(3, 0).nuyen, 300);
   });

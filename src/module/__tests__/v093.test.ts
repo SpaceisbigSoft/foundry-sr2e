@@ -97,12 +97,12 @@ describe('v0.93.0: the guard against another system\'s world', () => {
     assert.ok(at > 0 && at < mig.indexOf('const todo = MIGRATIONS.filter'), 'the guard comes before any step');
     assert.match(mig, /if \(signs\.length && !ignoringForeignWorld\(\)\) \{[\s\S]{0,600}?return;\n  \}/);
     assert.match(mig, /"ignoreForeignWorld", \{ scope: "world", config: false, type: Boolean, default: false \}/);
-    assert.match(SRC('applications/chat.ts'), /if \(isForeignWorld\(\) \|\| !sessionRefreshDue\(last, today\)\) return;/);
+    assert.match(SRC('applications/chat.ts'), /if \(isForeignWorld\(\) \|\| needsMove\([^)]*\) \|\| !sessionRefreshDue\(last, today\)\) return;/);
     assert.match(SRC('applications/canvas.ts'), /Hooks\.once\('ready', \(\) => \{ if \(isForeignWorld\(\)\) return;/);
     // Review 2: the module look and the refused-house-rules report write settings too; the guard writes no chat message.
     assert.match(SRC('applications/modules.ts'), /Hooks\.once\('ready', \(\) => \{ if \(!isForeignWorld\(\)\) void matchModuleLook\(\); \}\);/);
     assert.match(SRC('settings.ts'), /if \(!isLeadGm\(\)\) return false;\n    \/\/ v0\.93\.0 \(review 2\)[^\n]*\n    if \(isForeignWorld\(\)\) return false;/);
-    const guard = mig.slice(at, mig.indexOf('const stored = String(game.settings.get'));
+    const guard = mig.slice(at, mig.indexOf('if (needsMove(data.settings, SYSTEM.id)) {'));
     assert.doesNotMatch(guard, /ChatMessage/);
   });
 
@@ -110,7 +110,7 @@ describe('v0.93.0: the guard against another system\'s world', () => {
     const { foreignWorldHtml } = await import('../migrations.ts');
     const html = foreignWorldHtml(['Item <b>x</b> (1)']);
     assert.ok(html.includes('&lt;b&gt;x&lt;/b&gt;') && !html.includes('<b>x</b>'));
-    assert.match(html, /game\.settings\.set\(&#0?39;sr2e&#0?39;, &#0?39;ignoreForeignWorld&#0?39;, true\)|game\.settings\.set\(&#x27;sr2e&#x27;/);
+    assert.match(html, /game\.settings\.set\((&#0?39;|&#x27;)shadowrun2e_unified(&#0?39;|&#x27;), (&#0?39;|&#x27;)ignoreForeignWorld/);
   });
 });
 

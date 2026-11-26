@@ -347,7 +347,7 @@ export const SETTING_SECTIONS: Array<{ id: string; label: string; match: RegExp 
 ];
 
 export function settingSection(key: string): string {
-  const k = String(key ?? '').replace(/^sr2e\./, '');
+  const k = String(key ?? '').replace(/^(sr2e|shadowrun2e_unified)\./, '');
   return SETTING_SECTIONS.find((s) => s.match.test(k))?.id ?? 'other';
 }
 

@@ -86,7 +86,7 @@ function actor(id: string, owners: string[], extra: any = {}): any {
 }
 /** A stub chat message by `author` with sr2e flags. */
 function message(author: any, flags: Record<string, any>, extra: any = {}): any {
-  return { id: extra.id ?? `m${Math.random()}`, author, content: extra.content ?? '', speaker: extra.speaker ?? {}, flags: { sr2e: flags }, isOwner: true,
+  return { id: extra.id ?? `m${Math.random()}`, author, content: extra.content ?? '', speaker: extra.speaker ?? {}, flags: { shadowrun2e_unified: flags }, isOwner: true,
     getFlag: (_s: string, k: string) => flags[k], setFlag: async (_s: string, k: string, v: any) => { flags[k] = v; }, ...extra };
 }
 
@@ -534,7 +534,7 @@ describe('design 7 (SEC2b-4): cleanRichHtml in a DOM, before and after enriching
   test('unsafeUrl', async () => {
     const { unsafeUrl } = await import('../applications/richtext.ts');
     for (const u of ['javascript:x', 'java\tscript:x', ' \nJAVASCRIPT:x', 'vbscript:x', 'data:text/html,x', 'data:image/svg+xml,x']) assert.equal(unsafeUrl(u), true, JSON.stringify(u));
-    for (const u of ['https://x', '/systems/sr2e/a.png', 'data:image/png;base64,AA', 'icons/svg/d20.svg']) assert.equal(unsafeUrl(u), false, u);
+    for (const u of ['https://x', '/systems/shadowrun2e_unified/a.png', 'data:image/png;base64,AA', 'icons/svg/d20.svg']) assert.equal(unsafeUrl(u), false, u);
   });
 });
 
@@ -653,10 +653,10 @@ describe('chat.ts: nags and D-slice items', () => {
     await setup();
     actor('hag', ['p1'], { haggle: async () => null });
     g.game.user = P1;
-    const msg = message(P1, { buy: { actorUuid: 'Actor.hag', itemId: 'i', price: 100, name: 'X' } }, { unsetFlag: async (_s: string, k: string) => { delete (msg.flags.sr2e as any)[k]; } });
+    const msg = message(P1, { buy: { actorUuid: 'Actor.hag', itemId: 'i', price: 100, name: 'X' } }, { unsetFlag: async (_s: string, k: string) => { delete (msg.flags.shadowrun2e_unified as any)[k]; } });
     press(msg, 'haggle'); await tick();
     restore();
-    assert.equal(msg.getFlag('sr2e', 'superseded'), undefined);
+    assert.equal(msg.getFlag('shadowrun2e_unified', 'superseded'), undefined);
   });
 
   test('D2-3 (P2) inverted: the re-rolled summoning\'s Create spirit doesn\'t make a second spirit', async () => {
@@ -749,7 +749,7 @@ describe('settings, migrations, undo, socket, approvals and the small ones', () 
     ap.registerApprovalHooks();
     const r = { id: 'rq1', userId: 'gm', userName: 'GM', at: Date.now(), label: 'x', kind: 'method', data: {} };
     resetUser();
-    for (const f of hooks['updateActor'] ?? []) f({ name: 'Bob' }, { flags: { sr2e: { requests: { rq1: r } } } }, {}, 'p2');
+    for (const f of hooks['updateActor'] ?? []) f({ name: 'Bob' }, { flags: { shadowrun2e_unified: { requests: { rq1: r } } } }, {}, 'p2');
     assert.deepEqual(ap.filerOf(r), { id: 'p2', name: 'Player Two' });
     assert.equal(ap.filerOf({ id: 'never-seen' }), null);
     // SEC1-14: the request checked is a copy (what runs is what was checked).
@@ -771,7 +771,7 @@ describe('settings, migrations, undo, socket, approvals and the small ones', () 
     }
     const { decorateLookCard } = await import('../applications/look.ts');
     const root = new El(); const content = new El(); content.className = 'message-content'; root.appendChild(content);
-    assert.doesNotThrow(() => decorateLookCard({ flags: { sr2e: { test: { kind: 'constructor' } } } }, root as any));
+    assert.doesNotThrow(() => decorateLookCard({ flags: { shadowrun2e_unified: { test: { kind: 'constructor' } } } }, root as any));
     assert.ok(!/function|\(/.test(root.className), root.className);
   });
 
@@ -1001,7 +1001,7 @@ describe('round 2: B auto-apply, C styles, E targets, F filers, G contests', () 
     assert.equal(ap.filerLabel({ id: 'never-seen-F', userName: 'GM' }), 'GM (filer not verified)');
     ap.registerApprovalHooks();
     const r = { id: 'rqF', userId: 'gm', userName: 'GM', at: Date.now(), label: 'x', kind: 'method', data: {} };
-    for (const f of hooks['updateActor'] ?? []) f({ name: 'Bob' }, { flags: { sr2e: { requests: { rqF: r } } } }, {}, 'p1');
+    for (const f of hooks['updateActor'] ?? []) f({ name: 'Bob' }, { flags: { shadowrun2e_unified: { requests: { rqF: r } } } }, {}, 'p1');
     assert.equal(ap.filerLabel(r), 'Player One');
     assert.match(SRC('applications/ui.ts'), /escHtml\(filerLabel\(r\)\)/, 'the approve dialog uses it too');
   });

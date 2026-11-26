@@ -89,10 +89,10 @@ describe('v0.88.0 review fixes', () => {
   test('Remove: only flagged documents that aren\'t copies', async () => {
     (globalThis as any).foundry ??= {};
     const { isDemo } = await import('../applications/demo.ts');
-    assert.equal(isDemo({ flags: { sr2e: { demo: true } }, _stats: {} }), true);
-    assert.equal(isDemo({ flags: { sr2e: { demo: true } }, _stats: { duplicateSource: 'Actor.x' } }), false);
-    assert.equal(isDemo({ flags: { sr2e: { demo: true } }, _stats: { compendiumSource: 'Compendium.y' } }), false);
-    assert.equal(isDemo({ flags: { sr2e: {} } }), false);
+    assert.equal(isDemo({ flags: { shadowrun2e_unified: { demo: true } }, _stats: {} }), true);
+    assert.equal(isDemo({ flags: { shadowrun2e_unified: { demo: true } }, _stats: { duplicateSource: 'Actor.x' } }), false);
+    assert.equal(isDemo({ flags: { shadowrun2e_unified: { demo: true } }, _stats: { compendiumSource: 'Compendium.y' } }), false);
+    assert.equal(isDemo({ flags: { shadowrun2e_unified: {} } }), false);
     assert.equal(isDemo(null), false);
   });
 });

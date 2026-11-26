@@ -110,7 +110,8 @@ export function calledFromSystem(stack: string, wrapperName = 'sr2eDialogWrap'):
   const lines = String(stack ?? '').split('\n');
   const at = lines.findIndex((l) => l.includes(wrapperName));
   const caller = at >= 0 ? lines[at + 1] : undefined;
-  return !!caller && /systems\/sr2e\//.test(caller);
+  // v0.93.1: the system's folder follows its id (systems/shadowrun2e_unified/).
+  return !!caller && caller.includes(`systems/${ID}/`);
 }
 
 /**

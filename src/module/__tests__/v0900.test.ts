@@ -14,14 +14,14 @@ const sys = JSON.parse(read('public', 'system.json'));
 describe('v0.90.0 release polish', () => {
   test('the author, the cover and its credit', () => {
     assert.deepEqual(sys.authors.map((a: any) => [a.name, a.url]), [['Spaceisbig', 'https://github.com/SpaceisbigSoft']]);
-    assert.equal(sys.background, 'systems/sr2e/media/cover.jpg');
-    assert.ok(sys.media.some((m: any) => m.type === 'cover' && m.url === 'systems/sr2e/media/cover.jpg'));
+    assert.equal(sys.background, 'systems/shadowrun2e_unified/media/cover.jpg');
+    assert.ok(sys.media.some((m: any) => m.type === 'cover' && m.url === 'systems/shadowrun2e_unified/media/cover.jpg'));
     assert.ok(existsSync(join(ROOT, 'public', 'media', 'cover.jpg')) && existsSync(join(ROOT, 'docs', 'media', 'social.jpg')));
     // v0.90.1: the screenshots (the owner's, from the starter demo) ship with the system and show in the README.
     const shots = sys.media.filter((m: any) => m.type === 'screenshot');
     assert.equal(shots.length, 2);
     for (const m of shots) {
-      const file = m.url.replace('systems/sr2e/', '');
+      const file = m.url.replace('systems/shadowrun2e_unified/', '');
       assert.ok(existsSync(join(ROOT, 'public', file)) && existsSync(join(ROOT, 'docs', file)) && m.caption, m.url);
       assert.ok(read('README.md').includes(`docs/${file}`), `${file} in the README`);
     }
@@ -68,8 +68,8 @@ describe('v0.90.0 release polish', () => {
     assert.match(read('.github', 'ISSUE_TEMPLATE', 'rules_question.yml'), /don't copy rulebook text/);
     const wf = read('.github', 'workflows', 'release.yml');
     for (const step of ['npm ci', 'npm run typecheck', 'npm test', 'npm run build']) assert.ok(wf.includes(`run: ${step}`), step);
-    assert.match(wf, /releases\/latest\/download\/system\.json/);
-    assert.match(wf, /releases\/download\/' \+ process\.env\.GITHUB_REF_NAME \+ '\/sr2e\.zip/);
+    assert.match(wf, /releases\/latest\/download\/shadowrun2e_unified\.json/);
+    assert.match(wf, /releases\/download\/' \+ process\.env\.GITHUB_REF_NAME \+ '\/shadowrun2e_unified\.zip/);
     assert.match(wf, /test "v\$v" = "\$\{GITHUB_REF_NAME\}"/);
   });
 

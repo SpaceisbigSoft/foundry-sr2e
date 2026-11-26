@@ -186,7 +186,7 @@ describe('v0.78.0 flash grenades (BOOK_V78.flash)', () => {
     const flashCard = chat.find((m) => /\+4 TN<\/strong> for 5 Combat Turns/.test(m.content));
     assert.ok(flashCard);
     assert.match(chat.at(-1).content, /detonation/);
-    assert.deepEqual(chat.at(-1).flags.sr2e.damages.map((d: any) => d.targetUuid), [near.uuid]);
+    assert.deepEqual(chat.at(-1).flags.shadowrun2e_unified.damages.map((d: any) => d.targetUuid), [near.uuid]);
   });
   test('the old way: blinded, no Body test', async (t) => {
     t.after(oldWay({ 'BOOK_V78.flash.mode': 'blind' }));
@@ -204,11 +204,11 @@ describe('v0.78.0 the monofilament whip check', () => {
     faces.push(5, 2, 1);
     await a.rollWhipCheck({ skill: 'Whips', power: 10, level: 'S', damageType: 'physical', weaponName: 'Monowhip' });
     assert.match(chat.at(-1).content, /Struck by the whip/);
-    assert.deepEqual([chat.at(-1).flags.sr2e.damage.targetUuid, chat.at(-1).flags.sr2e.damage.armorKind, chat.at(-1).flags.sr2e.damage.armorMultiplier], [a.uuid, 'impact', 0.5]);
+    assert.deepEqual([chat.at(-1).flags.shadowrun2e_unified.damage.targetUuid, chat.at(-1).flags.shadowrun2e_unified.damage.armorKind, chat.at(-1).flags.shadowrun2e_unified.damage.armorMultiplier], [a.uuid, 'impact', 0.5]);
     faces.push(6, 1, 1, 1);
     await a.rollWhipCheck({ skill: 'Whips', power: 10, level: 'S', damageType: 'physical', weaponName: 'Monowhip' });
     assert.match(chat.at(-1).content, /Under control/);
-    assert.equal(chat.at(-1).flags.sr2e.damage, undefined);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.damage, undefined);
   });
 });
 
@@ -219,7 +219,7 @@ describe('v0.78.0 slap patches (BOOK_V78.patches)', () => {
     const text = await SR2Actor.patchEffect(p, { kind: 'stim', rating: 3, name: 'Stim 3' });
     assert.match(text, /7 minutes/);
     assert.equal(p.system.monitor.stun, 2);
-    assert.equal(p.getFlag('sr2e', 'stimDebt')[0].at, 420);
+    assert.equal(p.getFlag('shadowrun2e_unified', 'stimDebt')[0].at, 420);
     faces.push(4, 4, 4, 1, 1);                                         // the patch: 5 dice vs Body 4: 3
     faces.push(5, 1, 1, 1);                                            // Body 4 vs 5: 1
     const t2 = await SR2Actor.patchEffect(p, { kind: 'tranq', rating: 5, name: 'Tranq 5' });
@@ -235,8 +235,8 @@ describe('v0.78.0 toxins: bioware Power and critter immunity (BOOK_V78.toxinBiow
     faces.push(4, 4, 1, 1);                                            // Body 4 vs 6 − 2
     await a.resistToxin({ name: 'Narcoject', vector: 'injection', power: 6, level: 'S', damageType: 'stun' });
     assert.match(chat.at(-1).content, /toxin extractor −2 Power/);
-    assert.equal(chat.at(-1).flags.sr2e.test.targetNumber, 4);
-    assert.equal(chat.at(-1).flags.sr2e.test.successes, 2);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.test.targetNumber, 4);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.test.successes, 2);
   });
   test('immunity to poisons: + 2 × Essence dice, not a stop', async () => {
     const c = who({ name: 'Ghoul', type: 'npc', essence: 3 }, [{ id: 'im', type: 'power', name: 'Immunity', system: { active: false, special: 'immunity', substance: 'poisons' } }], { ...A, body: 4 });
@@ -255,7 +255,7 @@ describe('v0.78.0 symbiotes shorten natural healing (BOOK_V78.symbiotes)', () =>
     await a.naturalHeal({ track: 'stun', hours: 100 });
     assert.equal(faces.length, 0);
     assert.match(chat.at(-1).content, /symbiotes: time ×0\.7/);
-    assert.equal(chat.at(-1).flags.sr2e.test.heal.timeFactor, 0.7);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.test.heal.timeFactor, 0.7);
   });
 });
 
@@ -299,9 +299,9 @@ describe('v0.78.0 Paralyzing Touch drains Quickness (BOOK_V78.paralysis)', () =>
     assert.ok(v.statuses.has('paralysis'));
     g.game.actors = [v];
     await SR2Actor.timedEffects({ worldTime: 300, anyGm: true });
-    assert.equal((v.getFlag('sr2e', 'powerEffects') ?? []).length, 1);  // not yet (7 minutes = 420 s)
+    assert.equal((v.getFlag('shadowrun2e_unified', 'powerEffects') ?? []).length, 1);  // not yet (7 minutes = 420 s)
     await SR2Actor.timedEffects({ worldTime: 500, anyGm: true });
-    assert.equal((v.getFlag('sr2e', 'powerEffects') ?? []).length, 0);
+    assert.equal((v.getFlag('shadowrun2e_unified', 'powerEffects') ?? []).length, 0);
     assert.equal(v.system.attributes.quickness.total, 5);
     assert.ok(!v.statuses.has('paralysis'));
     assert.ok(chat.some((m) => /Paralyzing Touch wears off/.test(m.content)));
@@ -319,15 +319,15 @@ describe('v0.78.0 allergies add weapon Power (BOOK_V78.allergy)', () => {
 
 describe('v0.78.0 barrier damage and doors (BOOK_V78.barriers)', () => {
   test('gunfire against a doubled rating; an ordinary door breaks at half', async () => {
-    const wall: any = { door: 1, move: 20, sight: 20, light: 20, sound: 20, flags: { sr2e: { barrierRating: 6 } },
+    const wall: any = { door: 1, move: 20, sight: 20, light: 20, sound: 20, flags: { shadowrun2e_unified: { barrierRating: 6 } },
       getFlag(s2: string, k: string) { return this.flags[s2]?.[k]; }, async update(d: any) { for (const [k, v] of Object.entries(d)) setPath(this, k, v); } };
     const r1 = await SR2Actor.damageWall(wall, 7, { label: 'Door' });
     assert.deepEqual(r1, { damage: 1, left: 5, breached: false });
     assert.match(chat.at(-1).content, /12 against gunfire/);
     await SR2Actor.damageWall(wall, 7, { label: 'Door' });
     await SR2Actor.damageWall(wall, 7, { label: 'Door' });
-    assert.equal(wall.flags.sr2e.barrierRating, 3);
-    assert.ok(wall.flags.sr2e.breached);
+    assert.equal(wall.flags.shadowrun2e_unified.barrierRating, 3);
+    assert.ok(wall.flags.shadowrun2e_unified.breached);
     assert.match(chat.at(-1).content, /The door breaks/);
   });
 });
@@ -350,7 +350,7 @@ describe('v0.78.0 tamper alarms and voice locks at a site (BOOK_V78.tamper, voic
     faces.push(4, 4, 1);                                               // 3 dice vs casing 3 + tamper 2 = 5: none
     await thief.bypassLock(s, 'lock');
     assert.equal(faces.length, 0);
-    assert.equal(chat.find((m) => m.flags?.sr2e?.test)?.flags.sr2e.test.targetNumber, 5);
+    assert.equal(chat.find((m) => m.flags?.shadowrun2e_unified?.test)?.flags.shadowrun2e_unified.test.targetNumber, 5);
     assert.ok(chat.some((m) => /anti-tamper alarm trips/i.test(m.content)));
     assert.deepEqual({ tally: s.system.tally, alert: s.system.alert }, { tally: RULES.SECURITY.tamper.tally, alert: 'active' });
   });

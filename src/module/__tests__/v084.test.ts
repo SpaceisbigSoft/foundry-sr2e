@@ -170,7 +170,7 @@ describe('v0.84.0 loading a catalogue file', () => {
     assert.deepEqual(r.errors, []);
     assert.equal(r.templates, 1);
     assert.equal(r.actorsCreated, 2);
-    assert.deepEqual(w.created.map((d) => [d.name, d.folder, d.flags?.sr2e?.critter ?? false]), [['ZZ Bike', 'f1', false], ['ZZ Wolf', 'f1', true]]);
+    assert.deepEqual(w.created.map((d) => [d.name, d.folder, d.flags?.shadowrun2e_unified?.critter ?? false]), [['ZZ Bike', 'f1', false], ['ZZ Wolf', 'f1', true]]);
     // Second review: the van already in the world is never changed itself (only its matching items would be).
     assert.equal(w.updates.find((u) => u.who === 'ZZ Van'), undefined);
     // The character's pistol: cost and availability filled, its own Power 9 kept; the other gun untouched.

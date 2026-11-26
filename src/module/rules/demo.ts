@@ -16,7 +16,7 @@ const esc = escHtml;
 
 /** The demo's seed: the same demo in every world. */
 export const DEMO_SEED = 20261024;
-/** The flag every demo document carries (`flags.sr2e.demo`), so "Remove the demo" finds them all. */
+/** The flag every demo document carries (`flags.shadowrun2e_unified.demo`), so "Remove the demo" finds them all. */
 export const DEMO_FLAG = 'demo';
 /** The folders' name. */
 export const DEMO_FOLDER = 'Demo (SR2e)';

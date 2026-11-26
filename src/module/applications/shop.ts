@@ -17,12 +17,13 @@ import { t as tx } from '../helpers/i18n.ts';
 import { escHtml } from '../rules/html.ts';
 import { permitsBought } from '../rules/legalbuy.ts';
 import { parseFormulaKey, formulaGearSystem } from '../rules/formulas.ts';
+import { SYSTEM_ID } from '../config/system.ts';
 
 /** Fields a compendium index is asked for, so the list can show a summary and a price without loading every item. */
 export const INDEX_FIELDS = ['system.cost', 'system.availability', 'system.streetIndex', 'system.grade', 'system.bioware', 'system.cultured', 'system.damagePower', 'system.damageLevel',
   'system.damageType', 'system.strengthPower', 'system.modes', 'system.melee', 'system.reach', 'system.blast', 'system.skill', 'system.ballistic', 'system.impact', 'system.adds',
   'system.essenceCost', 'system.bodyIndex', 'system.rating', 'system.learnedForce', 'system.category', 'system.spellType', 'system.drainLevel', 'system.focusType', 'system.mpcp',
-  'system.kind', 'system.quantity', 'system.level', 'system.attribute', 'system.special', 'system.medkitRating', 'system.toxin.kind', 'system.legality', 'flags.sr2e.shop',
+  'system.kind', 'system.quantity', 'system.level', 'system.attribute', 'system.special', 'system.medkitRating', 'system.toxin.kind', 'system.legality', `flags.${SYSTEM_ID}.shop`,
   // v0.91.2 review (R1): what the shop's categories read (rules/shopfilters.ts), so compendium rows sort like the rest.
   'system.specialization', 'system.shotgun', 'system.heavy', 'system.antiVehicle', 'system.areaKind', 'system.concealability', 'system.parry', 'system.ammoType',
   'system.optics', 'system.radio', 'system.rcdRating', 'system.jammer', 'system.scanner', 'system.signal', 'system.suite', 'system.explosive', 'system.patch',
@@ -31,7 +32,7 @@ export const INDEX_FIELDS = ['system.cost', 'system.availability', 'system.stree
 
 /** v0.91.4: what a vehicle compendium's index is asked for (the row's summary, price and category). */
 export const VEHICLE_INDEX_FIELDS = ['system.cost', 'system.availability', 'system.streetIndex', 'system.legality', 'system.category', 'system.drone', 'system.handling',
-  'system.handlingOffroad', 'system.speed', 'system.accel', 'system.body', 'system.armor', 'system.signature', 'system.autonav', 'system.pilot', 'system.sensor', 'flags.sr2e.shop'];
+  'system.handlingOffroad', 'system.speed', 'system.accel', 'system.body', 'system.armor', 'system.signature', 'system.autonav', 'system.pilot', 'system.sensor', `flags.${SYSTEM_ID}.shop`];
 
 /** v0.91.4 review (R5): does a vehicle's update change what the shop and the Catalogue show of it? */
 const VEHICLE_SHOWN = ['name', 'img', 'folder', 'ownership', 'flags', 'system.notes', ...VEHICLE_INDEX_FIELDS.filter((f) => f.startsWith('system.'))];

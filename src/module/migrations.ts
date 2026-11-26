@@ -7,6 +7,7 @@ import { isLeadGm, leadSettled } from "./applications/leader.ts";
 import { t as tx, tCount } from './helpers/i18n.ts';
 import { collectNotice923, notice923Html } from './notice923.ts';
 import { foreignWorldSigns, ignoringForeignWorld } from './helpers/foreign.ts';
+import { needsMove, moveWorldDocuments, moveWorldSettings, MOVE_DONE_KEY, OLD_ID } from './helpers/move.ts';
 export { FOREIGN_WORLD, foreignWorldSigns } from './helpers/foreign.ts';
 
 /**
@@ -92,6 +93,9 @@ const MIGRATIONS: Migration[] = [
   { version: "0.92.3", label: "v0.92.3 rules changes (a notice; no data changes)", run: async () => {
     await notifyRules923();
   } },
+  // v0.93.1: the new system id. A world from the old id is moved before the steps run (runMigrations, helpers/move.ts);
+  // this step only records the version.
+  { version: "0.93.1", label: "The new system id (no data changes here)", run: async () => {} },
 ];
 
 /**
@@ -215,6 +219,36 @@ export function registerMigrationSetting(): void {
   game.settings.register(SYSTEM.id, "migrationVersion", { scope: "world", config: false, type: String, default: "" });
   // v0.93.0: a GM who has checked a world the guard below refuses (and backed it up) can let the updates run anyway.
   game.settings.register(SYSTEM.id, "ignoreForeignWorld", { scope: "world", config: false, type: Boolean, default: false });
+  // v0.93.1: when this world was moved here from the old id (helpers/move.ts); empty = not moved (or a new world).
+  game.settings.register(SYSTEM.id, MOVE_DONE_KEY, { scope: "world", config: false, type: String, default: "" });
+}
+
+/**
+ * v0.93.1: ask the GM before moving a world from the old id (back up first). True = go on; false = not now (asked again at
+ * the next load; nothing is written).
+ */
+async function askMove(): Promise<boolean> {
+  const D: any = (foundry as any)?.applications?.api?.DialogV2;
+  if (!D?.wait) return true;
+  const r = await D.wait({
+    window: { title: tx('SR2E.Dialog.Migrations.moveTitle') },
+    content: `<p>${tx('SR2E.Dialog.Migrations.moveBody', { old: escHtml(OLD_ID), id: escHtml(SYSTEM.id) })}</p>`,
+    buttons: [
+      { action: "continue", label: tx('SR2E.Dialog.Migrations.backupContinue'), default: true },
+      { action: "later", label: tx('SR2E.Dialog.Migrations.backupLater') },
+    ],
+    rejectClose: false,
+  });
+  return r === "continue";
+}
+
+/** Pure (v0.93.1): the GM's report after a move: documents changed by collection, settings moved; or the failure. */
+export function moveReport(counts: Record<string, number>, settings: number, failed: string | null): string {
+  const rows = Object.entries(counts).map(([k, n]) => `<li>${escHtml(k)}: ${escHtml(String(n))}</li>`).join("");
+  const body = failed
+    ? `<p class="sr2e-warn">${tx('SR2E.Card.Migrations.moveFailed', { error: escHtml(failed) })}</p>`
+    : `<p>${tx('SR2E.Card.Migrations.moveDone', { settings: escHtml(String(settings)) })}</p>`;
+  return `<p><strong>${tx('SR2E.Card.Migrations.moveTitle')}</strong></p>${body}${rows ? `<ul>${rows}</ul>` : ""}`;
 }
 
 /** Pure (v0.93.0): whether the GM is asked to back up first: a step changes data and the world holds any actors or items. */
@@ -274,6 +308,24 @@ export async function runMigrations(): Promise<void> {
     const D: any = (foundry as any)?.applications?.api?.DialogV2;
     void D?.prompt?.({ window: { title: tx('SR2E.Card.Migrations.foreignTitle') }, content: foreignWorldHtml(signs), rejectClose: false });
     return;
+  }
+  // v0.93.1: a world from the old id moves first (its update version comes across with its settings), behind its own prompt.
+  if (needsMove(data.settings, SYSTEM.id)) {
+    if (!(await askMove())) return;
+    const me = String((game as any).user?.id ?? "");
+    let counts: Record<string, number> = {}, moved = 0;
+    try {
+      console.log(`${SYSTEM.LOG.HEAD}Moving this world from ${OLD_ID} to ${SYSTEM.id}`);
+      counts = await moveWorldDocuments(SYSTEM.id);
+      moved = await moveWorldSettings(SYSTEM.id, (k) => Boolean((game.settings as any).settings?.has?.(`${SYSTEM.id}.${k}`)));
+      await game.settings.set(SYSTEM.id, MOVE_DONE_KEY as any, new Date().toISOString() as any);
+    } catch (err) {
+      console.error(`${SYSTEM.LOG.HEAD}Moving the world failed`, err);
+      ui.notifications?.error?.(tx('SR2E.Notify.Migrations.moveFailed'), { permanent: true });
+      await (globalThis as any).ChatMessage?.create?.({ whisper: me ? [me] : [], content: moveReport(counts, moved, String((err as any)?.message ?? err)) });
+      return;
+    }
+    await (globalThis as any).ChatMessage?.create?.({ whisper: me ? [me] : [], content: moveReport(counts, moved, null) });
   }
   const stored = String(game.settings.get(SYSTEM.id, "migrationVersion") ?? "");
   // A-4: the tested pendingMigrations is the filter that runs.

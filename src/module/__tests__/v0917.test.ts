@@ -172,17 +172,17 @@ describe('v0.91.7 placing tokens', () => {
 describe('v0.91.7 the documents', () => {
   test('the scene\'s data: metres to pixels, metre grid, darkness, the picture only when there is one', () => {
     const s = { ...defaultSpec('real'), name: 'ZZ', width: 30, height: 20, grid: 100, gridDistance: 1, hour: 12 };
-    const d: any = sceneCreateData(s, { imagePath: '', flags: { sr2e: { a: 1 } } });
+    const d: any = sceneCreateData(s, { imagePath: '', flags: { shadowrun2e_unified: { a: 1 } } });
     assert.equal(d.width, 3000);
     assert.equal(d.height, 2000);
     assert.equal(d.padding, 0);
     assert.deepEqual(d.grid, { type: 1, size: 100, distance: 1, units: 'm' });
     assert.equal(d.environment.darknessLevel, DARKNESS.day);
     assert.equal('background' in d, false);
-    const h: any = sceneCreateData({ ...s, gridDistance: 2, gridless: true }, { imagePath: 'systems/sr2e/backdrops/street.svg', flags: {} });
+    const h: any = sceneCreateData({ ...s, gridDistance: 2, gridless: true }, { imagePath: 'systems/shadowrun2e_unified/backdrops/street.svg', flags: {} });
     assert.equal(h.width, 1500);
     assert.equal(h.grid.type, 0);
-    assert.equal(h.background.src, 'systems/sr2e/backdrops/street.svg');
+    assert.equal(h.background.src, 'systems/shadowrun2e_unified/backdrops/street.svg');
     assert.deepEqual(Object.keys(sceneFlags(s)).sort(), ['backgroundCount', 'backgroundSources', 'environment', 'terrain', 'weather']);
   });
   test('a backdrop\'s walls, windows, doors and lamps in pixels', () => {
@@ -201,7 +201,7 @@ describe('v0.91.7 the documents', () => {
     const s = defaultSpec('real');
     assert.deepEqual(wardArea(s), { x: 0, y: 0, w: s.width, h: s.height });
     assert.deepEqual(wardArea({ ...s, ward: { ...s.ward, area: 'npcs' } }), zonesFor(s).npcs);
-    const r: any = rectRegionData({ x: 1, y: 2, w: 3, h: 4 }, { grid: 100, gridDistance: 1 }, { name: 'w', color: '#000000', flags: { sr2e: { env: { wardUuid: 'Actor.w' } } } });
+    const r: any = rectRegionData({ x: 1, y: 2, w: 3, h: 4 }, { grid: 100, gridDistance: 1 }, { name: 'w', color: '#000000', flags: { shadowrun2e_unified: { env: { wardUuid: 'Actor.w' } } } });
     assert.deepEqual(r.shapes[0], { type: 'rectangle', x: 100, y: 200, width: 300, height: 400 });
   });
   test('a generated site: a maglock per secure door, cameras and an alarm, valid kinds, rated by Threat', () => {

@@ -10,9 +10,10 @@
  * `__tests__/v083.test.ts` checks that every file this can return exists, and that the lists here match the drawings.
  */
 import { own } from './util.ts';
+import { SYSTEM_ID } from '../config/system.ts';
 
 /** Where the files are, as Foundry paths. */
-export const ART_ROOT = 'systems/sr2e/tokens/';
+export const ART_ROOT = `systems/${SYSTEM_ID}/tokens/`;
 
 export const ART_METAS = ['human', 'elf', 'dwarf', 'ork', 'troll'] as const;
 export const ART_FIGURES = ['masc', 'fem'] as const;
@@ -53,9 +54,9 @@ export interface ArtInfo {
   /** The sheet's choices ('' = not chosen). */
   figure?: string;
   archetype?: string;
-  /** The NPC generator's archetype (flags.sr2e.generated.archetype), e.g. 'guard' or 'critter:wolf'. */
+  /** The NPC generator's archetype (flags.shadowrun2e_unified.generated.archetype), e.g. 'guard' or 'critter:wolf'. */
   generated?: string;
-  /** A critter (flags.sr2e.critter). */
+  /** A critter (flags.shadowrun2e_unified.critter). */
   critter?: boolean;
   tradition?: string;
   hasDeck?: boolean;

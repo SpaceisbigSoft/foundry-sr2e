@@ -105,7 +105,7 @@ before(async () => {
     setupTurns() { return this.turns; }
     getFlag(_s: string, k: string) { return this.flags[k]; }
     async setFlag(_s: string, k: string, v: any) { this.flags[k] = v; }
-    async update(d: any) { for (const [k, v] of Object.entries(d)) { if (k.startsWith("flags.sr2e.")) this.flags[k.slice(11)] = v; else (this as any)[k] = v; } }
+    async update(d: any) { for (const [k, v] of Object.entries(d)) { if (k.startsWith("flags.shadowrun2e_unified.")) this.flags[k.slice(26)] = v; else (this as any)[k] = v; } }
     async nextTurn() { (this as any).turn = ((this as any).turn ?? -1) + 1; return this; }
     async previousTurn() { (this as any).turn = ((this as any).turn ?? 1) - 1; return this; }
     async previousRound() { (this as any).round = Math.max(0, ((this as any).round ?? 0) - 1); return this; }
@@ -388,10 +388,10 @@ describe("attack, defend, resist flow", () => {
     assert.ok(r.successes >= 1);
     const msg = chat.at(-1);
     assert.match(msg.content, /data-sr2e-action="defend"/);
-    assert.equal(msg.flags.sr2e.attack.targetUuid, "Actor.target");
-    assert.equal(msg.flags.sr2e.attack.power, 9);
-    assert.equal(msg.flags.sr2e.attack.targetNumber, 5);
-    assert.equal(msg.flags.sr2e.attack.attackSuccesses, r.successes);
+    assert.equal(msg.flags.shadowrun2e_unified.attack.targetUuid, "Actor.target");
+    assert.equal(msg.flags.shadowrun2e_unified.attack.power, 9);
+    assert.equal(msg.flags.shadowrun2e_unified.attack.targetNumber, 5);
+    assert.equal(msg.flags.shadowrun2e_unified.attack.attackSuccesses, r.successes);
   });
 
   test("a miss posts no defend button and no state", async () => {
@@ -402,7 +402,7 @@ describe("attack, defend, resist flow", () => {
     await atk.attackWith(weapon(), { targetUuid: "Actor.target", range: "short" });
     assert.doesNotMatch(chat.at(-1).content, /data-sr2e-action/);
     assert.match(chat.at(-1).content, /missed/i);
-    assert.equal(chat.at(-1).flags.sr2e.attack, undefined);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.attack, undefined);
   });
 
   test("an attack with no target is just a roll", async () => {
@@ -443,7 +443,7 @@ describe("attack, defend, resist flow", () => {
     const msg = chat.at(-1);
     assert.match(msg.content, /Hit!/);
     assert.match(msg.content, /data-sr2e-action="resist"/);
-    assert.deepEqual({ ...msg.flags.sr2e.damage }, { targetUuid: def.uuid, melee: false, damageType: "physical", power: 9, level: "M" });
+    assert.deepEqual({ ...msg.flags.shadowrun2e_unified.damage }, { targetUuid: def.uuid, melee: false, damageType: "physical", power: 9, level: "M" });
   });
 
   test("dodging with pool dice can cancel the attack and spends the pool", async () => {
@@ -453,7 +453,7 @@ describe("attack, defend, resist flow", () => {
     await def.defend({ attackerUuid: "Actor.a", targetUuid: def.uuid, weaponName: "Predator", melee: false,
       damageType: "physical", power: 9, level: "M", attackSuccesses: 3, targetNumber: 5 }, 3);
     assert.match(chat.at(-1).content, /Missed/);
-    assert.equal(chat.at(-1).flags.sr2e.damage, undefined);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.damage, undefined);
     assert.equal(def.system.poolSpent.combat, 3);
   });
 
@@ -462,7 +462,7 @@ describe("attack, defend, resist flow", () => {
     const def = makeActor(A);
     await def.defend({ attackerUuid: "Actor.a", targetUuid: def.uuid, weaponName: "Predator", melee: false,
       damageType: "physical", power: 9, level: "M", attackSuccesses: 4, targetNumber: 5 }, 0);
-    assert.equal(chat.at(-1).flags.sr2e.damage.level, "S"); // 4 net: M -> S
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.damage.level, "S"); // 4 net: M -> S
   });
 
   test("v0.55.0: an unaware target can't dodge or spend pool dice", async () => {
@@ -491,7 +491,7 @@ describe("attack, defend, resist flow", () => {
       { id: "tx", type: "gear", name: "Narcoject", system: { toxin: { kind: "toxin", vector: "injection", power: 8, level: "S", damageType: "stun", speed: "immediate" } } }];
     faces.push(5, 5, 5, 5, 5);
     await atk.attackWith(weapon({ skill: "Throwing Weapons", name: "Dart", toxinId: "tx" }), { targetUuid: "Actor.target", range: "short" });
-    const st = chat.at(-1).flags.sr2e.attack;
+    const st = chat.at(-1).flags.shadowrun2e_unified.attack;
     assert.equal(st.armorKind, "impact");
     assert.equal(st.toxinHit.name, "Narcoject");
     assert.equal(st.toxinHit.needsWound, false);
@@ -505,7 +505,7 @@ describe("attack, defend, resist flow", () => {
     await def.resistDamage({ power: 2, level: "L", armor: 0, toxinHit: { name: "Narcoject", vector: "injection", power: 8, level: "S", damageType: "stun", from: "X", needsWound: false } });
     const card = chat[0];
     faces.length = 0;
-    assert.equal(card.flags.sr2e.toxinHit.toxin.name, "Narcoject");
+    assert.equal(card.flags.shadowrun2e_unified.toxinHit.toxin.name, "Narcoject");
     assert.match(card.content, /data-sr2e-action="toxinHit"/);
   });
 
@@ -513,7 +513,7 @@ describe("attack, defend, resist flow", () => {
     t.after(oldWay({"BOOK_V78.patches.stim": "hours"})); // v0.78.0: the old rule (a house rule)
     chat.length = 0;
     const a = makeActor(A, { monitor: { physical: 0, stun: 5 }, care: { stabilised: false, dyingSince: -1 } });
-    a.flags.sr2e = {};
+    a.flags.shadowrun2e_unified = {};
     const items: any[] = [{ id: "p1", type: "gear", name: "Stim patch", system: { quantity: 2, patch: { kind: "stim", rating: 3 } } },
       { id: "p2", type: "gear", name: "Antidote patch", system: { quantity: 1, patch: { kind: "antidote", rating: 4 } } }];
     a.items = Object.assign(items, { get(id: string) { return items.find((i: any) => i.id === id); } });
@@ -521,9 +521,9 @@ describe("attack, defend, resist flow", () => {
     assert.equal(await a.applyPatch("p1"), true);
     assert.equal(a.system.monitor.stun, 2);
     assert.equal(items[0].system.quantity, 1);
-    assert.equal(a.flags.sr2e.stimDebt[0].boxes, 4);
+    assert.equal(a.flags.shadowrun2e_unified.stimDebt[0].boxes, 4);
     assert.equal(await a.applyPatch("p2"), true);
-    assert.equal(a.flags.sr2e.antidote.dice, 4);
+    assert.equal(a.flags.shadowrun2e_unified.antidote.dice, 4);
     assert.equal(await a.applyPatch("p2"), false); // none left
   });
   const katanaAttack = (def: any, over: any = {}) => ({ attackerUuid: "Actor.atk", targetUuid: def.uuid, weaponName: "Katana", melee: true,
@@ -540,8 +540,8 @@ describe("attack, defend, resist flow", () => {
     assert.match(msg.content, /Melee defense with Unarmed/);
     assert.match(msg.content, /TN <strong>4<\/strong>/);   // the attacker's longer reach helped the attacker, not the defender
     assert.match(msg.content, /Hit!/);
-    assert.equal(msg.flags.sr2e.damage.targetUuid, def.uuid);
-    assert.equal(msg.flags.sr2e.damage.level, "S");         // 3 net: M -> S
+    assert.equal(msg.flags.shadowrun2e_unified.damage.targetUuid, def.uuid);
+    assert.equal(msg.flags.shadowrun2e_unified.damage.level, "S");         // 3 net: M -> S
   });
 
   test("opposed melee: a defender with more successes counterattacks with their own weapon", async () => {
@@ -555,9 +555,9 @@ describe("attack, defend, resist flow", () => {
     await def.defend(katanaAttack(def, { attackSuccesses: 1 }), 0, { weaponId: "w1" });
     const msg = chat.at(-1);
     assert.match(msg.content, /Counterattack!/);
-    assert.equal(msg.flags.sr2e.damage.targetUuid, "Actor.atk");
-    assert.equal(msg.flags.sr2e.damage.power, 5);           // STR 4 + 1
-    assert.equal(msg.flags.sr2e.damage.level, "M");         // 2 net: the first hits, a stage needs 2 more
+    assert.equal(msg.flags.shadowrun2e_unified.damage.targetUuid, "Actor.atk");
+    assert.equal(msg.flags.shadowrun2e_unified.damage.power, 5);           // STR 4 + 1
+    assert.equal(msg.flags.shadowrun2e_unified.damage.level, "M");         // 2 net: the first hits, a stage needs 2 more
   });
 
   test("opposed melee: a tie hurts nobody; a melee attack with no successes still offers Defend", async () => {
@@ -574,8 +574,8 @@ describe("attack, defend, resist flow", () => {
     faces.push(1, 2);
     await atk.attackWith({ name: "Katana", system: { melee: true, skill: "Edged", damagePower: 3, damageLevel: "M", damageType: "physical", reach: 1, strengthPower: true } }, { targetUuid: def.uuid });
     assert.match(chat.at(-1).content, /may still counterattack/);
-    assert.equal(chat.at(-1).flags.sr2e.attack.power, 7);   // STR 4 + 3
-    assert.equal(chat.at(-1).flags.sr2e.attack.reach, 1);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.attack.power, 7);   // STR 4 + 3
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.attack.reach, 1);
   });
 
   test("resist from state uses ballistic armor for ranged and impact for melee", async () => {
@@ -788,7 +788,7 @@ describe("spellcasting", () => {
     assert.equal(chat.length, 2);
     const card = chat[0];
     assert.match(card.content, /data-sr2e-action="resistSpell"/);
-    assert.deepEqual({ ...card.flags.sr2e.spell }, { casterUuid: m.uuid, targetUuid: t.uuid, spellName: "Manabolt", force: 6,
+    assert.deepEqual({ ...card.flags.shadowrun2e_unified.spell }, { casterUuid: m.uuid, targetUuid: t.uuid, spellName: "Manabolt", force: 6,
       resistAttribute: "willpower", level: "M", damageType: "physical", casterSuccesses: 3 });
     assert.equal(m.system.poolSpent.spell, 1);
     // drain M staged down 1 by 2 successes -> L stun
@@ -814,7 +814,7 @@ describe("spellcasting", () => {
     const r = await m.castSpell(bolt({ category: "detection", targetNumber: 6 }), { force: 2, targetUuid: t.uuid });
     assert.equal(r.targetNumber, 6);
     assert.doesNotMatch(chat[0].content, /resistSpell/);
-    assert.equal(chat[0].flags.sr2e.spell, undefined);
+    assert.equal(chat[0].flags.shadowrun2e_unified.spell, undefined);
   });
 
   test("resisting: net caster successes stage the damage, applied with no armor", async () => {
@@ -860,8 +860,8 @@ describe("firing modes, recoil, ammo and situational modifiers", () => {
     assert.equal(r.successes, 2);
     assert.equal(r.targetNumber, 6);                         // 4 short + 2 recoil
     assert.deepEqual(r.modifiers.map((m: any) => m.label), ["Recoil"]);
-    assert.equal(chat.at(-1).flags.sr2e.attack.power, 11);
-    assert.equal(chat.at(-1).flags.sr2e.attack.level, "S");
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.attack.power, 11);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.attack.level, "S");
     assert.equal(w.system.ammo, 27);
     assert.match(chat.at(-1).content, /\[BF\]/);
   });
@@ -980,7 +980,7 @@ describe("recoil carries over within a combat phase", () => {
     faces.push(1, 2); await a.attackWith(w, { range: "short", mode: "BF" });
     faces.push(1, 2); const r = await a.attackWith(w, { range: "short", mode: "BF" });
     assert.equal(r.targetNumber, 6);
-    assert.equal(a.flags.sr2e, undefined);
+    assert.equal(a.flags.shadowrun2e_unified, undefined);
     g.game.combat = undefined;
   });
 });
@@ -1004,7 +1004,7 @@ describe("Karma Pool", () => {
     const some = withKarma(3); faces.push(1, 2, 5);
     await some.attackWith(pistol, { range: "short" });
     assert.match(chat.at(-1).content, /Re-roll 2 failures \(Karma 1\)/);
-    assert.equal(chat.at(-1).flags.sr2e.test.kind, "attack");
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.test.kind, "attack");
   });
 
   test("re-rolling a missed attack can turn it into a hit, with a Defend button and updated state", async () => {
@@ -1013,14 +1013,14 @@ describe("Karma Pool", () => {
     faces.push(1, 2, 3);                                      // TN 4: miss
     await a.attackWith(pistol, { targetUuid: "Actor.t", range: "short" });
     assert.match(chat.at(-1).content, /missed/);
-    const snap = chat.at(-1).flags.sr2e.test;
+    const snap = chat.at(-1).flags.shadowrun2e_unified.test;
     faces.push(5, 4, 1);                                      // re-roll all 3 failures
     await a.karmaReroll(snap);
     const card = chat.at(-1);
     assert.match(card.content, /Karma re-roll #1 \(cost 1\)/);
     assert.match(card.content, /data-sr2e-action="defend"/);
-    assert.equal(card.flags.sr2e.attack.attackSuccesses, 2);
-    assert.equal(card.flags.sr2e.attack.targetNumber, 4);
+    assert.equal(card.flags.shadowrun2e_unified.attack.attackSuccesses, 2);
+    assert.equal(card.flags.shadowrun2e_unified.attack.targetNumber, 4);
     assert.equal(a.system.karma.poolSpent, 1);
     assert.match(card.content, /Re-roll 1 failure \(Karma 2\)/);  // next costs 2
   });
@@ -1030,7 +1030,7 @@ describe("Karma Pool", () => {
     const a = withKarma(1);
     faces.push(1, 2, 3);
     await a.attackWith(pistol, { range: "short" });
-    const snap = { ...chat.at(-1).flags.sr2e.test, rerolls: 1 };   // next would cost 2
+    const snap = { ...chat.at(-1).flags.shadowrun2e_unified.test, rerolls: 1 };   // next would cost 2
     const n = chat.length;
     await a.karmaReroll(snap);
     assert.equal(chat.length, n);
@@ -1047,9 +1047,9 @@ describe("Karma Pool", () => {
     await d.defend(attack, 3);
     assert.match(chat.at(-1).content, /Hit!/);
     faces.push(5, 5, 1);                                      // re-roll: 2 successes, ties = miss
-    await d.karmaReroll(chat.at(-1).flags.sr2e.test);
+    await d.karmaReroll(chat.at(-1).flags.shadowrun2e_unified.test);
     assert.match(chat.at(-1).content, /Missed\.<\/strong> 2 attack vs 2 defense/);
-    assert.equal(chat.at(-1).flags.sr2e.damage, undefined);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.damage, undefined);
   });
 
   test("re-rolling a soak corrects the condition monitor", async () => {
@@ -1059,7 +1059,7 @@ describe("Karma Pool", () => {
     await a.resistDamage({ power: 9, level: "M", armor: 5 });
     assert.equal(a.system.monitor.physical, 3);
     faces.push(4, 4, 4, 1, 1);                                // 3 successes: M -> L
-    await a.karmaReroll(chat.at(-1).flags.sr2e.test);
+    await a.karmaReroll(chat.at(-1).flags.shadowrun2e_unified.test);
     assert.equal(a.system.monitor.physical, 1);
     assert.match(chat.at(-1).content, /Takes <strong>L<\/strong> physical damage/);
   });
@@ -1069,7 +1069,7 @@ describe("Karma Pool", () => {
     const a = withKarma(2);
     faces.push(1, 2, 2, 3, 3);
     await a.resistDamage({ power: 9, level: "M", armor: 5 });
-    const snap = chat.at(-1).flags.sr2e.test;
+    const snap = chat.at(-1).flags.shadowrun2e_unified.test;
     await a.update({ "system.monitor.physical": 5 });         // someone else hurt them meanwhile
     faces.push(4, 4, 4, 4, 1);
     await a.karmaReroll(snap);
@@ -1084,10 +1084,10 @@ describe("Karma Pool", () => {
     await a.resistDamage({ power: 9, level: "S", armor: 5 });  // S = 6 boxes
     assert.equal(a.system.monitor.physical, 6);
     faces.push(4, 4, 1, 1, 1);                                 // 2 successes: S -> M
-    await a.karmaReroll(chat.at(-1).flags.sr2e.test);
+    await a.karmaReroll(chat.at(-1).flags.shadowrun2e_unified.test);
     assert.equal(a.system.monitor.physical, 3);
     faces.push(4, 4, 1);                                       // 3 failures re-rolled: 4 total -> L
-    await a.karmaReroll(chat.at(-1).flags.sr2e.test);
+    await a.karmaReroll(chat.at(-1).flags.shadowrun2e_unified.test);
     assert.equal(a.system.monitor.physical, 1);
     assert.equal(a.system.karma.poolSpent, 3);                 // 1 + 2
   });
@@ -1099,11 +1099,11 @@ describe("Karma Pool", () => {
     await a.rollAttribute("body", { targetNumber: 4 });
     assert.match(chat.at(-1).content, /Disaster/);
     assert.match(chat.at(-1).content, /avoidDisaster/);
-    await a.avoidDisaster(chat.at(-1).flags.sr2e.test);
+    await a.avoidDisaster(chat.at(-1).flags.shadowrun2e_unified.test);
     assert.doesNotMatch(chat.at(-1).content, /Disaster: every die/);
     assert.match(chat.at(-1).content, /disaster avoided/);
     assert.equal(a.system.karma.poolSpent, 1);
-    assert.equal(chat.at(-1).flags.sr2e.test.botch, false);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.test.botch, false);
   });
 
   test("refresh restores the pool", async () => {
@@ -1306,14 +1306,14 @@ describe("conjuring: spirits, summoning, banishing", () => {
     faces.push(1, 2, 3, 2, 3);           // 0 successes vs TN 4
     faces.push(5, 5, 5, 5, 5, 5);        // drain: fully resisted
     await a.conjure({ force: 4, spiritType: "Hearth spirit" });
-    const snap = chat[0].flags.sr2e.test;
+    const snap = chat[0].flags.shadowrun2e_unified.test;
     assert.equal(snap.kind, "conjure");
     faces.push(4, 1, 1, 1, 1);           // re-roll 5 failures: 1 success
     await a.karmaReroll(snap);
     assert.equal(created.length, 1);
     const spirit = world[0];
     assert.equal(spirit.system.services, 1);
-    const snap2 = chat.at(-1).flags.sr2e.test;
+    const snap2 = chat.at(-1).flags.shadowrun2e_unified.test;
     assert.equal(snap2.conjure.spiritUuid, spirit.uuid);
     faces.push(5, 5, 1, 1);              // re-roll the 4 remaining failures: 2 more -> 3 services
     await a.karmaReroll(snap2);
@@ -1331,7 +1331,7 @@ describe("conjuring: spirits, summoning, banishing", () => {
     await a.conjure({ force: 4 });
     assert.equal(created.length, 0);
     assert.match(chat[0].content, /data-sr2e-action="createSpirit"/);
-    assert.equal(chat[0].flags.sr2e.pendingSpirit.system.services, 3);
+    assert.equal(chat[0].flags.shadowrun2e_unified.pendingSpirit.system.services, 3);
   });
 
   test("a template spirit is copied: its offsets and items come along", async () => {
@@ -1390,12 +1390,12 @@ describe("conjuring: spirits, summoning, banishing", () => {
     await a.banish(s);
     assert.equal(s.system.force, 3);
     faces.push(5, 6, 1, 1);              // re-roll 3 failures: 5, 6(+1=7), 1 -> 4 successes, Force 1
-    await a.karmaReroll(chat[1].flags.sr2e.test);
+    await a.karmaReroll(chat[1].flags.shadowrun2e_unified.test);
     assert.equal(s.system.force, 1);
     assert.equal(s.system.derived.status, "ok");
     s.system.force = 3;                  // something else changed it
     faces.push(5);                       // re-roll the last failure: 5 successes -> would banish
-    await a.karmaReroll(chat.at(-1).flags.sr2e.test);
+    await a.karmaReroll(chat.at(-1).flags.shadowrun2e_unified.test);
     assert.equal(s.system.force, 3);
     assert.match(chat.at(-1).content, /is banished!.*Force changed since this was rolled/);
   });
@@ -1494,13 +1494,13 @@ describe("astral plane", () => {
     const r = await m.astralAttack({ targetUuid: s.uuid, poolDice: 1 });
     assert.equal(r.targetNumber, 4);
     assert.equal(m.system.poolSpent.spell, 1);
-    const attack = chat.at(-1).flags.sr2e.attack;
+    const attack = chat.at(-1).flags.shadowrun2e_unified.attack;
     assert.deepEqual({ astral: attack.astral, power: attack.power, level: attack.level, melee: attack.melee }, { astral: true, power: 5, level: "M", melee: true });
     // Spirit: astral Quickness = its own (Force 4) plus Combat Pool dice
     faces.push(5, 1, 1, 1, 1);                                // 4 + 1 pool die: 1 success -> net 2
     await s.defend(attack, 1);
     assert.equal(s.system.poolSpent.combat, 1);
-    const damage = chat.at(-1).flags.sr2e.damage;
+    const damage = chat.at(-1).flags.shadowrun2e_unified.damage;
     assert.equal(damage.astral, true);
     // Soak: Body 4 vs TN 5 (Power 5, immunity armor ignored astrally)
     faces.push(5, 5, 1, 1);                                   // 2 successes: M -> L
@@ -1520,7 +1520,7 @@ describe("astral plane", () => {
     assert.equal(m.system.poolSpent.combat, 0);
     assert.match(chat.at(-1).content, /Astral defense/);
     faces.push(1, 1, 1, 1, 1, 2);                             // Willpower 6 vs TN 4: none
-    await m.resistFromState(chat.at(-1).flags.sr2e.damage, 0);
+    await m.resistFromState(chat.at(-1).flags.shadowrun2e_unified.damage, 0);
     assert.match(chat.at(-1).content, /6 dice vs TN/);
     assert.ok(m.system.monitor.stun > 0);
   });
@@ -1533,7 +1533,7 @@ describe("astral plane", () => {
     assert.equal(r.targetNumber, 8);
     faces.push(5, 5, 1, 1, 1);                                // Force 5
     await s.astralAttack({ targetUuid: m.uuid, damageType: "stun" });
-    const attack = chat.at(-1).flags.sr2e.attack;
+    const attack = chat.at(-1).flags.shadowrun2e_unified.attack;
     assert.equal(attack.power, 5);
     assert.equal(attack.damageType, "stun");
   });
@@ -1573,7 +1573,7 @@ describe("critter and spirit powers", () => {
     const card = chat.at(-1);
     assert.match(card.content, /Engulf \(5 dice; TN = Victim's Willpower\)/);
     assert.match(card.content, /data-sr2e-action="resistSpell" data-index="0">Resist power \(/);
-    const st = card.flags.sr2e.spell;
+    const st = card.flags.shadowrun2e_unified.spell;
     assert.deepEqual({ force: st.force, attr: st.resistAttribute, noun: st.noun, pool: st.resistPool, eff: st.effectOnly },
       { force: 5, attr: "body", noun: "power", pool: "none", eff: undefined });
     // Victim resists with Body 5 vs TN 5; pool dice are ignored when the power allows none
@@ -1590,7 +1590,7 @@ describe("critter and spirit powers", () => {
     const s = spiritUser(4); const v = victim();
     faces.push(5, 5, 5, 2);                                   // 3 successes vs Willpower 3
     await s.usePower(power({ name: "Fear", resist: "willpower", effect: "effect" }), { targetUuid: v.uuid });
-    const st = chat.at(-1).flags.sr2e.spell;
+    const st = chat.at(-1).flags.shadowrun2e_unified.spell;
     assert.equal(st.effectOnly, true);
     faces.push(4, 1, 1);                                      // Willpower 3 vs TN 4: 1 success
     await v.resistSpell(st, 0);
@@ -1612,7 +1612,7 @@ describe("critter and spirit powers", () => {
     const s = spiritUser(3); const v = victim();
     faces.push(5, 5, 1);
     await s.usePower(power({ resist: "none" }), { targetUuid: v.uuid });
-    assert.equal(chat.at(-1).flags.sr2e.test.kind, "plain");
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.test.kind, "plain");
     assert.equal(await s.usePower(power({ active: false })), null);
     assert.match(warnings.at(-1) ?? "", /passive power/);
   });
@@ -1625,9 +1625,9 @@ describe("critter and spirit powers", () => {
     await npc.usePower(power({ name: "Paralyzing Howl", dice: "rating", rating: 4, effect: "effect" }), { targetUuid: v.uuid });
     assert.match(chat.at(-1).content, /The power failed/);
     faces.push(5, 5, 5, 1);                                   // re-roll all 4
-    await npc.karmaReroll(chat.at(-1).flags.sr2e.test);
+    await npc.karmaReroll(chat.at(-1).flags.shadowrun2e_unified.test);
     assert.match(chat.at(-1).content, /Resist power \(/);
-    assert.equal(chat.at(-1).flags.sr2e.spell.casterSuccesses, 3);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.spell.casterSuccesses, 3);
   });
 });
 
@@ -1804,13 +1804,13 @@ describe("magic, final pieces: area effects, protection, initiation, dispelling,
     faces.push(5, 5, 5, 5, 5, 5);
     await a.castSpell(armorSpell, { force: 4 });
     assert.equal(a.system.sustaining?.length ?? 0, 0);
-    const snap = chat[0].flags.sr2e.test;
+    const snap = chat[0].flags.shadowrun2e_unified.test;
     faces.push(5, 1, 1, 1);                                   // 1 success
     await a.karmaReroll(snap);
     assert.equal(a.system.sustaining.length, 1);
     assert.equal(a.system.sustaining[0].successes, 1);
     faces.push(5, 5, 1);                                      // 3 failures left: 2 more
-    await a.karmaReroll(chat.at(-1).flags.sr2e.test);
+    await a.karmaReroll(chat.at(-1).flags.shadowrun2e_unified.test);
     assert.equal(a.system.sustaining.length, 1);
     assert.equal(a.system.sustaining[0].successes, 3);
   });
@@ -1824,9 +1824,9 @@ describe("magic, final pieces: area effects, protection, initiation, dispelling,
     assert.equal(r.targetNumber, 5);
     const card = chat[0];
     assert.match(card.content, /highest Willpower of 2 targets/);
-    assert.equal(card.flags.sr2e.spells.length, 2);
+    assert.equal(card.flags.shadowrun2e_unified.spells.length, 2);
     assert.match(card.content, /data-index="1"/);
-    assert.deepEqual(card.flags.sr2e.spells.map((x: any) => x.targetUuid), [t1.uuid, t2.uuid]);
+    assert.deepEqual(card.flags.shadowrun2e_unified.spells.map((x: any) => x.targetUuid), [t1.uuid, t2.uuid]);
   });
 
   test("an area, repeating power hits several targets and offers Use again", async () => {
@@ -1837,9 +1837,9 @@ describe("magic, final pieces: area effects, protection, initiation, dispelling,
     await s.usePower({ name: "Noxious Breath", uuid: "Item.breath", system: { active: true, dice: "force", rating: 0, tnSource: "willpower", targetNumber: 4,
       resist: "body", effect: "damage", damageLevel: "S", damageType: "stun", area: true, repeating: true } }, { targetUuids: [t1.uuid, t2.uuid] });
     const card = chat.at(-1);
-    assert.equal(card.flags.sr2e.spells.length, 2);
+    assert.equal(card.flags.shadowrun2e_unified.spells.length, 2);
     assert.match(card.content, /data-sr2e-action="repeatPower"/);
-    assert.deepEqual(card.flags.sr2e.repeat, { powerUuid: "Item.breath", targetUuids: [t1.uuid, t2.uuid], modifiers: [], exclude: [] });
+    assert.deepEqual(card.flags.shadowrun2e_unified.repeat, { powerUuid: "Item.breath", targetUuids: [t1.uuid, t2.uuid], modifiers: [], exclude: [] });
   });
 
   test("a protector's spell defense and the target's own shielding are added to spell resistance", async () => {
@@ -1873,7 +1873,7 @@ describe("magic, final pieces: area effects, protection, initiation, dispelling,
     assert.equal(victim.system.sustaining[0].successes, 1);
     assert.match(chat[0].content, /Armor weakens:<\/strong> 1 success left/);
     faces.push(5, 1);                                         // re-roll 2 failures: 1 more -> dispelled
-    await d.karmaReroll(chat[0].flags.sr2e.test);
+    await d.karmaReroll(chat[0].flags.shadowrun2e_unified.test);
     assert.equal(victim.system.sustaining.length, 0);
     assert.match(chat.at(-1).content, /Armor is dispelled/);
   });
@@ -2029,7 +2029,7 @@ describe("spellcraft: resisted spells, healing, background count, spell options,
     faces.push(5, 5, 5, 5, 5, 5);
     const r = await a.castSpell(spell("Confusion", { category: "illusion", resist: "willpower" }), { force: 4, targetUuid: t.uuid });
     assert.equal(r.targetNumber, 3);
-    const st = chat[0].flags.sr2e.spell;
+    const st = chat[0].flags.shadowrun2e_unified.spell;
     assert.equal(st.resistAttribute, "willpower");
     assert.equal(st.effectOnly, true);
     assert.match(chat[0].content, /Resist spell/);
@@ -2058,7 +2058,7 @@ describe("spellcraft: resisted spells, healing, background count, spell options,
     assert.match(chat[0].content, /heals 2 physical boxes \(5 → 3\)/);
     faces.push(6, 1);                                         // re-roll 2 failures: the 6 explodes (6+1 = 7), 1 more success
     faces.push(1);
-    await a.karmaReroll(chat[0].flags.sr2e.test);
+    await a.karmaReroll(chat[0].flags.shadowrun2e_unified.test);
     assert.equal(p.system.monitor.physical, 2);
     faces.push(5, 1, 1, 1);
     faces.push(5, 5, 5, 5, 5, 5);
@@ -2281,7 +2281,7 @@ describe("the Matrix: decks, hosts, system tests, cybercombat, dump shock", () =
     chat.length = 0;
     faces.push(5, 5, 5, 1, 1);                                   // Computer 5 vs IC rating 5: 3 net -> 5M becomes 5S
     await a.matrixAttack({ targetUuid: i.uuid, programId: "at" });
-    const dmg = chat[0].flags.sr2e.damage;
+    const dmg = chat[0].flags.shadowrun2e_unified.damage;
     assert.deepEqual({ m: dmg.matrix, p: dmg.power, l: dmg.level }, { m: true, p: 5, l: "S" });
     assert.match(chat[0].content, /Resist \(Killer-5\)/);
     faces.push(1, 1, 1, 2, 2);
@@ -2290,7 +2290,7 @@ describe("the Matrix: decks, hosts, system tests, cybercombat, dump shock", () =
     faces.push(5, 5, 5, 5, 5);                                   // 5 net: Deadly
     await a.matrixAttack({ targetUuid: i.uuid, programId: "at" });
     faces.push(2, 2, 2, 2, 2);
-    await i.resistFromState(chat.at(-1).flags.sr2e.damage);
+    await i.resistFromState(chat.at(-1).flags.shadowrun2e_unified.damage);
     assert.equal(i.system.matrix.monitor, 10);
     assert.match(chat.at(-1).content, /Killer-5 is derezzed!/);
     assert.equal(await i.icAttack({ targetUuid: a.uuid }), null);
@@ -2306,26 +2306,26 @@ describe("the Matrix: decks, hosts, system tests, cybercombat, dump shock", () =
     faces.push(5, 5, 1, 1, 1, 1);                                // 6 dice vs Evasion 5: 2 -> 6M
     await i.icAttack({ targetUuid: a.uuid });
     assert.match(chat[0].content, /data-sr2e-action="defend"/);   // v0.27.0: the persona may defend with Hacking Pool
-    await a.defend(chat[0].flags.sr2e.attack, 0);                // no pool dice: nothing cancelled
-    const dmg = chat.at(-1).flags.sr2e.damage;
+    await a.defend(chat[0].flags.shadowrun2e_unified.attack, 0);                // no pool dice: nothing cancelled
+    const dmg = chat.at(-1).flags.shadowrun2e_unified.damage;
     faces.push(4, 1, 1, 1, 1);                                   // Bod 4 + 1 pool vs 6 - 2 = 4: 1 success
     await a.resistFromState(dmg, 1);
     assert.equal(a.system.matrix.monitor, 3);
     assert.equal(a.system.poolSpent.hacking, 1);
     faces.push(4, 4, 1, 1);                                      // Karma re-roll of 4 failures: 2 more -> 3 -> L
-    await a.karmaReroll(chat.at(-1).flags.sr2e.test);
+    await a.karmaReroll(chat.at(-1).flags.shadowrun2e_unified.test);
     assert.equal(a.system.matrix.monitor, 1);
     await a.update({ "system.matrix.monitor": 8 });
     faces.push(5, 5, 1, 1, 1, 1);
     await i.icAttack({ targetUuid: a.uuid });
-    await a.defend(chat.at(-1).flags.sr2e.attack, 0);
+    await a.defend(chat.at(-1).flags.shadowrun2e_unified.attack, 0);
     faces.push(1, 1, 1, 2);
-    await a.resistFromState(chat.at(-1).flags.sr2e.damage);
+    await a.resistFromState(chat.at(-1).flags.shadowrun2e_unified.damage);
     assert.equal(a.system.matrix.monitor, 10);
     assert.equal(a.system.matrix.jackedIn, false);
     assert.match(chat.at(-2).content, /The persona crashes!/);
     assert.match(chat.at(-1).content, /data-sr2e-action="dumpShock"/);
-    assert.equal(chat.at(-1).flags.sr2e.dumpShockTn, 6);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.dumpShockTn, 6);
     faces.push(1, 1, 1, 2, 2);                                   // Willpower 5 vs 6: no successes, M stun
     await a.rollDumpShock(6);
     assert.equal(a.system.monitor.stun, 3);
@@ -2341,8 +2341,8 @@ describe("the Matrix: decks, hosts, system tests, cybercombat, dump shock", () =
     chat.length = 0;
     faces.push(5, 5, 5, 1, 1, 1);                                // 3 net: 6M -> 6S
     await i.icAttack({ targetUuid: a.uuid });
-    await a.defend(chat[0].flags.sr2e.attack, 0);
-    const dmg = chat.at(-1).flags.sr2e.damage;
+    await a.defend(chat[0].flags.shadowrun2e_unified.attack, 0);
+    const dmg = chat.at(-1).flags.shadowrun2e_unified.damage;
     assert.equal(dmg.black, true);
     faces.push(1, 1, 1, 2, 2);
     await a.resistFromState(dmg);
@@ -2410,12 +2410,12 @@ describe("the rest of magic: elemental spells and services, projection, masking,
     faces.push(5, 5, 5, 5, 5, 5);                             // drain
     const r = await a.castSpell(fireball, { force: 5, targetUuids: [g1.uuid, g2.uuid] });
     assert.equal(r.targetNumber, 4);
-    const attacks = chat[0].flags.sr2e.attacks;
+    const attacks = chat[0].flags.shadowrun2e_unified.attacks;
     assert.equal(attacks.length, 2);
     assert.deepEqual({ p: attacks[0].power, l: attacks[0].level, e: attacks[0].elemental }, { p: 5, l: "M", e: true });
     assert.equal((chat[0].content.match(/data-sr2e-action="defend"/g) ?? []).length, 2);
     await g1.defend({ ...attacks[0], attackSuccesses: 2, targetNumber: 4 }, 0);
-    const dmg = chat.at(-1).flags.sr2e.damage;
+    const dmg = chat.at(-1).flags.shadowrun2e_unified.damage;
     assert.equal(dmg.elemental, true);
     faces.push(1, 1, 1, 2);                                   // Body 4 vs 5 - floor(4 / 2) = 3: no successes
     await g1.resistFromState(dmg);
@@ -2507,7 +2507,7 @@ describe("the rest of magic: elemental spells and services, projection, masking,
     assert.equal(r.targetNumber, 6);
     assert.match(chat.at(-1).content, /Active foci: Ring \(power 2\)/);
     await masked.leaveSignature("spell", "Stunbolt", 4);
-    const sig = masked.getFlag("sr2e", "signatures").at(-1);
+    const sig = masked.getFlag("shadowrun2e_unified", "signatures").at(-1);
     assert.equal(sig.masking, 2);
     faces.push(1, 1, 1, 1, 2);
     const t = await seer.track({ signature: { ...sig, actorName: "Masked" }, targetNumber: 4 });
@@ -2578,7 +2578,7 @@ describe("the rest of magic: elemental spells and services, projection, masking,
     faces.push(1, 1, 1, 2);
     await a.attackWith(a.items.get("w1"), { targetUuid: s.uuid });
     faces.length = 0;   // v0.47.0: unskilled melee defaults to the linked attribute (Strength), fewer dice
-    assert.equal(chat.at(-1).flags.sr2e.test.attack.ignoreImmunity, true);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.test.attack.ignoreImmunity, true);
     assert.equal(s.armorRating("impact"), 8);
     assert.equal(s.armorRating("impact", { ignoreImmunity: true }), 0);
   });
@@ -2598,7 +2598,7 @@ describe("the rest of magic: elemental spells and services, projection, masking,
     faces.push(1, 1);                                         // 7, 7: 2 successes
     faces.push(5, 5, 5, 5, 5, 5);
     await a.castSpell(stunbolt, { force: 4, targetUuid: t.uuid, barrierUuid: ward.uuid });
-    const st = chat[0].flags.sr2e.spell;
+    const st = chat[0].flags.shadowrun2e_unified.spell;
     assert.equal(st.barrierDice, 3);
     faces.push(...Array(9).fill(1).map((_, i) => (i === 8 ? 2 : 1)));
     await t.resistSpell(st, 0);
@@ -2674,7 +2674,7 @@ describe("v0.20.0 combat additions", () => {
     chat.length = 0;
     faces.push(5, 5, 5);
     await shooter().attackWith(rifle({ ammoType: "gel" }), { targetUuid: "Actor.t", range: "short" });
-    const atk = chat.at(-1).flags.sr2e.attack;
+    const atk = chat.at(-1).flags.shadowrun2e_unified.attack;
     assert.equal(atk.power, 6);
     assert.equal(atk.damageType, "stun");
     assert.equal(atk.armorKind, "impact");
@@ -2695,7 +2695,7 @@ describe("v0.20.0 combat additions", () => {
     assert.equal(r.targetNumber, 8);
     faces.push(6, 6, 2, 2, 2);                           // two 6s explode to 8: 2 successes vs TN 8
     await shooter().attackWith(rifle(), { targetUuid: "Actor.t", range: "short", calledShot: "armor" });
-    assert.equal(chat.at(-1).flags.sr2e.attack.ignoreArmor, true);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.attack.ignoreArmor, true);
 
     chat.length = 0;
     const t = makeActor(A);
@@ -2727,22 +2727,22 @@ describe("v0.20.0 combat additions", () => {
     await thrower().attackWith(g, { range: "short", hits: [{ targetUuid: "Actor.a1", power: 10 }, { targetUuid: "Actor.a2", power: 7 }], blastPoint: { x: 0, y: 0, elevation: 0 } });
     let msg = chat.at(-1);
     assert.match(msg.content, /Blast!/);
-    assert.equal(msg.flags.sr2e.damages.length, 2);
-    assert.deepEqual([msg.flags.sr2e.damages[1].power, msg.flags.sr2e.damages[1].level], [7, "S"]);   // not staged by successes
-    assert.equal(msg.flags.sr2e.damages[0].armorKind, "impact");
+    assert.equal(msg.flags.shadowrun2e_unified.damages.length, 2);
+    assert.deepEqual([msg.flags.shadowrun2e_unified.damages[1].power, msg.flags.shadowrun2e_unified.damages[1].level], [7, "S"]);   // not staged by successes
+    assert.equal(msg.flags.shadowrun2e_unified.damages[0].armorKind, "impact");
     faces.push(5, 2);
     await thrower().attackWith(g, { range: "medium", blastPoint: { x: 0, y: 0, elevation: 0 } });
     msg = chat.at(-1);
     assert.match(msg.content, /blastScatter/);                       // every thrown blast detonates via the card
     assert.match(msg.content, /scatter 1d6 m − 2 m/);                // v0.79.0 (DOCS_V79.rangedScatter 'byType'): a standard grenade 1D6 (was 2D6 by range)
-    assert.equal(msg.flags.sr2e.blast.power, 10);
-    assert.equal(msg.flags.sr2e.blast.successes, 1);
-    assert.equal(msg.flags.sr2e.blast.range, "medium");
+    assert.equal(msg.flags.shadowrun2e_unified.blast.power, 10);
+    assert.equal(msg.flags.shadowrun2e_unified.blast.successes, 1);
+    assert.equal(msg.flags.shadowrun2e_unified.blast.range, "medium");
 
     chat.length = 0;
-    await makeActor(A).postBlast(msg.flags.sr2e.blast, [{ targetUuid: "Actor.a1", name: "A1", metres: 3.5 }, { targetUuid: "Actor.a2", name: "A2", metres: 12 }], "Scattered 4 m");
-    assert.equal(chat.at(-1).flags.sr2e.damages.length, 1);
-    assert.equal(chat.at(-1).flags.sr2e.damages[0].power, 7);
+    await makeActor(A).postBlast(msg.flags.shadowrun2e_unified.blast, [{ targetUuid: "Actor.a1", name: "A1", metres: 3.5 }, { targetUuid: "Actor.a2", name: "A2", metres: 12 }], "Scattered 4 m");
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.damages.length, 1);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.damages[0].power, 7);
   });
 
   test("a heavy hit offers a knockdown test", async () => {
@@ -2750,7 +2750,7 @@ describe("v0.20.0 combat additions", () => {
     faces.push(1, 1, 1, 1, 1);
     await makeActor(A).resistFromState({ targetUuid: "x", melee: false, damageType: "physical", power: 9, level: "M" }, 0);   // Power 9 > Body 5
     assert.match(chat.at(-1).content, /Knockdown test \(Body vs 9\)/);
-    assert.equal(chat.at(-1).flags.sr2e.knockdown.tn, 9);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.knockdown.tn, 9);
     chat.length = 0;
     faces.push(1, 1, 1, 1, 1);
     await makeActor(A).resistFromState({ targetUuid: "x", melee: false, damageType: "physical", power: 4, level: "M" }, 0);
@@ -2803,7 +2803,7 @@ describe("v0.21.0 combat fixes", () => {
     faces.push(5, 5, 5);
     const r = await atk.attackWith({ name: "Staff", system: { melee: true, skill: "Clubs", damagePower: 2, damageLevel: "M", damageType: "physical", reach: 2, strengthPower: true } }, { targetUuid: "Actor.t", subdue: true, targetReach: 0 });
     assert.equal(r.targetNumber, 2);                           // 4 − reach 2
-    assert.equal(chat.at(-1).flags.sr2e.attack.damageType, "stun");
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.attack.damageType, "stun");
     chat.length = 0;
     const t = makeActor(A);
     t.items = [{ type: "armor", system: { worn: true, ballistic: 2, impact: 1 } }];
@@ -2849,7 +2849,7 @@ describe("v0.21.0 combat fixes", () => {
     chat.length = 0;
     await a.postBlast({ attackerUuid: a.uuid, weaponName: "Grenade", power: 10, level: "S", damageType: "physical", perMetre: 1, point: { x: 0, y: 0, elevation: 0 }, dodge: false, kind: "offensive" },
       [{ targetUuid: "Actor.z", name: "Z", metres: 3 }], "On target.", 4);
-    assert.equal(chat.at(-1).flags.sr2e.damages[0].power, 11);  // 10 − 3 + 4
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.damages[0].power, 11);  // 10 − 3 + 4
     assert.match(chat.at(-1).content, /Confined space: \+4 Power/);
   });
 
@@ -3119,10 +3119,10 @@ describe("v0.24.0 vehicles and rigging", () => {
     await a.syncCondition("ok", { physical: false, stun: true });
     assert.equal(a.system.rigging.vehicleUuid, "");
     assert.equal(v.system.controlMode, "autopilot");
-    const card = chat.find((m: any) => m.flags?.sr2e?.riggerShock);
+    const card = chat.find((m: any) => m.flags?.shadowrun2e_unified?.riggerShock);
     assert.ok(card);
     assert.match(card.content, /dumped out of <strong>Americar/);
-    assert.equal(card.flags.sr2e.riggerShock.kind, "dump");
+    assert.equal(card.flags.shadowrun2e_unified.riggerShock.kind, "dump");
     a.system.monitor.stun = 0; a.system.prepareDerivedData();
   });
 
@@ -3185,9 +3185,9 @@ describe("v0.24.0 vehicles and rigging", () => {
     faces.push(1, 1, 1, 1, 1);
     await a.driveTest({ crashTest: true });
     assert.match(chat.at(-1).content, /Crash!/);
-    assert.deepEqual(chat.at(-1).flags.sr2e.crash, { vehicleUuid: v.uuid, speed: 95 });
+    assert.deepEqual(chat.at(-1).flags.shadowrun2e_unified.crash, { vehicleUuid: v.uuid, speed: 95 });
     await v.crash(95);
-    const d = chat.at(-1).flags.sr2e.damages;
+    const d = chat.at(-1).flags.shadowrun2e_unified.damages;
     assert.equal(d.length, 3);                                          // vehicle, passenger, the driver
     assert.deepEqual({ p: d[0].power, l: d[0].level, crash: d[0].crash, ia: d[0].ignoreArmor }, { p: 9, l: "S", crash: true, ia: true });
     assert.deepEqual({ p: d[1].power, l: d[1].level, k: d[1].armorKind }, { p: 9, l: "M", k: "impact" });
@@ -3211,16 +3211,16 @@ describe("v0.24.0 vehicles and rigging", () => {
     assert.equal(v.system.condition, 3);
     assert.match(chat.at(-2).content, /resists 10M \(Body 4, armor 3\)/);
     assert.match(chat.at(-1).content, /data-sr2e-action="riggerShock"/);
-    assert.deepEqual({ ...chat.at(-1).flags.sr2e.riggerShock, riggerUuid: 0 }, { riggerUuid: 0, riggerName: "Rigger", tn: 10, level: "M", type: "stun", kind: "feedback" });
+    assert.deepEqual({ ...chat.at(-1).flags.shadowrun2e_unified.riggerShock, riggerUuid: 0 }, { riggerUuid: 0, riggerName: "Rigger", tn: 10, level: "M", type: "stun", kind: "feedback" });
     faces.push(1, 1, 1, 1, 1);
-    await a.rollRiggerShock(chat.at(-1).flags.sr2e.riggerShock);
+    await a.rollRiggerShock(chat.at(-1).flags.shadowrun2e_unified.riggerShock);
     assert.equal(a.system.monitor.stun, 3);
     faces.push(1, 1, 1, 1);
     await v.resistFromState({ ...stopped, power: 12, level: "D", antiVehicle: true });
     assert.equal(v.system.condition, 10);
     assert.equal(v.system.derived.status, "destroyed");
     assert.match(chat.at(-2).content, /Destroyed!/);
-    assert.equal(chat.at(-1).flags.sr2e.riggerShock.kind, "dump");
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.riggerShock.kind, "dump");
     assert.equal(a.system.rigging.jumpedIn, false);
     assert.equal(v.system.controllerUuid, "");
     assert.equal(await a.driveTest({ vehicle: v }), null);
@@ -3232,7 +3232,7 @@ describe("v0.24.0 vehicles and rigging", () => {
     const atk = { attackerUuid: "x", targetUuid: v.uuid, weaponName: "Gun", melee: false, damageType: "physical", power: 8, level: "M", attackSuccesses: 2, targetNumber: 4, antiVehicle: true };
     await v.defend(atk, 3);
     assert.match(chat.at(-1).content, /Defense \(no Control Pool dice\)/);
-    assert.equal(chat.at(-1).flags.sr2e.damage.antiVehicle, true);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.damage.antiVehicle, true);
     const a = rigger(2);
     v.system.occupants.push(a.uuid); await a.takeControl(v, "jumped");
     faces.push(5, 5, 5);
@@ -3369,7 +3369,7 @@ describe("v0.25.0 vehicle combat, sensors, remote decks, chases", () => {
     faces.push(1, 1, 1, 1);
     await v.resistFromState({ targetUuid: v.uuid, melee: false, damageType: "physical", power: 12, level: "S", antiVehicle: true });
     assert.equal(v.system.condition, 6);
-    const d = chat.at(-1).flags.sr2e.damages;
+    const d = chat.at(-1).flags.shadowrun2e_unified.damages;
     assert.deepEqual({ t: d[0].targetUuid, p: d[0].power, l: d[0].level, k: d[0].armorKind }, { t: a.uuid, p: 8, l: "M", k: "impact" });
     chat.length = 0;
     faces.push(1, 1, 1, 1);
@@ -3388,10 +3388,10 @@ describe("v0.25.0 vehicle combat, sensors, remote decks, chases", () => {
     const card = chat.at(-1);
     // v0.79.0 (DOCS_V79.vehRamLevel 'speed'): speed 60 is Moderate on the impact table, the rammer at the same level.
     assert.match(card.content, /Ram truck rams Victim \(manual, Handling 4, 12M\)/);
-    assert.deepEqual({ p: card.flags.sr2e.attack.power, l: card.flags.sr2e.attack.level, av: card.flags.sr2e.attack.antiVehicle }, { p: 12, l: "M", av: true });
+    assert.deepEqual({ p: card.flags.shadowrun2e_unified.attack.power, l: card.flags.shadowrun2e_unified.attack.level, av: card.flags.shadowrun2e_unified.attack.antiVehicle }, { p: 12, l: "M", av: true });
     // v0.73.0 (O25): the rammer's share rides on the attack and is offered after the target's defense.
-    assert.deepEqual({ t: card.flags.sr2e.attack.ram.vehicleUuid, p: card.flags.sr2e.attack.ram.power, l: card.flags.sr2e.attack.ram.level }, { t: v.uuid, p: 6, l: "M" });
-    assert.equal(card.flags.sr2e.ramSelf, undefined);
+    assert.deepEqual({ t: card.flags.shadowrun2e_unified.attack.ram.vehicleUuid, p: card.flags.shadowrun2e_unified.attack.ram.power, l: card.flags.shadowrun2e_unified.attack.ram.level }, { t: v.uuid, p: 6, l: "M" });
+    assert.equal(card.flags.shadowrun2e_unified.ramSelf, undefined);
     assert.doesNotMatch(card.content, /data-sr2e-action="ramSelf"/);
   });
 
@@ -3552,7 +3552,7 @@ describe("v0.26.0 building security and security rigging", () => {
     const s2 = site(); s2.isOwner = false;
     await SR2Actor.changeSite(s2, { add: 2 }, "Test");
     assert.match(chat.at(-1).content, /data-sr2e-action="applySite"/);
-    assert.deepEqual(chat.at(-1).flags.sr2e.siteChange, { siteUuid: s2.uuid, add: 2 });
+    assert.deepEqual(chat.at(-1).flags.shadowrun2e_unified.siteChange, { siteUuid: s2.uuid, add: 2 });
     assert.equal(s2.system.tally, 0);
   });
 
@@ -3684,7 +3684,7 @@ describe("v0.27.0 Matrix depth: IC behaviors, defense, operations, paydata, Medi
     await k.icAttack({ targetUuid: a.uuid });
     assert.match(chat[0].content, /Defend \(Decker\)/);
     faces.push(5, 5);                                              // 2 Hacking Pool dice: 2 successes
-    await a.defend(chat[0].flags.sr2e.attack, 2);
+    await a.defend(chat[0].flags.shadowrun2e_unified.attack, 2);
     assert.equal(a.system.poolSpent.hacking, 2);
     assert.match(chat.at(-1).content, /Hit!<\/strong> 3 attack vs 2 defense: 1 net: <strong>6M<\/strong> Matrix damage/);
     // IC do not defend by default; with the house rule they roll their rating.
@@ -3699,7 +3699,7 @@ describe("v0.27.0 Matrix depth: IC behaviors, defense, operations, paydata, Medi
       await a.matrixAttack({ targetUuid: k5.uuid, programId: "at" });
       assert.match(chat.at(-1).content, /Defend \(Killer-5\)/);
       faces.push(5, 5, 1, 1, 1);                                   // the IC's rating 5: 2 successes
-      await k5.defend(chat.at(-1).flags.sr2e.attack, 0);
+      await k5.defend(chat.at(-1).flags.shadowrun2e_unified.attack, 0);
       assert.match(chat.at(-1).content, /Killer-5 defends \(rating 5\)/);
       assert.match(chat.at(-1).content, /4 attack vs 2 defense: 2 net: <strong>5M<\/strong>/);
     } finally { (RULES.MATRIX.defense as any).ic = "none"; }
@@ -3712,18 +3712,18 @@ describe("v0.27.0 Matrix depth: IC behaviors, defense, operations, paydata, Medi
     const c = ic(h, { behavior: "crippler", attribute: "evasion", name: "Crippler-6" });
     faces.push(5, 5, 5, 5, 1, 1);                                  // 4 vs Evasion 5
     await c.icAttack({ targetUuid: a.uuid });
-    await a.defend(chat.at(-1).flags.sr2e.attack, 0);
+    await a.defend(chat.at(-1).flags.shadowrun2e_unified.attack, 0);
     assert.equal(a.system.matrix.crippled.evasion, 2);            // 4 net: 2 points
     assert.equal(a.system.derived.matrix.evasion, 3);
     assert.match(chat.at(-1).content, /Crippler-6 cripples Evasion −2/);
-    assert.equal(chat.at(-1).flags.sr2e.test.matrixEffect.applied, true);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.test.matrixEffect.applied, true);
     await a.jackOut();
     assert.equal(a.system.derived.matrix.evasion, 5);
     await a.jackIn(h.uuid);
     const r = ic(h, { behavior: "ripper", attribute: "masking", name: "Ripper-6" });
     faces.push(5, 5, 1, 1, 1, 1);                                  // 2 vs Masking 5: 1 point
     await r.icAttack({ targetUuid: a.uuid });
-    await a.defend(chat.at(-1).flags.sr2e.attack, 0);
+    await a.defend(chat.at(-1).flags.shadowrun2e_unified.attack, 0);
     assert.equal(a.items.get("deck").system.damage.masking, 1);
     assert.equal(a.system.derived.matrix.masking, 4);
     assert.equal(a.system.derived.matrix.detectionFactor, 4);     // (4 + Sleaze 4) / 2
@@ -3743,14 +3743,14 @@ describe("v0.27.0 Matrix depth: IC behaviors, defense, operations, paydata, Medi
     faces.push(5, 5, 1, 1, 1);                                     // 2 vs Sleaze 4
     await tb.icAttack({ targetUuid: a.uuid, programId: "sl" });
     assert.match(chat.at(-1).content, /goes after Sleaze \(TN = the utility's rating 4\)/);
-    await a.defend(chat.at(-1).flags.sr2e.attack, 0);
+    await a.defend(chat.at(-1).flags.shadowrun2e_unified.attack, 0);
     assert.equal(a.items.get("sl").system.loaded, false);
     assert.equal(tb.system.matrix.monitor, 10);
     assert.equal(a.system.derived.matrix.detectionFactor, 3);     // no Sleaze loaded now: (5 + 0) / 2 rounded up
     const tp = ic(h, { behavior: "tarPit", rating: 5, name: "Tar pit-5" });
     faces.push(5, 1, 1, 1, 1);                                     // 1 vs Deception 3
     await tp.icAttack({ targetUuid: a.uuid, programId: "de" });
-    await a.defend(chat.at(-1).flags.sr2e.attack, 0);
+    await a.defend(chat.at(-1).flags.shadowrun2e_unified.attack, 0);
     assert.deepEqual({ l: a.items.get("de").system.loaded, e: a.items.get("de").system.erased }, { l: false, e: true });
     assert.match(chat.at(-1).content, /erases it from the deck/);
     assert.equal(tp.system.matrix.monitor, 0);                    // tar pits stay
@@ -3765,7 +3765,7 @@ describe("v0.27.0 Matrix depth: IC behaviors, defense, operations, paydata, Medi
     g.game.actors = [a, t, h];
     faces.push(5, 5, 5, 1, 1, 1);                                  // 3 net: 10 / 3 -> 4 Combat Turns
     await t.icAttack({ targetUuid: a.uuid });
-    await a.defend(chat.at(-1).flags.sr2e.attack, 0);
+    await a.defend(chat.at(-1).flags.shadowrun2e_unified.attack, 0);
     assert.match(chat.at(-1).content, /Trace-6 locks on to Decker<\/strong>: the trace completes in <strong>4 Combat Turns/);
     assert.deepEqual({ on: a.system.matrix.trace.active, w: a.system.matrix.trace.worldTime }, { on: true, w: 12 });
     assert.equal(a.system.derived.matrix.trace.icName, "Trace-6");
@@ -3775,20 +3775,20 @@ describe("v0.27.0 Matrix depth: IC behaviors, defense, operations, paydata, Medi
     assert.equal(a.system.matrix.jackedIn, false);
     assert.equal(a.system.matrix.trace.active, false);
     assert.match(chat.at(-1).content, /Trace complete:<\/strong> Trace-6 dumps Decker/);
-    assert.equal(chat.at(-1).flags.sr2e.dumpShockTn, 6);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.dumpShockTn, 6);
     // Trace and burn: dump plus a deck damage button; trace and report: whispered location and host alert.
     await a.jackIn(h.uuid);
     await t.update({ "system.traceMode": "burn" });
     faces.push(5, 5, 5, 5, 5, 1);
     await t.icAttack({ targetUuid: a.uuid });
-    await a.defend(chat.at(-1).flags.sr2e.attack, 0);
+    await a.defend(chat.at(-1).flags.shadowrun2e_unified.attack, 0);
     await SR2Actor.matrixTraces({ worldTime: 100 });
-    assert.equal(chat.at(-1).flags.sr2e.deckDamage.rating, 6);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.deckDamage.rating, 6);
     await a.jackIn(h.uuid);
     await t.update({ "system.traceMode": "report" });
     faces.push(5, 5, 5, 5, 5, 1);
     await t.icAttack({ targetUuid: a.uuid });
-    await a.defend(chat.at(-1).flags.sr2e.attack, 0);
+    await a.defend(chat.at(-1).flags.shadowrun2e_unified.attack, 0);
     await SR2Actor.matrixTraces({ worldTime: 200 });
     assert.equal(a.system.matrix.jackedIn, true);
     assert.equal(h.system.alert, "active");
@@ -3796,7 +3796,7 @@ describe("v0.27.0 Matrix depth: IC behaviors, defense, operations, paydata, Medi
     // Redirect datatrail.
     faces.push(5, 5, 5, 5, 5, 1);
     await t.icAttack({ targetUuid: a.uuid });
-    await a.defend(chat.at(-1).flags.sr2e.attack, 0);
+    await a.defend(chat.at(-1).flags.shadowrun2e_unified.attack, 0);
     noDetect(); faces.push(5, 1, 1, 1, 1);                         // Control 4: 1 success
     await a.systemTest("", { operationId: "redirectDatatrail" });
     assert.equal(a.system.matrix.trace.active, false);
@@ -3804,7 +3804,7 @@ describe("v0.27.0 Matrix depth: IC behaviors, defense, operations, paydata, Medi
     // A derezzed trace IC loses its trace.
     faces.push(5, 5, 5, 5, 5, 1);
     await t.icAttack({ targetUuid: a.uuid });
-    await a.defend(chat.at(-1).flags.sr2e.attack, 0);
+    await a.defend(chat.at(-1).flags.shadowrun2e_unified.attack, 0);
     await t.update({ "system.matrix.monitor": 10 });
     await SR2Actor.matrixTraces({ worldTime: 210 });
     assert.equal(a.system.matrix.trace.active, false);
@@ -3885,12 +3885,12 @@ describe("v0.27.0 Matrix depth: IC behaviors, defense, operations, paydata, Medi
     const bl = ic(h, { behavior: "blaster", rating: 4, name: "Blaster-4" });
     faces.push(5, 5, 1, 1);                                        // 2 vs Evasion 5: 4M
     await bl.icAttack({ targetUuid: a.uuid });
-    await a.defend(chat.at(-1).flags.sr2e.attack, 0);
+    await a.defend(chat.at(-1).flags.shadowrun2e_unified.attack, 0);
     faces.push(1, 1, 1, 1);                                        // Bod 4 vs 2: no successes, M
-    await a.resistFromState(chat.at(-1).flags.sr2e.damage);
+    await a.resistFromState(chat.at(-1).flags.shadowrun2e_unified.damage);
     assert.equal(a.system.matrix.jackedIn, false);
     assert.match(chat.at(-1).content, /Blaster-4<\/strong> blasts Decker's deck/);
-    const dd = chat.at(-1).flags.sr2e.deckDamage;
+    const dd = chat.at(-1).flags.shadowrun2e_unified.deckDamage;
     faces.push(6, 6, 6, 1, 1, 1, 1);                               // rating 4 vs MPCP 6: 3 successes (sixes re-rolled)
     const pts = await a.takeDeckDamage(dd.icName, dd.rating, dd.reason);
     assert.equal(pts, 1);
@@ -4005,7 +4005,7 @@ describe("v0.28.0 the grid, hot and cold sim, frames, connections", () => {
     await hot.resistFromState({ targetUuid: hot.uuid, melee: false, damageType: "physical", power: 8, level: "S", matrix: true });
     assert.equal(hot.system.matrix.monitor, 6);
     assert.match(chat.at(-1).content, /Simsense overload!/);
-    assert.equal(chat.at(-1).flags.sr2e.overload.tn, 8);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.overload.tn, 8);
     faces.push(1, 1, 1, 1, 2);
     await hot.rollOverload(8);
     assert.equal(hot.system.monitor.stun, 1);                     // L stun
@@ -4326,7 +4326,7 @@ describe("v0.31.0 toxins, drugs, hazards, stun weapons, statuses", () => {
     const dwarf = person([{ id: "tf", type: "cyberware", name: "Tracheal Filter 2", system: { bioware: true, bodyIndex: 0.4, bioKind: "trachealFilter", rating: 2, installed: true, essenceCost: 0, grade: "standard", attributes: {} } }], { metatype: "dwarf", name: "Dwarf" });
     const gas = tox("g", "Neuro-stun", { vector: "inhalation", power: 8, level: "S", damageType: "stun" });
     await gm.exposeTo(gas, [dwarf.uuid]);
-    const state = chat.at(-1).flags.sr2e.toxins[0];
+    const state = chat.at(-1).flags.shadowrun2e_unified.toxins[0];
     assert.match(chat.at(-1).content, /Neuro-stun<\/strong> \(toxin, inhalation, 8S stun\): immediately/);
     // Body 5 (dwarf +1) + 2 dwarf toxin dice + 2 tracheal filter = 9 dice
     faces.push(1, 1, 1, 1, 1, 1, 1, 1, 2);
@@ -4352,7 +4352,7 @@ describe("v0.31.0 toxins, drugs, hazards, stun weapons, statuses", () => {
       assert.equal(a.system.drugs.length, 0);
     } finally { delete g.game.actors; }
     assert.equal(a.system.derived.initiativeDice, before.d);
-    const c = chat.at(-1).flags.sr2e.drugCrash;
+    const c = chat.at(-1).flags.shadowrun2e_unified.drugCrash;
     assert.deepEqual({ p: c.power, l: c.level }, { p: 6, l: "M" });
     faces.push(1, 1, 1, 2);
     await a.resistToxin({ name: c.name, vector: "ingestion", power: c.power, level: c.level, damageType: "stun", label: "Jazz crash" });
@@ -4456,8 +4456,8 @@ describe("v0.32.0 perception, social tests, grunt groups, morale", () => {
     const r = await face.socialTest("Etiquette", mark.uuid);
     assert.equal(faces.length, n - 3, "the target doesn't roll");
     assert.deepEqual(r, { winner: "initiator", net: 1 });
-    assert.equal(chat.at(-1).flags.sr2e.contest.oneSided, true);
-    assert.equal(chat.at(-1).flags.sr2e.contest.sides.length, 1);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.contest.oneSided, true);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.contest.sides.length, 1);
     assert.match(chat.at(-1).content, /It works\./);
     faces.push(2, 1, 1);
     assert.deepEqual(await face.socialTest("Etiquette", mark.uuid), { winner: "none", net: 0 });
@@ -4473,7 +4473,7 @@ describe("v0.32.0 perception, social tests, grunt groups, morale", () => {
     await g4.syncCondition("ok", { physical: true, stun: false });
     assert.deepEqual({ d: g4.system.grunts.down, p: g4.system.monitor.physical }, { d: 1, p: 0 });
     assert.match(chat.at(-1).content, /2 standing/);
-    assert.equal(chat.at(-1).flags.sr2e.morale.actorUuid, g4.uuid);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.morale.actorUuid, g4.uuid);
     // The group attacks with each standing grunt.
     let calls = 0;
     const orig = g4.attackWith;
@@ -4576,7 +4576,7 @@ describe("v0.33.0 upkeep: Karma, nuyen, lifestyle, contacts, buying", () => {
     const f = await a.findItem("m");
     assert.deepEqual(f, { found: true, hours: 24, price: 300 });
     assert.match(chat.at(-1).content, /Found in <strong>24 hours<\/strong>/);
-    assert.deepEqual(chat.at(-1).flags.sr2e.buy, { actorUuid: a.uuid, itemId: "m", price: 300, name: "Medkit", qty: 1, hours: 24 });
+    assert.deepEqual(chat.at(-1).flags.shadowrun2e_unified.buy, { actorUuid: a.uuid, itemId: "m", price: 300, name: "Medkit", qty: 1, hours: 24 });
     assert.equal(await a.buyItem("m", 300), true);
     assert.equal(a.system.nuyen, 700);
     assert.equal(a.system.ledger.at(-1).reason, "Bought Medkit");
@@ -4655,7 +4655,7 @@ describe("v0.35.0 combat flow: delay, full defense, buying successes, disasters,
       assert.equal(a.currentPhaseKey()?.includes("cb0"), true);   // actions count to Pell's phase
       await a.endDelayedAction();
       assert.equal(a.isActing(), false);
-      await a.setFlag("sr2e", "delayed", { combatId: "cmb", round: 1, pass: 0 });
+      await a.setFlag("shadowrun2e_unified", "delayed", { combatId: "cmb", round: 1, pass: 0 });
       c.pass = 1;
       assert.equal(a.isDelaying(), false);
     } finally { delete g.game.combat; }
@@ -4685,12 +4685,12 @@ describe("v0.35.0 combat flow: delay, full defense, buying successes, disasters,
     const a = person([gun]);
     faces.push(5, 1, 1, 1, 1);                                      // 1 success at TN 4
     await a.rollAttribute("quickness", { targetNumber: 4 });
-    const snap = chat.at(-1).flags.sr2e.test;
+    const snap = chat.at(-1).flags.shadowrun2e_unified.test;
     assert.match(chat.at(-1).content, /data-sr2e-action="buySuccess"/);
     assert.equal(await a.buySuccess(snap), true);
     assert.equal(a.system.karma.pool, 2);
     assert.match(chat.at(-1).content, /bought success #1/);
-    assert.equal(chat.at(-1).flags.sr2e.test.successes, 2);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.test.successes, 2);
     (RULES.DISASTERS as any).prompt = true;
     try {
       faces.push(1, 1, 1, 1, 1);
@@ -4711,7 +4711,7 @@ describe("v0.35.0 combat flow: delay, full defense, buying successes, disasters,
     const a = person([], { name: "A", karma: { good: 0, pool: 3, poolSpent: 2, career: 0 } });
     faces.push(2, 2, 2, 2);
     await a.resistDamage({ power: 6, level: "M", type: "physical" });
-    const snap = chat.at(-1).flags.sr2e.test;
+    const snap = chat.at(-1).flags.shadowrun2e_unified.test;
     assert.match(chat.at(-1).content, /sr2e-banner-taken">Takes M physical/);
     assert.equal(a.system.monitor.physical, 3);
     assert.equal(await SR2Actor.gmUndoSoak(snap), true);
@@ -4827,11 +4827,11 @@ describe("v0.37.0 gear and combat leftovers", () => {
   test("barriers break; charges are set with Demolitions; grenades thrown back", async (t) => {
     t.after(oldWay({"BOOK_V78.barriers.mode": "subtract"})); // v0.78.0: the old rule (a house rule)
     chat.length = 0;
-    const wall: any = { flags: { sr2e: { barrierRating: 6 } }, move: 20, sight: 20, light: 20, sound: 20, getFlag(_s: string, k: string) { return this.flags.sr2e[k]; }, async update(d: any) { for (const [k, v] of Object.entries(d)) { if (k.startsWith("flags.sr2e.")) this.flags.sr2e[k.slice(11)] = v; else this[k] = v; } } };
+    const wall: any = { flags: { shadowrun2e_unified: { barrierRating: 6 } }, move: 20, sight: 20, light: 20, sound: 20, getFlag(_s: string, k: string) { return this.flags.shadowrun2e_unified[k]; }, async update(d: any) { for (const [k, v] of Object.entries(d)) { if (k.startsWith("flags.shadowrun2e_unified.")) this.flags.shadowrun2e_unified[k.slice(26)] = v; else this[k] = v; } } };
     assert.deepEqual(await SR2Actor.damageWall(wall, 9), { damage: 3, left: 3, breached: false });
     assert.deepEqual(await SR2Actor.damageWall(wall, 4, { antiVehicle: true }), { damage: 5, left: 0, breached: true });
     assert.equal(wall.move, 0);
-    assert.equal(wall.flags.sr2e.breached.move, 20);
+    assert.equal(wall.flags.shadowrun2e_unified.breached.move, 20);
     const a = person([
       { id: "d", type: "skill", name: "Demolitions", system: { rating: 3, attribute: "intelligence" } },
       { id: "c4", type: "gear", name: "C-12", system: { quantity: 2, weight: 0, explosive: { power: 10, perMetre: 1, shaped: false } } },
@@ -4841,7 +4841,7 @@ describe("v0.37.0 gear and combat leftovers", () => {
     assert.deepEqual(await a.setCharge("c4"), { power: 12 });
     assert.equal(a.items.get("c4").system.quantity, 1);
     // v0.81.0 (SEC1-12): the card carries the charge's id (storedCharge reads its Power from the setter's record).
-    const { chargeId, ...charge } = chat.at(-1).flags.sr2e.charge;
+    const { chargeId, ...charge } = chat.at(-1).flags.shadowrun2e_unified.charge;
     assert.deepEqual(charge, { actorUuid: a.uuid, name: "C-12", power: 12, perMetre: 1, shaped: false });
     assert.equal(SR2Actor.storedCharge(a, chargeId)?.power, 12);
     faces.push(5, 1, 1, 1);
@@ -4967,8 +4967,8 @@ describe("v0.39.0 magic and critters", () => {
     const t = who({ name: "Guard" }, [{ id: "ar", type: "armor", name: "Jacket", system: { worn: true, ballistic: 5, impact: 3, degraded: 0 } }]);
     faces.push(5, 5, 1, 1, ...Array(6).fill(5));                      // Sorcery 4: 2 successes; drain
     await a.castSpell(spell("Fireball", { spellType: "physical", elemental: true, element: "fire", learnedForce: 5, damageType: "physical" }), { force: 5, targetUuid: t.uuid });
-    await t.defend({ ...chat[0].flags.sr2e.attack, attackSuccesses: 2, targetNumber: 4 }, 0);
-    assert.deepEqual(chat.at(-1).flags.sr2e.elementEffect, { targetUuid: t.uuid, kind: "fire", force: 5 });
+    await t.defend({ ...chat[0].flags.shadowrun2e_unified.attack, attackSuccesses: 2, targetNumber: 4 }, 0);
+    assert.deepEqual(chat.at(-1).flags.shadowrun2e_unified.elementEffect, { targetUuid: t.uuid, kind: "fire", force: 5 });
     assert.match(chat.at(-1).content, /data-sr2e-action="elementEffect"[^>]*>Catches fire/);
     faces.push(1, 1, 1, 1);                                            // Body 4 vs Force 5: stunned
     await t.applyElementEffect("shock", 5);
@@ -5025,11 +5025,11 @@ describe("v0.39.0 magic and critters", () => {
       const lead = mage({ name: "Leader" }, [bolt]);
       const victim = mage({ name: "Victim" });
       assert.equal(await lead.castSpell(lead.items.get("sp-Death Touch"), { force: 4, targetUuid: victim.uuid, ritual: { teamUuids: [], materialLink: true } }), null);
-      const card = chat.find((c: any) => c.flags?.sr2e?.ritualPrep);
-      const prep = card.flags.sr2e.ritualPrep;
+      const card = chat.find((c: any) => c.flags?.shadowrun2e_unified?.ritualPrep);
+      const prep = card.flags.shadowrun2e_unified.ritualPrep;
       assert.match(card.content, /Ritual: Death Touch \(Force 4\)/);
       // v0.45.0: the (awakened) target gets a chance to notice it.
-      assert.equal(chat.at(-1).flags.sr2e.ritualNotice.targetUuid, victim.uuid);
+      assert.equal(chat.at(-1).flags.shadowrun2e_unified.ritualNotice.targetUuid, victim.uuid);
       assert.equal(prep.hours, 4);
       faces.push(5, 5, 1, 1, ...Array(6).fill(5));
       assert.equal(await SR2Actor.sendRitual(prep, true), true);
@@ -5047,8 +5047,8 @@ describe("v0.39.0 magic and critters", () => {
     chat.length = 0;
     faces.push(5, 5, 5, 5, 5, 5, 5, 5);
     await a.attackWith(SR2Actor.unarmed(), { targetUuid: "Actor.target" } as any);
-    const atk = chat.find((m: any) => m.flags?.sr2e?.attack);
-    assert.equal(atk?.flags.sr2e.attack.ignoreImmunity, true);
+    const atk = chat.find((m: any) => m.flags?.shadowrun2e_unified?.attack);
+    assert.equal(atk?.flags.shadowrun2e_unified.attack.ignoreImmunity, true);
     faces.length = 0; chat.length = 0;
     assert.deepEqual(a.woundModifiers().map((m: any) => m.value), [1]);    // 3 boxes, 2 ignored: Light
     faces.push(5, 1);                                                        // two combat sense dice
@@ -5077,7 +5077,7 @@ describe("v0.39.0 magic and critters", () => {
     await c.resistFromState({ targetUuid: c.uuid, melee: false, damageType: "physical", power: 6, level: "M", material: "silver" } as any);
     assert.ok(chat.some((m: any) => /vulnerable to silver/.test(m.content)));
     assert.equal(c.system.monitor.physical, 6);                            // S
-    assert.equal(c.getFlag("sr2e", "noRegen"), 6);
+    assert.equal(c.getFlag("shadowrun2e_unified", "noRegen"), 6);
     c.system.monitor.physical = 9;
     assert.equal(await c.regenerateTick(), 3);
     assert.equal(c.system.monitor.physical, 6);
@@ -5087,7 +5087,7 @@ describe("v0.39.0 magic and critters", () => {
     faces.push(5, 5, 5, 1, 1, 1);
     await c.usePower(c.items.get("ed"), { targetUuid: v.uuid });
     faces.push(1, 1, 1, 1, 1, 1);
-    await v.resistSpell(chat.at(-1).flags.sr2e.spell, 0);
+    await v.resistSpell(chat.at(-1).flags.shadowrun2e_unified.spell, 0);
     assert.match(chat.at(-1).content, /Victim loses 3 Essence; Wolf gains 3/);
     assert.equal(v.system.derived.essence, 3);
     assert.equal(c.system.derived.essence, 9);
@@ -5110,7 +5110,7 @@ describe("v0.39.0 magic and critters", () => {
     const a = mage({ astral: "perceiving" }, [foc("f1"), foc("f2")]);
     faces.push(1, 1, 1, 1, 1, 1);                                         // Willpower 6 vs foci 8
     await a.focusAddictionTest();
-    assert.equal(a.getFlag("sr2e", "focusAddict"), true);
+    assert.equal(a.getFlag("shadowrun2e_unified", "focusAddict"), true);
     await a.items.get("f1").update({ "system.active": false });
     await a.items.get("f2").update({ "system.active": false });
     faces.push(5, 1, 1, 1, ...Array(6).fill(5));
@@ -5129,13 +5129,13 @@ describe("v0.39.0 magic and critters", () => {
     } finally { (RULES.MAGIC_V39.domains as any).enforce = "off"; }
     // Cleaning a signature.
     const owner = who({ name: "Caster" });
-    await owner.setFlag("sr2e", "signatures", [{ id: "sg", sceneId: "s39", kind: "spell", label: "Fireball", force: 4, worldTime: 0 }]);
+    await owner.setFlag("shadowrun2e_unified", "signatures", [{ id: "sg", sceneId: "s39", kind: "spell", label: "Fireball", force: 4, worldTime: 0 }]);
     faces.push(5, 5, 5, 1);
     await a.cleanSignature({ id: "sg", sceneId: "s39", kind: "spell", label: "Fireball", force: 4, worldTime: 0, actorUuid: owner.uuid });
     assert.match(chat.at(-1).content, /1 hour left|1 h left/);
     faces.push(5, 5, 1, 1);
-    await a.cleanSignature({ ...owner.getFlag("sr2e", "signatures")[0], actorUuid: owner.uuid });
-    assert.equal(owner.getFlag("sr2e", "signatures").length, 0);
+    await a.cleanSignature({ ...owner.getFlag("shadowrun2e_unified", "signatures")[0], actorUuid: owner.uuid });
+    assert.equal(owner.getFlag("shadowrun2e_unified", "signatures").length, 0);
   });
 });
 
@@ -5201,13 +5201,13 @@ describe("v0.40.0 Matrix leftovers: psychotropic IC, defensive utilities, frames
     const p = ic(h, { behavior: "psychotropic", category: "black", damageType: "stun", rating: 5, payload: "cyberphobia", name: "Psycho-5" });
     faces.push(5, 5, 5, 1, 1);                                       // 3 vs Evasion 5
     await p.icAttack({ targetUuid: a.uuid });
-    await a.defend(chat.at(-1).flags.sr2e.attack, 0);
+    await a.defend(chat.at(-1).flags.shadowrun2e_unified.attack, 0);
     const card = chat.at(-1);
     assert.match(card.content, /stun to the decker/);
     assert.match(card.content, /data-sr2e-action="psychotropic"[^>]*>Resist Cyberphobia \(Willpower vs 5\)/);
-    assert.deepEqual(card.flags.sr2e.psychotropic, { deckerUuid: a.uuid, icName: "Psycho-5", rating: 5, kind: "cyberphobia", hostUuid: h.uuid });
+    assert.deepEqual(card.flags.shadowrun2e_unified.psychotropic, { deckerUuid: a.uuid, icName: "Psycho-5", rating: 5, kind: "cyberphobia", hostUuid: h.uuid });
     faces.push(1, 1, 1, 2, 2);                                       // Willpower 5 vs 5: nothing
-    await a.resistPsychotropic(card.flags.sr2e.psychotropic);
+    await a.resistPsychotropic(card.flags.shadowrun2e_unified.psychotropic);
     assert.match(chat.at(-1).content, /Cyberphobia takes hold<\/strong> for 5 days/);
     assert.equal(a.system.derived.matrix.psyche.length, 1);
     noDetect(); faces.push(5, 1, 1, 1, 1);
@@ -5310,7 +5310,7 @@ describe("v0.40.0 Matrix leftovers: psychotropic IC, defensive utilities, frames
     await agent.matrixAttack({ targetUuid: k.uuid });
     assert.match(chat.at(-1).content, /Hit!<\/strong> 3 net successes: <strong>5S<\/strong> Matrix damage/);
     faces.push(1, 1, 1, 2);                                          // the IC's rating 4 vs 5
-    await k.resistFromState(chat.at(-1).flags.sr2e.damage);
+    await k.resistFromState(chat.at(-1).flags.shadowrun2e_unified.damage);
     assert.equal(k.system.matrix.monitor, 6);
     // IC can damage it (TN = its rating), but not cripple it.
     const k6 = ic(h, { name: "Killer-6" });
@@ -5546,14 +5546,14 @@ describe("v0.42.0 health and environment", () => {
     const a = person([], { name: "Patient" });
     const flu = tox("v", "VITAS-3", { kind: "disease", vector: "inhalation", power: 5, level: "S", damageType: "physical", incubationHours: 12, intervalHours: 24, recoveries: 2 });
     await gm.exposeTo(flu, [a.uuid]);
-    const state = chat.at(-1).flags.sr2e.toxins[0];
+    const state = chat.at(-1).flags.shadowrun2e_unified.toxins[0];
     faces.push(1, 1, 1, 1);
     await a.resistToxin(state);
     assert.match(chat.at(-1).content, /infected with VITAS-3/);
     assert.deepEqual({ n: a.system.diseases[0].nextAt, need: a.system.diseases[0].needed }, { n: 12 * H, need: 2 });
     g.game.actors = [a];
     try { await SR2Actor.timedEffects({ worldTime: 12 * H }); } finally { delete g.game.actors; }
-    assert.equal(chat.at(-1).flags.sr2e.diseaseTick.name, "VITAS-3");
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.diseaseTick.name, "VITAS-3");
     assert.equal(a.system.diseases[0].pending, true);
     g.game.time.worldTime = 12 * H;
     faces.push(1, 1, 5, 5);                                              // Body 4 vs 5: two successes, S -> M
@@ -5702,7 +5702,7 @@ describe("v0.43.0 gear and combat", () => {
     const card = chat.at(-1);
     assert.match(card.content, /armor 2/);
     assert.match(card.content, /data-sr2e-action="cyberDamage"/);
-    assert.deepEqual(card.flags.sr2e.cyberDamage, { actorUuid: a.uuid, location: "leftArm", level: "D" }); // v0.92.3: the wound's level rides along
+    assert.deepEqual(card.flags.shadowrun2e_unified.cyberDamage, { actorUuid: a.uuid, location: "leftArm", level: "D" }); // v0.92.3: the wound's level rides along
     faces.push(3, 2);                                                     // the arm on 1–3, the eyes on 1
     assert.deepEqual(await a.cyberDamageCheck("leftArm"), ["Cyberarm"]);
     assert.equal(a.items.get("arm").system.damaged, true);
@@ -5773,7 +5773,7 @@ describe("v0.43.0 gear and combat", () => {
     assert.equal(r.successes, 2);
     const card = chat[0];
     assert.match(card.content, /Van's Object Resistance/);
-    const d = card.flags.sr2e.damages[0];
+    const d = card.flags.shadowrun2e_unified.damages[0];
     assert.deepEqual({ t: d.targetUuid, p: d.power, l: d.level, av: d.antiVehicle, ia: d.ignoreArmor }, { t: v.uuid, p: 6, l: "M", av: true, ia: true });   // 2 net: hits; a stage needs 2 more
     // The van resists with Body; its armor doesn't count against the spell.
     chat.length = 0;
@@ -5809,7 +5809,7 @@ describe("v0.43.0 gear and combat", () => {
   test("timed charges go off by themselves on the GM's tick; walls are repaired", async (t) => {
     t.after(oldWay({"BOOK_V78.barriers.mode": "subtract"})); // v0.78.0: the old rule (a house rule)
     chat.length = 0;
-    const scene: any = { id: "s43", name: "Warehouse", flags: { sr2e: {} }, isOwner: true, getFlag(_s: string, k: string) { return this.flags.sr2e[k]; }, async setFlag(_s: string, k: string, v: any) { this.flags.sr2e[k] = v; } };
+    const scene: any = { id: "s43", name: "Warehouse", flags: { shadowrun2e_unified: {} }, isOwner: true, getFlag(_s: string, k: string) { return this.flags.shadowrun2e_unified[k]; }, async setFlag(_s: string, k: string, v: any) { this.flags.shadowrun2e_unified[k] = v; } };
     g.game.scenes = Object.assign([scene], { get: (id: string) => (id === scene.id ? scene : undefined) });
     g.canvas = { scene };
     const blown: any[] = [];
@@ -5832,15 +5832,15 @@ describe("v0.43.0 gear and combat", () => {
       assert.deepEqual({ p: blown[0].ctx.power, x: blown[0].point.x, n: blown[0].note }, { p: 11, x: 10, n: "C-12 goes off (timer)." });
       assert.equal(SR2Actor.armedCharges(scene).length, 0);
       // Walls: breached, listed, repaired by a test and then fully.
-      const wall: any = { id: "w1", flags: { sr2e: { barrierRating: 4 } }, move: 20, sight: 20, light: 20, sound: 20, getFlag(_s: string, k: string) { return this.flags.sr2e[k]; },
-        async update(d: any) { for (const [k, v] of Object.entries(d)) { if (k.startsWith("flags.sr2e.-=")) delete this.flags.sr2e[k.slice(13)]; else if (k.startsWith("flags.sr2e.")) this.flags.sr2e[k.slice(11)] = v; else this[k] = v; } } };
+      const wall: any = { id: "w1", flags: { shadowrun2e_unified: { barrierRating: 4 } }, move: 20, sight: 20, light: 20, sound: 20, getFlag(_s: string, k: string) { return this.flags.shadowrun2e_unified[k]; },
+        async update(d: any) { for (const [k, v] of Object.entries(d)) { if (k.startsWith("flags.shadowrun2e_unified.-=")) delete this.flags.shadowrun2e_unified[k.slice(28)]; else if (k.startsWith("flags.shadowrun2e_unified.")) this.flags.shadowrun2e_unified[k.slice(26)] = v; else this[k] = v; } } };
       scene.walls = [wall];
       await SR2Actor.damageWall(wall, 12);
       assert.deepEqual(SR2Actor.damagedWalls(scene).map((w: any) => ({ r: w.rating, f: w.full, b: w.breached })), [{ r: 0, f: 4, b: true }]);
       const builder = person([{ id: "b", type: "skill", name: "Building B/R", system: { rating: 3, attribute: "intelligence" } }]);
       faces.push(5, 5, 1);
       assert.equal(await builder.repairWallTest(wall), 2);
-      assert.deepEqual({ m: wall.move, br: wall.flags.sr2e.breached }, { m: 20, br: undefined });
+      assert.deepEqual({ m: wall.move, br: wall.flags.shadowrun2e_unified.breached }, { m: 20, br: undefined });
       assert.equal(await SR2Actor.repairWall(wall, { full: true }), 4);
       assert.equal(SR2Actor.damagedWalls(scene).length, 0);
     } finally {
@@ -5962,7 +5962,7 @@ describe("v0.44.0 characters and the street", () => {
     faces.push(5, 5, 5, 1);                                              // 3 successes
     faces.push(5, 1, 1, 1);                                              // seller 1
     assert.equal(await a.haggle({ itemId: "gun", price: 1000, name: "Pistol" }), 900);
-    assert.equal(chat.at(-1).flags.sr2e.buy.price, 900);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.buy.price, 900);
     faces.push(5, 5, 1, 1);
     faces.push(1, 1, 1, 1);
     assert.equal(await a.fence("gun"), 400);                             // 30% + 2 × 5%
@@ -6067,13 +6067,13 @@ describe("v0.45.0 magic and critters", () => {
     faces.push(6, 6, 6, 1, 1, 1, 1, 1, 1, 1);                // 7 dice vs 6: 3 successes (the sixes roll 1s)
     faces.push(1, 1, 1, 1, 1, 1);                            // the body: none
     assert.equal(await a.possess(t.uuid), true);
-    assert.equal(t.getFlag("sr2e", "possessedBy").name, "Someone");
+    assert.equal(t.getFlag("shadowrun2e_unified", "possessedBy").name, "Someone");
     t.system.prepareDerivedData();
     assert.equal(t.system.attributes.charisma.total, 5);
     assert.equal(t.system.derived.possessedBy, "Someone");
     await a.endPossession();
-    assert.equal(t.getFlag("sr2e", "possessedBy"), undefined);
-    assert.equal(a.getFlag("sr2e", "possessing"), undefined);
+    assert.equal(t.getFlag("shadowrun2e_unified", "possessedBy"), undefined);
+    assert.equal(a.getFlag("shadowrun2e_unified", "possessing"), undefined);
   });
 
   test("reflecting bounces the extra successes back at the caster", async () => {
@@ -6084,11 +6084,11 @@ describe("v0.45.0 magic and critters", () => {
     await t.resistSpell({ casterUuid: caster.uuid, targetUuid: t.uuid, spellName: "Stunbolt", force: 4, resistAttribute: "willpower", level: "M", damageType: "stun", casterSuccesses: 1 }, 0);
     const last = chat.at(-1);
     assert.match(last.content, /Reflected!/);
-    assert.deepEqual({ t: last.flags.sr2e.spell.targetUuid, s: last.flags.sr2e.spell.casterSuccesses, c: last.flags.sr2e.spell.casterUuid }, { t: caster.uuid, s: 2, c: t.uuid });
+    assert.deepEqual({ t: last.flags.shadowrun2e_unified.spell.targetUuid, s: last.flags.shadowrun2e_unified.spell.casterSuccesses, c: last.flags.shadowrun2e_unified.spell.casterUuid }, { t: caster.uuid, s: 2, c: t.uuid });
     // A reflected spell isn't reflected again, even by a reflecting caster.
     caster.system.metamagic = { reflecting: true };
     faces.push(5, 5, 5, 5, 5, 5);
-    await caster.resistSpell(last.flags.sr2e.spell, 0);
+    await caster.resistSpell(last.flags.shadowrun2e_unified.spell, 0);
     assert.doesNotMatch(chat.at(-1).content, /Reflected!/);
   });
 
@@ -6097,7 +6097,7 @@ describe("v0.45.0 magic and critters", () => {
     const a = mage();
     faces.push(5, 5, 5, 5);                                  // Sorcery 4 vs Force 5: 4
     await a.designSpell({ name: "Thunderclap", force: 5, category: "combat", spellType: "physical", area: true, damageLevel: "S" });
-    const f = chat.at(-1).flags.sr2e.formula;
+    const f = chat.at(-1).flags.shadowrun2e_unified.formula;
     assert.deepEqual({ m: f.system.drainModifier, l: f.system.drainLevel }, { m: 2, l: "S" });
     assert.match(chat.at(-1).content, /designed<\/strong> in 2 days/);
     assert.equal(await a.learnFormula(f.name, f.system), true);
@@ -6118,17 +6118,17 @@ describe("v0.45.0 magic and critters", () => {
     const c = who({ name: "Critter", type: "npc" }, [pw]);
     faces.push(5, 5, 5, 5, 5, 5);
     await c.usePower(c.items.get("pw"));
-    assert.equal(c.getFlag("sr2e", "powerEffects").length, 1);
+    assert.equal(c.getFlag("shadowrun2e_unified", "powerEffects").length, 1);
     c.system.prepareDerivedData();
     assert.equal(c.system.attributes.strength.total, 6);
     assert.equal(SR2Actor.powerEffectsFrom([c.uuid]).length, 1);
     assert.equal(await c.dropAllPowerEffects(), 1);
-    assert.equal(c.getFlag("sr2e", "powerEffects").length, 0);
+    assert.equal(c.getFlag("shadowrun2e_unified", "powerEffects").length, 0);
     const victim = who({ name: "Victim" });
     faces.push(1, 1, 1, 1, 1, 1);                            // resists with nothing
     await victim.resistSpell({ casterUuid: c.uuid, targetUuid: victim.uuid, spellName: "Slow", force: 6, resistAttribute: "willpower", level: "M", damageType: "stun", casterSuccesses: 4,
       noun: "power", effectOnly: true, resistPool: "none", powerEffect: { name: "Slow", attributes: { quickness: -1 }, perSuccess: true } }, 0);
-    assert.equal(victim.getFlag("sr2e", "powerEffects")[0].attributes.quickness, -RULES.OCCULT.powers.maxPerSuccess);
+    assert.equal(victim.getFlag("shadowrun2e_unified", "powerEffects")[0].attributes.quickness, -RULES.OCCULT.powers.maxPerSuccess);
     assert.match(chat.at(-1).content, /Slow: Quickness −3 while Critter sustains it/);
   });
 
@@ -6137,7 +6137,7 @@ describe("v0.45.0 magic and critters", () => {
     const pw = { id: "el", name: "Essence loss", type: "power", system: { active: false, special: "essenceLoss" } };
     const gh = who({ name: "Ghoul", type: "npc" }, [pw]);
     assert.equal(await gh.feed(), true);
-    assert.equal(gh.getFlag("sr2e", "lastFed"), 0);
+    assert.equal(gh.getFlag("shadowrun2e_unified", "lastFed"), 0);
     g.game.time.worldTime = 8 * 86400;
     assert.equal(gh.hungerInfo().hungry, true);
     faces.push(5, 5, 5, 5);
@@ -6145,7 +6145,7 @@ describe("v0.45.0 magic and critters", () => {
     assert.equal(r.targetNumber, 5);
     await gh.feed();
     assert.equal(gh.hungerInfo().hungry, false);
-    assert.equal(gh.getFlag("sr2e", "essenceLossAt"), 8 * 86400);
+    assert.equal(gh.getFlag("shadowrun2e_unified", "essenceLossAt"), 8 * 86400);
   });
 
   test("surgery: the ware works after recovery; bioware over the limit risks rejection", async (t) => {
@@ -6162,7 +6162,7 @@ describe("v0.45.0 magic and critters", () => {
     p.system.prepareDerivedData();
     assert.equal(p.system.attributes.strength.total, 4);      // not yet
     assert.match(chat.at(-1).content, /Rejection test/);
-    assert.equal(chat.at(-1).flags.sr2e.rejection.actorUuid, p.uuid);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.rejection.actorUuid, p.uuid);
     faces.push(2, 2, 1, 1);                                   // Body 4 vs 4 + 1: none
     await p.rejectionTest();
     assert.equal(p.items.get("mus").system.damaged, true);
@@ -6298,7 +6298,7 @@ describe("v0.46.0 Matrix and rigging", () => {
     const r = await c.icAttack({ targetUuid: a.uuid, behavior: "trace" });
     assert.equal(r.successes, 3);
     assert.match(chat.at(-1).content, /Construct-6 \(Trace, construct\) traces/);
-    await a.defend(chat.at(-1).flags.sr2e.attack, 0);
+    await a.defend(chat.at(-1).flags.shadowrun2e_unified.attack, 0);
     assert.equal(a.system.matrix.trace.active, true);
     assert.equal(a.system.matrix.trace.icName, "Construct-6");
   });
@@ -6314,14 +6314,14 @@ describe("v0.46.0 Matrix and rigging", () => {
     faces.push(5, 5, 5, 1, 1, 1);
     await b.icAttack({ targetUuid: a.uuid });
     assert.match(chat.at(-1).content, /a tortoise: Matrix damage only/);
-    await a.defend(chat.at(-1).flags.sr2e.attack, 0);
+    await a.defend(chat.at(-1).flags.shadowrun2e_unified.attack, 0);
     const hit = chat.at(-1);
     assert.match(hit.content, /Matrix damage/);
-    assert.equal(hit.flags.sr2e.damage.black, undefined);
+    assert.equal(hit.flags.shadowrun2e_unified.damage.black, undefined);
     a.system.matrix.monitor = 9;
     chat.length = 0;
     faces.push(1, 1, 1, 1);                                           // Bod 4: nothing
-    await a.resistFromState(hit.flags.sr2e.damage);
+    await a.resistFromState(hit.flags.shadowrun2e_unified.damage);
     assert.equal(a.system.matrix.jackedIn, false);
     assert.ok(!chat.some((x) => /data-sr2e-action="dumpShock"/.test(x.content)));
   });
@@ -6336,8 +6336,8 @@ describe("v0.46.0 Matrix and rigging", () => {
     const b = ic(h, { name: "Black-6", category: "black", damageType: "physical" });
     faces.push(5, 5, 5, 1, 1, 1);
     await b.icAttack({ targetUuid: a.uuid });
-    await a.defend(chat.at(-1).flags.sr2e.attack, 0);
-    const dmg = chat.at(-1).flags.sr2e.damage;
+    await a.defend(chat.at(-1).flags.shadowrun2e_unified.attack, 0);
+    const dmg = chat.at(-1).flags.shadowrun2e_unified.damage;
     assert.equal(dmg.damageType, "stun");
     faces.push(1, 1, 1, 1, 1, 1, 2);                                  // Willpower 5 + ICCM 2 = 7 dice
     await a.resistFromState(dmg);
@@ -6625,7 +6625,7 @@ describe("v0.46.0 Matrix and rigging", () => {
     assert.equal(d.system.jammed.active, false);
     assert.match(chat.at(-1).content, /data-sr2e-action="applyJam"/);
     // v0.81.0 (SEC1-11): the jammer rides along, so the GM's Apply is bound to it.
-    assert.deepEqual(chat.at(-1).flags.sr2e.jam, { droneUuid: d.uuid, by: "Van", rating: 4, jammerUuid: jammer.uuid });
+    assert.deepEqual(chat.at(-1).flags.shadowrun2e_unified.jam, { droneUuid: d.uuid, by: "Van", rating: 4, jammerUuid: jammer.uuid });
     d.isOwner = true;
     assert.equal(await SR2Actor.applyJam(d.uuid, "Van", 4), true);
     assert.equal(d.system.jammed.active, true);
@@ -6776,14 +6776,14 @@ describe("v0.47.0 combat and gear", () => {
     const bolt = (spellType: string) => ({ name: spellType === "mana" ? "Manabolt" : "Powerbolt", system: { category: "combat", spellType, learnedForce: 5, damageLevel: "M", damageType: "physical", targetNumber: 4, drainModifier: 0, drainLevel: "M" } });
     assert.equal(await m.castAtObject(bolt("mana"), { objectKind: "lowTech" }), null);
     assert.match(warnings.at(-1) ?? "", /mana spell: it has no effect on objects/);
-    const wall: any = { id: "w", flags: { sr2e: { barrierRating: 6 } }, move: 20, sight: 20, light: 20, sound: 20, getFlag(_s: string, k: string) { return this.flags.sr2e[k]; }, async update(d: any) { for (const [k, v] of Object.entries(d)) { if (k.startsWith("flags.sr2e.")) this.flags.sr2e[k.slice(11)] = v; else this[k] = v; } } };
+    const wall: any = { id: "w", flags: { shadowrun2e_unified: { barrierRating: 6 } }, move: 20, sight: 20, light: 20, sound: 20, getFlag(_s: string, k: string) { return this.flags.shadowrun2e_unified[k]; }, async update(d: any) { for (const [k, v] of Object.entries(d)) { if (k.startsWith("flags.shadowrun2e_unified.")) this.flags.shadowrun2e_unified[k.slice(26)] = v; else this[k] = v; } } };
     faces.push(5, 5, 1, 1);                                               // Sorcery 4 vs low-tech TN 5: 2 successes
     faces.push(5, 5, 5, 5, 5);                                            // drain
     const r = await m.castAtObject(bolt("physical"), { force: 5, objectKind: "lowTech", wall });
     assert.equal(r.targetNumber, 5);
     assert.equal(r.successes, 2);
     assert.ok(chat.some((c) => /takes Power 7/.test(c.content)));
-    assert.equal(wall.flags.sr2e.barrierRating, 5);                       // Power 7 over rating 6: −1
+    assert.equal(wall.flags.shadowrun2e_unified.barrierRating, 5);                       // Power 7 over rating 6: −1
     assert.ok(chat.some((c) => /Drain/.test(c.content)));
     assert.equal(faces.length, 0);
     // A player can't change walls: the GM gets a card to apply it, and the drain still follows.
@@ -6794,9 +6794,9 @@ describe("v0.47.0 combat and gear", () => {
       faces.push(5, 5, 5, 1);
       faces.push(5, 5, 5, 5, 5);
       await m.castAtObject(bolt("physical"), { force: 5, objectKind: "lowTech", wall });
-      const card = chat.find((c) => c.flags?.sr2e?.spellWall);
-      assert.deepEqual(card.flags.sr2e.spellWall, { wallUuid: "Scene.s.Wall.w", power: 8, label: "Powerbolt on a wall" });
-      assert.equal(wall.flags.sr2e.barrierRating, 5);
+      const card = chat.find((c) => c.flags?.shadowrun2e_unified?.spellWall);
+      assert.deepEqual(card.flags.shadowrun2e_unified.spellWall, { wallUuid: "Scene.s.Wall.w", power: 8, label: "Powerbolt on a wall" });
+      assert.equal(wall.flags.shadowrun2e_unified.barrierRating, 5);
       assert.ok(chat.some((c) => /Drain/.test(c.content)));
     } finally { g.game.user = { isGM: true, id: "gm1" }; }
   });
@@ -6818,7 +6818,7 @@ describe("v0.47.0 combat and gear", () => {
 
   test("disarming a timed charge: Demolitions vs a TN raised by the setter's successes; all ones blows it", async () => {
     chat.length = 0;
-    const scene: any = { id: "s47", name: "Vault", flags: { sr2e: {} }, isOwner: true, getFlag(_s: string, k: string) { return this.flags.sr2e[k]; }, async setFlag(_s: string, k: string, v: any) { this.flags.sr2e[k] = v; } };
+    const scene: any = { id: "s47", name: "Vault", flags: { shadowrun2e_unified: {} }, isOwner: true, getFlag(_s: string, k: string) { return this.flags.shadowrun2e_unified[k]; }, async setFlag(_s: string, k: string, v: any) { this.flags.shadowrun2e_unified[k] = v; } };
     g.game.scenes = Object.assign([scene], { get: (id: string) => (id === scene.id ? scene : undefined) });
     g.canvas = { scene };
     const blown: any[] = [];
@@ -6883,9 +6883,9 @@ describe("v0.48.0 health, magic and critters", () => {
   const scene: any = { id: "s48", name: "Test scene", flags: {} as any, drawings: Object.assign(drawings, { get: (id: string) => drawings.find((d) => d.id === id) ?? null }),
     getFlag(_s: string, k: string) { return this.flags[k]; }, async setFlag(_s: string, k: string, v: any) { this.flags[k] = v; },
     async createEmbeddedDocuments() { return [{ id: `dr${Math.random()}` }]; }, async deleteEmbeddedDocuments() { return []; } };
-  const doc = (data: any) => ({ ...data, flags: { sr2e: { ...(data.flags?.sr2e ?? {}) } },
-    getFlag(_s: string, k: string) { return this.flags.sr2e[k]; },
-    async update(d: any) { for (const [k, v] of Object.entries(d)) { if (k.startsWith("flags.sr2e.-=")) delete this.flags.sr2e[k.slice(13)]; else if (k.startsWith("flags.sr2e.")) this.flags.sr2e[k.slice(11)] = v; else (this as any)[k] = v; } } });
+  const doc = (data: any) => ({ ...data, flags: { shadowrun2e_unified: { ...(data.flags?.shadowrun2e_unified ?? {}) } },
+    getFlag(_s: string, k: string) { return this.flags.shadowrun2e_unified[k]; },
+    async update(d: any) { for (const [k, v] of Object.entries(d)) { if (k.startsWith("flags.shadowrun2e_unified.-=")) delete this.flags.shadowrun2e_unified[k.slice(28)]; else if (k.startsWith("flags.shadowrun2e_unified.")) this.flags.shadowrun2e_unified[k.slice(26)] = v; else (this as any)[k] = v; } } });
   const walls: any[] = [];
   before(() => {
     g.game.scenes = { viewed: scene, current: scene, get: (id: string) => (id === scene.id ? scene : null), contents: [scene] };
@@ -6911,23 +6911,23 @@ describe("v0.48.0 health, magic and critters", () => {
     const prevInt = RULES.FIRE.intensity;
     (RULES.FIRE as any).intensity = "blaze";
     try {
-      const wall = doc({ id: "w1", c: [150, -500, 150, 500], move: 20, sight: 20, light: 20, sound: 20, flags: { sr2e: { burns: true, barrierRating: 2 } } });
+      const wall = doc({ id: "w1", c: [150, -500, 150, 500], move: 20, sight: 20, light: 20, sound: 20, flags: { shadowrun2e_unified: { burns: true, barrierRating: 2 } } });
       walls.push(wall);
       g.canvas.walls.placeables = walls.map((d) => ({ document: d }));
-      drawings.push(doc({ id: "fuel1", x: 500, y: -100, shape: { width: 200, height: 200 }, flags: { sr2e: { fuel: "heavy" } } }));
+      drawings.push(doc({ id: "fuel1", x: 500, y: -100, shape: { width: 200, height: 200 }, flags: { shadowrun2e_unified: { fuel: "heavy" } } }));
       const victim = who({ name: "Victim" });
       place(victim, 300, 0);                                  // 3 m away: in the smoke, not the flames yet
       const f = await SR2Actor.startFire({ x: 0, y: 0 }, { source: "test" });
       assert.equal(f.fuel, undefined);
       // One spread: radius 2, a blaze: the wall at 1.5 m burns through (rating 2 → 0); the fuel at 5 m isn't reached.
       await SR2Actor.fireTicks({ round: null, worldTime: 0 }, 1);
-      assert.equal(wall.flags.sr2e.barrierRating, 0);
+      assert.equal(wall.flags.shadowrun2e_unified.barrierRating, 0);
       assert.equal(wall.move, 0);
-      assert.ok(wall.flags.sr2e.breached);
+      assert.ok(wall.flags.shadowrun2e_unified.breached);
       const card = chat.at(-1);
       assert.match(card.content, /A wall burns through/);
       assert.match(card.content, /In the smoke/);
-      assert.deepEqual(card.flags.sr2e.smokeInhale.uuids, [victim.uuid]);
+      assert.deepEqual(card.flags.shadowrun2e_unified.smokeInhale.uuids, [victim.uuid]);
       // The fuel's nearest edge is 5 m away: radius 3 and 4 don't reach it, 5 does.
       await SR2Actor.fireTicks({ round: null, worldTime: 0 }, 1);
       await SR2Actor.fireTicks({ round: null, worldTime: 0 }, 1);
@@ -6936,7 +6936,7 @@ describe("v0.48.0 health, magic and critters", () => {
       const fires = SR2Actor.sceneFires(scene);
       assert.equal(fires.length, 2);
       assert.equal(fires[1].fuel, "heavy");
-      assert.equal(drawings[0].flags.sr2e.fuelFire, fires[1].id);
+      assert.equal(drawings[0].flags.shadowrun2e_unified.fuelFire, fires[1].id);
       assert.match(chat.at(-1).content, /Accelerant catches fire/);
       // Burning out leaves smoke for lingerTurns, then it clears.
       const first = SR2Actor.sceneFires(scene)[0];
@@ -6962,10 +6962,10 @@ describe("v0.48.0 health, magic and critters", () => {
     useCanvas();
     (RULES.FIRE as any).draw = false;
     try {
-      drawings.push(doc({ id: "fuel2", x: -100, y: -100, shape: { width: 200, height: 200 }, flags: { sr2e: { fuel: "light" } } }));
+      drawings.push(doc({ id: "fuel2", x: -100, y: -100, shape: { width: 200, height: 200 }, flags: { shadowrun2e_unified: { fuel: "light" } } }));
       const f = await SR2Actor.startFire({ x: 0, y: 0 }, { source: "a match" });
       assert.equal(f.fuel, "light");
-      assert.equal(drawings[0].flags.sr2e.fuelFire, f.id);
+      assert.equal(drawings[0].flags.shadowrun2e_unified.fuelFire, f.id);
       const a = who({ name: "Watcher" });
       const b = who({ name: "Sneaker" });
       place(a, -500, 50); place(b, 500, 50);
@@ -6973,7 +6973,7 @@ describe("v0.48.0 health, magic and critters", () => {
       assert.deepEqual(mods, [{ label: "Thermal smoke (flames)", value: RULES.COMBAT.smoke.thermal.normal }]);
       // GM: unmark the fuel.
       await SR2Actor.markFuel([drawings[0]], "");
-      assert.equal(drawings[0].flags.sr2e.fuel, undefined);
+      assert.equal(drawings[0].flags.shadowrun2e_unified.fuel, undefined);
     } finally { (RULES.FIRE as any).draw = true; }
   });
 
@@ -6987,7 +6987,7 @@ describe("v0.48.0 health, magic and critters", () => {
     const far = who({ name: "Far" });
     place(carrier, 0, 0); place(near, 150, 0); place(far, 900, 0);
     assert.equal(await carrier.spreadDisease(0), 1);
-    const st = chat.at(-1).flags.sr2e.toxins;
+    const st = chat.at(-1).flags.shadowrun2e_unified.toxins;
     assert.equal(st.length, 1);
     assert.equal(st[0].targetUuid, near.uuid);
     assert.equal(st[0].vector, "inhalation");
@@ -7018,9 +7018,9 @@ describe("v0.48.0 health, magic and critters", () => {
     await victim.resistDamage({ power: 6, level: "M", type: "physical", armor: 0, infection: toxin });
     const card = chat.at(-1);
     assert.match(card.content, /Resist infection/);
-    assert.equal(card.flags.sr2e.infection.targetUuid, victim.uuid);
+    assert.equal(card.flags.shadowrun2e_unified.infection.targetUuid, victim.uuid);
     faces.push(1, 1, 1, 1);
-    await victim.resistToxin({ ...card.flags.sr2e.infection.toxin, kind: "disease" });
+    await victim.resistToxin({ ...card.flags.shadowrun2e_unified.infection.toxin, kind: "disease" });
     assert.equal(victim.system.diseases[0].name, RULES.CRITTERS.infection.name);
     assert.equal(victim.system.diseases[0].contagious, "blood");
     // Stun damage doesn't infect.
@@ -7094,7 +7094,7 @@ describe("v0.48.0 health, magic and critters", () => {
       (RULES.OCCULT.metamagic.possessing as any).skills = "possessor";
       // A skill only the body has: the possessor's mind doesn't know it.
       const body2 = who({ name: "Body2" }, [skill("dr", "Car", 5, "reaction")]);
-      await body2.setFlag("sr2e", "possessedBy", { uuid: a.uuid, name: "Someone", attributes: {}, skills: [] });
+      await body2.setFlag("shadowrun2e_unified", "possessedBy", { uuid: a.uuid, name: "Someone", attributes: {}, skills: [] });
       assert.equal(body2.possessedSkill(body2.items.get("dr")).system.rating, 0);
     } finally { (RULES.OCCULT.metamagic.possessing as any).skills = prev; }
   });
@@ -7119,10 +7119,10 @@ describe("v0.48.0 health, magic and critters", () => {
       assert.equal(created[0].system.services, 0);
       assert.equal(a.system.nuyen, 2000);
       assert.equal(a.system.karma.good, 97);
-      assert.equal(a.getFlag("sr2e", "familiar").allyUuid, "Actor.ally0");
+      assert.equal(a.getFlag("shadowrun2e_unified", "familiar").allyUuid, "Actor.ally0");
       assert.equal(await a.advanceInitiation(null, { ordeal: "familiar" }), true);
       assert.equal(a.system.initiateGrade, 2);
-      assert.equal(a.getFlag("sr2e", "familiar").usedForGrade, 2);
+      assert.equal(a.getFlag("shadowrun2e_unified", "familiar").usedForGrade, 2);
       // Meditation: a failure postpones without spending Karma; a success goes ahead.
       const karma = a.system.karma.good;
       faces.push(...Array(6).fill(1));
@@ -7138,13 +7138,13 @@ describe("v0.48.0 health, magic and critters", () => {
       // Deed: a player's initiation waits for the GM.
       g.game.user.isGM = false;
       assert.equal(await a.advanceInitiation("shielding", { ordeal: "deed" }), false);
-      assert.equal(a.getFlag("sr2e", "pendingInitiation").grade, 5);
+      assert.equal(a.getFlag("shadowrun2e_unified", "pendingInitiation").grade, 5);
       assert.match(chat.at(-1).content, /The deed is done \(GM\)/);
       g.game.user.isGM = true;
-      const p = a.getFlag("sr2e", "pendingInitiation");
+      const p = a.getFlag("shadowrun2e_unified", "pendingInitiation");
       assert.equal(await a.advanceInitiation(p.technique, { ordeal: p.ordeal, deedDone: true }), true);
       assert.equal(a.system.metamagic.shielding, true);
-      assert.equal(a.getFlag("sr2e", "pendingInitiation"), undefined);
+      assert.equal(a.getFlag("shadowrun2e_unified", "pendingInitiation"), undefined);
     } finally { delete g.Actor.create; }
   });
 
@@ -7155,15 +7155,15 @@ describe("v0.48.0 health, magic and critters", () => {
     const prevInt = RULES.FIRE.intensity;
     (RULES.FIRE as any).intensity = "burning";
     try {
-      const wall = doc({ id: "w0", c: [100, -500, 100, 500], move: 20, sight: 20, light: 20, sound: 20, flags: { sr2e: { burns: true, barrierRating: 0 } } });
+      const wall = doc({ id: "w0", c: [100, -500, 100, 500], move: 20, sight: 20, light: 20, sound: 20, flags: { shadowrun2e_unified: { burns: true, barrierRating: 0 } } });
       walls.push(wall);
       g.canvas.walls.placeables = walls.map((d) => ({ document: d }));
       await SR2Actor.startFire({ x: 0, y: 0 }, { source: "test" });
       await SR2Actor.fireTicks({ round: null, worldTime: 0 }, 1);
-      assert.equal(wall.flags.sr2e.barrierRating, RULES.FIRE.walls.defaultRating - 1);
+      assert.equal(wall.flags.shadowrun2e_unified.barrierRating, RULES.FIRE.walls.defaultRating - 1);
     } finally { (RULES.FIRE as any).draw = true; (RULES.FIRE as any).intensity = prevInt; }
     const body = who({ name: "Guard" });
-    await body.setFlag("sr2e", "possessedBy", { uuid: "x", name: "Mage", attributes: {}, skills: [{ name: "Athletics", rating: 6, attribute: "body", kind: "active", specialization: "", specializationRating: 0, concentration: "", concentrationRating: 0 }] });
+    await body.setFlag("shadowrun2e_unified", "possessedBy", { uuid: "x", name: "Mage", attributes: {}, skills: [{ name: "Athletics", rating: 6, attribute: "body", kind: "active", specialization: "", specializationRating: 0, concentration: "", concentrationRating: 0 }] });
     assert.equal(body.findSkill("Athletics").system.rating, 6);
     const r = who({ name: "Rad2", diseases: [{ name: "Severe radiation sickness", power: 8, level: "S", damageType: "physical", intervalHours: 24, nextAt: 0, recovered: 0, needed: 3, pending: false, treated: false, contagious: "", infectedAt: 0, incubationHours: 0, source: "radiation" }], radiation: { dose: 20, at: 0 } });
     await r.addRadiation(3, 2);
@@ -7205,9 +7205,9 @@ describe("v0.48.0 health, magic and critters", () => {
     const card = chat.at(-1);
     assert.match(card.content, /Reflected!/);
     assert.match(card.content, /Resist power/);
-    assert.equal(card.flags.sr2e.spells[0].noun, "power");
-    assert.equal(card.flags.sr2e.spells[0].casterSuccesses, 4);
-    assert.equal(card.flags.sr2e.spells[0].reflected, true);
+    assert.equal(card.flags.shadowrun2e_unified.spells[0].noun, "power");
+    assert.equal(card.flags.shadowrun2e_unified.spells[0].casterSuccesses, 4);
+    assert.equal(card.flags.shadowrun2e_unified.spells[0].reflected, true);
     const prev = RULES.OCCULT.metamagic.reflecting.powers;
     try {
       (RULES.OCCULT.metamagic.reflecting as any).powers = false;
@@ -7217,7 +7217,7 @@ describe("v0.48.0 health, magic and critters", () => {
     } finally { (RULES.OCCULT.metamagic.reflecting as any).powers = prev; }
     faces.push(5, 5, 5, 5);
     await a.designSpell({ name: "Hex", force: 3, category: "combat", spellType: "mana", exclusive: true, fetish: true, restricted: true });
-    const d = chat.at(-1).flags.sr2e.formula;
+    const d = chat.at(-1).flags.shadowrun2e_unified.formula;
     assert.equal(d.system.exclusive, true);
     assert.equal(d.system.fetish, true);
     assert.equal(d.system.drainModifier, -1);
@@ -7348,7 +7348,7 @@ describe("v0.49.0 street, Matrix, rigging and security leftovers", () => {
       assert.equal(await a.removeQuality(lucky.id), false);
       assert.equal(await a.editQuality(lucky.id, { name: "Very lucky", kind: "edge", points: 6 }), false);
       assert.equal(JSON.stringify(a.system.qualities), before, "nothing changed until the GM approves");
-      const reqs = Object.values(a.flags?.sr2e?.requests ?? {}) as any[];
+      const reqs = Object.values(a.flags?.shadowrun2e_unified?.requests ?? {}) as any[];
       assert.deepEqual(reqs.map((r) => r.data.method).sort(), ["addQuality", "editQuality", "removeQuality"]);
       assert.ok(reqs.every((r) => r.kind === "quality" && !r.karma && !r.nuyen));
     } finally { g.game.user = prevUser; g.game.settings = prevSettings; g.foundry.utils.randomID = prevRandom; }
@@ -7373,7 +7373,7 @@ describe("v0.49.0 street, Matrix, rigging and security leftovers", () => {
     const a = person([{ id: "w", type: "weapon", name: "Hot gun", system: { cost: 1000, streetIndex: 1, heat: 2, heatAt: 0 } }]);
     faces.push(1, 1, 1, 1, 1, 1, 1, 1);                                // net 0
     assert.equal(await a.fence("w"), 200);                             // 30% − 2 × 5%
-    assert.equal(chat.at(-1).flags.sr2e.sell.heat, 2);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.sell.heat, 2);
     g.game.time.worldTime = 15 * 86400;                                // two weeks: cooled by 2
     faces.push(1, 1, 1, 1, 1, 1, 1, 1);
     assert.equal(await a.fence("w"), 300);
@@ -7394,7 +7394,7 @@ describe("v0.49.0 street, Matrix, rigging and security leftovers", () => {
     const scene: any = { tokens: [] };
     const npc = (name: string, pr: number, extra: any = {}) => {
       const a = person([], { name, type: "npc", professionalRating: pr, ...extra });
-      const t: any = { actor: a, parent: scene, actorLink: false, flags: { sr2e: { moraleGroup: "M1" } }, getFlag(s: string, k: string) { return this.flags[s]?.[k]; }, async setFlag(s: string, k: string, v: any) { (this.flags[s] ??= {})[k] = v; }, async unsetFlag(s: string, k: string) { delete this.flags[s]?.[k]; } };
+      const t: any = { actor: a, parent: scene, actorLink: false, flags: { shadowrun2e_unified: { moraleGroup: "M1" } }, getFlag(s: string, k: string) { return this.flags[s]?.[k]; }, async setFlag(s: string, k: string, v: any) { (this.flags[s] ??= {})[k] = v; }, async unsetFlag(s: string, k: string) { delete this.flags[s]?.[k]; } };
       (a as any).token = t; scene.tokens.push(t);
       return a;
     };
@@ -7420,19 +7420,19 @@ describe("v0.49.0 street, Matrix, rigging and security leftovers", () => {
     g.game.actors = [a];
     g.game.time.worldTime = 10 * 86400;
     await SR2Actor.timedEffects({ worldTime: 10 * 86400 });
-    const card = chat.find((m: any) => m.flags?.sr2e?.evict);
+    const card = chat.find((m: any) => m.flags?.shadowrun2e_unified?.evict);
     assert.ok(card);
     assert.match(card.content, /10 days overdue/);
     const n = chat.length;
     await SR2Actor.timedEffects({ worldTime: 10 * 86400 + 60 });
-    assert.equal(chat.filter((m: any) => m.flags?.sr2e?.evict).length, 1);
+    assert.equal(chat.filter((m: any) => m.flags?.shadowrun2e_unified?.evict).length, 1);
     assert.equal(chat.length, n);
     assert.equal(await a.moveLifestyleDown(), "low");
     assert.equal(a.system.lifestyle.level, "low");
     a.system.lifestyle.level = "street";
     faces.push(1, 1, 1, 1);
     await a.findItem("x");
-    assert.equal(chat.at(-1).flags?.sr2e?.buy, undefined);             // not found (v0.71.0: a contest card, no Buy)
+    assert.equal(chat.at(-1).flags?.shadowrun2e_unified?.buy, undefined);             // not found (v0.71.0: a contest card, no Buy)
     assert.match(JSON.stringify(chat.at(-1)), /Street lifestyle/);
   });
 
@@ -7489,7 +7489,7 @@ describe("v0.49.0 street, Matrix, rigging and security leftovers", () => {
     assert.deepEqual(await j.jamTest(d.uuid), { jammed: true });
     assert.equal(d.system.matrix.jackedIn, false);
     assert.equal(d.system.matrix.jammed.active, true);
-    assert.equal(chat.at(-1).flags.sr2e.dumpShockFor, d.uuid);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.dumpShockFor, d.uuid);
     assert.equal(await d.jackIn(h.uuid), false);
     assert.match(warnings.at(-1) ?? "", /jammed by Jammer guy/);
     await d.unjamLink();
@@ -7573,7 +7573,7 @@ describe("v0.49.0 street, Matrix, rigging and security leftovers", () => {
     // A door wall wired to the site, forced by damage.
     const before = s.system.tally;
     g.game.actors = [s];
-    const wall: any = { id: "w1", parent: { id: "sc1" }, move: 20, sight: 20, light: 20, sound: 20, flags: { sr2e: { barrierRating: 4 } },
+    const wall: any = { id: "w1", parent: { id: "sc1" }, move: 20, sight: 20, light: 20, sound: 20, flags: { shadowrun2e_unified: { barrierRating: 4 } },
       getFlag(sc: string, k: string) { return this.flags[sc]?.[k]; }, async update(d: any) { for (const [k, x] of Object.entries(d)) if (!k.startsWith("flags.")) (this as any)[k] = x; else setPath(this, k, x); } };
     await SR2Actor.damageWall(wall, 10);
     assert.equal(s.system.tally, before + RULES.SECURITY.tamper.tally);
@@ -7606,7 +7606,7 @@ describe("v0.49.0 street, Matrix, rigging and security leftovers", () => {
     assert.equal(await s.forceDevice("cam", "force"), false);
     assert.equal(s.system.tally, t0 + RULES.SECURITY.tamper.tally);
     g.game.actors = [s];
-    const wall: any = { id: "w1", parent: { id: "sc1" }, move: 20, sight: 20, light: 20, sound: 20, flags: { sr2e: { barrierRating: 8 } },
+    const wall: any = { id: "w1", parent: { id: "sc1" }, move: 20, sight: 20, light: 20, sound: 20, flags: { shadowrun2e_unified: { barrierRating: 8 } },
       getFlag(sc: string, k: string) { return this.flags[sc]?.[k]; }, async update(d: any) { for (const [k, x] of Object.entries(d)) setPath(this, k, x); } };
     const t1 = s.system.tally;
     await SR2Actor.damageWall(wall, 10);                               // chipped, not breached
@@ -7621,7 +7621,7 @@ describe("v0.49.0 street, Matrix, rigging and security leftovers", () => {
     const base = person([], { name: "Gangers", type: "npc", professionalRating: 2, grunts: { size: 3, down: 1 } });
     const twin = person([], { name: "Gangers", type: "npc", professionalRating: 2, grunts: { size: 3, down: 1 } });
     (twin as any).id = (base as any).id;
-    for (const a of [base, twin]) { const t: any = { actor: a, parent: scene, flags: { sr2e: { moraleGroup: "M2" } }, getFlag(sc: string, k: string) { return this.flags[sc]?.[k]; } }; (a as any).token = t; scene.tokens.push(t); }
+    for (const a of [base, twin]) { const t: any = { actor: a, parent: scene, flags: { shadowrun2e_unified: { moraleGroup: "M2" } }, getFlag(sc: string, k: string) { return this.flags[sc]?.[k]; } }; (a as any).token = t; scene.tokens.push(t); }
     faces.push(5, 5);
     await base.moraleTest();
     assert.match(chat.at(-1).content, /2 down/);
@@ -7642,7 +7642,7 @@ describe("v0.49.0 street, Matrix, rigging and security leftovers", () => {
       w.isOwner = false;
       await gunner.fireMounted(v, w, { targetUuid: "x" });
       assert.equal(w.system.turret.facing, 0);
-      assert.equal(chat.at(-1).flags.sr2e.turretFacing.facing, 90);
+      assert.equal(chat.at(-1).flags.shadowrun2e_unified.turretFacing.facing, 90);
       assert.ok(chat.at(-1).whisper.includes("gm1"));
     } finally { SR2Actor.turretAim = saved; }
     const { SR2Item } = await import("../documents/index.ts");
@@ -7720,7 +7720,7 @@ describe("v0.50.0 target-number automation, switching modifiers off, the GM's re
   });
   afterEach(() => { g.ChatMessage.create = savedCreate; g.ChatMessage.create = async (d: any) => { chat.push(d); const m = { id: `m${chat.length}`, ...d }; created.push(m); return m; }; });
   // v0.81.1 (SEC1-1): a card has an author (here the GM's), as every Foundry message does: retarget re-runs it as them.
-  const asMessage = (d: any) => ({ author: { id: "gm1", isGM: true }, ...d, getFlag: (s: string, k: string) => d.flags?.[s]?.[k], async update(u: any) { for (const [k, v] of Object.entries(u)) setPath(d, k.replace(/^flags\.sr2e\./, "flags.sr2e."), v); } });
+  const asMessage = (d: any) => ({ author: { id: "gm1", isGM: true }, ...d, getFlag: (s: string, k: string) => d.flags?.[s]?.[k], async update(u: any) { for (const [k, v] of Object.entries(u)) setPath(d, k.replace(/^flags\.sr2e\./, "flags.shadowrun2e_unified."), v); } });
 
   test("perception reads light and distance by itself; walls mean by ear; 'block' means no roll", async (tt) => {
     // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
@@ -7859,17 +7859,17 @@ describe("v0.50.0 target-number automation, switching modifiers off, the GM's re
     faces.push(6, 3, 5, 4, 1);                       // body 4 dice; the 6 re-rolls a 1: totals 7, 3, 5, 4
     await a.rollAttribute("body", { targetNumber: 5 });
     const card = asMessage(chat.at(-1));
-    assert.equal(card.flags.sr2e.test.successes, 2);
+    assert.equal(card.flags.shadowrun2e_unified.test.successes, 2);
     const n = faces.length;
     await SR2Actor.retarget(card, { baseTargetNumber: 4, modifiers: [{ label: "GM adjustment", value: -0 }] });
     assert.equal(faces.length, n);                   // no dice rolled
     const next = chat.at(-1);
-    assert.equal(next.flags.sr2e.test.successes, 3);
-    assert.equal(next.flags.sr2e.test.retargets, 1);
+    assert.equal(next.flags.shadowrun2e_unified.test.successes, 3);
+    assert.equal(next.flags.shadowrun2e_unified.test.retargets, 1);
     assert.match(next.content, /TN changed by the GM \(5 → 4\)/);
-    assert.equal(card.flags.sr2e.supersededBy, created.at(-1).id);
+    assert.equal(card.flags.shadowrun2e_unified.supersededBy, created.at(-1).id);
     await SR2Actor.retarget(asMessage(next), { baseTargetNumber: 4, modifiers: [{ label: "Partial light", value: 2 }] });
-    assert.equal(chat.at(-1).flags.sr2e.test.successes, 1);   // only the 7 meets 6
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.test.successes, 1);   // only the 7 meets 6
     const saved = g.game.user;
     g.game.user = { isGM: false, id: "p1" };
     try { assert.equal(await SR2Actor.retarget(card, { baseTargetNumber: 2, modifiers: [] }), null); } finally { g.game.user = saved; }
@@ -7887,7 +7887,7 @@ describe("v0.50.0 target-number automation, switching modifiers off, the GM's re
     await SR2Actor.retarget(card, { baseTargetNumber: 4, modifiers: [{ label: "GM adjustment", value: 2 }], side: 0 });
     assert.match(chat.at(-1).content, /Ninja goes unnoticed/);
     assert.match(chat.at(-1).content, /Guard's TN changed by the GM \(4 → 6\)/);
-    assert.ok(card.flags.sr2e.supersededBy);
+    assert.ok(card.flags.shadowrun2e_unified.supersededBy);
   });
 });
 
@@ -8061,10 +8061,10 @@ describe("v0.50.0 review fixes", () => {
     faces.push(5, 1, 1); faces.push(5, 5, 5, 5, 5);
     await mage.castSpell(mage.items.get("ar"), { force: 3 });
     assert.equal(mage.system.sustaining.length, 1);
-    const card = msgs.find((m) => m.flags?.sr2e?.test?.label?.startsWith("Armor"));
+    const card = msgs.find((m) => m.flags?.shadowrun2e_unified?.test?.label?.startsWith("Armor"));
     await SR2Actor.retarget(card, { baseTargetNumber: 6, modifiers: [] });
     assert.equal(mage.system.sustaining.length, 0);
-    assert.equal(chat.at(-1).flags.sr2e.test.sustain.applied, false);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.test.sustain.applied, false);
   });
 
   test("a card a Karma re-roll replaced can't have its TN changed; the newer one can", async () => {
@@ -8074,16 +8074,16 @@ describe("v0.50.0 review fixes", () => {
     await a.rollAttribute("body", { targetNumber: 4 });
     const first = msgs.at(-1);
     faces.push(5, 5, 5, 5);
-    await a.karmaReroll(first.flags.sr2e.test);
+    await a.karmaReroll(first.flags.shadowrun2e_unified.test);
     const second = msgs.at(-1);
-    assert.equal(second.flags.sr2e.test.testId, first.flags.sr2e.test.testId);
+    assert.equal(second.flags.shadowrun2e_unified.test.testId, first.flags.shadowrun2e_unified.test.testId);
     assert.equal(SR2Actor.isReplaced(first), true);
     assert.equal(SR2Actor.isReplaced(second), false);
     assert.equal(await SR2Actor.retarget(first, { baseTargetNumber: 2, modifiers: [] }), null);
     assert.match(warnings.at(-1) ?? "", /replaced by a later one/);
     const third = await SR2Actor.retarget(second, { baseTargetNumber: 6, modifiers: [] });
     assert.ok(third);
-    assert.equal(third.flags.sr2e.retargetOf, second.id);
+    assert.equal(third.flags.shadowrun2e_unified.retargetOf, second.id);
   });
 
   test("the replacement keeps the original card's author", async () => {
@@ -8142,11 +8142,11 @@ describe("v0.51.0 GM tools: calculator roll, healing several, panel rows", () =>
     assert.deepEqual(card.whisper, ["gm1"]);
     assert.match(card.content, /Guard &lt;Perception&gt;/);
     assert.match(card.content, /sr2e-banner/);
-    assert.equal(card.flags.sr2e.gmRoll.successes, 1);
+    assert.equal(card.flags.shadowrun2e_unified.gmRoll.successes, 1);
     faces.push(1, 1);
     await SR2Actor.gmRoll({ dice: 2, targetNumber: 4, public: true });
     assert.equal(chat.at(-1).whisper, undefined);
-    assert.equal(chat.at(-1).flags.sr2e.gmRoll.botch, true);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.gmRoll.botch, true);
   });
 
   test("healing several: boxes off one track, both, or cleared; owners only; one GM card", async () => {
@@ -8185,7 +8185,7 @@ describe("v0.51.0 GM tools: calculator roll, healing several, panel rows", () =>
     // Recent rolls: test cards and dice only; the banner is the outcome.
     const strip = (h: string) => h.replace(/<[^>]*>/g, "").trim();
     assert.equal(recentRollRow({ content: "<p>hi</p>", flags: {} }, strip), null);
-    const rr = recentRollRow({ id: "m1", content: '<div class="sr2e-banner sr2e-banner-hit">Hit</div><h3>Attack</h3>', flags: { sr2e: { test: { successes: 2 } } }, speaker: { alias: "Guard" }, whisper: ["gm1"] }, strip);
+    const rr = recentRollRow({ id: "m1", content: '<div class="sr2e-banner sr2e-banner-hit">Hit</div><h3>Attack</h3>', flags: { shadowrun2e_unified: { test: { successes: 2 } } }, speaker: { alias: "Guard" }, whisper: ["gm1"] }, strip);
     assert.equal(rr.outcome, "Hit");
     assert.equal(rr.who, "Guard");
     assert.equal(rr.whisper, true);
@@ -8246,8 +8246,8 @@ describe("v0.56.0 magic and critters", () => {
     assert.deepEqual({ r: a.system.derived.reaction, d: a.system.derived.initiativeDice }, { r: before0.r + 1, d: before0.d + 1 });
     const entry = a.system.sustaining[0];
     assert.match(entry.effectId, /^sp/);
-    assert.equal(a.getFlag("sr2e", "powerEffects")[0].id, entry.effectId);
-    assert.equal(a.getFlag("sr2e", "powerEffects")[0].kind, "spell");
+    assert.equal(a.getFlag("shadowrun2e_unified", "powerEffects")[0].id, entry.effectId);
+    assert.equal(a.getFlag("shadowrun2e_unified", "powerEffects")[0].kind, "spell");
     // Wired reflexes 2 beat the spell's die: it adds nothing, and the sheet says why.
     const sam = who({ name: "Pell" }, [{ id: "wr", type: "cyberware", name: "Wired reflexes 2", system: { installed: true, initiativeDice: 2, reaction: 4, essenceCost: 3, grade: "standard", attributes: {} } }]);
     await SR2Actor.setPowerEffect(sam.uuid, SR2Actor.fxEntry(SR2Actor.spellFx(a.items.get("ir"), 4), 2, "x1", a.uuid, a.name));
@@ -8256,7 +8256,7 @@ describe("v0.56.0 magic and critters", () => {
     assert.ok(sam.system.derived.cyberWarnings.some((w: string) => /Magical reflexes do not stack/.test(w)));
     // Dropping the spell takes the change off its target.
     await hooksDrop(a, 0);
-    assert.equal(a.getFlag("sr2e", "powerEffects").length, 0);
+    assert.equal(a.getFlag("shadowrun2e_unified", "powerEffects").length, 0);
     a.system.prepareDerivedData();
     assert.equal(a.system.derived.initiativeDice, before0.d);
   });
@@ -8275,11 +8275,11 @@ describe("v0.56.0 magic and critters", () => {
     faces.push(6, 6, 6, 1, 1, 1, 1);                          // vs Willpower 6: 3 successes (6+1)
     faces.push(...Array(6).fill(5));                          // drain
     await b.castSpell(b.items.get("sl"), { targetUuid: v.uuid, force: 4 });
-    const card = chat.find((c: any) => c.flags?.sr2e?.spell);
+    const card = chat.find((c: any) => c.flags?.shadowrun2e_unified?.spell);
     assert.ok(card);
     faces.push(...Array(6).fill(1));                          // the victim resists with nothing
-    await v.resistSpell(card.flags.sr2e.spell, 0);
-    const e = v.getFlag("sr2e", "powerEffects")[0];
+    await v.resistSpell(card.flags.shadowrun2e_unified.spell, 0);
+    const e = v.getFlag("shadowrun2e_unified", "powerEffects")[0];
     assert.equal(e.attributes.quickness, -3);
     assert.equal(e.id, b.system.sustaining[0].effectId);
     assert.match(chat.at(-1).content, /Slow: Quickness −3 while Hexer sustains it/);
@@ -8317,7 +8317,7 @@ describe("v0.56.0 magic and critters", () => {
     const treat = spell("tr", "Treat", { category: "health", heals: true, healTrack: "physical", treat: true });
     const a = mage({}, [treat]);
     const p = who({ name: "Old wound", monitor: { physical: 3, stun: 0 } });
-    await p.setFlag("sr2e", "damagedAt", { physical: 0 });
+    await p.setFlag("shadowrun2e_unified", "damagedAt", { physical: 0 });
     g.game.time.worldTime = 3 * 3600;
     // v0.92.3: refused is the default now (Core p. 155: Treat "must" be within one hour).
     assert.equal(RULES.MAGIC_V56.healing.treatBlock, true);
@@ -8434,7 +8434,7 @@ describe("v0.56.0 magic and critters", () => {
     await sh.conjure({ force: 3, spiritKind: "nature", spiritType: "City spirit", domain: "city" });
     const city = chat.find((c: any) => /Summon City spirit/.test(c.content));
     assert.doesNotMatch(city.content, /totem/);
-    assert.equal(city.flags.sr2e.test.totalDice, 4);
+    assert.equal(city.flags.shadowrun2e_unified.test.totalDice, 4);
   });
 
   test("taking control of someone else's spirit (its summoner helps it)", async () => {
@@ -8494,7 +8494,7 @@ describe("v0.56.0 magic and critters", () => {
     const t = who({ name: "Far target" });
     faces.push(1, 1, 1, 1);                                   // unarmed, no successes
     await ad.attackWith(SR2Actor.unarmed(), { targetUuid: t.uuid, distanceStrike: true, measuredMetres: 3 });
-    assert.equal(chat.at(-1).flags.sr2e.test.attack.distance, true);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.test.attack.distance, true);
   });
 
   test("critter immunities: normal weapons armor, fire, poisons", async (t) => {
@@ -8547,24 +8547,24 @@ describe("v0.56.0 magic and critters", () => {
     faces.push(...Array(6).fill(5));
     await a.castSpell(a.items.get("ir"), { targetUuid: ally.uuid, force: 4 });
     assert.ok(!chat.some((c: any) => /An effect on Ally ends/.test(c.content)));
-    const card = chat.find((c: any) => c.flags?.sr2e?.test?.powerEffect);
+    const card = chat.find((c: any) => c.flags?.shadowrun2e_unified?.test?.powerEffect);
     faces.push(5, 5, 5, 5);                                   // the Karma re-roll: 4 successes
-    await a.karmaReroll(card.flags.sr2e.test);
+    await a.karmaReroll(card.flags.shadowrun2e_unified.test);
     const entry = a.system.sustaining[0];
-    const gm = chat.find((c: any) => c.flags?.sr2e?.powerEffect?.effect);
-    assert.equal(gm.flags.sr2e.powerEffect.effect.id, entry.effectId);
+    const gm = chat.find((c: any) => c.flags?.shadowrun2e_unified?.powerEffect?.effect);
+    assert.equal(gm.flags.shadowrun2e_unified.powerEffect.effect.id, entry.effectId);
     (ally as any).isOwner = true;
     await Promise.all([
       SR2Actor.setPowerEffect(ally.uuid, { id: "e1", fromUuid: "x", fromName: "X", name: "One", attributes: { body: 1 } }),
       SR2Actor.setPowerEffect(ally.uuid, { id: "e2", fromUuid: "x", fromName: "X", name: "Two", attributes: { strength: 1 } }),
     ]);
-    assert.deepEqual(ally.getFlag("sr2e", "powerEffects").map((e: any) => e.id).sort(), ["e1", "e2"]);
+    assert.deepEqual(ally.getFlag("shadowrun2e_unified", "powerEffects").map((e: any) => e.id).sort(), ["e1", "e2"]);
   });
 
   test("review fixes: damaged wired reflexes don't block a spell; only the best reflex spell counts", () => {
     const sam = who({ name: "Sam2" }, [{ id: "wr", type: "cyberware", name: "Wired reflexes 2", system: { installed: true, damaged: true, initiativeDice: 2, reaction: 4, essenceCost: 3, grade: "standard", attributes: {} } }]);
     const base = sam.system.derived.initiativeDice;
-    sam.flags.sr2e = { powerEffects: [
+    sam.flags.shadowrun2e_unified = { powerEffects: [
       { id: "a", fromUuid: "x", fromName: "X", name: "IR1", kind: "spell", attributes: {}, initiativeDice: 1 },
       { id: "b", fromUuid: "y", fromName: "Y", name: "IR2", kind: "spell", attributes: {}, initiativeDice: 2 },
     ] };
@@ -8588,7 +8588,7 @@ describe("v0.56.0 magic and critters", () => {
       faces.push(5, 5, 1, 1); faces.push(...Array(6).fill(5));
       await b.castSpell(b.items.get("ar"), { force: 4 });
       assert.equal(b.system.sustaining.length, 0);
-      assert.equal(b.getFlag("sr2e", "powerEffects")[0].permanent, true);
+      assert.equal(b.getFlag("shadowrun2e_unified", "powerEffects")[0].permanent, true);
     } finally { (RULES.MAGIC_V56.permanent as any).enabled = true; }
   });
 
@@ -8603,7 +8603,7 @@ describe("v0.56.0 magic and critters", () => {
       await a.rollAttribute("willpower", { targetNumber: 4, magical: true });
       assert.equal(a.centeredSuccesses(), 0);
       faces.push(5, 5);
-      await a.karmaReroll(card.flags.sr2e.test);
+      await a.karmaReroll(card.flags.shadowrun2e_unified.test);
       assert.equal(a.centeredSuccesses(), 0);
       assert.match(chat.at(-1).content, /already used/);
     } finally { (RULES.MAGIC_V56.centering as any).mode = "auto"; }
@@ -8620,11 +8620,11 @@ describe("v0.56.0 magic and critters", () => {
     } finally { g.game.user.isGM = true; }
     assert.equal(free.system.summonerUuid, undefined);
     assert.equal(b.system.karma.good, 28);
-    const gm = chat.find((c: any) => c.flags?.sr2e?.actorUpdate);
+    const gm = chat.find((c: any) => c.flags?.shadowrun2e_unified?.actorUpdate);
     // v0.81.0 (SEC1-1): a typed change (the GM's client works the update out), never a free-form update.
-    assert.equal(gm.flags.sr2e.actorUpdate.update, undefined);
-    assert.equal(gm.flags.sr2e.actorUpdate.handSpirit.toUuid, b.uuid);
-    assert.equal(await SR2Actor.applyActorUpdate(gm.flags.sr2e.actorUpdate), true);
+    assert.equal(gm.flags.shadowrun2e_unified.actorUpdate.update, undefined);
+    assert.equal(gm.flags.shadowrun2e_unified.actorUpdate.handSpirit.toUuid, b.uuid);
+    assert.equal(await SR2Actor.applyActorUpdate(gm.flags.shadowrun2e_unified.actorUpdate), true);
     assert.equal(free.system.summonerUuid, b.uuid);
     assert.equal(free.system.services, 3);
   });
@@ -8743,8 +8743,8 @@ describe("v0.57.0 Matrix, vehicles and security", () => {
     h.isOwner = false;
     faces.push(5, 5, 1, 1, 1, 2, 2, 2, 2, 2, 2);
     await a.systemTest("access", { operationId: "nullOperation" });
-    const card = chat.find((m) => m.flags?.sr2e?.tally?.key === a.uuid);
-    assert.equal(card.flags.sr2e.tally.successes, 2);
+    const card = chat.find((m) => m.flags?.shadowrun2e_unified?.tally?.key === a.uuid);
+    assert.equal(card.flags.shadowrun2e_unified.tally.successes, 2);
     h.isOwner = true;
     await SR2Actor.applyTallyCard(h.uuid, 2, { key: a.uuid, name: "Anna" });
     assert.equal(h.system.tallies.find((t: any) => t.key === a.uuid).tally, 5);
@@ -8853,9 +8853,9 @@ describe("v0.57.0 Matrix, vehicles and security", () => {
       assert.equal(a.system.matrix.jackedIn, false);
       assert.equal(f.system.hostUuid, grid.uuid);
       assert.equal(h.system.shutdown.pending, false);
-      const card = chat.find((m) => m.flags?.sr2e?.dumpShockFor === a.uuid);
-      assert.equal(card.flags.sr2e.dumpShockLevel, "D");
-      assert.equal(card.flags.sr2e.dumpShockTn, 6);
+      const card = chat.find((m) => m.flags?.shadowrun2e_unified?.dumpShockFor === a.uuid);
+      assert.equal(card.flags.shadowrun2e_unified.dumpShockLevel, "D");
+      assert.equal(card.flags.shadowrun2e_unified.dumpShockTn, 6);
     } finally { R.MATRIX_V57.dumpShock.levelBy = "fixed"; }
     // Crashing a host is a shutdown too.
     const h2 = host("Crash");
@@ -8955,7 +8955,7 @@ describe("v0.57.0 Matrix, vehicles and security", () => {
     assert.equal(h.system.files.some((f: any) => f.id === "b1"), false);  // erased by its bomb
     assert.equal(a.items.get("deck").system.files.length, 0);             // and nothing downloaded
     const card = chat.find((m) => /A data bomb goes off/.test(m.content));
-    assert.deepEqual([card.flags.sr2e.damage.power, card.flags.sr2e.damage.level, card.flags.sr2e.damage.matrix], [4, "M", true]);
+    assert.deepEqual([card.flags.shadowrun2e_unified.damage.power, card.flags.shadowrun2e_unified.damage.level, card.flags.shadowrun2e_unified.damage.matrix], [4, "M", true]);
     noDetect(); faces.push(5, 1, 1, 1, 2);
     await a.systemTest("files", { operationId: "downloadData", fileId: "b2" });
     assert.equal(h.system.files.find((f: any) => f.id === "b2").bomb, 3);  // a Pavlov bomb stays
@@ -8972,7 +8972,7 @@ describe("v0.57.0 Matrix, vehicles and security", () => {
     noDetect(); faces.push(5, 1, 1, 1, 2);
     await a.systemTest("index", { operationId: "locateFile" });
     assert.deepEqual(h.system.bombs, []);
-    assert.match(chat.filter((m) => m.flags?.sr2e?.test && /data bomb goes off/.test(m.content)).at(-1).content, /the Index subsystem/);
+    assert.match(chat.filter((m) => m.flags?.shadowrun2e_unified?.test && /data bomb goes off/.test(m.content)).at(-1).content, /the Index subsystem/);
   });
 
   test("comcalls on an LTG: make, tap, reroute; not in a host", async () => {
@@ -9028,14 +9028,14 @@ describe("v0.57.0 Matrix, vehicles and security", () => {
     g.game.actors.push(bl);
     faces.push(5, 5, 5, 2);                                                // 3 vs Evasion 5
     await bl.icAttack({ targetUuid: a.uuid });
-    await a.defend(chat.at(-1).flags.sr2e.attack, 0);
-    const dmg = chat.at(-1).flags.sr2e.damages;
+    await a.defend(chat.at(-1).flags.shadowrun2e_unified.attack, 0);
+    const dmg = chat.at(-1).flags.shadowrun2e_unified.damages;
     assert.equal(dmg.length, 2);
     assert.equal(dmg[1].targetUuid, r1.uuid);
     assert.equal(dmg[1].black, true);
     await SR2Actor.startShutdown(h);
     await SR2Actor.matrixTraces({ worldTime: 99 });
-    assert.ok(chat.some((m) => m.flags?.sr2e?.dumpShockFor === r1.uuid));
+    assert.ok(chat.some((m) => m.flags?.shadowrun2e_unified?.dumpShockFor === r1.uuid));
     assert.equal(r1.system.matrix.ridingWith, "");
   });
 
@@ -9073,7 +9073,7 @@ describe("v0.57.0 Matrix, vehicles and security", () => {
     assert.equal(v.speedWindow().max, 60);
     faces.push(1, 1, 1);
     await v.pushSpeed(90);
-    assert.ok(chat.at(-1).flags.sr2e.crashTest);
+    assert.ok(chat.at(-1).flags.shadowrun2e_unified.crashTest);
     assert.match(chat.at(-1).content, /vehicleCrashTest/);
     g.game.combat = null;
     const free: any = { "system.currentSpeed": 0 };
@@ -9087,14 +9087,14 @@ describe("v0.57.0 Matrix, vehicles and security", () => {
     const v = vehicle({ currentSpeed: 40 }, [gun]);
     faces.push(1, 1, 1, 2);                                                // Body 4 vs 7: nothing off
     await v.resistVehicleDamage({ targetUuid: v.uuid, melee: false, damageType: "physical", power: 10, level: "S", antiVehicle: true });
-    assert.equal(chat.at(-1).flags.sr2e.crashTest.vehicleUuid, v.uuid);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.crashTest.vehicleUuid, v.uuid);
     // Tires shot out: Handling worse, and a crash test at +2 even after light damage.
     const t = vehicle({ currentSpeed: 40 });
     faces.push(1, 1, 1, 2);
     await t.resistVehicleDamage({ targetUuid: t.uuid, melee: false, damageType: "physical", power: 6, level: "L", antiVehicle: true, vehiclePart: "tires" });
     assert.equal(t.system.systems.tires, true);
     assert.equal(t.system.derived.working.handling, 3);
-    assert.equal(chat.at(-1).flags.sr2e.crashTest.tn, 2);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.crashTest.tn, 2);
     // A weapon mount: the gun is knocked out.
     faces.push(1, 1, 1, 2);
     await v.resistVehicleDamage({ targetUuid: v.uuid, melee: false, damageType: "physical", power: 6, level: "L", antiVehicle: true, vehiclePart: "mount" });
@@ -9105,12 +9105,12 @@ describe("v0.57.0 Matrix, vehicles and security", () => {
     v.system.occupants = [rider.uuid]; v.system.currentSpeed = 0;
     faces.push(6, 6, 1, 1, 1, 4, 4);                                       // TN 4 + 6: two sixes re-rolled to 10
     await shooter.attackWith({ name: "Predator", system: { melee: false, skill: "Pistols", damagePower: 9, damageLevel: "M", damageType: "physical" } }, { targetUuid: v.uuid, range: "short", vehiclePart: "occupant", occupantUuid: rider.uuid });
-    const atkCard = chat.filter((m) => m.flags?.sr2e?.attack).at(-1);
-    const attack = atkCard.flags.sr2e.attack;
+    const atkCard = chat.filter((m) => m.flags?.shadowrun2e_unified?.attack).at(-1);
+    const attack = atkCard.flags.shadowrun2e_unified.attack;
     assert.equal(attack.occupantUuid, rider.uuid);
-    assert.ok(atkCard.flags.sr2e.test.modifiers.some((m: any) => m.label === "Called shot: An occupant" && m.value === 6));
+    assert.ok(atkCard.flags.shadowrun2e_unified.test.modifiers.some((m: any) => m.label === "Called shot: An occupant" && m.value === 6));
     await v.defend(attack, 0);
-    const dmg = chat.at(-1).flags.sr2e.damage;
+    const dmg = chat.at(-1).flags.shadowrun2e_unified.damage;
     assert.equal(dmg.targetUuid, rider.uuid);
     assert.equal(dmg.extraArmor, 3);
   });
@@ -9125,8 +9125,8 @@ describe("v0.57.0 Matrix, vehicles and security", () => {
     faces.push(5, 5, 2, 2, 2, 2);                                          // Car 4 + 2 Combat Pool vs Handling 3
     await v.defend({ attackerUuid: "x", targetUuid: v.uuid, weaponName: "Gun", melee: false, damageType: "physical", power: 8, level: "M", attackSuccesses: 1, targetNumber: 5 }, 2);
     const card = chat.at(-1);
-    assert.match(card.flags.sr2e.test.label, /evasive driving \(Wheelman, Handling 3\)/);
-    assert.equal(card.flags.sr2e.test.totalDice, 6);
+    assert.match(card.flags.shadowrun2e_unified.test.label, /evasive driving \(Wheelman, Handling 3\)/);
+    assert.equal(card.flags.shadowrun2e_unified.test.totalDice, 6);
     assert.equal(drv.system.poolSpent.combat, 2);
     assert.match(card.content, /Missed/);
   });
@@ -9166,8 +9166,8 @@ describe("v0.57.0 Matrix, vehicles and security", () => {
     await rig.takeControl(v, "jumped");
     faces.push(5, 5, 1);                                                   // Sensor 3 vs Signature 2: 2
     await v.sensorTest(target.uuid);
-    const card = chat.filter((m) => m.flags?.sr2e?.test?.kind === "sensor").at(-1);
-    assert.equal(card.flags.sr2e.test.actorUuid, rig.uuid);
+    const card = chat.filter((m) => m.flags?.shadowrun2e_unified?.test?.kind === "sensor").at(-1);
+    assert.equal(card.flags.shadowrun2e_unified.test.actorUuid, rig.uuid);
     assert.equal(v.system.locks[0].targetUuid, target.uuid);
     {
       const back = oldWay({ "VEHICLES_V57.sensorGunnery": "signature" }); // v0.79.0: restore the shipped default, not 'flat'
@@ -9192,13 +9192,13 @@ describe("v0.57.0 Matrix, vehicles and security", () => {
     assert.equal(v.system.currentSpeed, 0);
     faces.push(1, 1, 1, 2);
     await v.resistVehicleDamage({ targetUuid: v.uuid, melee: false, damageType: "physical", power: 9, level: "S", crash: true, ignoreArmor: true });
-    assert.equal(chat.at(-1).flags.sr2e.crashTest, undefined);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.crashTest, undefined);
     // A failed push, then a Karma-style re-resolve that succeeds, pushes.
     const p = vehicle({ accel: 10, currentSpeed: 30 });
     g.game.combat = { started: true, round: 1, combatants: [] };
     faces.push(2, 2, 2);                                                    // Pilot 3 vs Handling 2 + 2: no success
     await p.pushSpeed(60);
-    const snap = chat.at(-1).flags.sr2e.test;
+    const snap = chat.at(-1).flags.shadowrun2e_unified.test;
     assert.equal(snap.drive.pushApplied, false);
     // Slow on a combatant the user can't update.
     const h = host();
@@ -9208,7 +9208,7 @@ describe("v0.57.0 Matrix, vehicles and security", () => {
     g.game.combat = { started: true, round: 1, combatants: [{ actor: k, initiative: 12, async update() { throw new Error("no"); } }] };
     faces.push(5, 5, 2, 2, 2);
     await a.useUtility("sw", { targetUuid: k.uuid });
-    assert.equal(chat.at(-1).flags.sr2e.test.mutility.applied, 0);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.test.mutility.applied, 0);
     assert.match(chat.at(-1).content, /GM: lower its Initiative by 6/);
   });
 
@@ -9569,9 +9569,9 @@ describe("v0.58.0 invisible and astral tokens", () => {
     const a = mage("perceiving");
     const u: any = visionUpdate(a, { sight: { enabled: true, visionMode: "basic", range: 0 }, detectionModes: { lightPerception: { enabled: true, range: null } } });
     assert.deepEqual(u["detectionModes.seeInvisibility"], { enabled: true, range: 10000 });
-    assert.equal(u["flags.sr2e.autoSeeInvisible"], true);
+    assert.equal(u["flags.shadowrun2e_unified.autoSeeInvisible"], true);
     a.system.astral = "physical"; a.system.prepareDerivedData();
-    const off: any = visionUpdate(a, { sight: { enabled: true, visionMode: "basic", range: 0 }, detectionModes: { seeInvisibility: { enabled: true, range: 10000 } }, flags: { sr2e: { autoSeeInvisible: true } } });
+    const off: any = visionUpdate(a, { sight: { enabled: true, visionMode: "basic", range: 0 }, detectionModes: { seeInvisibility: { enabled: true, range: 10000 } }, flags: { shadowrun2e_unified: { autoSeeInvisible: true } } });
     assert.equal(off["detectionModes.seeInvisibility.enabled"], false);
     // One the GM gave by hand stays.
     assert.equal(visionUpdate(a, { sight: { enabled: true, visionMode: "basic", range: 0 }, detectionModes: { seeInvisibility: { enabled: true, range: 10000 } } }), null);
@@ -9601,23 +9601,23 @@ describe("v0.60.0 Foundry quality of life (glue)", () => {
   test("roll privacy per kind of test: the user's group mode wins; answered cards stay public", async () => {
     const { withRollMode } = await import("../documents/index.ts");
     const prevSettings = g.game.settings;
-    g.game.settings = { get: (s: string, k: string) => (s === "core" && k === "messageMode" ? "public" : s === "sr2e" && k === "rollPrivacy" ? { magic: "blind", matrix: "self" } : undefined) };
+    g.game.settings = { get: (s: string, k: string) => (s === "core" && k === "messageMode" ? "public" : s === "shadowrun2e_unified" && k === "rollPrivacy" ? { magic: "blind", matrix: "self" } : undefined) };
     const seen: string[] = [];
     g.ChatMessage.applyMode = (d: any, mode: string) => { seen.push(mode); d.whisper = ["gm1"]; d.blind = mode === "blind"; return d; };
     try {
-      const spell = withRollMode({ content: "<p>Fireball</p>", flags: { sr2e: { test: { kind: "spell" } } } });
+      const spell = withRollMode({ content: "<p>Fireball</p>", flags: { shadowrun2e_unified: { test: { kind: "spell" } } } });
       assert.equal(spell.blind, true);
       assert.deepEqual(spell.whisper, ["gm1"]);
-      assert.equal(withRollMode({ content: "<p>x</p>", flags: { sr2e: { test: { kind: "attack" } } } }).whisper, undefined);
-      withRollMode({ content: "<p>x</p>", flags: { sr2e: { test: { kind: "system" } } } });
+      assert.equal(withRollMode({ content: "<p>x</p>", flags: { shadowrun2e_unified: { test: { kind: "attack" } } } }).whisper, undefined);
+      withRollMode({ content: "<p>x</p>", flags: { shadowrun2e_unified: { test: { kind: "system" } } } });
       assert.deepEqual(seen, ["blind", "self"]);
       // A spell card someone must resist stays public whatever the setting.
-      assert.equal(withRollMode({ content: '<button data-sr2e-action="resistSpell">Resist</button>', flags: { sr2e: { test: { kind: "spell" } } } }).whisper, undefined);
+      assert.equal(withRollMode({ content: '<button data-sr2e-action="resistSpell">Resist</button>', flags: { shadowrun2e_unified: { test: { kind: "spell" } } } }).whisper, undefined);
       // Foundry v12's applyRollMode gets the old name.
       delete g.ChatMessage.applyMode;
-      g.game.settings = { get: (s: string, k: string) => (s === "core" && k === "rollMode" ? "publicroll" : s === "sr2e" && k === "rollPrivacy" ? { magic: "gm" } : undefined) };
+      g.game.settings = { get: (s: string, k: string) => (s === "core" && k === "rollMode" ? "publicroll" : s === "shadowrun2e_unified" && k === "rollPrivacy" ? { magic: "gm" } : undefined) };
       g.ChatMessage.applyRollMode = (d: any, mode: string) => ({ ...d, mode });
-      assert.equal(withRollMode({ content: "<p>x</p>", flags: { sr2e: { test: { kind: "spell" } } } }).mode, "gmroll");
+      assert.equal(withRollMode({ content: "<p>x</p>", flags: { shadowrun2e_unified: { test: { kind: "spell" } } } }).mode, "gmroll");
     } finally { g.game.settings = prevSettings; delete g.ChatMessage.applyMode; delete g.ChatMessage.applyRollMode; }
   });
 
@@ -9625,7 +9625,7 @@ describe("v0.60.0 Foundry quality of life (glue)", () => {
     const { autoResistPlanned } = await import("../applications/chat.ts");
     const prevSettings = g.game.settings, prevUsers = g.game.users;
     let on = true;
-    g.game.settings = { get: (s: string, k: string) => (s === "sr2e" && k === "autoResistNpc" ? on : undefined) };
+    g.game.settings = { get: (s: string, k: string) => (s === "shadowrun2e_unified" && k === "autoResistNpc" ? on : undefined) };
     const player = { id: "p1", isGM: false, active: true };
     g.game.users = [player, { id: "gm", isGM: true, active: true }];
     const npc = { testUserPermission: () => false };
@@ -9742,10 +9742,10 @@ describe("v0.61.0 rules gaps (glue)", () => {
       g.fromUuidSync = (u: string) => uuidRegistry.get(u) ?? { name: u };
       await a.exposeToxinState({ name: "Narcoject", vector: "injection", power: 6, level: "S", damageType: "stun", kind: "toxin", from: "dart", needsWound: false, speed: "minute" }, [v.uuid], "Dart");
       const card = chat.at(-1);
-      assert.equal(card.flags.sr2e.toxinOnset.at, 1060);
-      assert.equal(card.flags.sr2e.toxins[0].onsetAt, 1060);
+      assert.equal(card.flags.shadowrun2e_unified.toxinOnset.at, 1060);
+      assert.equal(card.flags.shadowrun2e_unified.toxins[0].onsetAt, 1060);
       assert.match(card.content, /minute/);
-      const flags: any = { ...card.flags.sr2e };
+      const flags: any = { ...card.flags.shadowrun2e_unified };
       const msg = { getFlag: (_s: string, k: string) => flags[k], setFlag: async (_s: string, k: string, val: any) => { flags[k] = val; } };
       g.game.messages = { contents: [msg] };
       await SR2Actor.toxinOnsetTick(1030);
@@ -9865,7 +9865,7 @@ describe("v0.61.0 rules gaps (glue)", () => {
     const tok = { x: 100, y: 100, width: 1, height: 1, center: { x: 150, y: 150 }, document: { x: 100, y: 100, width: 1, height: 1, elevation: 0 }, actor: victim };
     const devTok = { x: 100, y: 100, width: 1, height: 1 };
     const prev = { canvas: g.canvas, fromUuidSync: g.fromUuidSync };
-    const room = { flags: { sr2e: { env: { siteUuid: "Actor.site1", deviceId: "g1" } } }, testPoint: () => true };
+    const room = { flags: { shadowrun2e_unified: { env: { siteUuid: "Actor.site1", deviceId: "g1" } } }, testPoint: () => true };
     g.canvas = { scene: { id: "sc1", regions: [room], grid: { size: 100 }, tokens: [] }, tokens: { placeables: [tok] }, grid: { size: 100 }, dimensions: { distance: 1, size: 100 } };
     g.fromUuidSync = (u: string) => (u === "Scene.sc1.Token.dev" ? devTok : uuidRegistry.get(u) ?? { name: u });
     try {
@@ -9880,10 +9880,10 @@ describe("v0.61.0 rules gaps (glue)", () => {
         const prevCloud = RULES.SECURITY_V61.gas.cloud;
         (RULES.SECURITY_V61.gas as any).cloud = "";
         try { await SR2Actor.applySiteChange(site.uuid, { minAlert: "lockdown" }); } finally { (RULES.SECURITY_V61.gas as any).cloud = prevCloud; }
-        const card = chat.find((m) => m.flags?.sr2e?.toxins);
+        const card = chat.find((m) => m.flags?.shadowrun2e_unified?.toxins);
         assert.ok(card, chat.map((m) => m.content).join(" | "));
-        assert.equal(card.flags.sr2e.toxins[0].targetUuid, victim.uuid);
-        assert.equal(card.flags.sr2e.toxins[0].name, RULES.SECURITY_V61.gas.defaultToxin.name);
+        assert.equal(card.flags.shadowrun2e_unified.toxins[0].targetUuid, victim.uuid);
+        assert.equal(card.flags.shadowrun2e_unified.toxins[0].name, RULES.SECURITY_V61.gas.defaultToxin.name);
       });
     } finally { g.canvas = prev.canvas; g.fromUuidSync = prev.fromUuidSync; }
   });
@@ -9926,7 +9926,7 @@ describe("v0.61.0 rules gaps (glue)", () => {
       assert.equal(list[0].kind, "invisibility");
       assert.equal(caster.concealmentFor(obs).length, 1);
       assert.ok(!String(list[0].key).includes("."));                       // a flag key: no dots
-      obs.flags = { sr2e: { seenThrough: { [list[0].key]: true } } };
+      obs.flags = { shadowrun2e_unified: { seenThrough: { [list[0].key]: true } } };
       assert.equal(caster.concealmentFor(obs).length, 0);
       const astral = actorWith([], { name: "Seer" });
       astral.isAstral = () => true;
@@ -10177,29 +10177,29 @@ describe("v0.79.0 review fixes", () => {
     uuidRegistry.set(a.uuid, a);
     faces.push(2, 2, 2, 2, 2);                                        // natural Body 5 vs 4: no successes
     assert.equal(await a.naturalHeal({ track: "physical", hours: 24, care: "none" }), null);
-    assert.equal(a.getFlag("sr2e", "selfRecovery")?.ok, false);
+    assert.equal(a.getFlag("shadowrun2e_unified", "selfRecovery")?.ok, false);
     const card = chat.find((c) => /Self-recovery test/.test(c.content));
     assert.match(card.content, /Needs medical attention/);
     faces.push(5, 5, 5, 5, 5);
-    await a.karmaReroll(card.flags.sr2e.test);
-    assert.equal(a.getFlag("sr2e", "selfRecovery")?.ok, true);
+    await a.karmaReroll(card.flags.shadowrun2e_unified.test);
+    assert.equal(a.getFlag("shadowrun2e_unified", "selfRecovery")?.ok, true);
   });
 
   test("a healing stage keeps its successes: the next rest adds hours without a new roll", async () => {
     chat.length = 0; faces.length = 0;
     const a = makeActor(A, { monitor: { physical: 4, stun: 0 } });
     uuidRegistry.set(a.uuid, a);
-    await a.setFlag("sr2e", "selfRecovery", { boxes: 4, ok: true, t: 0 });
+    await a.setFlag("shadowrun2e_unified", "selfRecovery", { boxes: 4, ok: true, t: 0 });
     faces.push(6, 1, 6, 1, 1, 1, 1);                                  // Moderate: TN 6; 6+1 = 7 and 6+1 = 7: 2 successes = 120 h
     await a.naturalHeal({ track: "physical", hours: 24, care: "none" });
     assert.equal(a.system.monitor.physical, 4);
-    assert.equal(a.getFlag("sr2e", "healStage")?.successes, 2);
+    assert.equal(a.getFlag("shadowrun2e_unified", "healStage")?.successes, 2);
     const before = faces.length;
     await a.naturalHeal({ track: "physical", hours: 48, care: "none" });  // 72 of 120 h: no roll
     assert.equal(faces.length, before);
-    assert.equal(a.getFlag("sr2e", "healStage")?.rested, 72);
+    assert.equal(a.getFlag("shadowrun2e_unified", "healStage")?.rested, 72);
     await a.naturalHeal({ track: "physical", hours: 48, care: "none" });  // 120 h: done
     assert.equal(a.system.monitor.physical, 1);                       // Moderate → the lowest Light box
-    assert.equal(a.getFlag("sr2e", "healStage") ?? null, null);
+    assert.equal(a.getFlag("shadowrun2e_unified", "healStage") ?? null, null);
   });
 });

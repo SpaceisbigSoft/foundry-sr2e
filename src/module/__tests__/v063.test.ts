@@ -108,7 +108,7 @@ describe('v0.63.0 stacking, failures and rollback', () => {
 describe('v0.63.0 the tools context', () => {
   test('pins keep only existing, pinnable items, with their actions', () => {
     const a = actorWith([{ type: 'weapon', name: 'Pistol', system: {} }, { type: 'armor', name: 'Vest', system: { ballistic: 2, impact: 1 } }, { type: 'skill', name: 'Firearms', system: {} }]);
-    a.flags = { sr2e: { pins: ['i0', 'i1', 'gone', 'i2'] } };
+    a.flags = { shadowrun2e_unified: { pins: ['i0', 'i1', 'gone', 'i2'] } };
     const c = tools.sheetToolsContext(a);
     assert.deepEqual(c.pins.map((p: any) => [p.name, p.action]), [['Pistol', 'attackWeapon'], ['Firearms', 'rollSkill']]);
     assert.deepEqual(c.pinSet, { i0: true, i2: true });

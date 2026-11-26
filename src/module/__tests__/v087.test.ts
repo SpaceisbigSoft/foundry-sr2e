@@ -101,7 +101,7 @@ describe('v0.87.0 Report a bug (pure)', () => {
   });
   test('which console entries are ours, and how they are written', () => {
     assert.equal(isOurError('sr2e | Initializing'), true);
-    assert.equal(isOurError('at foo (http://localhost:30000/systems/sr2e/index.mjs:1:2)'), true);
+    assert.equal(isOurError('at foo (http://localhost:30000/systems/shadowrun2e_unified/index.mjs:1:2)'), true);
     assert.equal(isOurError('Foundry VTT | something'), false);
     assert.equal(isOurError('sr2eX'), false);
     const err = new Error('bad');

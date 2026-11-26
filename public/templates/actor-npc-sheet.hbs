@@ -18,11 +18,11 @@
       </div>
     </div>
   </header>
-  {{> "systems/sr2e/templates/sheet-summary.hbs"}}
+  {{> "systems/shadowrun2e_unified/templates/sheet-summary.hbs"}}
   <div class="sr2e-stuck">
-    {{> "systems/sr2e/templates/status-strip.hbs"}}
+    {{> "systems/shadowrun2e_unified/templates/status-strip.hbs"}}
   </div>
-  {{#if (eq layout "combat")}}{{> "systems/sr2e/templates/combat-column.hbs"}}{{/if}}
+  {{#if (eq layout "combat")}}{{> "systems/shadowrun2e_unified/templates/combat-column.hbs"}}{{/if}}
 
   <div class="sr2e-statgrid">
     {{#each attributes}}<div class="sr2e-stat"><a class="sr2e-stat-label" data-action="rollAttribute" data-attribute="{{key}}" title="{{sr2eT "SR2E.UI.roll2" label=label}}">{{abbr}}</a><input type="number" name="system.attributes.{{key}}.base" value="{{base}}" min="0" title="{{sr2eT "SR2E.UI.base4" label=label}}">{{#if augmented}}<span class="sr2e-aug" title="{{sr2eT "SR2E.UI.withAugmentations"}}">({{total}})</span>{{/if}}</div>{{/each}}
@@ -48,7 +48,7 @@
   {{/if}}
 
   <section class="sr2e-monitor">
-    {{> "systems/sr2e/templates/monitor.hbs"}}
+    {{> "systems/shadowrun2e_unified/templates/monitor.hbs"}}
     <button type="button" data-action="resistDamage">{{sr2eT "SR2E.UI.resistDamage"}}</button>
     <button type="button" data-action="hazard" title="{{sr2eT "SR2E.UI.fallingFireDrowningColdFatigue"}}">{{sr2eT "SR2E.UI.hazard"}}</button>
   </section>
@@ -115,7 +115,7 @@
       <label>{{sr2eT "SR2E.UI.initiateGrade2"}} <input type="number" name="system.initiateGrade" value="{{system.initiateGrade}}" min="0"></label>
       <span class="sr2e-metamagic">{{#each metamagicList}}<label class="sr2e-check"><input type="checkbox" name="system.metamagic.{{key}}" {{checked known}}> {{label}}</label>{{/each}}</span>
     </div>
-    {{> "systems/sr2e/templates/occult-section.hbs"}}
+    {{> "systems/shadowrun2e_unified/templates/occult-section.hbs"}}
     {{#if isElementalist}}
     <div class="sr2e-row">
       <label>{{sr2eT "SR2E.UI.element"}}
@@ -241,11 +241,11 @@
     </ul>
     {{/if}}
     {{#if occult.possessedBy}}<p class="sr2e-warning">{{sr2eT "SR2E.UI.possessedBy"}} <strong>{{occult.possessedBy}}</strong>. <button type="button" data-action="endPossession">{{sr2eT "SR2E.UI.free"}}</button></p>{{/if}}
-    {{> "systems/sr2e/templates/power-effects.hbs"}}
+    {{> "systems/shadowrun2e_unified/templates/power-effects.hbs"}}
   </section>
 
-  {{> "systems/sr2e/templates/matrix-section.hbs"}}
-  {{> "systems/sr2e/templates/rigging-section.hbs"}}
+  {{> "systems/shadowrun2e_unified/templates/matrix-section.hbs"}}
+  {{> "systems/shadowrun2e_unified/templates/rigging-section.hbs"}}
 
   <section class="sr2e-items sr2e-npc-gear">
     <h2 data-heading="Other gear">{{sr2eT "SR2E.UI.otherGear"}} <a class="sr2e-add" data-action="addItem" data-type="gear" title="{{sr2eT "SR2E.UI.addArmorGearOrCyberware"}}"><i class="fa-solid fa-plus"></i></a></h2>
@@ -260,7 +260,7 @@
 
   <details class="sr2e-details" {{#unless effects.empty}}open{{/unless}}>
     <summary data-heading="Effects">{{sr2eT "SR2E.UI.effects"}}</summary>
-    {{> "systems/sr2e/templates/effects-section.hbs"}}
+    {{> "systems/shadowrun2e_unified/templates/effects-section.hbs"}}
   </details>
 
   <details class="sr2e-details">

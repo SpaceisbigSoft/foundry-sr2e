@@ -2,12 +2,12 @@ import type { UserConfig } from "vite";
 
 /**
  * Builds src/start.ts into public/index.mjs. Foundry loads the system from the
- * `public` folder (symlink it into Data/systems/sr2e during development).
+ * `public` folder (symlink it into Data/systems/shadowrun2e_unified during development).
  * Derived from the SRA2 build setup (CC BY-SA 4.0).
  */
 const config: UserConfig = {
   publicDir: false,
-  base: "/systems/sr2e/",
+  base: "/systems/shadowrun2e_unified/",
   build: {
     outDir: "public",
     emptyOutDir: false,

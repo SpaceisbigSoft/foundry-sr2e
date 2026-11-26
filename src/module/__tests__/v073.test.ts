@@ -361,35 +361,35 @@ describe('O25 ramming: the rammer\'s share after the defense; its passengers tak
 
   test('the attack card has no rammer\'s button; the victim\'s defense card offers it when the ram still hits', async () => {
     const { truck, victim, card } = await ram();
-    assert.equal(card.flags.sr2e.ramSelf, undefined);
-    const atk = card.flags.sr2e.attack;
+    assert.equal(card.flags.shadowrun2e_unified.ramSelf, undefined);
+    const atk = card.flags.shadowrun2e_unified.attack;
     assert.equal(atk.ram.vehicleUuid, truck.uuid);
     await victim.defend(atk, 0);                                         // on its autopilot: no dodge
     const def = chat.at(-1);
-    const rs = def.flags.sr2e.ramSelf;
+    const rs = def.flags.shadowrun2e_unified.ramSelf;
     assert.ok(rs, 'the rammer\'s share is on the defense card');
     assert.deepEqual({ t: rs.targetUuid, p: rs.power, l: rs.level, c: rs.crash, r: rs.ramSelf }, { t: truck.uuid, p: atk.ram.power, l: atk.ram.level, c: true, r: true });
     assert.match(def.content, /data-sr2e-action="ramSelf"[^>]*>Rammer's damage \(Ram truck: /);
-    assert.ok(def.flags.sr2e.damage, 'and the victim\'s own damage');
+    assert.ok(def.flags.shadowrun2e_unified.damage, 'and the victim\'s own damage');
   });
 
   test('a ram the defense turns into a miss: no rammer\'s damage, a line saying so', async () => {
     const { victim, card } = await ram();
-    const atk = { ...card.flags.sr2e.attack, attackSuccesses: 0 };
+    const atk = { ...card.flags.shadowrun2e_unified.attack, attackSuccesses: 0 };
     await victim.defend(atk, 0);
     const def = chat.at(-1);
     assert.match(def.content, /Missed\./);
     assert.match(def.content, /The ram missed: Ram truck takes no damage\./);
-    assert.equal(def.flags.sr2e.ramSelf, undefined);
+    assert.equal(def.flags.shadowrun2e_unified.ramSelf, undefined);
   });
 
   test('switched off (afterDefense false): the old button on the attack card, none on the defense', async () => {
     await withRule(NR().ram, 'afterDefense', false, async () => {
       const { truck, victim, card } = await ram();
-      assert.equal(card.flags.sr2e.ramSelf.targetUuid, truck.uuid);
+      assert.equal(card.flags.shadowrun2e_unified.ramSelf.targetUuid, truck.uuid);
       assert.match(card.content, /data-sr2e-action="ramSelf"/);
-      await victim.defend(card.flags.sr2e.attack, 0);
-      assert.equal(chat.at(-1).flags.sr2e.ramSelf, undefined);
+      await victim.defend(card.flags.shadowrun2e_unified.attack, 0);
+      assert.equal(chat.at(-1).flags.shadowrun2e_unified.ramSelf, undefined);
     });
   });
 
@@ -401,7 +401,7 @@ describe('O25 ramming: the rammer\'s share after the defense; its passengers tak
       chat.length = 0;
       faces.push(1, 1, 1, 1);
       await truck.resistFromState({ targetUuid: truck.uuid, melee: false, damageType: 'physical', power: 10, level: 'S', crash: true, ...extra });
-      return { p, damages: chat.flatMap((m) => m.flags?.sr2e?.damages ?? []) };
+      return { p, damages: chat.flatMap((m) => m.flags?.shadowrun2e_unified?.damages ?? []) };
     };
     const hit = await soak({ ramSelf: true });
     assert.equal(hit.damages.length, 1);
@@ -435,7 +435,7 @@ describe('O26 the control rig on gunnery and the Control-Pool dodge', () => {
   test('the Control-Pool dodge (riggerDodge \'pool\') takes the rig\'s −1 too; switched off it doesn\'t', async () => {
     const { v } = await jumped();
     const attack = { targetUuid: v.uuid, attackerUuid: 'Actor.x', melee: false, damageType: 'physical', power: 9, level: 'M', targetNumber: 5, attackSuccesses: 1 };
-    const tnOf = () => chat.at(-1).flags.sr2e.test.targetNumber;
+    const tnOf = () => chat.at(-1).flags.shadowrun2e_unified.test.targetNumber;
     await withRule(RULES.FIXES_V71, 'riggerDodge', 'pool', async () => {
       faces.push(1, 1);
       await v.defend(attack, 2);
@@ -572,17 +572,17 @@ describe('O28 (5-A9) intercepting and spoofing a drone\'s link', () => {
     const card = chat.at(-1);
     assert.equal(d.system.link?.intercepted?.byUuid ?? '', '');
     assert.match(card.content, /data-sr2e-action="applyDroneLink"/);
-    assert.deepEqual(card.flags.sr2e.droneLink, { droneUuid: d.uuid, kind: 'intercept', byUuid: h.uuid, by: 'Spoofer' });
+    assert.deepEqual(card.flags.shadowrun2e_unified.droneLink, { droneUuid: d.uuid, kind: 'intercept', byUuid: h.uuid, by: 'Spoofer' });
     assert.equal(GM_APPLY_ACTIONS['applyDroneLink'], 'droneLinkApplied');
     // v0.81.0: by itself only when the card's author owns the interceptor (rules/trust.ts); v0.81.1 (RB2-2): never
     // (the drone is someone else's): the GM applies it.
     const mine = { authorIsGm: false, owns: (u: string) => u === h.uuid };
-    assert.equal(safeAutoApply('applyDroneLink', card.flags.sr2e, mine), false);
-    assert.equal(safeAutoApply('applyDroneLink', card.flags.sr2e, { authorIsGm: false, owns: () => false }), false);
-    assert.equal(safeAutoApply('applyDroneLink', { droneLink: { ...card.flags.sr2e.droneLink, kind: 'spoof' } }, mine), false);
-    assert.equal(await SR2Actor.applyDroneLink(card.flags.sr2e.droneLink), true);
+    assert.equal(safeAutoApply('applyDroneLink', card.flags.shadowrun2e_unified, mine), false);
+    assert.equal(safeAutoApply('applyDroneLink', card.flags.shadowrun2e_unified, { authorIsGm: false, owns: () => false }), false);
+    assert.equal(safeAutoApply('applyDroneLink', { droneLink: { ...card.flags.shadowrun2e_unified.droneLink, kind: 'spoof' } }, mine), false);
+    assert.equal(await SR2Actor.applyDroneLink(card.flags.shadowrun2e_unified.droneLink), true);
     assert.equal(d.system.link.intercepted.byUuid, h.uuid);
-    assert.equal(await SR2Actor.applyDroneLink({ ...card.flags.sr2e.droneLink, droneUuid: 'Actor.gone' }), false);
+    assert.equal(await SR2Actor.applyDroneLink({ ...card.flags.shadowrun2e_unified.droneLink, droneUuid: 'Actor.gone' }), false);
   });
 
   test('spoof: refused until intercepted; then vs its Pilot; one command by default (nothing stored)', async () => {
@@ -737,7 +737,7 @@ describe('O30 negotiating pay reads the opposed-attribute house rule', () => {
     assert.ok(await face.negotiatePay(10000, mrj.uuid));
     assert.match(chat.at(-1).content, /Face: Negotiation vs Johnson's Willpower 6/);
     assert.match(chat.at(-1).content, /Johnson: Negotiation vs Face's Willpower 5/);
-    assert.equal(chat.at(-1).flags.sr2e.contest.pay, 10000);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.contest.pay, 10000);
   });
 
   test('switched off: the social skills table (Willpower since the v0.77.0 book check; Charisma when the GM sets it back); the preview agrees with the roll', async () => {
@@ -1118,10 +1118,10 @@ describe('O41 statuses that outlive their reason', () => {
     const { registerTokenHooks } = await import('../applications/tokens.ts');
     registerTokenHooks();
     const run = async () => {
-      const a = who({ name: 'Ganger', flags: { sr2e: { broken: true } } });
+      const a = who({ name: 'Ganger', flags: { shadowrun2e_unified: { broken: true } } });
       await fire('deleteCombat', { combatants: [{ actor: a }, { actor: a }] });
       await wait(5);
-      return a.getFlag('sr2e', 'broken');
+      return a.getFlag('shadowrun2e_unified', 'broken');
     };
     // v0.81.0 (A-13): cleared through helpers/flags.ts clearFlag (null on an unlinked token's actor, deleted elsewhere).
     assert.ok(!(await run()));
@@ -1132,13 +1132,13 @@ describe('O41 statuses that outlive their reason', () => {
 
   test('timedEffects: a timed paralysis takes its power-effect entry with it; a sustained one stays; switch off: both stay', async () => {
     const run = async () => {
-      const a = who({ name: 'Victim', flags: { sr2e: {
+      const a = who({ name: 'Victim', flags: { shadowrun2e_unified: {
         powerEffects: [{ id: 'fx1', name: 'Paralyzing touch', status: 'paralysis', holdTurns: 2 }, { id: 'fx2', name: 'Binding', status: 'sr2eBound', holdTurns: 0 }],
         statusUntil: { paralysis: { round: -1, worldTime: 6 } },
       } } });
       g.game.actors = [a];
       await SR2Actor.timedEffects({ worldTime: 10 });
-      return { ids: (a.getFlag('sr2e', 'powerEffects') ?? []).map((e: any) => e.id), until: a.getFlag('sr2e', 'statusUntil') };
+      return { ids: (a.getFlag('shadowrun2e_unified', 'powerEffects') ?? []).map((e: any) => e.id), until: a.getFlag('shadowrun2e_unified', 'statusUntil') };
     };
     const r = await run();
     assert.deepEqual(r.ids, ['fx2']);
@@ -1149,8 +1149,8 @@ describe('O41 statuses that outlive their reason', () => {
 });
 
 describe('O42 the advancement log and projects', () => {
-  const recorded = (extra: any = {}, items: any[] = []) => who({ name: 'Ann', flags: { sr2e: { creation: { v: 1 }, advancement: [] } }, ...extra }, items);
-  const log = (a: any) => a.getFlag('sr2e', 'advancement') as any[];
+  const recorded = (extra: any = {}, items: any[] = []) => who({ name: 'Ann', flags: { shadowrun2e_unified: { creation: { v: 1 }, advancement: [] } }, ...extra }, items);
+  const log = (a: any) => a.getFlag('shadowrun2e_unified', 'advancement') as any[];
 
   test('logProjectDone: the requester, approved by the GM (and the GM who finished it early, once)', async () => {
     const { logProjectDone } = await import('../applications/advancement.ts');
@@ -1218,11 +1218,11 @@ describe('O42 the advancement log and projects', () => {
     adv.registerAdvancementHooks();
     const run = async () => {
       const a = recorded({ nuyen: 0 });
-      a.flags.sr2e.advancement = [{ id: 's', at: '', t: 0, by: 'Ann', approvedBy: '', karma: 0, nuyen: -5000, kind: 'gain', what: 'Bought Ares Predator' }];
+      a.flags.shadowrun2e_unified.advancement = [{ id: 's', at: '', t: 0, by: 'Ann', approvedBy: '', karma: 0, nuyen: -5000, kind: 'gain', what: 'Bought Ares Predator' }];
       const update = a.update.bind(a);
       a.update = async (d: any, o: any = {}) => { await fire('preUpdateActor', a, d, o, 'gm1'); await update(d); await fire('updateActor', a, d, o, 'gm1'); };
       const id = `p${++n}`;
-      await a.update({ [`flags.sr2e.projects.${id}`]: { id, kind: 'order', area: 'gear', label: 'Ares Predator on order', hours: 24, startedAt: 0, readyAt: 86400, paid: { karma: 0, nuyen: 5000 }, effect: {}, by: 'Ann' } }, { sr2eNoAdvance: true });
+      await a.update({ [`flags.shadowrun2e_unified.projects.${id}`]: { id, kind: 'order', area: 'gear', label: 'Ares Predator on order', hours: 24, startedAt: 0, readyAt: 86400, paid: { karma: 0, nuyen: 5000 }, effect: {}, by: 'Ann' } }, { sr2eNoAdvance: true });
       assert.equal(await a.cancelProject(id), true);
       assert.equal(a.system.nuyen, 5000);
       await adv.flushAdvancement();

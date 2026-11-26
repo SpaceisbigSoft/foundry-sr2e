@@ -7,6 +7,7 @@ import { SR2GmPanel } from './ui.ts';
 import { SR2AddWindow } from './adding.ts';
 import { escHtml } from '../rules/html.ts';
 import { t as tx } from '../helpers/i18n.ts';
+import { SYSTEM_ID } from '../config/system.ts';
 
 interface SR2Step {
   id: string;
@@ -84,7 +85,7 @@ function tourClass(): any {
     sr2e: SR2TourDef;
     constructor(def: SR2TourDef) {
       super({ title: def.title(), description: def.description(), canBeResumed: false, display: true, restricted: def.gm,
-        steps: def.steps.map((s) => ({ id: s.id, title: s.title(), content: s.body(), selector: 'body', tooltipDirection: s.tooltipDirection ?? 'UP' })) }, { id: def.id, namespace: 'sr2e' });
+        steps: def.steps.map((s) => ({ id: s.id, title: s.title(), content: s.body(), selector: 'body', tooltipDirection: s.tooltipDirection ?? 'UP' })) }, { id: def.id, namespace: SYSTEM_ID });
       this.sr2e = def;
     }
 
@@ -136,7 +137,7 @@ export function registerTours(): void {
     const tours: any = (game as any).tours;
     if (!Cls || !tours?.register) return;
     for (const def of TOURS) {
-      try { const t = new Cls(def); tours.register('sr2e', def.id, t); made.set(def.id, t); }
+      try { const t = new Cls(def); tours.register(SYSTEM_ID, def.id, t); made.set(def.id, t); }
       catch (err) { console.warn(`sr2e | tour ${def.id}`, err); }
     }
   });
@@ -144,7 +145,7 @@ export function registerTours(): void {
 
 /** Start a tour by id (character-sheet, add-window, gm-panel). */
 export async function startTour(id: string): Promise<boolean> {
-  const t = made.get(id) ?? (game as any).tours?.get?.(`sr2e.${id}`);
+  const t = made.get(id) ?? (game as any).tours?.get?.(`${SYSTEM_ID}.${id}`);
   if (!t) { ui.notifications.warn(tx('SR2E.Notify.Tours.noTour', { id: escHtml(id) })); return false; }
   try { await t.reset?.(); } catch { /* fresh */ }
   await t.start();

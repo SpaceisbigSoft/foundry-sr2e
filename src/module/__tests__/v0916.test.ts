@@ -238,13 +238,13 @@ describe('v0.91.6 the find test through a contact or a fixer (documents/index.ts
     assert.equal(faces.length, 0, 'all ten dice rolled');
     assert.equal(r.found, true);
     assert.equal(r.hours, 16, '48 hours ÷ the better result, 3');
-    const c = chat.at(-1).flags.sr2e.contest;
+    const c = chat.at(-1).flags.shadowrun2e_unified.contest;
     assert.equal(c.sides.length, 2);
     assert.equal(c.sides[0].result.targetNumber, 5);
     assert.equal(c.sides[1].uuid, undefined, 'the contact\'s side has no Karma buttons');
     assert.equal(c.deal.through.mode, 'help');
     assert.equal(c.deal.price, 2000);
-    assert.equal(chat.at(-1).flags.sr2e.buy.hours, 16);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.buy.hours, 16);
     assert.equal(a.system.nuyen, 4750, 'fee 50 and pay 200');
     const html = SR2Actor.contestContent(c);
     assert.match(html, /data-sr2e-action="haggle"/);
@@ -260,12 +260,12 @@ describe('v0.91.6 the find test through a contact or a fixer (documents/index.ts
     assert.equal(r.found, true);
     assert.equal(r.hours, 36, '48 × 1.5 ÷ 2 (the forbidden ×2 doesn\'t count)');
     assert.equal(r.price, 11000, 'the cut is on the price');
-    const c = chat.at(-1).flags.sr2e.contest;
+    const c = chat.at(-1).flags.shadowrun2e_unified.contest;
     assert.equal(c.sides.length, 1);
     assert.equal(c.sides[0].uuid, undefined);
     assert.equal(c.sides[0].result.targetNumber, 4);
     assert.equal(c.deal.through.fee, 1000);
-    assert.equal(chat.at(-1).flags.sr2e.buy.price, 11000);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.buy.price, 11000);
     assert.equal(a.system.nuyen, 5000, 'nothing paid until Buy');
     const html = SR2Actor.contestContent(c);
     assert.doesNotMatch(html, /data-sr2e-action="haggle"/);
@@ -297,7 +297,7 @@ describe('v0.91.6 the find test through a contact or a fixer (documents/index.ts
     assert.equal(faces.length, 0);
     assert.equal(a.system.contacts[0].favours, 0);
     assert.equal(a.system.nuyen, 5000, 'the favour waived the fee');
-    assert.ok(chat.at(-1).flags.sr2e.contest.deal.favNote);
+    assert.ok(chat.at(-1).flags.shadowrun2e_unified.contest.deal.favNote);
   });
   test('not enough nuyen for the fee: nothing rolled', async () => {
     settings['itemTemplates'] = [RIFLE];
@@ -318,7 +318,7 @@ describe('v0.91.6 the find test through a contact or a fixer (documents/index.ts
     const a = withContacts();
     faces.push(1, 1, 1, 1);
     await withRule(RULES.SHOP_V916, 'through', 'off', () => a.findFromShop('tpl:w:t5', { through: { contactId: 'f1', mode: 'fixer' } }));
-    const c = chat.at(-1).flags.sr2e.contest;
+    const c = chat.at(-1).flags.shadowrun2e_unified.contest;
     assert.equal(c.sides.length, 1);
     assert.equal(c.sides[0].uuid, a.uuid);
     assert.equal(c.sides[0].result.targetNumber, 6);
@@ -330,7 +330,7 @@ describe('v0.91.6 the find test through a contact or a fixer (documents/index.ts
     a.type = 'npc';
     faces.push(1, 1, 1, 1);
     await a.findFromShop('tpl:w:t5', { through: { contactId: 'f1', mode: 'fixer' } });
-    assert.equal(chat.at(-1).flags.sr2e.contest.sides[0].uuid, a.uuid);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.contest.sides[0].uuid, a.uuid);
   });
   test('a new contact keeps the form\'s fields, the fixer tick among them', async () => {
     const a = shopper();
@@ -409,8 +409,8 @@ describe('v0.91.6 review fixes', () => {
     faces.push(1, 1, 1, 1);
     const r = await a.findFromShop('tpl:w:t5', { through: { contactId: 'f1', mode: 'fixer' } });
     assert.equal(r.found, false);
-    assert.equal(chat.at(-1).flags.sr2e.contest.deal.avHours, 72);
-    const waits: any = Object.values(a.flags.sr2e.findRetry ?? {});
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.contest.deal.avHours, 72);
+    const waits: any = Object.values(a.flags.shadowrun2e_unified.findRetry ?? {});
     assert.equal(waits.length, 1);
     assert.equal(waits[0].at, 72 * 3600);
   });

@@ -34,7 +34,7 @@ const expand = (flat: Record<string, unknown>) => {
 };
 
 describe('v0.51.0 undo: what a change was before', () => {
-  const src = { name: 'Ganger', system: { monitor: { physical: 2, stun: 0 }, nuyen: 100, ledger: [{ a: 1 }], deep: { x: { y: 1 } } }, flags: { sr2e: { a: 1 } } };
+  const src = { name: 'Ganger', system: { monitor: { physical: 2, stun: 0 }, nuyen: 100, ledger: [{ a: 1 }], deep: { x: { y: 1 } } }, flags: { shadowrun2e_unified: { a: 1 } } };
 
   test('leaves are recorded with their old values; plain objects are walked into', () => {
     const f = beforeValues(src, expand({ 'system.monitor.physical': 5, 'system.nuyen': 50, name: 'Boss' }));
@@ -46,8 +46,8 @@ describe('v0.51.0 undo: what a change was before', () => {
     assert.deepEqual(f[0]!.before, [{ a: 1 }]);
   });
   test('-= and == keys (and dotted keys) record the field whole', () => {
-    const f = beforeValues(src, { flags: { sr2e: { '-=a': null } }, 'system.==deep': { q: 1 } });
-    assert.deepEqual(f.map((x) => x.path), ['flags.sr2e.a', 'system.deep']);
+    const f = beforeValues(src, { flags: { shadowrun2e_unified: { '-=a': null } }, 'system.==deep': { q: 1 } });
+    assert.deepEqual(f.map((x) => x.path), ['flags.shadowrun2e_unified.a', 'system.deep']);
     assert.deepEqual(f[1]!.before, { x: { y: 1 } });
   });
   test("Foundry's operator objects (class instances) are leaves", () => {
@@ -60,12 +60,12 @@ describe('v0.51.0 undo: what a change was before', () => {
     assert.deepEqual(f.map((x) => x.path), ['system']);
   });
   test('the inverse puts everything back (values, whole objects, removed new keys)', () => {
-    const upd = { system: { monitor: { physical: 9 }, ledger: [], newThing: { z: 1 }, deep: { x: { y: 7 } } }, flags: { sr2e: { b: 2 } } };
+    const upd = { system: { monitor: { physical: 9 }, ledger: [], newThing: { z: 1 }, deep: { x: { y: 7 } } }, flags: { shadowrun2e_unified: { b: 2 } } };
     const fields = beforeValues(src, upd);
     const after = applyUpdate(src, upd as any);
     const inv = inverseUpdate(fields);
     assert.deepEqual(applyUpdate(after, inv), src);
-    assert.ok('system.-=newThing' in inv && 'flags.sr2e.-=b' in inv);
+    assert.ok('system.-=newThing' in inv && 'flags.shadowrun2e_unified.-=b' in inv);
   });
   test('the inverse replaces an object that was overwritten whole', () => {
     const fields = beforeValues(src, { 'system.==deep': { q: 1 } });
@@ -169,7 +169,7 @@ describe('v0.51.0 undo: steps', () => {
     assert.equal(describeEntry({ op: 'delete', docName: 'Item', uuid: 'x', name: 'Medkit' }), 'item “Medkit” deleted');
     assert.equal(describeEntry({ op: 'update', docName: 'Setting', uuid: 'x', name: 'World time', settingKey: 'core.time', fields: [{ path: 'value', had: true, before: '0', hadAfter: true, after: '3600' }] }), 'world time 00:00:00 → 01:00:00');
     assert.equal(fieldLabel('system.poolSpent.combat'), 'combat Pool spent');
-    assert.equal(fieldLabel('flags.sr2e.cardRolls'), 'flag cardRolls');
+    assert.equal(fieldLabel('flags.shadowrun2e_unified.cardRolls'), 'flag cardRolls');
     assert.equal(fieldLabel('system.matrix.trace.active'), 'trace active');
     assert.equal(shortValue([1, 2]), '2 items');
     assert.equal(shortValue(undefined), '—');
@@ -280,7 +280,7 @@ describe('v0.51.0 Ctrl+Z: the canvas and the log, newest first', () => {
     assert.deepEqual(out.map((e) => [e.type, e.data.map((d) => d._id)]), [['update', ['w2']], ['delete', ['w3']]]);
   });
   test('change paths and forgetting what Foundry undid', () => {
-    assert.deepEqual(changePaths({ _id: 'x', x: 1, 'flags.sr2e.a': 2, hidden: true }), ['x', 'flags', 'hidden']);
+    assert.deepEqual(changePaths({ _id: 'x', x: 1, 'flags.shadowrun2e_unified.a': 2, hidden: true }), ['x', 'flags', 'hidden']);
     const who = { userId: 'gm', userName: 'GM' };
     const log: UndoStep[] = [];
     let n = 0;

@@ -414,7 +414,7 @@ export function backdropDocuments(b: Backdrop, spec: Pick<SceneSpec, 'grid' | 'g
   };
 }
 
-/** A rectangular region over an area (metres), e.g. a ward's edge (flags.sr2e.env.wardUuid). */
+/** A rectangular region over an area (metres), e.g. a ward's edge (flags.shadowrun2e_unified.env.wardUuid). */
 export function rectRegionData(area: BackdropRect, spec: Pick<SceneSpec, 'grid' | 'gridDistance'> & Partial<Pick<SceneGeo, 'originX' | 'originY'>>, o: { name: string; color: string; flags: Record<string, unknown> }): Record<string, unknown> {
   const px = spec.grid / spec.gridDistance;
   const ox = spec.originX ?? 0;

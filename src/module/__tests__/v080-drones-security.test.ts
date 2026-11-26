@@ -179,7 +179,7 @@ function site(devices: any[]): any {
 }
 const dev = (id: string, extra: any = {}) => ({ id, name: id, kind: 'maglock', rating: 4, tokenUuid: '', sceneId: '', wallId: '', active: true, bypassed: false, scanKind: '', sense: '', tamper: 0, identifies: false, notes: '', casing: 0, casingOpen: false, lockType: '', ...extra });
 const tool = (id: string, kind: string, rating: number) => ({ id, type: 'gear', name: id, system: { quantity: 1, bypassTool: { kind, rating } } });
-const testTn = () => chat.filter((m) => m.flags?.sr2e?.test).at(-1)?.flags.sr2e.test.targetNumber;
+const testTn = () => chat.filter((m) => m.flags?.shadowrun2e_unified?.test).at(-1)?.flags.shadowrun2e_unified.test.targetNumber;
 
 describe('v0.80.0 drones-security: drone-link interception (dsLinkIntercept)', () => {
   useV922Vehicles(); // v0.92.3: these pin the v0.92.2 vehicle rules
@@ -250,7 +250,7 @@ describe('v0.80.0 drones-security: listening in on encrypted radio (dsRadioDecry
     await ear.interceptComms(target.uuid);
     assert.equal(faces.length, 0);
     assert.equal(testTn(), 5);
-    assert.ok(chat.some((m) => /needs 1 success\)/.test(m.content ?? '') || /needs 1 success\)/.test(m.flags?.sr2e?.test?.label ?? '')));
+    assert.ok(chat.some((m) => /needs 1 success\)/.test(m.content ?? '') || /needs 1 success\)/.test(m.flags?.shadowrun2e_unified?.test?.label ?? '')));
   });
 });
 
@@ -302,7 +302,7 @@ describe('v0.80.0 drones-security: maglocks (dsLockCasing, lockTypes, dsPasskey,
     await thief([tool('Seq', 'sequencer', 5)]).bypassLock(s2, 'lock');
     assert.equal(faces.length, 0);
     assert.equal(s2.system.devices[0].bypassed, true);
-    assert.ok(chat.some((m) => /Crack lock/.test(m.flags?.sr2e?.test?.label ?? m.content ?? '') || /Crack lock/.test(m.content ?? '')));
+    assert.ok(chat.some((m) => /Crack lock/.test(m.flags?.shadowrun2e_unified?.test?.label ?? m.content ?? '') || /Crack lock/.test(m.content ?? '')));
     assert.ok(chat.some((m) => /accepts the code<\/strong> \(3 vs the lock's 1\) after 5 s/.test(m.content ?? '')));
   });
 });

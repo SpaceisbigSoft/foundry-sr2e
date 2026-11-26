@@ -248,10 +248,10 @@ describe('v0.91.0 finding and buying from the shop (documents/index.ts)', () => 
     const r = await a.findFromShop('tpl:w:t1');
     assert.deepEqual(r, { found: true, hours: 24, price: 1000 });
     const card = chat.at(-1);
-    assert.equal(card.flags.sr2e.buy.shop, 'tpl:w:t1');
-    assert.equal(card.flags.sr2e.buy.itemId, undefined);
-    assert.equal(card.flags.sr2e.buy.price, 1000);
-    assert.equal(card.flags.sr2e.buy.hours, 24);
+    assert.equal(card.flags.shadowrun2e_unified.buy.shop, 'tpl:w:t1');
+    assert.equal(card.flags.shadowrun2e_unified.buy.itemId, undefined);
+    assert.equal(card.flags.shadowrun2e_unified.buy.price, 1000);
+    assert.equal(card.flags.shadowrun2e_unified.buy.hours, 24);
     assert.equal(a.items.length, 1, 'nothing goes on the sheet until it is bought');
   });
 
@@ -265,7 +265,7 @@ describe('v0.91.0 finding and buying from the shop (documents/index.ts)', () => 
     await withRule(RULES.WAITING, 'enabled', true, async () => {
       assert.equal(await b.buyFromShop('tpl:w:t1', 1000, 24, 1), true);
     });
-    const projects = Object.values(b.flags.sr2e?.projects ?? {}) as any[];
+    const projects = Object.values(b.flags.shadowrun2e_unified?.projects ?? {}) as any[];
     assert.equal(projects.length, 1);
     assert.equal(projects[0].kind, 'order');
     assert.equal(projects[0].hours, 24);
@@ -301,14 +301,14 @@ describe('v0.91.0 finding and buying from the shop (documents/index.ts)', () => 
     faces.push(1, 1, 1, 1);
     const r = await a.findFromShop('tpl:w:t1');
     assert.deepEqual(r, { found: false, hours: null, price: 1000 });
-    const entry = a.flags.sr2e.findRetry[retryFlagKey('tpl:w:t1')];
+    const entry = a.flags.shadowrun2e_unified.findRetry[retryFlagKey('tpl:w:t1')];
     assert.equal(entry.at, 48 * 3600);
     assert.equal(await a.findFromShop('tpl:w:t1'), null);
     assert.ok(warnings.some((w) => /tryAgainLater|try again/.test(w)));
     g.game.time.worldTime = 48 * 3600;
     faces.push(5, 1, 1, 1);
     assert.equal((await a.findFromShop('tpl:w:t1'))?.found, true);
-    assert.equal(a.flags.sr2e.findRetry[retryFlagKey('tpl:w:t1')], undefined, 'found: the wait is gone');
+    assert.equal(a.flags.shadowrun2e_unified.findRetry[retryFlagKey('tpl:w:t1')], undefined, 'found: the wait is gone');
     // A sheet item's Find… waits the same way.
     const b = who({ name: 'B', nuyen: 0 }, [skill('et', 'Etiquette', 4, 'charisma'), { id: 'g1', type: 'gear', name: 'Medkit', system: { cost: 100, availability: '6/12 hrs', quantity: 1 } }]);
     faces.push(1, 1, 1, 1);
@@ -326,7 +326,7 @@ describe('v0.91.0 finding and buying from the shop (documents/index.ts)', () => 
     const a = shopper();
     a.testUserPermission = () => true;
     assert.equal(await a.buyFromShop('tpl:w:t1', 900, 12, 1), 'requested');
-    const reqs = Object.values(a.flags.sr2e.requests) as any[];
+    const reqs = Object.values(a.flags.shadowrun2e_unified.requests) as any[];
     assert.equal(reqs.length, 1);
     assert.deepEqual(reqs[0].data, { method: 'buyFromShop', args: ['tpl:w:t1', 900, 12, 1] });
     assert.equal(reqs[0].nuyen, 900);
@@ -346,8 +346,8 @@ describe('v0.91.0 finding and buying from the shop (documents/index.ts)', () => 
     const p = await a.haggle({ shop: 'tpl:w:t1', price: 1, name: 'x', qty: 1, hours: 24 });
     assert.equal(typeof p, 'number');
     const card = chat.at(-1);
-    assert.equal(card.flags.sr2e.buy.shop, 'tpl:w:t1');
-    assert.equal(card.flags.sr2e.contest.deal.price, 1000, 'the list price, not the card\'s 1');
+    assert.equal(card.flags.shadowrun2e_unified.buy.shop, 'tpl:w:t1');
+    assert.equal(card.flags.shadowrun2e_unified.contest.deal.price, 1000, 'the list price, not the card\'s 1');
     settings['itemTemplates'] = [];
     assert.equal(await a.haggle({ shop: 'tpl:w:t1', price: 1, name: 'x', qty: 1 }), null, 'gone from the shop: no haggle');
   });
@@ -417,7 +417,7 @@ describe('v0.91.0 review fixes', () => {
     const a = shopper();
     assert.equal(await a.buyFromShop('tpl:w:t1', 1000, 12, 1), 'requested');
     assert.equal(await a.buyFromShop('tpl:w:t1', 1000, 12, 1), 'requested');
-    assert.equal(Object.values(a.flags.sr2e.requests).length, 2);
+    assert.equal(Object.values(a.flags.shadowrun2e_unified.requests).length, 2);
     const b = shopper();
     b.isOwner = false;
     assert.equal(await b.buyFromShop('tpl:w:t1', 1000, 12, 1), false, 'fileRequest refused (not the owner): nothing filed');
@@ -430,18 +430,18 @@ describe('v0.91.0 review fixes', () => {
     a.system.karma.pool = 5; a.system.prepareDerivedData();
     faces.push(1, 1, 2, 2);
     await a.findFromShop('tpl:w:t1');
-    assert.ok(a.flags.sr2e.findRetry[retryFlagKey('tpl:w:t1')]);
+    assert.ok(a.flags.shadowrun2e_unified.findRetry[retryFlagKey('tpl:w:t1')]);
     const card = chat.at(-1);
     faces.push(5, 5, 5, 5);
     await SR2Actor.contestKarma(card, 0, 'reroll');
-    assert.equal(a.flags.sr2e.findRetry[retryFlagKey('tpl:w:t1')], undefined);
+    assert.equal(a.flags.shadowrun2e_unified.findRetry[retryFlagKey('tpl:w:t1')], undefined);
   });
 
   test('R2: a find time of 0 for something with an Availability test becomes its base time', async () => {
     settings['itemTemplates'] = [PISTOL];
     const b = shopper();
     await withRule(RULES.WAITING, 'enabled', true, async () => { assert.equal(await b.buyFromShop('tpl:w:t1', 1000, 0, 1), true); });
-    assert.equal((Object.values(b.flags.sr2e.projects) as any[])[0].hours, 48);
+    assert.equal((Object.values(b.flags.shadowrun2e_unified.projects) as any[])[0].hours, 48);
   });
 
   test('R1: a Buy now add request from a character who must find first, or holding a Forbidden item, is refused on the GM side', async () => {

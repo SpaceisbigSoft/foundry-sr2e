@@ -195,7 +195,7 @@ export class SR2Actor {
     await ChatMessage.create({ content: \`<p><strong>Hit!</strong> Damage follows.</p>\` });
     const mode = 'full auto';
     if (mode === 'full auto') return;
-    await this.update({ 'flags.sr2e.note': 'kept as data' });
+    await this.update({ 'flags.shadowrun2e_unified.note': 'kept as data' });
     const tip = 'Shown in a title';
     await ChatMessage.create({ content: \`<p><button type="button" title="\${tip}" class="wide button">Press it now</button></p>\` });
     await this.#post(this.#snapshot(\`\${this.name} jumps the fence\`));
@@ -238,7 +238,7 @@ export class SR2Actor {
     assert.ok(vals.includes('Damage follows.'));
     // code values and stored data stay
     assert.match(out, /const mode = 'full auto';\n\s+if \(mode === 'full auto'\) return;/);
-    assert.match(out, /'flags\.sr2e\.note': 'kept as data'/);
+    assert.match(out, /'flags\.shadowrun2e_unified\.note': 'kept as data'/);
     // a local shown only in a title attribute, the button's text, and a test's label
     assert.match(out, /const tip = tx\('SR2E\.Card\.Actor\.\w+'\);/);
     assert.match(out, /class="wide button">\$\{tx\('SR2E\.Card\.Actor\.\w+'\)\}<\/button>/);

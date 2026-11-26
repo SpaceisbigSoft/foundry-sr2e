@@ -215,12 +215,12 @@ describe('v0.92.3 banishing (Core p. 143)', () => {
     await m.banish(s);
     assert.equal(s.system.force, 4);
     assert.ok(!has(/Conjuring drain/));
-    assert.deepEqual(s.getFlag('sr2e', 'banishForce'), { lost: 1, at: 0 });
+    assert.deepEqual(s.getFlag('shadowrun2e_unified', 'banishForce'), { lost: 1, at: 0 });
     g.game.actors = [s];
     g.game.time = { worldTime: 3600 };
     await SR2Actor.magicTicks({ worldTime: 3600 });
     assert.equal(s.system.force, 5);
-    assert.equal(s.getFlag('sr2e', 'banishForce'), undefined);
+    assert.equal(s.getFlag('shadowrun2e_unified', 'banishForce'), undefined);
   });
   test('book: the spirit winning takes 1 Magic per 2 net successes from the banisher', async () => {
     const m = conjurer();
@@ -228,7 +228,7 @@ describe('v0.92.3 banishing (Core p. 143)', () => {
     faces.push(6, 6, 6, 6, 1, 1, 1, 1, 1);            // the spirit vs Magic 6: 4 successes (each 6 rolls again)
     faces.push(1, 1, 1, 1, 1);                        // the banisher: none
     await m.banish(s);
-    assert.deepEqual(m.getFlag('sr2e', 'banishMagic'), { lost: 2, at: 0 });
+    assert.deepEqual(m.getFlag('shadowrun2e_unified', 'banishMagic'), { lost: 2, at: 0 });
     m.system.prepareDerivedData();                    // (Foundry recomputes on the flag's update)
     assert.equal(m.system.derived.magic, 4);
     assert.ok(has(/loses 2 Magic/));
@@ -273,9 +273,9 @@ describe('v0.92.3 banishing (Core p. 143)', () => {
     faces.push(5, 5, 1, 1, 1);
     faces.push(1, 1, 1, 1);                           // the challenger's drain only
     await m.banish(s, { control: true });
-    const card = chat.find((c: any) => c.flags?.sr2e?.conjuringDrain923);
+    const card = chat.find((c: any) => c.flags?.shadowrun2e_unified?.conjuringDrain923);
     assert.ok(card);
-    assert.deepEqual(card.flags.sr2e.conjuringDrain923, { actorUuid: holder.uuid, force: 3 });
+    assert.deepEqual(card.flags.shadowrun2e_unified.conjuringDrain923, { actorUuid: holder.uuid, force: 3 });
     assert.match(card.content, /data-sr2e-action="conjuringDrain923"/);
     assert.equal(holder.system.monitor.stun, 0);
   });
@@ -376,7 +376,7 @@ describe('v0.92.3 the astral plane (Core p. 147; Grimoire p. 91)', () => {
     faces.push(1, 1, 1, 1, 1);                        // Sorcery 5 vs 4: none
     await m.breachBarrier(b);
     assert.ok(has(/Ward strikes back: 4M/));
-    assert.equal(chat.at(-1).flags.sr2e.damage.astral, true);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.damage.astral, true);
     t.after(oldWay({ 'SPIRITS_V923.barrierBacklash': 'v922' }));
     faces.push(6, 6, 6, 1, 1, 1, 1, 1, 1, 1, 1, 1);
     chat.length = 0;
@@ -389,7 +389,7 @@ describe('v0.92.3 initiation, allies, wards, geasa, dispelling (Grimoire; initia
   test('book: the first initiation is Grade 0 for 18 Karma and adds no Magic; the next is Grade 1 for 21', async (t) => {
     const m = mage({ karma: { pool: 0, poolSpent: 0, good: 60, career: 60 } });
     assert.equal(await m.advanceInitiation(null), true);
-    assert.deepEqual([m.system.initiateGrade, m.getFlag('sr2e', 'initiated'), m.system.karma.good, m.system.derived.magic], [0, true, 42, 6]);
+    assert.deepEqual([m.system.initiateGrade, m.getFlag('shadowrun2e_unified', 'initiated'), m.system.karma.good, m.system.derived.magic], [0, true, 42, 6]);
     assert.equal(await m.advanceInitiation(null), true);
     assert.deepEqual([m.system.initiateGrade, m.system.karma.good, m.system.derived.magic], [1, 21, 7]);
     t.after(oldWay(SPIRITS_V922_WAY));

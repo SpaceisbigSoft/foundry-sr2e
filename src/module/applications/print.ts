@@ -18,6 +18,7 @@ import { escHtml } from '../rules/html.ts';
 import { enrichFields } from './richtext.ts';
 import { skillRow, weaponRow, cyberRow, conditionMonitor, TRADITION_LABELS } from './sheets.ts';
 import { t as tx, tKey } from '../helpers/i18n.ts';
+import { SYSTEM_ID } from '../config/system.ts';
 
 const esc = escHtml;
 /** Actor types with a printable sheet. */
@@ -65,7 +66,7 @@ export async function printModel(actor: any, opts: { secrets?: boolean } = {}): 
   if (sys.threatRating) facts.push([tx('SR2E.App.Print.threatRating'), num(sys.threatRating)]);
   if (sys.totem?.name) facts.push([tx('SR2E.App.Print.totem'), String(sys.totem.name)]);
   // v0.92.3 review fix: a Grade 0 initiate (RULES.SORCERY_V923.initiation 'book', the `initiated` flag) prints too.
-  if (Number(sys.initiateGrade ?? 0) > 0 || actor.getFlag?.('sr2e', 'initiated') || actor.flags?.sr2e?.initiated) facts.push([tx('SR2E.App.Print.initiateGrade'), num(sys.initiateGrade)]);
+  if (Number(sys.initiateGrade ?? 0) > 0 || actor.getFlag?.(SYSTEM_ID, 'initiated') || actor.flags?.[SYSTEM_ID]?.initiated) facts.push([tx('SR2E.App.Print.initiateGrade'), num(sys.initiateGrade)]);
 
   const attributes = ATTRIBUTE_KEYS.map((k) => {
     const a = sys.attributes?.[k] ?? {};

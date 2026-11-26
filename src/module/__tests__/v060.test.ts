@@ -18,7 +18,7 @@ function fire(name: string, ...args: any[]): any[] {
 }
 
 function region(id: string, env: any, shapes: any[], extra: any = {}) {
-  return { id, uuid: `Scene.s.Region.${id}`, name: `Region ${id}`, shapes, flags: { sr2e: { env } }, behaviors: [], ...extra };
+  return { id, uuid: `Scene.s.Region.${id}`, name: `Region ${id}`, shapes, flags: { shadowrun2e_unified: { env } }, behaviors: [], ...extra };
 }
 
 function scene(regs: any[], tokens: any[] = []) {
@@ -135,7 +135,7 @@ describe('v0.60.0 regions (glue)', () => {
     await new Promise((r) => setTimeout(r, 10));
     assert.equal(chat.length, 1);
     assert.match(chat[0].content, /Lobby cam.*Runner walks in/);
-    assert.deepEqual(chat[0].flags.sr2e.regionDetect, { siteUuid: 'Actor.site', deviceId: 'cam', intruderUuid: 'Actor.runner' });
+    assert.deepEqual(chat[0].flags.shadowrun2e_unified.regionDetect, { siteUuid: 'Actor.site', deviceId: 'cam', intruderUuid: 'Actor.runner' });
     // Moving inside the view isn't walking in again.
     runner.x = 1200;
     fire('updateToken', runner, { x: 1200 });
@@ -177,20 +177,20 @@ describe('v0.60.0 regions (glue)', () => {
   });
 
   test('saving a region keeps its environment tidy; the config fields carry the current values', () => {
-    const doc = { flags: { sr2e: { env: { backgroundCount: 2, light: 'partial' } } } };
-    const change: any = { flags: { sr2e: { env: { backgroundCount: '4', smoke: 'oops' } } } };
+    const doc = { flags: { shadowrun2e_unified: { env: { backgroundCount: 2, light: 'partial' } } } };
+    const change: any = { flags: { shadowrun2e_unified: { env: { backgroundCount: '4', smoke: 'oops' } } } };
     fire('preUpdateRegion', doc, change);
-    assert.equal(change.flags.sr2e.env.backgroundCount, 4);
-    assert.equal(change.flags.sr2e.env.light, 'partial');
-    assert.equal(change.flags.sr2e.env.smoke, '');
+    assert.equal(change.flags.shadowrun2e_unified.env.backgroundCount, 4);
+    assert.equal(change.flags.shadowrun2e_unified.env.light, 'partial');
+    assert.equal(change.flags.shadowrun2e_unified.env.smoke, '');
     const html = regions.regionEnvFields(regions.regionsAt(scene([]), { x: 0, y: 0 })[0]?.env ?? (globalThis as any).structuredClone({ backgroundCount: 3, backgroundAspect: 'bear', backgroundToxic: true, environment: 'forest', weather: 'fog', light: 'minimal', smoke: 'smoke', wardUuid: 'Actor.w', siteUuid: 'Actor.s', deviceId: 'd' }),
       { barriers: [{ uuid: 'Actor.w', name: 'Ward (4)' }], devices: [{ siteUuid: 'Actor.s', deviceId: 'd', name: 'Lab: cam' }] });
-    assert.match(html, /name="flags\.sr2e\.env\.backgroundCount" value="3"/);
+    assert.match(html, /name="flags\.shadowrun2e_unified\.env\.backgroundCount" value="3"/);
     assert.match(html, /<option value="fog" selected>/);
     assert.match(html, /<option value="minimal" selected>/);
     assert.match(html, /<option value="Actor\.w" selected>/);
     assert.match(html, /<option value="Actor\.s#d" selected>/);
-    assert.match(html, /name="flags\.sr2e\.env\.backgroundToxic" checked/);
+    assert.match(html, /name="flags\.shadowrun2e_unified\.env\.backgroundToxic" checked/);
     assert.doesNotMatch(html, /name="sr2eRegionDevice"/);                          // the picker isn't saved itself
   });
 });
@@ -233,7 +233,7 @@ describe('v0.60.0 quality of life (glue)', () => {
     await new Promise((r) => setTimeout(r, 200));
     assert.ok(notes.includes('info:Your turn: Pell.'));
     assert.equal(played.length, 1);
-    fire('updateCombat', combat, { flags: { sr2e: { surprise: {} } } }, {}, 'gm');
+    fire('updateCombat', combat, { flags: { shadowrun2e_unified: { surprise: {} } } }, {}, 'gm');
     await new Promise((r) => setTimeout(r, 200));
     assert.equal(played.length, 1);
     delete g.foundry.audio;

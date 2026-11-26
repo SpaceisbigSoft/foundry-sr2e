@@ -1,6 +1,6 @@
 # SR2e system API and hooks (v0.82.0)
 
-For macros and other modules. Everything here is available once the world is ready (`Hooks.once('sr2e.ready', api => …)`, or `game.sr2e.api` afterwards). The system is unofficial and ships no rulebook data.
+For macros and other modules. **v0.93.1:** the system id is `shadowrun2e_unified` (it was `sr2e`): flags, settings, the socket (`system.shadowrun2e_unified`) and file paths follow it, but the names below stay as they were (`game.sr2e`, the `sr2e.*` hooks), so macros keep working. Everything here is available once the world is ready (`Hooks.once('sr2e.ready', api => …)`, or `game.sr2e.api` afterwards). The system is unofficial and ships no rulebook data.
 
 ## `game.sr2e`
 
@@ -49,7 +49,7 @@ Called with `Hooks.call` (a listener returning `false` stops it):
 
 ## Region environment flags
 
-A Region's SR2 environment is `flags.sr2e.env`: `backgroundCount` (0–20), `backgroundAspect` (tags, `toxic` counts as toxic), `backgroundToxic`, `environment` (tags), `weather` (an id from `RULES.HEALTH.weather`, `''` for the scene's), `light` (`normal`, `partial`, `minimal`, `darkness`, or `''`), `smoke` (`smoke`, `thermal` or `''`), `wardUuid` (a barrier actor), `siteUuid` and `deviceId` (a site's camera or sensor).
+A Region's SR2 environment is `flags.shadowrun2e_unified.env` (`flags.sr2e.env` before v0.93.1): `backgroundCount` (0–20), `backgroundAspect` (tags, `toxic` counts as toxic), `backgroundToxic`, `environment` (tags), `weather` (an id from `RULES.HEALTH.weather`, `''` for the scene's), `light` (`normal`, `partial`, `minimal`, `darkness`, or `''`), `smoke` (`smoke`, `thermal` or `''`), `wardUuid` (a barrier actor), `siteUuid` and `deviceId` (a site's camera or sensor).
 
 ## Token Action HUD
 

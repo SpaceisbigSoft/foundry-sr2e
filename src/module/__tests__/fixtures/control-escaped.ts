@@ -23,7 +23,7 @@ export function c03() { return `<p>${wrap(a.name)} ${wrapDefault(a.nick)}</p>`; 
 export function c04() { return `<p>${a.count} ${a.ratio.toFixed(1)} ${a.count.toLocaleString()} ${Math.round(a.ratio)}</p>`; }
 export function c05() { return `<p title="${escHtml(a.name)}">${RULES.MAGIC_V56.learning.skill}</p>`; }
 export function c06() { return `<p>${game.i18n.localize('SR2E.Armor')} ${game.i18n.format('SR2E.X', { n: a.count })}</p>`; }
-export function c07() { return `<a href="#${escHtml(a.name)}">x</a><img src="systems/sr2e/${escHtml(a.nick)}.webp">`; }
+export function c07() { return `<a href="#${escHtml(a.name)}">x</a><img src="systems/shadowrun2e_unified/${escHtml(a.nick)}.webp">`; }
 export function c08() { el.innerHTML = `<b>${escHtml(a.name)}</b>`; }
 export function c09() { el.insertAdjacentHTML('beforeend', `${escHtml(a.name)} was here`); }
 export function c10() { const parts = a.tags.map((t) => `<li>${escHtml(t)}</li>`); return `<ul>${parts.join('')}</ul>`; }

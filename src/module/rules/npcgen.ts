@@ -15,6 +15,7 @@ import { racialModsOf } from './core923.ts';
 import { escHtml } from './html.ts';
 import { own } from './util.ts';
 import { t as tx, tCount } from '../helpers/i18n.ts';
+import { SYSTEM_ID } from '../config/system.ts';
 
 type AttributeKey = 'body' | 'quickness' | 'strength' | 'charisma' | 'intelligence' | 'willpower';
 const ATTRS: AttributeKey[] = ['body', 'quickness', 'strength', 'charisma', 'intelligence', 'willpower'];
@@ -567,7 +568,7 @@ export function npcActorData(p: NpcPlan): { actor: { name: string; type: string;
   return {
     actor: { name: p.grunts > 1 ? `${p.name} (×${p.grunts})` : p.name, type: 'npc', system,
       prototypeToken: { name: p.grunts > 1 || p.archetype.startsWith('critter:') ? p.name : p.streetName || p.realName || p.name, actorLink: false },
-      flags: { sr2e: { generated: { role: p.role, threat: p.threat, archetype: p.archetype } } } },
+      flags: { [SYSTEM_ID]: { generated: { role: p.role, threat: p.threat, archetype: p.archetype } } } },
     // The block's placeholder attributes and the spells' default drain aren't worth a warning here (v0.89.6: by code).
     items, warnings: [...parsed.warnings.filter((w) => !QUIET_WARNINGS.has(statBlockWarningCode(parsed.warnings, w))),
       ...extra.warnings.filter((w) => !QUIET_WARNINGS.has(statBlockWarningCode(extra.warnings, w)))],
@@ -724,7 +725,7 @@ export function generateSpirit(opts: { threat: number; spiritKind?: 'nature' | '
 
 export function spiritActorData(p: SpiritPlan): { actor: { name: string; type: string; system: Record<string, unknown>; prototypeToken: Record<string, unknown>; flags: Record<string, unknown> } } {
   return { actor: { name: p.name, type: 'spirit', system: { force: p.force, spiritKind: p.spiritKind, spiritType: p.spiritType, element: p.element, services: 0, materialized: true },
-    prototypeToken: { name: p.spiritType, actorLink: false }, flags: { sr2e: { generated: { description: p.description, threat: p.threat } } } } };
+    prototypeToken: { name: p.spiritType, actorLink: false }, flags: { [SYSTEM_ID]: { generated: { description: p.description, threat: p.threat } } } } };
 }
 
 /** Generic animals (no book critters): attributes before Threat Level, natural weapons, senses. */
@@ -757,7 +758,7 @@ export function critterActorData(p: NpcPlan): ReturnType<typeof npcActorData> {
   const base = npcActorData(p);
   base.actor.system['racialModifiers'] = false;
   // A critter has no metatype: no racial modifiers or (meta)human maximums (see `usesMetatype`).
-  base.actor.flags['sr2e'] = { ...(base.actor.flags['sr2e'] ?? {}), critter: true };
+  base.actor.flags[SYSTEM_ID] = { ...(base.actor.flags[SYSTEM_ID] ?? {}), critter: true };
   const c = CRITTERS.find((x) => `critter:${x.id}` === p.archetype);
   if (c?.vision) base.actor.system['vision'] = { lowLight: Boolean(c.vision.lowLight), thermographic: Boolean(c.vision.thermographic) };
   if (c) {

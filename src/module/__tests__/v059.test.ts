@@ -94,7 +94,7 @@ describe('v0.59.0 migration of v0.58.0 data', () => {
     assert.equal(mig.itemMigrationUpdate({ type: 'skill', name: 'Car', system: { attribute: 'intelligence' } }), null);
     assert.equal(mig.itemMigrationUpdate({ type: 'skill', name: 'Pistols', system: { attribute: 'quickness' } }), null);
     // v0.81.1 (RB2-6): the house-rule cleanup for removed rules runs too.
-    assert.deepEqual(mig.pendingMigrations('0.58.0'), ['0.59.0', '0.77.0', '0.81.1', '0.92.3']);
+    assert.deepEqual(mig.pendingMigrations('0.58.0'), ['0.59.0', '0.77.0', '0.81.1', '0.92.3', '0.93.1']);
     // v0.77.0: Killing Hands saved under M/S/D moves up one level (L/M/S/D); other items and level 4 are left alone.
     assert.deepEqual(mig.killingHandsMigrationUpdate({ type: 'adeptpower', system: { special: 'killingHands', level: 1 } }), { 'system.level': 2 });
     assert.deepEqual(mig.killingHandsMigrationUpdate({ type: 'adeptpower', system: { special: 'killingHands', level: 3 } }), { 'system.level': 4 });
@@ -204,7 +204,7 @@ describe('v0.59.0 quality of life', () => {
     assert.equal(cv.areaExpired({ round: null, combatId: null, at: 5000 }, { rounds, ms: 6000 }), true);
     const d: any = cv.areaRegionData({ x: 10.4, y: 20 }, 5, { name: 'Blast' });
     assert.deepEqual(d.shapes[0], { type: 'circle', x: 10, y: 20, radius: 500 });
-    assert.equal(d.flags.sr2e.area, true);
+    assert.equal(d.flags.shadowrun2e_unified.area, true);
     assert.deepEqual(cv.tokenCentre({ x: 100, y: 200, width: 2, height: 1 }, 100), { x: 200, y: 250 });
     delete g.canvas;
   });

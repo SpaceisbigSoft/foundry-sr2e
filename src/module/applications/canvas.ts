@@ -9,6 +9,7 @@ import { palette } from "../rules/look.ts";
 import { regionLightAt, regionSmokeBetween } from "./regions.ts";
 import { isLeadGm, madeHere, leadSettled } from "./leader.ts";
 import { t as tx } from '../helpers/i18n.ts';
+import { SYSTEM_ID } from '../config/system.ts';
 
 /** Canvas glue shared by the sheets and chat cards: tokens, distances, sight lines, light. */
 
@@ -352,9 +353,9 @@ export function isProne(actor: any): boolean {
  */
 export function wallRating(doc: any): number {
   const def = RULES.COMBAT.barriers.defaultWallRating;
-  const raw = doc?.getFlag?.(SYSTEM.id, "barrierRating") ?? doc?.flags?.sr2e?.barrierRating;
+  const raw = doc?.getFlag?.(SYSTEM.id, "barrierRating") ?? doc?.flags?.[SYSTEM_ID]?.barrierRating;
   // A wall damaged down to 0 (it has a `barrierFull`, the rating before damage) really is 0.
-  const damaged = (doc?.getFlag?.(SYSTEM.id, "barrierFull") ?? doc?.flags?.sr2e?.barrierFull) != null;
+  const damaged = (doc?.getFlag?.(SYSTEM.id, "barrierFull") ?? doc?.flags?.[SYSTEM_ID]?.barrierFull) != null;
   if (raw === null || raw === undefined || raw === "") return def;
   return Number(raw) > 0 ? Number(raw) : damaged ? 0 : def;
 }
@@ -548,7 +549,7 @@ export async function placeArea(radiusMetres: number, name: string): Promise<{ r
 
 /**
  * v0.61.0: draw a ward on the map: the user places a circle of `radiusMetres` that stays (no expiry) and carries
- * the ward (flags.sr2e.env.wardUuid), so astral movement and spells across it are checked (applications/regions.ts).
+ * the ward (flags.shadowrun2e_unified.env.wardUuid), so astral movement and spells across it are checked (applications/regions.ts).
  */
 export async function placeWardRegion(barrierUuid: string, name: string, radiusMetres: number): Promise<any | null> {
   try {

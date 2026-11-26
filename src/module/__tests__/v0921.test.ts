@@ -274,7 +274,7 @@ describe('v0.92.1 accessories read on SR2Item', () => {
     assert.deepEqual(changed.system.tweaks.map((t: any) => t.id), ['accfoldingStock']);
     assert.equal(changed.system.tweaks[0].target, 'note');
     assert.match(changed.system.tweaks[0].label, /From the description: Folding stock/);
-    const rec = changed.flags.sr2e.fromDescription;
+    const rec = changed.flags.shadowrun2e_unified.fromDescription;
     assert.deepEqual(rec.fields.recoilComp, { id: 'gasVent', value: 2, before: 0, text: 'Gas-vent 2' });
     assert.deepEqual(rec.noted, ['foldingStock']);
   });
@@ -296,7 +296,7 @@ describe('v0.92.1 the rating lock follows the approval queue', () => {
   before(async () => { adv = await import('../applications/advancement.ts'); });
   test('queue off: a player\'s typed raise is kept, with a notice; queue on: refused; \'always\': refused', async () => {
     const a = who({ name: 'Done' });
-    a.flags.sr2e = { creation: { v: 1, finishedAt: 'x', attributes: {} } };
+    a.flags.shadowrun2e_unified = { creation: { v: 1, finishedAt: 'x', attributes: {} } };
     g.game.user = { id: 'player', name: 'P', isGM: false };
     settings['approvalQueue'] = false;
     const ch: Record<string, unknown> = { 'system.attributes.body.base': 6 };
@@ -361,7 +361,7 @@ describe('v0.92.1 review fixes (glue)', () => {
     SR2Item.readDescriptionInto(c, { smartgun: false, laserSight: false }, { fields: {}, dismissed: [], noted: [] }, { oldDescription: 'smartgun link' });
     assert.equal(c.system.smartgun, undefined, 'cleared by hand before: not ticked again');
     assert.equal(c.system.laserSight, true);
-    assert.match(SRC('documents/index.ts'), /!data\?\.flags\?\.sr2e\?\.fromDescription\) \{/);
+    assert.match(SRC('documents/index.ts'), /!data\?\.flags\?\.\[SYSTEM_ID\]\?\.fromDescription\) \{/);
   });
   test('with the lock on, a player\'s new or stronger tweak is refused; a note or switching one off is fine', async () => {
     const adv: any = await import('../applications/advancement.ts');
@@ -370,7 +370,7 @@ describe('v0.92.1 review fixes (glue)', () => {
     assert.equal(adv.tweaksRaise([{ id: 'a', target: 'attribute', key: 'body', value: 2, on: true }], [{ id: 'a', target: 'attribute', key: 'body', value: 2, on: false }]), false);
     assert.equal(adv.tweaksRaise([{ id: 'a', target: 'attribute', key: 'body', value: 2, on: true }], [{ id: 'a', target: 'attribute', key: 'body', value: 3, on: true }]), true);
     const a = who({ name: 'Locked' });
-    a.flags.sr2e = { creation: { v: 1, finishedAt: 'x', attributes: {} } };
+    a.flags.shadowrun2e_unified = { creation: { v: 1, finishedAt: 'x', attributes: {} } };
     g.game.user = { id: 'player', name: 'P', isGM: false };
     settings['approvalQueue'] = true;
     const skill = { type: 'skill', parent: a, system: { rating: 3, tweaks: [] } };

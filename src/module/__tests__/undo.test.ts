@@ -177,7 +177,7 @@ describe('v0.51.0 undo log', () => {
     assert.equal(SR2Undo.newest(), null);
     const a = new Doc('Actor', 'a1', { name: 'A', system: { n: 1 } });
     await a.update({ 'system.n': 2 });
-    const card = new Doc('ChatMessage', 'c1', { content: '<div class="sr2e-roll"><h3>Attack: Pistol</h3></div>', flags: { sr2e: { test: {} } } });
+    const card = new Doc('ChatMessage', 'c1', { content: '<div class="sr2e-roll"><h3>Attack: Pistol</h3></div>', flags: { shadowrun2e_unified: { test: {} } } });
     fire('createChatMessage', card, {}, 'u1');
     assert.equal(SR2Undo.newest().label, 'Attack: Pistol');
     await SR2Undo.undoLast();
@@ -223,7 +223,7 @@ describe('v0.51.0 undo log', () => {
   test('settings: world time and the system\'s settings are logged, others not; time is put back by advancing', async () => {
     const other = new Doc('Setting', 's0', { key: 'core.fog', value: '1' });
     await other.update({ value: '2' });
-    const mig = new Doc('Setting', 's1', { key: 'sr2e.migrationVersion', value: '"0.1"' });
+    const mig = new Doc('Setting', 's1', { key: 'shadowrun2e_unified.migrationVersion', value: '"0.1"' });
     await mig.update({ value: '"0.2"' });
     assert.equal(SR2Undo.newest(), null);
     const time = new Doc('Setting', 's2', { key: 'core.time', value: '3600' });
@@ -311,12 +311,12 @@ describe('v0.51.0 undo log', () => {
 
   test('review: undoing a setting saved for the first time puts back its default; the first world time goes back to 0', async () => {
     const sets: any[] = [];
-    g.game.settings = { settings: new Map([['sr2e.scenePresets', { default: [] }]]), set: async (...a: any[]) => { sets.push(a); } };
-    const st = new Doc('Setting', 's9', { key: 'sr2e.scenePresets', value: '[{"id":"x"}]' });
+    g.game.settings = { settings: new Map([['shadowrun2e_unified.scenePresets', { default: [] }]]), set: async (...a: any[]) => { sets.push(a); } };
+    const st = new Doc('Setting', 's9', { key: 'shadowrun2e_unified.scenePresets', value: '[{"id":"x"}]' });
     fire('createSetting', st, {}, 'u1');
     assert.equal(SR2Undo.newest().label, 'setting “scenePresets” first saved');
     await SR2Undo.undoLast();
-    assert.deepEqual(sets, [['sr2e', 'scenePresets', []]]);
+    assert.deepEqual(sets, [['shadowrun2e_unified', 'scenePresets', []]]);
     SR2Undo.endQuiet();
     g.game.time.worldTime = 500;
     const t = new Doc('Setting', 's10', { key: 'core.time', value: '500' });

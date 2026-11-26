@@ -52,7 +52,7 @@ if (!t) return ui.notifications.warn("Select a token.");
 const units = String(canvas.scene.grid.units || "m").toLowerCase();
 const metresPerUnit = /^(ft|feet|foot)/.test(units) ? 0.3048 : /^(yd|yard)/.test(units) ? 0.9144 : /^km/.test(units) ? 1000 : 1;
 const ppm = canvas.dimensions.size / ((canvas.dimensions.distance || 1) * metresPerUnit);
-await canvas.scene.createEmbeddedDocuments("Region", [{ name: "Smoke", color: "#888888", visibility: 2, shapes: [{ type: "circle", x: t.center.x, y: t.center.y, radius: 5 * ppm }], flags: { sr2e: { env: { smoke: "smoke" } } } }]);` },
+await canvas.scene.createEmbeddedDocuments("Region", [{ name: "Smoke", color: "#888888", visibility: 2, shapes: [{ type: "circle", x: t.center.x, y: t.center.y, radius: 5 * ppm }], flags: { shadowrun2e_unified: { env: { smoke: "smoke" } } } }]);` },
   { _id: 'sr2eMacroExport0', name: 'Export item templates to a compendium (GM)', img: `${ICON}/book.svg`, command: `await game.sr2e.api.exportTemplates();` },
 ];
 
@@ -60,7 +60,7 @@ const out = path.resolve('public/packs/sr2e-macros');
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sr2e-packs-'));
 for (const [i, m] of MACROS.entries()) {
   if (m._id.length !== 16 || !/^[a-zA-Z0-9]+$/.test(m._id)) throw new Error(`Bad id ${m._id}`);
-  const doc = { ...m, type: 'script', scope: 'global', author: null, folder: null, sort: (i + 1) * 100000, ownership: { default: 0 }, flags: { sr2e: { systemMacro: true } }, _key: `!macros!${m._id}` };
+  const doc = { ...m, type: 'script', scope: 'global', author: null, folder: null, sort: (i + 1) * 100000, ownership: { default: 0 }, flags: { shadowrun2e_unified: { systemMacro: true } }, _key: `!macros!${m._id}` };
   fs.writeFileSync(path.join(tmp, `${m._id}.json`), JSON.stringify(doc, null, 2));
 }
 fs.rmSync(out, { recursive: true, force: true });

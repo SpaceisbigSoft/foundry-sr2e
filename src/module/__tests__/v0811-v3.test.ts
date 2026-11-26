@@ -84,7 +84,7 @@ function actor(id: string, owners: string[], extra: any = {}): any {
 }
 /** A stub chat message by `author` with sr2e flags. */
 function message(author: any, flags: Record<string, any>, extra: any = {}): any {
-  return { id: extra.id ?? `m${Math.random()}`, author, content: extra.content ?? '', speaker: extra.speaker ?? {}, flags: { sr2e: flags }, isOwner: true,
+  return { id: extra.id ?? `m${Math.random()}`, author, content: extra.content ?? '', speaker: extra.speaker ?? {}, flags: { shadowrun2e_unified: flags }, isOwner: true,
     getFlag: (_s: string, k: string) => flags[k], setFlag: async (_s: string, k: string, v: any) => { flags[k] = v; }, ...extra };
 }
 

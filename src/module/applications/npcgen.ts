@@ -13,6 +13,7 @@ import {
 import { CONTACT_ROLES } from '../rules/npcdata.ts';
 import { escHtml } from '../rules/html.ts';
 import { t as tx, tCount } from '../helpers/i18n.ts';
+import { SYSTEM_ID } from '../config/system.ts';
 
 const { HandlebarsApplicationMixin, ApplicationV2 } = foundry.applications.api;
 
@@ -252,7 +253,7 @@ async function placeTokens(actors: any[], s: GenState): Promise<void> {
   const toks: any[] = (await scene.createEmbeddedDocuments('Token', docs)) ?? [];
   if (s.moraleGroup && toks.length > 1) {
     // The person being guarded is not part of the guards' morale.
-    const people = toks.filter((t: any) => ['npc', 'character'].includes(t.actor?.type) && !/principal/i.test(String(t.actor?.flags?.sr2e?.generated?.role ?? '')));
+    const people = toks.filter((t: any) => ['npc', 'character'].includes(t.actor?.type) && !/principal/i.test(String(t.actor?.flags?.[SYSTEM_ID]?.generated?.role ?? '')));
     if (people.length > 1) { try { await (CONFIG.Actor.documentClass as any).setMoraleGroup(people, true); } catch { /* no morale groups */ } }
   }
 }

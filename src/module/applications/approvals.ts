@@ -1,7 +1,7 @@
 /**
  * v0.64.0: the approval queue (a world setting, off by default). With it on, a player's purchases and
  * Karma spending on a character in play don't happen at once: they become a request on the character
- * (`flags.sr2e.requests`), listed in the GM panel's Requests tab. The GM approves (the action then runs
+ * (`flags.shadowrun2e_unified.requests`), listed in the GM panel's Requests tab. The GM approves (the action then runs
  * on the GM's client, as if the player had done it) or declines (with a reason, whispered back).
  *
  * This file imports no documents or sheets: actors call `approvalNeeded` / `fileRequest`, the Add window

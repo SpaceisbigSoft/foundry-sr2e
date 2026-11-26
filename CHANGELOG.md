@@ -1,6 +1,11 @@
 # Changelog
 
-This is the history of the unofficial Shadowrun 2nd Edition system for Foundry VTT (system id `sr2e`), newest version first. Every rules change since v0.70.0 has a house-rule switch that puts the old behaviour back. The system was built with AI (Anthropic's Claude) under human direction, and it has not yet been play-tested at a real table.
+This is the history of the unofficial Shadowrun 2nd Edition system for Foundry VTT (system id `shadowrun2e_unified`; `sr2e` until v0.93.0), newest version first. Every rules change since v0.70.0 has a house-rule switch that puts the old behaviour back. The system was built with AI (Anthropic's Claude) under human direction, and it has not yet been play-tested at a real table.
+
+## v0.93.1 — The new system id (25 Nov 2026)
+- **The system id is now `shadowrun2e_unified`** (it was `sr2e`). Another Shadowrun 2e system for Foundry uses `sr2e` too, so the two could replace each other's install folder and open each other's worlds. Now they can be installed side by side.
+- **Moving a world:** install this version from the new manifest address (it goes in beside the old one), back up the world, change one line in its `world.json`, and open it. SR2e asks the GM, then copies the world's flags, settings and file paths (token art, backdrops, links, chosen sheets) to the new id and reports what it moved; each player's own settings come across when they next log in. Nothing old is deleted, so the world still opens with v0.93.0 if you point it back. The steps are in `docs/MOVING.md`.
+- The names macros use stay the same: `game.sr2e`, the `sr2e.*` hooks. The release's manifest is now `shadowrun2e_unified.json`, so an install of the old id sees no update rather than one with a different id.
 
 ## v0.93.0 — Safety and the table's requests (25 Nov 2026)
 - **Other systems' worlds are left alone.** Another Shadowrun 2e system for Foundry uses the same id (`sr2e`), so its worlds open with this one. SR2e now recognises them (that system's update marker, or document types only it has) and changes nothing: no world updates, no session-start Karma refresh, no timer sweep. The GM gets a message saying why. The id changes in 0.93.1, which ends the clash for good.

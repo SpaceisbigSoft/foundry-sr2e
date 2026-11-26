@@ -151,7 +151,7 @@ function who(extra: any = {}, items: any[] = [], attrs: Record<string, number> =
 }
 
 const skill = (id: string, name: string, rating: number, attribute = 'quickness', more: any = {}) => ({ id, type: 'skill', name, system: { rating, attribute, kind: 'active', specialization: '', specializationRating: 0, concentration: '', concentrationRating: 0, ...more } });
-const contestOf = () => chat.at(-1).flags.sr2e.contest;
+const contestOf = () => chat.at(-1).flags.shadowrun2e_unified.contest;
 
 describe('v0.92.3 core: perception on the sheet (Core p. 185; Companion p. 90)', () => {
   const pair = () => {
@@ -221,12 +221,12 @@ describe('v0.92.3 review fix: a creation draft keeps the priority table it was s
     const { draftTable } = await import('../applications/approvals.ts');
     const { buildRowsFor } = await import('../applications/buildinput.ts');
     const old = who({ name: 'Old draft' });
-    old.flags = { sr2e: { creationDraft: { step: 'priorities' }, build: { attributes: 'A' } } };
+    old.flags = { shadowrun2e_unified: { creationDraft: { step: 'priorities' }, build: { attributes: 'A' } } };
     assert.equal(draftTable(old), 'old');
     const row = (a: any) => buildRowsFor(a).find((r: any) => r.label === 'Attributes');
     assert.equal(row(old)?.allowed, String(RULES.CREATION.priorities.A.attributes));
     const fresh = who({ name: 'New draft' });
-    fresh.flags = { sr2e: { creationDraft: { step: 'priorities', table: 'book' }, build: { attributes: 'A' } } };
+    fresh.flags = { shadowrun2e_unified: { creationDraft: { step: 'priorities', table: 'book' }, build: { attributes: 'A' } } };
     assert.equal(draftTable(fresh), 'book');
     assert.equal(row(fresh)?.allowed, '30');
     const done = who({ name: 'No draft' });
@@ -364,9 +364,9 @@ describe('v0.92.3 core: Karma on the sheet (Core pp. 190–191)', () => {
     const a = who({ karma: { pool: 5, poolSpent: 0, good: 0, career: 0 } });
     faces.push(1, 1, 1, 1);
     await a.rollAttribute('body', { targetNumber: 4 });
-    const snap = chat.at(-1).flags.sr2e.test;
+    const snap = chat.at(-1).flags.shadowrun2e_unified.test;
     await a.avoidDisaster(snap);
-    const avoided = chat.at(-1).flags.sr2e.test;
+    const avoided = chat.at(-1).flags.shadowrun2e_unified.test;
     assert.equal(avoided.disasterAvoided, true);
     assert.doesNotMatch(chat.at(-1).content, /karmaReroll|buySuccess/);
     await a.karmaReroll(avoided);

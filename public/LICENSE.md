@@ -1,6 +1,6 @@
 # Licence and notices
 
-**Shadowrun 2nd Edition (Unofficial) for Foundry VTT** (system id `sr2e`)
+**Shadowrun 2nd Edition (Unofficial) for Foundry VTT** (system id `shadowrun2e_unified`; `sr2e` until v0.93.0)
 Copyright © 2026 Spaceisbig and the sr2e contributors.
 Source: <https://github.com/SpaceisbigSoft/foundry-sr2e>
 

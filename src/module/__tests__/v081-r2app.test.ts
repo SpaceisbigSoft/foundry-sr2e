@@ -83,7 +83,7 @@ function actor(id: string, owners: string[], extra: any = {}): any {
 }
 /** A stub chat message by `author` with sr2e flags. */
 function message(author: any, flags: Record<string, any>, extra: any = {}): any {
-  return { id: extra.id ?? `m${Math.random()}`, author, content: extra.content ?? '', speaker: extra.speaker ?? {}, flags: { sr2e: flags }, isOwner: true,
+  return { id: extra.id ?? `m${Math.random()}`, author, content: extra.content ?? '', speaker: extra.speaker ?? {}, flags: { shadowrun2e_unified: flags }, isOwner: true,
     getFlag: (_s: string, k: string) => flags[k], setFlag: async (_s: string, k: string, v: any) => { flags[k] = v; }, ...extra };
 }
 
@@ -141,10 +141,10 @@ describe('v0.81.0 round 2 (RF-APP): the R2-SEC findings in the application files
   test('R2-SEC-1 (Q3): Create spirit drops the card\'s projects and other flags, and the GM confirms it', async () => {
     const { spiritCreateData } = await setup();
     const projects = { x: { id: 'x', kind: 'x', area: 'magic', startedAt: 0, readyAt: 0, hours: 0, paid: { karma: 0, nuyen: 0 }, label: 'x', effect: { call: { method: 'refundModPayer', args: ['Actor.own3', 10000000, 'x'] } } } };
-    const r = spiritCreateData({ name: 'Mote', type: 'spirit', system: {}, flags: { sr2e: { projects, familiar: { allyUuid: 'x' }, allyRitual: true }, core: { sheetClass: 'x' } },
-      items: [{ name: 'P', type: 'power', flags: { sr2e: { projects } }, effects: [{ name: 'e', changes: [{ key: 'flags.sr2e.projects', mode: 5, value: '{}' }, { key: 'system.attributes.body.mod', mode: 2, value: '1' }] }] }],
-      prototypeToken: { name: 'x', flags: { sr2e: { a: 1 } } } });
-    assert.deepEqual(r.data.flags, { sr2e: { allyRitual: true } });
+    const r = spiritCreateData({ name: 'Mote', type: 'spirit', system: {}, flags: { shadowrun2e_unified: { projects, familiar: { allyUuid: 'x' }, allyRitual: true }, core: { sheetClass: 'x' } },
+      items: [{ name: 'P', type: 'power', flags: { shadowrun2e_unified: { projects } }, effects: [{ name: 'e', changes: [{ key: 'flags.shadowrun2e_unified.projects', mode: 5, value: '{}' }, { key: 'system.attributes.body.mod', mode: 2, value: '1' }] }] }],
+      prototypeToken: { name: 'x', flags: { shadowrun2e_unified: { a: 1 } } } });
+    assert.deepEqual(r.data.flags, { shadowrun2e_unified: { allyRitual: true } });
     assert.equal(r.data.items[0].flags, undefined);
     assert.deepEqual(r.data.items[0].effects[0].changes, [{ key: 'system.attributes.body.mod', mode: 2, value: '1' }]);
     assert.equal(r.data.prototypeToken.flags, undefined);
@@ -153,17 +153,17 @@ describe('v0.81.0 round 2 (RF-APP): the R2-SEC findings in the application files
     g.Actor = { implementation: { create: async (d: any) => { made.push(d); return { uuid: 'Actor.new', name: d.name, system: d.system }; } } };
     actor('own3', ['p1']);
     g.game.user = GM; confirms.length = 0; confirmAnswer = false;
-    press(message(P1, { pendingSpirit: { name: 'Mote', type: 'spirit', system: {}, flags: { sr2e: { projects } } } }, { speaker: { actor: 'own3' } }), 'createSpirit');
+    press(message(P1, { pendingSpirit: { name: 'Mote', type: 'spirit', system: {}, flags: { shadowrun2e_unified: { projects } } } }, { speaker: { actor: 'own3' } }), 'createSpirit');
     await tick();
     assert.equal(made.length, 0, 'declined: nothing created');
     assert.equal(confirms.length, 1);
     assert.match(confirms[0].content, /Mote/);
     assert.match(confirms[0].content, /owned by the GM only/);
     confirmAnswer = true;
-    press(message(P1, { pendingSpirit: { name: 'Mote', type: 'spirit', system: {}, flags: { sr2e: { projects } } } }, { speaker: { actor: 'own3' } }), 'createSpirit');
+    press(message(P1, { pendingSpirit: { name: 'Mote', type: 'spirit', system: {}, flags: { shadowrun2e_unified: { projects } } } }, { speaker: { actor: 'own3' } }), 'createSpirit');
     await tick();
     assert.equal(made.length, 1);
-    assert.equal(made[0].flags?.sr2e?.projects, undefined);
+    assert.equal(made[0].flags?.shadowrun2e_unified?.projects, undefined);
   });
 
   test('R2-SEC-5 (Q4): a healer\'s URR Magic loss card for another player\'s patient: the patient\'s owner and the GM can roll it (after a confirm)', async () => {

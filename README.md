@@ -15,7 +15,7 @@ You need **Foundry VTT version 14** (older versions won't load it) and your own 
 1. Start Foundry and, on the setup screen, open the **Game Systems** tab.
 2. Click **Install System**. At the bottom of the window, paste this into the **Manifest URL** box and click **Install**:
    ```
-   https://github.com/SpaceisbigSoft/foundry-sr2e/releases/latest/download/system.json
+   https://github.com/SpaceisbigSoft/foundry-sr2e/releases/latest/download/shadowrun2e_unified.json
    ```
 3. Open the **Game Worlds** tab, click **Create World**, and choose **Shadowrun 2nd Edition (Unofficial)** as the game system.
 4. Launch the world and log in as the Gamemaster.
@@ -27,9 +27,11 @@ You need **Foundry VTT version 14** (older versions won't load it) and your own 
 
 **Updating:** when there is a new version, Foundry shows an **Update** button next to the system in the **Game Systems** tab. After updating, fully quit and restart Foundry if something looks missing (some changes are only read when Foundry starts).
 
-**Back up your worlds before updating.** An update can change a world's data when the GM next opens it, and that can't be undone. Make a backup first (Foundry's setup screen: **Worlds**, then **Backups**). SR2e asks the GM before it changes anything, lists what it is about to change, and reports afterwards what ran. It never updates a world made with another Shadowrun 2e system that uses the same id (`sr2e`); it says so instead.
+**Back up your worlds before updating.** An update can change a world's data when the GM next opens it, and that can't be undone. Make a backup first (Foundry's setup screen: **Worlds**, then **Backups**). SR2e asks the GM before it changes anything, lists what it is about to change, and reports afterwards what ran. It never updates a world made with another Shadowrun 2e system; it says so instead.
 
-**Installing by hand instead:** download `sr2e.zip` from the [Releases page](https://github.com/SpaceisbigSoft/foundry-sr2e/releases), make a folder named `sr2e` inside your Foundry `Data/systems` folder, and unzip the file into it, so that `Data/systems/sr2e/system.json` exists. (Foundry's setup screen shows where your Data folder is under **Configuration → User Data Path**.) Then restart Foundry.
+**The system id changed in v0.93.1** from `sr2e` to `shadowrun2e_unified`, because another Shadowrun 2e system for Foundry also uses `sr2e`. If you installed SR2e before v0.93.1, install it again from the manifest address above (it goes in beside the old one), then move each world as `docs/MOVING.md` describes: a backup, one line in the world's `world.json`, and SR2e does the rest when the GM opens it.
+
+**Installing by hand instead:** download `shadowrun2e_unified.zip` from the [Releases page](https://github.com/SpaceisbigSoft/foundry-sr2e/releases), make a folder named `shadowrun2e_unified` inside your Foundry `Data/systems` folder, and unzip the file into it, so that `Data/systems/shadowrun2e_unified/system.json` exists. (Foundry's setup screen shows where your Data folder is under **Configuration → User Data Path**.) Then restart Foundry.
 
 **Found a problem?** Please report it on the [issue tracker](https://github.com/SpaceisbigSoft/foundry-sr2e/issues). The **Report a bug** button in the in-game guide collects the details (versions, modules, settings) for you to paste in; nothing is sent automatically.
 
@@ -50,7 +52,7 @@ That has two consequences you should know about:
 - **The rules numbers came from the AI's memory of the books**, not from a human typing them out of a rulebook, so some were wrong. In v0.92.3 the AI checked the default rules against the SR2 books and corrected them; a human has not re-checked that work, so every number is listed with its source in `docs/VERIFY.md` for checking against your book.
 - **No human has play-tested it at a table yet.** Expect bugs, and please report them.
 
-## Status: v0.93.0 (pre-release; the First Rules Audit was v0.92.5)
+## Status: v0.93.1 (pre-release; the First Rules Audit was v0.92.5)
 
 The system is feature-complete for SR2 core play and much of the sourcebook material, and public for testing ahead of a 1.0 release. It is tested by 4,104 automated tests, by in-Foundry test batches (Quench), by live runs in Foundry v14 as a GM and a player, and by an upgrade test from worlds saved with v0.50 and v0.72, and v0.81 had a full code and security review. It has not yet been play-tested at a real table, so expect rough edges. In the *First Rules Audit* (v0.92.3–v0.92.5) every default rule was checked against the SR2 books and made to follow them; `docs/VERIFY.md` lists every rules number with its source (and what is still unchecked), and every rules change since v0.70.0 has a house-rule switch that puts the earlier behaviour back.
 
@@ -95,8 +97,8 @@ Treat players as untrusted: anyone can change what their own browser sends. The 
 2. `npm test` runs the rules-engine and Foundry-glue tests (Node 22+; uses tsx and node:test).
 3. `npx tsc --noEmit` type-checks.
 4. `npm run build` compiles `src/start.ts` to `public/index.mjs`.
-5. To try your build, copy the contents of the `public` folder into `Data/systems/sr2e`.
-6. **In-Foundry tests:** with the [Quench](https://github.com/Ethaks/FVTT-Quench) module active, a GM can run the system's test batches from Quench's window (or `quench.runBatches('sr2e.**')` in the console): every document type and sheet, tests and chat cards, combat, the record sheet's tweaks and accessories, the translation and the world's migrations. **SR2e: performance on a busy table** is opt-in: it builds a temporary scene with 50 tokens, a long combat and 300 chat cards and prints timings. Run them in a test world: each batch makes `ZZ Quench …` documents and removes them afterwards. Keep Quench's window open while they run.
+5. To try your build, copy the contents of the `public` folder into `Data/systems/shadowrun2e_unified`.
+6. **In-Foundry tests:** with the [Quench](https://github.com/Ethaks/FVTT-Quench) module active, a GM can run the system's test batches from Quench's window (or `quench.runBatches('shadowrun2e_unified.**')` in the console): every document type and sheet, tests and chat cards, combat, the record sheet's tweaks and accessories, the translation and the world's migrations. **SR2e: performance on a busy table** is opt-in: it builds a temporary scene with 50 tokens, a long combat and 300 chat cards and prints timings. Run them in a test world: each batch makes `ZZ Quench …` documents and removes them afterwards. Keep Quench's window open while they run.
 7. `npm run tokens` redraws the default token art from `src/art/` into `public/tokens/`, and `npm run backdrops` the scene backdrops into `public/backdrops/` (only needed after changing a drawing; the files are committed).
 
 The rules engine (`src/module/rules`) is pure TypeScript with no Foundry dependency; its numbers live in `src/module/rules/config.ts` and, for the rules audit's switches, `src/module/rules/config923/`, so they are easy to check and to change as house rules (`docs/VERIFY.md` lists each with its source). The Foundry glue is in `src/module/documents`, `models` and `applications`. Module authors: see `docs/API.md` (`game.sr2e.api` and hooks).

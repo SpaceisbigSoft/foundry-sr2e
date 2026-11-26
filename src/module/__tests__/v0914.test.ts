@@ -91,14 +91,14 @@ describe('v0.91.4 a vehicle for sale and its bought copy (mocked Foundry)', () =
   const folder = (name: string, parent: any = null) => ({ name, folder: parent });
   const cat = folder('Cars', folder('Vehicles', folder('Catalogue (SR2e)')));
   const vehicle = (o: any) => ({ documentName: 'Actor', type: 'vehicle', inCompendium: false, parent: null, hasPlayerOwner: false, flags: {}, folder: null, name: 'V', uuid: 'Actor.v',
-    toObject: () => ({ _id: 'x', name: o.name ?? 'V', type: 'vehicle', folder: 'f', ownership: { default: 0, p: 3 }, system: { cost: 10000, condition: 4, controllerUuid: 'Actor.d', occupants: ['a'], link: { encryption: 2, intercepted: { by: 'x' } }, handling: 4 }, flags: { sr2e: { shop: true } }, items: [{ _id: 'i', name: 'Gun' }], prototypeToken: { actorLink: false } }), ...o });
+    toObject: () => ({ _id: 'x', name: o.name ?? 'V', type: 'vehicle', folder: 'f', ownership: { default: 0, p: 3 }, system: { cost: 10000, condition: 4, controllerUuid: 'Actor.d', occupants: ['a'], link: { encryption: 2, intercepted: { by: 'x' } }, handling: 4 }, flags: { shadowrun2e_unified: { shop: true } }, items: [{ _id: 'i', name: 'Gun' }], prototypeToken: { actorLink: false } }), ...o });
   test('for sale: in the catalogue folder, or marked; never a player\'s', async () => {
     g.game = { settings: { get: (_s: string, k: string) => settings[k] }, user: { isGM: true }, actors: [], items: [], packs: [] };
     g.foundry = { utils: { deepClone: (x: any) => structuredClone(x) } };
     const { vehicleForSale, inCatalogueFolder, vehicleCopyData, resolveShopKey, resolveCatalogueKey } = await import('../applications/shop.ts');
     assert.equal(inCatalogueFolder({ folder: cat }), true);
     assert.equal(vehicleForSale(vehicle({ folder: cat })), true);
-    assert.equal(vehicleForSale(vehicle({ flags: { sr2e: { shop: true } } })), true);
+    assert.equal(vehicleForSale(vehicle({ flags: { shadowrun2e_unified: { shop: true } } })), true);
     assert.equal(vehicleForSale(vehicle({})), false, 'a GM vehicle elsewhere, unmarked');
     assert.equal(vehicleForSale(vehicle({ folder: cat, hasPlayerOwner: true })), false, 'a player\'s');
     assert.equal(vehicleForSale({ documentName: 'Actor', type: 'npc', folder: cat }), false);
@@ -107,7 +107,7 @@ describe('v0.91.4 a vehicle for sale and its bought copy (mocked Foundry)', () =
     assert.equal(c._id, undefined); assert.equal(c.folder, undefined); assert.equal(c.ownership, undefined);
     assert.equal(c.system.condition, undefined); assert.equal(c.system.controllerUuid, undefined); assert.equal(c.system.occupants, undefined);
     assert.deepEqual(c.system.link, { encryption: 2 });
-    assert.equal(c.flags.sr2e.shop, undefined); assert.equal(c.items[0]._id, 'i', 'embedded ids are kept (per parent)'); assert.equal(c.prototypeToken.actorLink, true);
+    assert.equal(c.flags.shadowrun2e_unified.shop, undefined); assert.equal(c.items[0]._id, 'i', 'embedded ids are kept (per parent)'); assert.equal(c.prototypeToken.actorLink, true);
     assert.equal(c.system.cost, 10000);
     // Read back from a key: for sale only, in this user's shop.
     const forSale = vehicle({ folder: cat, flags: {} });
@@ -198,7 +198,7 @@ describe('v0.91.4 review fixes', () => {
     const { vehicleListChange } = await import('../applications/shop.ts');
     assert.equal(vehicleListChange({ system: { currentSpeed: 40, condition: 2 } }), false);
     assert.equal(vehicleListChange({ system: { cost: 5000 } }), true);
-    assert.equal(vehicleListChange({ flags: { sr2e: { shop: true } } }), true);
+    assert.equal(vehicleListChange({ flags: { shadowrun2e_unified: { shop: true } } }), true);
     assert.equal(vehicleListChange({ name: 'X' }), true);
   });
   test('B1: orders are the GM\'s record, used up once, for their own buyer only (mocked)', async () => {

@@ -286,7 +286,7 @@ describe('v0.91.8 learning needs a formula (documents/index.ts)', () => {
       const a = mage([formula(STUN, 4, 'shamanic')]);
       faces.push(1, 1, 1, 1, 1);
       await a.learnFormula('ZZ Stunbolt', { ...STUN.system, learnedForce: 4 }, 'study', { origin: 'shop' });
-      const snap = chat.at(-1).flags.sr2e.test;
+      const snap = chat.at(-1).flags.shadowrun2e_unified.test;
       // v0.92.3 (RULES.SORCERY_V923.learning, formulaAloneTn; Core p. 132, Grimoire p. 114): 2 × Force, + the other
       // tradition's penalty, + 2 for a formula with no teacher.
       assert.equal(snap.targetNumber, 2 * 4 + F.foreignTn + RULES.SORCERY_V923.formulaAloneTn);
@@ -345,7 +345,7 @@ describe('v0.91.8 teachers', () => {
     await a.learnFromTeacher(teacher.uuid, 'ZZ Heal', 4);
     const m = chat.at(-1);
     messagesById();
-    const snap = m.flags.sr2e.test;
+    const snap = m.flags.shadowrun2e_unified.test;
     assert.equal(snap.teach.spell, 'ZZ Heal');
     assert.equal(snap.teach.teacherUuid, teacher.uuid);
     assert.equal(snap.teach.system.exclusive, undefined, 'the teacher\'s own choices aren\'t taught');
@@ -361,7 +361,7 @@ describe('v0.91.8 teachers', () => {
     await a.learnFromTeacher(teacher.uuid, 'ZZ Heal', 3);
     const m = chat.at(-1);
     messagesById();
-    m.flags.sr2e.test.teach.fee = 0; m.flags.sr2e.test.teach.sorcery = 12;
+    m.flags.shadowrun2e_unified.test.teach.fee = 0; m.flags.shadowrun2e_unified.test.teach.sorcery = 12;
     const L: any = RULES.MAGIC_V56.learning;
     const prev = { enabled: L.enabled, site: L.site };
     L.enabled = true; L.site = 'off';

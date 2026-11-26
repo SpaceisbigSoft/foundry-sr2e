@@ -60,7 +60,7 @@ test('cleanFields cleans each HTML field (here: the no-DOM path escapes; Foundry
 test('v0.81.1: an item card\'s picture keeps only a relative path or http(s)', async () => {
   const { safeImgSrc } = await import('../applications/richtext.ts');
   const bag = 'icons/svg/item-bag.svg';
-  assert.equal(safeImgSrc('systems/sr2e/icons/gun.svg'), 'systems/sr2e/icons/gun.svg');
+  assert.equal(safeImgSrc('systems/shadowrun2e_unified/icons/gun.svg'), 'systems/shadowrun2e_unified/icons/gun.svg');
   assert.equal(safeImgSrc('worlds/w/a b.png'), 'worlds/w/a b.png');
   assert.equal(safeImgSrc('https://example.com/a.png'), 'https://example.com/a.png');
   for (const bad of ['javascript:alert(1)', 'java\tscript:x', '//evil.example/x.png', 'data:text/html,x', 'vbscript:x', 'C:/x.png', '', null]) assert.equal(safeImgSrc(bad), bag, String(bad));

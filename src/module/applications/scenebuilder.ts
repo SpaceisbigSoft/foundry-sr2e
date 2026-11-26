@@ -5,7 +5,7 @@
  * backdrop's walls, doors and lamps, a ward, the player characters and NPCs (from the world's actors or made by the
  * NPC generator) in the start zones, a security site and its host, a GM journal, the playlist and the combat
  * tracker. Opened on an existing scene it changes that scene's settings and adds to it; it never deletes anything
- * there. What it makes is flagged `flags.sr2e.sceneBuilder`, and **Remove this scene** deletes exactly that.
+ * there. What it makes is flagged `flags.shadowrun2e_unified.sceneBuilder`, and **Remove this scene** deletes exactly that.
  * Also `game.sr2e.api.sceneBuilder()`, `buildScene(spec)` and `removeBuiltScene(sceneId)`.
  */
 import { SYSTEM } from '../config/system.ts';

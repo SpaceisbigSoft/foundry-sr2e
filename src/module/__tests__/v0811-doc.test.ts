@@ -170,7 +170,7 @@ const P1 = () => ({ id: 'p1', name: 'Player One', isGM: false, can: () => true }
 const P2 = () => ({ id: 'p2', name: 'Player Two', isGM: false, can: () => true });
 const dice = (n: number, face = 6) => Array.from({ length: n }, () => ({ faces: [face], total: face, success: face >= 4 }));
 /** A card authored by `author` carrying a test snapshot (a forged one, when the author wrote the flags). */
-const cardBy = (author: any, snap: any, extra: any = {}) => asMessage({ author, speaker: {}, content: '<p>Sneaking test</p>', flags: { sr2e: { test: snap, ...extra } }, update: async function (this: any, d: any) { Object.assign(this, { _upd: d }); } });
+const cardBy = (author: any, snap: any, extra: any = {}) => asMessage({ author, speaker: {}, content: '<p>Sneaking test</p>', flags: { shadowrun2e_unified: { test: snap, ...extra } }, update: async function (this: any, d: any) { Object.assign(this, { _upd: d }); } });
 const usersAll = () => Object.assign([GM(), P1(), P2()], { activeGM: { id: 'gm1', isSelf: true } });
 
 // =============================================================================== design 1: act as the card's author
@@ -187,8 +187,8 @@ describe('SEC1-1 / D1-1: a GM re-running a player\'s card acts as that player', 
     const msg = cardBy(P1(), snap);
     g.game.messages = { contents: [msg] };
     const posted = await SR2Actor.retarget(msg, { baseTargetNumber: 4, modifiers: [] });
-    assert.equal((victim.flags?.sr2e?.powerEffects ?? []).length, 0, 'no direct write on P2\'s character');
-    assert.ok(chat.some((m: any) => m.flags?.sr2e?.powerEffect), 'an Apply (GM) card was posted');
+    assert.equal((victim.flags?.shadowrun2e_unified?.powerEffects ?? []).length, 0, 'no direct write on P2\'s character');
+    assert.ok(chat.some((m: any) => m.flags?.shadowrun2e_unified?.powerEffect), 'an Apply (GM) card was posted');
     assert.equal(posted.author, 'p1', 'the replacement keeps P1 as its author');
     assert.equal(SR2Actor.actingAuthor, null, 'the acting author is cleared afterwards');
   });
@@ -219,9 +219,9 @@ describe('SEC1-1 / D1-1: a GM re-running a player\'s card acts as that player', 
     };
     faces.push(5);
     await SR2Actor.runAsAuthor(P1(), () => mine.karmaReroll(snap));
-    assert.equal((victim.flags?.sr2e?.powerEffects ?? []).length, 0);
-    assert.ok(chat.some((m: any) => m.flags?.sr2e?.powerEffect), 'an Apply (GM) card instead');
-    assert.ok(chat.some((m: any) => m.flags?.sr2e?.test && m.author === 'p1'), 'the re-roll card is P1\'s');
+    assert.equal((victim.flags?.shadowrun2e_unified?.powerEffects ?? []).length, 0);
+    assert.ok(chat.some((m: any) => m.flags?.shadowrun2e_unified?.powerEffect), 'an Apply (GM) card instead');
+    assert.ok(chat.some((m: any) => m.flags?.shadowrun2e_unified?.test && m.author === 'p1'), 'the re-roll card is P1\'s');
   });
 
   test('X3 control: a GM-authored card (or none) runs with the GM\'s rights, as before', async () => {
@@ -234,7 +234,7 @@ describe('SEC1-1 / D1-1: a GM re-running a player\'s card acts as that player', 
     };
     faces.push(5);
     await SR2Actor.runAsAuthor(GM(), () => mine.karmaReroll(snap));
-    assert.equal((npc.flags?.sr2e?.powerEffects ?? []).length, 1);
+    assert.equal((npc.flags?.shadowrun2e_unified?.powerEffects ?? []).length, 1);
   });
 
   test('X5 inverted: a GM retarget of a forged "bind by true name" card leaves P2\'s spirit with P2', async () => {
@@ -305,7 +305,7 @@ describe('surgery: progress and money from the patient, never the card', () => {
     assert.equal(sg.installed, false);
     assert.equal(sg.points, 0.2, 'points from the item, not the card');
     assert.equal(sg.care, RULES.BIOWARE.recovery.defaultCare);
-    patient.flags.sr2e = { surgeryState: { x: { installed: true, paid: true, paidAmount: 300, harmed: false, traumaDone: true } } };
+    patient.flags.shadowrun2e_unified = { surgeryState: { x: { installed: true, paid: true, paidAmount: 300, harmed: false, traumaDone: true } } };
     const sg2 = SR2Actor.surgeryFromCard({ id: 'x', patientUuid: patient.uuid, itemId: 'dj', paidAmount: 0 }, patient, true);
     assert.equal(sg2.paidAmount, 300);
     assert.equal(sg2.installed, true);
@@ -317,20 +317,20 @@ describe('surgery: progress and money from the patient, never the card', () => {
     const surgeon = ownedBy(who({ name: 'Doc', karma: { pool: 5, poolSpent: 0, good: 0, career: 0 } }), 'p1');
     const patient = ownedBy(who({ name: 'Pat' }, [ware()]), 'p2');
     patient.isOwner = false;
-    const old = asMessage({ author: P1(), flags: { sr2e: { surgeryApply: { surgeonUuid: surgeon.uuid, snap: { testId: 'tS' } } } } });
+    const old = asMessage({ author: P1(), flags: { shadowrun2e_unified: { surgeryApply: { surgeonUuid: surgeon.uuid, snap: { testId: 'tS' } } } } });
     old.testUserPermission = (u: any) => u?.id === 'p1';
     old.isOwner = true;
-    old.setFlag = async (_s: string, k: string, v: any) => { old.flags.sr2e[k] = v; };
+    old.setFlag = async (_s: string, k: string, v: any) => { old.flags.shadowrun2e_unified[k] = v; };
     g.game.messages = { contents: [old] };
     faces.push(5, 5, 5, 5, 5, 5, 5, 5);
     await patient.surgery('dj', { surgeon });
-    const card = chat.find((m: any) => m.flags?.sr2e?.surgeryApply);
+    const card = chat.find((m: any) => m.flags?.shadowrun2e_unified?.surgeryApply);
     assert.ok(card, 'an Apply (GM) card');
     // The new card's test id is fresh: give the old card the same id and resolve again (a Karma re-roll keeps it).
-    old.flags.sr2e.surgeryApply.snap.testId = card.flags.sr2e.surgeryApply.snap.testId;
+    old.flags.shadowrun2e_unified.surgeryApply.snap.testId = card.flags.shadowrun2e_unified.surgeryApply.snap.testId;
     faces.push(5);
-    await surgeon.karmaReroll({ ...card.flags.sr2e.surgeryApply.snap, dice: [...dice(2), ...dice(1, 1)] });
-    assert.equal(old.flags.sr2e.surgeryApplied, 'superseded');
+    await surgeon.karmaReroll({ ...card.flags.shadowrun2e_unified.surgeryApply.snap, dice: [...dice(2), ...dice(1, 1)] });
+    assert.equal(old.flags.shadowrun2e_unified.surgeryApplied, 'superseded');
   });
 });
 
@@ -344,7 +344,7 @@ describe('projects on the GM\'s clock', () => {
     mine.ownership = { default: 0, p1: 3 };
     const victim = ownedBy(who({ name: 'Other PC', nuyen: 54321 }), 'p2');
     const van = ownedBy(vehicle({ name: 'My van', mods: [{ kind: 'armor', rating: 1, name: 'Plate', cost: 54321, installed: false }] }), 'p1');
-    mine.flags.sr2e = { projects: { a: forgedProject('a', 'finishModInstall', [van.uuid, 0, victim.uuid, 'Plate', 0, null]) } };
+    mine.flags.shadowrun2e_unified = { projects: { a: forgedProject('a', 'finishModInstall', [van.uuid, 0, victim.uuid, 'Plate', 0, null]) } };
     g.game.actors = [mine, victim, van];
     await SR2Actor.timedEffects({ worldTime: 10 });
     assert.equal(victim.system.nuyen, 54321);
@@ -357,14 +357,14 @@ describe('projects on the GM\'s clock', () => {
     let installed = 0; van.installMod = async () => { installed++; return true; };
     const p = { id: 'pr1', kind: 'install', label: 'Installing Armor in Party van', hours: 1, startedAt: 0, readyAt: 3600, paid: { karma: 0, nuyen: 0 }, by: 'Player',
       effect: { call: { method: 'finishModInstall', args: [van.uuid, 0, null, 'Armor', 500, mech.uuid] } } };
-    mech.flags.sr2e = { projects: { pr1: p } };
+    mech.flags.shadowrun2e_unified = { projects: { pr1: p } };
     await mech.finishProject('pr1');
     assert.equal(installed, 0);
-    const card = chat.find((m: any) => m.flags?.sr2e?.vehicleJob);
+    const card = chat.find((m: any) => m.flags?.shadowrun2e_unified?.vehicleJob);
     assert.ok(card, 'a GM card');
     assert.doesNotMatch(chat.at(-1).content, /paid back/);
     assert.match(chat.at(-1).content, /the GM applies it/);
-    assert.ok(await SR2Actor.applyVehicleJobAsGm(card.flags.sr2e.vehicleJob));
+    assert.ok(await SR2Actor.applyVehicleJobAsGm(card.flags.shadowrun2e_unified.vehicleJob));
     assert.equal(installed, 1);
   });
 
@@ -387,15 +387,15 @@ describe('projects on the GM\'s clock', () => {
   test('D3 P4 inverted: a player\'s finishCleanse posts an Apply (GM) card; the count is unchanged', async () => {
     g.game.users = Object.assign([GM(), PLAYER()], { activeGM: { id: 'gm1', isSelf: true } });
     const mine = ownedBy(who({ name: 'Player PC' }), 'p1');
-    const flags: any = { sr2e: { backgroundCount: 6, backgroundSources: '' } };
-    const scene: any = { id: 'S1', name: 'Hot zone', tokens: [{ actor: mine }], getFlag: (_s: string, k: string) => flags.sr2e[k], setFlag: async (_s: string, k: string, v: any) => { flags.sr2e[k] = v; } };
+    const flags: any = { shadowrun2e_unified: { backgroundCount: 6, backgroundSources: '' } };
+    const scene: any = { id: 'S1', name: 'Hot zone', tokens: [{ actor: mine }], getFlag: (_s: string, k: string) => flags.shadowrun2e_unified[k], setFlag: async (_s: string, k: string, v: any) => { flags.shadowrun2e_unified[k] = v; } };
     g.game.scenes = { get: (id: string) => (id === 'S1' ? scene : null) };
-    mine.flags.sr2e = { projects: { p4: forgedProject('p4', 'finishCleanse', ['S1', 30, []]) } };
+    mine.flags.shadowrun2e_unified = { projects: { p4: forgedProject('p4', 'finishCleanse', ['S1', 30, []]) } };
     g.game.actors = [mine];
     await SR2Actor.timedEffects({ worldTime: 40 });
-    assert.equal(flags.sr2e.backgroundCount, 6);
+    assert.equal(flags.shadowrun2e_unified.backgroundCount, 6);
     // Round 2 (V-DOC 10): bounded at the real maximum background count (20), as the Apply card's own check is.
-    assert.deepEqual(chat.find((m: any) => m.flags?.sr2e?.cleanse)?.flags.sr2e.cleanse, { sceneId: 'S1', points: 20, align: [], sourceUuid: mine.uuid });
+    assert.deepEqual(chat.find((m: any) => m.flags?.shadowrun2e_unified?.cleanse)?.flags.shadowrun2e_unified.cleanse, { sceneId: 'S1', points: 20, align: [], sourceUuid: mine.uuid });
   });
 
   test('D3-6: on the GM\'s clock, a player\'s project can\'t card a refund to someone its players don\'t own', async () => {
@@ -403,12 +403,12 @@ describe('projects on the GM\'s clock', () => {
     const mine = ownedBy(who({ name: 'Player PC' }), 'p1');
     const other = ownedBy(who({ name: 'Other' }), 'p2');
     assert.equal(await mine.refundModPayer(other.uuid, 10_000_000, 'x'), false);
-    assert.ok(!chat.some((m: any) => m.flags?.sr2e?.actorUpdate));
+    assert.ok(!chat.some((m: any) => m.flags?.shadowrun2e_unified?.actorUpdate));
   });
 
   test('D1-12: a project can\'t write flags.core as a nested object', async () => {
     const a = who({ name: 'A' });
-    a.flags.sr2e = { projects: { p: { id: 'p', kind: 'x', area: 'magic', label: 'x', startedAt: 0, readyAt: 0, hours: 0, paid: { karma: 0, nuyen: 0 }, effect: { actor: [['flags', { core: { sheetClass: 'evil' } }]] } } } };
+    a.flags.shadowrun2e_unified = { projects: { p: { id: 'p', kind: 'x', area: 'magic', label: 'x', startedAt: 0, readyAt: 0, hours: 0, paid: { karma: 0, nuyen: 0 }, effect: { actor: [['flags', { core: { sheetClass: 'evil' } }]] } } } };
     await a.finishProject('p');
     assert.equal(a.flags.core, undefined);
   });
@@ -428,9 +428,9 @@ describe('D3-5 / SEC1-7: possession takes the possessor\'s own mind, never the c
   test('a card\'s Willpower 99 / skills are ignored; the possessor\'s attributes are stored', async () => {
     const mage = who({ name: 'Mage' });
     const npc = who({ name: 'Guard', type: 'npc' });
-    mage.flags.sr2e = { possessing: { uuid: npc.uuid, name: 'Guard' } };
+    mage.flags.shadowrun2e_unified = { possessing: { uuid: npc.uuid, name: 'Guard' } };
     assert.ok(await SR2Actor.setPossession(npc.uuid, { uuid: mage.uuid, name: 'Friendly spirit', attributes: { willpower: 99, intelligence: -20 }, skills: [] }));
-    const by = npc.flags.sr2e.possessedBy;
+    const by = npc.flags.shadowrun2e_unified.possessedBy;
     assert.equal(by.name, 'Mage');
     assert.equal(by.attributes.willpower, mage.system.attributes.willpower.total);
   });
@@ -439,7 +439,7 @@ describe('D3-5 / SEC1-7: possession takes the possessor\'s own mind, never the c
     const mage = who({ name: 'Mage' });
     const npc = who({ name: 'Guard', type: 'npc' });
     assert.equal(await SR2Actor.setPossession(npc.uuid, { uuid: mage.uuid, name: 'x', attributes: {} }), false);
-    assert.equal(npc.flags?.sr2e?.possessedBy, undefined);
+    assert.equal(npc.flags?.shadowrun2e_unified?.possessedBy, undefined);
   });
 });
 
@@ -447,7 +447,7 @@ describe('SEC1-8: the GM\'s clock makes only the caster\'s own spell effect perm
   test('a sustaining entry naming another caster\'s effect id leaves it untouched; its own spell takes', async () => {
     const p1 = who({ name: 'P1 mage' });
     const p2 = who({ name: 'P2' });
-    p2.flags.sr2e = { powerEffects: [
+    p2.flags.shadowrun2e_unified = { powerEffects: [
       { id: 'curse', name: 'GM curse', kind: 'spell', fromUuid: 'Actor.gm-npc', fromName: 'NPC', attributes: { body: -2 }, successes: 2 },
       { id: 'mine', name: 'Heal-ish', kind: 'spell', fromUuid: p1.uuid, fromName: 'P1 mage', attributes: { body: 1 }, successes: 2 },
     ] };
@@ -457,7 +457,7 @@ describe('SEC1-8: the GM\'s clock makes only the caster\'s own spell effect perm
     ];
     g.game.actors = [p1, p2];
     await SR2Actor.magicTicks({ worldTime: 10 });
-    const fx = p2.flags.sr2e.powerEffects;
+    const fx = p2.flags.shadowrun2e_unified.powerEffects;
     assert.notEqual(fx.find((e: any) => e.id === 'curse').permanent, true);
     assert.equal(fx.find((e: any) => e.id === 'mine').permanent, true);
   });
@@ -509,14 +509,14 @@ describe('D3-11 / RA2-2: a host change is shaped and written once', () => {
 describe('SEC1-16: a stored charge is bounded by its explosive item, or is nothing', () => {
   test('round 3 (V2 #2, V2-charge inverted): a record with no explosive item is refused; a non-explosive item too', () => {
     const a = ownedBy(who({ name: 'Mundane' }, [{ id: 'rock', type: 'gear', name: 'Rock', system: { quantity: 1 } }]), 'p1');
-    a.flags.sr2e = { setCharges: [{ id: 'forged', itemId: 'never-existed', successes: 50, name: 'C-12', power: 200, perMetre: 0.25, shaped: false }, { id: 'c2', itemId: 'rock', name: 'Rock', power: 50, perMetre: 1, shaped: false }] };
+    a.flags.shadowrun2e_unified = { setCharges: [{ id: 'forged', itemId: 'never-existed', successes: 50, name: 'C-12', power: 200, perMetre: 0.25, shaped: false }, { id: 'c2', itemId: 'rock', name: 'Rock', power: 50, perMetre: 1, shaped: false }] };
     assert.equal(SR2Actor.storedCharge(a, 'forged'), null);
     assert.equal(SR2Actor.storedCharge(a, 'c2'), null);
   });
 
   test('round 3 (FIX3-BRIEF 2, H5): only a GM gets the item-less record back, bounded, with the confirm text', () => {
     const a = who({ name: 'Sapper' });
-    a.flags.sr2e = { setCharges: [{ id: 'c1', itemId: 'gone', name: 'C4', power: 999, perMetre: 0.01, shaped: false }] };
+    a.flags.shadowrun2e_unified = { setCharges: [{ id: 'c1', itemId: 'gone', name: 'C4', power: 999, perMetre: 0.01, shaped: false }] };
     g.game.user = P1();
     assert.equal(SR2Actor.chargeRecordForGm(a, 'c1'), null);
     g.game.user = GM();
@@ -556,7 +556,7 @@ describe('spell defense: spent first, and only a covering protector', () => {
     const me = ownedBy(who({ name: 'Me' }), 'p1');
     const ally = ownedBy(who({ name: 'Ally mage', spellDefense: 3 }), 'p2');
     assert.match(SR2Actor.spellDefenseCoverProblem(ally, me, P1()), /isn't covering/);
-    ally.flags.sr2e = { spellDefenseCovers: [me.uuid] };
+    ally.flags.shadowrun2e_unified = { spellDefenseCovers: [me.uuid] };
     assert.equal(SR2Actor.spellDefenseCoverProblem(ally, me, P1()), '');
     assert.equal(SR2Actor.spellDefenseCoverProblem(ally, me, P2()), '', 'its own owner');
   });
@@ -568,7 +568,7 @@ describe('D2-2: a disease from a card is bounded where every route meets', () =>
     const p2 = who({ name: 'P2' });
     faces.push(...Array(30).fill(1));
     await p2.resistToxin({ kind: 'disease', name: 'Forged plague', power: 6, level: 'S', damageType: 'physical', vector: 'contact', recoveries: 1e9, intervalHours: 0, incubationHours: 0, contagious: 'airborne' } as any);
-    const d = chat.find((m: any) => m.flags?.sr2e?.test?.disease)?.flags.sr2e.test.disease;
+    const d = chat.find((m: any) => m.flags?.shadowrun2e_unified?.test?.disease)?.flags.shadowrun2e_unified.test.disease;
     assert.ok(d);
     assert.ok(d.needed <= 30);
     assert.ok(d.intervalHours >= 1);
@@ -578,7 +578,7 @@ describe('D2-2: a disease from a card is bounded where every route meets', () =>
     const p2 = who({ name: 'P2' });
     faces.push(...Array(30).fill(1));
     await p2.resistToxin({ kind: 'disease', name: 'X', power: 1e6, level: '<b>', damageType: 'physical', vector: 'contact', contagious: '<img>' } as any);
-    const d = chat.find((m: any) => m.flags?.sr2e?.test?.disease)?.flags.sr2e.test.disease;
+    const d = chat.find((m: any) => m.flags?.shadowrun2e_unified?.test?.disease)?.flags.shadowrun2e_unified.test.disease;
     assert.equal(d.power, 60);
     assert.equal(d.level, 'L');
     assert.equal(d.contagious, undefined);
@@ -591,7 +591,7 @@ describe('D2-3 / round 2 (V-DOC 4, 8): a summoning re-rolled after the GM create
     g.game.users = usersAll();
     const mage = ownedBy(who({ name: 'Mage', karma: { pool: 5, poolSpent: 0, good: 0, career: 0 } }), 'p1');
     const spirit = ownedBy(who({ name: 'Fire spirit', type: 'spirit', force: 4, services, summonerUuid: mage.uuid }), 'p1');
-    const first = asMessage({ author: authorOfStamp, flags: { sr2e: { test: { testId: 'T1' }, pendingSpirit: { name: 'Fire spirit', type: 'spirit', system: { services: 1 } }, spiritCreated: spirit.uuid } } });
+    const first = asMessage({ author: authorOfStamp, flags: { shadowrun2e_unified: { test: { testId: 'T1' }, pendingSpirit: { name: 'Fire spirit', type: 'spirit', system: { services: 1 } }, spiritCreated: spirit.uuid } } });
     g.game.messages = { contents: [first] };
     const snap: any = { actorUuid: mage.uuid, kind: 'conjure', label: 'Summon', rerolls: 0, testId: 'T1', baseTargetNumber: 4, targetNumber: 4, modifiers: [],
       dice: [...dice(3), ...dice(1, 1)], successes: 3, botch: false, conjure: { force: 4, spiritKind: 'elemental', spiritType: 'Fire', templateUuid: null, spiritUuid: null } };
@@ -602,11 +602,11 @@ describe('D2-3 / round 2 (V-DOC 4, 8): a summoning re-rolled after the GM create
     const { mage, spirit, snap } = setup(1, GM());
     faces.push(5);
     await mage.karmaReroll(snap);
-    const card = chat.find((m: any) => m.flags?.sr2e?.test);
-    assert.equal(card.flags.sr2e.pendingSpirit, undefined, 'no second Create spirit');
-    assert.equal(card.flags.sr2e.test.conjure.spiritUuid, spirit.uuid);
+    const card = chat.find((m: any) => m.flags?.shadowrun2e_unified?.test);
+    assert.equal(card.flags.shadowrun2e_unified.pendingSpirit, undefined, 'no second Create spirit');
+    assert.equal(card.flags.shadowrun2e_unified.test.conjure.spiritUuid, spirit.uuid);
     assert.equal(spirit.system.services, 1, 'not written by the player\'s client');
-    assert.ok(chat.some((m: any) => m.flags?.sr2e?.actorUpdate?.handSpirit), 'a GM card for the services');
+    assert.ok(chat.some((m: any) => m.flags?.shadowrun2e_unified?.actorUpdate?.handSpirit), 'a GM card for the services');
   });
 
   test('VD-5 inverted: services used since the spirit was created are not given back', async () => {
@@ -624,18 +624,18 @@ describe('D2-3 / round 2 (V-DOC 4, 8): a summoning re-rolled after the GM create
     const { mage, spirit, snap } = setup(1, P1());
     faces.push(5);
     await mage.karmaReroll(snap);
-    const card = chat.find((m: any) => m.flags?.sr2e?.test);
-    assert.equal(card.flags.sr2e.pendingSpirit, undefined, 'no second Create spirit');
-    assert.equal(card.flags.sr2e.test.conjure.spiritUuid, spirit.uuid);
+    const card = chat.find((m: any) => m.flags?.shadowrun2e_unified?.test);
+    assert.equal(card.flags.shadowrun2e_unified.pendingSpirit, undefined, 'no second Create spirit');
+    assert.equal(card.flags.shadowrun2e_unified.test.conjure.spiritUuid, spirit.uuid);
     assert.equal(spirit.system.services, 1, 'the change goes to the GM');
-    assert.ok(chat.some((m: any) => m.flags?.sr2e?.actorUpdate?.handSpirit));
+    assert.ok(chat.some((m: any) => m.flags?.shadowrun2e_unified?.actorUpdate?.handSpirit));
   });
 
   test('V-DOC 8: a stamp on a card by someone who doesn\'t own the summoner is not trusted', async () => {
     const { mage, spirit, snap } = setup(1, P2());
     faces.push(5);
     await mage.karmaReroll(snap);
-    assert.ok(chat.find((m: any) => m.flags?.sr2e?.test)?.flags.sr2e.pendingSpirit, 'the stamp is ignored');
+    assert.ok(chat.find((m: any) => m.flags?.shadowrun2e_unified?.test)?.flags.shadowrun2e_unified.pendingSpirit, 'the stamp is ignored');
     assert.equal(spirit.system.services, 1);
   });
 });
@@ -648,7 +648,7 @@ describe('D2-5: a player\'s flash on someone they don\'t own goes to the GM', ()
     assert.equal(await SR2Actor.applyTimedStatusAsGm({ targetUuid: npc.uuid, status: 'dead', seconds: 30 }), false);
     assert.ok(await SR2Actor.applyTimedStatusAsGm({ targetUuid: npc.uuid, status: 'blind', seconds: 1e9, flashTn: 99 }));
     assert.deepEqual(set, [['blind', 600]]);
-    assert.equal(npc.flags.sr2e.flashTn, 10);
+    assert.equal(npc.flags.shadowrun2e_unified.flashTn, 10);
   });
 });
 
@@ -656,14 +656,14 @@ describe('D2-7 / RA2-3: burning follows the combat whose round ticked', () => {
   test('a fire caught in fight B isn\'t re-stamped by fight A\'s round', async () => {
     await withRule(RULES.COMBAT.burning, 'enabled', true, async () => {
       const a = who({ name: 'Torch' });
-      a.flags.sr2e = { onFire: { combatId: 'B', round: 1 } };
+      a.flags.shadowrun2e_unified = { onFire: { combatId: 'B', round: 1 } };
       const A = { id: 'A', started: true, round: 3, combatants: [{ actor: a }] };
       const B = { id: 'B', started: true, round: 1, combatants: [{ actor: a }] };
       g.game.combat = A;
       g.game.combats = { get: (id: string) => (id === 'A' ? A : id === 'B' ? B : undefined) };
       try {
         await SR2Actor.burningTick(a, 3, 'A');
-        assert.deepEqual(a.flags.sr2e.onFire, { combatId: 'B', round: 1 }, 'left for fight B');
+        assert.deepEqual(a.flags.shadowrun2e_unified.onFire, { combatId: 'B', round: 1 }, 'left for fight B');
       } finally { delete g.game.combats; }
     });
   });
@@ -751,15 +751,15 @@ describe('SEC2b-2 / design 4: numbers from a snapshot are numbers on the card', 
 describe('design 5: a card is replaced only by its own author\'s or a GM\'s', () => {
   test('another player\'s card with the same testId doesn\'t replace it', () => {
     g.game.users = usersAll();
-    const real = asMessage({ author: GM(), flags: { sr2e: { test: { testId: 'tZ' } } } });
-    const forgedCard = asMessage({ author: P1(), flags: { sr2e: { test: { testId: 'tZ' } } } });
+    const real = asMessage({ author: GM(), flags: { shadowrun2e_unified: { test: { testId: 'tZ' } } } });
+    const forgedCard = asMessage({ author: P1(), flags: { shadowrun2e_unified: { test: { testId: 'tZ' } } } });
     g.game.messages = { contents: [real, forgedCard] };
     assert.equal(SR2Actor.isReplaced(real), false);
-    const reroll = asMessage({ author: GM(), flags: { sr2e: { test: { testId: 'tZ' } } } });
+    const reroll = asMessage({ author: GM(), flags: { shadowrun2e_unified: { test: { testId: 'tZ' } } } });
     g.game.messages = { contents: [real, forgedCard, reroll] };
     assert.equal(SR2Actor.isReplaced(real), true);
-    const p1first = asMessage({ author: P1(), flags: { sr2e: { test: { testId: 'tY' } } } });
-    const p1again = asMessage({ author: P1(), flags: { sr2e: { test: { testId: 'tY' } } } });
+    const p1first = asMessage({ author: P1(), flags: { shadowrun2e_unified: { test: { testId: 'tY' } } } });
+    const p1again = asMessage({ author: P1(), flags: { shadowrun2e_unified: { test: { testId: 'tY' } } } });
     g.game.messages = { contents: [p1first, p1again] };
     assert.equal(SR2Actor.isReplaced(p1first), true, 'a Karma re-roll by the same author still replaces');
   });
@@ -884,7 +884,7 @@ describe('round 2 A7 (V-DOC 14): the spell-defense relay spends once per protect
     g.game.users.activeGM = { id: 'gm1', isSelf: true };
     const target = ownedBy(who({ name: 'Me' }), 'p1');
     const protector = ownedBy(who({ name: 'Ally', spellDefense: 4 }), 'p2');
-    protector.flags.sr2e = { spellDefenseCovers: [target.uuid] };
+    protector.flags.shadowrun2e_unified = { spellDefenseCovers: [target.uuid] };
     protector.update = async (d: any, o: any = {}) => {
       await new Promise((r) => setTimeout(r, 5));
       if ((hooks['preUpdateActor'] ?? []).some((f) => f(protector, d, o, 'gm1') === false)) return undefined;
@@ -905,9 +905,9 @@ describe('round 2 G (V-SEC 6, 7): contests', () => {
     const a = ownedBy(who({ name: 'A' }), 'p1');
     const b = ownedBy(who({ name: 'B' }), 'p2');
     const contest = { id: 'c1', kind: 'social', sides: [{ uuid: a.uuid, name: 'A', result: { successes: 1, dice: [] } }, { uuid: b.uuid, name: 'B', result: { successes: 1, dice: [] } }] };
-    const m1 = asMessage({ author: P1(), flags: { sr2e: { contest } } });
-    const m2 = asMessage({ author: P2(), flags: { sr2e: { contest: { ...contest } } } });
-    const m3 = asMessage({ author: { id: 'p3', isGM: false }, flags: { sr2e: { contest: { ...contest } } } });
+    const m1 = asMessage({ author: P1(), flags: { shadowrun2e_unified: { contest } } });
+    const m2 = asMessage({ author: P2(), flags: { shadowrun2e_unified: { contest: { ...contest } } } });
+    const m3 = asMessage({ author: { id: 'p3', isGM: false }, flags: { shadowrun2e_unified: { contest: { ...contest } } } });
     g.game.messages = { contents: [m1, m3] };
     assert.equal(SR2Actor.isReplaced(m1), false, 'a stranger\'s copy doesn\'t');
     g.game.messages = { contents: [m1, m2] };
@@ -919,7 +919,7 @@ describe('round 2 G (V-SEC 6, 7): contests', () => {
       g.game.users = usersAll();
       const npc = ownedBy(who({ name: 'Guard', karma: { pool: 5, poolSpent: 0, good: 0, career: 0 } }));
       const contest = { id: 'c2', kind: 'sneak', sides: [{ uuid: 'Actor.x', name: 'Sneak', result: { successes: 2, dice: dice(2), targetNumber: 4, baseTargetNumber: 4, modifiers: [], totalDice: 2, botch: false } }, { uuid: npc.uuid, name: 'Guard', result: { successes: 0, dice: [...dice(1, 1), ...dice(1, 1)], targetNumber: 4, baseTargetNumber: 4, modifiers: [], totalDice: 2, botch: false } }] };
-      const m = asMessage({ author: P1(), speaker: {}, flags: { sr2e: { contest } } });
+      const m = asMessage({ author: P1(), speaker: {}, flags: { shadowrun2e_unified: { contest } } });
       g.game.messages = { contents: [m] };
       faces.push(5, 5);
       const posted = await SR2Actor.contestKarma(m, 1, 'reroll');
@@ -939,7 +939,7 @@ describe('round 2 H1 (V-DOC 1): the snapshot cleaner keeps word text in number k
     };
     const msg = cardBy(GM(), snap);
     g.game.messages = { contents: [msg] };
-    const t = (await SR2Actor.retarget(msg, { baseTargetNumber: 4, modifiers: [] })).flags.sr2e.test;
+    const t = (await SR2Actor.retarget(msg, { baseTargetNumber: 4, modifiers: [] })).flags.shadowrun2e_unified.test;
     assert.equal(t.blast.toxin.speed, 'hour');
     assert.equal(t.extra.toxinHit.speed, 'minute');
     assert.equal(t.extra.toxinHit.power, 6);
@@ -992,9 +992,9 @@ describe('round 2 H2 (V-DOC 2): spell defense covers allies however they are fou
 describe('round 2 H3 (V-DOC 3, 13): vehicle-job money moves at most once', () => {
   /** A finished project on the party's GM van: the clock posts the Apply (GM) card; its `vehicleJob` flag. */
   const jobCard = async (mech: any, id: string, method: string, args: any[]) => {
-    mech.flags.sr2e = { ...(mech.flags.sr2e ?? {}), projects: { [id]: { id, kind: 'install', label: 'Work', hours: 1, startedAt: 0, readyAt: 0, paid: { karma: 0, nuyen: 0 }, effect: { call: { method, args } } } } };
+    mech.flags.shadowrun2e_unified = { ...(mech.flags.shadowrun2e_unified ?? {}), projects: { [id]: { id, kind: 'install', label: 'Work', hours: 1, startedAt: 0, readyAt: 0, paid: { karma: 0, nuyen: 0 }, effect: { call: { method, args } } } } };
     await mech.finishProject(id);
-    return chat.filter((m: any) => m.flags?.sr2e?.vehicleJob).at(-1).flags.sr2e.vehicleJob;
+    return chat.filter((m: any) => m.flags?.shadowrun2e_unified?.vehicleJob).at(-1).flags.shadowrun2e_unified.vehicleJob;
   };
 
   test('VD-2 inverted: a job whose mod is gone refunds once', async () => {
@@ -1025,7 +1025,7 @@ describe('round 2 H3 (V-DOC 3, 13): vehicle-job money moves at most once', () =>
   test('V-DOC 13: the vehicle deleted mid-install: the up-front money goes back', async () => {
     g.game.users = Object.assign([GM(), PLAYER()], { activeGM: { id: 'gm1', isSelf: true } });
     const mech = ownedBy(who({ name: 'Mech', nuyen: 100 }), 'p1');
-    mech.flags.sr2e = { projects: { pr: { id: 'pr', kind: 'install', label: 'Installing Armor', hours: 1, startedAt: 0, readyAt: 0, paid: { karma: 0, nuyen: 0 },
+    mech.flags.shadowrun2e_unified = { projects: { pr: { id: 'pr', kind: 'install', label: 'Installing Armor', hours: 1, startedAt: 0, readyAt: 0, paid: { karma: 0, nuyen: 0 },
       effect: { call: { method: 'finishModInstall', args: ['Actor.gone-van', 0, null, 'Armor', 500, mech.uuid] } } } } };
     await mech.finishProject('pr');
     assert.equal(mech.system.nuyen, 600);
@@ -1047,7 +1047,7 @@ describe('round 2 H6: smaller fixes', () => {
       const a = who({ name: 'Torch' });
       let burned = 0;
       a.resistHazard = async () => { burned++; };
-      a.flags.sr2e = { onFire: { combatId: 'A', round: 1 } };
+      a.flags.shadowrun2e_unified = { onFire: { combatId: 'A', round: 1 } };
       const sc: any = { id: 'S1' };
       sc.tokens = [{ actorId: a.id, actorLink: true, disposition: 0, parent: sc }];
       g.game.scenes = [sc];
@@ -1143,7 +1143,7 @@ describe('round 3 item 10 (V2 #11): burning in a combat linked to no scene', () 
       const a = who({ name: 'Torch' });
       let burned = 0;
       a.resistHazard = async () => { burned++; };
-      a.flags.sr2e = { onFire: { combatId: 'A', round: 1 } };
+      a.flags.shadowrun2e_unified = { onFire: { combatId: 'A', round: 1 } };
       const A = { id: 'A', started: true, round: 2, combatants: [], scene: null };
       g.game.combats = { get: (id: string) => (id === 'A' ? A : undefined) };
       try { await SR2Actor.burningTick(a, 2, 'A'); } finally { delete g.game.combats; }
@@ -1167,7 +1167,7 @@ describe('round 3 nit (V2 #15): only IC is exempt from the tally-source check', 
 describe('round 3 (FX-APP-WIRING3): the GM\'s Detonate confirm text', () => {
   test('detonateConfirmText gives the record\'s bounded numbers to a GM, nothing to a player or without a record', () => {
     const a = who({ name: 'Sapper' });
-    a.flags.sr2e = { setCharges: [{ id: 'c1', itemId: 'gone', name: 'C4', power: 999, perMetre: 0.01, shaped: true }] };
+    a.flags.shadowrun2e_unified = { setCharges: [{ id: 'c1', itemId: 'gone', name: 'C4', power: 999, perMetre: 0.01, shaped: true }] };
     g.game.user = P1();
     assert.equal(SR2Actor.detonateConfirmText(a, 'c1', '', {}), null);
     g.game.user = GM();

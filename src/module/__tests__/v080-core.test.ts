@@ -349,11 +349,11 @@ describe('v0.80.0 core: gear', () => {
     const a = who({}, [skill('et', 'Etiquette', 3, 'charisma'), gun]);
     faces.push(5, 1, 1);
     await a.findItem('g1');
-    const tn1 = chat.at(-1).flags.sr2e.contest.sides[0].result.targetNumber;
+    const tn1 = chat.at(-1).flags.shadowrun2e_unified.contest.sides[0].result.targetNumber;
     t.after(urrMode());
     faces.push(5, 1, 1);
     await a.findItem('g1');
-    const r2 = chat.at(-1).flags.sr2e.contest.sides[0].result;
+    const r2 = chat.at(-1).flags.shadowrun2e_unified.contest.sides[0].result;
     assert.equal(r2.targetNumber, tn1 + 2);
     assert.ok(r2.modifiers.some((m: any) => m.label === 'Acquisition' && m.value === 2));
     assert.equal(faces.length, 0);
@@ -365,11 +365,11 @@ describe('v0.80.0 core: gear', () => {
     const a = who({}, [skill('ne', 'Negotiation', 2, 'charisma')], { ...A, intelligence: 6 });
     faces.push(1, 1, 1, 1, 1, 1);
     await a.haggle({ itemId: 'x', price: 1000, name: 'Gun' });
-    assert.equal(chat.at(-1).flags.sr2e.contest.sides[1].result.targetNumber, RULES.STREET.haggle.tn);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.contest.sides[1].result.targetNumber, RULES.STREET.haggle.tn);
     t.after(urrMode());
     faces.push(1, 1, 1, 1, 1, 1);
     await a.haggle({ itemId: 'x', price: 1000, name: 'Gun' });
-    assert.equal(chat.at(-1).flags.sr2e.contest.sides[1].result.targetNumber, 6);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.contest.sides[1].result.targetNumber, 6);
   });
 });
 

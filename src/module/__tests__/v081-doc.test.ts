@@ -234,7 +234,7 @@ describe('SEC1-2 a project flag never runs privileged calls on what its players 
     const mine = ownedBy(who({ name: 'Player PC' }), 'p1');
     mine.ownership = { default: 0, p1: 3 };
     const victim = ownedBy(who({ name: 'Other PC', nuyen: 5 }), 'p2');
-    mine.flags.sr2e = { projects: {
+    mine.flags.shadowrun2e_unified = { projects: {
       a: forged('a', 'finishWard', [{ name: 'Loot', type: 'character', ownership: { default: 3 }, system: { nuyen: 999999, rating: 99 }, items: [{ name: 'Gun', type: 'weapon' }] }, 'w']),
       b: forged('b', 'refundModPayer', [victim.uuid, 1000000, 'x']),
       c: forged('c', 'finishAlly', [{ name: 'Ally', type: 'npc', ownership: { default: 3 }, system: { force: 99, summonerUuid: victim.uuid } }]),
@@ -254,7 +254,7 @@ describe('SEC1-2 a project flag never runs privileged calls on what its players 
     assert.equal(ally.system.force, 30);
     assert.equal(victim.system.nuyen, 5, 'no refund straight to an actor the project actor\'s players do not own');
     // v0.81.1 (D3-6): on the GM's clock that refund is refused outright (a GM-authored card would skip the confirm).
-    assert.ok(!chat.some((m) => m.flags?.sr2e?.actorUpdate?.nuyen), 'no GM-authored refund card either');
+    assert.ok(!chat.some((m) => m.flags?.shadowrun2e_unified?.actorUpdate?.nuyen), 'no GM-authored refund card either');
     assert.equal(mine.ownership.default, 0);
     assert.equal(mine.system.karma.good, 1);
   });
@@ -303,7 +303,7 @@ describe('SEC1-11 / D3-6 jams', () => {
       assert.equal(await SR2Actor.applyJam(d.uuid, 'Van', 4), true);
     });
     assert.equal(d.system.matrix.jackedIn, false);
-    assert.ok(chat.some((m) => m.flags?.sr2e?.dumpShockFor === d.uuid), 'dump shock card');
+    assert.ok(chat.some((m) => m.flags?.shadowrun2e_unified?.dumpShockFor === d.uuid), 'dump shock card');
     assert.equal(rider.system.matrix.ridingWith, '');
   });
 });
@@ -312,7 +312,7 @@ describe('SEC1-12 a charge goes off with the Power on record', () => {
   test('storedCharge reads the setter\'s record, bounded; an unknown id is nothing', () => {
     // v0.81.1 (SEC1-16): a record is bounded by the explosive item it names; one with no such item is nothing.
     const a = who({ name: 'Setter' }, [{ id: 'cx', type: 'gear', name: 'C-12', system: { quantity: 0, explosive: { power: 200, perMetre: 1, shaped: false } } }]);
-    a.flags.sr2e = { setCharges: [{ id: 'c1', itemId: 'cx', name: 'C-12', power: 999, perMetre: 1, shaped: false }, { id: 'c2', name: 'C-12', power: 999, perMetre: 1, shaped: false }] };
+    a.flags.shadowrun2e_unified = { setCharges: [{ id: 'c1', itemId: 'cx', name: 'C-12', power: 999, perMetre: 1, shaped: false }, { id: 'c2', name: 'C-12', power: 999, perMetre: 1, shaped: false }] };
     assert.ok(SR2Actor.storedCharge(a, 'c1')?.power <= 200);
     // Round 3 (V2 #2): a record with no explosive item behind it is refused again (SEC1-16); a GM confirms instead.
     assert.equal(SR2Actor.storedCharge(a, 'c2'), null);
@@ -362,7 +362,7 @@ describe('D1 findings (index.ts 1-5800)', () => {
     assert.equal(patient.items.get('ww').system.installed, true);
     const hurt = patient.system.monitor.physical;
     await SR2Actor.retarget(card, { baseTargetNumber: 6, modifiers: [] });
-    assert.equal(chat.at(-1).flags.sr2e.test.successes, 0);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.test.successes, 0);
     assert.equal(patient.system.monitor.physical, hurt, 'no complications on top of an earlier success');
     assert.equal(patient.items.get('ww').system.installed, true);
     assert.doesNotMatch(chat.at(-1).content, /Complications/);
@@ -372,7 +372,7 @@ describe('D1 findings (index.ts 1-5800)', () => {
     // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
     tt.after(oldWay({ 'CORE_V923.morale': 'old' }));
     const npc = who({ name: 'Goon', type: 'npc', professionalRating: 3 });
-    await npc.setFlag('sr2e', 'broken', true);
+    await npc.setFlag('shadowrun2e_unified', 'broken', true);
     faces.push(5, 5, 5);
     await npc.moraleTest();
     assert.equal(npc.isBroken(), true);
@@ -411,7 +411,7 @@ describe('D1 findings (index.ts 1-5800)', () => {
     await victim.karmaReroll(snap);
     assert.equal(victim.system.essenceShift, 0);
     assert.equal(caster.system.essenceShift, 0);
-    assert.equal(chat.at(-1).flags.sr2e.test.soak.essenceDrain.taken, 0);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.test.soak.essenceDrain.taken, 0);
   });
 
   test('D1-5: follow-up cards are per call, not instance fields two tests could share', async () => {
@@ -426,7 +426,7 @@ describe('D1 findings (index.ts 1-5800)', () => {
     b.id = a.id; b.isToken = true;                                      // same base actor, another token
     g.game.combat = { started: true, combatant: { actor: a }, nextTurn: async () => {} };
     assert.equal(await b.delayAction(), false);
-    assert.equal(b.getFlag('sr2e', 'delayed'), undefined);
+    assert.equal(b.getFlag('shadowrun2e_unified', 'delayed'), undefined);
   });
 
   test('D1-8: an exclusive spell blocks perception and street tests too (blocksAllTests)', async () => {
@@ -457,9 +457,9 @@ describe('D1 findings (index.ts 1-5800)', () => {
       const a = who({ name: 'Unlucky' });
       faces.push(1, 1, 1, 1);
       await a.rollAttribute('body', { targetNumber: 4 });
-      const cards = () => chat.filter((m) => m.flags?.sr2e?.disaster).length;
+      const cards = () => chat.filter((m) => m.flags?.shadowrun2e_unified?.disaster).length;
       assert.equal(cards(), 1);
-      await SR2Actor.retarget(asMessage({ author: GM(), ...chat.find((m) => m.flags?.sr2e?.test), update: async () => {} }), { baseTargetNumber: 5, modifiers: [] });
+      await SR2Actor.retarget(asMessage({ author: GM(), ...chat.find((m) => m.flags?.shadowrun2e_unified?.test), update: async () => {} }), { baseTargetNumber: 5, modifiers: [] });
       assert.equal(cards(), 1);
     });
   });
@@ -483,14 +483,14 @@ describe('D2 findings (index.ts 5800-11600)', () => {
     faces.push(1, 1, 1);                                                // the spirit resists: nothing
     faces.push(...Array(60).fill(5));                                   // the banishing, then the drain
     await mage.banish(spirit);
-    const gm = chat.find((m) => m.flags?.sr2e?.actorUpdate?.lower);
+    const gm = chat.find((m) => m.flags?.shadowrun2e_unified?.actorUpdate?.lower);
     assert.ok(gm, 'a GM card');
-    assert.deepEqual(gm.flags.sr2e.actorUpdate.lower, { key: 'force', from: 3, to: 0 });
-    assert.equal(gm.flags.sr2e.actorUpdate.by, mage.uuid);
-    const card = chat.find((m) => m.flags?.sr2e?.test?.banish);
-    assert.equal(card.flags.sr2e.test.banish.forceAfter, 3, 'nothing was written, so the Force is still 3');
+    assert.deepEqual(gm.flags.shadowrun2e_unified.actorUpdate.lower, { key: 'force', from: 3, to: 0 });
+    assert.equal(gm.flags.shadowrun2e_unified.actorUpdate.by, mage.uuid);
+    const card = chat.find((m) => m.flags?.shadowrun2e_unified?.test?.banish);
+    assert.equal(card.flags.shadowrun2e_unified.test.banish.forceAfter, 3, 'nothing was written, so the Force is still 3');
     assert.equal(spirit.system.force, 3);
-    assert.equal(await SR2Actor.applyActorUpdate(gm.flags.sr2e.actorUpdate), true);
+    assert.equal(await SR2Actor.applyActorUpdate(gm.flags.shadowrun2e_unified.actorUpdate), true);
     assert.equal(spirit.system.force, 0);
   });
 
@@ -499,7 +499,7 @@ describe('D2 findings (index.ts 5800-11600)', () => {
     a.backgroundInfo = () => ({ penalty: 3, toxic: true, bonusDice: 0, rating: 3 });
     faces.push(...Array(20).fill(5));
     await withRule(RULES.MAGIC_V39.background, 'toxicAffectsDrain', true, () => a.resistHazard('cold', 'cold'));
-    const card = chat.find((m) => m.flags?.sr2e?.test);
+    const card = chat.find((m) => m.flags?.shadowrun2e_unified?.test);
     assert.doesNotMatch(card.content, /background count/i);
   });
 
@@ -513,7 +513,7 @@ describe('D2 findings (index.ts 5800-11600)', () => {
     });
     assert.deepEqual(asked, []);
     assert.equal(a.system.astral, 'physical');
-    assert.equal(a.getFlag('sr2e', 'projectionStart'), undefined);
+    assert.equal(a.getFlag('shadowrun2e_unified', 'projectionStart'), undefined);
   });
 
   test('D2-8: radiation past a day of hourly tests says the rest were not rolled', async () => {
@@ -592,20 +592,20 @@ describe('D3 findings, more', () => {
     faces.push(5, 5, 5, 5);
     await withRule(RULES.RIGGING.jamming, 'dumpShock', true, () => jammer.jamTest(d.uuid, { rating: 4 }));
     const card = chat.at(-1);
-    assert.ok(card.flags.sr2e.jam, 'an Apply (GM) card');
-    assert.equal(card.flags.sr2e.riggerShock, undefined);
+    assert.ok(card.flags.shadowrun2e_unified.jam, 'an Apply (GM) card');
+    assert.equal(card.flags.shadowrun2e_unified.riggerShock, undefined);
     assert.doesNotMatch(card.content, /data-sr2e-action="riggerShock"/);
     // The GM's Apply pushes the rigger out and posts the shock.
     d.isOwner = true;
     await withRule(RULES.RIGGING.jamming, 'dumpShock', true, () => SR2Actor.applyJam(d.uuid, 'Van', 4, { jammerUuid: jammer.uuid }));
-    assert.ok(chat.some((m) => m.flags?.sr2e?.riggerShock?.riggerUuid === r.uuid));
+    assert.ok(chat.some((m) => m.flags?.shadowrun2e_unified?.riggerShock?.riggerUuid === r.uuid));
   });
 
   test("D3-10: resetting a site clears the response's combat marker", async () => {
     const s = who({ name: 'Plant', type: 'site', tally: 5, alert: 'active', response: { round: 2, worldTime: -1, arrived: false }, devices: [{ id: 'd1', name: 'Cam', bypassed: true }] });
-    s.flags.sr2e = { responseCombat: 'c1' };
+    s.flags.shadowrun2e_unified = { responseCombat: 'c1' };
     await s.resetSite(true);
-    assert.equal(s.flags.sr2e.responseCombat, '');
+    assert.equal(s.flags.shadowrun2e_unified.responseCombat, '');
     assert.equal(s.system.devices[0].bypassed, false);
   });
 });

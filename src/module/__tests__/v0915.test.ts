@@ -246,10 +246,10 @@ describe('v0.91.5 the find test and its card (documents/index.ts)', () => {
     assert.equal(r.found, true);
     assert.equal(r.hours, 24);
     const card = chat.at(-1);
-    const side = card.flags.sr2e.contest.sides[0];
+    const side = card.flags.shadowrun2e_unified.contest.sides[0];
     assert.equal(side.result.targetNumber, 6);
     assert.ok(side.result.modifiers.some((m: any) => m.id === LEGAL_FIND_MOD && m.value === 2));
-    assert.equal(card.flags.sr2e.contest.deal.legality, 'restricted');
+    assert.equal(card.flags.shadowrun2e_unified.contest.deal.legality, 'restricted');
     assert.match(card.content, /data-sr2e-legal="restricted"/);
     assert.match(card.content, /5,000/);
   });
@@ -260,7 +260,7 @@ describe('v0.91.5 the find test and its card (documents/index.ts)', () => {
     await withRule(RULES.SHOP_V915, 'findByLegality', 'off', async () => {
       const r = await a.findFromShop('tpl:w:t5');
       assert.equal(r.found, true);
-      assert.equal(chat.at(-1).flags.sr2e.contest.sides[0].result.targetNumber, 4);
+      assert.equal(chat.at(-1).flags.shadowrun2e_unified.contest.sides[0].result.targetNumber, 4);
     });
   });
   test('a forbidden entry (the GM sells them): TN +4 and twice the time, also for the retry wait', async () => {
@@ -269,9 +269,9 @@ describe('v0.91.5 the find test and its card (documents/index.ts)', () => {
     const a = shopper();
     faces.push(6, 1, 1, 1, 1);
     const r = await a.findFromShop('tpl:w:t6');
-    assert.equal(chat.at(-1).flags.sr2e.contest.sides[0].result.targetNumber, 8);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.contest.sides[0].result.targetNumber, 8);
     assert.equal(r.found, false, 'a 6 + 1 does not reach TN 8');
-    assert.equal(chat.at(-1).flags.sr2e.contest.deal.avHours, 96);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.contest.deal.avHours, 96);
   });
   test('readily available (no Availability): no test, but the warning is there', async () => {
     settings['itemTemplates'] = [KNIFE];
@@ -305,7 +305,7 @@ describe('v0.91.5 Get a permit… (documents/index.ts)', () => {
       assert.equal(await a.getPermit('item:w1'), true);
       assert.equal(a.system.nuyen, 4600, '10% of ¥4,000');
       assert.equal(a.items.get('w1').system.permit, false, 'not yet');
-      const p: any = Object.values(a.flags.sr2e.projects)[0];
+      const p: any = Object.values(a.flags.shadowrun2e_unified.projects)[0];
       assert.equal(p.kind, 'permit'); assert.equal(p.hours, 168); assert.equal(p.source, 'permit:item:w1');
       assert.deepEqual(p.effect, { updates: [{ itemId: 'w1', changes: [['system.permit', true]] }] });
       assert.equal(await a.getPermit('item:w1'), false);
@@ -325,10 +325,10 @@ describe('v0.91.5 Get a permit… (documents/index.ts)', () => {
     const a = carrying();
     settings['approvalQueue'] = true;
     g.game.user = PLAYER();
-    a.flags.sr2e = { creation: { v: 1 } };
+    a.flags.shadowrun2e_unified = { creation: { v: 1 } };
     const r = await a.getPermit('item:w1');
     assert.equal(r, 'requested');
-    const req: any = Object.values(a.flags.sr2e.requests)[0];
+    const req: any = Object.values(a.flags.shadowrun2e_unified.requests)[0];
     assert.equal(req.nuyen, 1000);
     assert.deepEqual(req.data, { method: 'getPermit', args: ['item:w1', 1000] });
     assert.deepEqual(methodRequestProblems(req.data, { karma: 0, nuyen: 1000 }), []);
@@ -415,7 +415,7 @@ describe('v0.91.5 review fixes', () => {
     faces.push(6, 6, 1, 1, 1, 1);
     await a.findFromShop('tpl:w:t5');
     assert.match(chat.at(-1).content, /data-sr2e-legal="restricted"/);
-    assert.equal(chat.at(-1).flags.sr2e.contest.deal.permit, false);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.contest.deal.permit, false);
   });
   test('R3: the legality time counts however it is bought (itemAcquireHours)', async () => {
     const { itemAcquireHours } = await import('../rules/waiting.ts');
@@ -450,10 +450,10 @@ describe('v0.91.5 review fixes', () => {
     const { approveRequest } = await import('../applications/approvals.ts');
     const a = holder();
     settings['approvalQueue'] = true;
-    a.flags.sr2e = { creation: { v: 1 } };
+    a.flags.shadowrun2e_unified = { creation: { v: 1 } };
     g.game.user = PLAYER();
     assert.equal(await a.getPermit('item:w1'), 'requested');
-    const id = Object.keys(a.flags.sr2e.requests)[0]!;
+    const id = Object.keys(a.flags.shadowrun2e_unified.requests)[0]!;
     g.game.user = GM();
     a.items.get('w1').system.cost = 8000;
     assert.equal(await approveRequest(a, id), false, 'the cost changed since it was filed');
@@ -461,7 +461,7 @@ describe('v0.91.5 review fixes', () => {
     a.items.get('w1').system.cost = 4000;
     g.game.user = PLAYER();
     assert.equal(await a.getPermit('item:w1'), 'requested');
-    const id2 = Object.entries(a.flags.sr2e.requests).find(([, r]: any) => r)![0];
+    const id2 = Object.entries(a.flags.shadowrun2e_unified.requests).find(([, r]: any) => r)![0];
     g.game.user = GM();
     assert.equal(await approveRequest(a, id2), true);
     assert.equal(a.system.nuyen, 4000);

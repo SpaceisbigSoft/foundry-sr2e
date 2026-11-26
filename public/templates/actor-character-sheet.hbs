@@ -11,14 +11,14 @@
       </div>
     </div>
   </header>
-  {{> "systems/sr2e/templates/sheet-summary.hbs"}}
+  {{> "systems/shadowrun2e_unified/templates/sheet-summary.hbs"}}
   <div class="sr2e-stuck">
-    {{> "systems/sr2e/templates/status-strip.hbs"}}
+    {{> "systems/shadowrun2e_unified/templates/status-strip.hbs"}}
     <nav class="sheet-tabs tabs sr2e-tabs" data-group="primary">
       {{#each sheetTabs}}<a class="item{{#if active}} active{{/if}}" data-action="tab" data-group="primary" data-tab="{{id}}"><i class="{{icon}}" aria-hidden="true"></i> {{label}}</a>{{/each}}
     </nav>
   </div>
-  {{#if (eq layout "combat")}}{{> "systems/sr2e/templates/combat-column.hbs"}}{{/if}}
+  {{#if (eq layout "combat")}}{{> "systems/shadowrun2e_unified/templates/combat-column.hbs"}}{{/if}}
   <section class="tab sr2e-tab{{#if (eq activeTab "main")}} active{{/if}}" data-group="primary" data-tab="main">
     <section class="sr2e-attributes">
       <h2 data-heading="Attributes">{{sr2eT "SR2E.UI.attributes"}}</h2>
@@ -81,11 +81,11 @@
       </div>
       {{/if}}
       {{#if occult.possessedBy}}<p class="sr2e-warning">{{sr2eT "SR2E.UI.possessedBy"}} <strong>{{occult.possessedBy}}</strong>{{sr2eT "SR2E.UI.theBodyUsesTheirCharismaIntelligence"}} <button type="button" data-action="endPossession">{{sr2eT "SR2E.UI.free"}}</button></p>{{/if}}
-      {{> "systems/sr2e/templates/power-effects.hbs"}}
+      {{> "systems/shadowrun2e_unified/templates/power-effects.hbs"}}
     </section>
     <section class="sr2e-monitor">
       <h2 data-heading="Condition Monitor">{{sr2eT "SR2E.UI.conditionMonitor"}} <span class="sr2e-status">{{system.derived.status}}</span></h2>
-      {{> "systems/sr2e/templates/monitor.hbs"}}
+      {{> "systems/shadowrun2e_unified/templates/monitor.hbs"}}
       <div class="sr2e-row">
         <label>{{sr2eT "SR2E.UI.physicalDamageBoxes"}} <input type="number" name="system.monitor.physical" value="{{system.monitor.physical}}" min="0"></label>
         <label>{{sr2eT "SR2E.UI.stunDamageBoxes"}} <input type="number" name="system.monitor.stun" value="{{system.monitor.stun}}" min="0"></label>
@@ -233,7 +233,7 @@
     </section>
   </section>
   <section class="tab sr2e-tab{{#if (eq activeTab "effects")}} active{{/if}}" data-group="primary" data-tab="effects">
-    {{> "systems/sr2e/templates/effects-section.hbs"}}
+    {{> "systems/shadowrun2e_unified/templates/effects-section.hbs"}}
   </section>
   {{#if showMagicTab}}
   <section class="tab sr2e-tab{{#if (eq activeTab "magic")}} active{{/if}}" data-group="primary" data-tab="magic">
@@ -275,7 +275,7 @@
         {{#if centeringTests}}<button type="button" data-action="centeringTest" title="{{sr2eT "SR2E.UI.rollItBeforeAMagicalTest"}}">{{sr2eT "SR2E.UI.center"}}</button>{{#if centeredNow}} <span class="sr2e-status">{{sr2eT "SR2E.UI.centered" centeredNow=centeredNow}}</span>{{/if}}{{/if}}
       </div>
       {{/if}}
-      {{> "systems/sr2e/templates/occult-section.hbs"}}
+      {{> "systems/shadowrun2e_unified/templates/occult-section.hbs"}}
       {{#if isElementalist}}
       <div class="sr2e-row">
         <label>{{sr2eT "SR2E.UI.element"}}
@@ -408,12 +408,12 @@
   {{/if}}
   {{#if matrix}}
   <section class="tab sr2e-tab{{#if (eq activeTab "matrix")}} active{{/if}}" data-group="primary" data-tab="matrix">
-    {{> "systems/sr2e/templates/matrix-section.hbs"}}
+    {{> "systems/shadowrun2e_unified/templates/matrix-section.hbs"}}
   </section>
   {{/if}}
   {{#if rigging}}
   <section class="tab sr2e-tab{{#if (eq activeTab "rigging")}} active{{/if}}" data-group="primary" data-tab="rigging">
-    {{> "systems/sr2e/templates/rigging-section.hbs"}}
+    {{> "systems/shadowrun2e_unified/templates/rigging-section.hbs"}}
   </section>
   {{/if}}
   <section class="tab sr2e-tab{{#if (eq activeTab "gear")}} active{{/if}}" data-group="primary" data-tab="gear">

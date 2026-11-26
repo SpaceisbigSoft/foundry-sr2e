@@ -73,10 +73,10 @@ describe('v0.64.0 the approval queue (glue)', () => {
   test('a player on a finished or never-built character waits; GMs, the queue off and the wizard don\'t', () => {
     const a = character();
     assert.equal(ap.approvalNeeded(a), true);
-    a.flags.sr2e = { creationDraft: { step: 'skills' } };
+    a.flags.shadowrun2e_unified = { creationDraft: { step: 'skills' } };
     assert.equal(ap.inCreation(a), true);
     assert.equal(ap.approvalNeeded(a), false, 'in the wizard');
-    a.flags.sr2e.creation = { v: 1, finishedAt: 'x', attributes: {} };
+    a.flags.shadowrun2e_unified.creation = { v: 1, finishedAt: 'x', attributes: {} };
     assert.equal(ap.inCreation(a), false, 'a record beats a stale draft');
     assert.equal(ap.approvalNeeded(a), true);
     settings['approvalQueue'] = false;
@@ -137,7 +137,7 @@ describe('v0.64.0 the approval queue (glue)', () => {
     await ap.fileRequest(a, { kind: 'improve', label: 'Raise Quickness', karma: 10, data: {} });
     const list = ap.requestsOf(a);
     assert.deepEqual(list.map((r) => r.label), ['Raise Body', 'Raise Quickness']);
-    assert.equal(Array.isArray(a.flags.sr2e.requests), false);
+    assert.equal(Array.isArray(a.flags.shadowrun2e_unified.requests), false);
     await ap.dropRequest(a, list[0]!.id);
     assert.deepEqual(ap.requestsOf(a).map((r) => r.label), ['Raise Quickness']);
   });
@@ -155,7 +155,7 @@ describe('v0.64.0 the advancement log (glue)', () => {
   test('a recorded character logs awards, raises and items; an approved one credits both', async () => {
     const a = character();
     g.game.actors = [a];
-    a.flags.sr2e = { creation: { v: 1, finishedAt: 'x', attributes: {} } };
+    a.flags.shadowrun2e_unified = { creation: { v: 1, finishedAt: 'x', attributes: {} } };
     await a.update({ 'system.karma.good': 25, 'system.karma.career': 5, 'system.ledger': [{ t: 0, kind: 'karma', amount: 5, reason: 'Run: docks' }] });
     // A raise in its own update (as improve does for attributes): base and the ledger together.
     await a.update({ 'system.attributes.body.base': 5, 'system.karma.good': 15, 'system.ledger': [{ t: 0, kind: 'karma', amount: 5, reason: 'Run: docks' }, { t: 0, kind: 'karma', amount: -10, reason: 'Body 4 → 5' }] });
@@ -174,7 +174,7 @@ describe('v0.64.0 the advancement log (glue)', () => {
   test('a batched item update logs each item\'s own raise once; credit splits between bursts', async () => {
     const a = character();
     g.game.actors = [a];
-    a.flags.sr2e = { creation: { v: 1, finishedAt: 'x', attributes: {} } };
+    a.flags.shadowrun2e_unified = { creation: { v: 1, finishedAt: 'x', attributes: {} } };
     const s1 = { id: 's1', type: 'skill', name: 'Firearms', system: { rating: 3 }, parent: a };
     const s2 = { id: 's2', type: 'skill', name: 'Stealth', system: { rating: 2 }, parent: a };
     const options: any = {};
@@ -192,7 +192,7 @@ describe('v0.64.0 the advancement log (glue)', () => {
   test('another user\'s change is logged on their client, not here', async () => {
     const a = character();
     g.game.actors = [a];
-    a.flags.sr2e = { creation: { v: 1, finishedAt: 'x', attributes: {} } };
+    a.flags.shadowrun2e_unified = { creation: { v: 1, finishedAt: 'x', attributes: {} } };
     for (const fn of hooks.get('createItem') ?? []) fn({ type: 'gear', name: 'Rope', system: {}, parent: a }, {}, 'someone-else');
     await adv.flushAdvancement();
     assert.equal(adv.advancementOf(a).length, 0);
@@ -206,7 +206,7 @@ describe('v0.64.0 rating edits after creation (glue)', () => {
   after(() => { (RULES.SHEET_V921 as any).ratingLock = lockWas; });
   test('a player\'s typed raise is dropped; a GM\'s stays; money only with the queue on', () => {
     const a = character();
-    a.flags.sr2e = { creation: { v: 1, finishedAt: 'x', attributes: {} } };
+    a.flags.shadowrun2e_unified = { creation: { v: 1, finishedAt: 'x', attributes: {} } };
     const ch: Record<string, unknown> = { 'system.attributes.body.base': 6, 'system.attributes.body.mod': 2, 'system.nuyen': 9000 };
     assert.deepEqual(adv.refuseLockedRaises(a, 'actor', ch).sort(), ['system.attributes.body.base', 'system.nuyen']);
     assert.deepEqual(Object.keys(ch), ['system.attributes.body.mod']);
@@ -231,7 +231,7 @@ describe('v0.64.0 rating edits after creation (glue)', () => {
     assert.deepEqual(adv.refuseLockedRaises(a, 'actor', { 'system.attributes.body.base': 6 }), []);
     settings['approvalQueue'] = true;
     assert.deepEqual(adv.refuseLockedRaises(a, 'actor', { 'system.attributes.body.base': 6 }), ['system.attributes.body.base'], 'a character made before the wizard, in play');
-    a.flags.sr2e = { creationDraft: { step: 'attributes' } };
+    a.flags.shadowrun2e_unified = { creationDraft: { step: 'attributes' } };
     assert.deepEqual(adv.refuseLockedRaises(a, 'actor', { 'system.attributes.body.base': 6 }), [], 'in the wizard');
   });
 });

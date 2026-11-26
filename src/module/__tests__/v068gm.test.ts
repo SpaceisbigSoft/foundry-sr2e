@@ -92,7 +92,7 @@ describe('GM panel: party cards and mook stat cards', () => {
     assert.match(party, /<article class="sr2e-party-card/);
     assert.match(party, /<img class="sr2e-pc-portrait" src="\{\{img\}\}"/);
     assert.match(party, /data-action="openActor" data-uuid="\{\{uuid\}\}"[^>]*>\{\{name\}\}<\/a>/);
-    assert.ok(party.includes('{{> "systems/sr2e/templates/monitor-mini.hbs"}}'));
+    assert.ok(party.includes('{{> "systems/shadowrun2e_unified/templates/monitor-mini.hbs"}}'));
     for (const t of ['physical', 'stun']) for (const d of ['-1', '1']) assert.ok(party.includes(`data-action="box" data-uuid="{{uuid}}" data-track="${t}" data-delta="${d}"`), `${t} ${d}`);
     assert.ok(party.includes('{{#each poolChips}}'));
     assert.ok(party.includes('{{woundText}}'));

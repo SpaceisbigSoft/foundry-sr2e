@@ -187,7 +187,7 @@ describe('v0.92.3 death and bleeding (HEALTH_V923.death, bleed; Core p. 111)', (
   });
   test('bleeding: a box every 10 minutes unattended; the old way every (Body) Combat Turns', async (t) => {
     const a = who({ name: 'Downed', monitor: { physical: 10, stun: 0 } });
-    a.flags.sr2e = { dyingAt: { t: 0, boxes: 0 } };
+    a.flags.shadowrun2e_unified = { dyingAt: { t: 0, boxes: 0 } };
     g.game.actors = [a];
     await SR2Actor.timedEffects({ worldTime: 599, anyGm: true });
     assert.equal(a.system.monitor.physical, 10);
@@ -196,7 +196,7 @@ describe('v0.92.3 death and bleeding (HEALTH_V923.death, bleed; Core p. 111)', (
     assert.match(a.system.derived.bleedEvery, /10 minutes/);
     t.after(off({ 'HEALTH_V923.bleed': 'bodyTurns' }));
     const b = who({ name: 'Downed', monitor: { physical: 10, stun: 0 } });
-    b.flags.sr2e = { dyingAt: { t: 0, boxes: 0 } };
+    b.flags.shadowrun2e_unified = { dyingAt: { t: 0, boxes: 0 } };
     g.game.actors = [b];
     await SR2Actor.timedEffects({ worldTime: 24, anyGm: true });                  // 8 turns, Body 4: 2 boxes
     assert.equal(b.system.monitor.physical, 12);
@@ -272,7 +272,7 @@ describe('v0.92.3 first aid (HEALTH_V923.firstAid, firstAidStun, selfStabilise, 
     faces.push(1, 1, 1, 1);                                           // natural Body 4 vs 4: fails
     await SR2Actor.patchEffect(p, { kind: 'trauma', rating: 3, name: 'Trauma patch' });
     assert.equal(p.system.care.stabilised, false);
-    assert.equal(p.getFlag('sr2e', 'traumaPatched923'), true);
+    assert.equal(p.getFlag('shadowrun2e_unified', 'traumaPatched923'), true);
     t.after(off({ 'HEALTH_V923.traumaPatch': 'stabilise' }));
     const q = who({ name: 'Dying', monitor: { physical: 10, stun: 0 } });
     await SR2Actor.patchEffect(q, { kind: 'trauma', rating: 3, name: 'Trauma patch' });
@@ -348,7 +348,7 @@ describe('v0.92.3 permanent damage and drastic surgery (HEALTH_V923.permanentDam
     await a.resistDamage({ power: 9, level: 'S' });
     const card = chat.find((c: any) => /data-sr2e-action="permanentDamage923"/.test(c.content));
     assert.ok(card);
-    assert.equal(card.flags.sr2e.permanentDamageFor, a.uuid);
+    assert.equal(card.flags.shadowrun2e_unified.permanentDamageFor, a.uuid);
     ones(4); faces.push(3, 1);                                        // no successes; 1D6 = 3: Quickness
     const out = await a.rollPermanentDamage();
     assert.deepEqual({ kind: out.kind, result: out.result }, { kind: 'attribute', result: 'quickness' });
@@ -361,7 +361,7 @@ describe('v0.92.3 permanent damage and drastic surgery (HEALTH_V923.permanentDam
     assert.ok(!chat.some((c: any) => /permanentDamage923/.test(c.content)));
   });
   test('a trauma patch makes it +2; 1 success costs a limb or eye', async () => {
-    const a = who({ name: 'Hurt', monitor: { physical: 10, stun: 0 }, flags: { sr2e: { traumaPatched923: true } } });
+    const a = who({ name: 'Hurt', monitor: { physical: 10, stun: 0 }, flags: { shadowrun2e_unified: { traumaPatched923: true } } });
     faces.push(6, 1, 1, 1, 1); faces.push(6, 4);                      // vs 6: one success (6 + 1 = 7); 1D6 = 6 (an eye), 4: left
     const out = await a.rollPermanentDamage();
     assert.deepEqual({ kind: out.kind, result: out.result }, { kind: 'limb', result: 'leftEye' });
@@ -381,9 +381,9 @@ describe('v0.92.3 permanent damage and drastic surgery (HEALTH_V923.permanentDam
     await b.rollPermanentDamage();
     assert.match(chat.at(-1).content, /\(dermal armor 0\)/);
     faces.length = 0;
-    const p = who({ name: 'Patched', monitor: { physical: 0, stun: 0 }, flags: { sr2e: { traumaPatched923: true } } });
+    const p = who({ name: 'Patched', monitor: { physical: 0, stun: 0 }, flags: { shadowrun2e_unified: { traumaPatched923: true } } });
     await p.syncCondition('ok', { physical: false, stun: false }, { physical: 3, stun: 0 });
-    assert.equal(p.getFlag('sr2e', 'traumaPatched923') ?? null, null);
+    assert.equal(p.getFlag('shadowrun2e_unified', 'traumaPatched923') ?? null, null);
   });
   test('a magician through drastic surgery is asked for a Magic loss test', async (t) => {
     const doc = who({ name: 'Doc' }, [skill('bt', 'Biotech', 5, 'intelligence')]);
@@ -446,7 +446,7 @@ describe('v0.92.3 hazards (HEALTH_V923.falling, breathHold, drowning, burning; F
   });
   test('burning clothes: 6M after the first turn, +2 Power each turn after', async (t) => {
     const a = who({ name: 'Torch' });
-    a.flags.sr2e = { onFire: { combatId: 'A', round: 1 } };
+    a.flags.shadowrun2e_unified = { onFire: { combatId: 'A', round: 1 } };
     const A = { id: 'A', started: true, round: 2, combatants: [{ actor: a }], scene: null };
     g.game.combats = { get: (id: string) => (id === 'A' ? A : undefined) };
     ones(4);
@@ -472,7 +472,7 @@ describe('v0.92.3 shock weapons (HEALTH_V923.shock; Core p. 103)', () => {
     ones(4);                                                          // soak: Body 4 vs 10 − 2
     faces.push(5, 1, 1, 1, 1);                                        // Willpower 5 (higher) vs 4: 1 success
     await a.resistFromState({ targetUuid: a.uuid, melee: false, damageType: 'stun', power: 10, level: 'S', armorKind: 'impact', armorMultiplier: 0.5, shock: true } as any, 0);
-    const fx = (a.getFlag('sr2e', 'powerEffects') ?? []).find((e: any) => e.id === 'shockDisoriented923');
+    const fx = (a.getFlag('shadowrun2e_unified', 'powerEffects') ?? []).find((e: any) => e.id === 'shockDisoriented923');
     assert.ok(fx);
     assert.equal(fx.testsTn, 2);
     assert.match(chat.at(-1).content, /disoriented by the shock for 7 Combat Turns/);   // 10 − 2 − 1
@@ -481,16 +481,16 @@ describe('v0.92.3 shock weapons (HEALTH_V923.shock; Core p. 103)', () => {
     const b = who({ name: 'Mark' });
     ones(4);
     await b.resistFromState({ targetUuid: b.uuid, melee: false, damageType: 'stun', power: 10, level: 'S', armorKind: 'impact', armorMultiplier: 0.5, shock: true } as any, 0);
-    assert.equal((b.getFlag('sr2e', 'powerEffects') ?? []).length, 0);
+    assert.equal((b.getFlag('shadowrun2e_unified', 'powerEffects') ?? []).length, 0);
   });
   test('review fix: a second, shorter shock never cuts the disorientation short', async () => {
     const a = who({ name: 'Mark' });
     faces.push(1, 1, 1, 1, 1);                                        // no successes: 10 turns
     assert.equal(await a.shockDisorient(10, 0), 10);
-    const first = (a.getFlag('sr2e', 'powerEffects') ?? []).find((e: any) => e.id === 'shockDisoriented923');
+    const first = (a.getFlag('shadowrun2e_unified', 'powerEffects') ?? []).find((e: any) => e.id === 'shockDisoriented923');
     faces.push(1, 1, 1, 1, 1);
     assert.equal(await a.shockDisorient(3, 0), 3);
-    const after = (a.getFlag('sr2e', 'powerEffects') ?? []).find((e: any) => e.id === 'shockDisoriented923');
+    const after = (a.getFlag('shadowrun2e_unified', 'powerEffects') ?? []).find((e: any) => e.id === 'shockDisoriented923');
     assert.deepEqual(after.until, first.until);
   });
 });

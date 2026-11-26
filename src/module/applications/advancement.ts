@@ -1,11 +1,11 @@
 /**
  * v0.64.0: the creation record and the advancement log (Foundry glue; the rules are in rules/advancement.ts).
  *
- * - `recordCreation(actor, …)` freezes the character into `flags.sr2e.creation` (the Creation tab).
+ * - `recordCreation(actor, …)` freezes the character into `flags.shadowrun2e_unified.creation` (the Creation tab).
  * - Once a character has a record, the client that changes it notes what was gained: new items, raised
  *   ratings, and new ledger lines (Karma in and out, nuyen spent on what was bought). Changes within
  *   `RULES_ADVANCEMENT.burstMs` of each other make one burst, written as dated lines to
- *   `flags.sr2e.advancement` (with `sr2eNoAdvance`, so the write isn't noted itself).
+ *   `flags.shadowrun2e_unified.advancement` (with `sr2eNoAdvance`, so the write isn't noted itself).
  * - Whoever made the change is "by"; an approved request credits the player and the approving GM.
  */
 import { SYSTEM } from '../config/system.ts';

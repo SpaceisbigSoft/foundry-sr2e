@@ -88,6 +88,7 @@ import { requestGm, onRelay, type RelayOp } from "./socket.ts";
 import { openHelp } from "./help.ts";
 import { artSheetContext, useDefaultArt } from "./tokenart.ts";
 import { t as tx, tCount, tList, tKey } from '../helpers/i18n.ts';
+import { SYSTEM_ID } from "../config/system.ts";
 
 /** v0.73.0 (O24): the known-hosts context for this decker and the viewing user. */
 function knowledgeCtx(actor: any): any {
@@ -552,10 +553,10 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         dualNatured: Boolean(actor.system.derived?.dualNatured),
         regenerates: Boolean(actor.hasCritterPower?.("regeneration")),
         essenceShift: Number(actor.system.essenceShift ?? 0),
-        noRegen: Number(actor.getFlag?.("sr2e", "noRegen") ?? 0) || 0,
+        noRegen: Number(actor.getFlag?.(SYSTEM_ID, "noRegen") ?? 0) || 0,
         outOfDomain: Boolean(actor.outOfDomain?.()),
       },
-      focusAddict: Boolean(actor.getFlag?.("sr2e", "focusAddict")),
+      focusAddict: Boolean(actor.getFlag?.(SYSTEM_ID, "focusAddict")),
       shapeshiftForms: [{ key: "animal", label: tx('SR2E.App.Sheets.animal') }, { key: "human", label: tx('SR2E.App.Sheets.human') }],
       shapeshiftFields: ATTRIBUTE_KEYS.map((k) => ({ key: k, label: cap(k), value: actor.system.shapeshift?.human?.[k] ?? 0 })),
       backgroundSources: SR2Actor.backgroundSources(),
@@ -609,7 +610,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
           if (!x.effectId) return "";
           for (const u of (x.targetUuids?.length ? x.targetUuids : [actor.uuid])) {
             const t: any = fromUuidSync(u);
-            const fx = ((t?.getFlag?.("sr2e", "powerEffects") as any[] | undefined) ?? []).find((e: any) => e.id === x.effectId);
+            const fx = ((t?.getFlag?.(SYSTEM_ID, "powerEffects") as any[] | undefined) ?? []).find((e: any) => e.id === x.effectId);
             if (fx) return `${t.uuid === actor.uuid ? "" : `${t.name}: `}${describeBundle(fx)}`;
           }
           return "";
@@ -733,7 +734,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
   static async #onAdvanceInitiation(this: SR2CharacterSheet) {
     const actor: any = this.document;
     // v0.92.3 (RULES.SORCERY_V923.initiation 'book', Grimoire p. 38): the first initiation is to Grade 0.
-    const grade = nextInitiationGrade(Number(actor.system.initiateGrade ?? 0), Boolean(actor.getFlag?.("sr2e", "initiated")));
+    const grade = nextInitiationGrade(Number(actor.system.initiateGrade ?? 0), Boolean(actor.getFlag?.(SYSTEM_ID, "initiated")));
     // v0.72.0 (O15): adepts and aspected magicians see only the techniques they can learn (MAGIC_V72.metamagicLimits).
     const unknown = metamagicChoices(String(actor.tradition ?? actor.system.tradition ?? ""), METAMAGIC.filter((k) => !actor.system.metamagic?.[k]));
     const groups = (actor.myGroups?.() ?? []) as any[];
@@ -2705,7 +2706,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const objectHolders = [actor, ...[...(game.user?.targets ?? [])].map((t: any) => t.actor).filter(Boolean)];
     for (const h of objectHolders) {
       for (const it of h.items ?? []) {
-        const sg = it.getFlag?.("sr2e", "signature");
+        const sg = it.getFlag?.(SYSTEM_ID, "signature");
         if (sg) sigs.push({ ...sg, label: `${it.name} (${h.name}'s): ${sg.label}`, ageHours: 0, hoursLeft: Infinity });
       }
     }
@@ -4210,7 +4211,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
   static async #onSetBackground(this: SR2CharacterSheet) {
     if (!game.user?.isGM) return ui.notifications.warn(tx('SR2E.Notify.Sheet.onlyTheGmSetsTheBackground'));
     const scene: any = game.scenes?.viewed ?? game.scenes?.current;
-    const text = String(scene?.getFlag?.("sr2e", "backgroundSources") ?? "");
+    const text = String(scene?.getFlag?.(SYSTEM_ID, "backgroundSources") ?? "");
     const value = await foundry.applications.api.DialogV2.prompt({
       window: { title: tx('SR2E.Dialog.Sheet.backgroundCount') },
       position: { width: 520 },
@@ -4439,9 +4440,9 @@ function occultContext(actor: any) {
       grimoire: RULES.OCCULT.groups.grimoire ? g.grimoire.map((s: any) => ({ name: s.name, force: s.system?.learnedForce ?? 1, known: [...actor.items].some((i: any) => i.type === "spell" && i.name === s.name), groupId: g.id })) : [],
     };
   });
-  const possessing = actor.getFlag?.("sr2e", "possessing") ?? null;
+  const possessing = actor.getFlag?.(SYSTEM_ID, "possessing") ?? null;
   const hungerInfo = actor.hungerInfo?.() ?? null;
-  const lastFed = Number(actor.getFlag?.("sr2e", "lastFed") ?? NaN);
+  const lastFed = Number(actor.getFlag?.(SYSTEM_ID, "lastFed") ?? NaN);
   const bi = actor.system.derived?.bodyIndex;
   return {
     knows: { cleansing: Boolean(mm.cleansing), divining: Boolean(mm.divining), invoking: Boolean(mm.invoking), possessing: Boolean(mm.possessing) },
@@ -4458,9 +4459,9 @@ function occultContext(actor: any) {
       careLabel: r.care ? (RULES.HEALING.natural.care.find((c) => c.id === r.care)?.label ?? r.care).toLowerCase() : "" })),
     // v0.48.0: allies by ritual and the familiar ordeal; a possessed body's skills.
     canAlly: Number(actor.system.initiateGrade ?? 0) >= RULES.OCCULT.ally.minGrade && (actor.findSkill?.("Conjuring")?.system?.rating ?? 0) > 0 && actor.tradition !== "adept",
-    familiar: (() => { const f = actor.getFlag?.("sr2e", "familiar"); return f?.allyUuid ? { name: f.allyName ?? tx('SR2E.App.Sheets.anAlly'), ready: familiarReady(f) } : null; })(),
-    possessedSkills: actor.getFlag?.("sr2e", "possessedBy")?.skills ? RULES.OCCULT.metamagic.possessing.skills : "",
-    pendingDeed: actor.getFlag?.("sr2e", "pendingInitiation")?.grade ?? 0,
+    familiar: (() => { const f = actor.getFlag?.(SYSTEM_ID, "familiar"); return f?.allyUuid ? { name: f.allyName ?? tx('SR2E.App.Sheets.anAlly'), ready: familiarReady(f) } : null; })(),
+    possessedSkills: actor.getFlag?.(SYSTEM_ID, "possessedBy")?.skills ? RULES.OCCULT.metamagic.possessing.skills : "",
+    pendingDeed: actor.getFlag?.(SYSTEM_ID, "pendingInitiation")?.grade ?? 0,
     // v0.92.3 (RULES.GEAR_V923.overBodyIndex 'shock'): system shock instead of the rejection test.
     rejectionDue: Boolean(bi?.over) && RULES.BIOWARE.rejection.enabled && !gearBook('overBodyIndex'),
   };
@@ -4990,7 +4991,7 @@ export class SR2HostSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
   static async #onResetTally(this: SR2HostSheet) {
     // v0.70.0: each decker's launched sheaf steps too.
-    await (this.document as any).update({ "system.tally": 0, "system.tallies": [], "system.alert": "none", "system.launchedSteps": [], "flags.sr2e.sheafLaunched": [] });
+    await (this.document as any).update({ "system.tally": 0, "system.tallies": [], "system.alert": "none", "system.launchedSteps": [], [`flags.${SYSTEM_ID}.sheafLaunched`]: [] });
   }
 
   static async #onShutdownNow(this: SR2HostSheet) {
@@ -5469,7 +5470,7 @@ export class SR2ItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
    */
   static async #onUndoDescription(this: SR2ItemSheet) {
     const item: any = this.document;
-    const rec = item.flags?.sr2e?.fromDescription;
+    const rec = item.flags?.[SYSTEM_ID]?.fromDescription;
     if (!item.isOwner || !rec) return;
     const up: Record<string, unknown> = {};
     const dismissed = new Set<string>(Array.isArray(rec.dismissed) ? rec.dismissed.map(String) : []);
@@ -5839,7 +5840,7 @@ function itemSheetV921(item: any): Record<string, unknown> {
     return { ...t, index, keyChoices: tweakKeyChoices(t.target, type), keyText: keys === "text", isNote: t.target === "note", text: tweakText(t, type) };
   });
   const live = item?.parent ? tweakLiveNote(item) : "";
-  const rec = item?.flags?.sr2e?.fromDescription;
+  const rec = item?.flags?.[SYSTEM_ID]?.fromDescription;
   const filled = rec && typeof rec.fields === "object" ? Object.entries(rec.fields as Record<string, any>).filter(([k, f]) => f && sys[k] === f.value) : [];
   const ware = type === "cyberware" && !sys.bioware && sys.grade && sys.grade !== "standard";
   return {
@@ -5896,7 +5897,7 @@ function ordealHint(actor: any, ordealId: string, grade: number): string {
     case "quest": return tx('SR2E.App.Sheets.ordealQuest');
     case "deed": return i.deed.gmConfirms ? tx('SR2E.App.Sheets.ordealDeedGmConfirms') : tx('SR2E.App.Sheets.ordealDeedGmSets');
     case "familiar": {
-      const f = actor.getFlag?.("sr2e", "familiar");
+      const f = actor.getFlag?.(SYSTEM_ID, "familiar");
       return familiarReady(f) ? tx('SR2E.App.Sheets.ordealFamiliarReady', { ally: f.allyName ?? tx('SR2E.App.Sheets.yourAlly') }) : tx('SR2E.App.Sheets.ordealFamiliarNeeds');
     }
     case "meditation": return tx('SR2E.App.Sheets.ordealMeditation', { attribute: cap(i.meditation.attribute), tn: meditationTn(grade), weeks: ordealWeeks("meditation", grade) });
@@ -5920,7 +5921,7 @@ function ordealHint(actor: any, ordealId: string, grade: number): string {
 function powerEffectOfSheet(doc: any, uuid: string, id: string): boolean {
   if (!uuid || !id) return false;
   const t: any = fromUuidSync(uuid);
-  const fx = ((t?.getFlag?.("sr2e", "powerEffects") as any[] | undefined) ?? []).find((e: any) => e?.id === id);
+  const fx = ((t?.getFlag?.(SYSTEM_ID, "powerEffects") as any[] | undefined) ?? []).find((e: any) => e?.id === id);
   if (!t || !fx) return false;
   if (t.uuid === doc?.uuid) return true;
   const me: string[] = doc?.selfUuids?.() ?? [doc?.uuid];
@@ -6140,12 +6141,12 @@ function summaryContext(actor: any): any {
   // v0.45.0
   if (d.possessedBy) chips.push(tx('SR2E.App.Sheets.possessedBy', { name: d.possessedBy }));
   // v0.56.0: afraid (a Fear power), confused, concealed, guarded; manifesting.
-  for (const e of (actor.getFlag?.("sr2e", "powerEffects") as any[] | undefined) ?? []) {
+  for (const e of (actor.getFlag?.(SYSTEM_ID, "powerEffects") as any[] | undefined) ?? []) {
     const word = ({ fear: () => tx('SR2E.App.Sheets.afraid'), confusion: () => tx('SR2E.App.Sheets.confused'), concealment: () => tx('SR2E.App.Sheets.concealed'), guard: () => tx('SR2E.App.Sheets.guarded') } as Record<string, () => string>)[String(e.special ?? "")]?.();
     if (word && !chips.includes(word)) chips.push(word);
   }
   if (actor.isManifesting?.()) chips.push(tx('SR2E.App.Sheets.manifesting'));
-  const possessing = actor.getFlag?.("sr2e", "possessing");
+  const possessing = actor.getFlag?.(SYSTEM_ID, "possessing");
   if (possessing?.name) chips.push(tx('SR2E.App.Sheets.possessing', { name: possessing.name }));
   if (actor.system?.greatForm) chips.push(tx('SR2E.App.Sheets.greatForm'));
   if (actor.hungerInfo?.()?.hungry) chips.push(tx('SR2E.App.Sheets.hungry'));

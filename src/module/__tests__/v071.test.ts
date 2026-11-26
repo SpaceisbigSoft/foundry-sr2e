@@ -192,12 +192,12 @@ describe('R1 Karma Pool on contest and street cards', () => {
     faces.push(5, 1, 1, 1, 2, 2, 2, 2);                                  // 1 success vs the seller's 0
     const price = await a.haggle({ itemId: 'x', price: 1000, name: 'Ares Predator' });
     const card = chat.at(-1);
-    const c = card.flags.sr2e.contest;
+    const c = card.flags.shadowrun2e_unified.contest;
     assert.equal(c.kind, 'haggle');
     assert.ok(c.id, 'a contest id');
     assert.equal(price, haggledPrice(1000, 1).price);
-    assert.equal(card.flags.sr2e.buy.price, price);
-    assert.equal(card.flags.sr2e.haggled, true);
+    assert.equal(card.flags.shadowrun2e_unified.buy.price, price);
+    assert.equal(card.flags.shadowrun2e_unified.haggled, true);
     assert.match(card.content, /data-sr2e-action="contestKarma" data-side="0" data-op="reroll"/);
     assert.match(card.content, /data-sr2e-action="contestKarma" data-side="0" data-op="buy"/);
     assert.doesNotMatch(card.content, /data-side="1"/);
@@ -207,7 +207,7 @@ describe('R1 Karma Pool on contest and street cards', () => {
     const a = dealer();
     faces.push(5, 1, 1, 1, 2, 2, 2, 2);
     await a.haggle({ itemId: 'x', price: 1000, name: 'Gun' });
-    const c = chat.at(-1).flags.sr2e.contest;
+    const c = chat.at(-1).flags.shadowrun2e_unified.contest;
     assert.match(SR2Actor.contestContent(c), /contestKarma/);
     await withRule(RULES.FIXES_V71, 'contestKarma', false, () => {
       assert.doesNotMatch(SR2Actor.contestContent(c), /contestKarma/);
@@ -227,11 +227,11 @@ describe('R1 Karma Pool on contest and street cards', () => {
     const next = await SR2Actor.contestKarma(old, 0, 'reroll');
     assert.ok(next);
     assert.equal(a.system.karma.poolSpent, 1);
-    const c = next.flags.sr2e.contest;
-    assert.equal(c.id, old.flags.sr2e.contest.id);
+    const c = next.flags.shadowrun2e_unified.contest;
+    assert.equal(c.id, old.flags.shadowrun2e_unified.contest.id);
     assert.equal(c.sides[0].result.successes, 3);
     assert.equal(c.sides[0].rerolls, 1);
-    assert.equal(next.flags.sr2e.buy.price, haggledPrice(1000, 3).price);
+    assert.equal(next.flags.shadowrun2e_unified.buy.price, haggledPrice(1000, 3).price);
     assert.match(next.content, /Karma re-roll #1/);
     g.game.messages = { contents: [old, next] };
     assert.equal(SR2Actor.isReplaced(old), true);
@@ -245,22 +245,22 @@ describe('R1 Karma Pool on contest and street cards', () => {
     faces.push(5, 1, 1, 1, 2, 2, 2, 2);
     await a.haggle({ itemId: 'x', price: 1000, name: 'Gun' });
     const bought = await SR2Actor.contestKarma(chat.at(-1), 0, 'buy');
-    assert.equal(bought.flags.sr2e.contest.sides[0].result.successes, 2);
-    assert.equal(bought.flags.sr2e.contest.sides[0].bought, 1);
+    assert.equal(bought.flags.shadowrun2e_unified.contest.sides[0].result.successes, 2);
+    assert.equal(bought.flags.shadowrun2e_unified.contest.sides[0].bought, 1);
     if (RULES.KARMA.buyPermanent) assert.equal(a.system.karma.pool, 2); else assert.equal(a.system.karma.poolSpent, 1);
-    assert.equal(bought.flags.sr2e.buy.price, haggledPrice(1000, 2).price);
+    assert.equal(bought.flags.shadowrun2e_unified.buy.price, haggledPrice(1000, 2).price);
     // A disaster on a find test: avoid it.
     const b = dealer(3, [{ id: 'gun', type: 'gear', name: 'Gun', system: { availability: '4/48hrs', cost: 500, streetIndex: 1, quantity: 1 } }]);
     faces.push(1, 1, 1);                                                 // Etiquette 3: all ones
     const r = await b.findItem('gun');
     assert.deepEqual({ found: r.found, hours: r.hours }, { found: false, hours: null });
     const card = chat.at(-1);
-    assert.equal(card.flags.sr2e.contest.sides[0].result.botch, true);
+    assert.equal(card.flags.shadowrun2e_unified.contest.sides[0].result.botch, true);
     assert.match(card.content, /data-op="avoid"/);
-    assert.equal(card.flags.sr2e.buy, undefined, 'not found: no Buy flag');
+    assert.equal(card.flags.shadowrun2e_unified.buy, undefined, 'not found: no Buy flag');
     const saved = await SR2Actor.contestKarma(card, 0, 'avoid');
-    assert.equal(saved.flags.sr2e.contest.sides[0].result.botch, false);
-    assert.equal(saved.flags.sr2e.contest.sides[0].avoided, true);
+    assert.equal(saved.flags.shadowrun2e_unified.contest.sides[0].result.botch, false);
+    assert.equal(saved.flags.shadowrun2e_unified.contest.sides[0].avoided, true);
     assert.equal(b.system.karma.poolSpent, 1);
   });
 
@@ -281,12 +281,12 @@ describe('R1 Karma Pool on contest and street cards', () => {
     const r = await b.findItem('gun');
     assert.equal(r.found, false);
     const card = chat.at(-1);
-    assert.equal(card.flags.sr2e.contest.kind, 'find');
+    assert.equal(card.flags.shadowrun2e_unified.contest.kind, 'find');
     assert.match(card.content, /Not found/);
     faces.push(5, 5, 2);
     const again = await SR2Actor.contestKarma(card, 0, 'reroll');
-    assert.equal(again.flags.sr2e.buy.hours, 24);                        // 48 h ÷ 2 successes
-    assert.equal(again.flags.sr2e.buy.itemId, 'gun');
+    assert.equal(again.flags.shadowrun2e_unified.buy.hours, 24);                        // 48 h ÷ 2 successes
+    assert.equal(again.flags.shadowrun2e_unified.buy.itemId, 'gun');
     assert.match(again.content, /Found in/);
   });
 
@@ -298,15 +298,15 @@ describe('R1 Karma Pool on contest and street cards', () => {
     faces.push(5, 5, 1, 1, 2, 2, 2, 2);
     const offer = await a.fence('loot');
     const card = chat.at(-1);
-    assert.equal(card.flags.sr2e.contest.kind, 'fence');
-    assert.equal(card.flags.sr2e.sell.price, offer);
+    assert.equal(card.flags.shadowrun2e_unified.contest.kind, 'fence');
+    assert.equal(card.flags.shadowrun2e_unified.sell.price, offer);
     assert.equal(offer, hotFencePrice(1000, 2, 0).price);
     assert.match(card.content, /data-op="reroll"/);
     const hot = dealer(3, [loot(8)]);
     faces.push(2, 2, 2, 2, 5, 5, 1, 1);                                  // −2 net at Heat 8
     assert.equal(await hot.fence('loot'), 0);
     assert.match(chat.at(-1).content, /The fence passes/);
-    assert.equal(chat.at(-1).flags.sr2e.sell, undefined);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.sell, undefined);
   });
 
   test('legwork: a contest card with Karma buttons', async (t) => {
@@ -317,7 +317,7 @@ describe('R1 Karma Pool on contest and street cards', () => {
     const r = await a.legwork('c1', { difficultyTn: 4 });
     assert.equal(r.successes, 1);
     const card = chat.at(-1);
-    assert.equal(card.flags.sr2e.contest.kind, 'legwork');
+    assert.equal(card.flags.shadowrun2e_unified.contest.kind, 'legwork');
     assert.match(card.content, /data-sr2e-action="contestKarma" data-side="0"/);
   });
 
@@ -397,7 +397,7 @@ describe('R10 a counterattack keeps the defending weapon\'s extras', () => {
     const def = defender({ name: 'Stun baton', system: { stunWeapon: true, ammo: 10, ammoMax: 10 } });
     faces.push(5, 5, 5, 1);                                              // 3 vs 1: counterattack
     await def.defend(attack(def), 0, { weaponId: 'w1' });
-    const d = chat.at(-1).flags.sr2e.damage;
+    const d = chat.at(-1).flags.shadowrun2e_unified.damage;
     assert.match(chat.at(-1).content, /Counterattack!/);
     assert.equal(d.targetUuid, 'Actor.nobody');
     assert.equal(d.damageType, 'stun');
@@ -410,11 +410,11 @@ describe('R10 a counterattack keeps the defending weapon\'s extras', () => {
     const def = defender({ name: 'Silver sword', system: { material: 'silver' } });
     faces.push(5, 5, 5, 1);
     await def.defend(attack(def), 0, { weaponId: 'w1' });
-    assert.equal(chat.at(-1).flags.sr2e.damage.material, 'silver');
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.damage.material, 'silver');
     const baton = defender({ name: 'Stun baton', system: { stunWeapon: true, ammo: 10, ammoMax: 10, material: 'silver' } });
     faces.push(5, 5, 5, 1);
     await withRule(RULES.FIXES_V71, 'counterWeaponExtras', false, () => baton.defend(attack(baton), 0, { weaponId: 'w1' }));
-    const d = chat.at(-1).flags.sr2e.damage;
+    const d = chat.at(-1).flags.shadowrun2e_unified.damage;
     assert.equal(d.damageType, 'physical');
     assert.equal(d.armorKind, undefined);
     assert.equal(d.armorMultiplier, undefined);
@@ -430,9 +430,9 @@ describe('R11 a partial dispel shrinks the spell\'s effect', () => {
     const oldSubj = who({ name: 'Old subject' });
     const caster = who({ name: 'Caster', magic: 6, tradition: 'hermetic',
       sustaining: [{ spellName: 'Armor', force: 4, category: 'manipulation', focusId: '', successes: 3, quickened: false, effectId: 'fx1', targetUuids: [subj.uuid, oldSubj.uuid] }] });
-    subj.flags.sr2e = { powerEffects: [SR2Actor.fxEntry(spec, 3, 'fx1', caster.uuid, 'Caster')] };
+    subj.flags.shadowrun2e_unified = { powerEffects: [SR2Actor.fxEntry(spec, 3, 'fx1', caster.uuid, 'Caster')] };
     const oldFx = { id: 'fx1', fromUuid: caster.uuid, fromName: 'Caster', name: 'Armor', attributes: {}, kind: 'spell', ballistic: 3, impact: 3 };
-    oldSubj.flags.sr2e = { powerEffects: [oldFx] };
+    oldSubj.flags.shadowrun2e_unified = { powerEffects: [oldFx] };
     const d = who({ name: 'Dispeller', magic: 6, tradition: 'hermetic', metamagic: { dispelling: true }, initiateGrade: 1 }, [skill('sorc', 'Sorcery', 4, 'willpower')]);
     return { subj, oldSubj, caster, d, oldFx };
   };
@@ -441,15 +441,15 @@ describe('R11 a partial dispel shrinks the spell\'s effect', () => {
     // v0.92.3: 'the book' here is the v0.92.2 reading (RULES.SORCERY_V923 at its old way); the book's way is in v0923-sorcery.test.ts.
     t.after(oldWay(SORCERY_V922));
     const { subj, oldSubj, caster, d, oldFx } = setup();
-    assert.equal(subj.getFlag('sr2e', 'powerEffects')[0].ballistic, 3);
+    assert.equal(subj.getFlag('shadowrun2e_unified', 'powerEffects')[0].ballistic, 3);
     faces.push(5, 5, 1, 1, ...Array(12).fill(5));                        // 2 successes; drain
     await d.dispel(caster, 0);
     assert.equal(caster.system.sustaining[0].successes, 1);
-    const fx = subj.getFlag('sr2e', 'powerEffects');
+    const fx = subj.getFlag('shadowrun2e_unified', 'powerEffects');
     assert.equal(fx.length, 1);
     assert.equal(fx[0].successes, 1);
     assert.equal(fx[0].ballistic, 1);
-    assert.deepEqual(oldSubj.getFlag('sr2e', 'powerEffects'), [oldFx]);
+    assert.deepEqual(oldSubj.getFlag('shadowrun2e_unified', 'powerEffects'), [oldFx]);
     assert.ok(chat.some((m) => /predates v0\.71\.0/.test(m.content) && /Old subject/.test(m.content)));
   });
 
@@ -460,7 +460,7 @@ describe('R11 a partial dispel shrinks the spell\'s effect', () => {
     faces.push(5, 5, 1, 1, ...Array(12).fill(5));
     await withRule(RULES.FIXES_V71, 'dispelShrinks', false, () => d.dispel(caster, 0));
     assert.equal(caster.system.sustaining[0].successes, 1);
-    assert.equal(subj.getFlag('sr2e', 'powerEffects')[0].successes, 3);
+    assert.equal(subj.getFlag('shadowrun2e_unified', 'powerEffects')[0].successes, 3);
   });
 });
 
@@ -492,13 +492,13 @@ describe('R12 invisibility before spells and powers', () => {
     faces.push(5, 5, 5, 5, 5);
     await owner.spotInvisible([t]);
     assert.equal(faces.length, 0);
-    assert.ok(Object.values(owner.getFlag('sr2e', 'seenThrough') ?? {}).length === 1);
+    assert.ok(Object.values(owner.getFlag('shadowrun2e_unified', 'seenThrough') ?? {}).length === 1);
     const stranger = who({ name: 'Stranger' });
     stranger.isOwner = false;
     const before = chat.length;
     await stranger.spotInvisible([t]);
     assert.equal(chat.length, before);
-    assert.equal(stranger.getFlag('sr2e', 'seenThrough'), undefined);
+    assert.equal(stranger.getFlag('shadowrun2e_unified', 'seenThrough'), undefined);
     await vehicle().spotInvisible([t]);
     assert.equal(chat.length, before);
     await withRule(RULES.FIXES_V71, 'invisibilityEverywhere', false, () => who({ name: 'Off' }).spotInvisible([t]));
@@ -511,10 +511,10 @@ describe('R13 holds and berserk', () => {
     const holder = who({ name: 'Troll' });
     const a = who({ name: 'Held' });
     assert.equal(a.movementHold(), '');
-    a.flags.sr2e = { heldBy: holder.uuid };
+    a.flags.shadowrun2e_unified = { heldBy: holder.uuid };
     assert.equal(a.movementHold(), 'held by Troll');
     const b = who({ name: 'Bound' });
-    b.flags.sr2e = { powerEffects: [{ id: 'b1', special: 'binding', name: 'Binding', fromName: 'Spirit', fromUuid: '', attributes: {} }] };
+    b.flags.shadowrun2e_unified = { powerEffects: [{ id: 'b1', special: 'binding', name: 'Binding', fromName: 'Spirit', fromUuid: '', attributes: {} }] };
     assert.equal(b.movementHold(), 'bound by Binding (Spirit)');
     await withRule(RULES.FIXES_V71, 'holds', false, () => { assert.equal(a.movementHold(), ''); assert.equal(b.movementHold(), ''); });
   });
@@ -526,16 +526,16 @@ describe('R13 holds and berserk', () => {
     await SR2Actor.setHeld(v2, h2.uuid, true);
     g.game.actors = [h1, h2, v1, v2, free];
     assert.equal(await SR2Actor.releaseHolds({ holderUuid: h1.uuid }), 1);
-    assert.equal(v1.getFlag('sr2e', 'heldBy'), undefined);
-    assert.equal(v2.getFlag('sr2e', 'heldBy'), h2.uuid);
+    assert.equal(v1.getFlag('shadowrun2e_unified', 'heldBy'), undefined);
+    assert.equal(v2.getFlag('shadowrun2e_unified', 'heldBy'), h2.uuid);
     assert.match(chat.at(-1).content, /V1<\/strong> is free: H1 can no longer hold on/);
     assert.equal(await SR2Actor.releaseHolds({ uuids: [free.uuid] }), 0);
     assert.equal(await SR2Actor.releaseHolds({ uuids: [h2.uuid] }), 1);
-    assert.equal(v2.getFlag('sr2e', 'heldBy'), undefined);
+    assert.equal(v2.getFlag('shadowrun2e_unified', 'heldBy'), undefined);
     assert.match(chat.at(-1).content, /the fight is over/);
     await SR2Actor.setHeld(v1, h1.uuid, true);
     await withRule(RULES.FIXES_V71, 'holds', false, async () => { assert.equal(await SR2Actor.releaseHolds({ holderUuid: h1.uuid }), 0); });
-    assert.equal(v1.getFlag('sr2e', 'heldBy'), h1.uuid);
+    assert.equal(v1.getFlag('shadowrun2e_unified', 'heldBy'), h1.uuid);
   });
 
   test('berserk refuses castSpell (and summoning); other actions still go', async () => {
@@ -719,7 +719,7 @@ describe('R19 switching to the astral costs an action', () => {
     await a.onAstralModeChange('physical', 'projecting');
     assert.deepEqual(asked, ['astralProject']);
     assert.equal(a.system.astral, 'physical');
-    assert.equal(a.getFlag('sr2e', 'projectionStart'), undefined);
+    assert.equal(a.getFlag('shadowrun2e_unified', 'projectionStart'), undefined);
   });
 });
 
@@ -778,7 +778,7 @@ describe('v0.71.0 review fixes', () => {
     faces.push(5, 1, 1, 1, 2, 2, 2, 2);
     await a.haggle({ itemId: 'x', price: 1000, name: 'Gun' });
     const card = chat.at(-1);
-    card.flags.sr2e.bought = true;
+    card.flags.shadowrun2e_unified.bought = true;
     g.game.messages = { contents: [card] };
     assert.equal(await SR2Actor.contestKarma(card, 0, 'reroll'), null);
     assert.match(warnings.at(-1) ?? '', /Already paid for/);
@@ -793,11 +793,11 @@ describe('v0.71.0 review fixes', () => {
     const first = chat.at(-1);
     g.game.messages = { contents: [first] };
     const bought = await SR2Actor.contestKarma(first, 0, 'buy');
-    assert.equal(bought.flags.sr2e.contest.sides[0].result.successes, 2);
+    assert.equal(bought.flags.shadowrun2e_unified.contest.sides[0].result.successes, 2);
     g.game.messages = { contents: [first, bought] };
     faces.push(1, 1, 1);
     const rr = await SR2Actor.contestKarma(bought, 0, 'reroll');
-    assert.equal(rr.flags.sr2e.contest.sides[0].result.successes, 2, 'the die kept + the bought one');
+    assert.equal(rr.flags.shadowrun2e_unified.contest.sides[0].result.successes, 2, 'the die kept + the bought one');
   });
 
   test('F5: giving up a timed summoning still rolls its drain (onCancel giveUpElemental)', async () => {

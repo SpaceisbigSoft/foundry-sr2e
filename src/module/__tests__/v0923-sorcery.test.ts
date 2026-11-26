@@ -171,15 +171,15 @@ describe('v0.92.3 casting', () => {
     faces.push(5, 5, 1, 1, 1);                                        // drain: Willpower 5 vs 2 + 2
     await m.castSpell(spell(), { force: 3 });
     assert.equal(faces.length, 0);
-    assert.equal(drainCard().flags.sr2e.test.targetNumber, 4);
+    assert.equal(drainCard().flags.shadowrun2e_unified.test.targetNumber, 4);
   });
   test('an exclusive spell takes effect 2 Force higher, Drain at the chosen Force with no cut; an expendable fetish +2', async () => {
     const m = mage();
     faces.push(5, 5, 5, 1, 1); faces.push(5, 5, 1, 1, 1);
     await m.castSpell(spell({ learnedForce: 4, exclusive: true }), { force: 4 });
     assert.match(chat[0].content, /Force 6/);
-    assert.equal(drainCard().flags.sr2e.test.targetNumber, 2);
-    assert.ok(!drainCard().flags.sr2e.test.modifiers.some((x: any) => x.value < 0));
+    assert.equal(drainCard().flags.shadowrun2e_unified.test.targetNumber, 2);
+    assert.ok(!drainCard().flags.shadowrun2e_unified.test.modifiers.some((x: any) => x.value < 0));
     chat.length = 0;
     faces.push(5, 5, 5, 1, 1); faces.push(5, 5, 1, 1, 1);
     await m.castSpell(spell({ learnedForce: 3, fetish: true, fetishExpendable: true }), { force: 3 });
@@ -217,10 +217,10 @@ describe('v0.92.3 casting', () => {
     faces.push(3, 3, 4, 5, 1);                                        // Sorcery 5 vs the lowest, 3: four successes
     faces.push(5, 5, 5, 1, 1);                                        // drain
     await m.castSpell(spell({ name: 'Manaball', category: 'combat', spellType: 'mana', area: true, damageLevel: 'M', drainLevel: 'S', learnedForce: 4 }), { force: 4, targetUuids: [low.uuid, high.uuid] });
-    const card = chat.find((c) => c.flags?.sr2e?.spells);
+    const card = chat.find((c) => c.flags?.shadowrun2e_unified?.spells);
     assert.ok(card, 'the cast card carries both targets');
-    assert.equal(card.flags.sr2e.test.targetNumber, 3);
-    assert.deepEqual(card.flags.sr2e.spells.map((s: any) => s.casterSuccesses), [4, 1]);
+    assert.equal(card.flags.shadowrun2e_unified.test.targetNumber, 3);
+    assert.deepEqual(card.flags.shadowrun2e_unified.spells.map((s: any) => s.casterSuccesses), [4, 1]);
   });
   test('v922: an area spell rolls against the highest TN', async (t) => {
     t.after(oldWay({ 'SORCERY_V923.areaTargets': 'v922' }));
@@ -229,9 +229,9 @@ describe('v0.92.3 casting', () => {
     const high = who({ name: 'High' }, [], { ...A, willpower: 5 });
     faces.push(3, 3, 4, 5, 1); faces.push(5, 5, 5, 1, 1);
     await m.castSpell(spell({ name: 'Manaball', category: 'combat', spellType: 'mana', area: true, damageLevel: 'M', drainLevel: 'S', learnedForce: 4 }), { force: 4, targetUuids: [low.uuid, high.uuid] });
-    const card = chat.find((c) => c.flags?.sr2e?.spells);
-    assert.equal(card.flags.sr2e.test.targetNumber, 5);
-    assert.deepEqual(card.flags.sr2e.spells.map((s: any) => s.casterSuccesses), [1, 1]);
+    const card = chat.find((c) => c.flags?.shadowrun2e_unified?.spells);
+    assert.equal(card.flags.shadowrun2e_unified.test.targetNumber, 5);
+    assert.deepEqual(card.flags.shadowrun2e_unified.spells.map((s: any) => s.casterSuccesses), [1, 1]);
   });
 });
 
@@ -267,7 +267,7 @@ describe('v0.92.3 metamagic, geasa, foci', () => {
     const init = mage({ initiateGrade: 4, metamagic: { dispelling: true } });
     const P1 = { id: 'p1', name: 'P1', isGM: false };
     const snap = { kind: 'dispel', actorUuid: init.uuid, successes: 2, dispel: { targetUuid: caster.uuid, spellName: 'Barrier', force: 3, mode: 'force' } };
-    g.game.messages = { contents: [{ author: P1, flags: { sr2e: { test: snap } }, getFlag: (_s: string, k: string) => (k === 'test' ? snap : undefined) }] };
+    g.game.messages = { contents: [{ author: P1, flags: { shadowrun2e_unified: { test: snap } }, getFlag: (_s: string, k: string) => (k === 'test' ? snap : undefined) }] };
     init.ownership = { default: 0, p1: 3 };
     const ch = { uuid: caster.uuid, by: init.uuid, dispel: { spellName: 'Barrier', force: 3, from: 3, to: 2, mode: 'force' } };
     init.system.metamagic = {};
@@ -283,8 +283,8 @@ describe('v0.92.3 metamagic, geasa, foci', () => {
     assert.equal(m.system.derived.magic, 6);
     faces.push(5, 5, 1, 1, 1); faces.push(5, 5, 5, 1, 1);
     await m.castSpell(spell(), { force: 3 });
-    assert.equal(chat[0].flags.sr2e.test.targetNumber, 6);
-    assert.equal(drainCard().flags.sr2e.test.targetNumber, 4);
+    assert.equal(chat[0].flags.shadowrun2e_unified.test.targetNumber, 6);
+    assert.equal(drainCard().flags.shadowrun2e_unified.test.targetNumber, 4);
   });
   test('focus addiction: a Magic test; failed, 2D6 at or below Magic loses a point', async () => {
     const focus = (id: string) => ({ id, type: 'focus', name: id, system: { focusType: 'spell', rating: 4, category: 'combat', active: true, bonded: true } });
@@ -293,7 +293,7 @@ describe('v0.92.3 metamagic, geasa, foci', () => {
     faces.push(3, 3);                                                 // 2D6 = 6, at Magic 6
     await m.focusAddictionTest();
     assert.equal(m.system.magic, 5);
-    assert.equal(m.getFlag('sr2e', 'focusMagicLost'), 1);
+    assert.equal(m.getFlag('shadowrun2e_unified', 'focusMagicLost'), 1);
   });
   test('review fix: a Karma re-roll that passes the focus addiction test gives the Magic back; the 2D6 isn\'t rolled again', async () => {
     const focus = (id: string) => ({ id, type: 'focus', name: id, system: { focusType: 'spell', rating: 4, category: 'combat', active: true, bonded: true } });
@@ -302,14 +302,14 @@ describe('v0.92.3 metamagic, geasa, foci', () => {
     faces.push(3, 3);                                                 // 2D6 = 6: a point lost
     await m.focusAddictionTest();
     assert.equal(m.system.magic, 5);
-    const card = chat.find((c: any) => c.flags?.sr2e?.test?.kind === 'focusLoss');
+    const card = chat.find((c: any) => c.flags?.shadowrun2e_unified?.test?.kind === 'focusLoss');
     assert.ok(card);
-    assert.equal(card.flags.sr2e.test.focusLoss.applied.lost, 1);
+    assert.equal(card.flags.shadowrun2e_unified.test.focusLoss.applied.lost, 1);
     faces.push(6, 1, 1, 1, 1, 1, 2);                                  // the re-roll: 6, then its 2 = 8, one success
-    await m.karmaReroll(card.flags.sr2e.test);
+    await m.karmaReroll(card.flags.shadowrun2e_unified.test);
     assert.equal(faces.length, 0, 'no new 2D6');
     assert.equal(m.system.magic, 6);
-    assert.equal(m.getFlag('sr2e', 'focusMagicLost'), 0);
+    assert.equal(m.getFlag('shadowrun2e_unified', 'focusMagicLost'), 0);
     assert.match(chat.at(-1).content, /given back/);
   });
   test('a spell focus adds its dice to the Drain test', async () => {
@@ -318,7 +318,7 @@ describe('v0.92.3 metamagic, geasa, foci', () => {
     faces.push(5, 5, 1, 1, 1, 1, 1);                                  // drain: Willpower 5 + focus 2
     await m.castSpell(spell(), { force: 3 });
     assert.equal(faces.length, 0);
-    assert.equal(drainCard().flags.sr2e.test.totalDice, 7);
+    assert.equal(drainCard().flags.shadowrun2e_unified.test.totalDice, 7);
   });
 });
 
@@ -348,7 +348,7 @@ describe('v0.92.3 wards and learning', () => {
     faces.push(5, 5, 5, 5, 5);                                        // drain vs 3 × 2
     await m.raiseWardRitual({ force: 3, payMaterials: false });
     const d = drainCard();
-    assert.equal(d.flags.sr2e.test.targetNumber, 6);
+    assert.equal(d.flags.shadowrun2e_unified.test.targetNumber, 6);
     assert.match(d.content, /Ward drain L/);
   });
   test('review fix: a ward team\'s Magic Pool dice join the test and are spent', async () => {
@@ -382,6 +382,6 @@ describe('v0.92.3 the Revamp: casting as before', () => {
     faces.push(1, 1, 1); faces.push(5, 5, 1, 1, 1);
     const r = await m.castSpell(spell(), { force: 3 });
     assert.equal(r.totalDice, 3);
-    assert.equal(drainCard().flags.sr2e.test.targetNumber, 4);
+    assert.equal(drainCard().flags.shadowrun2e_unified.test.targetNumber, 4);
   });
 });

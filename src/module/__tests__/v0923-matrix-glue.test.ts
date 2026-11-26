@@ -407,8 +407,8 @@ describe('v0.92.3 review fix: a re-resolved miss takes back the marks of the hit
     faces.push(5, 5, 5, 5, 5, 5, 5, 5, 5, 5);
     await bl.icAttack({ targetUuid: d.uuid });
     assert.deepEqual(d.system.matrix.engagedBy, [bl.uuid]);
-    const card = chat.find((c: any) => c.flags?.sr2e?.test?.kind === 'attack' || c.flags?.sr2e?.test?.attack);
-    assert.ok(card, chat.map((c: any) => JSON.stringify(c.flags?.sr2e?.test?.kind)).join(','));
+    const card = chat.find((c: any) => c.flags?.shadowrun2e_unified?.test?.kind === 'attack' || c.flags?.shadowrun2e_unified?.test?.attack);
+    assert.ok(card, chat.map((c: any) => JSON.stringify(c.flags?.shadowrun2e_unified?.test?.kind)).join(','));
     Object.assign(card, { author: g.game.user, async update(dd: any) { for (const [k, v] of Object.entries(dd)) setPath(this, k, v); }, async setFlag(this: any, sc: string, k: string, v: any) { ((this.flags ??= {})[sc] ??= {})[k] = v; } });
     await SR2Actor.retarget(card, { baseTargetNumber: 30, modifiers: [] });
     assert.deepEqual(d.system.matrix.engagedBy, []);
@@ -486,7 +486,7 @@ describe('v0.92.3 Matrix glue: trace, psychotropic and gray IC', () => {
     faces.push(5, 5, 5, 5);
     await ps.icAttack({ targetUuid: d.uuid });
     assert.doesNotMatch(text(), /data-sr2e-action="psychotropic"/);
-    assert.equal(d.flags.sr2e?.psyche923?.length, 1);
+    assert.equal(d.flags.shadowrun2e_unified?.psyche923?.length, 1);
     chat.length = 0;
     await d.jackOut({ force: true });
     assert.match(text(), /data-sr2e-action="psychotropic"/);

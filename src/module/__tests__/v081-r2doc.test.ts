@@ -212,7 +212,7 @@ describe('R2-DOC 2 (D1-4): an Essence drain the GM moves by hand', () => {
     faces.push(1, 1, 1);
     await victim.karmaReroll(snap);
     const c1 = chat.at(-1);
-    const ed1 = c1.flags.sr2e.test.soak.essenceDrain;
+    const ed1 = c1.flags.shadowrun2e_unified.test.soak.essenceDrain;
     assert.ok(ed1.gained > 0, JSON.stringify(ed1));
     assert.equal(ed1.gmGain, true);
     assert.match(c1.content, new RegExp(`GM: give Wendigo ${ed1.gained} Essence by hand`));
@@ -222,16 +222,16 @@ describe('R2-DOC 2 (D1-4): an Essence drain the GM moves by hand', () => {
     caster.system.essenceShift = Number(caster.system.essenceShift ?? 0) + ed1.gained; caster.system.prepareDerivedData();
     // A second re-roll that changes nothing asks for nothing more.
     faces.push(1, 1, 1);
-    await victim.karmaReroll({ ...c1.flags.sr2e.test });
+    await victim.karmaReroll({ ...c1.flags.shadowrun2e_unified.test });
     const c2 = chat.at(-1);
     assert.doesNotMatch(c2.content, /by hand/);
-    assert.equal(c2.flags.sr2e.test.soak.essenceDrain.gained, ed1.gained);
+    assert.equal(c2.flags.shadowrun2e_unified.test.soak.essenceDrain.gained, ed1.gained);
     // A re-roll that now resists: the GM takes it back.
     faces.push(5, 5, 5);
-    await victim.karmaReroll({ ...c2.flags.sr2e.test });
+    await victim.karmaReroll({ ...c2.flags.shadowrun2e_unified.test });
     const c3 = chat.at(-1);
     assert.match(c3.content, new RegExp(`GM: take ${ed1.gained} Essence back from Wendigo by hand`));
-    assert.equal(c3.flags.sr2e.test.soak.essenceDrain.gained, 0);
+    assert.equal(c3.flags.shadowrun2e_unified.test.soak.essenceDrain.gained, 0);
   });
 
   test('R2-DOC 9: the victim\'s own failed write is left to the GM and the card says so', async () => {
@@ -249,7 +249,7 @@ describe('R2-DOC 2 (D1-4): an Essence drain the GM moves by hand', () => {
     const c = chat.at(-1);
     assert.match(c.content, /Essence drain:<\/strong> <em>GM: take [\d.]+ Essence from Victim by hand/);
     assert.match(c.content, /the GM takes [\d.]+ Essence from Victim/);
-    assert.equal(c.flags.sr2e.test.soak.essenceDrain.gmTake, true);
+    assert.equal(c.flags.shadowrun2e_unified.test.soak.essenceDrain.gmTake, true);
   });
 });
 
@@ -271,7 +271,7 @@ describe('R2-DOC 3 (D1-7): sneaking is a physical act', () => {
     faces.push(5, 5, 5, 5, 5, 5, 5, 5, 5, 5);
     const res = await down.sneakPast([guard.uuid], { watched: true });
     assert.deepEqual(res.map((x: any) => x.noticed), [true]);
-    const side = chat.at(-1).flags.sr2e.contest.sides[0];
+    const side = chat.at(-1).flags.shadowrun2e_unified.contest.sides[0];
     assert.equal(side.result.totalDice, 0);
     assert.match(side.label, /is unconscious: no Stealth/);
   });
@@ -291,7 +291,7 @@ describe('R2-DOC 4 (D2-2): a ritual member\'s drain', () => {
     const byHand = chat.filter((m) => /rolls it by hand/.test(m.content ?? ''));
     assert.equal(byHand.length, 1, byHand.map((m) => m.content).join(' | '));
     assert.match(byHand[0].content, /Theirs<\/strong> resists the ritual drain for the ward \(Force 3\) \(Willpower vs TN \d+, [LMSD] drain\)/);
-    assert.ok(chat.some((m) => /Ward drain/.test(m.content ?? '') && m.flags?.sr2e?.test?.actorUuid === mine.uuid), 'Mine\'s drain card was posted once');
+    assert.ok(chat.some((m) => /Ward drain/.test(m.content ?? '') && m.flags?.shadowrun2e_unified?.test?.actorUuid === mine.uuid), 'Mine\'s drain card was posted once');
   });
 });
 
@@ -321,7 +321,7 @@ describe('R2-DOC 5 (D3-20): a complex form copied from one the player owns stays
 });
 
 describe('R2-DOC 6 (D2-3): lower and dispel from a player\'s card need a test card behind them', () => {
-  const testCard = (author: any, test: any) => asMessage({ author, flags: { sr2e: { test } } });
+  const testCard = (author: any, test: any) => asMessage({ author, flags: { shadowrun2e_unified: { test } } });
   test('a forged lower is refused; the banishing card that works it out lets it through', async () => {
     const p = PLAYER();
     // realUser compares by identity: the same object is the author everywhere.
@@ -369,7 +369,7 @@ describe('R2-SEC (index.ts side)', () => {
     // The probe's project call: refundModPayer('Actor.<mine>', 10000000, 'x').
     await mote.refundModPayer(own3.uuid, 10000000, 'x');
     assert.equal(own3.system.nuyen, 0);
-    assert.ok(chat.some((m) => m.flags?.sr2e?.actorUpdate?.nuyen?.amount === 10000000 && m.flags.sr2e.actorUpdate.uuid === own3.uuid), 'a GM card');
+    assert.ok(chat.some((m) => m.flags?.shadowrun2e_unified?.actorUpdate?.nuyen?.amount === 10000000 && m.flags.shadowrun2e_unified.actorUpdate.uuid === own3.uuid), 'a GM card');
     // GM-owned to GM-owned still pays straight away.
     const npc = ownedBy(who({ name: 'Fixer', nuyen: 0 }));
     await mote.refundModPayer(npc.uuid, 500, 'x');
@@ -389,12 +389,12 @@ describe('R2-SEC (index.ts side)', () => {
     const { chargePower } = await import('../rules/index.ts');
     const d = RULES.COMBAT.demolitions;
     const setter = who({ name: 'Sapper' }, [skill('dm', d.skill, 4, d.attribute), { id: 'px', type: 'gear', name: 'Plastique', system: { quantity: 0, explosive: { power: 6, perMetre: 0.5, shaped: false } } }]);
-    setter.flags = { sr2e: { setCharges: [{ id: 'c1', itemId: 'px', successes: 99, name: 'Plastique', power: 200, perMetre: 0, shaped: false }] } };
+    setter.flags = { shadowrun2e_unified: { setCharges: [{ id: 'c1', itemId: 'px', successes: 99, name: 'Plastique', power: 200, perMetre: 0, shaped: false }] } };
     const c = SR2Actor.storedCharge(setter, 'c1', '');
     assert.equal(c!.power, chargePower(6, 4));
     assert.equal(c!.perMetre, 0.5);
     // A record that matches a real roll keeps its Power.
-    setter.flags.sr2e.setCharges[0] = { id: 'c1', itemId: 'px', successes: 2, name: 'Plastique', power: chargePower(6, 2), perMetre: 0.5 };
+    setter.flags.shadowrun2e_unified.setCharges[0] = { id: 'c1', itemId: 'px', successes: 2, name: 'Plastique', power: chargePower(6, 2), perMetre: 0.5 };
     assert.equal(SR2Actor.storedCharge(setter, 'c1', '')!.power, chargePower(6, 2));
   });
 
@@ -436,7 +436,7 @@ describe('R2-SEC (index.ts side)', () => {
     van.isAboard = (a: any) => a === gunner;
     const gun: any = { uuid: `${van.uuid}.Item.gun`, name: 'Turret gun', parent: van, isOwner: false };
     await SR2Actor.setTurretFacing(gun, 90, gunner);
-    assert.deepEqual(chat.at(-1).flags.sr2e.turretFacing, { weaponUuid: gun.uuid, facing: 90, firerUuid: gunner.uuid });
+    assert.deepEqual(chat.at(-1).flags.shadowrun2e_unified.turretFacing, { weaponUuid: gun.uuid, facing: 90, firerUuid: gunner.uuid });
     assert.equal(SR2Actor.mountedRole(gunner, van), 'gunner');
     assert.equal(SR2Actor.mountedRole(who({ name: 'Stranger' }), van), null);
   });
@@ -446,8 +446,8 @@ describe('R2-SEC (index.ts side)', () => {
     const patient = who({ name: 'Mage', magic: 5 });
     await withRule(RULES.MAGIC_LOSS, 'enabled', true, () => SR2Actor.urrMagicLossCard(patient, healer));
     const m = chat.at(-1);
-    assert.equal(m.flags.sr2e.magicLossFor, patient.uuid);
-    assert.equal(m.flags.sr2e.magicLossBy, healer.uuid);
+    assert.equal(m.flags.shadowrun2e_unified.magicLossFor, patient.uuid);
+    assert.equal(m.flags.shadowrun2e_unified.magicLossBy, healer.uuid);
     assert.match(m.content, /treated by Doc/);
   });
 });

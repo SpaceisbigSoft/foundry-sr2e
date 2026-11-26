@@ -32,8 +32,8 @@ function actorStub(o: any = {}): any {
   return {
     uuid: 'Actor.a1', id: 'a1', type: o.type ?? 'character', items: Object.assign([...items], { get: (id: string) => items.find((i: any) => i.id === id) }),
     system: { derived: { woundModifier: 1, status: 'ok', reaction: 6, initiativeDice: 2, ...(o.derived ?? {}) }, care: {} },
-    flags: { sr2e: o.flags ?? {} },
-    getFlag(_ns: string, k: string) { return this.flags.sr2e[k]; },
+    flags: { shadowrun2e_unified: o.flags ?? {} },
+    getFlag(_ns: string, k: string) { return this.flags.shadowrun2e_unified[k]; },
     isActing: () => Boolean(o.acting), actionsUsed: () => o.used ?? 0,
   };
 }
@@ -91,8 +91,8 @@ describe('templates', () => {
     for (const f of ['actor-character-sheet.hbs', 'actor-npc-sheet.hbs', 'actor-spirit-sheet.hbs']) {
       const t = tpl(f);
       assert.match(t, /<div class="sr2e-sheet[^"]* sr2e-layout-\{\{layout\}\}">/, f);
-      assert.ok(t.includes('<div class="sr2e-stuck">\n    {{> "systems/sr2e/templates/status-strip.hbs"}}'), f);
-      assert.ok(t.includes('{{#if (eq layout "combat")}}{{> "systems/sr2e/templates/combat-column.hbs"}}{{/if}}'), f);
+      assert.ok(t.includes('<div class="sr2e-stuck">\n    {{> "systems/shadowrun2e_unified/templates/status-strip.hbs"}}'), f);
+      assert.ok(t.includes('{{#if (eq layout "combat")}}{{> "systems/shadowrun2e_unified/templates/combat-column.hbs"}}{{/if}}'), f);
     }
     const c = tpl('actor-character-sheet.hbs');
     const stuck = c.slice(c.indexOf('<div class="sr2e-stuck">'), c.indexOf('</div>', c.indexOf('</nav>')));

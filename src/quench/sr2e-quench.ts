@@ -2,7 +2,7 @@
  * v0.92.2: in-Foundry test batches for the Quench module (https://github.com/Ethaks/FVTT-Quench).
  * Registered only when Quench is active (its `quenchReady` hook); nothing here runs otherwise.
  * Run them from Quench's window (the flask button in the scene controls), or from the console:
- *   await quench.runBatches('sr2e.**')
+ *   await quench.runBatches('shadowrun2e_unified.**')
  * Every batch makes its own `ZZ Quench …` documents and removes them afterwards, with the chat cards,
  * windows and combats it made; world time is put back. Run them as a GM, in a test world.
  * This is developer-only test code: its English text is the test names, never shown to players.

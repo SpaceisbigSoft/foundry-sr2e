@@ -11,8 +11,9 @@ import { hudActions, hudMultiActions, hudDefaults, hudWeaponInfo, hudDamageLabel
 import { runSheetAction, latestAttackOn, useItem } from './tokens.ts';
 import { escHtml } from '../rules/html.ts';
 import { t as tx } from '../helpers/i18n.ts';
+import { SYSTEM_ID } from '../config/system.ts';
 
-export const TAH_SYSTEM_ID = 'sr2e';
+export const TAH_SYSTEM_ID = SYSTEM_ID;
 const TAH_CORE_ID = 'token-action-hud-core';
 const REQUIRED_CORE_VERSION = '2';
 const PEOPLE = ['character', 'npc', 'spirit'];

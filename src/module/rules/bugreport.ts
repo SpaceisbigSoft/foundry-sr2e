@@ -30,7 +30,7 @@ export const BUG_ENTRY_MAX = 600;
  * an sr2e world, which holds "sr2e" in its flags, isn't kept.)
  */
 export function isOurError(text: string): boolean {
-  return /(^|[\s:'"(\[])sr2e \||systems\/sr2e\//i.test(String(text ?? ''));
+  return /(^|[\s:'"(\[])sr2e \||systems\/(sr2e|shadowrun2e_unified)\//i.test(String(text ?? ''));
 }
 
 /**

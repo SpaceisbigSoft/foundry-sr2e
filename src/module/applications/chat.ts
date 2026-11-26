@@ -1,5 +1,6 @@
 import { individualAwardRows } from '../rules/core923.ts';
 import { isForeignWorld } from '../helpers/foreign.ts';
+import { needsMove } from '../helpers/move.ts';
 import type { AttackState, DamageState, SpellState, TestSnapshot, PoolKind, BlastContext, Contest } from '../documents/index.ts';
 import { opposedMelee, SR2Actor, serialTicks } from '../documents/index.ts';
 import { settleClock } from './clock.ts';
@@ -426,7 +427,7 @@ export async function detonateAt(actor: any, ctx: BlastContext, point: { x: numb
     const to = c.token.center;
     const metresTo = Math.hypot(to.x - point.x, to.y - point.y) / pxPerMetre();
     const walls = wallsBetweenPoints(point, to).map((w) => {
-      const raw = w.doc?.getFlag?.(SYSTEM_ID, 'barrierRating') ?? w.doc?.flags?.sr2e?.barrierRating;
+      const raw = w.doc?.getFlag?.(SYSTEM_ID, 'barrierRating') ?? w.doc?.flags?.[SYSTEM_ID]?.barrierRating;
       const t = crossingFraction(point, to, w.doc?.c ?? []) ?? 0;
       // Review fix: walls saved before v0.72.0 stored 0 for "not set": 0 counts as unrated for blasts.
       return { metres: t * metresTo, rating: raw === null || raw === undefined || raw === '' || !(Number(raw) > 0) ? null : Number(raw) };
@@ -1972,7 +1973,8 @@ function registerKarmaRefresh(): void {
       const today = localDateKey();
       const last = String(game.settings.get(SYSTEM_ID, 'karmaRefreshDay') ?? '');
       // v0.93.0: another system's world (the same id) is left alone.
-      if (isForeignWorld() || !sessionRefreshDue(last, today)) return;
+      // v0.93.1 (review 7): not before a world from the old id is moved (its house rules aren't read yet); the next load does it.
+      if (isForeignWorld() || needsMove((game as any).data?.settings, SYSTEM_ID) || !sessionRefreshDue(last, today)) return;
       void game.settings.set(SYSTEM_ID, 'karmaRefreshDay', today);
       void cls().refreshAllKarma(tx('SR2E.Card.Chat.newSession'));
     } catch (err) { console.warn('sr2e | Karma refresh', err); }
@@ -2247,25 +2249,25 @@ function registerWallConfig(): void {
     try {
       const root: HTMLElement = (html as any)?.querySelector ? html : (html as any)?.[0] ?? app.element;
       const form: HTMLFormElement | null = root?.tagName === 'FORM' ? (root as any) : root?.querySelector('form');
-      if (!form || form.querySelector('[name="flags.sr2e.barrierRating"]')) return;
+      if (!form || form.querySelector('[name="flags.${SYSTEM_ID}.barrierRating"]')) return;
       // v0.72.0 (O1): an unset rating stays blank (unrated walls stop blasts; RULES.COMBAT_V72.blastBarriers.unratedWalls).
       const rawRating = app.document?.getFlag?.(SYSTEM_ID, 'barrierRating');
       const value = rawRating === null || rawRating === undefined || rawRating === '' ? '' : (Number(rawRating) || 0);
       const burns = Boolean(app.document?.getFlag?.(SYSTEM_ID, 'burns'));
       const group = document.createElement('div');
       group.className = 'form-group';
-      group.innerHTML = `<label>${tx('SR2E.Card.Chat.sr2BarrierRating')}</label><div class="form-fields"><input type="number" name="flags.sr2e.barrierRating" value="${value}" min="0" step="1" placeholder="${tx('SR2E.Card.Chat.notSet', { barriersDefaultWallRating: RULES.COMBAT.barriers.defaultWallRating })}"></div>
+      group.innerHTML = `<label>${tx('SR2E.Card.Chat.sr2BarrierRating')}</label><div class="form-fields"><input type="number" name="flags.${SYSTEM_ID}.barrierRating" value="${value}" min="0" step="1" placeholder="${tx('SR2E.Card.Chat.notSet', { barriersDefaultWallRating: RULES.COMBAT.barriers.defaultWallRating })}"></div>
         <p class="hint">${tx('SR2E.Card.Chat.addedToATargetSArmor', { barriersDefaultWallRating: RULES.COMBAT.barriers.defaultWallRating, part: RULES.COMBAT_V72.blastBarriers.unratedWalls === 'block' ? tx('SR2E.Card.Chat.aBlastIsStoppedCompletely') : tx('SR2E.Card.Chat.aBlastCountsTheSame') })}</p>`;
       // v0.48.0: a wall that burns (wood, plasterboard) loses rating inside a fire and lets it through once burnt.
       const burnGroup = document.createElement('div');
       burnGroup.className = 'form-group';
-      burnGroup.innerHTML = `<label>${tx('SR2E.Card.Chat.sr2Burns')}</label><div class="form-fields"><input type="checkbox" name="flags.sr2e.burns" ${burns ? 'checked' : ''}></div>
+      burnGroup.innerHTML = `<label>${tx('SR2E.Card.Chat.sr2Burns')}</label><div class="form-fields"><input type="checkbox" name="flags.${SYSTEM_ID}.burns" ${burns ? 'checked' : ''}></div>
         <p class="hint">${tx('SR2E.Card.Chat.aFireBurnsThroughItRating', { wallsDefaultRating: RULES.FIRE.walls.defaultRating })}</p>`;
       // v0.78.0 (RULES.BOOK_V78.barriers 'book'): a security door breaks only at 0 (an ordinary door at half its rating).
       const secDoor = Boolean(app.document?.getFlag?.(SYSTEM_ID, 'securityDoor'));
       const doorGroup = document.createElement('div');
       doorGroup.className = 'form-group';
-      doorGroup.innerHTML = `<label>${tx('SR2E.Card.Chat.sr2SecurityDoor')}</label><div class="form-fields"><input type="checkbox" name="flags.sr2e.securityDoor" ${secDoor ? 'checked' : ''}></div>
+      doorGroup.innerHTML = `<label>${tx('SR2E.Card.Chat.sr2SecurityDoor')}</label><div class="form-fields"><input type="checkbox" name="flags.${SYSTEM_ID}.securityDoor" ${secDoor ? 'checked' : ''}></div>
         <p class="hint">${tx('SR2E.Card.Chat.aDoorBreaksWhenDamageBrings')}</p>`;
       const anchor = form.querySelector('footer, .form-footer, button[type="submit"]');
       const parent = anchor?.parentElement === form ? form : (anchor?.closest('footer')?.parentElement ?? form);
@@ -2993,7 +2995,7 @@ async function onConfirmDeed(message: any, button: HTMLButtonElement): Promise<v
   if (!d || !a) return ui.notifications.warn(tx('SR2E.Notify.Chat.thatCharacterIsGone'));
   if (message.getFlag(SYSTEM_ID, 'deedDone')) return ui.notifications.warn(tx('SR2E.Notify.Chat.alreadyConfirmed'));
   const p = a.getFlag?.(SYSTEM_ID, 'pendingInitiation');
-  if (!p || p.grade !== nextInitiationGrade(Number(a.system.initiateGrade ?? 0), Boolean(a.getFlag?.('sr2e', 'initiated')))) return ui.notifications.warn(tx('SR2E.Notify.Chat.hasNoInitiationWaitingOnThis', { name: escHtml(a.name) }));
+  if (!p || p.grade !== nextInitiationGrade(Number(a.system.initiateGrade ?? 0), Boolean(a.getFlag?.(SYSTEM_ID, 'initiated')))) return ui.notifications.warn(tx('SR2E.Notify.Chat.hasNoInitiationWaitingOnThis', { name: escHtml(a.name) }));
   // v0.81.0 (SEC1-17): only the initiate's own card (or a GM's), and the GM says yes in a dialog naming it.
   if (!(await gmMay(message, { title: tx('SR2E.Dialog.Chat.confirmADeed'), lines: [tx('SR2E.Dialog.Chat.sDeedIsDoneInitiationTo', { name: a.name, grade: p.grade })], sources: [a.uuid], always: true }))) return;
   await gmLocked(message, button, async () => {

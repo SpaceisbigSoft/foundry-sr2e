@@ -273,7 +273,7 @@ Lifestyle: Low (2 months)`);
 describe('v0.66.0 import gates', () => {
   test('a player can\'t import into a finished character, or past the approval queue; the GM can', async () => {
     const a = actor('character', 'ZZ Done', { contacts: [], qualities: [] });
-    a.flags = { sr2e: { creation: { v: 1, finishedAt: 'x', attributes: {} } } };
+    a.flags = { shadowrun2e_unified: { creation: { v: 1, finishedAt: 'x', attributes: {} } } };
     a.getFlag = (s: string, k: string) => a.flags[s]?.[k];
     g.game.user = { id: 'p', name: 'Corvo', isGM: false };
     await assert.rejects(() => cat.importCharacter(a, 'Skills: Firearms 6'), /finished/);

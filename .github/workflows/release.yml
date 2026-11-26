@@ -1,7 +1,8 @@
 # v0.90.0: builds the release. Push a tag named after the version in public/system.json (for example v0.92.0):
 #   git tag v0.92.0 && git push origin v0.92.0
 # The workflow runs the tests, builds the system, writes the manifest and download addresses for this repository into
-# system.json, and publishes a GitHub release with system.json and sr2e.zip (what Foundry installs).
+# system.json, and publishes a GitHub release with shadowrun2e_unified.json (the manifest) and shadowrun2e_unified.zip
+# (what Foundry installs). v0.93.1: the system id is shadowrun2e_unified (it was sr2e).
 name: Release
 on:
   push:
@@ -36,20 +37,24 @@ jobs:
             s.bugs = repo + '/issues';
             s.changelog = repo + '/blob/' + process.env.GITHUB_REF_NAME + '/CHANGELOG.md';
             s.readme = repo + '/blob/' + process.env.GITHUB_REF_NAME + '/README.md';
-            s.manifest = repo + '/releases/latest/download/system.json';
-            s.download = repo + '/releases/download/' + process.env.GITHUB_REF_NAME + '/sr2e.zip';
+            // v0.93.1: the manifest has its own file name, so installs of the old id (`sr2e`) find no update instead of one
+            // with a different id (docs/MOVING.md).
+            s.manifest = repo + '/releases/latest/download/shadowrun2e_unified.json';
+            s.download = repo + '/releases/download/' + process.env.GITHUB_REF_NAME + '/shadowrun2e_unified.zip';
             fs.writeFileSync(p, JSON.stringify(s, null, 2) + '\n');
           "
+      - name: The manifest under its own name
+        run: cp public/system.json shadowrun2e_unified.json
       - name: Zip the system
         run: |
           cd public
-          zip -r ../sr2e.zip . -x index.mjs.map
+          zip -r ../shadowrun2e_unified.zip . -x index.mjs.map
       - name: Release notes (this version's CHANGELOG section, then how to install)
         run: node scripts/release-notes.mjs > release-notes.md && cat release-notes.md
       - uses: softprops/action-gh-release@v2
         with:
           files: |
-            public/system.json
-            sr2e.zip
+            shadowrun2e_unified.json
+            shadowrun2e_unified.zip
           generate_release_notes: false
           body_path: release-notes.md

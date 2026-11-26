@@ -19,7 +19,7 @@
   {{/if}}{{/if}}
   <div class="sr2e-row sr2e-gm-line">
     {{#if monitor}}
-    {{#if cm}}{{> "systems/sr2e/templates/monitor-mini.hbs"}}{{/if}}
+    {{#if cm}}{{> "systems/shadowrun2e_unified/templates/monitor-mini.hbs"}}{{/if}}
     <span title="{{sr2eT "SR2E.UI.physicalBoxes"}}"><a data-action="box" data-uuid="{{uuid}}" data-track="physical" data-delta="-1" title="{{sr2eT "SR2E.UI.physical1"}}">−</a> P {{physical}} <a data-action="box" data-uuid="{{uuid}}" data-track="physical" data-delta="1" title="{{sr2eT "SR2E.UI.physical12"}}">+</a></span>
     <span title="{{sr2eT "SR2E.UI.stunBoxes"}}"><a data-action="box" data-uuid="{{uuid}}" data-track="stun" data-delta="-1" title="{{sr2eT "SR2E.UI.stun1"}}">−</a> S {{stun}} <a data-action="box" data-uuid="{{uuid}}" data-track="stun" data-delta="1" title="{{sr2eT "SR2E.UI.stun12"}}">+</a></span>
     {{/if}}
@@ -204,7 +204,7 @@
           </div>
           {{#if initiative}}<span class="sr2e-pc-init" title="{{sr2eT "SR2E.UI.initiativeThisPass"}}{{#if acting}} {{sr2eT "SR2E.UI.actingNow"}}{{/if}}">{{initiative}}</span>{{/if}}
         </header>
-        <div class="sr2e-pc-monitor">{{> "systems/sr2e/templates/monitor-mini.hbs"}}</div>
+        <div class="sr2e-pc-monitor">{{> "systems/shadowrun2e_unified/templates/monitor-mini.hbs"}}</div>
         <div class="sr2e-pc-boxes">
           <span class="sr2e-pc-track" title="{{sr2eT "SR2E.UI.physicalBoxes"}}"><a data-action="box" data-uuid="{{uuid}}" data-track="physical" data-delta="-1" title="{{sr2eT "SR2E.UI.physical1"}}">−</a> P <b>{{physical}}</b> <a data-action="box" data-uuid="{{uuid}}" data-track="physical" data-delta="1" title="{{sr2eT "SR2E.UI.physical12"}}">+</a></span>
           <span class="sr2e-pc-track" title="{{sr2eT "SR2E.UI.stunBoxes"}}"><a data-action="box" data-uuid="{{uuid}}" data-track="stun" data-delta="-1" title="{{sr2eT "SR2E.UI.stun1"}}">−</a> S <b>{{stun}}</b> <a data-action="box" data-uuid="{{uuid}}" data-track="stun" data-delta="1" title="{{sr2eT "SR2E.UI.stun12"}}">+</a></span>

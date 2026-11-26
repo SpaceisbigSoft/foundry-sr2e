@@ -50,6 +50,7 @@ import { ART_ARCHETYPES } from '../rules/tokenart.ts';
 import { t as tx, tCount } from '../helpers/i18n.ts';
 import { gearBook, isDermalPlating, dermalRating, limbPairsBody, housedEssenceCost, boneLacingBook, cyberReplacements, awakenedBioEssence, culturedBodyCost, essenceKills, bookLoad, heavyArmorPoolPenalty } from '../rules/gear923.ts';
 import { round2 } from '../rules/util.ts';
+import { SYSTEM_ID } from '../config/system.ts';
 
 const f = () => foundry.data.fields;
 /** World time now (0 outside Foundry). */
@@ -723,7 +724,7 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
   /** Whether metatypes apply (characters and NPCs; spirits override). */
   usesMetatype(): boolean {
     // v0.52.0: a generated critter (an animal) has no metatype: no racial modifiers or maximums.
-    return !(this as any).parent?.flags?.sr2e?.critter;
+    return !(this as any).parent?.flags?.[SYSTEM_ID]?.critter;
   }
 
   /** The natural rating an attribute total starts from (spirits derive it from Force). */
@@ -761,7 +762,7 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
       // v0.92.3 (RULES.GEAR_V923.awakenedBioware 'essence'): the bioware's Essence lowers Magic instead.
       - (sys.magic > 0 && !gearBook('awakenedBioware') ? bio.magicLoss : 0)
       // v0.92.3 (RULES.SPIRITS_V923.banishBackfire, Core p. 143): Magic lost to a spirit in banishing (back at 1 an hour).
-      - Math.max(0, Number((this as any).parent?.flags?.sr2e?.banishMagic?.lost ?? 0) || 0)));
+      - Math.max(0, Number((this as any).parent?.flags?.[SYSTEM_ID]?.banishMagic?.lost ?? 0) || 0)));
     // v0.56.0: adept powers past the power-point budget stop working when Magic drops (RULES.CRITTERS_V56.adeptBudget).
     const adeptAll = [...((this as any).parent?.items ?? [])].filter((i: any) => i.type === 'adeptpower');
     const budget = adeptBudget(adeptAll.map((i: any) => ({ id: i.id, cost: Number(i.system.cost ?? 0), active: i.system.active !== false })), magic * RULES.MAGIC.adeptPointsPerMagic);
@@ -774,7 +775,7 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
     // Drugs in effect add their bonuses too (v0.31.0).
     const drugAugs: Augmentation[] = drugsForBonuses(sys.drugs ?? []).map((d: any) => ({ essenceCost: 0, grade: 'standard', installed: true, attributes: d.attributes, reaction: d.reaction, initiativeDice: d.initiativeDice, name: d.name }));
     // Sustained critter and spirit powers, and (v0.56.0) sustained or permanent spells, changing this actor (actor flag powerEffects).
-    const powerFx: any[] = [...(((this as any).parent?.flags?.sr2e?.powerEffects as any[] | undefined) ?? [])];
+    const powerFx: any[] = [...(((this as any).parent?.flags?.[SYSTEM_ID]?.powerEffects as any[] | undefined) ?? [])];
     // v0.61.0: drugs' effects beyond attributes (armor, TNs, movement, ignoring wounds or Stun boxes).
     const drugFx = combineDrugEffects(drugsForBonuses(sys.drugs ?? []).map((d: any) => d.extra ?? {}));
     const fxSum = sumBundles([...powerFx.map((p: any) => ({ attributes: p.attributes ?? {}, reaction: p.reaction ?? 0, initiativeDice: p.initiativeDice ?? 0, ballistic: p.ballistic ?? 0, impact: p.impact ?? 0, testsTn: p.testsTn ?? 0, perceivedTn: p.perceivedTn ?? 0, attackedTn: p.attackedTn ?? 0, movementFactor: p.movementFactor ?? 1 })), drugFx.bundle]);
@@ -864,7 +865,7 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
       (totals as any)[k] = v;
     }
     // A possessed body thinks with its possessor's mind (v0.45.0; actor flag possessedBy).
-    const possessor = (this as any).parent?.flags?.sr2e?.possessedBy;
+    const possessor = (this as any).parent?.flags?.[SYSTEM_ID]?.possessedBy;
     if (possessor?.attributes) {
       const p = possessedAttributes(totals as any, possessor.attributes);
       for (const k of ATTRIBUTE_KEYS) if (p[k] !== totals[k]) { sys.attributes[k].total = p[k]; totals[k] = p[k]; }

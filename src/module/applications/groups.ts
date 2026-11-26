@@ -3,6 +3,7 @@ import { isCarried } from '../rules/tweaks.ts';
 import { monitorView } from '../rules/look.ts';
 import { mookLine, type MookLine } from '../rules/gmdash.ts';
 import { t as tx, tCount } from '../helpers/i18n.ts';
+import { SYSTEM_ID } from '../config/system.ts';
 
 /**
  * v0.81.1 (SEC2b-1, design 8): the most Overflow boxes a panel builds, one element each. Body comes from the actor (a
@@ -130,7 +131,7 @@ export function personRow(a: any, extra: Record<string, unknown> = {}): any {
 
 /** A recent roll for the GM panel's log: who, what, the outcome. Null for messages without a test or dice. */
 export function recentRollRow(m: any, strip: (html: string, flavor?: string) => string): any | null {
-  const sys = m?.flags?.sr2e ?? {};
+  const sys = m?.flags?.[SYSTEM_ID] ?? {};
   const snap = sys.test;
   if (!snap && !(m?.rolls?.length)) return null;
   const html = String(m?.content ?? '');

@@ -69,7 +69,7 @@ describe('v0.89.0 templates', () => {
     const hb = Handlebars.create();
     hb.registerHelper('sr2eT', (key: string, options: any) => formatText(KEYS[key] ?? key, options?.hash ?? {}));
     for (const h of ['eq', 'ne', 'lt', 'gt', 'and', 'or', 'not', 'checked', 'selectOptions', 'localize', 'concat', 'editor', 'numberFormat', 'timeSince', 'disabled', 'json']) hb.registerHelper(h, () => '');
-    for (const f of templates) hb.registerPartial(`systems/sr2e/templates/${f}`, readFileSync(join(TPL, f), 'utf8'));
+    for (const f of templates) hb.registerPartial(`systems/shadowrun2e_unified/templates/${f}`, readFileSync(join(TPL, f), 'utf8'));
     for (const f of templates) {
       const html = hb.compile(readFileSync(join(TPL, f), 'utf8'))({});
       assert.ok(!/SR2E\.(UI|Settings)\.|\{[a-z]\w*\}|undefined/.test(html), `${f}: ${/SR2E\.(UI|Settings)\.\w+|\{[a-z]\w*\}|undefined/.exec(html)?.[0]}`);

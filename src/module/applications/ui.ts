@@ -47,6 +47,7 @@ const ATTRS: AttributeKey[] = ['body', 'quickness', 'strength', 'charisma', 'int
 export { applyDiceColours } from '../helpers/dicecolours.ts';
 import { applyDiceColours } from '../helpers/dicecolours.ts';
 import { t as tx, tCount, tKey } from '../helpers/i18n.ts';
+import { SYSTEM_ID } from '../config/system.ts';
 
 // ---------------------------------------------------------------- Drop a weapon or spell on a token
 
@@ -251,7 +252,7 @@ export class SR2GmPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       } : null,
       ...SR2GmPanel.#extraContext(scene, combat, wt),
       regions: SR2GmPanel.#envRegions(scene),
-      time: { label: formatWorldTime(wt), combat: combat?.started ? (combat.flags?.sr2e?.pass ? tx('SR2E.App.Ui.combatTurnPass', { round: combat.round, pass: combat.flags.sr2e.pass + 1 }) : tx('SR2E.App.Ui.combatTurn', { round: combat.round })) : '' },
+      time: { label: formatWorldTime(wt), combat: combat?.started ? (combat.flags?.[SYSTEM_ID]?.pass ? tx('SR2E.App.Ui.combatTurnPass', { round: combat.round, pass: combat.flags[SYSTEM_ID].pass + 1 }) : tx('SR2E.App.Ui.combatTurn', { round: combat.round })) : '' },
       hosts: actors.filter((a: any) => a.type === 'host').map((h: any) => ({
         uuid: h.uuid, name: h.name, kind: (h.system.gridKind ?? 'host').toUpperCase(), code: `${cap(h.system.securityCode)}-${h.system.securityValue}`,
         tally: h.system.tally, alert: h.system.alert, next: h.system.derived?.nextStep?.step ?? null,
@@ -427,7 +428,7 @@ export class SR2GmPanel extends HandlebarsApplicationMixin(ApplicationV2) {
         terrain: RULES.VEHICLES.terrain.find((t: any) => t.id === p.terrain)?.label ?? p.terrain }) })),
       notes,
       combatInfo: combat ? {
-        started: Boolean(combat.started), round: combat.round ?? 0, pass: Number(combat.pass ?? combat.flags?.sr2e?.pass ?? 0) + 1,
+        started: Boolean(combat.started), round: combat.round ?? 0, pass: Number(combat.pass ?? combat.flags?.[SYSTEM_ID]?.pass ?? 0) + 1,
         current: combat.combatant?.name ?? '', count: turns.length, scene: combat.scene?.name ?? '',
       } : null,
       combatRows,
@@ -902,7 +903,7 @@ export class SR2GmPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   static async #onResetHost(this: SR2GmPanel, _e: Event, target: HTMLElement) {
     const doc: any = fromUuidSync(target.dataset['uuid'] ?? '');
     // v0.70.0: a host's launched sheaf steps (host-wide and per decker) start over too.
-    await doc?.update({ 'system.tally': 0, 'system.alert': 'none', ...(doc?.type === 'host' ? { 'system.tallies': [], 'system.launchedSteps': [], 'flags.sr2e.sheafLaunched': [] } : {}) });
+    await doc?.update({ 'system.tally': 0, 'system.alert': 'none', ...(doc?.type === 'host' ? { 'system.tallies': [], 'system.launchedSteps': [], [`flags.${SYSTEM_ID}.sheafLaunched`]: [] } : {}) });
   }
 
   static async #onClearSmoke(this: SR2GmPanel, _e: Event, target: HTMLElement) {

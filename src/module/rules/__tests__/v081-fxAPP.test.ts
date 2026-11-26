@@ -84,7 +84,7 @@ function actor(id: string, owners: string[], extra: any = {}): any {
 }
 /** A stub chat message by `author` with sr2e flags. */
 function message(author: any, flags: Record<string, any>, extra: any = {}): any {
-  return { id: extra.id ?? `m${Math.random()}`, author, content: extra.content ?? '', speaker: extra.speaker ?? {}, flags: { sr2e: flags }, isOwner: true,
+  return { id: extra.id ?? `m${Math.random()}`, author, content: extra.content ?? '', speaker: extra.speaker ?? {}, flags: { shadowrun2e_unified: flags }, isOwner: true,
     getFlag: (_s: string, k: string) => flags[k], setFlag: async (_s: string, k: string, v: any) => { flags[k] = v; }, ...extra };
 }
 
@@ -194,7 +194,7 @@ describe('SEC1-9 / A-5 undo: only the fields the server changed, never ownership
   });
   test('a field recorded whole, or a change to a parent object, still counts', () => {
     assert.deepEqual(undoFieldsToKeep([{ path: 'system.monitor' }], { system: { monitor: { physical: 3 } } }).length, 1);
-    assert.deepEqual(undoFieldsToKeep([{ path: 'flags.sr2e.x.y' }], { flags: { sr2e: { '-=x': null } } }).length, 1);
+    assert.deepEqual(undoFieldsToKeep([{ path: 'flags.shadowrun2e_unified.x.y' }], { flags: { shadowrun2e_unified: { '-=x': null } } }).length, 1);
     assert.deepEqual(diffPaths({ a: { b: 1, '-=c': null }, d: [1] }).sort(), ['a.b', 'a.c', 'd']);
   });
 });
@@ -208,7 +208,7 @@ describe('SEC1-10 approvals: the data is checked again on approval', () => {
   });
   test('approvals.ts: an edited request is refused, and the GM panel says what it runs', async () => {
     const ap = await import('../../applications/approvals.ts');
-    const a: any = actor('corvo', ['p1'], { flags: { sr2e: { requests: { r1: { id: 'r1', kind: 'add', label: 'Pay for Ares Predator', karma: 0, nuyen: 500, userId: 'p1', userName: 'Corvo', at: 1, data: { method: 'buyItem', args: ['i1', 0, 0, 1] } } } } } });
+    const a: any = actor('corvo', ['p1'], { flags: { shadowrun2e_unified: { requests: { r1: { id: 'r1', kind: 'add', label: 'Pay for Ares Predator', karma: 0, nuyen: 500, userId: 'p1', userName: 'Corvo', at: 1, data: { method: 'buyItem', args: ['i1', 0, 0, 1] } } } } } });
     g.game.actors = [a];
     let ran = false;
     a.buyItem = async () => { ran = true; return true; };
@@ -377,7 +377,7 @@ describe('chat.ts: the render hook (SEC2-1) and card handlers', () => {
     const theirs = actor('theirs', ['p2']);
     const own = actor('own', ['p1']);
     const press = (msg: any) => { const root = new El(); const b = new El('button'); b.dataset['sr2eAction'] = 'createSpirit'; root.appendChild(b); render(msg, root); b.click(); };
-    press(message(P1, { pendingSpirit: { name: 'Ally', type: 'spirit', ownership: { p1: 3 }, system: { summonerUuid: theirs.uuid }, flags: { sr2e: { allyRitual: true } } } }));
+    press(message(P1, { pendingSpirit: { name: 'Ally', type: 'spirit', ownership: { p1: 3 }, system: { summonerUuid: theirs.uuid }, flags: { shadowrun2e_unified: { allyRitual: true } } } }));
     await new Promise((r) => setTimeout(r, 5));
     assert.equal(created.length, 0);
     press(message(P1, { pendingSpirit: { name: 'Watcher', type: 'spirit', ownership: { default: 3 }, system: { summonerUuid: own.uuid } } }));
@@ -436,7 +436,7 @@ describe('A-8 walls rated 0, A-4 migrations, A-17 quick rolls', () => {
     const { wallRating } = await import('../../applications/canvas.ts');
     const { RULES } = await import('../index.ts');
     const def = RULES.COMBAT.barriers.defaultWallRating;
-    const wall = (flags: any) => ({ flags: { sr2e: flags }, getFlag: (_s: string, k: string) => flags[k] });
+    const wall = (flags: any) => ({ flags: { shadowrun2e_unified: flags }, getFlag: (_s: string, k: string) => flags[k] });
     assert.equal(wallRating(wall({ barrierRating: 0 })), def);
     assert.equal(wallRating(wall({})), def);
     assert.equal(wallRating(wall({ barrierRating: 7 })), 7);
@@ -446,7 +446,7 @@ describe('A-8 walls rated 0, A-4 migrations, A-17 quick rolls', () => {
     const mig = await import('../../migrations.ts');
     const kh = { type: 'adeptpower', system: { special: 'killingHands', level: 2 } };
     assert.deepEqual(mig.killingHandsMigrationUpdate(kh), { 'system.level': 3 });
-    assert.equal(mig.killingHandsMigrationUpdate({ ...kh, flags: { sr2e: { mig077: true } } }), null);
+    assert.equal(mig.killingHandsMigrationUpdate({ ...kh, flags: { shadowrun2e_unified: { mig077: true } } }), null);
     const items = [{ id: 'base1' }, { id: 'delta1' }];
     const synthetic = { isToken: true, items, token: { delta: { _source: { items: [{ _id: 'delta1' }] } } } };
     assert.deepEqual(mig.ownItems(synthetic).map((i: any) => i.id), ['delta1']);

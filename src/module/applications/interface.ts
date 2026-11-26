@@ -603,8 +603,9 @@ export function decorateSettingsConfig(rootIn: HTMLElement): void {
   if (!root) return;
   const keyOf = (g: HTMLElement): string => {
     const id = g.dataset['settingId'] ?? g.querySelector<HTMLElement>('[data-setting-id]')?.dataset['settingId']
-      ?? g.querySelector<HTMLInputElement>('[name^="sr2e."]')?.name ?? g.querySelector<HTMLElement>('[data-key^="sr2e."]')?.dataset['key'] ?? '';
-    return id.startsWith('sr2e.') ? id : '';
+      ?? g.querySelector<HTMLInputElement>(`[name^="${ID}."]`)?.name ?? g.querySelector<HTMLElement>(`[data-key^="${ID}."]`)?.dataset['key'] ?? '';
+    // v0.93.1 (review 4): the system's settings are named by its id.
+    return id.startsWith(`${ID}.`) ? id : '';
   };
   const groups = Array.from(root.querySelectorAll<HTMLElement>('.form-group')).filter((g) => keyOf(g));
   if (!groups.length) return;

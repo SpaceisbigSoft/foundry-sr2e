@@ -1,7 +1,7 @@
 /**
  * v0.60.0: scene regions that set the environment where a token stands (pure; no Foundry globals).
  *
- * A Foundry Region carries `flags.sr2e.env` (set in the region's config window, SR2e environment):
+ * A Foundry Region carries `flags.shadowrun2e_unified.env` (set in the region's config window, SR2e environment):
  * - backgroundCount (+ aspect tags, toxic): a background count source while a token is inside;
  * - environment: environment tags added to the scene's (forest, urban…) for totems and domains;
  * - weather: the weather inside, instead of the scene's ('' = the scene's; 'clear' = sheltered/indoors);

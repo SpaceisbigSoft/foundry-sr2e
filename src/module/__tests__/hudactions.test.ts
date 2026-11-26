@@ -273,7 +273,7 @@ describe('v0.60.0 Token Action HUD: several tokens, encoded values', () => {
 });
 
 describe('v0.60.0 Token Action HUD glue', () => {
-  test('registerTokenActionHud only registers a once-hook for TAH Core; the system id is sr2e', async () => {
+  test('registerTokenActionHud only registers a once-hook for TAH Core; the system id is the system\'s (v0.93.1: shadowrun2e_unified)', async () => {
     const g = globalThis as any;
     const prev = g.Hooks;
     const once: Array<[string, Function]> = [];
@@ -281,7 +281,7 @@ describe('v0.60.0 Token Action HUD glue', () => {
     g.Hooks = { on: () => {}, once: (n: string, fn: Function) => once.push([n, fn]), call: (n: string, d: any) => { called.push([n, d]); return true; }, callAll: () => {} };
     try {
       const tah = await import('../applications/tah.ts');
-      assert.equal(tah.TAH_SYSTEM_ID, 'sr2e');
+      assert.equal(tah.TAH_SYSTEM_ID, 'shadowrun2e_unified');
       tah.registerTokenActionHud();
       assert.deepEqual(once.map(([n]) => n), ['tokenActionHudCoreApiReady']);
       assert.equal(called.length, 0, 'nothing happens until TAH Core fires');
@@ -293,7 +293,7 @@ describe('v0.60.0 Token Action HUD glue', () => {
       assert.equal(called.length, 1);
       const [hook, data] = called[0]!;
       assert.equal(hook, 'tokenActionHudSystemReady');
-      assert.equal(data.id, 'sr2e');
+      assert.equal(data.id, 'shadowrun2e_unified');
       assert.equal(data.api.requiredCoreModuleVersion, '2');
       const sm = new data.api.SystemManager();
       assert.deepEqual(sm.getAvailableRollHandlers(), { core: 'SR2e' });

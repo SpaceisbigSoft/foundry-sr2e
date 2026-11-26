@@ -217,7 +217,7 @@ describe('v0.92.3 vehicles: driving tests', () => {
     assert.equal(await v.crashTestFor({ why: 'test' }), null);
     assert.equal(await v.crashUndriven(), true);
     assert.match(chat.at(-1).content, /data-sr2e-action="vehicleCrash"/);
-    assert.equal(chat.at(-1).flags.sr2e.crash.vehicleUuid, v.uuid);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.crash.vehicleUuid, v.uuid);
     assert.equal(await vehicle({ autonav: 1, currentSpeed: 0 }).crashUndriven(), false, 'standing still: no crash');
     assert.equal(await vehicle({ autonav: 2 }).crashUndriven(), false, 'an autonav that drives rolls the test');
   });
@@ -233,7 +233,7 @@ describe('v0.92.3 vehicles: attacks on a vehicle', () => {
     chat.length = 0;
     assert.equal(await diceUsed(() => v.resistVehicleDamage(hit(v, { power: 4, level: 'M', antiVehicle: true, attackHits: 2 }), 8)), 9);
     assert.equal(a.system.poolSpent.control, 5);
-    const soak = chat.find((m) => m.flags?.sr2e?.snapshot?.soak || /resists/.test(m.content));
+    const soak = chat.find((m) => m.flags?.shadowrun2e_unified?.snapshot?.soak || /resists/.test(m.content));
     assert.ok(soak);
     assert.match(allText(), /complete miss/i);
     t.after(v922Vehicles());
@@ -301,25 +301,25 @@ describe('v0.92.3 vehicles: crashes and initiative', () => {
     chat.length = 0;
     await v.crash(100);
     let card = chat.at(-1);
-    assert.equal(card.flags.sr2e.damages.length, 1);
+    assert.equal(card.flags.shadowrun2e_unified.damages.length, 1);
     faces.push(1, 1, 1, 1);
-    await v.resistFromState(card.flags.sr2e.damages[0]);
+    await v.resistFromState(card.flags.shadowrun2e_unified.damages[0]);
     assert.match(allText(), /carries through/);
     t.after(v922Vehicles());
     v = vehicle({ occupants: [p.uuid], currentSpeed: 100 });
     await v.crash(100);
     card = chat.at(-1);
-    assert.equal(card.flags.sr2e.damages.length, 2);
+    assert.equal(card.flags.shadowrun2e_unified.damages.length, 2);
   });
   test('review fix: the people aboard a crash resist the same damage even when the vehicle escapes it, with no Combat Pool', async () => {
     const p = who({ name: 'Passenger' });
     const v = vehicle({ occupants: [p.uuid], currentSpeed: 100 });
     chat.length = 0;
     await v.crash(100);
-    const crash = chat.at(-1).flags.sr2e.damages[0];
+    const crash = chat.at(-1).flags.shadowrun2e_unified.damages[0];
     faces.push(...Array(30).fill(6), ...Array(30).fill(1));            // the vehicle's Body: all successes
     await v.resistFromState(crash);
-    const pass = chat.flatMap((c: any) => c.flags?.sr2e?.damages ?? []).filter((d: any) => d.targetUuid === p.uuid);
+    const pass = chat.flatMap((c: any) => c.flags?.shadowrun2e_unified?.damages ?? []).filter((d: any) => d.targetUuid === p.uuid);
     assert.equal(pass.length, 1, chat.map((c: any) => c.content).join(' | '));
     assert.equal(pass[0].level, crash.level);
     assert.equal(pass[0].noPool, true);
@@ -334,7 +334,7 @@ describe('v0.92.3 vehicles: crashes and initiative', () => {
     const first = chat.at(-1);
     assert.match(first.content, /data-sr2e-action="vehicleCrash"/);
     Object.assign(first, { author: g.game.user, async update(d: any) { for (const [k, val] of Object.entries(d)) setPath(this, k, val); }, async setFlag(this: any, sc: string, k: string, val: any) { ((this.flags ??= {})[sc] ??= {})[k] = val; } });
-    const snap = first.flags.sr2e.test;
+    const snap = first.flags.shadowrun2e_unified.test;
     await SR2Actor.retarget(first, { baseTargetNumber: snap.baseTargetNumber, modifiers: [] });
     const again = chat.at(-1);
     assert.notEqual(again, first);
@@ -372,18 +372,18 @@ describe('v0.92.3 vehicles: ramming (Rigger 2 pp. 47, 50)', () => {
   };
   test('the speed difference; the rammer less Body × successes; the victim resists with no armor', async (t) => {
     const { victim, card } = await ram();
-    const atk = card.flags.sr2e.attack;
+    const atk = card.flags.shadowrun2e_unified.attack;
     assert.deepEqual([atk.power, atk.level, atk.ram.power, atk.ram.bodyPerSuccess], [15, 'S', 15, 3]);
     await victim.defend(atk, 0);
     const def = chat.at(-1);
-    assert.equal(def.flags.sr2e.ramSelf.power, 15 - 3 * 2);
+    assert.equal(def.flags.shadowrun2e_unified.ramSelf.power, 15 - 3 * 2);
     chat.length = 0;
     faces.push(1, 1, 1, 1);
-    await victim.resistFromState(def.flags.sr2e.damage);
+    await victim.resistFromState(def.flags.shadowrun2e_unified.damage);
     assert.match(allText(), /resists 15S/);                                  // armor 3 doesn't count against a collision
     t.after(v922Vehicles());
     const old = await ram();
-    assert.equal(old.card.flags.sr2e.attack.power, 3 + 15);
+    assert.equal(old.card.flags.shadowrun2e_unified.attack.power, 3 + 15);
   });
 });
 

@@ -8,6 +8,7 @@ import { BOOK_V78 } from './config78.ts';
 import { spiritOnMasterDeath } from './glamour.ts';
 import { RULES } from './config.ts';
 import { t as tx, tList } from '../helpers/i18n.ts';
+import { SYSTEM_ID } from '../config/system.ts';
 
 type Level = 'L' | 'M' | 'S' | 'D';
 // v0.81.0 (RC-17): read through RULES at call time, as the sibling files do (the direct import is the fallback).
@@ -172,7 +173,7 @@ export function barrierSpellRadius(o: { force: number; magic: number }): number 
 }
 
 /**
- * O17: the barrier actor a barrier spell raises (Actor.create data). It carries flags.sr2e.barrierSpell so it
+ * O17: the barrier actor a barrier spell raises (Actor.create data). It carries flags.shadowrun2e_unified.barrierSpell so it
  * can be found and taken down when the spell ends.
  */
 export function barrierSpellActorData(o: {
@@ -184,7 +185,7 @@ export function barrierSpellActorData(o: {
     name: `${str(o.spellName) || (o.kind === 'physical' ? 'Physical Barrier' : 'Mana Barrier')} (${str(o.casterName)})`,
     type: 'barrier',
     system: { barrierKind, rating, baseRating: rating },
-    flags: { [o.systemId ?? 'sr2e']: { barrierSpell: { casterUuid: str(o.casterUuid), spellName: str(o.spellName), effectId: str(o.effectId) } } },
+    flags: { [o.systemId ?? SYSTEM_ID]: { barrierSpell: { casterUuid: str(o.casterUuid), spellName: str(o.spellName), effectId: str(o.effectId) } } },
   };
 }
 

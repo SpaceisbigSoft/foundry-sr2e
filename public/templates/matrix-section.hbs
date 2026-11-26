@@ -39,7 +39,7 @@
   {{#if matrix.filter}}<p class="hint">{{matrix.filter}}</p>{{/if}}
   {{#if matrix.riders}}<p class="hint">{{sr2eT "SR2E.UI.ridingYourHitcherJacks" riders=matrix.riders hitcherRoom=matrix.hitcherRoom}}</p>{{/if}}
   <div class="sr2e-cm sr2e-cm-matrix-row">
-    {{> "systems/sr2e/templates/monitor-track.hbs" t=matrix.track action="setMatrixMonitor"}}
+    {{> "systems/shadowrun2e_unified/templates/monitor-track.hbs" t=matrix.track action="setMatrixMonitor"}}
     {{#if matrix.m.crashed}}<span class="sr2e-overflow">{{sr2eT "SR2E.UI.crashed"}}</span>{{/if}}
   </div>
   <div class="sr2e-row sr2e-matrix-actions">

@@ -1,5 +1,6 @@
 import { RULES } from './config.ts';
 import { woundLevel } from './core.ts';
+import { SYSTEM_ID } from '../config/system.ts';
 
 /** Tokens (v0.36.0): vision from the character's eyes, bars, wound icons. No Foundry dependency. */
 
@@ -62,8 +63,8 @@ export const STATE_STATUSES = [
   { id: 'sr2eFullDefense', name: 'SR2E.Text.Tokens.fullDefense', img: 'icons/svg/shield.svg', state: 'fullDefense' },
   { id: 'sr2eDelaying', name: 'SR2E.Text.Tokens.delaying', img: 'icons/svg/clockwork.svg', state: 'delaying' },
   { id: 'sr2eSurprised', name: 'SR2E.Text.Tokens.surprised', img: 'icons/svg/hazard.svg', state: 'surprised' },
-  { id: 'sr2eJackedIn', name: 'SR2E.Text.Tokens.jackedIn', img: 'systems/sr2e/icons/jacked-in.svg', state: 'jackedIn' },
-  { id: 'sr2eJumpedIn', name: 'SR2E.Text.Tokens.jumpedIn', img: 'systems/sr2e/icons/jumped-in.svg', state: 'jumpedIn' },
+  { id: 'sr2eJackedIn', name: 'SR2E.Text.Tokens.jackedIn', img: `systems/${SYSTEM_ID}/icons/jacked-in.svg`, state: 'jackedIn' },
+  { id: 'sr2eJumpedIn', name: 'SR2E.Text.Tokens.jumpedIn', img: `systems/${SYSTEM_ID}/icons/jumped-in.svg`, state: 'jumpedIn' },
   { id: 'burning', name: 'SR2E.Text.Tokens.onFire', img: 'icons/svg/fire.svg', state: 'onFire' },
   { id: 'fear', name: 'SR2E.Text.Tokens.moraleBroken', img: 'icons/svg/terror.svg', state: 'broken' },
 ] as const;

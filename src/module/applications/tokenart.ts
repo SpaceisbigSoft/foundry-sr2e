@@ -2,7 +2,7 @@
  * v0.83.0: the default token art, Foundry side. New actors that still have Foundry's stand-in picture get the
  * system's own picture and token (rules/tokenart.ts picks the file); later changes (metatype, figure, archetype,
  * a control rig or cyberdeck added, a vehicle's category, a spirit's kind) swap it while the picture or token is
- * still the exact file the system put there (flags.sr2e.artAuto). A picture set by hand or found by name
+ * still the exact file the system put there (flags.shadowrun2e_unified.artAuto). A picture set by hand or found by name
  * ("Portraits by name", which wins) is never touched. Follow-ups run on the active GM's client, which also updates
  * the actor's linked tokens on the map (a player's own change with no GM online updates the actor only). Existing actors keep what they have until someone presses "Use the default art" on the sheet or the
  * GM's Setup button.
@@ -26,7 +26,7 @@ function standIns(): string[] {
 }
 
 /**
- * Whether a picture may be replaced: 'auto' only the default art the system put there itself (flags.sr2e.artAuto:
+ * Whether a picture may be replaced: 'auto' only the default art the system put there itself (flags.shadowrun2e_unified.artAuto:
  * a system art file someone picked by hand is theirs); 'standin' also Foundry's stand-ins; 'force' anything.
  */
 function replaceable(src: unknown, mode: 'auto' | 'standin' | 'force', auto: string): boolean {

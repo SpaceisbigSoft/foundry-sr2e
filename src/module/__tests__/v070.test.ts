@@ -177,7 +177,7 @@ const shot = (def: any, over: any = {}) => ({ attackerUuid: 'Actor.atk', targetU
 // ---------------------------------------------------------------------------------------------------------------
 
 describe('B1/B3 a replaced card goes dead (chat.ts cardReplaced)', () => {
-  const msg = (id: string, flags: any = {}) => ({ id, flags: { sr2e: flags }, getFlag(_s: string, k: string) { return this.flags.sr2e[k]; } });
+  const msg = (id: string, flags: any = {}) => ({ id, flags: { shadowrun2e_unified: flags }, getFlag(_s: string, k: string) { return this.flags.shadowrun2e_unified[k]; } });
 
   test("an older card of the same test is 'newer'-replaced; the newest is live; the GM's change is 'gm'", () => {
     const first = msg('m1', { test: { testId: 't1' } });
@@ -207,11 +207,11 @@ describe('B1/B3 a replaced card goes dead (chat.ts cardReplaced)', () => {
 
 describe('B2 Defend is remembered once per target (chat.ts defendedOn)', () => {
   test('from the card flag and from the defender\'s cardRolls keys', () => {
-    const m = { id: 'mA', flags: { sr2e: { defended: [0] } }, getFlag(_s: string, k: string) { return (this.flags.sr2e as any)[k]; } };
-    const d = { flags: { sr2e: { cardRolls: ['mA:defended:2', 'mB:defended:1', 'mA:resisted:3', 'mA:defended:2'] } }, getFlag(_s: string, k: string) { return (this.flags.sr2e as any)[k]; } };
+    const m = { id: 'mA', flags: { shadowrun2e_unified: { defended: [0] } }, getFlag(_s: string, k: string) { return (this.flags.shadowrun2e_unified as any)[k]; } };
+    const d = { flags: { shadowrun2e_unified: { cardRolls: ['mA:defended:2', 'mB:defended:1', 'mA:resisted:3', 'mA:defended:2'] } }, getFlag(_s: string, k: string) { return (this.flags.shadowrun2e_unified as any)[k]; } };
     assert.deepEqual(chatMod.defendedOn(m).sort(), [0]);
     assert.deepEqual(chatMod.defendedOn(m, d).sort(), [0, 2]);
-    const fresh = { id: 'mC', flags: { sr2e: {} }, getFlag(_s: string, k: string) { return (this.flags.sr2e as any)[k]; } };
+    const fresh = { id: 'mC', flags: { shadowrun2e_unified: {} }, getFlag(_s: string, k: string) { return (this.flags.shadowrun2e_unified as any)[k]; } };
     assert.deepEqual(chatMod.defendedOn(fresh, d), []);
   });
 });
@@ -386,11 +386,11 @@ describe('B12 per-decker sheaf launches', () => {
       for (const [u, name] of [['Actor.d1', 'Deck One'], ['Actor.d2', 'Deck Two']] as const) uuidRegistry.set(u, { uuid: u, name, documentName: 'Actor' });
       await SR2Actor.applyTallyCard(h.uuid, 4, { key: 'Actor.d1', name: 'Deck One' });
       assert.equal(made.length, 1);
-      assert.deepEqual(h.getFlag('sr2e', 'sheafLaunched'), ['Actor.d1|3']);
+      assert.deepEqual(h.getFlag('shadowrun2e_unified', 'sheafLaunched'), ['Actor.d1|3']);
       assert.deepEqual([...h.system.launchedSteps], [], 'the host-wide list is not used per decker');
       await SR2Actor.applyTallyCard(h.uuid, 4, { key: 'Actor.d2', name: 'Deck Two' });
       assert.equal(made.length, 2, 'a second decker reaching the step launches its own');
-      assert.deepEqual(h.getFlag('sr2e', 'sheafLaunched'), ['Actor.d1|3', 'Actor.d2|3']);
+      assert.deepEqual(h.getFlag('shadowrun2e_unified', 'sheafLaunched'), ['Actor.d1|3', 'Actor.d2|3']);
       await SR2Actor.applyTallyCard(h.uuid, 2, { key: 'Actor.d1', name: 'Deck One' });
       assert.equal(made.length, 2, 'the first decker going further doesn\'t launch step 3 again');
     } finally { g.Actor.implementation = prevImpl; (RULES.MATRIX_V57.tally as any).perDecker = prevPer; }
@@ -417,7 +417,7 @@ describe('B13 security responses set in a combat', () => {
     assert.match(String(note), /the response arrives in Combat Turn 5/);
     assert.equal(s.system.response.round, 5);
     assert.equal(s.system.response.worldTime, 1000 + RULES.SECURITY.response.turns * RULES.COMBAT_TURN_SECONDS);
-    assert.equal(s.getFlag('sr2e', 'responseCombat'), 'c1');
+    assert.equal(s.getFlag('shadowrun2e_unified', 'responseCombat'), 'c1');
   });
 
   test('another combat reaching that Combat Turn doesn\'t bring it; its own combat does; world time does', async () => {
@@ -450,7 +450,7 @@ describe('B13 security responses set in a combat', () => {
     await SR2Actor.applySiteChange(s.uuid, { add: 2 });
     assert.equal(s.system.response.round, -1);
     assert.equal(s.system.response.worldTime, 50 + RULES.SECURITY.response.minutes * 60);
-    assert.equal(s.getFlag('sr2e', 'responseCombat'), '');
+    assert.equal(s.getFlag('shadowrun2e_unified', 'responseCombat'), '');
   });
 
   test('a vehicle forgets its Combat Turn stamps when the combat is deleted', async () => {
@@ -488,7 +488,7 @@ describe('B15 dying on world time', () => {
     t.after(oldWay({ 'HEALTH_V923.bleed': 'bodyTurns' })); // v0.92.3: the old rate (the book's 10 minutes: v0923-health tests)
     const a = dying();
     assert.equal(a.system.derived.status, 'dying');
-    a.flags.sr2e = { dyingAt: { t: 0, boxes: 0 } };
+    a.flags.shadowrun2e_unified = { dyingAt: { t: 0, boxes: 0 } };
     const per = A.body * RULES.COMBAT_TURN_SECONDS;                        // Body 4: 12 s
     await SR2Actor.timedEffects({ worldTime: per - 1, anyGm: true });
     assert.equal(a.system.monitor.physical, 10);
@@ -496,7 +496,7 @@ describe('B15 dying on world time', () => {
     assert.equal(a.system.monitor.physical, 11);
     await SR2Actor.timedEffects({ worldTime: per, anyGm: true });
     assert.equal(a.system.monitor.physical, 11, 'no double tick at the same time');
-    assert.deepEqual(a.getFlag('sr2e', 'dyingAt'), { t: 0, boxes: 1 });
+    assert.deepEqual(a.getFlag('shadowrun2e_unified', 'dyingAt'), { t: 0, boxes: 1 });
     await SR2Actor.timedEffects({ worldTime: 3 * per + 1, anyGm: true });
     assert.equal(a.system.monitor.physical, 13);
     assert.match(chat.at(-1).content, /Downed is dying and takes 2 more Physical boxes \(now 13\)/);
@@ -505,13 +505,13 @@ describe('B15 dying on world time', () => {
   test('without a dyingAt flag the clock starts now', async () => {
     const a = dying();
     await SR2Actor.timedEffects({ worldTime: 500, anyGm: true });
-    assert.deepEqual(a.getFlag('sr2e', 'dyingAt'), { t: 500, boxes: 0 });
+    assert.deepEqual(a.getFlag('shadowrun2e_unified', 'dyingAt'), { t: 500, boxes: 0 });
     assert.equal(a.system.monitor.physical, 10);
   });
 
   test('a stabilised patient takes no boxes', async () => {
     const a = dying({ care: { stabilised: true, dyingSince: 0 } });
-    a.flags.sr2e = { dyingAt: { t: 0, boxes: 0 } };
+    a.flags.shadowrun2e_unified = { dyingAt: { t: 0, boxes: 0 } };
     await SR2Actor.timedEffects({ worldTime: 1000, anyGm: true });
     assert.equal(a.system.monitor.physical, 10);
   });
@@ -525,10 +525,10 @@ describe('B15 dying on world time', () => {
   test('new Physical damage on a stabilised dying patient clears stabilised and restarts the clock', async () => {
     g.game.time.worldTime = 77;
     const a = dying({ monitor: { physical: 11, stun: 0 }, care: { stabilised: true, dyingSince: 0 } });
-    a.flags.sr2e = { dyingAt: { t: 0, boxes: 1 } };
+    a.flags.shadowrun2e_unified = { dyingAt: { t: 0, boxes: 1 } };
     await a.syncCondition('dying', { physical: true, stun: false });
     assert.equal(a.system.care.stabilised, false);
-    assert.deepEqual(a.getFlag('sr2e', 'dyingAt'), { t: 77, boxes: 0 });
+    assert.deepEqual(a.getFlag('shadowrun2e_unified', 'dyingAt'), { t: 77, boxes: 0 });
     assert.match(chat.at(-1).content, /hurt again while dying: no longer stabilised/);
     // Stun only: still stabilised.
     const b = dying({ monitor: { physical: 11, stun: 2 }, care: { stabilised: true, dyingSince: 0 } });
@@ -687,7 +687,7 @@ describe('B20 slap patches on someone the player doesn\'t own', () => {
     const card = chat.at(-1);
     assert.match(card.content, /data-sr2e-action="applyPatch"/);
     // v0.81.0: the patcher rides along (sourceUuid), so the GM's Apply is bound to the card's author.
-    assert.deepEqual(card.flags.sr2e.patchApply, { targetUuid: guard.uuid, kind: 'tranq', rating: 6, name: 'Tranq patch', byName: 'Medic', sourceUuid: a.uuid });
+    assert.deepEqual(card.flags.shadowrun2e_unified.patchApply, { targetUuid: guard.uuid, kind: 'tranq', rating: 6, name: 'Tranq patch', byName: 'Medic', sourceUuid: a.uuid });
     assert.deepEqual([...card.whisper].sort(), ['gm1', 'p1']);
     assert.equal(guard.system.monitor.stun, 0, 'nothing happens until the GM applies it');
     assert.ok(chatMod.GM_APPLY_ACTIONS['applyPatch'] === 'patchApplied');
@@ -730,7 +730,7 @@ describe('B22 the program sheet\'s Loaded box', () => {
 // Fixes after the independent review of v0.70.0 (scratchpad review-v070.md) and the test plan's notes.
 
 describe('review fixes: once per target per test, not per card', () => {
-  const msg = (id: string, flags: any = {}) => ({ id, flags: { sr2e: flags }, getFlag(_s: string, k: string) { return this.flags.sr2e[k]; } });
+  const msg = (id: string, flags: any = {}) => ({ id, flags: { shadowrun2e_unified: flags }, getFlag(_s: string, k: string) { return this.flags.shadowrun2e_unified[k]; } });
   test('a defense on the first card counts on the Karma re-roll\'s card (and from the defender\'s keys)', () => {
     const first = msg('r1', { test: { testId: 'tz' }, defended: [1] });
     const reroll = msg('r2', { test: { testId: 'tz' } });

@@ -34,13 +34,13 @@ beforeEach(() => { settings = {}; notes.length = 0; browsed = []; listing = []; 
 
 function actorStub(name: string, img = 'icons/svg/mystery-man.svg', proto = 'icons/svg/mystery-man.svg', flags: any = {}): any {
   const a: any = {
-    id: 'a1', name, img, isOwner: true, prototypeToken: { texture: { src: proto } }, flags: { sr2e: { ...flags } }, updates: [] as any[],
+    id: 'a1', name, img, isOwner: true, prototypeToken: { texture: { src: proto } }, flags: { shadowrun2e_unified: { ...flags } }, updates: [] as any[],
     getFlag(ns: string, k: string) { return this.flags?.[ns]?.[k]; },
     async update(u: any, o: any) {
       this.updates.push([u, o]);
       if ('img' in u) this.img = u.img;
       if ('prototypeToken.texture.src' in u) this.prototypeToken.texture.src = u['prototypeToken.texture.src'];
-      if (`flags.sr2e.portraitAuto` in u) this.flags.sr2e.portraitAuto = u['flags.sr2e.portraitAuto'];
+      if (`flags.shadowrun2e_unified.portraitAuto` in u) this.flags.shadowrun2e_unified.portraitAuto = u['flags.shadowrun2e_unified.portraitAuto'];
     },
   };
   return a;
@@ -48,11 +48,11 @@ function actorStub(name: string, img = 'icons/svg/mystery-man.svg', proto = 'ico
 
 describe('our dialogs: tagged when the system opened them', () => {
   test('the calling frame decides (Chrome and Firefox stacks)', () => {
-    const chrome = 'Error\n    at Function.sr2eDialogWrap [as prompt] (http://localhost:30000/systems/sr2e/index.mjs:10:5)\n    at SR2Actor.rollSkill (http://localhost:30000/systems/sr2e/index.mjs:900:3)';
+    const chrome = 'Error\n    at Function.sr2eDialogWrap [as prompt] (http://localhost:30000/systems/shadowrun2e_unified/index.mjs:10:5)\n    at SR2Actor.rollSkill (http://localhost:30000/systems/shadowrun2e_unified/index.mjs:900:3)';
     assert.equal(look.calledFromSystem(chrome), true);
-    const other = 'Error\n    at Function.sr2eDialogWrap [as prompt] (http://localhost:30000/systems/sr2e/index.mjs:10:5)\n    at Object.open (http://localhost:30000/modules/some-mod/main.js:5:1)';
+    const other = 'Error\n    at Function.sr2eDialogWrap [as prompt] (http://localhost:30000/systems/shadowrun2e_unified/index.mjs:10:5)\n    at Object.open (http://localhost:30000/modules/some-mod/main.js:5:1)';
     assert.equal(look.calledFromSystem(other), false);
-    const firefox = 'sr2eDialogWrap@http://localhost:30000/systems/sr2e/index.mjs:10:5\nrollSkill@http://localhost:30000/systems/sr2e/index.mjs:900:3';
+    const firefox = 'sr2eDialogWrap@http://localhost:30000/systems/shadowrun2e_unified/index.mjs:10:5\nrollSkill@http://localhost:30000/systems/shadowrun2e_unified/index.mjs:900:3';
     assert.equal(look.calledFromSystem(firefox), true);
     assert.equal(look.calledFromSystem('no frames'), false);
     assert.equal(look.calledFromSystem('Error\n    at sr2eDialogWrap (x)'), false, 'no caller frame');
@@ -76,7 +76,7 @@ describe('our dialogs: tagged when the system opened them', () => {
     assert.equal(D.confirm, 5, 'non-functions are left');
     assert.equal(await D.prompt({ content: 'x' }), 'ok');
     assert.equal(calls[0][0], D);
-    // This test file is not under systems/sr2e/, so nothing is added.
+    // This test file is not under systems/shadowrun2e_unified/, so nothing is added.
     assert.deepEqual(calls[0][1], { content: 'x' });
   });
 
@@ -116,7 +116,7 @@ describe('portraits found by name', () => {
     assert.deepEqual(browsed.at(-1), ['data', 'avatars']);
     assert.equal(a.img, 'avatars/Rook.webp');
     assert.equal(a.prototypeToken.texture.src, 'avatars/Rook.webp');
-    assert.equal(a.flags.sr2e.portraitAuto, 'avatars/Rook.webp');
+    assert.equal(a.flags.shadowrun2e_unified.portraitAuto, 'avatars/Rook.webp');
     assert.equal(a.updates[0][1].sr2ePortrait, true);
     assert.equal(a.updates[0][1].sr2eNoAdvance, true);
     // Again: nothing to change.
@@ -200,7 +200,7 @@ describe('templates and the stylesheet', () => {
   test('every monitor on the character, NPC and spirit sheets is the wound-group partial', () => {
     for (const f of ['actor-character-sheet.hbs', 'actor-npc-sheet.hbs', 'actor-spirit-sheet.hbs']) {
       const t = read('public', 'templates', f);
-      assert.ok(t.includes('{{> "systems/sr2e/templates/monitor.hbs"}}'), f);
+      assert.ok(t.includes('{{> "systems/shadowrun2e_unified/templates/monitor.hbs"}}'), f);
       assert.ok(!t.includes('{{#each monitorTracks}}'), f);
     }
     assert.ok(read('public', 'templates', 'matrix-section.hbs').includes('monitor-track.hbs" t=matrix.track action="setMatrixMonitor"'));

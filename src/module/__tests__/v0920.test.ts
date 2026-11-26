@@ -218,8 +218,8 @@ describe('v0.92.0 the layered pool on a character (glue)', () => {
     const a = mage();
     faces.push(...Array(8 + 6).fill(5), ...Array(20).fill(5));
     await a.castSpell(a.items.get('sp1'), { force: 4, poolDice: 7, drainPoolDice: 0 });
-    const card = chat.find((m: any) => m.flags?.sr2e?.test?.kind === 'spell' || m.flags?.sr2e?.test?.kind === 'attack') ?? chat[0];
-    assert.match(card.flags.sr2e.test.label, /Combat spells 8/);
+    const card = chat.find((m: any) => m.flags?.shadowrun2e_unified?.test?.kind === 'spell' || m.flags?.shadowrun2e_unified?.test?.kind === 'attack') ?? chat[0];
+    assert.match(card.flags.shadowrun2e_unified.test.label, /Combat spells 8/);
     // 7 asked, the Magic cap 6: specialization 2, concentration 2, general 2.
     assert.equal(a.system.poolSpent.spellSpec, 2);
     assert.equal(a.system.poolSpent.spellConc, 2);
@@ -233,7 +233,7 @@ describe('v0.92.0 the layered pool on a character (glue)', () => {
       assert.equal(a.spellPoolFor(a.sorceryUseFor('cast', { category: 'combat' })), 4);
       faces.push(...Array(40).fill(5));
       await a.castSpell(a.items.get('sp1'), { force: 4, poolDice: 3, drainPoolDice: 0 });
-      assert.doesNotMatch(chat.at(-2)?.flags?.sr2e?.test?.label ?? chat.at(-1).flags.sr2e.test.label, /Combat spells 8/);
+      assert.doesNotMatch(chat.at(-2)?.flags?.shadowrun2e_unified?.test?.label ?? chat.at(-1).flags.shadowrun2e_unified.test.label, /Combat spells 8/);
       assert.equal(a.system.poolSpent.spell, 3);
       assert.equal(a.system.poolSpent.spellConc ?? 0, 0);
     }));

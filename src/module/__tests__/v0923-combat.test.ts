@@ -159,7 +159,7 @@ describe('v0.92.3 combat: ranged defense (Core pp. 87, 91; Ka-Ge 7 Q4)', () => {
     const def = who();
     await def.defend(shot(def, { attackSuccesses: 4 }), 0);
     assert.match(chat.at(-1).content, /Hit!/);
-    assert.equal(chat.at(-1).flags.sr2e.damage.level, 'S');
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.damage.level, 'S');
   });
   test('Revamp source: the v0.92.3 switch is inert (the Revamp\'s own cbtDefense decides)', async (t) => {
     t.after(urrMode({ 'URR_V80.cbtDefense': 'dodge' }));
@@ -175,12 +175,12 @@ describe('v0.92.3 combat: melee (Core pp. 100–102)', () => {
     faces.push(5);                                                     // 1 vs 1
     await def.defend(katana(def, { attackSuccesses: 1, reach: 0 }), 0);
     assert.match(chat.at(-1).content, /Hit!/);
-    assert.equal(chat.at(-1).flags.sr2e.damage.level, 'M');
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.damage.level, 'M');
     chat.length = 0;
     const d2 = who({}, [skill('s1', 'Unarmed Combat', 1, 'strength')]);
     faces.push(1);                                                     // 2 vs 0
     await d2.defend(katana(d2, { attackSuccesses: 2, reach: 0 }), 0);
-    assert.equal(chat.at(-1).flags.sr2e.damage.level, 'S');            // 2 net: M → S
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.damage.level, 'S');            // 2 net: M → S
   });
   test('book: full defense adds no dice and no pool, costs no initiative; the hit carries the tally, a clean miss on the soak\'s pool', async () => {
     const def = who({}, [skill('s1', 'Unarmed Combat', 3, 'strength')]);
@@ -188,7 +188,7 @@ describe('v0.92.3 combat: melee (Core pp. 100–102)', () => {
     await def.defend(katana(def), 2, { fullDefense: true });
     assert.equal(faces.length, 0);
     assert.equal(def.system.poolSpent.combat, 0);
-    const dmg = chat.at(-1).flags.sr2e.damage;
+    const dmg = chat.at(-1).flags.shadowrun2e_unified.damage;
     assert.equal(dmg.level, 'S');                                       // 3 net: M → S (staged at the melee test)
     assert.deepEqual(dmg.cleanMiss80, { hits: 3, net: 3, apart: true });
     faces.push(1, 1, 1, 1, 6, 6, 6, 6, 1, 1, 1, 1);                    // Body 4 all ones; 4 pool dice re-rolled 6s: 4 pool successes > 3
@@ -200,7 +200,7 @@ describe('v0.92.3 combat: melee (Core pp. 100–102)', () => {
     const def = who({}, [skill('s1', 'Unarmed Combat', 3, 'strength')]);
     faces.push(2, 2, 2);
     await def.defend(katana(def), 0, { fullDefense: true });
-    const dmg = chat.at(-1).flags.sr2e.damage;
+    const dmg = chat.at(-1).flags.shadowrun2e_unified.damage;
     faces.push(6, 6, 1, 1, 1, 1);                                       // TN 6: 2 successes (6 re-rolled 1 → 7), no pool: S → M
     await def.resistFromState(dmg, 0);
     assert.equal(def.system.monitor.physical, 3);
@@ -226,7 +226,7 @@ describe('v0.92.3 combat: knockdown (Core pp. 92, 102)', () => {
     const def = who();
     faces.push(1, 2, 2, 2);                                            // resist TN 3: none; M stays
     await def.resistFromState(light(def, { power: 9 }), 0);
-    const k = chat.at(-1).flags.sr2e.knockdown;
+    const k = chat.at(-1).flags.shadowrun2e_unified.knockdown;
     assert.deepEqual(k, { actorUuid: def.uuid, tn: 4, level: 'M' });
     faces.push(5, 1, 5, 1);                                            // 2 successes, not past 2
     await def.rollKnockdown(k.tn, k.level);
@@ -237,17 +237,17 @@ describe('v0.92.3 combat: knockdown (Core pp. 92, 102)', () => {
     const def = who();
     faces.push(1, 1, 1, 1);
     await def.resistFromState({ ...light(def, { power: 7 }), melee: true, strength: 5 }, 0);
-    assert.equal(chat.at(-1).flags.sr2e.knockdown.tn, 5);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.knockdown.tn, 5);
     faces.push(1, 1, 1, 1);
     await def.resistFromState({ ...light(def, { power: 7 }), gel: true, armorKind: 'impact', damageType: 'stun' }, 0);
-    assert.equal(chat.at(-1).flags.sr2e.knockdown.tn, 7);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.knockdown.tn, 7);
   });
   test('old: Power 3 doesn\'t beat Body 4: no knockdown test', async (t) => {
     t.after(combat922());
     const def = who();
     faces.push(1, 2, 2, 2);
     await def.resistFromState(light(def), 0);
-    assert.equal(chat.at(-1).flags.sr2e.knockdown, undefined);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.knockdown, undefined);
   });
 });
 
@@ -257,7 +257,7 @@ describe('v0.92.3 combat: blasts (Core p. 97)', () => {
     const def = who({ name: 'Target' });
     await thrower.postBlast({ attackerUuid: thrower.uuid, weaponName: 'Grenade', power: 10, level: 'S', damageType: 'physical', perMetre: 1, kind: 'offensive', successes: 4 } as any,
       [{ targetUuid: def.uuid, name: 'Target', metres: 2 }], '');
-    const d = chat.at(-1).flags.sr2e.damages[0];
+    const d = chat.at(-1).flags.shadowrun2e_unified.damages[0];
     assert.equal(d.power, 8);
     assert.deepEqual(d.cleanMiss80, { hits: 4, net: 4, noClean: true });
     faces.push(1, 1, 1, 1, 6, 1, 1);                                   // Body 4 vs 8: none; 2 pool dice, the 6 re-rolled 1 (7): none
@@ -270,7 +270,7 @@ describe('v0.92.3 combat: blasts (Core p. 97)', () => {
     const def = who({ name: 'Target' });
     await thrower.postBlast({ attackerUuid: thrower.uuid, weaponName: 'Grenade', power: 10, level: 'S', damageType: 'physical', perMetre: 1, kind: 'offensive', successes: 4 } as any,
       [{ targetUuid: def.uuid, name: 'Target', metres: 2 }], '');
-    assert.equal(chat.at(-1).flags.sr2e.damages[0].cleanMiss80, undefined);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.damages[0].cleanMiss80, undefined);
   });
 });
 
@@ -331,14 +331,14 @@ describe('v0.92.3 combat: flechette (Core p. 93)', () => {
     const def = who({}, [jacket]);
     faces.push(1, 1, 1, 1);
     await def.resistFromState(hit(def), 0);
-    assert.equal(chat.at(-1).flags.sr2e.test.targetNumber, 3);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.test.targetNumber, 3);
   });
   test('old: the higher doubled: 10 (TN 2)', async (t) => {
     t.after(combat922());
     const def = who({}, [jacket]);
     faces.push(1, 1, 1, 1);
     await def.resistFromState(hit(def), 0);
-    assert.equal(chat.at(-1).flags.sr2e.test.targetNumber, 2);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.test.targetNumber, 2);
   });
   test('dermal armor stops the extra level: an unarmored troll (CORE_V923.trollDermal \'body\') takes M, a human S', async () => {
     const human = who({});
@@ -420,7 +420,7 @@ describe('v0.92.3 combat: pools and delays (Core pp. 78, 80, 84)', () => {
   test('book: using pool dice while delaying breaks the delay', async () => {
     const a = who();
     g.game.combat = { started: true, id: 'cmb2', round: 1, pass: 0 };
-    await a.setFlag('sr2e', 'delayed', { combatId: 'cmb2', round: 1, pass: 0 });
+    await a.setFlag('shadowrun2e_unified', 'delayed', { combatId: 'cmb2', round: 1, pass: 0 });
     assert.equal(a.isDelaying(), true);
     faces.push(1, 1, 1, 1, 5);
     await a.resistDamage({ power: 6, level: 'L', poolDice: 1 });
@@ -431,7 +431,7 @@ describe('v0.92.3 combat: pools and delays (Core pp. 78, 80, 84)', () => {
     t.after(combat922({ 'DELAY.lostAtPassEnd': false }));
     const a = who();
     g.game.combat = { started: true, id: 'cmb3', round: 1, pass: 0 };
-    await a.setFlag('sr2e', 'delayed', { combatId: 'cmb3', round: 1, pass: 0 });
+    await a.setFlag('shadowrun2e_unified', 'delayed', { combatId: 'cmb3', round: 1, pass: 0 });
     faces.push(1, 1, 1, 1, 5);
     await a.resistDamage({ power: 6, level: 'L', poolDice: 1 });
     assert.equal(a.isDelaying(), true);

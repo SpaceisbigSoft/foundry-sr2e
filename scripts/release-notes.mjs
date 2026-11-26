@@ -24,7 +24,7 @@ const notes = [
   [
     "1. On Foundry's setup screen, open **Game Systems** and click **Install System**.",
     '2. Paste this into the **Manifest URL** box and click **Install**:',
-    `   \`${repo}/releases/latest/download/system.json\``,
+    `   \`${repo}/releases/latest/download/shadowrun2e_unified.json\``,
     '3. Create a world with **Shadowrun 2nd Edition (Unofficial)**. To try it out, press **Alt+T**, open the **GM panel**, and on its **Setup** tab click **Create the demo**.',
   ].join('\n'),
   `Already installed? Use the **Update** button in Game Systems. More in the [README](${repo}#install) and the full [CHANGELOG](${changelog}).`,

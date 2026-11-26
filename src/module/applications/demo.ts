@@ -2,7 +2,7 @@
  * v0.88.0: the starter demo (the Foundry glue for `rules/demo.ts`). GM panel, Setup tab: **Create the demo** builds
  * the runners, the gang, the host, the secured building, the safehouse, the rigger's car and drone, the scene (walls,
  * a maglocked door, lamps, tokens) and the "Try this" journal, all in folders named "Demo (SR2e)" and flagged
- * `flags.sr2e.demo`. **Remove the demo** deletes exactly what carries that flag (and the combats on its scene).
+ * `flags.shadowrun2e_unified.demo`. **Remove the demo** deletes exactly what carries that flag (and the combats on its scene).
  * Also `game.sr2e.api.createDemo()` / `removeDemo()`.
  */
 import { SYSTEM } from '../config/system.ts';

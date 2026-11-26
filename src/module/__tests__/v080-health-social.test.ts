@@ -177,13 +177,13 @@ describe('v0.80.0 health-social: death and bleeding (URR_V80.hsDeathPastOverflow
   });
   test('bleeding on game time: book every Body Combat Turns; Revamp every 10 minutes', async (t) => {
     const a = who({ name: 'Downed', monitor: { physical: 10, stun: 0 } });
-    a.flags.sr2e = { dyingAt: { t: 0, boxes: 0 } };
+    a.flags.shadowrun2e_unified = { dyingAt: { t: 0, boxes: 0 } };
     g.game.actors = [a];
     await SR2Actor.timedEffects({ worldTime: 24, anyGm: true });   // 8 turns, Body 4: 2 boxes
     assert.equal(a.system.monitor.physical, 12);
     t.after(urrMode());
     const b = who({ name: 'Downed', monitor: { physical: 10, stun: 0 } });
-    b.flags.sr2e = { dyingAt: { t: 0, boxes: 0 } };
+    b.flags.shadowrun2e_unified = { dyingAt: { t: 0, boxes: 0 } };
     g.game.actors = [b];
     await SR2Actor.timedEffects({ worldTime: 599, anyGm: true });
     assert.equal(b.system.monitor.physical, 10);
@@ -250,17 +250,17 @@ describe('v0.80.0 health-social: first aid (URR_V80.hsFirstAid, hsFirstAidTime, 
     const p = who({ name: 'Mage', magic: 4, monitor: { physical: 3, stun: 0 } });
     faces.push(1, 1, 1, 1);
     await medic().firstAid(p, { medkitId: 'k1', applyMagician: false });
-    assert.ok(!chat.some((m) => m.flags?.sr2e?.magicLossFor));
+    assert.ok(!chat.some((m) => m.flags?.shadowrun2e_unified?.magicLossFor));
     t.after(urrMode());
     const q = who({ name: 'Mage', magic: 4, monitor: { physical: 3, stun: 0 } });
     faces.push(1, 1, 1, 1);
     await medic().firstAid(q, { medkitId: 'k1', applyMagician: false });
-    assert.equal(chat.at(-1).flags.sr2e.magicLossFor, q.uuid);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.magicLossFor, q.uuid);
     chat.length = 0;
     faces.push(1, 1, 1, 1);
     const r = who({ name: 'Mage', magic: 4, monitor: { physical: 3, stun: 0 } });
     await medic().firstAid(r, { medkitId: 'k1' });
-    assert.ok(!chat.some((m) => m.flags?.sr2e?.magicLossFor));
+    assert.ok(!chat.some((m) => m.flags?.shadowrun2e_unified?.magicLossFor));
   });
 });
 
@@ -303,7 +303,7 @@ describe('v0.80.0 health-social: Stun recovery (URR_V80.hsStunRecovery)', () => 
     assert.equal(faces.length, 0);
     assert.equal(a.system.monitor.stun, 2);
     assert.match(chat.at(-1).content, /Wounds/);
-    assert.equal(chat.at(-1).flags.sr2e.test.targetNumber, 4);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.test.targetNumber, 4);
   });
 });
 

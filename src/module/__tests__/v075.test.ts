@@ -36,7 +36,7 @@ function applyPath(target: any, path: string, value: any, o: { staleTopDelete?: 
   }
   const last = parts[parts.length - 1]!;
   if (last.startsWith('-=')) {
-    // Synthetic: a top-level flag key (flags.sr2e.-=k) stays on the client (deleted only on the server).
+    // Synthetic: a top-level flag key (flags.shadowrun2e_unified.-=k) stays on the client (deleted only on the server).
     if (o.staleTopDelete && parts.length === 2) return;
     delete t[last.slice(2)];
   } else if (last.startsWith('==')) t[last.slice(2)] = clone(value);
@@ -53,8 +53,8 @@ function merged(base: any, delta: any): any {
 /** Give a stub document Foundry-like flag methods. `base` (synthetic only): the base actor's flags. */
 function flagged(doc: any, o: { synthetic?: boolean; base?: Record<string, any> } = {}): any {
   const delta: any = {};
-  const base = { sr2e: clone(o.base ?? {}) };
-  const own: any = { sr2e: {} };
+  const base = { shadowrun2e_unified: clone(o.base ?? {}) };
+  const own: any = { shadowrun2e_unified: {} };
   const refresh = () => { doc.flags = o.synthetic ? merged(base, delta) : own; };
   doc.documentName ??= 'Actor';
   if (o.synthetic) { doc.isToken = true; doc.token = { actorLink: false, delta: { flags: delta } }; } else doc.isToken = false;
@@ -74,7 +74,7 @@ function flagged(doc: any, o: { synthetic?: boolean; base?: Record<string, any> 
   return doc;
 }
 
-const linked = (flags: Record<string, any> = {}) => { const d = flagged({ name: 'Linked' }); Object.assign(d.flags.sr2e, clone(flags)); return d; };
+const linked = (flags: Record<string, any> = {}) => { const d = flagged({ name: 'Linked' }); Object.assign(d.flags.shadowrun2e_unified, clone(flags)); return d; };
 const synth = (base: Record<string, any> = {}) => flagged({ name: 'Token' }, { synthetic: true, base });
 
 // ============================================================================================ The model itself
@@ -82,19 +82,19 @@ const synth = (base: Record<string, any> = {}) => flagged({ name: 'Token' }, { s
 describe('the stub model matches what Foundry did live', () => {
   test('synthetic: unsetFlag on its own flag stays (the bug), a base flag stays, null sticks', async () => {
     const a = synth({ inherited: true });
-    await a.setFlag('sr2e', 'k', true);
-    await a.unsetFlag('sr2e', 'k');
-    assert.equal(a.getFlag('sr2e', 'k'), true);
-    await a.unsetFlag('sr2e', 'inherited');
-    assert.equal(a.getFlag('sr2e', 'inherited'), true);
-    await a.setFlag('sr2e', 'k', null);
-    assert.equal(a.getFlag('sr2e', 'k'), null);
+    await a.setFlag('shadowrun2e_unified', 'k', true);
+    await a.unsetFlag('shadowrun2e_unified', 'k');
+    assert.equal(a.getFlag('shadowrun2e_unified', 'k'), true);
+    await a.unsetFlag('shadowrun2e_unified', 'inherited');
+    assert.equal(a.getFlag('shadowrun2e_unified', 'inherited'), true);
+    await a.setFlag('shadowrun2e_unified', 'k', null);
+    assert.equal(a.getFlag('shadowrun2e_unified', 'k'), null);
   });
   test('setFlag merges objects (a dropped key stays) on both kinds', async () => {
     for (const a of [linked(), synth()]) {
-      await a.setFlag('sr2e', 'm', { a: 1, b: 2 });
-      await a.setFlag('sr2e', 'm', { a: 1 });
-      assert.deepEqual(a.getFlag('sr2e', 'm'), { a: 1, b: 2 });
+      await a.setFlag('shadowrun2e_unified', 'm', { a: 1, b: 2 });
+      await a.setFlag('shadowrun2e_unified', 'm', { a: 1 });
+      assert.deepEqual(a.getFlag('shadowrun2e_unified', 'm'), { a: 1, b: 2 });
     }
   });
 });
@@ -119,21 +119,21 @@ describe('clearFlag', () => {
   test('linked: deleted for real (no null left)', async () => {
     const a = linked({ k: { x: 1 } });
     await clearFlag(a, 'k');
-    assert.equal('k' in a.flags.sr2e, false);
+    assert.equal('k' in a.flags.shadowrun2e_unified, false);
   });
   test('synthetic: its own flag and an inherited one both read as not set at once', async () => {
     const a = synth({ inherited: 'yes' });
-    await a.setFlag('sr2e', 'own', { t: 1 });
+    await a.setFlag('shadowrun2e_unified', 'own', { t: 1 });
     await clearFlag(a, 'own');
     await clearFlag(a, 'inherited');
-    assert.equal(a.getFlag('sr2e', 'own') ?? undefined, undefined);
-    assert.equal(a.getFlag('sr2e', 'inherited') ?? undefined, undefined);
+    assert.equal(a.getFlag('shadowrun2e_unified', 'own') ?? undefined, undefined);
+    assert.equal(a.getFlag('shadowrun2e_unified', 'inherited') ?? undefined, undefined);
   });
   test('false and 0 are cleared too; a flag that is not set writes nothing', async () => {
     const a = synth();
-    await a.setFlag('sr2e', 'f', false);
+    await a.setFlag('shadowrun2e_unified', 'f', false);
     await clearFlag(a, 'f');
-    assert.equal(a.getFlag('sr2e', 'f'), null);
+    assert.equal(a.getFlag('shadowrun2e_unified', 'f'), null);
     let writes = 0;
     const b = linked();
     const up = b.update; b.update = async (...x: any[]) => { writes++; return up(...x); };
@@ -143,16 +143,16 @@ describe('clearFlag', () => {
   test('options go along with the write (sr2eUndoing and the like)', async () => {
     const seen: any[] = [];
     for (const a of [linked({ k: 1 }), synth()]) {
-      if (a.isToken) await a.setFlag('sr2e', 'k', 1);
+      if (a.isToken) await a.setFlag('shadowrun2e_unified', 'k', 1);
       const up = a.update; a.update = async (d: any, opts: any) => { seen.push(opts); return up(d, opts); };
       await clearFlag(a, 'k', { sr2eNoAdvance: true });
-      assert.equal(a.getFlag('sr2e', 'k') ?? undefined, undefined);
+      assert.equal(a.getFlag('shadowrun2e_unified', 'k') ?? undefined, undefined);
     }
     assert.deepEqual(seen, [{ sr2eNoAdvance: true }, { sr2eNoAdvance: true }]);
   });
   test('clearFlagUpdate: `-=` on linked, null on synthetic', () => {
-    assert.deepEqual(clearFlagUpdate(linked(), 'a', 'b'), { 'flags.sr2e.-=a': null, 'flags.sr2e.-=b': null });
-    assert.deepEqual(clearFlagUpdate(synth(), 'a'), { 'flags.sr2e.a': null });
+    assert.deepEqual(clearFlagUpdate(linked(), 'a', 'b'), { 'flags.shadowrun2e_unified.-=a': null, 'flags.shadowrun2e_unified.-=b': null });
+    assert.deepEqual(clearFlagUpdate(synth(), 'a'), { 'flags.shadowrun2e_unified.a': null });
   });
 });
 
@@ -160,13 +160,13 @@ describe('dropFlagKeys (map-shaped flags: projects, requests)', () => {
   test('linked: keys deleted', async () => {
     const a = linked({ projects: { p1: { id: 'p1' }, p2: { id: 'p2' } } });
     await dropFlagKeys(a, 'projects', ['p1']);
-    assert.deepEqual(Object.keys(a.getFlag('sr2e', 'projects')), ['p2']);
+    assert.deepEqual(Object.keys(a.getFlag('shadowrun2e_unified', 'projects')), ['p2']);
   });
   test('synthetic: own and inherited keys read as gone', async () => {
     const a = synth({ projects: { base: { id: 'base' } } });
-    await a.update({ 'flags.sr2e.projects.p1': { id: 'p1' } });
+    await a.update({ 'flags.shadowrun2e_unified.projects.p1': { id: 'p1' } });
     await dropFlagKeys(a, 'projects', ['p1', 'base']);
-    const p = a.getFlag('sr2e', 'projects');
+    const p = a.getFlag('shadowrun2e_unified', 'projects');
     assert.equal(Object.values(p).filter(Boolean).length, 0);
   });
   test('no ids, no write; the update form is mergeable', async () => {
@@ -174,8 +174,8 @@ describe('dropFlagKeys (map-shaped flags: projects, requests)', () => {
     const a = linked(); a.update = async () => { writes++; };
     await dropFlagKeys(a, 'projects', []);
     assert.equal(writes, 0);
-    assert.deepEqual(dropFlagKeysUpdate(synth(), 'requests', ['r1']), { 'flags.sr2e.requests.r1': null });
-    assert.deepEqual(dropFlagKeysUpdate(linked(), 'requests', ['r1']), { 'flags.sr2e.requests.-=r1': null });
+    assert.deepEqual(dropFlagKeysUpdate(synth(), 'requests', ['r1']), { 'flags.shadowrun2e_unified.requests.r1': null });
+    assert.deepEqual(dropFlagKeysUpdate(linked(), 'requests', ['r1']), { 'flags.shadowrun2e_unified.requests.-=r1': null });
   });
 });
 
@@ -183,61 +183,61 @@ describe('replaceFlag (an object flag written exactly)', () => {
   test('linked: keys left out are dropped; nested objects are replaced, not merged', async () => {
     const a = linked({ repeatPower: { powerUuid: 'old', modifiers: [{ v: -2 }], exclude: ['x'], extra: { a: 1, b: 2 } } });
     await replaceFlag(a, 'repeatPower', { powerUuid: 'new', extra: { a: 1 } });
-    assert.deepEqual(a.getFlag('sr2e', 'repeatPower'), { powerUuid: 'new', extra: { a: 1 } });
+    assert.deepEqual(a.getFlag('shadowrun2e_unified', 'repeatPower'), { powerUuid: 'new', extra: { a: 1 } });
   });
   test('synthetic: the same, with dropped keys (own and inherited) as null', async () => {
     const a = synth({ build: { A: 'magic', B: 'attributes', C: 'skills' } });
-    await a.update({ 'flags.sr2e.build.D': 'resources' });
+    await a.update({ 'flags.shadowrun2e_unified.build.D': 'resources' });
     await replaceFlag(a, 'build', { A: 'attributes' });
-    const b = a.getFlag('sr2e', 'build');
+    const b = a.getFlag('shadowrun2e_unified', 'build');
     assert.equal(b.A, 'attributes');
     for (const k of ['B', 'C', 'D']) assert.equal(b[k], null, k);
   });
   test('review fix: on a synthetic actor a value or list flag is replaced in one key (no null with keys under it)', () => {
     const s = synth({ build: ['old'] });
-    assert.deepEqual(replaceFlagUpdate(s, 'build', { A: 'magic' }), { 'flags.sr2e.build': { A: 'magic' } });
+    assert.deepEqual(replaceFlagUpdate(s, 'build', { A: 'magic' }), { 'flags.shadowrun2e_unified.build': { A: 'magic' } });
   });
   test('a flag that was a value or a list before becomes the object', async () => {
     const a = linked({ build: ['old'] });
     await replaceFlag(a, 'build', { A: 'magic' });
-    assert.deepEqual(a.getFlag('sr2e', 'build'), { A: 'magic' });
+    assert.deepEqual(a.getFlag('shadowrun2e_unified', 'build'), { A: 'magic' });
     const s = synth();
-    await s.setFlag('sr2e', 'build', 'old');
+    await s.setFlag('shadowrun2e_unified', 'build', 'old');
     await replaceFlag(s, 'build', { A: 'magic' });
-    assert.deepEqual(s.getFlag('sr2e', 'build'), { A: 'magic' });
+    assert.deepEqual(s.getFlag('shadowrun2e_unified', 'build'), { A: 'magic' });
   });
   test('the first write of a new flag is just its keys', () => {
-    assert.deepEqual(replaceFlagUpdate(linked(), 'x', { a: 1 }), { 'flags.sr2e.x.a': 1 });
+    assert.deepEqual(replaceFlagUpdate(linked(), 'x', { a: 1 }), { 'flags.shadowrun2e_unified.x.a': 1 });
   });
 });
 
 describe('deltaSafeUpdate (the undo log\'s inverse update)', () => {
   test('synthetic: flag deletions become null writes, other keys untouched', () => {
-    const inv = { 'flags.sr2e.-=broken': null, 'flags.sr2e.projects.-=p1': null, 'flags.sr2e.==aim': { a: 1 }, 'system.-=foo': null, 'system.monitor.stun': 2 };
-    assert.deepEqual(deltaSafeUpdate(synth(), inv), { 'flags.sr2e.broken': null, 'flags.sr2e.projects.p1': null, 'flags.sr2e.==aim': { a: 1 }, 'system.-=foo': null, 'system.monitor.stun': 2 });
+    const inv = { 'flags.shadowrun2e_unified.-=broken': null, 'flags.shadowrun2e_unified.projects.-=p1': null, 'flags.shadowrun2e_unified.==aim': { a: 1 }, 'system.-=foo': null, 'system.monitor.stun': 2 };
+    assert.deepEqual(deltaSafeUpdate(synth(), inv), { 'flags.shadowrun2e_unified.broken': null, 'flags.shadowrun2e_unified.projects.p1': null, 'flags.shadowrun2e_unified.==aim': { a: 1 }, 'system.-=foo': null, 'system.monitor.stun': 2 });
   });
   test('linked: returned as it was', () => {
-    const inv = { 'flags.sr2e.-=broken': null };
+    const inv = { 'flags.shadowrun2e_unified.-=broken': null };
     assert.equal(deltaSafeUpdate(linked(), inv), inv);
   });
   test('review fix: undoing the first sr2e flag ever (the whole namespace added) nulls its keys, never the namespace', async () => {
     const { beforeValues, inverseUpdate } = await import('../rules/index.ts');
     const a = flagged({ name: 'Bare' }, { synthetic: true });
-    delete a._delta.sr2e; a.flags = {};
-    const change = { flags: { sr2e: { broken: true } } };
+    delete a._delta.shadowrun2e_unified; a.flags = {};
+    const change = { flags: { shadowrun2e_unified: { broken: true } } };
     const fields = beforeValues({ flags: a.flags }, change);
-    await a.update({ 'flags.sr2e.broken': true });
+    await a.update({ 'flags.shadowrun2e_unified.broken': true });
     const inv = deltaSafeUpdate(a, inverseUpdate(fields));
-    assert.equal('flags.sr2e' in inv, false, JSON.stringify(inv));
+    assert.equal('flags.shadowrun2e_unified' in inv, false, JSON.stringify(inv));
     await a.update(inv);
-    assert.equal(a.getFlag('sr2e', 'broken') ?? undefined, undefined);
-    assert.ok(a._delta.sr2e && typeof a._delta.sr2e === 'object', 'the namespace stays an object');
+    assert.equal(a.getFlag('shadowrun2e_unified', 'broken') ?? undefined, undefined);
+    assert.ok(a._delta.shadowrun2e_unified && typeof a._delta.shadowrun2e_unified === 'object', 'the namespace stays an object');
   });
   test('an undone flag on a synthetic actor reads as not set', async () => {
     const a = synth();
-    await a.setFlag('sr2e', 'broken', true);
-    await a.update(deltaSafeUpdate(a, { 'flags.sr2e.-=broken': null }));
-    assert.equal(a.getFlag('sr2e', 'broken') ?? undefined, undefined);
+    await a.setFlag('shadowrun2e_unified', 'broken', true);
+    await a.update(deltaSafeUpdate(a, { 'flags.shadowrun2e_unified.-=broken': null }));
+    assert.equal(a.getFlag('shadowrun2e_unified', 'broken') ?? undefined, undefined);
   });
 });
 
@@ -289,7 +289,7 @@ function token(base: Record<string, any> = {}, o: { synthetic?: boolean } = { sy
   a.items = Object.assign([], { get: () => undefined });
   a.statuses = new Set<string>();
   flagged(a, { synthetic: o.synthetic !== false, base });
-  if (o.synthetic === false) Object.assign(a.flags.sr2e, clone(base));
+  if (o.synthetic === false) Object.assign(a.flags.shadowrun2e_unified, clone(base));
   sys.parent = a; sys.prepareDerivedData();
   uuidRegistry.set(a.uuid, a);
   return a;
@@ -321,17 +321,17 @@ describe('glue: flags cleared on an unlinked token stay cleared', () => {
   test('a hold let go: heldBy and heldStatus both clear (heldStatus false too)', async () => {
     const t = token();
     await SR2Actor.setHeld(t, 'Actor.holder', true);
-    assert.equal(t.getFlag('sr2e', 'heldBy'), 'Actor.holder');
-    assert.equal(t.getFlag('sr2e', 'heldStatus'), true);
+    assert.equal(t.getFlag('shadowrun2e_unified', 'heldBy'), 'Actor.holder');
+    assert.equal(t.getFlag('shadowrun2e_unified', 'heldStatus'), true);
     await SR2Actor.setHeld(t, 'Actor.holder', false);
-    assert.equal(t.getFlag('sr2e', 'heldBy') ?? undefined, undefined);
-    assert.equal(t.getFlag('sr2e', 'heldStatus') ?? undefined, undefined);
+    assert.equal(t.getFlag('shadowrun2e_unified', 'heldBy') ?? undefined, undefined);
+    assert.equal(t.getFlag('shadowrun2e_unified', 'heldStatus') ?? undefined, undefined);
     // Prone already when grabbed: heldStatus is false, and it still goes.
     t.statuses.add(RULES.COMBAT.hold.status);
     await SR2Actor.setHeld(t, 'Actor.holder', true);
-    assert.equal(t.getFlag('sr2e', 'heldStatus'), false);
+    assert.equal(t.getFlag('shadowrun2e_unified', 'heldStatus'), false);
     await SR2Actor.setHeld(t, 'Actor.holder', false);
-    assert.equal(t.getFlag('sr2e', 'heldStatus') ?? undefined, undefined);
+    assert.equal(t.getFlag('shadowrun2e_unified', 'heldStatus') ?? undefined, undefined);
   });
   test('an astral quest ended stays ended', async () => {
     const a = token();
@@ -343,7 +343,7 @@ describe('glue: flags cleared on an unlinked token stay cleared', () => {
   test('a project given up leaves the list, even one the base actor carries', async () => {
     const p = (id: string) => ({ id, label: `Job ${id}`, kind: 'gear', startedAt: 0, readyAt: 3600, hours: 1, paid: { karma: 0, nuyen: 0 }, effect: { call: { method: 'finishDesign', args: [] } } });
     const a = token({ projects: { base: p('base') } });
-    await a.update({ 'flags.sr2e.projects.own': p('own') });
+    await a.update({ 'flags.shadowrun2e_unified.projects.own': p('own') });
     assert.deepEqual(a.projects().map((x: any) => x.id).sort(), ['base', 'own']);
     assert.equal(await a.cancelProject('own'), true);
     assert.equal(await a.cancelProject('base'), true);
@@ -351,22 +351,22 @@ describe('glue: flags cleared on an unlinked token stay cleared', () => {
   });
   test('focus addiction cleared by the GM reads as gone, own or inherited from the base actor', async () => {
     for (const a of [token({ focusAddict: true }), token()]) {
-      if (!a.getFlag('sr2e', 'focusAddict')) await a.setFlag('sr2e', 'focusAddict', true);
+      if (!a.getFlag('shadowrun2e_unified', 'focusAddict')) await a.setFlag('shadowrun2e_unified', 'focusAddict', true);
       await a.clearFocusAddiction();
-      assert.equal(Boolean(a.getFlag('sr2e', 'focusAddict')), false);
+      assert.equal(Boolean(a.getFlag('shadowrun2e_unified', 'focusAddict')), false);
     }
   });
   test('the old unsetFlag way still leaves it set on this stub (so the tests above would catch a revert)', async () => {
     const a = token();
-    await a.setFlag('sr2e', 'focusAddict', true);
-    await a.unsetFlag('sr2e', 'focusAddict');
-    assert.equal(a.getFlag('sr2e', 'focusAddict'), true);
+    await a.setFlag('shadowrun2e_unified', 'focusAddict', true);
+    await a.unsetFlag('shadowrun2e_unified', 'focusAddict');
+    assert.equal(a.getFlag('shadowrun2e_unified', 'focusAddict'), true);
   });
   test('a linked character still gets the key deleted (nothing null left behind)', async () => {
     const a = token({}, { synthetic: false });
     await a.startQuest({ name: 'Q', stages: 2, targetNumber: 4 });
     await a.endQuest();
-    assert.equal('quest' in a.flags.sr2e, false);
+    assert.equal('quest' in a.flags.shadowrun2e_unified, false);
   });
 });
 
@@ -374,7 +374,7 @@ describe('review fix: a build with only null columns counts as no build', () => 
   test('buildRowsFor', async () => {
     const { buildRowsFor } = await import('../applications/buildinput.ts');
     const a = token();
-    await a.update({ 'flags.sr2e.build': { A: null, B: null } });
+    await a.update({ 'flags.shadowrun2e_unified.build': { A: null, B: null } });
     assert.deepEqual(buildRowsFor(a), []);
   });
 });
@@ -383,7 +383,7 @@ describe('glue: the approval queue drops requests on an unlinked token', () => {
   test('dropRequest', async () => {
     const { requestsOf, dropRequest } = await import('../applications/approvals.ts');
     const a = token();
-    await a.update({ 'flags.sr2e.requests.r1': { id: 'r1', at: 1, kind: 'improve', label: 'x' }, 'flags.sr2e.requests.r2': { id: 'r2', at: 2, kind: 'improve', label: 'y' } });
+    await a.update({ 'flags.shadowrun2e_unified.requests.r1': { id: 'r1', at: 1, kind: 'improve', label: 'x' }, 'flags.shadowrun2e_unified.requests.r2': { id: 'r2', at: 2, kind: 'improve', label: 'y' } });
     await dropRequest(a, 'r1');
     assert.deepEqual(requestsOf(a).map((r: any) => r.id), ['r2']);
   });

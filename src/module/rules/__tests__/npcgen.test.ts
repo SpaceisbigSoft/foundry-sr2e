@@ -247,13 +247,13 @@ describe('v0.52.0 review fixes', () => {
   });
   test('critters: flagged (no metatype maximums), vision set, token named for the animal', () => {
     const d = critterActorData(generateCritter({ threat: 2, critter: 'cat' }, makeRng(1)));
-    assert.equal(d.actor.flags['sr2e'].critter, true);
+    assert.equal(d.actor.flags['shadowrun2e_unified'].critter, true);
     assert.deepEqual(d.actor.system['vision'], { lowLight: true, thermographic: false });
     assert.equal(d.actor.prototypeToken['name'], 'Big cat');
     assert.equal(npcActorData(generateNpc({ threat: 2, archetype: 'suit' }, makeRng(1))).actor.prototypeToken['name'], generateNpc({ threat: 2, archetype: 'suit' }, makeRng(1)).realName);
   });
   test('spirits are marked generated (never a template for conjuring)', () => {
-    assert.ok((spiritActorData(generateSpirit({ threat: 1 }, makeRng(1))).actor.flags as any).sr2e.generated);
+    assert.ok((spiritActorData(generateSpirit({ threat: 1 }, makeRng(1))).actor.flags as any).shadowrun2e_unified.generated);
   });
 });
 

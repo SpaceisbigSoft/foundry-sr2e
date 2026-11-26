@@ -204,7 +204,7 @@ describe('O1 postBlast takes the walls\' Power loss and armor', () => {
       { targetUuid: 'Actor.x3', name: 'Behind concrete', metres: 4, barrierLoss: 8 },
       { targetUuid: 'Actor.x4', name: 'In the open', metres: 1 },
     ], 'On target.');
-    const d = chat.at(-1).flags.sr2e.damages;
+    const d = chat.at(-1).flags.shadowrun2e_unified.damages;
     assert.deepEqual(d.map((x: any) => x.targetUuid), ['Actor.x1', 'Actor.x2', 'Actor.x4']);
     assert.equal(d[0].power, 5);                                         // 10 − 3 m − 2 lost to the wall
     assert.equal(d[0].extraArmor, undefined);
@@ -217,7 +217,7 @@ describe('O1 postBlast takes the walls\' Power loss and armor', () => {
     const a = who({ name: 'Grenadier' });
     const t = who({ name: 'Target' });
     await a.postBlast(ctx(a), [{ targetUuid: t.uuid, name: 'T', metres: 2, barrierArmor: 3 }], 'On target.');
-    const dmg = chat.at(-1).flags.sr2e.damages[0];
+    const dmg = chat.at(-1).flags.shadowrun2e_unified.damages[0];
     faces.push(1, 1, 1, 1);
     await t.resistFromState(dmg, 0);
     assert.match(chat.at(-1).content, /Resist 8S physical, armor 3/);
@@ -242,7 +242,7 @@ describe('O2 Take Aim lasts across Combat Turns; the cap is by the rating rolled
     assert.equal(await a.takeAim('w1', t.uuid), 2);
     g.game.combat.round = 2;
     assert.equal(await a.takeAim('w1', t.uuid), 2);                     // 3 actions, capped at 2
-    assert.equal(a.getFlag('sr2e', 'aim').actions, 3);
+    assert.equal(a.getFlag('shadowrun2e_unified', 'aim').actions, 3);
     assert.match(chat.at(-1).content, /−2 TN on the next attack \(at the most\)/);
   });
 
@@ -252,7 +252,7 @@ describe('O2 Take Aim lasts across Combat Turns; the cap is by the rating rolled
       await a.takeAim('w1', t.uuid);
       g.game.combat.round = 2;
       assert.equal(await a.takeAim('w1', t.uuid), 1);
-      assert.equal(a.getFlag('sr2e', 'aim').actions, 1);
+      assert.equal(a.getFlag('shadowrun2e_unified', 'aim').actions, 1);
     });
     await withRule(RULES.COMBAT_V72.aim, 'capBy', 'base', async () => {
       await a.takeAim('w1', t.uuid);
@@ -443,7 +443,7 @@ describe('O8 drug doses and overdoses', () => {
     assert.match(chat.at(-2).content, /Already in effect: the dose renews it \(dose 2\)/);
     const od = chat.at(-1);
     assert.match(od.content, /Overdose: Jazz \(dose 2 while active\)/);
-    const t = od.flags.sr2e.toxins[0];
+    const t = od.flags.shadowrun2e_unified.toxins[0];
     assert.deepEqual({ name: t.name, power: t.power, level: t.level, vector: t.vector, target: t.targetUuid }, { name: 'Jazz overdose', power: 7, level: 'M', vector: 'inhalation', target: a.uuid });
   });
 
@@ -464,7 +464,7 @@ describe('O8 drug doses and overdoses', () => {
       await a.takeDrug('j');
       await a.takeDrug('j');
     });
-    assert.ok(!chat.some((m) => m.flags?.sr2e?.toxins));
+    assert.ok(!chat.some((m) => m.flags?.shadowrun2e_unified?.toxins));
     assert.equal(a.system.drugs[0].doses, 2);
   });
 });
@@ -680,7 +680,7 @@ describe('O14 an adept in astral combat', () => {
     assert.equal(faces.length, 0);
     assert.equal(a.system.poolSpent.combat, 1);
     assert.equal(a.system.poolSpent.spell, 0);
-    const atk = chat.at(-1).flags.sr2e.attack;
+    const atk = chat.at(-1).flags.shadowrun2e_unified.attack;
     assert.equal(atk.level, 'M'); // v0.77.0: level 2 is M (L/M/S/D)
     assert.match(chat.at(-1).content, /killing hands M/);
   });
@@ -792,12 +792,12 @@ describe('O17 Mana Barrier raises a barrier actor while sustained', () => {
     const b = created[0];
     assert.equal(b.type, 'barrier');
     assert.deepEqual({ ...b.system }, { barrierKind: 'mana barrier', rating: 4, baseRating: 4 });
-    assert.equal(b.flags.sr2e.barrierSpell.effectId, eff);
-    assert.equal(b.flags.sr2e.barrierSpell.casterUuid, a.uuid);
+    assert.equal(b.flags.shadowrun2e_unified.barrierSpell.effectId, eff);
+    assert.equal(b.flags.shadowrun2e_unified.barrierSpell.casterUuid, a.uuid);
     assert.ok(SR2Actor.barrierOfSpell(eff));
-    const card = chat.find((c) => c.flags?.sr2e?.wardPlace);
+    const card = chat.find((c) => c.flags?.shadowrun2e_unified?.wardPlace);
     assert.ok(card, 'a Draw it on the map card');
-    assert.equal(card.flags.sr2e.wardPlace.radius, 6);                   // the caster's Magic
+    assert.equal(card.flags.shadowrun2e_unified.wardPlace.radius, 6);                   // the caster's Magic
     await dropHooks(a, 0, 'gm1');
     assert.equal(deleted.length, 1);
     assert.equal(SR2Actor.barrierOfSpell(eff), null);
@@ -812,19 +812,19 @@ describe('O17 Mana Barrier raises a barrier actor while sustained', () => {
     faces.push(5, 5, 1, 1, 1, ...Array(10).fill(5));
     await a.castSpell(a.items.get('mb'), { force: 4 });
     assert.equal(created.length, 0);
-    const pending = chat.find((c) => c.flags?.sr2e?.pendingSpirit);
+    const pending = chat.find((c) => c.flags?.shadowrun2e_unified?.pendingSpirit);
     assert.ok(pending);
-    assert.equal(pending.flags.sr2e.pendingSpirit.type, 'barrier');
+    assert.equal(pending.flags.shadowrun2e_unified.pendingSpirit.type, 'barrier');
     // The GM makes it from the card (simulated); the player drops the spell.
     const eff = a.system.sustaining[0].effectId;
-    const b: any = { ...pending.flags.sr2e.pendingSpirit, uuid: 'Actor.gmbarrier', getFlag(s: string, k: string) { return this.flags?.[s]?.[k]; }, async delete() {} };
+    const b: any = { ...pending.flags.shadowrun2e_unified.pendingSpirit, uuid: 'Actor.gmbarrier', getFlag(s: string, k: string) { return this.flags?.[s]?.[k]; }, async delete() {} };
     g.game.actors.push(b);
     uuidRegistry.set(b.uuid, b);
     assert.equal(SR2Actor.barrierOfSpell(eff), b);
     await dropHooks(a, 0, 'p1');
-    const gmCard = chat.find((c) => c.flags?.sr2e?.actorUpdate?.remove);
+    const gmCard = chat.find((c) => c.flags?.shadowrun2e_unified?.actorUpdate?.remove);
     assert.ok(gmCard, 'a GM remove card');
-    assert.equal(gmCard.flags.sr2e.actorUpdate.uuid, 'Actor.gmbarrier');
+    assert.equal(gmCard.flags.shadowrun2e_unified.actorUpdate.uuid, 'Actor.gmbarrier');
     assert.match(gmCard.content, /Mana Barrier is dropped: remove/);
   });
 
@@ -864,7 +864,7 @@ describe('O19 a ward on the map stops a materialized spirit (regions.ts wardMove
     const move = hooks.get('preUpdateToken')![0]!;
     const bar = { uuid: `Actor.ward-${++n}`, type: 'barrier', name: 'Ward', system: { rating: 4, barrierKind } };
     uuidRegistry.set(bar.uuid, bar);
-    const region = { id: 'r1', name: 'Ward', flags: { sr2e: { env: { wardUuid: bar.uuid } } }, testPoint: (p: any) => p.x < 300 };
+    const region = { id: 'r1', name: 'Ward', flags: { shadowrun2e_unified: { env: { wardUuid: bar.uuid } } }, testPoint: (p: any) => p.x < 300 };
     const scene = { grid: { size: 100 }, regions: [region] };
     const token = (actor: any) => ({ actor, parent: scene, x: 0, y: 0, width: 1, height: 1, elevation: 0, name: actor.name });
     return { move, token };
@@ -957,11 +957,11 @@ describe('O21 anchoring and allies', () => {
     await m.setSenseLink(ally.uuid, true);
     assert.match(warnings.at(-1) ?? '', /has no sense link/);
     assert.equal(await m.buyAllyAbility(ally.uuid, 'senseLink'), true);
-    assert.deepEqual(ally.getFlag('sr2e', 'allyAbilities'), { senseLink: true });
+    assert.deepEqual(ally.getFlag('shadowrun2e_unified', 'allyAbilities'), { senseLink: true });
     assert.equal(m.system.karma.good, 29);
     assert.equal(await m.buyAllyAbility(ally.uuid, 'senseLink'), false);
     await m.setSenseLink(ally.uuid, true);
-    assert.deepEqual(m.getFlag('sr2e', 'senseLink'), { allyUuid: ally.uuid, on: true });
+    assert.deepEqual(m.getFlag('shadowrun2e_unified', 'senseLink'), { allyUuid: ally.uuid, on: true });
     await withRule(RULES.MAGIC_V72.ally, 'enabled', false, async () => {
       assert.equal(await m.buyAllyAbility(ally.uuid, 'astralGateway'), false);
     });
@@ -987,7 +987,7 @@ describe('v0.72.0 review fixes', () => {
       await a.takeDrug('j');
       assert.equal(a.system.drugs.length, 2);
     });
-    assert.ok(!chat.some((m) => m.flags?.sr2e?.toxins));
+    assert.ok(!chat.some((m) => m.flags?.shadowrun2e_unified?.toxins));
   });
 
   test("a spirit's or dual-natured critter's blow isn't stopped outright by immunity (it still counts as armor)", async () => {
@@ -1007,7 +1007,7 @@ describe('v0.72.0 review fixes', () => {
     let gone = false;
     const caster: any = { uuid: 'Actor.caster', system: { sustaining: [{ effectId: 'spX' }] } };
     uuidRegistry.set(caster.uuid, caster);
-    const b: any = { uuid: 'Actor.bX', documentName: 'Actor', type: 'barrier', name: 'Mana Barrier', flags: { sr2e: { barrierSpell: { casterUuid: caster.uuid, effectId: 'spX' } } }, getFlag(s: string, k: string) { return this.flags?.[s]?.[k]; }, async delete() { gone = true; } };
+    const b: any = { uuid: 'Actor.bX', documentName: 'Actor', type: 'barrier', name: 'Mana Barrier', flags: { shadowrun2e_unified: { barrierSpell: { casterUuid: caster.uuid, effectId: 'spX' } } }, getFlag(s: string, k: string) { return this.flags?.[s]?.[k]; }, async delete() { gone = true; } };
     uuidRegistry.set(b.uuid, b);
     g.game.scenes = [];
     assert.equal(await SR2Actor.applyActorUpdate({ uuid: b.uuid, remove: true }), true);

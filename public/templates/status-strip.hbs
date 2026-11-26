@@ -4,7 +4,7 @@
      v0.86.0: a group, not a live region (it re-renders with every change and would talk over everything); each pool's
      pips are one Tab stop moved with the arrow keys (applications/a11y.ts). --}}
 <div class="sr2e-strip{{#if strip.turn}} sr2e-strip-myturn{{/if}}" role="group" aria-label="{{sr2eT "SR2E.UI.status"}}">
-  {{#if cm}}<span class="sr2e-strip-cm">{{> "systems/sr2e/templates/monitor-mini.hbs"}}</span>{{/if}}
+  {{#if cm}}<span class="sr2e-strip-cm">{{> "systems/shadowrun2e_unified/templates/monitor-mini.hbs"}}</span>{{/if}}
   {{#if strip.wound}}<span class="sr2e-strip-item sr2e-strip-wound" title="{{sr2eT "SR2E.UI.woundModifierAddedToTheTarget"}}">{{strip.wound}}<small>{{sr2eT "SR2E.UI.tn"}}</small></span>{{/if}}
   {{#if strip.status}}<span class="sr2e-strip-item{{#if strip.danger}} sr2e-strip-danger{{/if}}">{{strip.status}}</span>{{/if}}
   <span class="sr2e-strip-item" title="{{#if strip.initNow}}{{sr2eT "SR2E.UI.initiativeThisPass"}}{{else}}{{sr2eT "SR2E.UI.initiativeReactionDice"}}{{/if}}"><small>{{sr2eT "SR2E.UI.init"}}</small> <b>{{strip.init}}</b></span>

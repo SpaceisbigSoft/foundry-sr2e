@@ -1,6 +1,6 @@
 /**
  * v0.60.0: scene regions as SR2 environments (Foundry glue). The GM gives a Region an SR2e environment in its
- * config window (flags.sr2e.env, see rules/regions.ts); tests then read the background count, environment
+ * config window (flags.shadowrun2e_unified.env, see rules/regions.ts); tests then read the background count, environment
  * tags, weather, light and smoke where each token stands; wards stop astral forms at their edge; cameras and
  * sensors watching a region notice who walks in.
  */

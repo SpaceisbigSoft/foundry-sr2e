@@ -148,7 +148,7 @@ describe('v0.72.0 O17: barrier spells', () => {
     const d = barrierSpellActorData({ kind: 'physical', force: 4, successes: 2, spellName: 'Physical Barrier', casterUuid: 'Actor.a', casterName: 'Mage', effectId: 'e1' });
     assert.equal(d.type, 'barrier');
     assert.deepEqual(d.system, { barrierKind: 'physical barrier', rating: 4, baseRating: 4 });
-    assert.deepEqual((d.flags as any).sr2e.barrierSpell, { casterUuid: 'Actor.a', spellName: 'Physical Barrier', effectId: 'e1' });
+    assert.deepEqual((d.flags as any).shadowrun2e_unified.barrierSpell, { casterUuid: 'Actor.a', spellName: 'Physical Barrier', effectId: 'e1' });
     assert.match(d.name, /\(Mage\)$/); // the rating is shown by the notes, not the name (live run)
     assert.equal(barrierSpellActorData({ kind: 'mana', force: 3, successes: 1, spellName: '', casterUuid: '', casterName: 'M' }).system.barrierKind, 'mana barrier');
   });

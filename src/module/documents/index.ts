@@ -191,7 +191,7 @@ import { t as tx, tCount, tKey, tNoun, tList, type CountNoun } from '../helpers/
 import { gearBook, housedEssenceCost, awakenedBioEssence, culturedBodyCost, surgeryEssenceCost, systemsHit, systemDamage, gradeResistTn, systemStops, adrenalCrashBook, systemShockTn, isDermalPlating } from '../rules/gear923.ts';
 import { GEAR_V923_TABLES } from '../rules/config923/gear.ts';
 
-const SYSTEM_ID = 'sr2e';
+import { SYSTEM_ID } from '../config/system.ts';
 
 /**
  * Adapter between the pure rules engine and Foundry's dice: every wave the engine
@@ -3812,7 +3812,7 @@ export class SR2Actor extends Actor {
   static async damageWall(doc: any, power: number, opts: { antiVehicle?: boolean; shaped?: boolean; label?: string; kind?: BarrierAttackKind } = {}): Promise<{ damage: number; left: number; breached: boolean } | null> {
     if (!doc) return null;
     const def = RULES.COMBAT.barriers.defaultWallRating;
-    const rating = Number(doc.getFlag?.(SYSTEM_ID, 'barrierRating') ?? doc.flags?.sr2e?.barrierRating ?? def) || 0;
+    const rating = Number(doc.getFlag?.(SYSTEM_ID, 'barrierRating') ?? doc.flags?.[SYSTEM_ID]?.barrierRating ?? def) || 0;
     // v0.78.0 (RULES.BOOK_V78.barriers 'book'): what hits it (firearm, melee, combat spell or blast), and doors.
     const isDoor = Number(doc.door ?? 0) > 0;
     const door = !isDoor ? 'none' : doc.getFlag?.(SYSTEM_ID, 'securityDoor') ? 'security' : 'ordinary';
@@ -3842,9 +3842,9 @@ export class SR2Actor extends Actor {
   static damagedWalls(scene: any = (globalThis as any).canvas?.scene): Array<{ id: string; rating: number; full: number; breached: boolean; doc: any }> {
     const out: Array<{ id: string; rating: number; full: number; breached: boolean; doc: any }> = [];
     for (const w of [...(scene?.walls ?? [])] as any[]) {
-      const br = w.getFlag?.(SYSTEM_ID, 'breached') ?? w.flags?.sr2e?.breached;
-      const full = Number(w.getFlag?.(SYSTEM_ID, 'barrierFull') ?? w.flags?.sr2e?.barrierFull ?? br?.rating ?? NaN);
-      const rating = Number(w.getFlag?.(SYSTEM_ID, 'barrierRating') ?? w.flags?.sr2e?.barrierRating ?? 0) || 0;
+      const br = w.getFlag?.(SYSTEM_ID, 'breached') ?? w.flags?.[SYSTEM_ID]?.breached;
+      const full = Number(w.getFlag?.(SYSTEM_ID, 'barrierFull') ?? w.flags?.[SYSTEM_ID]?.barrierFull ?? br?.rating ?? NaN);
+      const rating = Number(w.getFlag?.(SYSTEM_ID, 'barrierRating') ?? w.flags?.[SYSTEM_ID]?.barrierRating ?? 0) || 0;
       if (br || (Number.isFinite(full) && rating < full)) out.push({ id: w.id, rating, full: Number.isFinite(full) ? full : rating, breached: Boolean(br), doc: w });
     }
     return out;
@@ -3856,9 +3856,9 @@ export class SR2Actor extends Actor {
    */
   static async repairWall(doc: any, opts: { successes?: number; full?: boolean; label?: string } = {}): Promise<number | null> {
     if (!doc) return null;
-    const br = doc.getFlag?.(SYSTEM_ID, 'breached') ?? doc.flags?.sr2e?.breached;
-    const rating = Number(doc.getFlag?.(SYSTEM_ID, 'barrierRating') ?? doc.flags?.sr2e?.barrierRating ?? 0) || 0;
-    const full = Number(doc.getFlag?.(SYSTEM_ID, 'barrierFull') ?? doc.flags?.sr2e?.barrierFull ?? br?.rating ?? rating) || 0;
+    const br = doc.getFlag?.(SYSTEM_ID, 'breached') ?? doc.flags?.[SYSTEM_ID]?.breached;
+    const rating = Number(doc.getFlag?.(SYSTEM_ID, 'barrierRating') ?? doc.flags?.[SYSTEM_ID]?.barrierRating ?? 0) || 0;
+    const full = Number(doc.getFlag?.(SYSTEM_ID, 'barrierFull') ?? doc.flags?.[SYSTEM_ID]?.barrierFull ?? br?.rating ?? rating) || 0;
     const now = wallRepair({ rating, original: full, successes: opts.successes ?? 0, full: opts.full ?? (opts.successes == null) });
     const update: Record<string, unknown> = { [`flags.${SYSTEM_ID}.barrierRating`]: now };
     if (br && now > 0) {
@@ -6716,7 +6716,7 @@ export class SR2Actor extends Actor {
   /**
    * The find test itself (a sheet item or a shop entry). v0.91.0 (RULES.SHOP_V91.retry 'wait'): a failed find may be
    * tried again once its base time has passed (the GM is never held back); the wait is kept per thing in
-   * `flags.sr2e.findRetry`.
+   * `flags.shadowrun2e_unified.findRetry`.
    */
   async #findCore(src: { name: string; type: string; system: any }, buy: Record<string, unknown>, retryKey: string, opts: { modifiers?: TargetNumberModifier[]; quantity?: number; through?: FindThrough | null }): Promise<{ found: boolean; hours: number | null; price: number } | null> {
     const sys: any = src.system ?? {};
@@ -18527,7 +18527,7 @@ export class SR2Actor extends Actor {
     const want = (type ?? '').trim().toLowerCase();
     if (!want) return null;
     // v0.52.0: spirits from the NPC generator are not templates (they have no powers of their own).
-    return allActors().find((a: any) => a.type === 'spirit' && !a.system?.summonerUuid && !a.flags?.sr2e?.generated
+    return allActors().find((a: any) => a.type === 'spirit' && !a.system?.summonerUuid && !a.flags?.[SYSTEM_ID]?.generated
       && ((a.system?.spiritType ?? '').trim().toLowerCase() === want || (a.name ?? '').trim().toLowerCase() === want)) ?? null;
   }
 
@@ -19979,7 +19979,7 @@ export class SR2Actor extends Actor {
     const coll: any = s?.drawings;
     const drawings: any[] = coll?.contents ?? (coll && typeof coll[Symbol.iterator] === 'function' ? [...coll] : []);
     for (const d of drawings) {
-      const kind = String(d.getFlag?.(SYSTEM_ID, 'fuel') ?? d.flags?.sr2e?.fuel ?? '');
+      const kind = String(d.getFlag?.(SYSTEM_ID, 'fuel') ?? d.flags?.[SYSTEM_ID]?.fuel ?? '');
       const fk = fuelKind(kind);
       if (!fk) continue;
       const w = Number(d.shape?.width ?? 0), h = Number(d.shape?.height ?? 0);
@@ -20047,9 +20047,9 @@ export class SR2Actor extends Actor {
 
   /** A burnable wall inside a fire loses barrier rating; burnt through, it no longer blocks (v0.48.0). Returns a note. */
   static async #burnWallDoc(doc: any, intensity: string): Promise<string> {
-    const burns = Boolean(doc?.getFlag?.(SYSTEM_ID, 'burns') ?? doc?.flags?.sr2e?.burns);
+    const burns = Boolean(doc?.getFlag?.(SYSTEM_ID, 'burns') ?? doc?.flags?.[SYSTEM_ID]?.burns);
     if (!burns || doc.move === 0) return '';
-    const set = doc.getFlag?.(SYSTEM_ID, 'barrierRating') ?? doc.flags?.sr2e?.barrierRating;
+    const set = doc.getFlag?.(SYSTEM_ID, 'barrierRating') ?? doc.flags?.[SYSTEM_ID]?.barrierRating;
     // A rating of 0 (the wall config's blank) counts as unset for burning.
     const rating = Number(set) > 0 ? Number(set) : RULES.FIRE.walls.defaultRating;
     const r = burnWall(rating, intensity);
@@ -20827,7 +20827,7 @@ export class SR2Item extends Item {
     if (changed?.system) SR2Item.carriedRules((this as any).type, (this as any).system ?? {}, changed.system);
     // v0.92.1 (RULES.SHEET_V921.accessories): a weapon's new description is read for accessories.
     if ((this as any).type === 'weapon' && changed?.system?.description !== undefined && String(changed.system.description ?? '') !== String((this as any).system?.description ?? '')) {
-      SR2Item.readDescriptionInto(changed, (this as any).system ?? {}, (this as any).flags?.sr2e?.fromDescription, { oldDescription: String((this as any).system?.description ?? '') });
+      SR2Item.readDescriptionInto(changed, (this as any).system ?? {}, (this as any).flags?.[SYSTEM_ID]?.fromDescription, { oldDescription: String((this as any).system?.description ?? '') });
     }
     // v0.73.0 (O28): a weapon on a vehicle must fit its firmpoints and hardpoints.
     const ms = changed?.system ?? {};
@@ -20859,13 +20859,13 @@ export class SR2Item extends Item {
       if (Object.keys(flat).length) (this as any).updateSource(foundry.utils.expandObject(flat));
     }
     // A copy of a weapon already read keeps its values (a field someone cleared by hand isn't filled again).
-    if (data?.type === 'weapon' && String(data?.system?.description ?? '').trim() && !data?.flags?.sr2e?.fromDescription) {
+    if (data?.type === 'weapon' && String(data?.system?.description ?? '').trim() && !data?.flags?.[SYSTEM_ID]?.fromDescription) {
       const ch: any = { system: { description: data.system.description } };
       const cur: any = (this as any).system?.toObject?.() ?? { ...(this as any).system };
-      SR2Item.readDescriptionInto(ch, cur, data?.flags?.sr2e?.fromDescription, { creating: true });
+      SR2Item.readDescriptionInto(ch, cur, data?.flags?.[SYSTEM_ID]?.fromDescription, { creating: true });
       const flat: Record<string, unknown> = {};
       for (const [k, v] of Object.entries(ch.system ?? {})) if (k !== 'description') flat[`system.${k}`] = v;
-      if (ch.flags?.sr2e?.fromDescription) flat['flags.sr2e.fromDescription'] = ch.flags.sr2e.fromDescription;
+      if (ch.flags?.[SYSTEM_ID]?.fromDescription) flat[`flags.${SYSTEM_ID}.fromDescription`] = ch.flags[SYSTEM_ID].fromDescription;
       if (Object.keys(flat).length) (this as any).updateSource(flat);
     }
     // v0.73.0 (O28): a weapon on a vehicle must fit its firmpoints and hardpoints.
@@ -20932,7 +20932,7 @@ export class SR2Item extends Item {
       changed.system.tweaks = [...base, ...newNotes.filter((t) => !have.has(t.id))].slice(0, TWEAK_MAX);
     }
     const next = { fields, dismissed, noted: [...noted, ...plan.notes.map((h) => h.id)] };
-    changed.flags = foundry.utils.mergeObject(changed.flags ?? {}, { sr2e: { fromDescription: next } }, { inplace: false });
+    changed.flags = foundry.utils.mergeObject(changed.flags ?? {}, { [SYSTEM_ID]: { fromDescription: next } }, { inplace: false });
   }
 
   /**

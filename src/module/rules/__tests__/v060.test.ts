@@ -134,11 +134,11 @@ describe('v0.60.0 quality of life', () => {
     assert.equal(autoResists({ ...o, combined: true }), false);
   });
   test('turn pings: which changes start a turn, and who is told', () => {
-    assert.equal(turnChanged({ turn: 2 }, 'sr2e'), true);
-    assert.equal(turnChanged({ round: 3 }, 'sr2e'), true);
-    assert.equal(turnChanged({ flags: { sr2e: { pass: 1 } } }, 'sr2e'), true);
-    assert.equal(turnChanged({ flags: { sr2e: { surprise: {} } } }, 'sr2e'), false);
-    assert.equal(turnChanged(null, 'sr2e'), false);
+    assert.equal(turnChanged({ turn: 2 }, 'shadowrun2e_unified'), true);
+    assert.equal(turnChanged({ round: 3 }, 'shadowrun2e_unified'), true);
+    assert.equal(turnChanged({ flags: { shadowrun2e_unified: { pass: 1 } } }, 'shadowrun2e_unified'), true);
+    assert.equal(turnChanged({ flags: { shadowrun2e_unified: { surprise: {} } } }, 'shadowrun2e_unified'), false);
+    assert.equal(turnChanged(null, 'shadowrun2e_unified'), false);
     assert.deepEqual(turnRecipients([
       { id: 'gm', active: true, isGM: true, owns: true },
       { id: 'p1', active: true, isGM: false, owns: true },

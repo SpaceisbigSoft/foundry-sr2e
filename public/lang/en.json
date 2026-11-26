@@ -3382,7 +3382,8 @@
       },
       "Migrations": {
         "sr2eMigrationToFailedSeeThe": "SR2e: migration to {version} failed; see the console. Later migrations were not run.",
-        "foreignWorld": "SR2e: this world looks like another system's (the same id, {id}), so it was not updated."
+        "foreignWorld": "SR2e: this world looks like another system's (the same id, {id}), so it was not updated.",
+        "moveFailed": "SR2e: moving this world to the new system id stopped; see the chat card and the console."
       },
       "Settings": {
         "sr2eHouseRulesTheAdvancedBox": "SR2e house rules: the advanced box is not valid JSON ({errMessage}). Nothing was saved.",
@@ -5051,7 +5052,9 @@
         "backupTitle": "SR2e: back up your world first",
         "backupBody": "SR2e is about to update this world's data. Updates can't be undone, so make a backup first (Foundry's setup screen: Worlds, then Backups). These updates change data:",
         "backupContinue": "Continue",
-        "backupLater": "Not now"
+        "backupLater": "Not now",
+        "moveTitle": "SR2e: move this world to the new system id",
+        "moveBody": "SR2e's system id changed from {old} to {id} (another Shadowrun 2e system uses {old}). This world was made with the old id, so SR2e is about to copy its data to the new name: flags, settings, and the file paths of token art, backdrops and links. The old data stays in place, so the world can still be opened with v0.93.0. Back up the world first (Foundry's setup screen: Worlds, then Backups)."
       },
       "Drops": {
         "howManyTitle": "How many? ({name})",
@@ -8160,7 +8163,10 @@
         "reportTitle": "SR2e: world updates",
         "foreignTitle": "SR2e: this world looks like another system's",
         "foreignBody": "Another Shadowrun 2e system for Foundry uses the same id ({id}), and this world carries its marks, so SR2e has not updated it and changed nothing. Open it with the system it was made with. These marks were found:",
-        "foreignOverride": "If you have checked the world and backed it up, a GM can let SR2e update it anyway: run {command} in the console and reload."
+        "foreignOverride": "If you have checked the world and backed it up, a GM can let SR2e update it anyway: run {command} in the console and reload.",
+        "moveTitle": "SR2e: this world was moved to the new system id",
+        "moveDone": "Every document's flags and file paths were copied to the new id, and {settings} settings came across. Reload the world now (F5) so every setting takes effect. Documents changed:",
+        "moveFailed": "The move stopped: {error}. Nothing was deleted; it runs again at the next load. If the world looks wrong, restore your backup."
       },
       "Arcana": {
         "sustainingSpells": {

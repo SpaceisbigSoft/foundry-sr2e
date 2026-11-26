@@ -56,6 +56,8 @@ function fnSource(name: string): string {
 }
 function compile(name: string, scope: Record<string, unknown>): any {
   const js = ts.transpileModule(fnSource(name), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None } }).outputText;
+  // v0.93.1: the sheet helpers read flags by the system id.
+  scope = { SYSTEM_ID: 'shadowrun2e_unified', ...scope };
   const keys = Object.keys(scope);
   return new Function(...keys, `${js}\nreturn ${name};`)(...keys.map((k) => scope[k]));
 }

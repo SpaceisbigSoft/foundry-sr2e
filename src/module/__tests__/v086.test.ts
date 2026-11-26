@@ -174,7 +174,7 @@ describe('v0.86.0 hotkeys', () => {
     } finally { g.game = prev; }
     assert.equal(seen.length, HOTKEYS.length);
     for (const s of seen) {
-      assert.equal(s.ns, 'sr2e');
+      assert.equal(s.ns, 'shadowrun2e_unified');
       assert.match(s.o.name, /^SR2E\.Keybindings\.\w+\.Name$/);
       assert.deepEqual(s.o.editable[0].modifiers, ['Alt']);
       assert.equal(typeof s.o.onDown, 'function');

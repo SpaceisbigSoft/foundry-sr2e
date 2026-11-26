@@ -150,10 +150,10 @@ describe('v0.83.0 the lookup', () => {
     assert.ok(isDefaultArt(at('people/elf-fem')));
     assert.ok(isDefaultArt('/' + at('people/elf-fem')));
     assert.ok(!isDefaultArt('worlds/x/rook.webp'));
-    assert.ok(!isDefaultArt('systems/sr2e/icons/wound-l.svg'));
+    assert.ok(!isDefaultArt('systems/shadowrun2e_unified/icons/wound-l.svg'));
     // Re-review: only the exact files, not anything under the folder.
-    assert.ok(!isDefaultArt('systems/sr2e/tokens/../../worlds/x.png'));
-    assert.ok(!isDefaultArt('systems/sr2e/tokens/people/nobody.svg'));
+    assert.ok(!isDefaultArt('systems/shadowrun2e_unified/tokens/../../worlds/x.png'));
+    assert.ok(!isDefaultArt('systems/shadowrun2e_unified/tokens/people/nobody.svg'));
     assert.ok(isDefaultPortrait(at('vehicles/car')));
     assert.ok(portraitReplaceable(at('people/human-masc'), null));
     assert.ok(!isDefaultPortrait('icons/svg/sword.svg'));
@@ -196,7 +196,7 @@ describe('v0.83.0 the glue', () => {
         { type: 'cyberdeck', system: {} },
       ],
       system: { metatype: 'dwarf', art: { figure: 'fem', archetype: '' }, tradition: 'none', attributes: { charisma: { base: 4, mod: 1 } } },
-      flags: { sr2e: { generated: { archetype: 'tech' } } },
+      flags: { shadowrun2e_unified: { generated: { archetype: 'tech' } } },
     });
     const i = artInfo(a);
     assert.equal(i.hasControlRig, true);
@@ -215,7 +215,7 @@ describe('v0.83.0 the glue', () => {
     assert.equal(u['system.art.figure'], fig);
     assert.equal(u['img'], at(`people/human-${fig}`));
     assert.equal(u['prototypeToken.texture.src'], at(`people/human-${fig}`));
-    assert.equal(u['flags.sr2e.artAuto'], at(`people/human-${fig}`));
+    assert.equal(u['flags.shadowrun2e_unified.artAuto'], at(`people/human-${fig}`));
     assert.equal(a.updates[0].opts.sr2eArt, true);
     // 'auto' (the follow-up hooks) leaves stand-ins alone.
     const b = fakeActor({ system: { metatype: 'elf', art: { figure: 'masc', archetype: '' }, attributes: {} } });
@@ -226,13 +226,13 @@ describe('v0.83.0 the glue', () => {
     assert.equal(await applyDefaultArt(c, 'standin'), false);
     assert.equal(c.updates.length, 0);
     // A custom token is pinned so Foundry doesn't copy the new picture onto it.
-    const d = fakeActor({ img: at('people/human-masc'), flags: { sr2e: { artAuto: at('people/human-masc') } }, prototypeToken: { texture: { src: 'worlds/w/tok.webp' } }, system: { metatype: 'troll', art: { figure: 'masc', archetype: '' }, attributes: {} } });
+    const d = fakeActor({ img: at('people/human-masc'), flags: { shadowrun2e_unified: { artAuto: at('people/human-masc') } }, prototypeToken: { texture: { src: 'worlds/w/tok.webp' } }, system: { metatype: 'troll', art: { figure: 'masc', archetype: '' }, attributes: {} } });
     assert.equal(await applyDefaultArt(d, 'auto'), true);
     assert.equal(d.updates[0].u['img'], at('people/troll-masc'));
     assert.equal(d.updates[0].u['prototypeToken.texture.src'], 'worlds/w/tok.webp');
     assert.equal(d.updates[0].opts.diff, false);
     // Review risk 4: a system art file picked by hand (not the one the system set) is kept.
-    const h = fakeActor({ img: at('critters/wolf'), prototypeToken: { texture: { src: at('critters/wolf') } }, flags: { sr2e: { artAuto: at('people/human-masc') } }, system: { metatype: 'ork', art: { figure: 'masc', archetype: '' }, attributes: {} } });
+    const h = fakeActor({ img: at('critters/wolf'), prototypeToken: { texture: { src: at('critters/wolf') } }, flags: { shadowrun2e_unified: { artAuto: at('people/human-masc') } }, system: { metatype: 'ork', art: { figure: 'masc', archetype: '' }, attributes: {} } });
     assert.equal(await applyDefaultArt(h, 'auto'), false);
     assert.equal(await applyDefaultArt(h, 'standin'), false);
     // Not the owner, or an unlinked token's actor: nothing.
@@ -252,7 +252,7 @@ describe('v0.83.0 the glue', () => {
       async updateEmbeddedDocuments(_t: string, u: any[]) { calls.push(u); },
     };
     stubGame({ gm: true, scenes: [scene] });
-    const a = fakeActor({ img: at('people/human-masc'), flags: { sr2e: { artAuto: at('people/human-masc') } }, prototypeToken: { texture: { src: at('people/human-masc') } }, system: { metatype: 'ork', art: { figure: 'masc', archetype: '' }, attributes: {} } });
+    const a = fakeActor({ img: at('people/human-masc'), flags: { shadowrun2e_unified: { artAuto: at('people/human-masc') } }, prototypeToken: { texture: { src: at('people/human-masc') } }, system: { metatype: 'ork', art: { figure: 'masc', archetype: '' }, attributes: {} } });
     assert.equal(await applyDefaultArt(a, 'auto'), true);
     assert.deepEqual(calls, [[{ _id: 't1', 'texture.src': at('people/ork-masc') }, { _id: 't5', 'texture.src': at('people/ork-masc') }]]);
     // Review risk 8: the sheet button ('force') also takes the linked tokens that showed the actor's old token picture.
@@ -281,13 +281,13 @@ describe('v0.83.0 the glue', () => {
     assert.ok(c.archetypes.some((x) => x.id === 'none'));
     assert.equal(c.isDefault, false);
     assert.equal(c.standIn, true);
-    const stored = artSheetContext(fakeActor({ img: at('people/human-fem'), flags: { sr2e: { artAuto: at('people/human-fem') } }, system: { metatype: 'human', art: { figure: 'fem', archetype: 'face' }, attributes: {} } }))!;
+    const stored = artSheetContext(fakeActor({ img: at('people/human-fem'), flags: { shadowrun2e_unified: { artAuto: at('people/human-fem') } }, system: { metatype: 'human', art: { figure: 'fem', archetype: 'face' }, attributes: {} } }))!;
     assert.deepEqual(stored.figures.map((f) => f.id), ['masc', 'fem']);
     assert.equal(stored.figures.find((f) => f.selected)?.id, 'fem');
     assert.equal(stored.archetypes.find((f) => f.selected)?.id, 'face');
     assert.equal(stored.isDefault, true);
     assert.equal(stored.standIn, false);
-    assert.equal(artSheetContext(fakeActor({ flags: { sr2e: { critter: true } } })), null);
+    assert.equal(artSheetContext(fakeActor({ flags: { shadowrun2e_unified: { critter: true } } })), null);
     assert.equal(artSheetContext(fakeActor({ type: 'vehicle' })), null);
   });
   test('review risk 9: wired reflexes left to "guess from the name" count as combat ware', () => {
@@ -318,7 +318,7 @@ describe('v0.83.0 the glue', () => {
     const src: any[] = [];
     const a = fakeActor({ updateSource: (u: any) => src.push(u) });
     hooks['preCreateActor']!(a, { name: 'Rook' });
-    assert.deepEqual(src[0], { 'system.art.figure': fig, img: at(`people/human-${fig}`), 'prototypeToken.texture.src': at(`people/human-${fig}`), 'flags.sr2e.artAuto': at(`people/human-${fig}`) });
+    assert.deepEqual(src[0], { 'system.art.figure': fig, img: at(`people/human-${fig}`), 'prototypeToken.texture.src': at(`people/human-${fig}`), 'flags.shadowrun2e_unified.artAuto': at(`people/human-${fig}`) });
     // A new actor with pictures of its own: nothing at all.
     const own: any[] = [];
     const b = fakeActor({ img: 'worlds/w/b.webp', prototypeToken: { texture: { src: 'worlds/w/b.webp' } }, updateSource: (u: any) => own.push(u) });
@@ -331,11 +331,11 @@ describe('v0.83.0 the glue', () => {
     assert.equal(tk[0]['prototypeToken.texture.src'], undefined);
     // A generated critter: no figure, the critter's picture.
     const cr: any[] = [];
-    const c = fakeActor({ type: 'npc', flags: { sr2e: { critter: true, generated: { archetype: 'critter:bear' } } }, updateSource: (u: any) => cr.push(u) });
+    const c = fakeActor({ type: 'npc', flags: { shadowrun2e_unified: { critter: true, generated: { archetype: 'critter:bear' } } }, updateSource: (u: any) => cr.push(u) });
     hooks['preCreateActor']!(c, {});
-    assert.deepEqual(cr[0], { img: at('critters/bear'), 'prototypeToken.texture.src': at('critters/bear'), 'flags.sr2e.artAuto': at('critters/bear') });
+    assert.deepEqual(cr[0], { img: at('critters/bear'), 'prototypeToken.texture.src': at('critters/bear'), 'flags.shadowrun2e_unified.artAuto': at('critters/bear') });
     // Updates: one client (no active GM here: the changing user), relevant paths only, only while the system's art is on.
-    const art = { img: at('people/human-masc'), flags: { sr2e: { artAuto: at('people/human-masc') } }, prototypeToken: { texture: { src: at('people/human-masc') } } };
+    const art = { img: at('people/human-masc'), flags: { shadowrun2e_unified: { artAuto: at('people/human-masc') } }, prototypeToken: { texture: { src: at('people/human-masc') } } };
     const d = fakeActor({ ...art, system: { metatype: 'elf', art: { figure: 'masc', archetype: '' }, attributes: {} } });
     hooks['updateActor']!(d, { system: { metatype: 'elf' } }, {}, 'someone-else');
     hooks['updateActor']!(d, { system: { karma: { good: 1 } } }, {}, 'u1');
@@ -386,7 +386,7 @@ describe('v0.83.0 the glue', () => {
     g.Hooks = { on: (k: string, f: Function) => { hooks[k] = f; } };
     registerDefaultArt();
     const path = at('people/elf-fem');
-    const a = fakeActor({ img: path, prototypeToken: { texture: { src: path } }, flags: { sr2e: { artAuto: path } }, system: { metatype: 'elf', art: { figure: 'fem', archetype: '' }, attributes: {} } });
+    const a = fakeActor({ img: path, prototypeToken: { texture: { src: path } }, flags: { shadowrun2e_unified: { artAuto: path } }, system: { metatype: 'elf', art: { figure: 'fem', archetype: '' }, attributes: {} } });
     // The player pressed the button (their update carries sr2eArt and the old pictures).
     hooks['updateActor']!(a, { img: path, prototypeToken: { texture: { src: path } } }, { sr2eArt: true, sr2eArtWas: ['worlds/w/old.webp'] }, 'player');
     await new Promise((r) => setTimeout(r, 5));
@@ -398,7 +398,7 @@ describe('v0.83.0 the glue', () => {
     await new Promise((r) => setTimeout(r, 5));
     assert.deepEqual(calls, []);
     // A renamed cyberware item is looked at again (ware counted by its name).
-    const art = { img: at('people/human-masc'), flags: { sr2e: { artAuto: at('people/human-masc') } }, prototypeToken: { texture: { src: at('people/human-masc') } } };
+    const art = { img: at('people/human-masc'), flags: { shadowrun2e_unified: { artAuto: at('people/human-masc') } }, prototypeToken: { texture: { src: at('people/human-masc') } } };
     const c = fakeActor({ ...art, system: { metatype: 'human', art: { figure: 'masc', archetype: '' }, attributes: {} } });
     c.documentName = 'Actor';
     c.items = [{ type: 'cyberware', name: 'Wired Reflexes 1', system: { installed: true } }];

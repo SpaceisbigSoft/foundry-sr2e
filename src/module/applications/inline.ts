@@ -11,6 +11,7 @@ import { successTest, noticeTest, guessSkillAttribute, type TargetNumberModifier
 import { withRollMode } from '../documents/index.ts';
 import { escHtml } from '../rules/html.ts';
 import { t as tx, tCount } from '../helpers/i18n.ts';
+import { SYSTEM_ID } from '../config/system.ts';
 
 let registered = false;
 
@@ -113,7 +114,7 @@ async function plainTest(actor: any | null, label: string, dice: number, tn: num
   await ChatMessage.create(withRollMode({
     speaker: actor ? ChatMessage.getSpeaker({ actor }) : ChatMessage.getSpeaker(),
     rolls,
-    flags: { sr2e: { privacyKind: 'plain' } },
+    flags: { [SYSTEM_ID]: { privacyKind: 'plain' } },
     content: `${banner}<div class="sr2e-roll">
       <h3>${esc(label)}</h3>
       ${r.botch ? `<div class="sr2e-count sr2e-count-botch"><b>✕</b><span>${tx('SR2E.Card.Inline.disaster2')}</span></div>` : `<div class="sr2e-count"><b>${r.successes}</b><span>${tCount(r.successes, 'SR2E.Card.Inline.successes2')}</span></div>`}

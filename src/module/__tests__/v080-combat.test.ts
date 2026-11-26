@@ -150,8 +150,8 @@ describe('v0.80.0 combat: the ranged defense flow (URR_V80.cbtDefense)', () => {
     const def = who();
     await def.defend(shot(def, { attackSuccesses: 4 }), 0);
     assert.match(chat.at(-1).content, /Hit!/);
-    assert.equal(chat.at(-1).flags.sr2e.damage.level, 'S');
-    assert.equal(chat.at(-1).flags.sr2e.damage.cleanMiss80, undefined);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.damage.level, 'S');
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.damage.cleanMiss80, undefined);
   });
 
   test('Revamp: no dodge card; the pool dice go to the resistance test, and beating the attack is a clean miss', async (t) => {
@@ -162,7 +162,7 @@ describe('v0.80.0 combat: the ranged defense flow (URR_V80.cbtDefense)', () => {
     assert.equal(faces.length, 0);
     assert.equal(chat.length, 1);                                      // straight to the soak card
     assert.match(chat[0].content, /Clean miss/);
-    assert.equal(chat[0].flags.sr2e.test.soak.cleanMiss80.hits, 1);
+    assert.equal(chat[0].flags.shadowrun2e_unified.test.soak.cleanMiss80.hits, 1);
     assert.deepEqual({ ...def.system.monitor }, { physical: 0, stun: 0 });
     assert.equal(def.system.poolSpent.combat, 2);
   });
@@ -199,7 +199,7 @@ describe('v0.80.0 combat: opposed melee and full defense (URR_V80.cbtDefense)', 
     const def = who({}, [skill('s1', 'Unarmed Combat', 3, 'strength')]);
     faces.push(2, 2, 2);
     await def.defend(katana(def), 0);
-    assert.equal(chat.at(-1).flags.sr2e.damage.level, 'S');
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.damage.level, 'S');
     chat.length = 0;
     faces.push(...Array(8).fill(2));                                   // 3 skill + 5 Quickness
     await def.defend(katana(def), 0, { fullDefense: true });
@@ -212,7 +212,7 @@ describe('v0.80.0 combat: opposed melee and full defense (URR_V80.cbtDefense)', 
     const def = who({}, [skill('s1', 'Unarmed Combat', 3, 'strength')]);
     faces.push(2, 2, 2);
     await def.defend(katana(def), 0);
-    const dmg = chat.at(-1).flags.sr2e.damage;
+    const dmg = chat.at(-1).flags.shadowrun2e_unified.damage;
     assert.equal(dmg.level, 'M');
     assert.deepEqual(dmg.cleanMiss80, { hits: 3, net: 3, noClean: true });
     faces.push(1, 2, 2, 2);                                            // Body 4 vs 6: none; 3 net: M → S
@@ -235,7 +235,7 @@ describe('v0.80.0 combat: opposed melee and full defense (URR_V80.cbtDefense)', 
     const def = who({}, [skill('s1', 'Unarmed Combat', 3, 'strength')]);
     faces.push(2, 2, 2);
     await def.defend(katana(def), 0);
-    const dmg = chat.at(-1).flags.sr2e.damage;
+    const dmg = chat.at(-1).flags.shadowrun2e_unified.damage;
     faces.push(1, 1, 1, 1, 6, 6, 6, 6, 1, 1, 1, 1);                    // Body 4 all ones; 4 pool dice: 6s re-rolled to 7s: 4 pool successes
     await def.resistFromState(dmg, 4);
     assert.doesNotMatch(chat.at(-1).content, /Clean miss/);
@@ -243,7 +243,7 @@ describe('v0.80.0 combat: opposed melee and full defense (URR_V80.cbtDefense)', 
     const full = who({}, [skill('s1', 'Unarmed Combat', 3, 'strength')]);
     faces.push(2, 2, 2);
     await full.defend(katana(full), 0, { fullDefense: true });
-    const d2 = chat.at(-1).flags.sr2e.damage;
+    const d2 = chat.at(-1).flags.shadowrun2e_unified.damage;
     assert.equal(d2.cleanMiss80.noClean, undefined);
     faces.push(1, 1, 1, 1, 6, 6, 6, 6, 1, 1, 1, 1);
     await full.resistFromState(d2, 4);
@@ -266,14 +266,14 @@ describe('v0.80.0 combat: knockdown (URR_V80.cbtKnockdown)', () => {
     const def = who();
     faces.push(1, 2, 2, 2);
     await def.resistFromState(light(def), 0);
-    assert.equal(chat.at(-1).flags.sr2e.knockdown, undefined);
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.knockdown, undefined);
   });
   test('Revamp: any damage: Body vs half the Power, the level needed; one success short of 3 staggers', async (t) => {
     t.after(combatMode());
     const def = who();
     faces.push(1, 2, 2, 2);                                            // TN 3: none; M stays
     await def.resistFromState(light(def), 0);
-    const k = chat.at(-1).flags.sr2e.knockdown;
+    const k = chat.at(-1).flags.shadowrun2e_unified.knockdown;
     assert.deepEqual(k, { actorUuid: def.uuid, tn: 2, level: 'M' });
     faces.push(1, 1, 2, 1);                                            // 1 success vs 2: 2 short of 3
     await def.rollKnockdown(k.tn, k.level);

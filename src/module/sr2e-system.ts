@@ -26,6 +26,7 @@ import { SR2CharacterSheet, SR2NpcSheet, SR2SpiritSheet, SR2BarrierSheet, SR2Hos
 import { registerChatHandlers } from "./applications/chat.ts";
 import { configureTokens, registerTokenHooks, useItem, runSheetAction, syncTokenVision, registerStateStatusHooks, registerMovementRuler, latestAttackOn } from "./applications/tokens.ts";
 import { registerMigrationSetting, runMigrations } from "./migrations.ts";
+import { moveClientSettings } from "./helpers/move.ts";
 import { registerClockSetting } from "./helpers/clock.ts";
 import { registerSettings } from "./settings.ts";
 import { registerUiHooks, SR2GmPanel } from "./applications/ui.ts";
@@ -56,6 +57,13 @@ import { registerQuenchBatches } from "../quench/sr2e-quench.ts";
 export class SR2System {
   constructor() {
     Hooks.once("init", () => this.onInit());
+    // v0.93.1: in a world moved from the old id, this browser's own settings come across too (once every client setting is
+    // registered, before ready reads them).
+    Hooks.once("setup", () => {
+      const keys = [...((game.settings as any).settings?.values?.() ?? [])].filter((s: any) => s?.namespace === SYSTEM.id && s?.scope === "client").map((s: any) => String(s.key));
+      const n = moveClientSettings(SYSTEM.id, keys);
+      if (n) console.log(`${SYSTEM.LOG.HEAD}Moved ${n} of this browser's settings from the old system id`);
+    });
     Hooks.once("ready", () => {
       void runMigrations();
       // Macros and other modules: game.sr2e.useItem(uuid) opens an item's dialog (v0.36.0).
