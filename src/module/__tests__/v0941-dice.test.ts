@@ -18,7 +18,10 @@ const read = (...p: string[]) => readFileSync(join(ROOT, ...p), 'utf8');
 const src = (...p: string[]) => read('src', 'module', ...p);
 /** The new strings, until the lead merges them into lang/en.json (then that file has them and this adds nothing). */
 const DRAFT = join(ROOT, 'i18n-drafts', 'reroll-typed.json');
-const draft = (): Record<string, string> => (existsSync(DRAFT) ? JSON.parse(readFileSync(DRAFT, 'utf8')) : {});
+// The drafts were merged into public/lang/en.json (and removed): read the strings from there once they are gone.
+const flatLang = (o: any, pre = ''): Record<string, string> => Object.entries(o ?? {}).reduce((acc: Record<string, string>, [k, v]) => (
+  v && typeof v === 'object' ? { ...acc, ...flatLang(v, `${pre}${k}.`) } : { ...acc, [`${pre}${k}`]: v as string }), {});
+const draft = (): Record<string, string> => (existsSync(DRAFT) ? JSON.parse(readFileSync(DRAFT, 'utf8')) : flatLang(JSON.parse(readFileSync(join(ROOT, 'public', 'lang', 'en.json'), 'utf8')).SR2E, 'SR2E.'));
 
 before(() => {
   const en = (globalThis as any).__SR2E_EN__ ?? ((globalThis as any).__SR2E_EN__ = {});

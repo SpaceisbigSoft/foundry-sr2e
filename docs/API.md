@@ -33,7 +33,7 @@ A test (`src/module/__tests__/v0932.test.ts`) checks that every call the system 
 | `version` | The system's version. |
 | `rules` | The rule values (`RULES`, after house rules). Read only: change them with the House rules settings. |
 | `successTest({dice, targetNumber, modifiers, roll})` | The engine's SR2 success test (Rule of Six, Rule of One). |
-| `rollTest(spec, actor?, {quick, label})` | Roll a test from an inline-test spec, as `@SR2Test[...]` and `/sr2` do: `body tn 5`, `Firearms tn 4 mod -1 pool 2`, `perception`, `6 tn 5`. `quick` (default true) skips the dialog. |
+| `rollTest(spec, actor?, {quick, label})` | Roll a test from an inline-test spec, as `@SR2Test[...]` and `/sr2` do: `body tn 5`, `Firearms tn 4 mod -1 pool 2`, `perception`, `6 tn 5`; add `secret` for a GM-only card (v0.94.1). `quick` (default true) skips the dialog. |
 | `defendNewest(actor)` | Click Defend on the newest attack aimed at this actor (false when there is none). |
 | `regionsAt(scene, {x, y, elevation})`, `regionsAtToken(token)` | The SR2 environment regions at a point or under a token: `{id, name, env, area}`. |
 | `wardsBetween(tokenA, tokenB)` | The ward or barrier actors whose region edge lies between two tokens. |
@@ -121,8 +121,9 @@ The system registers itself with Token Action HUD Core 2.x (`tokenActionHudSyste
 
 The interface's history from v0.93.2, newest first. Each version's `CHANGELOG.md` entry repeats its line.
 
-- **v0.93.4:** none.
+- **v0.94.1:** `rollTest(spec)` (and every roll link) takes the word `secret`: the card goes to the GMs only. Nothing was changed or removed.
 - **v0.94.0:** `importCharacter(actor, text)` also takes the text of a Nullsheen generator file or a futurekill actor export (it is turned into a write-up first). Nothing was removed.
 - **v0.93.5:** added `partyView()`; `gmPanel()` takes an optional tab. Nothing was changed or removed.
+- **v0.93.4:** none.
 - **v0.93.3:** added `requestRoll({ actors? })`, `postRollRequest({ kind, key, tn, hidden?, actors })` and `teamKarma()`. Nothing was changed or removed.
 - **v0.93.2:** the stability rules above. Nothing changed; the calls added in v0.87.0–v0.92.1 are listed here for the first time. Since v0.93.1 (the system id change) the flags and settings live under `shadowrun2e_unified`; the names `game.sr2e` and the `sr2e.*` hooks stayed.

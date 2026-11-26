@@ -21,7 +21,10 @@ const ROOT = join(import.meta.dirname, '..', '..', '..');
 const read = (...p: string[]) => readFileSync(join(ROOT, ...p), 'utf8');
 const mod = (...p: string[]) => read('src', 'module', ...p);
 const DRAFT = join(ROOT, 'i18n-drafts', 'automation-presets.json');
-const draft = (): Record<string, string> => (existsSync(DRAFT) ? JSON.parse(readFileSync(DRAFT, 'utf8')) : {});
+// The drafts were merged into public/lang/en.json (and removed): read the strings from there once they are gone.
+const flatLang = (o: any, pre = ''): Record<string, string> => Object.entries(o ?? {}).reduce((acc: Record<string, string>, [k, v]) => (
+  v && typeof v === 'object' ? { ...acc, ...flatLang(v, `${pre}${k}.`) } : { ...acc, [`${pre}${k}`]: v as string }), {});
+const draft = (): Record<string, string> => (existsSync(DRAFT) ? JSON.parse(readFileSync(DRAFT, 'utf8')) : flatLang(JSON.parse(readFileSync(join(ROOT, 'public', 'lang', 'en.json'), 'utf8')).SR2E, 'SR2E.'));
 const getPath = (o: any, p: string): unknown => p.split('.').reduce((a: any, k) => (a == null ? undefined : a[k]), o);
 
 /** Every .ts file under src/module (not the tests), with its text; paths with forward slashes (Windows too). */
