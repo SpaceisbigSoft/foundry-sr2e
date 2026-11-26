@@ -1586,7 +1586,7 @@ li.chat-message.sr2e-card.sr2e-card-note .message-content { font-size: 0.92em; }
   -webkit-appearance: none; appearance: none;
   box-sizing: border-box; position: relative; flex: 0 0 auto;
   width: 16px; height: 16px; min-width: 16px; min-height: 16px; margin: 0; padding: 0;
-  border: var(--sr2e-control-edge-width, 1.5px) solid var(--sr2e-control-edge, var(--sr2e-box-line));
+  border: var(--sr2e-control-edge-width, 2px) solid var(--sr2e-control-edge, var(--sr2e-box-line));
   border-radius: 2px; background: var(--sr2e-sunk); box-shadow: none;
   color: var(--sr2e-control-mark, var(--sr2e-window)); font-size: 16px; line-height: 1;
   vertical-align: middle; cursor: pointer;
@@ -1755,8 +1755,8 @@ body.sr2e-theme-contrast :is(.sr2e-look, .sr2e-card, .sr2e-hover-card) .sr2e-cm-
 }
 
 /* ---------------------------------------------------------------- Dialogs: the body scrolls, the footer stays in view */
-.application.dialog.sr2e-dialog.sr2e-look { max-height: calc(100vh - 0.5rem); }
-.application.dialog.sr2e-dialog.sr2e-look > .window-content:has(.form-footer) { display: flex; flex-direction: column; min-height: 0; max-height: calc(100vh - 3.5rem); overflow: hidden; }
+.application.dialog.sr2e-dialog.sr2e-look { max-height: calc(100vh - 2rem); }
+.application.dialog.sr2e-dialog.sr2e-look > .window-content:has(.form-footer) { display: flex; flex-direction: column; min-height: 0; max-height: calc(100vh - 5rem); overflow: hidden; }
 .application.dialog.sr2e-dialog.sr2e-look > .window-content > form:has(> .form-footer) { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; max-height: 100%; }
 .application.dialog.sr2e-dialog.sr2e-look :is(.window-content, .window-content > form) > .dialog-content { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: 0.25rem; }
 .application.dialog.sr2e-dialog.sr2e-look :is(.window-content, .window-content > form) > .form-footer { flex: 0 0 auto; margin-top: 0.4rem; padding-top: 0.45rem; border-top: 1px solid var(--sr2e-rule); }

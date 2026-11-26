@@ -38,7 +38,7 @@ describe('unticked checkboxes and radios are visible in every theme', () => {
       assert.equal(p.controlEdge, '#ffffff');
       assert.equal(paletteVars(p)['--sr2e-control-edge-width'], '2px');
     }
-    assert.equal(paletteVars(palette('street', 'cyan'))['--sr2e-control-edge-width'], '1.5px');
+    assert.equal(paletteVars(palette('street', 'cyan'))['--sr2e-control-edge-width'], '2px'); // v0.93.4 live run: 1.5px rounded down to 1px on a 1x screen
     assert.match(CSS, /body\.sr2e-theme-contrast[^{]*:focus-visible \{\s*outline: 3px/);
   });
 
@@ -47,7 +47,7 @@ describe('unticked checkboxes and radios are visible in every theme', () => {
     assert.equal(rules.length, 1);
     const r = rules[0]!;
     assert.match(r, /^\s*(\/\*[\s\S]*?\*\/\s*)*:is\(\.sr2e-look, \.sr2e-card, \.sr2e-hover-card\)/m);
-    assert.match(r, /border: var\(--sr2e-control-edge-width, 1\.5px\) solid var\(--sr2e-control-edge/);
+    assert.match(r, /border: var\(--sr2e-control-edge-width, 2px\) solid var\(--sr2e-control-edge/);
     assert.match(r, /width: 16px; height: 16px/);
     // Every checkbox or radio selector is scoped to our windows and cards.
     for (const sel of CSS.replace(/\/\*[\s\S]*?\*\//g, '').split('{').map((x) => x.split('}').pop()!.trim()).filter((x) => /checkbox|radio/.test(x))) {

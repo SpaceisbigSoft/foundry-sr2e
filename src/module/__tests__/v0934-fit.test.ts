@@ -157,7 +157,7 @@ describe('v0.93.4 the strip, the GM panel and the stylesheet', () => {
     // Dialogs: the content scrolls, the footer doesn't.
     assert.match(c, /> \.dialog-content \{ flex: 1 1 auto; min-height: 0; overflow-y: auto;/);
     assert.match(c, /> \.form-footer \{ flex: 0 0 auto;/);
-    assert.match(c, /\.window-content:has\(\.form-footer\) \{[^}]*max-height: calc\(100vh - 3\.5rem\); overflow: hidden; \}/);
+    assert.match(c, /\.window-content:has\(\.form-footer\) \{[^}]*max-height: calc\(100vh - 5rem\); overflow: hidden; \}/);
     // The compact top: the tab bar scrolls sideways, the find bar keeps Edit on its line.
     assert.match(c, /@media \(max-width: 1100px\), \(max-height: 820px\)/);
     assert.match(c, /\.sr2e-tabs \{ flex-wrap: nowrap; overflow-x: auto;/);

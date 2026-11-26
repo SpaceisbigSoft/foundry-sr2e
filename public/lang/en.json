@@ -16779,7 +16779,7 @@
         "priorities": "Priorities",
         "eachLetterOnce": "each of A–E once",
         "usedTwice": "{list} used twice",
-        "pickALetter": "pick a letter for every column",
+        "pickALetter": "pick a letter for every row",
         "race": "Race",
         "orBetter": "{need} or better",
         "magic": "Magic",

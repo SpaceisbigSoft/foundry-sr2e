@@ -287,7 +287,7 @@ export function paletteVars(p: Palette): Record<string, string> {
     '--sr2e-edge-soft': rgba(p.accent, 0.12), '--sr2e-hit-glow': rgba(p.accent, p.scheme === 'light' ? 0 : 0.35),
     '--sr2e-accent-wash': rgba(p.accent, 0.16), '--sr2e-scheme': p.scheme,
     // v0.93.4: checkboxes and radios (the edge of an unticked one, the tick on the accent fill, the edge's width).
-    '--sr2e-control-edge': p.controlEdge, '--sr2e-control-mark': p.controlMark, '--sr2e-control-edge-width': p.textMin >= 7 ? '2px' : '1.5px',
+    '--sr2e-control-edge': p.controlEdge, '--sr2e-control-mark': p.controlMark, '--sr2e-control-edge-width': '2px',
     // v0.74.0: outcome colours for the success count (text on the card's own background).
     '--sr2e-good': p.scheme === 'light' ? '#17692f' : '#4cd982', '--sr2e-bad': p.danger,
     // Solid outcome fills (white text on each is at least 4.5:1) and the colourblind set (Okabe-Ito).
