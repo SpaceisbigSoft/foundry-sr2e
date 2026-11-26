@@ -435,8 +435,11 @@ function decorateTracker(htmlIn: HTMLElement): void {
 function woundChipFor(li: HTMLElement, actor: any): void {
   const img = Array.from(li.querySelectorAll<HTMLImageElement>('img')).find((i) => woundLetterOf(i.getAttribute('src')));
   const old = li.querySelector<HTMLElement>('.sr2e-tracker-wound');
-  const chip = img ? trackerWoundChip(woundLetterOf(img.getAttribute('src')), actor?.system?.derived?.woundModifier) : null;
+  // v0.93.4 review: the exact modifier only for those who own the actor (the dot alone never told players an NPC's).
+  const chip = img ? trackerWoundChip(woundLetterOf(img.getAttribute('src')), actor?.isOwner ? actor?.system?.derived?.woundModifier : undefined) : null;
   if (!img || !chip) { old?.remove(); return; }
+  // Only our own wound icon is hidden beside the chip (by this class).
+  img.classList.add('sr2e-wound-dot');
   // A-3: Foundry's tooltip renders data-tooltip as HTML; the text is escaped.
   img.dataset['tooltip'] = escHtml(chip.title);
   const el = old ?? document.createElement('span');

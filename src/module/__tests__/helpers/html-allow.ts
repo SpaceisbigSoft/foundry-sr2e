@@ -26,9 +26,6 @@ export const ALLOWED: Record<string, Record<string, string>> = {
   'src/module/applications/print.ts': {
     'withoutSecrets | innerHTML | html': 'v0.87.0: already-cleaned rich text (enrichFields) parsed into an inert <template> element (never rendered) to take out the secret sections.',
   },
-  'src/module/applications/sheettools.ts': {
-    "lockField | data-tooltip | el.dataset['sr2eTipWas']": "v0.93.4: the field's own data-tooltip value, kept while Play mode showed the lock note, put back unchanged (it was already this attribute's value).",
-  },
   'src/module/applications/teamkarma.ts': {
     'SR2TeamKarma._replaceHTML | innerHTML | result': 'v0.93.3: the Team Karma window\'s own _renderHTML output, whose interpolations are scanned where they are written.',
   },

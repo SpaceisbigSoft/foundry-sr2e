@@ -306,10 +306,15 @@ function monitorTrack(body: HTMLElement): void {
         b.classList.toggle('sr2e-would-clear', n > to && b.classList.contains('filled'));
       }
       const label = box.dataset['track'] === 'stun' ? tx('SR2E.App.Interface.stun') : box.dataset['track'] === 'matrix' ? tx('SR2E.App.Interface.persona') : tx('SR2E.App.Interface.physical');
-      box.title = tCount(to, 'SR2E.App.Interface.clickToSetBox', { label });
+      // v0.93.4: Foundry's tooltip attributes, not a title (the tooltip converter would show the last hover's text).
+      const tip = tCount(to, 'SR2E.App.Interface.clickToSetBox', { label });
+      box.removeAttribute('title');
+      box.dataset['tooltipText'] = tip;
+      box.dataset['tooltip'] = escHtml(tip);
     };
     const hide = () => { for (const b of same()) b.classList.remove('sr2e-would-fill', 'sr2e-would-clear'); };
-    box.addEventListener('mouseenter', show);
+    // v0.93.4: pointerover comes before pointerenter, where Foundry's tooltip reads the text set here.
+    box.addEventListener('pointerover', show);
     box.addEventListener('focus', show);
     box.addEventListener('mouseleave', hide);
     box.addEventListener('blur', hide);
@@ -451,22 +456,31 @@ function rollMemory(form: HTMLFormElement, marker: HTMLElement, okButton: HTMLEl
   form.addEventListener('submit', (ev: Event) => { const by = (ev as SubmitEvent).submitter; if (!by || by === okButton) keep(); }, { capture: true });
 }
 
-/** v0.93.4: the other roll windows open on this client (each one a dialog with the TN preview). */
-export function otherRollWindows(app: any, apps: Iterable<any>): any[] {
+/** v0.93.4: a Defend or Resist window (an answer to someone else's card): never closed for another roll window. */
+export function isAnswerWindow(el: any): boolean {
+  try { return Boolean(el?.querySelector?.('.sr2e-resist-preview')); } catch { return false; }
+}
+
+/**
+ * v0.93.4: the other roll windows open on this client (each one a dialog with the TN preview) that a new one replaces.
+ * Defend and Resist windows stay (two attacks in a row each keep theirs), and a new Defend or Resist window closes nothing.
+ */
+export function otherRollWindows(app: any, apps: Iterable<any>, root: any = app?.element): any[] {
+  if (isAnswerWindow(root)) return [];
   const out: any[] = [];
   for (const a of apps) {
     if (!a || a === app || a.id === app?.id) continue;
     const el: HTMLElement | null = a.element ?? null;
-    if (el?.classList?.contains('sr2e-roll-dialog') && el.isConnected !== false) out.push(a);
+    if (el?.classList?.contains('sr2e-roll-dialog') && el.isConnected !== false && !isAnswerWindow(el)) out.push(a);
   }
   return out;
 }
 
-function closeOtherRollWindows(app: any): void {
+function closeOtherRollWindows(app: any, root: HTMLElement | null = null): void {
   try {
     const all: any = (foundry as any).applications?.instances;
     const list = all?.values ? Array.from(all.values()) : [];
-    for (const a of otherRollWindows(app, list)) void Promise.resolve(a.close?.()).catch(() => { /* already closing */ });
+    for (const a of otherRollWindows(app, list, root ?? app?.element)) void Promise.resolve(a.close?.()).catch(() => { /* already closing */ });
   } catch (err) { console.warn('sr2e | one roll window', err); }
 }
 
@@ -488,7 +502,7 @@ export function enhanceRollDialog(app: any, root: HTMLElement | null): void {
   const preview = content.querySelector<HTMLElement>('.sr2e-preview');
   if (!preview || content.querySelector('.sr2e-roll-grid')) return;
   root.classList.add('sr2e-roll-dialog');
-  if (setting('oneRollWindow', true)) closeOtherRollWindows(app);
+  if (setting('oneRollWindow', true)) closeOtherRollWindows(app, root);
   for (const name of ['pool', 'drainPool', 'hackingPool', 'controlPool', 'poolDice']) {
     content.querySelector<HTMLElement>(`[name="${name}"]`)?.closest('.form-group')?.classList.add('sr2e-pool-field');
   }

@@ -208,7 +208,7 @@ a.sr2e-ic-act { display: inline-block; min-width: 1.5rem; min-height: 1.5rem; pa
 .sr2e-tracker-wound.sr2e-wound-S { background: #eb5757; color: #111; }
 .sr2e-tracker-wound.sr2e-wound-D { background: #7b0000; color: #fff; border-color: #fff; }
 /* The chip says it in words: the bare wound dot beside it goes. */
-li[data-combatant-id]:has(.sr2e-tracker-wound) img[src*="/wound-"] { display: none; }
+li[data-combatant-id]:has(.sr2e-tracker-wound) img.sr2e-wound-dot { display: none; }
 
 /* v0.37.0: ammo pips and firing-mode buttons */
 .sr2e-ammo { display: inline-flex; flex-wrap: wrap; gap: 1px; align-items: center; max-width: 9rem; vertical-align: middle; }

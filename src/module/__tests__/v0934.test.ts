@@ -122,12 +122,17 @@ describe('v0.93.4 one roll window at a time', () => {
     const roll = (id: string) => ({ id, element: { classList: { contains: (c: string) => c === 'sr2e-roll-dialog' }, isConnected: true } });
     const me = roll('a'), other = roll('b'), gone = { id: 'c', element: { classList: { contains: () => true }, isConnected: false } };
     const plain = { id: 'd', element: { classList: { contains: () => false }, isConnected: true } };
-    assert.deepEqual(otherRollWindows(me, [me, other, gone, plain, null]).map((a) => a.id), ['b']);
+    assert.deepEqual(otherRollWindows(me, [me, other, gone, plain, null], null).map((a) => a.id), ['b']);
+    // Review: a Defend or Resist window is never closed, and a new one closes nothing.
+    const answerEl = { classList: { contains: (c: string) => c === 'sr2e-roll-dialog' }, isConnected: true, querySelector: (q: string) => (q === '.sr2e-resist-preview' ? {} : null) };
+    const defend = { id: 'e', element: answerEl };
+    assert.deepEqual(otherRollWindows(me, [me, other, defend], null).map((a) => a.id), ['b']);
+    assert.deepEqual(otherRollWindows(defend, [me, other, defend], answerEl), []);
   });
   test('a client setting, on by default, in the Rolls section', () => {
     const s = read('src/module/applications/interface.ts');
     assert.match(s, /s\.register\(ID, 'oneRollWindow', \{[\s\S]*?scope: 'client', config: true, type: Boolean, default: true/);
-    assert.match(s, /if \(setting\('oneRollWindow', true\)\) closeOtherRollWindows\(app\);/);
+    assert.match(s, /if \(setting\('oneRollWindow', true\)\) closeOtherRollWindows\(app, root\);/);
     assert.match(read('src/module/rules/interface.ts'), /oneRollWindow/);
   });
 });
@@ -162,7 +167,12 @@ describe('v0.93.4 Play / Edit', () => {
     } finally { delete (globalThis as any).localStorage; }
   });
   test('locked fields say why; the item sheet gets the switch and keeps its play fields', () => {
-    assert.match(src, /el\.dataset\['tooltip'\] = tx\('SR2E\.App\.Sheettools\.lockedInPlay'\)/);
+    assert.match(src, /const why = tx\('SR2E\.App\.Sheettools\.lockedInPlay'\);\n    d\['tooltip'\] = why;\n    d\['tooltipText'\] = why;/);
+    // Review: Edit puts back what the template gave the field (disabled or read-only), its title and tooltips.
+    assert.match(src, /d\['sr2eWasOff'\] = box \?/);
+    assert.match(src, /el\.setAttribute\('title', d\['sr2eTitleWas'\]\)/);
+    for (const f of ['system.turret.facing', 'system.exposed', 'system.erased', 'system.damage.mpcp']) assert.ok(src.includes(`'${f}'`), f);
+    assert.doesNotMatch(src, /sw\.outerHTML/);
     for (const f of ['system.carried', 'system.ready', 'system.ammo', 'system.quantity', 'system.notes', 'system.loaded']) assert.ok(src.includes(`'${f}'`), f);
     const sheets = read('src/module/applications/sheets.ts');
     assert.match(sheets, /sheetMode: SHEET_TOOL_ACTIONS\.sheetMode/);
@@ -172,6 +182,22 @@ describe('v0.93.4 Play / Edit', () => {
   test('the list tools run on every sheet render', () => {
     assert.match(src, /decorateLists\(body, sheet\)/);
     assert.match(src, /LIST_FILTER_MIN/);
+  });
+});
+
+describe('v0.93.4 review fixes', () => {
+  test('the monitor boxes set Foundry\'s tooltip before it reads it, never a title', () => {
+    const s = read('src/module/applications/interface.ts');
+    assert.match(s, /box\.dataset\['tooltipText'\] = tip;/);
+    assert.match(s, /box\.addEventListener\('pointerover', show\);/);
+    assert.doesNotMatch(s, /box\.title = /);
+  });
+  test('the tracker hides only our own wound icon, and shows the modifier only to owners', () => {
+    const css = read('public/style/sr2e.css');
+    assert.ok(css.includes('img.sr2e-wound-dot { display: none; }'));
+    assert.ok(!css.includes('img[src*="/wound-"] { display: none; }'));
+    const t = read('src/module/applications/tokens.ts');
+    assert.match(t, /actor\?\.isOwner \? actor\?\.system\?\.derived\?\.woundModifier : undefined/);
   });
 });
 

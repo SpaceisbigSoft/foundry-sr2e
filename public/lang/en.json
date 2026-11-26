@@ -2387,7 +2387,7 @@
       },
       "oneRollWindow": {
         "Name": "Roll dialogs: one at a time",
-        "Hint": "Opening a roll dialog closes the one already open, as if you had cancelled it."
+        "Hint": "Opening a roll dialog closes the one already open, as if you had cancelled it. Defend and Resist windows always stay open."
       }
     },
     "Notify": {

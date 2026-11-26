@@ -159,7 +159,10 @@ const PLAY_LOCK = ['.sr2e-header input', '.sr2e-header select', '.sr2e-attribute
 /** v0.93.4: on an item sheet Play locks every field but the ones used in play (`.sr2e-play-ok`, carried, drawn, rounds, notes). */
 const ITEM_PLAY_OK = ['system.carried', 'system.ready', 'system.active', 'system.loaded', 'system.ammo', 'system.ammoType', 'system.rounds',
   'system.quantity', 'system.notes', 'system.sustained', 'system.worn', 'system.optics.worn', 'system.protection.worn', 'system.stealth.worn',
-  'system.chip.slotted', 'system.damaged', 'system.degraded', 'system.surveillance.active', 'system.simchip.minutes'];
+  'system.chip.slotted', 'system.damaged', 'system.degraded', 'system.surveillance.active', 'system.simchip.minutes',
+  // v0.93.4 review: the turret's facing, being exposed, an erased program, a set-up support, a deck's damage.
+  'system.turret.facing', 'system.exposed', 'system.erased', 'system.supportSetUp', 'system.damage.mpcp', 'system.damage.bod',
+  'system.damage.evasion', 'system.damage.masking', 'system.damage.sensors'];
 const ITEM_PLAY_LOCK = 'form input[name], form select[name], form textarea[name]';
 
 /** v0.93.4: the Edit | Play switch (two buttons, the current one pressed). */
@@ -171,20 +174,39 @@ export function modeSwitchHtml(mode: 'edit' | 'play'): string {
 
 function lockField(el: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement, play: boolean, editable: boolean): void {
   const box = el instanceof HTMLSelectElement || (el as HTMLInputElement).type === 'checkbox' || (el as HTMLInputElement).type === 'radio';
+  const d = el.dataset;
   if (play) {
-    el.dataset['sr2eLocked'] = '1';
+    if (d['sr2eLocked']) return;
+    d['sr2eLocked'] = '1';
+    // v0.93.4 review: what the template gave the field is kept, and Edit puts back exactly that (a GM-only box stays off).
+    d['sr2eWasOff'] = box ? String((el as HTMLInputElement).disabled) : String((el as HTMLInputElement).readOnly);
     if (box) (el as HTMLInputElement).disabled = true; else (el as HTMLInputElement).readOnly = true;
-    // v0.93.4: say why it can't be changed (Foundry's tooltip; the field's own hint comes back in Edit).
-    if (el.dataset['tooltip'] !== undefined && !el.dataset['sr2eLockTip']) el.dataset['sr2eTipWas'] = el.dataset['tooltip'];
-    el.dataset['tooltip'] = tx('SR2E.App.Sheettools.lockedInPlay');
-    el.dataset['sr2eLockTip'] = '1';
-  } else if (el.dataset['sr2eLocked']) {
-    delete el.dataset['sr2eLocked'];
-    if (box) (el as HTMLInputElement).disabled = !editable; else (el as HTMLInputElement).readOnly = !editable;
-    if (el.dataset['sr2eLockTip']) {
-      delete el.dataset['sr2eLockTip'];
-      if (el.dataset['sr2eTipWas'] !== undefined) { el.dataset['tooltip'] = el.dataset['sr2eTipWas']; delete el.dataset['sr2eTipWas']; } else delete el.dataset['tooltip'];
-    }
+    // Say why it can't be changed (Foundry's tooltip). The field's own hint (a title, or tooltip attributes) comes back in Edit.
+    const title = el.getAttribute('title');
+    if (title !== null) { d['sr2eTitleWas'] = title; el.removeAttribute('title'); }
+    if (d['tooltip'] !== undefined) d['sr2eTipWas'] = d['tooltip'];
+    if (d['tooltipText'] !== undefined) d['sr2eTipTextWas'] = d['tooltipText'];
+    const why = tx('SR2E.App.Sheettools.lockedInPlay');
+    d['tooltip'] = why;
+    d['tooltipText'] = why;
+  } else if (d['sr2eLocked']) {
+    delete d['sr2eLocked'];
+    const wasOff = d['sr2eWasOff'] === 'true';
+    delete d['sr2eWasOff'];
+    if (box) (el as HTMLInputElement).disabled = wasOff || !editable; else (el as HTMLInputElement).readOnly = wasOff || !editable;
+    delete d['tooltip']; delete d['tooltipText'];
+    if (d['sr2eTipWas'] !== undefined) { d['tooltip'] = d['sr2eTipWas']; delete d['sr2eTipWas']; }
+    if (d['sr2eTipTextWas'] !== undefined) { d['tooltipText'] = d['sr2eTipTextWas']; delete d['sr2eTipTextWas']; }
+    if (d['sr2eTitleWas'] !== undefined) { el.setAttribute('title', d['sr2eTitleWas']); delete d['sr2eTitleWas']; }
+  }
+}
+
+/** v0.93.4 review: the switch is updated in place (the pressed button keeps the keyboard focus). */
+function updateSwitch(sw: HTMLElement, mode: 'edit' | 'play'): void {
+  for (const b of Array.from(sw.querySelectorAll<HTMLElement>('button[data-mode]'))) {
+    const on = b.dataset['mode'] === mode;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-pressed', String(on));
   }
 }
 
@@ -221,7 +243,7 @@ export function applyMode(sheet: any, root: HTMLElement | null): void {
     : Array.from(root.querySelectorAll<HTMLInputElement | HTMLSelectElement>(PLAY_LOCK));
   for (const el of fields) lockField(el, play, editable);
   const sw = root.querySelector<HTMLElement>('.sr2e-mode-switch');
-  if (sw) sw.outerHTML = modeSwitchHtml(play ? 'play' : 'edit');
+  if (sw) updateSwitch(sw, play ? 'play' : 'edit');
 }
 
 function tabOf(el: HTMLElement): string { return el.closest<HTMLElement>('[data-tab].sr2e-tab')?.dataset['tab'] ?? 'all'; }
@@ -279,7 +301,9 @@ function runSearch(root: HTMLElement, q: string): void {
 
 /** A list row's name (its item link) and number (rating, Force, quantity: the first number field or `data-sort-value`). */
 function rowOf(li: HTMLElement): SortRow {
-  const link = li.querySelector<HTMLElement>('a[data-item-id], [data-action="editItem"], [data-action="rollSkill"]');
+  // v0.93.4: the first link with words (a row can start with an icon-only link, such as Carried).
+  const links = Array.from(li.querySelectorAll<HTMLElement>('[data-action="editItem"], [data-action="rollSkill"], a[data-item-id]'));
+  const link = links.find((a) => (a.textContent ?? '').trim());
   const name = (link?.textContent ?? li.textContent ?? '').trim();
   const tagged = li.querySelector<HTMLElement>('[data-sort-value]')?.dataset['sortValue'];
   const input = li.querySelector<HTMLInputElement>('input[type="number"].sr2e-rowedit');
