@@ -3671,7 +3671,8 @@
         "resistPreviewImmune": "Immune: this damage does nothing.",
         "resistPreviewStops": "Shrugged off: the Power doesn't beat the immunity ({against}).",
         "resistNoArmor": "Count no armor this time (armor {armor})",
-        "resistPreviewBarrier": "Stopped: the barrier is rated above the Power."
+        "resistPreviewBarrier": "Stopped: the barrier is rated above the Power.",
+        "defendPreview": "Resistance test: Power {power} − armor {armor} = TN {tn}, {dice} dice + the pool dice you add ({left} left); the attacker's net successes then stage the damage."
       },
       "Creation": {
         "buildCheckNotMet": "{failedLength} not met:",

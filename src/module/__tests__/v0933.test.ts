@@ -233,3 +233,17 @@ describe('v0.93.3 review fixes', () => {
     assert.ok(read('src', 'module', 'applications', 'creation.ts').includes("s.kind === 'buildRepair' ? '' : ` (${attributeDisplayLabel(s.attribute)})`"));
   });
 });
+
+describe('v0.93.3 live-run fixes', () => {
+  test('a row\'s target is read as its uuid (safeStr only checks it), so the GM\'s copy is marked done', () => {
+    const src = read('src', 'module', 'applications', 'chat.ts');
+    assert.ok(src.includes("const uuid = safeStr(raw, 400) ? String(raw) : '';"));
+    assert.ok(!src.includes('const uuid = safeStr(list[index]?.targetUuid, 400);'));
+  });
+  test('the Defend window previews the resistance test when there is no dodge', () => {
+    const src = read('src', 'module', 'applications', 'chat.ts');
+    assert.ok(src.includes("const preview = cm80 ? defendPreviewLine(defender, attack, left) : '';"));
+    assert.ok(src.includes('content: `${preview}<div class="form-group"><label>${U80C.cbtDefendPoolLabel(left, cm80)}</label>'));
+    assert.match(String(key('SR2E.Dialog.Chat.defendPreview')), /\{tn\}/);
+  });
+});

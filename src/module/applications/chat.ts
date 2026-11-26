@@ -324,9 +324,12 @@ async function onDefend(message: any, button: HTMLButtonElement): Promise<void> 
     const left = (defender.system.derived?.combatPoolLeft as number | undefined) ?? 0;
     // v0.80.0 (URR_V80.cbtDefense 'cleanMiss'): no dodge; the pool dice go to the resistance test.
     const cm80 = U80C.cbtCleanMissRanged(attack, false);
+    // v0.93.3 (report item 10): when the Defend roll is the resistance test (no dodge), the same preview as the
+    // Resist window: Power − armor = TN and the dice, before the roll.
+    const preview = cm80 ? defendPreviewLine(defender, attack, left) : '';
     const choice = await foundry.applications.api.DialogV2.prompt({
       window: { title: tx('SR2E.Dialog.Chat.defend2', { defenderName: defender.name }) },
-      content: `<div class="form-group"><label>${U80C.cbtDefendPoolLabel(left, cm80)}</label><input name="pool" type="number" value="0" min="0" max="${left}" autofocus></div>${cm80 ? `<p class="hint">${tx('SR2E.Dialog.Chat.noDodgePoolSuccessesAboveThe')}</p>` : fullDefenseRow(defender)}`,
+      content: `${preview}<div class="form-group"><label>${U80C.cbtDefendPoolLabel(left, cm80)}</label><input name="pool" type="number" value="0" min="0" max="${left}" autofocus></div>${cm80 ? `<p class="hint">${tx('SR2E.Dialog.Chat.noDodgePoolSuccessesAboveThe')}</p>` : fullDefenseRow(defender)}`,
       ok: { label: tx('SR2E.Dialog.Chat.defend'), callback: (_e: Event, b: any) => ({ pool: Math.max(0, Math.min(left, Math.floor(Number(b.form.elements.pool.value) || 0))), full: Boolean(b.form.elements.full?.checked) }) },
       rejectClose: false,
     });
@@ -343,6 +346,23 @@ async function onDefend(message: any, button: HTMLButtonElement): Promise<void> 
   button.disabled = true;
   await gmRoll(message, button, () => defender.defend(attack, pool));
   await done();
+}
+
+/**
+ * v0.93.3 (report item 10): the Defend window's preview line when the defence is the resistance test: the attack's
+ * Power and kind as the resistance will see them (resistPreview), before the attacker's net successes stage it.
+ */
+function defendPreviewLine(defender: any, attack: AttackState, left: number): string {
+  try {
+    const a: any = attack;
+    const damage = { ...a, targetUuid: String(defender.uuid), damageType: a.damageType ?? 'physical', power: Number(a.power) || 0, level: a.level } as DamageState;
+    const p = defender.resistPreview?.(damage, false);
+    if (!p) return '';
+    const text = p.immune ? tx('SR2E.Dialog.Chat.resistPreviewImmune') : p.barrier ? tx('SR2E.Dialog.Chat.resistPreviewBarrier')
+      : p.stops !== undefined ? tx('SR2E.Dialog.Chat.resistPreviewStops', { against: Number(p.stops) || 0 })
+      : tx('SR2E.Dialog.Chat.defendPreview', { power: Number(p.power) || 0, armor: Number(p.armor) || 0, tn: Number(p.tn) || 0, dice: (Number(p.dice) || 0) + (Number(p.threat) || 0), left: Math.max(0, Number(left) || 0) });
+    return `<div class="sr2e-preview sr2e-resist-preview" aria-live="polite">${text}</div>`;
+  } catch { return ''; }
 }
 
 /** The full-defense checkbox for Defend dialogs. */
@@ -705,7 +725,9 @@ function rowTarget(message: any, action: 'defend' | 'resist', index: number): an
   const list: any[] = action === 'defend'
     ? listFlag<any>(message.getFlag?.(SYSTEM_ID, 'attacks')).length ? listFlag<any>(message.getFlag?.(SYSTEM_ID, 'attacks')) : [message.getFlag?.(SYSTEM_ID, 'attack')]
     : listFlag<any>(message.getFlag?.(SYSTEM_ID, 'damages')).length ? listFlag<any>(message.getFlag?.(SYSTEM_ID, 'damages')) : [message.getFlag?.(SYSTEM_ID, 'damage')];
-  const uuid = safeStr(list[index]?.targetUuid, 400);
+  // safeStr checks a string (it returns true/false); the uuid itself is the row's.
+  const raw = list[index]?.targetUuid;
+  const uuid = safeStr(raw, 400) ? String(raw) : '';
   try { return uuid ? (globalThis as any).fromUuidSync?.(uuid) ?? null : null; } catch { return null; }
 }
 
