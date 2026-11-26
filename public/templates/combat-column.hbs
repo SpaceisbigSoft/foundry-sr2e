@@ -16,7 +16,7 @@
       {{#each weapons}}{{#unless leftBehind}}
       <li class="{{#unless system.ready}}sr2e-col-holstered{{/unless}}">
         <span class="sr2e-col-name" title="{{name}}">{{name}}</span>
-        <span class="sr2e-col-detail">{{damageLabel}}{{#if system.ammoMax}} · <b>{{system.ammo}}/{{system.ammoMax}}</b>{{/if}}{{#if system.jammed}} · <strong class="sr2e-warn">{{sr2eT "SR2E.UI.jammed"}}</strong>{{/if}}</span>
+        <span class="sr2e-col-detail">{{damageLabel}}{{#if system.ammoMax}} · <b data-sr2e-lower="ammo" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.roundsLeftRightClick"}}">{{system.ammo}}/{{system.ammoMax}}</b>{{/if}}{{#if system.jammed}} · <strong class="sr2e-warn">{{sr2eT "SR2E.UI.jammed"}}</strong>{{/if}}</span>
         <span class="sr2e-col-acts">
           {{#if modeButtons.length}}{{#each modeButtons}}<button type="button" class="sr2e-mode" data-action="attackWeapon" data-item-id="{{../id}}" data-mode="{{this}}" title="{{sr2eT "SR2E.UI.attackInMode" value=this}}">{{this}}</button>{{/each}}
           {{else}}<button type="button" data-action="attackWeapon" data-item-id="{{id}}">{{sr2eT "SR2E.UI.attack"}}</button>{{/if}}

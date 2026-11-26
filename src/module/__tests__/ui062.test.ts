@@ -78,7 +78,7 @@ describe('v0.62.0 UI pass', () => {
     assert.equal((bare.match(/(^|\})\s*\.sr2e-pip\s*\{/gm) ?? []).length, 1, 'one bare .sr2e-pip rule (the pools); ammo pips are scoped');
     assert.ok(!/(^|\})\s*\.sr2e-pools\s*\{[^}]*font-size:\s*0\.7rem/m.test(bare), 'the tracker restyles the summary pools');
     assert.match(css, /\.sr2e\.sheet \.window-content > \.sr2e-sheet,[\s\S]*?overflow-y:\s*auto/);
-    assert.match(css, /\.application\.dialog > \.window-content \{[^}]*overflow-y:\s*auto/);
+    assert.match(css, /\.application\.dialog\.sr2e-dialog > \.window-content \{[^}]*overflow-y:\s*auto/);
     // Review fixes: sheet button rules stay inside the window content (not the window header or rich-text menus),
     // list and heading rules skip rich text, and money fields are wide.
     const layer = css.slice(css.indexOf('v0.62.0: the UI pass'));

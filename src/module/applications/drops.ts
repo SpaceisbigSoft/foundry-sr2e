@@ -4,6 +4,8 @@
  *   a focus needs bonding (Good Karma), a program needs loading. A GM holding Shift drops it as it is.
  * - Gear dragged from one actor to another moves (the giver loses it); hold Alt to copy. Skills, spells,
  *   powers and programs are knowledge and always copy.
+ * - v0.93.0: a stack (quantity over 1) asks how many move; the rest stay with the giver, and the moved ones join a
+ *   matching stack the receiver already has.
  * - Each actor type takes only the item types it can use.
  */
 import { SYSTEM_ID } from "../config/system.ts";
@@ -55,6 +57,53 @@ export function dropMoves(itemType: string, o: { fromActor: boolean; sameActor: 
   return o.fromActor && !o.sameActor && !o.copyKey && PHYSICAL_ITEM_TYPES.includes(itemType);
 }
 
+/** Pure (v0.93.0): a stack's size (its quantity, 1 when it has none). */
+export function stackSize(system: any): number {
+  const q = Number(system?.quantity ?? 1);
+  return Number.isFinite(q) ? Math.max(0, Math.floor(q)) : 1;
+}
+
+/** Pure (v0.93.0): a "how many?" answer as a count from 1 to `have`; null when it isn't one. */
+export function howManyAnswer(raw: unknown, have: number): number | null {
+  const n = Math.floor(Number(raw));
+  return Number.isFinite(n) && n >= 1 && n <= have ? n : null;
+}
+
+/**
+ * Pure (v0.93.0): whether a moved stack can join one the receiver has: the same type and name, and the same data apart
+ * from the quantity (so a damaged or modified copy stays apart).
+ */
+export function sameStack(a: { type?: string; name?: string; system?: any } | null | undefined, b: { type?: string; name?: string; system?: any } | null | undefined): boolean {
+  if (!a || !b || a.type !== b.type || a.name !== b.name) return false;
+  const strip = (sys: any) => { const { quantity: _q, ...rest } = sys ?? {}; return rest; };
+  return stableJson(strip(a.system)) === stableJson(strip(b.system));
+}
+
+function stableJson(v: unknown): string {
+  if (Array.isArray(v)) return `[${v.map(stableJson).join(',')}]`;
+  if (v && typeof v === 'object') return `{${Object.keys(v as object).sort().map((k) => `${JSON.stringify(k)}:${stableJson((v as any)[k])}`).join(',')}}`;
+  return JSON.stringify(v ?? null);
+}
+
+/** v0.93.0: ask how many of a stack move (all by default). Null = cancelled. */
+async function askHowMany(name: string, have: number): Promise<number | null> {
+  const D: any = (foundry as any)?.applications?.api?.DialogV2;
+  if (!D?.wait) return have;
+  const r = await D.wait({
+    window: { title: tx('SR2E.Dialog.Drops.howManyTitle', { name }) },
+    content: `<div class="form-group"><label>${tx('SR2E.Dialog.Drops.howManyLabel', { have })}</label><input type="number" name="count" value="${have}" min="1" max="${have}" step="1" autofocus></div>`,
+    buttons: [
+      { action: 'ok', label: tx('SR2E.Dialog.Drops.howManyMove'), default: true, callback: (_e: any, button: any) => button?.form?.elements?.count?.value },
+      { action: 'cancel', label: tx('SR2E.Dialog.Drops.howManyCancel') },
+    ],
+    rejectClose: false,
+  });
+  if (r === 'cancel' || r === null || r === undefined) return null;
+  const n = howManyAnswer(r, have);
+  if (n === null) ui.notifications?.warn?.(tx('SR2E.Notify.Drops.howManyBad', { have }));
+  return n;
+}
+
 function describe(reset: Record<string, unknown>): string {
   const parts: string[] = [];
   if (reset['installed'] === false) parts.push(tx('SR2E.Card.Drops.notInstalledTickInstalledAfterSurgery'));
@@ -79,6 +128,14 @@ export async function dropItemOnActor(sheet: any, event: DragEvent | any, item: 
   const fromActor = Boolean(source && source.documentName === 'Actor');
   const moves = dropMoves(item.type, { fromActor, sameActor: false, copyKey: Boolean(event?.altKey) });
   if (moves && !source.isOwner) { ui.notifications?.warn?.(tx('SR2E.Notify.Drops.isSOnlyTheirOwnerOr', { itemName: escHtml(item.name), sourceName: escHtml(source.name) })); return null; }
+  // v0.93.0: a stack asks how many move (Alt copies, and copies take the whole stack as before).
+  const have = stackSize(item.system);
+  let take = have;
+  if (moves && have > 1) {
+    const n = await askHowMany(item.name, have);
+    if (n === null) return null;
+    take = n;
+  }
   const keepId = !actor.items.has(item.id);
   const data: any = item.inCompendium ? (game as any).items.fromCompendium(item, { clearFolder: true, keepId }) : item.toObject();
   const asIs = gm && Boolean(event?.shiftKey);
@@ -91,13 +148,19 @@ export async function dropItemOnActor(sheet: any, event: DragEvent | any, item: 
     await fileRequest(actor, { kind: 'add', label: tx('SR2E.App.Adding.addFree', { named: item.name }), data: { payment: 'free', ready: false, lines: [{ type: item.type, name: item.name, system: data.system ?? {}, amount: (() => { const r = rowAmount(item.type); return r.kind === 'value' && r.field ? Math.max(1, Number(data.system?.[r.field] ?? 1) || 1) : 1; })(), data }] } });
     return null;
   }
-  const made = await (Item as any).implementation.create(data, { parent: actor, keepId, sr2eComplexFormFrom: item.uuid });
+  if (take !== have) data.system = { ...(data.system ?? {}), quantity: take };
+  // v0.93.0: moved items join a matching stack the receiver has (same data apart from the count).
+  const stack: any = moves && have > 1 ? [...actor.items].find((i: any) => sameStack(i, { type: item.type, name: item.name, system: data.system })) : null;
+  const made = stack
+    ? (await stack.update({ 'system.quantity': stackSize(stack.system) + take }), stack)
+    : await (Item as any).implementation.create(data, { parent: actor, keepId, sr2eComplexFormFrom: item.uuid });
   if (!made) return null;
   if (moves) {
-    try { await source.deleteEmbeddedDocuments('Item', [item.id]); } catch (err) { console.warn('sr2e | move item', err); }
+    // Part of a stack: the giver keeps the rest.
+    try { if (take < have) await item.update({ 'system.quantity': have - take }); else await source.deleteEmbeddedDocuments('Item', [item.id]); } catch (err) { console.warn('sr2e | move item', err); }
   }
   const note = describe(reset);
-  const what = moves ? tx('SR2E.Notify.Drops.handsTo', { source: source.name, made: made.name, actor: actor.name }) : tx('SR2E.Notify.Drops.addedTo', { made: made.name, actor: actor.name });
+  const what = moves ? tx('SR2E.Notify.Drops.handsTo', { source: source.name, made: take > 1 ? `${made.name} ×${take}` : made.name, actor: actor.name }) : tx('SR2E.Notify.Drops.addedTo', { made: made.name, actor: actor.name });
   ui.notifications?.info?.(`${escHtml(what)}${note ? `: ${note}` : ''}.`);
   return made;
 }

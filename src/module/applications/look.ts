@@ -177,14 +177,14 @@ export function cardOutcome(content: HTMLElement): 'good' | 'bad' | 'disaster' |
 
 /**
  * Our chat cards: the area colour (from the kind of test), the kind word over the title, the outcome
- * bar moved under the dice, and dice that rolled a 1 marked. Only the rendered page changes, not the
+ * bar on top (v0.93.0; under the dice v0.74.0–v0.92.5), and dice that rolled a 1 marked. Only the rendered page changes, not the
  * stored message, so old cards take the new look too.
  */
 export function decorateLookCard(message: any, html: HTMLElement): void {
   if (!html?.classList) return;
-  // v0.74.0: every other message (typed chat, Foundry's own rolls, other packages' cards) gets the same themed
-  // shell, so no parchment bubble shows up in the stream; only our own cards get the outcome decorations.
-  if (!isOurCard(message, html)) { html.classList.add('sr2e-card', 'sr2e-area-neutral', 'sr2e-card-chat'); return; }
+  // v0.93.0 (one theme per window, the owner's answer 2): every other message (typed chat, Foundry's own rolls, other
+  // packages' cards) keeps its own look; only our own cards get the shell and the outcome decorations (v0.74.0 themed all).
+  if (!isOurCard(message, html)) return;
   const snap = message?.flags?.[ID]?.test ?? null;
   // v0.81.1 (RC2-5): the area comes from a card's flags (a forged kind of 'constructor' gave a class name with
   // spaces and brackets, and classList.add threw): only a plain word becomes a class.
@@ -196,8 +196,8 @@ export function decorateLookCard(message: any, html: HTMLElement): void {
   const title = roll?.querySelector<HTMLElement>(':scope > h3');
   const word = cardKindLabel(snap?.kind);
   if (title && typeof word === 'string' && word && !title.dataset['kind']) title.dataset['kind'] = word;
-  const banner = content.querySelector<HTMLElement>(':scope > .sr2e-banner');
-  if (banner && roll && banner.nextElementSibling === roll) roll.after(banner);
+  // v0.93.0 (the owner's decision 7): the outcome banner stays on top, where the card puts it, so the verdict is the first
+  // line (also in Foundry's chat pop-up); v0.74.0 moved it under the dice.
   content.querySelectorAll<HTMLElement>('.sr2e-die').forEach((d) => {
     if (/^1(\s|$)/.test(String(d.textContent ?? '').trim()) && !d.classList.contains('hit')) d.classList.add('one');
   });

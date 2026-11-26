@@ -29,6 +29,7 @@ import { exportTemplatesToCompendium, promptImportTemplates } from './qol.ts';
 import { SR2NewEntry } from './newentry.ts';
 import { pendingRequests, approveRequest, declineRequest, queueOn, requestsOf, describeRequestData, requestProblems, filerLabel } from './approvals.ts';
 import { escHtml } from '../rules/html.ts';
+import { bindLower } from './lower.ts';
 import { underwayRows, projectAction } from './projects.ts';
 import { setupContext, SETUP_ACTIONS, bindSetupTab, setSetupRefresh } from './setup.ts';
 import { CATALOGUE_ACTIONS } from './catalogue.ts';
@@ -661,6 +662,8 @@ export class SR2GmPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     await (super._onRender as any)?.(context, options);
     const root: HTMLElement = (this as any).element;
     const cls: any = CONFIG.Actor.documentClass;
+    // v0.93.0: right-click lowers the party rows' boxes (their − buttons) by one.
+    bindLower(root);
     // v0.66.0: the Setup tab's ticks, kit drops and checklist buttons.
     setSetupRefresh(() => SR2GmPanel.refresh());
     if (SR2GmPanel.tab === 'setup') bindSetupTab(root, (act) => this.#runChecklistAction(act));

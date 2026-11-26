@@ -15,7 +15,7 @@
   <span class="sr2e-strip-weapon{{#if strip.weapon.out}} out{{/if}}" title="{{sr2eT "SR2E.UI.readiedWeaponClickToAttackWith"}}">
     <a data-action="attackWeapon" data-item-id="{{strip.weapon.id}}" aria-label="{{sr2eT "SR2E.UI.attackWith" name=strip.weapon.name}}"><i class="fa-solid fa-crosshairs"></i> {{strip.weapon.name}}</a>
     {{#if strip.weapon.mode}}<small>{{strip.weapon.mode}}</small>{{/if}}
-    {{#if strip.weapon.ammo}}<b class="{{#if strip.weapon.low}}low{{/if}}" title="{{sr2eT "SR2E.UI.roundsLeft"}}">{{strip.weapon.ammo}}</b>{{/if}}
+    {{#if strip.weapon.ammo}}<b class="{{#if strip.weapon.low}}low{{/if}}" data-sr2e-lower="ammo" data-item-id="{{strip.weapon.id}}" title="{{sr2eT "SR2E.UI.roundsLeftRightClick"}}">{{strip.weapon.ammo}}</b>{{/if}}
     {{#if strip.weapon.jammed}}<strong class="sr2e-warn">{{sr2eT "SR2E.UI.jammed"}}</strong>{{/if}}
     {{#if strip.weapon.holstered}}<em>{{sr2eT "SR2E.UI.holstered"}}</em>{{/if}}
   </span>

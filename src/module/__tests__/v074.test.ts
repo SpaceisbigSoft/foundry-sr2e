@@ -22,7 +22,9 @@ describe('v0.74.0 chat-card cleanup', async () => {
   });
   test('outcomes are classed and styled from the palette', () => {
     const src = read('src', 'module', 'applications', 'look.ts');
-    for (const want of ["sr2e-card-chat", "sr2e-count-good", "sr2e-count-zero", "sr2e-outcome-${out}", "sr2e-card-note", "sr2e-count-tie", "'dodged'"]) assert.ok(src.includes(want), want);
+    // v0.93.0: other messages no longer get the shell (sr2e-card-chat), by the owner's answer 2.
+    assert.ok(!src.includes("'sr2e-card-chat'"));
+    for (const want of ["sr2e-count-good", "sr2e-count-zero", "sr2e-outcome-${out}", "sr2e-card-note", "sr2e-count-tie", "'dodged'"]) assert.ok(src.includes(want), want);
     const css = read('public', 'style', 'sr2e.css');
     const part = css.slice(css.indexOf('v0.74.0: outcomes that read at a glance'));
     assert.ok(part.length > 500);

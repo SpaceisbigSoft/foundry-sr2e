@@ -6,6 +6,8 @@ import { escHtml } from "./rules/html.ts";
 import { isLeadGm, leadSettled } from "./applications/leader.ts";
 import { t as tx, tCount } from './helpers/i18n.ts';
 import { collectNotice923, notice923Html } from './notice923.ts';
+import { foreignWorldSigns, ignoringForeignWorld } from './helpers/foreign.ts';
+export { FOREIGN_WORLD, foreignWorldSigns } from './helpers/foreign.ts';
 
 /**
  * World data migrations. The GM's client runs every migration newer than the world's stored
@@ -17,20 +19,22 @@ interface Migration {
   version: string;
   label: string;
   run: () => Promise<void>;
+  /** v0.93.0: the step changes world data (actors, items or settings): the GM is asked to back up first. */
+  changes?: boolean;
 }
 
 const MIGRATIONS: Migration[] = [
   // v0.22.0: metatype and care fields have defaults; nothing to convert. Kept as the first entry.
   { version: "0.22.0", label: "Metatypes and care (no data changes)", run: async () => {} },
   // v0.27.0: IC gained a behavior (default killer); set it from the IC type name where that names one.
-  { version: "0.27.0", label: "IC behaviors from their type names", run: async () => {
+  { version: "0.27.0", label: "IC behaviors from their type names", changes: true, run: async () => {
     for (const a of [...(game.actors ?? [])].filter((x: any) => x.type === "ic")) {
       const b = icBehaviorUpdate(a.system?.icType, a.system?.behavior);
       if (b) await a.update({ "system.behavior": b });
     }
   } },
   // v0.40.0: psychotropic IC are modeled; IC named for one (still on the default killer) become psychotropic.
-  { version: "0.40.0", label: "Psychotropic IC from their type names", run: async () => {
+  { version: "0.40.0", label: "Psychotropic IC from their type names", changes: true, run: async () => {
     for (const a of [...(game.actors ?? [])].filter((x: any) => x.type === "ic")) {
       if (icBehaviorUpdate(a.system?.icType, a.system?.behavior) === "psychotropic") await a.update({ "system.behavior": "psychotropic" });
     }
@@ -38,7 +42,7 @@ const MIGRATIONS: Migration[] = [
   // v0.59.0: v0.58.0's data on every copy: bone lacing and filtration typed by name (they came in as
   // 'other'), and vehicle skills still on Quickness linked to Reaction. World actors, the actors of
   // unlinked tokens on every scene, and world items.
-  { version: "0.59.0", label: "Bone lacing, filtration and vehicle skills (v0.58.0 data)", run: async () => {
+  { version: "0.59.0", label: "Bone lacing, filtration and vehicle skills (v0.58.0 data)", changes: true, run: async () => {
     for (const actor of everyActor()) {
       const ups = ownItems(actor).map((i: any) => ({ _id: i.id, ...(itemMigrationUpdate(i) ?? {}) })).filter((u: any) => Object.keys(u).length > 1);
       if (ups.length) await actor.updateEmbeddedDocuments("Item", ups);
@@ -51,7 +55,7 @@ const MIGRATIONS: Migration[] = [
   // v0.77.0: the book check made Killing Hands four levels (L/M/S/D, was M/S/D): saved powers move up
   // one level so they keep their damage (not when the GM has set the level table as a house rule).
   // The GM gets a note on the other changes that touch existing characters.
-  { version: "0.77.0", label: "Killing Hands levels (book check)", run: async () => {
+  { version: "0.77.0", label: "Killing Hands levels (book check)", changes: true, run: async () => {
     const custom = Boolean((game.settings.get(SYSTEM.id as any, "houseRules" as any) as any)?.values?.["ADEPT.killingHands.levels"]);
     let n = 0;
     if (!custom) {
@@ -70,7 +74,7 @@ const MIGRATIONS: Migration[] = [
   } },
   // v0.81.1 (RB2-6): v0.81.0 removed some rules (one merged into another). A world's stored house rules for them were
   // ignored with only a console line: the merged one moves across, the others are dropped, and the GM is told.
-  { version: "0.81.1", label: "House rules for removed rules", run: async () => {
+  { version: "0.81.1", label: "House rules for removed rules", changes: true, run: async () => {
     // Loaded here, not at the top: settings.ts builds Foundry windows when it loads.
     const { getPath, RULE_DEFAULTS } = await import("./settings.ts");
     const stored = game.settings.get(SYSTEM.id as any, "houseRules" as any) as HouseRules | null;
@@ -209,6 +213,44 @@ export function pendingMigrations(stored: string, list: readonly { version: stri
 
 export function registerMigrationSetting(): void {
   game.settings.register(SYSTEM.id, "migrationVersion", { scope: "world", config: false, type: String, default: "" });
+  // v0.93.0: a GM who has checked a world the guard below refuses (and backed it up) can let the updates run anyway.
+  game.settings.register(SYSTEM.id, "ignoreForeignWorld", { scope: "world", config: false, type: Boolean, default: false });
+}
+
+/** Pure (v0.93.0): whether the GM is asked to back up first: a step changes data and the world holds any actors or items. */
+export function needsBackupPrompt(todo: readonly { changes?: boolean }[], data: { actors?: any[]; items?: any[] } | null | undefined): boolean {
+  return todo.some((m) => m.changes) && ((data?.actors?.length ?? 0) + (data?.items?.length ?? 0)) > 0;
+}
+
+/** Pure (v0.93.0): the GM's report after the updates ran: each step that ran, and the one that failed. '' when nothing ran. */
+export function migrationReport(ran: readonly { version: string; label: string }[], failed: { version: string; label: string } | null): string {
+  if (!ran.length && !failed) return "";
+  const li = (m: { version: string; label: string }) => `<li>${escHtml(m.version)}: ${escHtml(m.label)}</li>`;
+  const ok = ran.length ? `<p>${tx('SR2E.Card.Migrations.ranSteps')}</p><ul>${ran.map(li).join("")}</ul>` : "";
+  const bad = failed ? `<p class="sr2e-warn">${tx('SR2E.Card.Migrations.failedStep', { version: escHtml(failed.version), label: escHtml(failed.label) })}</p>` : "";
+  return `<p><strong>${tx('SR2E.Card.Migrations.reportTitle')}</strong></p>${ok}${bad}`;
+}
+
+/** v0.93.0: the card the lead GM gets when the world is another system's (nothing was changed). */
+export function foreignWorldHtml(signs: readonly string[]): string {
+  return `<p><strong>${tx('SR2E.Card.Migrations.foreignTitle')}</strong></p><p>${tx('SR2E.Card.Migrations.foreignBody', { id: escHtml(SYSTEM.id) })}</p><ul>${signs.map((x) => `<li><code>${escHtml(x)}</code></li>`).join("")}</ul><p>${tx('SR2E.Card.Migrations.foreignOverride', { command: `<code>${escHtml(`game.settings.set('${SYSTEM.id}', 'ignoreForeignWorld', true)`)}</code>` })}</p>`;
+}
+
+/** v0.93.0: ask the GM to back up before the updates run. True = go on; false = not now (asked again at the next load). */
+async function askBackup(todo: readonly Migration[]): Promise<boolean> {
+  const D: any = (foundry as any)?.applications?.api?.DialogV2;
+  if (!D?.wait) return true;
+  const list = todo.filter((m) => m.changes).map((m) => `<li>${escHtml(m.version)}: ${escHtml(m.label)}</li>`).join("");
+  const r = await D.wait({
+    window: { title: tx('SR2E.Dialog.Migrations.backupTitle') },
+    content: `<p>${tx('SR2E.Dialog.Migrations.backupBody')}</p><ul>${list}</ul>`,
+    buttons: [
+      { action: "continue", label: tx('SR2E.Dialog.Migrations.backupContinue'), default: true },
+      { action: "later", label: tx('SR2E.Dialog.Migrations.backupLater') },
+    ],
+    rejectClose: false,
+  });
+  return r === "continue";
 }
 
 export async function runMigrations(): Promise<void> {
@@ -217,22 +259,44 @@ export async function runMigrations(): Promise<void> {
   // lead window, once the windows have heard each other.
   await leadSettled();
   if (!isLeadGm()) return;
+  // v0.93.0: another system's world (futurekill's has the same id) is never updated: nothing is written, and the GM is told.
+  const data: any = (game as any).data ?? {};
+  const signs = foreignWorldSigns(data);
+  if (signs.length && !ignoringForeignWorld()) {
+    console.warn(`${SYSTEM.LOG.HEAD}This world looks like another system's; no updates were run.`, signs);
+    ui.notifications?.error?.(tx('SR2E.Notify.Migrations.foreignWorld', { id: SYSTEM.id }), { permanent: true });
+    const me = String((game as any).user?.id ?? "");
+    await (globalThis as any).ChatMessage?.create?.({ whisper: me ? [me] : [], content: foreignWorldHtml(signs) });
+    return;
+  }
   const stored = String(game.settings.get(SYSTEM.id, "migrationVersion") ?? "");
   // A-4: the tested pendingMigrations is the filter that runs.
   const pending = new Set(pendingMigrations(stored));
   const todo = MIGRATIONS.filter((m) => pending.has(m.version));
+  // v0.93.0: back up first (Continue, or Not now: nothing runs and nothing is stored, so the GM is asked again next time).
+  if (needsBackupPrompt(todo, data) && !(await askBackup(todo))) return;
+  const ran: Migration[] = [];
+  let failed: Migration | null = null;
   for (const m of todo) {
     try {
       console.log(`${SYSTEM.LOG.HEAD}Migrating world data to ${m.version}: ${m.label}`);
       await m.run();
       // A-4: each step is stored as it succeeds, so a later failure doesn't run this one again next time.
       await game.settings.set(SYSTEM.id, "migrationVersion", m.version);
+      ran.push(m);
     } catch (err) {
       console.error(`${SYSTEM.LOG.HEAD}Migration ${m.version} failed`, err);
       ui.notifications?.error?.(tx('SR2E.Notify.Migrations.sr2eMigrationToFailedSeeThe', { version: escHtml(m.version) }));
-      return;
+      failed = m;
+      break;
     }
   }
+  // v0.93.0: a short report of what ran and what failed, when a step changed data (the no-change steps need none).
+  if (failed || ran.some((m) => m.changes)) {
+    const me = String((game as any).user?.id ?? "");
+    await (globalThis as any).ChatMessage?.create?.({ whisper: me ? [me] : [], content: migrationReport(ran, failed) });
+  }
+  if (failed) return;
   // Foundry reports the old system version until it restarts, so store whichever is newer.
   const candidates = [String(game.system?.version ?? ""), MIGRATIONS.at(-1)?.version ?? "", stored].filter(Boolean);
   const current = candidates.reduce((a, b) => (compareVersions(a, b) >= 0 ? a : b), "0.0.0");
