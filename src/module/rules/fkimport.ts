@@ -1,5 +1,6 @@
 import { t as tx, tKey } from '../helpers/i18n.ts';
 import { startsLikeLabel } from './charimport.ts';
+import { personOrder } from './nullsheen.ts';
 
 /**
  * v0.94.0: futurekill's SR2 system (futurekill/sr2e-foundryvtt) → SR2e's character write-up text.
@@ -514,7 +515,8 @@ function convert(data: Rec, sys: Rec, name: string, npc: boolean, W: (key: strin
     parts.push(['level', String(level)].join(' '));
     if (loyalty > 0) parts.push(['loyalty', String(Math.min(6, loyalty))].join(' '));
     if (ct === 'follower' || ct === 'gang') parts.push(ct);
-    contacts.push(`${c.name} (${parts.join(', ')})`);
+    // v0.94.1: "Surname, Given" keeps its order as "Given Surname" (cleanName would make it "Surname Given").
+    contacts.push(`${cleanName(personOrder(c.raw)) || c.name} (${parts.join(', ')})`);
   }
   section('Contacts', contacts);
   const edges: string[] = [];

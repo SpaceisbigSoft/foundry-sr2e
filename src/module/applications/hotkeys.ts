@@ -3,6 +3,7 @@
  * end the turn, roll initiative, open the GM panel; v0.86.0: open your sheet, go to the newest chat card, open the
  * guide), and Shift-click quick rolls for every test dialog.
  */
+import { floatVisible, DICE_WAIT_MS } from '../rules/hidden941.ts';
 import { SYSTEM_ID } from "../config/system.ts";
 import { rememberFocus } from "./a11y.ts";
 import { t as tx } from '../helpers/i18n.ts';
@@ -23,10 +24,30 @@ export function damageTexts(before: { physical?: number; stun?: number; conditio
   return out;
 }
 
+// v0.94.1 (item 21): Dice So Nice rolls still on the screen; floating damage waits for them to stop.
+let diceRolling = 0;
+let diceSince = 0;
+function diceStopped(): Promise<void> {
+  if (diceRolling <= 0 || Date.now() - diceSince > DICE_WAIT_MS) return Promise.resolve();
+  return new Promise((resolve) => {
+    const started = Date.now();
+    const tick = () => (diceRolling <= 0 || Date.now() - started > DICE_WAIT_MS ? resolve() : setTimeout(tick, 150));
+    tick();
+  });
+}
+
 function floatOver(actor: any, texts: Array<{ text: string; damage: boolean }>): void {
   try {
     if (game.settings.get(SYSTEM_ID, 'floatingDamage') === false) return;
   } catch { /* not registered */ }
+  // v0.94.1 (item 21): only the GM and the actor's owners see it, unless the GM shows it to everyone.
+  let who = 'owners';
+  try { who = String(game.settings.get(SYSTEM_ID, 'floatingDamageWho') ?? 'owners'); } catch { /* not registered */ }
+  if (!floatVisible({ who, isGM: Boolean((game as any).user?.isGM), isOwner: Boolean(actor?.isOwner) })) return;
+  void diceStopped().then(() => floatNow(actor, texts));
+}
+
+function floatNow(actor: any, texts: Array<{ text: string; damage: boolean }>): void {
   const ci: any = (canvas as any)?.interface;
   if (!ci?.createScrollingText || !texts.length) return;
   const tokens: any[] = actor?.getActiveTokens?.() ?? [];
@@ -47,6 +68,8 @@ function floatOver(actor: any, texts: Array<{ text: string; damage: boolean }>):
 }
 
 export function registerFloatingDamage(): void {
+  Hooks.on('diceSoNiceRollStart', () => { diceRolling++; diceSince = Date.now(); });
+  Hooks.on('diceSoNiceRollComplete', () => { diceRolling = Math.max(0, diceRolling - 1); });
   Hooks.on('updateActor', (actor: any, _change: any, options: any) => {
     const m = options?.sr2ePrevMonitor;
     if (m && actor?.system?.monitor) floatOver(actor, damageTexts(m, actor.system.monitor));

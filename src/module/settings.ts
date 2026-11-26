@@ -11,6 +11,7 @@ import { HOUSE_MATRIX_V923 } from "./rules/config923/matrix.ts";
 import { HOUSE_VEHICLES_V923 } from "./rules/config923/vehicles.ts";
 import { HOUSE_GEAR_V923 } from "./rules/config923/gear.ts";
 import { SYSTEM } from "./config/system.ts";
+import { worldFloor, flooredMode } from "./rules/hidden941.ts";
 import { RULES, parseSkillWeb, setSkillWeb, PRIVACY_GROUPS, PRIVACY_MODES, SOUND_EVENTS, settingMatches, URR_V80_PATCH, RULES_SOURCES, SHOP_LIST_MODES } from "./rules/index.ts";
 import type { RulesSource } from "./rules/index.ts";
 import { applyDiceColours } from "./helpers/dicecolours.ts";
@@ -1353,9 +1354,24 @@ export class RollPrivacyConfig extends foundry.applications.api.ApplicationV2 {
 
   async _renderHTML(): Promise<string> {
     const prefs = (game.settings.get(SYSTEM.id, "rollPrivacy") ?? {}) as Record<string, string>;
-    const rows = PRIVACY_GROUPS.map((g) => `<div class="form-group"><label>${esc(tKey(g.label))}</label><div class="form-fields"><select name="${esc(g.id)}">${PRIVACY_MODES.map((m) => `<option value="${esc(m.id)}"${String(prefs[g.id] ?? "") === m.id ? " selected" : ""}>${esc(tKey(m.label))}</option>`).join("")}</select></div></div>`).join("");
+    // v0.94.1 (item 21): the table's default per group; a player's options below it are greyed.
+    let world: Record<string, unknown> = {};
+    try { world = (game.settings.get(SYSTEM.id, "rollPrivacyWorld") ?? {}) as Record<string, unknown>; } catch { /* not registered */ }
+    const gm = Boolean((game as any).user?.isGM);
+    const rows = PRIVACY_GROUPS.map((g) => {
+      const floor = worldFloor(g.id, world);
+      const mine = `<select name="${esc(g.id)}" aria-label="${esc(tx('SR2E.App.Settings.privacyMine', { group: tKey(g.label) }))}">${PRIVACY_MODES.map((m) => {
+        const below = !gm && floor && m.id !== "" && flooredMode(m.id, floor, false) !== m.id;
+        return `<option value="${esc(m.id)}"${String(prefs[g.id] ?? "") === m.id ? " selected" : ""}${below ? " disabled" : ""}>${esc(tKey(m.label))}</option>`;
+      }).join("")}</select>`;
+      const table = gm
+        ? `<select name="world.${esc(g.id)}" aria-label="${esc(tx('SR2E.App.Settings.privacyTable', { group: tKey(g.label) }))}">${["", "gm", "blind"].map((id) => `<option value="${esc(id)}"${floor === id ? " selected" : ""}>${esc(id ? tKey(PRIVACY_MODES.find((m) => m.id === id)?.label ?? id) : tx('SR2E.App.Settings.privacyNoFloor'))}</option>`).join("")}</select>`
+        : floor ? `<span class="hint">${esc(tx('SR2E.App.Settings.privacyAtLeast', { mode: tKey(PRIVACY_MODES.find((m) => m.id === floor)?.label ?? floor) }))}</span>` : "";
+      return `<div class="form-group"><label>${esc(tKey(g.label))}</label><div class="form-fields">${mine}${table}</div></div>`;
+    }).join("");
     return `<div class="standard-form">
       <p class="hint">${tx('SR2E.App.Settings.whoSeesEachKindOfTest')}</p>
+      <p class="hint">${gm ? tx('SR2E.App.Settings.privacyGmHint') : tx('SR2E.App.Settings.privacyPlayerHint')}</p>
       ${rows}
       <footer class="form-footer"><button type="submit"><i class="fa-solid fa-floppy-disk"></i> ${tx('SR2E.App.Settings.save')}</button></footer>
     </div>`;
@@ -1372,6 +1388,15 @@ export class RollPrivacyConfig extends foundry.applications.api.ApplicationV2 {
       if (v) out[g.id] = v;
     }
     await game.settings.set(SYSTEM.id, "rollPrivacy", out);
+    // v0.94.1 (item 21): the GM's table defaults (only "GM only" and "blind" are a floor).
+    if ((game as any).user?.isGM) {
+      const world: Record<string, string> = {};
+      for (const g of PRIVACY_GROUPS) {
+        const v = String((form.elements as any)[`world.${g.id}`]?.value ?? "");
+        if (v === "gm" || v === "blind") world[g.id] = v;
+      }
+      await game.settings.set(SYSTEM.id, "rollPrivacyWorld", world);
+    }
   }
 }
 
@@ -1624,6 +1649,17 @@ export function registerSettings(): void {
   game.settings.registerMenu(SYSTEM.id, "rollPrivacyMenu", {
     name: "SR2E.Settings.rollPrivacyMenu.Name", label: "SR2E.Settings.rollPrivacyMenu.Label", hint: "SR2E.Settings.rollPrivacyMenu.Hint",
     icon: "fa-solid fa-eye-slash", type: RollPrivacyConfig, restricted: false,
+  });
+  // v0.94.1 (item 21): hidden-information basics (screen hiding, not security).
+  game.settings.register(SYSTEM.id, "rollPrivacyWorld", { scope: "world", config: false, type: Object, default: {} });
+  game.settings.register(SYSTEM.id, "hideNpcNumbers", {
+    name: "SR2E.Settings.hideNpcNumbers.Name", hint: "SR2E.Settings.hideNpcNumbers.Hint",
+    scope: "world", config: true, type: Boolean, default: true,
+  });
+  game.settings.register(SYSTEM.id, "floatingDamageWho", {
+    name: "SR2E.Settings.floatingDamageWho.Name", hint: "SR2E.Settings.floatingDamageWho.Hint",
+    scope: "world", config: true, type: String, default: "owners",
+    choices: { owners: "SR2E.Settings.floatingDamageWho.Choices.owners", all: "SR2E.Settings.floatingDamageWho.Choices.all" },
   });
   game.settings.register(SYSTEM.id, "turnPing", {
     name: "SR2E.Settings.turnPing.Name", hint: "SR2E.Settings.turnPing.Hint",

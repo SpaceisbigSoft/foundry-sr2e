@@ -447,12 +447,23 @@ function outcomeBanner(snap: { kind: string; botch: boolean; disasterAvoided?: b
   return snap.successes > 0 ? b('ok', tx('SR2E.Card.Actor.success', { successes: snap.successes })) : b('miss', tx('SR2E.Card.Actor.failed'));
 }
 
+import { takeSecret, worldFloor, flooredMode } from '../rules/hidden941.ts';
+import { privacyGroup } from '../rules/qol.ts';
+
 /**
  * Foundry's roll mode (public, GM only, blind, self) on a card (v0.36.0). Cards someone else must
  * answer (Defend, Resist, a blast to detonate) stay public, or the other player would never see them.
  */
 export function withRollMode(data: any): any {
   const content = String(data?.content ?? '');
+  const CMs: any = ChatMessage;
+  // v0.94.1 (item 21): a secret inline test's card goes to the GMs only, blind for the roller.
+  if (takeSecret(String(data?.flags?.[SYSTEM_ID]?.test?.actorUuid ?? ''))) {
+    const d = { ...data }; delete d.whisper;
+    if (typeof CMs.applyMode === 'function') return CMs.applyMode(d, 'blind') ?? d;
+    if (typeof CMs.applyRollMode === 'function') return CMs.applyRollMode(d, 'blindroll') ?? d;
+    return { ...d, whisper: [...((game as any).users ?? [])].filter((u: any) => u.isGM).map((u: any) => u.id), blind: true };
+  }
   // v0.81.0 (D1-9): also the buttons another player presses (the attacker's whip check on a defender's card, the
   // patient's rejection test on the surgeon's, a rammer's own damage, a rigger's shock, catching fire, an element's effect).
   if (/data-sr2e-action="(defend|resist|resistSpell|resistToxin|blastScatter|createSpirit|morale|whipCheck|rejectionTest|ramSelf|riggerShock|catchFire|elementEffect)"/.test(content) || data?.whisper?.length) return data;
@@ -461,18 +472,24 @@ export function withRollMode(data: any): any {
   const kind = String(data?.flags?.[SYSTEM_ID]?.test?.kind ?? data?.flags?.[SYSTEM_ID]?.privacyKind ?? '');
   let prefs: Record<string, string> = {};
   try { prefs = (game.settings.get(SYSTEM_ID, 'rollPrivacy') ?? {}) as Record<string, string>; } catch { /* not registered */ }
+  // v0.94.1 (item 21): the table's default for this kind (world setting rollPrivacyWorld); a player only goes more private.
+  let floor = '';
+  if (kind) try { floor = worldFloor(privacyGroup(kind), (game.settings.get(SYSTEM_ID, 'rollPrivacyWorld') ?? {}) as Record<string, unknown>); } catch { /* not registered */ }
+  const isGM = Boolean((game as any).user?.isGM);
+  // The GM's own empty choice takes the table default too.
+  if (isGM && floor && !prefs[privacyGroup(kind)]) prefs = { ...prefs, [privacyGroup(kind)]: floor };
   // Foundry v14: core.messageMode (public, gm, blind, self, ic) and ChatMessage.applyMode.
   if (typeof CM.applyMode === 'function') {
     let mode = 'public';
     try { mode = String(game.settings.get('core', 'messageMode') ?? 'public'); } catch { /* no setting */ }
-    mode = privacyFor(kind, prefs, mode);
+    mode = flooredMode(privacyFor(kind, prefs, mode), floor, isGM);
     if (mode === 'public' || mode === 'ic') return data;
     const d = { ...data };
     return CM.applyMode(d, mode) ?? d;
   }
   let mode = 'publicroll';
   try { mode = String(game.settings.get('core', 'rollMode') ?? 'publicroll'); } catch { /* no setting */ }
-  const own = privacyFor(kind, prefs, '');
+  const own = flooredMode(privacyFor(kind, prefs, '') || ({ publicroll: 'public', gmroll: 'gm', blindroll: 'blind', selfroll: 'self' } as Record<string, string>)[mode] || '', floor, isGM);
   if (own) mode = legacyRollMode(own);
   if (mode === 'publicroll' || typeof CM.applyRollMode !== 'function') return data;
   return CM.applyRollMode({ ...data }, mode) ?? data;

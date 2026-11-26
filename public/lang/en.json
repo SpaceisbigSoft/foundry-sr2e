@@ -2409,6 +2409,18 @@
       "partyWounds": {
         "Name": "Players see party members' wounds",
         "Hint": "In the party view, players see how hurt the party members they don't own look (unhurt, hurt, badly hurt, down), never their boxes. Off: only names and portraits."
+      },
+      "hideNpcNumbers": {
+        "Name": "Hide NPC target numbers from players",
+        "Hint": "On the cards of tests no player owns, players see the successes but not the target number or its modifiers. This hides them on screen; it isn't security."
+      },
+      "floatingDamageWho": {
+        "Name": "Who sees floating damage",
+        "Hint": "Floating damage numbers over tokens: only the GM and the token's owners, or everyone. They wait for Dice So Nice's dice to stop.",
+        "Choices": {
+          "owners": "The GM and the token's owners",
+          "all": "Everyone who can see the token"
+        }
       }
     },
     "Notify": {
@@ -8494,6 +8506,9 @@
       "Next": {
         "defended": "{name} defended",
         "resisted": "{name} resisted"
+      },
+      "Hidden": {
+        "tnForTheGm": "The target number is for the GM to know."
       }
     },
     "Privacy": {
@@ -14308,7 +14323,13 @@
         "rulesSourceConfigure": "Rules source: {source} (Configure Settings, SR2e system: Rules source).",
         "sr2eHouseRulesTheAdvancedBox": "SR2e house rules: the advanced box is not valid JSON.",
         "skillWebLoadStarter": "Add the book's links",
-        "skillWebStarterHint": "The book's web (SR2 Core p. 69) is the default. “Add the book's links” puts back any of its links that aren't in the text (your own lines stay). An empty text means no web: any related skill at +2, an attribute at +4."
+        "skillWebStarterHint": "The book's web (SR2 Core p. 69) is the default. “Add the book's links” puts back any of its links that aren't in the text (your own lines stay). An empty text means no web: any related skill at +2, an attribute at +4.",
+        "privacyMine": "Your own default for {group}",
+        "privacyTable": "The table's default for {group}",
+        "privacyNoFloor": "No table default",
+        "privacyAtLeast": "Table default: at least {mode}",
+        "privacyGmHint": "First list: your own default. Second list: the table's default for everyone; a player can only make those cards more private, never less. This hides cards on screen; it isn't security.",
+        "privacyPlayerHint": "Your GM may set a table default for some kinds of test: you can only make those cards more private."
       },
       "Tours": {
         "yourCharacterSheet": "Your character sheet",
@@ -16964,7 +16985,8 @@
         "diceVsExtras": "{subject} vs {tn} ({extras})",
         "testTn": "{subject} (TN {tn})",
         "testTnExtras": "{subject} (TN {tn}, {extras})",
-        "usage": "Usage: /sr2 <attribute | skill | perception | dice> [tn N] [mod ±M] [pool N] [label text], e.g. /sr2 Firearms tn 5 mod -1"
+        "usage": "Usage: /sr2 <attribute | skill | perception | dice> [tn N] [mod ±M] [pool N] [secret] [label text], e.g. /sr2 Firearms tn 5 mod -1 (secret: only the GM sees the card)",
+        "secretExtra": "secret"
       },
       "Advancement": {
         "human": "Human",

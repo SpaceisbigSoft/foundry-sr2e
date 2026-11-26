@@ -1,0 +1,17 @@
+{
+  "SR2E.Text.Inlinetest.secretExtra": "secret",
+  "SR2E.Text.Inlinetest.usage": "Usage: /sr2 <attribute | skill | perception | dice> [tn N] [mod ±M] [pool N] [secret] [label text], e.g. /sr2 Firearms tn 5 mod -1 (secret: only the GM sees the card)",
+  "SR2E.Card.Hidden.tnForTheGm": "The target number is for the GM to know.",
+  "SR2E.App.Settings.privacyMine": "Your own default for {group}",
+  "SR2E.App.Settings.privacyTable": "The table's default for {group}",
+  "SR2E.App.Settings.privacyNoFloor": "No table default",
+  "SR2E.App.Settings.privacyAtLeast": "Table default: at least {mode}",
+  "SR2E.App.Settings.privacyGmHint": "First list: your own default. Second list: the table's default for everyone; a player can only make those cards more private, never less. This hides cards on screen; it isn't security.",
+  "SR2E.App.Settings.privacyPlayerHint": "Your GM may set a table default for some kinds of test: you can only make those cards more private.",
+  "SR2E.Settings.hideNpcNumbers.Name": "Hide NPC target numbers from players",
+  "SR2E.Settings.hideNpcNumbers.Hint": "On the cards of tests no player owns, players see the successes but not the target number or its modifiers. This hides them on screen; it isn't security.",
+  "SR2E.Settings.floatingDamageWho.Name": "Who sees floating damage",
+  "SR2E.Settings.floatingDamageWho.Hint": "Floating damage numbers over tokens: only the GM and the token's owners, or everyone. They wait for Dice So Nice's dice to stop.",
+  "SR2E.Settings.floatingDamageWho.Choices.owners": "The GM and the token's owners",
+  "SR2E.Settings.floatingDamageWho.Choices.all": "Everyone who can see the token"
+}

@@ -9621,6 +9621,32 @@ describe("v0.60.0 Foundry quality of life (glue)", () => {
     } finally { g.game.settings = prevSettings; delete g.ChatMessage.applyMode; delete g.ChatMessage.applyRollMode; }
   });
 
+  test("v0.94.1 (item 21): the table's privacy default is a floor for players; a secret inline test is blind", async () => {
+    const { withRollMode } = await import("../documents/index.ts");
+    const { armSecret } = await import("../rules/hidden941.ts");
+    const prevSettings = g.game.settings; const prevUser = g.game.user;
+    g.game.settings = { get: (s: string, k: string) => (s === "core" && k === "messageMode" ? "public" : s === "shadowrun2e_unified" && k === "rollPrivacy" ? { combat: "public" } : s === "shadowrun2e_unified" && k === "rollPrivacyWorld" ? { magic: "gm", combat: "blind" } : undefined) };
+    const seen: string[] = [];
+    g.ChatMessage.applyMode = (d: any, mode: string) => { seen.push(mode); d.whisper = ["gm1"]; d.blind = mode === "blind"; return d; };
+    try {
+      g.game.user = { isGM: false, id: "p1" };
+      withRollMode({ content: "<p>x</p>", flags: { shadowrun2e_unified: { test: { kind: "spell" } } } });
+      withRollMode({ content: "<p>x</p>", flags: { shadowrun2e_unified: { test: { kind: "attack" } } } });
+      assert.deepEqual(seen, ["gm", "blind"], "the player's public choice is raised to the table default");
+      assert.equal(withRollMode({ content: "<p>x</p>" }).whisper, undefined, "a card with no test kind takes no floor");
+      g.game.user = { isGM: true, id: "gm1" };
+      seen.length = 0;
+      assert.equal(withRollMode({ content: "<p>x</p>", flags: { shadowrun2e_unified: { test: { kind: "attack" } } } }).whisper, undefined, "the GM's own choice stands");
+      withRollMode({ content: "<p>x</p>", flags: { shadowrun2e_unified: { test: { kind: "spell" } } } });
+      assert.deepEqual(seen, ["gm"], "the GM's empty choice takes the table default");
+      seen.length = 0;
+      armSecret("Actor.s");
+      const sec = withRollMode({ content: '<button data-sr2e-action="defend">x</button>', whisper: ["p1"], flags: { shadowrun2e_unified: { test: { kind: "notice", actorUuid: "Actor.s" } } } });
+      assert.deepEqual([seen, sec.blind], [["blind"], true]);
+      assert.equal(withRollMode({ content: "<p>x</p>", flags: { shadowrun2e_unified: { test: { kind: "plain", actorUuid: "Actor.s" } } } }).blind, undefined, "one card only");
+    } finally { g.game.settings = prevSettings; g.game.user = prevUser; delete g.ChatMessage.applyMode; }
+  });
+
   test("NPC auto-resist: only for NPCs, only with the setting, never for blasts or re-scored cards", async () => {
     const { autoResistPlanned } = await import("../applications/chat.ts");
     const prevSettings = g.game.settings, prevUsers = g.game.users;

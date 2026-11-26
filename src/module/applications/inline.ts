@@ -3,6 +3,7 @@
  * renders a link that rolls the test (shift-click skips the dialog); `/sr2 spec` (or `/sr2e`) in
  * chat rolls it for the speaker. The spec grammar lives in rules/inlinetest.ts.
  */
+import { armSecret, disarmSecret } from '../rules/hidden941.ts';
 import {
   parseInlineTest, inlineTestLabel, inlineTestSummary, inlineTestSubject, matchInlineSkill, chatCommandSpec,
   signedText, INLINE_TEST_PATTERN, inlineTestUsage, ROLLABLE_ATTRIBUTES, type InlineTest,
@@ -137,6 +138,14 @@ function defaultingSkill(name: string): any {
  * Attribute and skill tests go through the actor's own methods, so they get normal SR2 cards.
  */
 export async function rollInlineTest(test: InlineTest, o: { actor: any | null; quick?: boolean; label?: string | null }): Promise<SuccessTestResult | null> {
+  if (!test.secret) return rollInlineTestNow(test, o);
+  // v0.94.1 (item 21): a secret test's card goes to the GMs only; armed for this roll alone.
+  const key = String(o.actor?.uuid ?? '');
+  armSecret(key);
+  try { return await rollInlineTestNow(test, o); } finally { disarmSecret(key); }
+}
+
+async function rollInlineTestNow(test: InlineTest, o: { actor: any | null; quick?: boolean; label?: string | null }): Promise<SuccessTestResult | null> {
   const t: InlineTest = { ...test, ...(o.label?.trim() ? { label: o.label.trim() } : {}) };
   const actor = o.actor;
   if (!actor && t.kind !== 'dice') {

@@ -122,7 +122,7 @@ describe('v0.94.0 Nullsheen: a full SR2 file through the import', () => {
   });
 
   test('contacts, nuyen, Karma, lifestyle, text; what is not imported is warned and named in the notes', () => {
-    assert.deepEqual(plan.contacts?.map((c) => [c.name, c.role, c.level]), [['Sample Fixer', 'Fixer', 1], ['Doe/Jane', 'Street Doc', 2]]);
+    assert.deepEqual(plan.contacts?.map((c) => [c.name, c.role, c.level]), [['Sample Fixer', 'Fixer', 1], ['Jane Doe', 'Street Doc', 2]]);
     assert.equal(up['system.nuyen'], 1450, '5000 - 3800 + 250');
     assert.ok(hasWarning(r.warnings, 'SR2E.Import.Nullsheen.nuyenWorkedOut'));
     assert.equal(up['system.karma.good'], 3);

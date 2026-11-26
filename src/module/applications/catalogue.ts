@@ -604,7 +604,8 @@ async function importDialog(title: string, withRecord: boolean): Promise<{ text:
           const input = importInput(area.value);
           const p = characterImportPlan(parseCharacterSheet(input.text));
           const warns = [...input.warnings, ...p.warnings];
-          const from = input.source !== 'writeup' ? `<p>${esc(tx('SR2E.Import.from', { source: tKey(`SR2E.Import.source.${input.source}`) }))}</p>` : '';
+          // v0.94.1 (0.94.0 live check): a refused file (nothing to read) doesn't first say where it was read from.
+          const from = input.source !== 'writeup' && input.text.trim() ? `<p>${esc(tx('SR2E.Import.from', { source: tKey(`SR2E.Import.source.${input.source}`) }))}</p>` : '';
           out.innerHTML = `${from}<ul>${p.summary.map((l: string) => `<li>${esc(l)}</li>`).join('')}</ul>${warns.length ? `<ul class="sr2e-warn">${warns.slice(0, 10).map((w: string) => `<li>${esc(w)}</li>`).join('')}</ul>` : ''}`;
         } catch (err) { out.textContent = String(err); }
       };
@@ -656,6 +657,11 @@ async function newCharacterFromBlock(): Promise<void> {
   if (!r) return;
   // v0.94.0: a file whose character was imported before updates that character, if the GM wants.
   const input = importInput(r.text);
+  // v0.94.1 (0.94.0 live check): a refused file stops here, before an actor is made (and deleted again).
+  if (!input.text.trim() && input.warnings.length) {
+    ui.notifications.error(tx('SR2E.Notify.Catalogue.theImportStopped', { errMessage: escHtml(input.warnings.join(' ')) }));
+    return;
+  }
   if (input.key) {
     const earlier = [...((game as any).actors ?? [])].find((a: any) => a.type === 'character' && sameImport(a.getFlag?.(SYSTEM.id, 'importedFrom'), input));
     if (earlier) {

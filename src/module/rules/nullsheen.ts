@@ -102,6 +102,19 @@ function clean(v: unknown, max = MAX_TEXT): string {
 }
 
 /**
+ * v0.94.1 (0.94.0 live check): a person's name written "Surname, Given" becomes "Given Surname", so the comma that
+ * splits list entries doesn't turn it into "Surname/Given". Anything else (no comma, two commas, a suffix such as
+ * "Jr.") is left as it is.
+ */
+export function personOrder(raw: string): string {
+  const m = /^\s*([^,;]+?)\s*,\s*([^,;]+?)\s*$/.exec(String(raw ?? ''));
+  if (!m) return String(raw ?? '');
+  const [surname, given] = [m[1] as string, m[2] as string];
+  if (!/\p{L}/u.test(surname) || !/\p{L}/u.test(given) || /^(jr|sr|ii|iii|iv|phd|md)\.?$/i.test(given) || given.split(/\s+/).length > 3) return String(raw);
+  return `${given} ${surname}`;
+}
+
+/**
  * A name safe inside a list entry: commas and semicolons (which split entries) become "/", colons and "=" (which
  * read as labels) become " - ", "(x)" becomes " - x" (brackets are read as an entry's details), other brackets go.
  * A lower-case first letter is raised (a line starting in lower case continues the entry before it).
@@ -524,7 +537,8 @@ function convert(d: Rec, warnings: string[], result: (text: string, name: string
 
   // ---- Contacts
   for (const c of list(field(d, 'contacts'))) {
-    const n = entryName(field(c, 'Name', 'name'), { dashes: false });
+    const rawName = field(c, 'Name', 'name');
+    const n = entryName(typeof rawName === 'string' ? personOrder(rawName) : rawName, { dashes: false });
     if (!n) continue;
     const role = entryName(field(c, 'Archtype', 'Archetype', 'archetype', 'role'), { dashes: false }).replace(/\//g, ' ');
     const level = num(field(c, 'Level', 'level'));

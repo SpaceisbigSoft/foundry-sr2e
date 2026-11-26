@@ -39,6 +39,8 @@ interface InlineBase {
   pool: number;
   /** A label given in the spec, or null. */
   label: string | null;
+  /** v0.94.1: `secret`: the card goes to the GMs only (blind for the roller). Absent when not given. */
+  secret?: true;
 }
 
 export type InlineTest =
@@ -92,6 +94,7 @@ export function parseInlineTest(spec: string): InlineTest | string {
   let mod = 0;
   let label: string | null = null;
   let options = false;
+  let secret = false;
 
   for (let i = 0; i < toks.length; i++) {
     const t = toks[i] as Token;
@@ -134,6 +137,8 @@ export function parseInlineTest(spec: string): InlineTest | string {
         if (v < 0 || v > 50) return tx('SR2E.Text.Inlinetest.poolDiceOutOfRange', { value: v });
         pool = v; options = true; continue;
       }
+      // v0.94.1 (item 21): `secret` after the subject: a GM-only card.
+      if (what.length && /^secret$/i.test(t.text)) { secret = true; options = true; continue; }
       if ((m = /^label(?:[=:](.*))?$/i.exec(t.text))) {
         const rest = [...(m[1] ? [m[1]] : []), ...toks.slice(i + 1).map((x) => x.text)].join(' ').trim();
         if (!rest) return tx('SR2E.Text.Inlinetest.labelNeedsText');
@@ -152,7 +157,7 @@ export function parseInlineTest(spec: string): InlineTest | string {
   }
 
   if (!what.length) return tx('SR2E.Text.Inlinetest.sayWhatToRoll');
-  const base: InlineBase = { tn: tn ?? 4, mod, pool: pool ?? 0, label };
+  const base: InlineBase = { tn: tn ?? 4, mod, pool: pool ?? 0, label, ...(secret ? { secret: true as const } : {}) };
   const subject = what.map((w) => w.text).join(' ').trim().replace(/\s+/g, ' ');
   if (!subject) return tx('SR2E.Text.Inlinetest.sayWhatToRoll');
 
@@ -206,7 +211,7 @@ export function inlineTestSubject(t: InlineTest): string {
 
 /** The test spelled out, ignoring any label: "Body (TN 4)", "Firearms (TN 5, −1)", "6 dice vs 4". */
 export function inlineTestSummary(t: InlineTest): string {
-  const extras = [...(t.mod ? [signedText(t.mod)] : []), ...(t.pool ? [tx('SR2E.Text.Inlinetest.poolExtra', { pool: t.pool })] : [])];
+  const extras = [...(t.mod ? [signedText(t.mod)] : []), ...(t.pool ? [tx('SR2E.Text.Inlinetest.poolExtra', { pool: t.pool })] : []), ...(t.secret ? [tx('SR2E.Text.Inlinetest.secretExtra')] : [])];
   const subject = inlineTestSubject(t);
   if (t.kind === 'dice') return extras.length ? tx('SR2E.Text.Inlinetest.diceVsExtras', { subject, tn: t.tn, extras: extras.join(', ') }) : tx('SR2E.Text.Inlinetest.diceVs', { subject, tn: t.tn });
   return extras.length ? tx('SR2E.Text.Inlinetest.testTnExtras', { subject, tn: t.tn, extras: extras.join(', ') }) : tx('SR2E.Text.Inlinetest.testTn', { subject, tn: t.tn });

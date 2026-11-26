@@ -148,7 +148,7 @@ describe('v0.94.0 futurekill: a full SR2 character through the import', () => {
     assert.equal(fixer?.level, 2);
     assert.equal(fixer?.loyalty, 3);
     assert.equal(fixer?.role, 'Fixer');
-    assert.equal(c.find((x) => x.name === 'Doe Jane')?.role, 'Talismonger');
+    assert.equal(c.find((x) => x.name === 'Jane Doe')?.role, 'Talismonger');
     assert.ok(!c.some((x) => /Rival/.test(String(x.name))));
     assert.ok(hasWarning(r.warnings, 'enemy'));
     assert.match(String(a['system.notes']), /Sample Rival/);
