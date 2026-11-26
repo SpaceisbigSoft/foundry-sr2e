@@ -24,6 +24,7 @@ import { itemTypeProblem } from './drops.ts';
 import { t as tx, tKey, tCount, tNoun, type CountNoun } from '../helpers/i18n.ts';
 import { startProgress, type Progress } from './progress.ts';
 // v0.94.0: Nullsheen and futurekill files are turned into a write-up first (rules/imports094.ts).
+import { catalogueTemplates, saveCatalogueTemplates, openCataloguePack, removeOldCatalogueCopy } from './catalogue942.ts';
 import { importInput, sameImport, MAX_IMPORT_JSON, type ImportInput } from '../rules/imports094.ts';
 
 const { DialogV2 } = foundry.applications.api;
@@ -34,10 +35,11 @@ const randomId = () => `w-${(foundry.utils as any).randomID?.() ?? Math.random()
 const plural = (n: number, noun: CountNoun) => tNoun(n, noun);
 
 function worldTemplates(): ItemTemplate[] {
-  try { return [...(((game.settings.get(SYSTEM.id, 'itemTemplates') as ItemTemplate[]) ?? []))]; } catch { return []; }
+  // v0.94.2 (item 32): the world compendium (applications/catalogue942.ts).
+  return catalogueTemplates();
 }
 async function saveTemplates(list: ItemTemplate[]): Promise<void> {
-  await game.settings.set(SYSTEM.id, 'itemTemplates', list.map(({ world: _w, ...t }: any) => t));
+  await saveCatalogueTemplates(list);
 }
 
 function download(text: string, type: string, name: string): void {
@@ -693,5 +695,8 @@ export const CATALOGUE_ACTIONS: Record<string, (this: any, ev: Event, t: HTMLEle
   catExport: () => exportCatalogue(),
   catImport: () => once('catImport', importCatalogueDialog),
   catList: () => manageTemplates(),
+  // v0.94.2 (item 32): the catalogue compendium, and removing the old setting's copy once it has moved.
+  catPack: () => openCataloguePack(),
+  catDropOld: () => once('catDropOld', async () => { if (await removeOldCatalogueCopy()) refreshSetup(); }),
   charImportNew: () => once('charImportNew', newCharacterFromBlock),
 };

@@ -259,23 +259,36 @@ describe('v0.60.0 quality of life (glue)', () => {
     assert.deepEqual(got, [['damage', 3], ['alert', '', 'active'], ['test', 'attack']]);
   });
 
+  // v0.94.2 (item 32): the compendium is the catalogue's home (applications/catalogue942.ts): "to a compendium" makes it
+  // and moves the old setting in (the setting kept); taking a compendium in writes to the catalogue compendium.
   test('item templates go into a world compendium and come back', async () => {
     g.game.user.isGM = true;
     settings.itemTemplates = [{ id: 'w-1', type: 'weapon', name: 'Ares Predator', system: { power: 9 } }, { id: 'w-2', type: 'gear', name: 'Medkit', system: { rating: 3 } }];
+    const docs: any[] = [{ id: 'x1', name: 'Medkit', type: 'gear', system: {}, flags: {} }];
     const created: any[] = []; const updated: any[] = [];
-    const pack: any = { collection: 'world.sr2e-item-templates', locked: false, documentName: 'Item', metadata: { label: 'SR2e item templates' },
-      getIndex: async () => [{ _id: 'x1', name: 'Medkit', type: 'gear' }],
+    const asDoc = (d: any) => ({ ...d, toObject: () => ({ _id: d.id, name: d.name, type: d.type, system: d.system, flags: d.flags ?? {} }) });
+    const pack: any = { collection: 'world.sr2e-item-templates', locked: false, documentName: 'Item', metadata: { label: 'SR2e catalogue' }, render: () => { pack.opened = true; },
+      getDocuments: async () => docs.map(asDoc) };
+    const other: any = { collection: 'world.other', documentName: 'Item', metadata: { label: 'Other' },
       getDocuments: async () => [{ type: 'weapon', name: 'Ares Predator', system: { power: 10, installed: true } }, { type: 'spell', name: 'Nope', system: {} }] };
+    g.game.packs.set(other.collection, other);
     g.foundry.documents = { collections: { CompendiumCollection: { createCompendium: async (m: any) => { pack.made = m; g.game.packs.set(pack.collection, pack); return pack; } } } };
-    g.CONFIG.Item.documentClass = { createDocuments: async (d: any[], o: any) => { created.push(...d.map((x) => [x.name, o.pack])); }, updateDocuments: async (d: any[]) => { updated.push(...d.map((x) => [x._id, x.name])); } };
+    let n = 0;
+    g.CONFIG.Item.documentClass = Object.assign(function (this: any, d: any) { this.system = { toObject: () => ({}) }; void d; }, {
+      createDocuments: async (d: any[], o: any) => { for (const x of d) { created.push([x.name, o.pack]); docs.push({ id: `n${++n}`, ...x }); } },
+      updateDocuments: async (d: any[]) => { for (const x of d) { updated.push([x._id, x.name]); Object.assign(docs.find((y) => y.id === x._id), x); } },
+      deleteDocuments: async () => {},
+    });
     assert.equal(await qol.exportTemplatesToCompendium(), 2);
-    assert.deepEqual(pack.made, { type: 'Item', label: 'SR2e item templates', name: 'sr2e-item-templates', package: 'world' });
+    assert.equal(pack.made.name, 'sr2e-item-templates');
+    assert.deepEqual(pack.made.ownership, { PLAYER: 'OBSERVER', ASSISTANT: 'OWNER' });
     assert.deepEqual(created, [['Ares Predator', 'world.sr2e-item-templates']]);
-    assert.deepEqual(updated, [['x1', 'Medkit']]);
-    assert.equal(await qol.importTemplatesFromCompendium('world.sr2e-item-templates'), 1);   // the spell type isn't an item type here
-    const list = settings.itemTemplates as any[];
-    assert.equal(list.length, 2);
-    const ares = list.find((t: any) => t.name === 'Ares Predator');
+    assert.deepEqual(updated, [['x1', 'Medkit']], 'an old export of the same template is matched and updated');
+    assert.ok(pack.opened);
+    assert.equal(settings.catalogueMoved942, true);
+    assert.equal((settings.itemTemplates as any[]).length, 2, 'the old setting keeps its copy');
+    assert.equal(await qol.importTemplatesFromCompendium('world.other'), 1);   // the spell type isn't an item type here
+    const ares = docs.find((d) => d.name === 'Ares Predator');
     assert.equal(ares.system.power, 10);
     assert.equal(ares.system.installed, undefined);
     g.game.user.isGM = false;

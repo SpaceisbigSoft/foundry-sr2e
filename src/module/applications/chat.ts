@@ -21,6 +21,7 @@ import { tokensNear, scatterPoint, blastBlocked, wallDistances, wallsBetweenPoin
 import { escHtml } from '../rules/html.ts';
 import { safeAutoApply, gmApplyShapeOk, describeGmChange, cardTargetUuid, cardSourceUuids, safeInt, safePath, boundPower, boundLevel, safeStr, deepSafeKeys, trustedSource, GM_APPLY_SPECS } from '../rules/trust.ts';
 import { authorIsGm, authorOwns, cardAuthor, cardTrust, speakerActorUuid, nameOfUuid, playerMay, gmMay } from './trust.ts';
+import { applyTransferAsGm, transferLiveLines } from './trade942.ts';
 import { disarmQuickRoll } from './hotkeys.ts';
 import { withGmLock } from './gmlock.ts';
 import { RULES, autoResists, blastRadius, blastLoss, scatter, damageLabel, scatterDiceFor, scatterMetres, confinedBlast, throwBackScatter, blastScatterDice, fusedScatter, canThrowBack, stopsAtWalls, grenadeKind, toxinOnsetLabel, scatterDirection, bearingDeg, type TargetNumberModifier } from '../rules/index.ts';
@@ -1571,6 +1572,8 @@ async function gmApplyFlag<T = any>(message: any, action: string): Promise<T | n
   if (action === 'applySurgery') {
     try { const m = (CONFIG.Actor.documentClass as any).surgeryApplyMoney?.(flags[spec.flag]?.snap); if (typeof m === 'string' && m) lines.push(tx('SR2E.Dialog.Chat.money', { m })); } catch { /* the line stays out */ }
   }
+  // v0.94.2 (item 28): what the documents hold now (the item's real name and count, the loot mark), beside the card's word.
+  if (action === 'applyTransfer') lines.push(...transferLiveLines(flags[spec.flag]));
   const ok = await gmMay(message, {
     title: tx('SR2E.Dialog.Chat.applyGm'), lines,
     target: cardTargetUuid(action, flags), sources: cardSourceUuids(action, flags),
@@ -1770,6 +1773,7 @@ export const GM_APPLY_ACTIONS: Record<string, string> = {
   applyHost: 'hostApplied', applyTally: 'tallyApplied', applyCleanse: 'cleanseApplied', applyPossession: 'possessionApplied',
   applyPowerEffect: 'powerEffectApplied', applyActorUpdate: 'actorUpdateApplied', applySurgery: 'surgeryApplied',
   applyHeal: 'healApplied', applyPatch: 'patchApplied', applyVehicleJob: 'vehicleJobApplied', applyTimedStatus: 'timedStatusApplied',
+  applyTransfer: 'transferApplied',
 };
 
 /** Pure: the Apply (GM) actions a card's content carries that are not yet done. */
@@ -1816,7 +1820,7 @@ async function runAutoApply(message: any, todo: string[]): Promise<void> {
     applySite: onApplySite, applyLocks: onApplyLocks, applyJam: onApplyJam, applyDroneLink: onApplyDroneLink, applyHold: onApplyHold, applyHost: onApplyHost,
     applyTally: onApplyTally, applyCleanse: onApplyCleanse, applyPossession: onApplyPossession, applyPowerEffect: onApplyPowerEffect,
     applyActorUpdate: onApplyActorUpdate, applySurgery: onApplySurgery, applyHeal: onApplyHeal, applyPatch: onApplyPatch,
-    applyVehicleJob: onApplyVehicleJob, applyTimedStatus: onApplyTimedStatus,
+    applyVehicleJob: onApplyVehicleJob, applyTimedStatus: onApplyTimedStatus, applyTransfer: onApplyTransfer,
   };
   for (const a of todo) {
     const b = document.createElement('button');
@@ -2852,6 +2856,22 @@ async function onApplyActorUpdate(message: any, button: HTMLButtonElement): Prom
   });
 }
 
+/** v0.94.2 (item 28, GM): a give, stash or loot a player couldn't make (applications/trade942.ts checks and moves it). */
+async function onApplyTransfer(message: any, button: HTMLButtonElement): Promise<void> {
+  if (!game.user?.isGM) return ui.notifications.warn(tx('SR2E.Notify.Chat.onlyTheGmCanApplyThis'));
+  if (message.getFlag(SYSTEM_ID, 'transferApplied')) return ui.notifications.warn(tx('SR2E.Notify.Chat.alreadyApplied'));
+  const v = await gmApplyFlag(message, 'applyTransfer');
+  if (!v) return;
+  await gmLocked(message, button, async () => {
+    if (message.getFlag(SYSTEM_ID, 'transferApplied')) return;
+    button.disabled = true;
+    // Bound to the card's author (message.author): applyTransferAsGm reads ownership and the loot mark from the documents.
+    const r = await applyTransferAsGm(v, message.author ?? null, 'card');
+    if (r.ok) await message.setFlag(SYSTEM_ID, 'transferApplied', true);
+    else { button.disabled = false; ui.notifications.warn(escHtml(r.note ?? '')); }
+  });
+}
+
 /** Patch cards being applied right now (two fast clicks apply once). */
 const patching = new Set<string>();
 /** v0.70.0 (GM): a slap patch a player put on someone they don't own. */
@@ -3594,6 +3614,7 @@ function dispatch(message: any, button: HTMLButtonElement, action: string): Prom
   else if (action === 'applyPatch') return onApplyPatch(message, button);
   else if (action === 'applyVehicleJob') return onApplyVehicleJob(message, button);
   else if (action === 'applyTimedStatus') return onApplyTimedStatus(message, button);
+  else if (action === 'applyTransfer') return onApplyTransfer(message, button);
   else if (action === 'docwagonArrive') return onDocwagonArrive(message, button);
   else if (action === 'breakBinding') return onBreakBinding(message, button);
   else if (action === 'placeWard') return onPlaceWard(message);

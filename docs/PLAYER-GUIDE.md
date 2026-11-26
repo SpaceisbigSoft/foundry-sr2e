@@ -53,6 +53,8 @@ How to use the unofficial Shadowrun 2nd Edition system for Foundry VTT: what the
 - [Gear](#gear)
 - [Item sheets](#item-sheets)
 - [Money, lifestyle and the ledger](#money-lifestyle-and-the-ledger)
+- [Giving, stashing and looting](#giving-stashing-and-looting)
+- [Using Item Piles instead](#using-item-piles-instead)
 - [The shop (the Add window)](#the-shop-the-add-window)
 - [The Catalogue](#the-catalogue)
 - [New entries](#new-entries)
@@ -95,6 +97,7 @@ How to use the unofficial Shadowrun 2nd Edition system for Foundry VTT: what the
 **GM: setup and world**
 
 - [Setup tab: players, tokens, kits and the catalogue](#setup-tab-players-tokens-kits-and-the-catalogue)
+- [The catalogue compendium](#the-catalogue-compendium)
 - [Scene builder](#scene-builder)
 - [World tab, hosts, sites and safehouses](#world-tab-hosts-sites-and-safehouses)
 - [NPCs tab: NPC generator and calculator](#npcs-tab-npc-generator-and-calculator)
@@ -653,6 +656,26 @@ Hover a field for what it does. The rules behind the numbers are in your SR2 rul
 
 The **Ledger** lists the latest 15 changes to nuyen, Good Karma and the Karma Pool, with their reasons.
 
+## Giving, stashing and looting
+
+Items and nuyen change hands without any module (the world setting *Give, stash and loot (without Item Piles)*, on by default).
+
+- **Give to…**: the hand icon on an item row of a sheet you own (weapons, armor, gear, spare ware, foci and decks; installed cyberware can't be given). Pick who gets it: your own actors and safehouses are listed under *Stash*, everyone else under *Give*. A stack asks **How many?**, as dragging one does. **Give nuyen…** beside the nuyen box works the same way.
+- You can also drag an item onto someone else's sheet, or a non-weapon item onto their token (a weapon dropped on a token still attacks).
+- Into an actor you own it moves at once. To anyone else it posts an **Apply (GM)** card for the GM (with *Apply GM cards by themselves* on, a give of your own item goes through by itself). The receiver's matching stack grows instead of getting a second copy.
+- **Stash**: a safehouse holds items. Its sheet lists the **Stash**: drop items on the sheet to stash them, and drag one onto a sheet to take it back.
+- **Loot**: the GM marks a token lootable with the sack icon on its token HUD (click again: *free for all*; again: off; right-click: the Loot window). Players open **Loot** from the SR2e tools window: it lists the lootable tokens on the scene you are viewing (a targeted one first), what each carries and its nuyen; **Take** puts it on the actor you pick.
+
+A take waits for the GM's Apply, unless the GM made the token free for all: then it is yours at once (the GM must be logged in). Using Item Piles instead? See [Using Item Piles instead](#using-item-piles-instead).
+
+## Using Item Piles instead
+
+If your table uses the Item Piles module for loot, merchants and trading:
+
+- Turn **off** *Give, stash and loot (without Item Piles)* in Configure Settings. The Give icons, Give nuyen, the safehouse stash list, the loot HUD button and the Loot window go away; Apply (GM) cards already posted can still be applied.
+- Keep *Support for Item Piles and Health Estimate* **on** and reload, so Item Piles uses nuyen as the currency and reads prices and quantities.
+- Make piles and merchants with Item Piles' own tools. Dragging an item between two sheets you own still moves it, as before.
+
 ## The shop (the Add window)
 
 The **Shop** button opens it as the shop: only the tabs that sell things (weapons, armor, gear, ware, foci, programs, decks, vehicles, kits), ready to buy. It is in the SR2e tools window, the SR2e group of the left toolbar, and the title bar of your character sheet (the GM: for the selected token). The + on a heading (Weapons, Armor, Spells, Cyberware, Gear and so on) opens the same window with every tab, at that kind of item.
@@ -1012,6 +1035,19 @@ The **Log** tab lists the steps, newest first. Each is one person's burst of cha
 - **Item catalogue**: the world's item templates, which show first in every [Add window](#the-shop-the-add-window). **Paste spreadsheet rows…**, **Export as CSV**, **Manage templates…**, save or load a catalogue file, and templates to or from a compendium. A catalogue file holds templates and kits (to take to another world) and can also hold vehicles and drones, NPCs, critters and spirits, so one file can bring a whole data set into a world. **Load a catalogue file…** shows what the file has and asks first. New actors go in the folder *Catalogue (SR2e)*, sorted into subfolders (vehicles and drones by kind, spirits, critters, NPCs; actors left at the top of the folder by an earlier load are sorted too, and anything you moved elsewhere stays put); an actor already in the world with the same name is never replaced. With *Fill in missing values* ticked, items already in the world with the same type and name (on characters too, and on actors the file also has) get the file's descriptive values (cost, Availability, a damage code, ranges, Essence…) only where theirs are still empty or zero. A value someone set is kept, and ratings, quantities, ammo, accessories and on/off switches are never changed. An actor already in the world is never changed itself. Any item sheet also has **Save as template**.
 - **Characters from a stat block**: paste a character write-up to make a new character.
 - **Modules**: which helpful modules are on, a tour of the GM panel, and a link to this guide.
+
+## The catalogue compendium
+
+Since v0.94.2 your own catalogue entries (templates) are items in a world compendium, **SR2e catalogue** (`world.sr2e-item-templates`), not one big world setting. The shop, the Add window, the Catalogue and the item sheet's template list read it. Open it from the Setup tab (**Open the catalogue compendium**); you can drag items into it or edit them there. Players need *Observer* on it to buy from it (it is made that way).
+
+The first time you load the world in v0.94.2, the old setting's templates are copied into the compendium; nothing is deleted. The Setup tab then offers **Remove the old copy**: it removes the setting's copy only after you confirm, and only when every template is in the compendium. Starter kits stay in their setting, and catalogue vehicles and drones stay world actors in the *Catalogue (SR2e)* folder.
+
+To copy the catalogue to another world:
+
+- **A catalogue file** (simplest; it also carries kits and catalogue vehicles): **Save a catalogue file** on the Setup tab in this world, then **Load a catalogue file** in the other. The templates go into that world's compendium. **Export as CSV** and **Paste spreadsheet rows** move templates through a spreadsheet the same way.
+- **Foundry's compendiums**: a world compendium belongs to its world, so drag the items from *SR2e catalogue* into a compendium of a module you share between worlds (your own content module), then in the other world drag them from there into its *SR2e catalogue*. For a few entries, an item's *Export Data* and *Import Data* also work. Items keep their template id and *In the shop* mark.
+
+Keep what you typed from your books for your own group.
 
 ## Scene builder
 

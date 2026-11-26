@@ -16,6 +16,7 @@ import { describeBundle } from './arcanum.ts';
 import { t as tx, tCount } from '../helpers/i18n.ts';
 import { RULES } from './config.ts';
 import { EFFECT_NUMBER_KEYS } from './effects.ts';
+import { transferShapeOk } from './trade942.ts';
 
 /** Path segments that reach an object's prototype: never walked or set from data. */
 export const UNSAFE_KEYS: ReadonlySet<string> = new Set(['__proto__', 'prototype', 'constructor']);
@@ -124,6 +125,9 @@ export const GM_APPLY_SPECS: Record<string, { flag: string; keys: readonly strin
   // v0.81.1 (D1-3, D2-5): a mechanic's timed job on someone else's vehicle; a flash's blindness on someone else.
   applyVehicleJob: { flag: 'vehicleJob', keys: ['actorUuid', 'method', 'args', 'jobId', 'sourceUuid'], target: '', sources: ['actorUuid', 'sourceUuid'] },
   applyTimedStatus: { flag: 'timedStatus', keys: ['targetUuid', 'status', 'seconds', 'flashTn', 'sourceUuid'], target: 'targetUuid', sources: ['sourceUuid'] },
+  // v0.94.2 (item 28): a give, stash or loot (rules/trade942.ts). Both actors are sources: the giver's owner gives, the
+  // looter's owner takes; applications/trade942.ts applyTransferAsGm checks which one the kind needs.
+  applyTransfer: { flag: 'transfer', keys: ['kind', 'fromUuid', 'toUuid', 'itemId', 'qty', 'nuyen', 'name', 'sourceUuid'], target: '', sources: ['fromUuid', 'toUuid'] },
 };
 
 function at(obj: any, path: string): unknown {
@@ -200,6 +204,8 @@ export function gmApplyShapeOk(action: string, flags: Record<string, any>): bool
     case 'applyVehicleJob': return safeStr(f.actorUuid, 400) && ['finishVehicleRepair', 'finishModInstall'].includes(String(f.method)) && Array.isArray(f.args) && f.args.length <= 6 && deepSafeKeys(f.args) && safeStr(f.jobId, 65);
     // v0.81.1 (D2-5): only blindness, bounded.
     case 'applyTimedStatus': return safeStr(f.targetUuid, 400) && f.status === 'blind' && intIn(f.seconds, 1, 600) && (f.flashTn === undefined || intIn(f.flashTn, 0, 10));
+    // v0.94.2 (item 28): one item (bounded count) or nuyen, between two actors.
+    case 'applyTransfer': return transferShapeOk(f);
     default: return false;
   }
 }
@@ -376,6 +382,9 @@ export function safeAutoApply(action: string, flags: Record<string, any>, trust:
     case 'applyHold': return owns(f.targetUuid) && owns(f.holderUuid);
     // Design 3: a lowering (background count cleansed) never applies by itself.
     case 'applyCleanse': return false;
+    // v0.94.2 (item 28): a give or stash of the author's own item applies by itself (the GM's client checks the author
+    // owns the giver again, and the item and count, as it moves it); a loot always waits for the GM's click.
+    case 'applyTransfer': return (f.kind === 'give' || f.kind === 'stash') && owns(f.fromUuid);
     case 'applyActorUpdate': {
       if (f.nuyen !== undefined || f.remove !== undefined || f.masterDied !== undefined || f.handSpirit !== undefined || f.lower !== undefined || f.dispel !== undefined || !f.monitor) return false;
       // Round 2 (R2-SEC-9): healing too only on an actor the author owns. A "source" the card names is the author's
@@ -578,6 +587,12 @@ export function describeGmChange(action: string, flags: Record<string, any>, nam
       out.push(tn
         ? (src ? tx('SR2E.Text.Trust.blindedTnFlash', { target, seconds, tn: Number(f.flashTn), source: src }) : tx('SR2E.Text.Trust.blindedTn', { target, seconds, tn: Number(f.flashTn) }))
         : (src ? tx('SR2E.Text.Trust.blindedFlash', { target, seconds, source: src }) : tx('SR2E.Text.Trust.blinded', { target, seconds })));
+      break;
+    }
+    case 'applyTransfer': {
+      // The card's item name is its author's word: shown as said (the GM's client reads the item itself when it moves it).
+      const what = f.nuyen !== undefined ? tx('SR2E.Trade.nuyenAmount', { amount: Number(f.nuyen) }) : tx('SR2E.Trade.itemCount', { name: String(f.name ?? f.itemId ?? '').slice(0, 120), qty: Number(f.qty ?? 1) });
+      out.push(f.kind === 'loot' ? tx('SR2E.Trade.describeLoot', { from: nm(f.fromUuid), to: nm(f.toUuid), what }) : tx('SR2E.Trade.describeGive', { from: nm(f.fromUuid), to: nm(f.toUuid), what }));
       break;
     }
     default: out.push(action);

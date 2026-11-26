@@ -118,6 +118,9 @@ export const GUIDE_TOPICS: GuideTopic[] = [
   topic('health', 'both', ['Addictions', 'Diseases'], ['p', 2, 'p']),
   // ---------------------------------------------------------------- Upkeep tab
   topic('money', 'both', ['Money and lifestyle', 'Ledger'], ['p', 3, 'p']),
+  // v0.94.2: give, stash and loot (applications/trade942.ts), and the Item Piles route.
+  topic('trade', 'both', [], ['p', 5, 'p']),
+  topic('item-piles', 'both', [], ['p', 3]),
   topic('spend-karma', 'both', ['Karma', 'More', 'Recent Karma'], ['p', 'p', 4, 'p', 'p', 'p']),
   topic('under-way', 'both', ['Under way'], ['p', 'p', 3, 'p']),
   topic('contacts', 'both', ['Contacts'], ['p', 'p', 'p', 'p']),
@@ -151,6 +154,8 @@ export const GUIDE_TOPICS: GuideTopic[] = [
   topic('gm-world', 'gm', ['Magical groups', 'Building security', 'Safehouses', 'Security sheaf', 'IC', 'Data stores', 'Deckers here', 'Security deckers', 'Subsystem data bombs', 'Comcalls', 'Devices', 'Guards', 'Security steps', 'Security rigger', 'Turrets and drones', 'People', 'Build it'], ['p', 4, 'p']),
   // v0.91.7
   topic('scene-builder', 'gm', [], ['p', 7, 'p', 'p']),
+  // v0.94.2: the GM's catalogue in a world compendium, and copying it to another world (applications/catalogue942.ts).
+  topic('gm-catalogue', 'gm', [], ['p', 'p', 'p', 2, 'p']),
   topic('gm-undo', 'gm', ['Undo', "What undo can't do", 'Recent rolls'], ['p', 'p', 'p']),
   topic('gm-cards', 'gm', [], [8, 'p', 10]),
   topic('house-rules', 'gm', [], ['p', 'p', 'p', 'p', 'p', 5, 'p', 'p', 'p']),
@@ -168,13 +173,13 @@ export const GUIDE_CATEGORIES: GuideCategory[] = [
   category('start', 'players', ['getting-started', 'tools', 'rules-v079', 'rules-v0923-combat', 'rules-urr', 'sheet-tools', 'summary-bar', 'layouts', 'look', 'shortcuts', 'printing', 'troubleshooting', 'interpretations', 'credits']),
   category('rolls', 'players', ['rolling', 'targeting', 'chat-cards', 'karma-pool', 'pools', 'inline-tests', 'physical-dice']),
   category('character', 'players', ['attributes', 'condition-monitor', 'skills', 'skill-picker', 'current-tab', 'effects', 'health', 'contacts', 'bio', 'token-art']),
-  category('gear', 'players', ['weapons', 'cyberware', 'gear', 'item-sheet', 'money', 'adding', 'catalogue', 'new-entry']),
+  category('gear', 'players', ['weapons', 'cyberware', 'gear', 'item-sheet', 'money', 'trade', 'item-piles', 'adding', 'catalogue', 'new-entry']),
   category('advancement', 'players', ['creation-wizard', 'creation-record', 'spend-karma', 'under-way', 'approval']),
   category('magic', 'players', ['magic', 'conjuring', 'spells', 'spell-formulas', 'powers']),
   category('matrix', 'players', ['matrix', 'rigging']),
   category('sheets', 'players', ['npc-sheets', 'vehicles']),
   category('gm-run', 'gm', ['gm-panel', 'gm-time', 'gm-combat', 'gm-party', 'gm-cards', 'gm-undo']),
-  category('gm-setup', 'gm', ['gm-setup', 'scene-builder', 'gm-world', 'gm-tools', 'house-rules']),
+  category('gm-setup', 'gm', ['gm-setup', 'gm-catalogue', 'scene-builder', 'gm-world', 'gm-tools', 'house-rules']),
 ];
 
 /** The categories with their topics, for a player or the GM (GM categories only for the GM). */

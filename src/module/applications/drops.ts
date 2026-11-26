@@ -13,6 +13,7 @@ import { approvalNeeded, fileRequest } from "./approvals.ts";
 import { rowAmount } from "../rules/catalogue.ts";
 import { escHtml } from "../rules/html.ts";
 import { t as tx } from '../helpers/i18n.ts';
+import { giveByDrop } from './trade942.ts';
 
 export const ALL_ITEM_TYPES = ['skill', 'weapon', 'armor', 'gear', 'cyberware', 'spell', 'power', 'focus', 'adeptpower', 'cyberdeck', 'program'] as const;
 
@@ -23,7 +24,8 @@ export const ITEM_TYPES_FOR: Record<string, readonly string[]> = {
   spirit: ['skill', 'weapon', 'armor', 'gear', 'spell', 'power', 'focus'],
   vehicle: ['weapon', 'gear', 'program'],
   ic: ['program'],
-  host: [], barrier: [], site: [], safehouse: [],
+  // v0.94.2 (item 28): a safehouse holds physical items (its stash).
+  host: [], barrier: [], site: [], safehouse: ['weapon', 'armor', 'gear', 'cyberware', 'focus', 'cyberdeck'],
 };
 
 /** Physical things that change hands (moved, not copied, between actors). */
@@ -86,7 +88,7 @@ function stableJson(v: unknown): string {
 }
 
 /** v0.93.0: ask how many of a stack move (all by default). Null = cancelled. */
-async function askHowMany(name: string, have: number): Promise<number | null> {
+export async function askHowMany(name: string, have: number): Promise<number | null> {
   const D: any = (foundry as any)?.applications?.api?.DialogV2;
   if (!D?.wait) return have;
   const r = await D.wait({
@@ -119,6 +121,8 @@ function describe(reset: Record<string, unknown>): string {
  */
 export async function dropItemOnActor(sheet: any, event: DragEvent | any, item: any, fallback: () => Promise<any>): Promise<any> {
   const actor: any = sheet.actor;
+  // v0.94.2 (item 28): the user's own item dropped on someone else's sheet is offered as a gift (applications/trade942.ts).
+  if (actor && item && !actor.isOwner) return giveByDrop(item, actor);
   if (!actor?.isOwner || !item) return null;
   const source: any = item.parent ?? null;
   if (source?.uuid === actor.uuid) return fallback();

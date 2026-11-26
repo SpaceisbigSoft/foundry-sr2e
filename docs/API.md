@@ -116,11 +116,14 @@ The system registers itself with Token Action HUD Core 2.x (`tokenActionHudSyste
 | `buildScene(spec)`, `applyToScene(sceneId, spec)`, `removeBuiltScene(sceneId, {confirm})` | v0.91.7, GM: build a scene from a spec, change one, or remove one it built. |
 | `interpretations(id?)` | v0.92.0: the rules interpretations window, at an entry. |
 | `reference(actor)` | v0.92.1: the reference pane beside an actor's sheet. |
+| `trade` | v0.94.2: give, stash and loot: `trade.give(item, toUuid?)`, `trade.giveNuyen(actor)`, `trade.requestTransfer({ kind, fromUuid, toUuid, itemId?, qty?, nuyen? })` (made at once, as a GM-apply card or through the GM, as the user may), `trade.setLootable(actor, { on, free? })` (GM), `trade.openLoot()`, and `trade.setNesting({ childrenOf, clearFlags, relink })` (what moves along with an item). |
+| `catalogueCompendium()`, `removeOldCatalogue()` | v0.94.2, GM: open the world compendium the GM's catalogue lives in (made when missing), or remove the old world setting's copy of the catalogue after a confirmation (only once every template is in the compendium). |
 
 ## API changes
 
 The interface's history from v0.93.2, newest first. Each version's `CHANGELOG.md` entry repeats its line.
 
+- **v0.94.2:** added `trade`, `catalogueCompendium()` and `removeOldCatalogue()`; `exportTemplates()` now moves the catalogue into its world compendium and opens it (the compendium is the catalogue's home). Nothing was removed.
 - **v0.94.1:** `rollTest(spec)` (and every roll link) takes the word `secret`: the card goes to the GMs only. Nothing was changed or removed.
 - **v0.94.0:** `importCharacter(actor, text)` also takes the text of a Nullsheen generator file or a futurekill actor export (it is turned into a write-up first). Nothing was removed.
 - **v0.93.5:** added `partyView()`; `gmPanel()` takes an optional tab. Nothing was changed or removed.

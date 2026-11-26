@@ -2443,6 +2443,10 @@
           "gm": "The GM only",
           "all": "Everyone, for their own tests"
         }
+      },
+      "tradeOn": {
+        "Name": "Give, stash and loot (without Item Piles)",
+        "Hint": "Give to… on item rows, Give nuyen…, safehouse stashes and the Loot window. Turn it off when your table uses the Item Piles module for trading and loot instead."
       }
     },
     "Notify": {
@@ -18718,6 +18722,38 @@
             "i12": "<strong>A world from before v0.93.1</strong> (system id <code>sr2e</code>) must be moved to the new id <code>shadowrun2e_unified</code>: see <code>docs/MOVING.md</code>. Macros keep working: <code>game.sr2e</code> and the <code>sr2e.*</code> hooks didn't change."
           },
           "b3": "The full page is <code>docs/TROUBLESHOOTING.md</code> on the project's GitHub. To report a bug, press <strong>Report a bug</strong> (in this guide, or the SR2e tools window, <kbd>Alt</kbd>+<kbd>T</kbd>), press <strong>Copy</strong> and paste the text into the <em>Bug report</em> form on the GitHub issue tracker, with the steps that make it happen. Nothing is sent by itself; read the text before posting."
+        },
+        "trade": {
+          "title": "Giving, stashing and looting",
+          "b1": "Items and nuyen change hands without any module (the world setting <em>Give, stash and loot (without Item Piles)</em>, on by default).",
+          "b2": {
+            "i1": "<strong>Give to…</strong>: the hand icon on an item row of a sheet you own (weapons, armor, gear, spare ware, foci and decks; installed cyberware can't be given). Pick who gets it: your own actors and safehouses are listed under <em>Stash</em>, everyone else under <em>Give</em>. A stack asks <strong>How many?</strong>, as dragging one does. <strong>Give nuyen…</strong> beside the nuyen box works the same way.",
+            "i2": "You can also drag an item onto someone else's sheet, or a non-weapon item onto their token (a weapon dropped on a token still attacks).",
+            "i3": "Into an actor you own it moves at once. To anyone else it posts an <strong>Apply (GM)</strong> card for the GM (with <em>Apply GM cards by themselves</em> on, a give of your own item goes through by itself). The receiver's matching stack grows instead of getting a second copy.",
+            "i4": "<strong>Stash</strong>: a safehouse holds items. Its sheet lists the <strong>Stash</strong>: drop items on the sheet to stash them, and drag one onto a sheet to take it back.",
+            "i5": "<strong>Loot</strong>: the GM marks a token lootable with the sack icon on its token HUD (click again: <em>free for all</em>; again: off; right-click: the Loot window). Players open <strong>Loot</strong> from the SR2e tools window: it lists the lootable tokens on the scene you are viewing (a targeted one first), what each carries and its nuyen; <strong>Take</strong> puts it on the actor you pick."
+          },
+          "b3": "A take waits for the GM's Apply, unless the GM made the token free for all: then it is yours at once (the GM must be logged in). Using Item Piles instead? See <a href=\"#item-piles\">Using Item Piles instead</a>."
+        },
+        "itemPiles": {
+          "title": "Using Item Piles instead",
+          "b1": "If your table uses the Item Piles module for loot, merchants and trading:",
+          "b2": {
+            "i1": "Turn <strong>off</strong> <em>Give, stash and loot (without Item Piles)</em> in Configure Settings. The Give icons, Give nuyen, the safehouse stash list, the loot HUD button and the Loot window go away; Apply (GM) cards already posted can still be applied.",
+            "i2": "Keep <em>Support for Item Piles and Health Estimate</em> <strong>on</strong> and reload, so Item Piles uses nuyen as the currency and reads prices and quantities.",
+            "i3": "Make piles and merchants with Item Piles' own tools. Dragging an item between two sheets you own still moves it, as before."
+          }
+        },
+        "gmCatalogue": {
+          "title": "The catalogue compendium",
+          "b1": "Since v0.94.2 your own catalogue entries (templates) are items in a world compendium, <strong>SR2e catalogue</strong> (<code>world.sr2e-item-templates</code>), not one big world setting. The shop, the Add window, the Catalogue and the item sheet's template list read it. Open it from the Setup tab (<strong>Open the catalogue compendium</strong>); you can drag items into it or edit them there. Players need <em>Observer</em> on it to buy from it (it is made that way).",
+          "b2": "The first time you load the world in v0.94.2, the old setting's templates are copied into the compendium; nothing is deleted. The Setup tab then offers <strong>Remove the old copy</strong>: it removes the setting's copy only after you confirm, and only when every template is in the compendium. Starter kits stay in their setting, and catalogue vehicles and drones stay world actors in the <em>Catalogue (SR2e)</em> folder.",
+          "b3": "To copy the catalogue to another world:",
+          "b4": {
+            "i1": "<strong>A catalogue file</strong> (simplest; it also carries kits and catalogue vehicles): <strong>Save a catalogue file</strong> on the Setup tab in this world, then <strong>Load a catalogue file</strong> in the other. The templates go into that world's compendium. <strong>Export as CSV</strong> and <strong>Paste spreadsheet rows</strong> move templates through a spreadsheet the same way.",
+            "i2": "<strong>Foundry's compendiums</strong>: a world compendium belongs to its world, so drag the items from <em>SR2e catalogue</em> into a compendium of a module you share between worlds (your own content module), then in the other world drag them from there into its <em>SR2e catalogue</em>. For a few entries, an item's <em>Export Data</em> and <em>Import Data</em> also work. Items keep their template id and <em>In the shop</em> mark."
+          },
+          "b5": "Keep what you typed from your books for your own group."
         }
       }
     },
@@ -18845,6 +18881,10 @@
       "partyView": {
         "label": "Party view",
         "hint": "The party at a glance: your characters' vitals, and the others as far as you may see them."
+      },
+      "loot": {
+        "label": "Loot",
+        "hint": "Take items and nuyen from the lootable tokens on the scene you are viewing (the GM marks them)."
       }
     },
     "SceneBuilder": {
@@ -19449,6 +19489,85 @@
         "setting": "{name}: {from} → {to}",
         "thisBrowser": "(this browser only)"
       }
+    },
+    "Trade": {
+      "Problem": {
+        "badRequest": "That transfer isn't one the system sends.",
+        "noSource": "The actor it comes from is gone.",
+        "noTarget": "The actor it goes to is gone.",
+        "sameActor": "It already belongs to that actor.",
+        "noItem": "That item is no longer there.",
+        "notTradeable": "That can't change hands (only physical items that aren't installed).",
+        "targetRefuses": "That actor can't hold this kind of item.",
+        "badQty": "That isn't a count of the stack.",
+        "notEnough": "There aren't that many left.",
+        "noNuyenField": "One of them has no nuyen.",
+        "notEnoughNuyen": "Not enough nuyen."
+      },
+      "nuyen": "Nuyen",
+      "nuyenAmount": "{amount}¥",
+      "itemCount": "{name} ×{qty}",
+      "describeGive": "{from} gives {what} to {to}",
+      "describeLoot": "{to} takes {what} from {from}",
+      "liveItem": "Now on the giver: {name} ×{have}",
+      "liveLootable": "The source is marked lootable.",
+      "liveNotLootable": "The source is not marked lootable (applying will be refused).",
+      "notAllowed": "{who} may not move that (not their item, or the source isn't lootable).",
+      "failed": "The transfer failed; nothing was moved (see the console).",
+      "chatGive": "{from} gives {what} to {to}.",
+      "chatStash": "{from} stashes {what} with {to}.",
+      "chatLoot": "{to} takes {what} from {from}.",
+      "cardGive": "{from} wants to give {what} to {to}.",
+      "cardLoot": "{to} wants to take {what} from {from}.",
+      "refusedGive": "You can only give away what your own characters carry.",
+      "refusedLoot": "You can only loot a token the GM marked lootable, into an actor of your own.",
+      "done": "{from} → {to}: {what}.",
+      "sentToGm": "Sent to the GM: {what} to {to}.",
+      "noRecipients": "There is nobody to give that to.",
+      "nuyenLabel": "How much (of {have}¥)",
+      "to": "To",
+      "groupStash": "Stash (yours and safehouses)",
+      "groupGive": "Give to someone else",
+      "giveHint": "Into an actor you own it moves at once; to anyone else the GM applies it.",
+      "giveButton": "Give",
+      "giveTitle": "Give {name} to…",
+      "giveNuyenTitle": "Give nuyen from {name}",
+      "giveControl": "Give to…",
+      "giveNuyenControl": "Give nuyen…",
+      "lootTitle": "Loot",
+      "noLoot": "No token on this scene is marked lootable.",
+      "lootFrom": "From",
+      "lootInto": "Into",
+      "freeForAllHint": "Free for all: what you take is yours at once.",
+      "asksGmHint": "What you take waits for the GM to apply it.",
+      "markFree": "Make it free for all",
+      "markAsk": "Make takes wait for the GM",
+      "markOff": "Not lootable",
+      "nothingToTake": "Nothing to take.",
+      "take": "Take",
+      "off": "Give, stash and loot are turned off in this world.",
+      "stashHeading": "Stash",
+      "stashHint": "Items kept here. Drag one onto a sheet to take it; drop items on this sheet to stash them.",
+      "stashEmpty": "Nothing stashed.",
+      "hudOff": "Not lootable: click to mark lootable (right-click: Loot window)",
+      "hudOn": "Lootable (takes wait for the GM): click for free for all",
+      "hudFree": "Lootable, free for all: click to unmark",
+      "safehouseNamed": "{name} (safehouse)"
+    },
+    "Catalogue942": {
+      "packLabel": "SR2e catalogue",
+      "openPack": "Open the catalogue compendium",
+      "livesInPack": "Your catalogue lives in the world compendium \"SR2e catalogue\". You can drag items into it or edit them there. Players need Observer on it to buy from it.",
+      "livesInSetting": "Your catalogue is still in the old world setting. It moves into the world compendium when the GM next loads the world.",
+      "oldCopyHint": "The old setting still holds a copy of {n} templates.",
+      "removeOld": "Remove the old copy",
+      "removeTitle": "Remove the old catalogue copy",
+      "removeBody": "Every one of the {n} in the old world setting is in the catalogue compendium. Remove the old copy? This can't be undone (save a catalogue file first if unsure).",
+      "removed": "The old catalogue copy was removed.",
+      "notAllMoved": "Not removed: some templates aren't in the compendium yet ({list}).",
+      "noPack": "The catalogue compendium couldn't be made or found.",
+      "moveFailed": "Moving the catalogue into its compendium failed; the old setting is untouched (see the console).",
+      "moved": "SR2e: your catalogue ({n}) now lives in the world compendium {pack}. The old setting keeps its copy until you remove it (GM panel, Setup tab)."
     }
   },
   "TYPES": {

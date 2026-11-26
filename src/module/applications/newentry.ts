@@ -17,6 +17,7 @@ import {
 } from '../rules/index.ts';
 import { vehicleForSale, makeOwnedVehicle } from './shop.ts';
 import { catalogueFolderFor } from './catalogue.ts';
+import { catalogueTemplates, saveCatalogueTemplates } from './catalogue942.ts';
 import { fileRequest, registerRequestRunner, requestsOf, finishRequest } from './approvals.ts';
 import { addLines } from './adding.ts';
 import { escHtml } from '../rules/html.ts';
@@ -29,7 +30,8 @@ const label = (key: string): string => tKey(key);
 const kindLabel = (k: EntryKind): string => tKey(ENTRY_KIND_KEYS[k]);
 
 function worldTemplates(): ItemTemplate[] {
-  try { return [...(((game.settings.get(SYSTEM.id, 'itemTemplates') as ItemTemplate[]) ?? []))]; } catch { return []; }
+  // v0.94.2 (item 32): the world compendium (applications/catalogue942.ts).
+  return catalogueTemplates();
 }
 
 /** The character a player's entry is filed on: the one the window was opened for, else theirs, else one they own. */
@@ -55,7 +57,7 @@ export async function saveEntryTemplate(e: { type: string; name: string; system:
   }
   // v0.91.1 review (B6): a replaced template keeps its "in the shop" mark (the shop window's Shop column takes it off).
   const t: ItemTemplate = { id: old?.id ?? `w-${foundry.utils.randomID()}`, type: e.type, name: e.name, system: foundry.utils.deepClone(e.system), ...(o.inShop || old?.shop ? { shop: true } : {}) };
-  await game.settings.set(SYSTEM.id, 'itemTemplates', [...list.filter((x) => x !== old), t].map(({ world: _w, ...x }: any) => x));
+  await saveCatalogueTemplates([...list.filter((x) => x !== old), t]);
   return t;
 }
 

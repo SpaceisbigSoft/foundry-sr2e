@@ -521,9 +521,12 @@
     <p class="hint">{{sr2eT "SR2E.UI.aCatalogueFileHoldsTheTemplates"}}</p>
     <p class="hint sr2e-warn">{{sr2eT "SR2E.UI.catalogueBookText"}}</p>
     <div class="sr2e-row">
-      <button type="button" data-action="exportTemplates"><i class="fa-solid fa-file-export"></i> {{sr2eT "SR2E.UI.templatesToACompendium"}}</button>
+      <button type="button" data-action="catPack"><i class="fa-solid fa-book"></i> {{sr2eT "SR2E.Catalogue942.openPack"}}</button>
       <button type="button" data-action="importTemplates"><i class="fa-solid fa-file-import"></i> {{sr2eT "SR2E.UI.templatesFromACompendium"}}</button>
     </div>
+    <p class="hint">{{#if catalogue942.inPack}}{{sr2eT "SR2E.Catalogue942.livesInPack"}}{{else}}{{sr2eT "SR2E.Catalogue942.livesInSetting"}}{{/if}}</p>
+    {{#if catalogue942.oldCopy}}<div class="sr2e-row sr2e-cat942-old"><span class="hint">{{sr2eT "SR2E.Catalogue942.oldCopyHint" n=catalogue942.oldCopy}}</span>
+      <button type="button" data-action="catDropOld"><i class="fa-solid fa-broom"></i> {{sr2eT "SR2E.Catalogue942.removeOld"}}</button></div>{{/if}}
   </section>
 
   <section>
