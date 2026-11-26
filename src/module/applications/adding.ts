@@ -39,6 +39,7 @@ import { buysByFinding, shopRowInfo, retryFlagKey, retryHoursLeft, timeLabel, so
 // v0.93.5 review: pinning refuses when the bar is full (rules/pins935.ts).
 import { placePin, isEffectPin } from '../rules/pins935.ts';
 import { shownPins } from './sheets935.ts';
+import { duplicateData, duplicateChildren } from './nesting942.ts';
 
 const { HandlebarsApplicationMixin, ApplicationV2, DialogV2 } = foundry.applications.api;
 
@@ -855,7 +856,8 @@ export const SHEET_TOOL_ACTIONS: Record<string, (this: any, e: Event, t: HTMLEle
     if (dupBusy.has(actor.uuid)) return;
     dupBusy.add(actor.uuid);
     try {
-      const data = item.toObject();
+      // v0.94.2: a copy of an attached accessory or program arrives free (applications/nesting942.ts).
+      const data = duplicateData(item.toObject());
       delete data._id;
       data.name = copyName(item.name, [...actor.items].map((i: any) => i.name));
       // A copy arrives as a drop does (cyberware not installed, a focus not bonded...); a GM holding Shift copies it as it is.
@@ -865,7 +867,9 @@ export const SHEET_TOOL_ACTIONS: Record<string, (this: any, e: Event, t: HTMLEle
         await fileRequest(actor, { kind: 'add', label: tx('SR2E.App.Adding.addFree', { named: data.name }), data: { payment: 'free', ready: false, lines: [{ type: item.type, name: data.name, system: data.system, amount: 1, data }] } });
         return;
       }
-      await actor.createEmbeddedDocuments('Item', [data]);
+      const made = await actor.createEmbeddedDocuments('Item', [data]);
+      // v0.94.2: a duplicated weapon or deck copies its accessories or programs (a container's copy is empty).
+      if (made?.[0]) await duplicateChildren(actor, item, made[0]);
     } finally { dupBusy.delete(actor.uuid); }
   },
   pinItem: async function (this: any, _e: Event, t: HTMLElement) {

@@ -13,6 +13,7 @@ import { approvalNeeded, fileRequest } from "./approvals.ts";
 import { rowAmount } from "../rules/catalogue.ts";
 import { escHtml } from "../rules/html.ts";
 import { t as tx } from '../helpers/i18n.ts';
+import { nestDropOnRow, nestAfterForeignDrop, carryChildren } from "./nesting942.ts";
 
 export const ALL_ITEM_TYPES = ['skill', 'weapon', 'armor', 'gear', 'cyberware', 'spell', 'power', 'focus', 'adeptpower', 'cyberdeck', 'program'] as const;
 
@@ -21,9 +22,10 @@ export const ITEM_TYPES_FOR: Record<string, readonly string[]> = {
   character: ALL_ITEM_TYPES,
   npc: ALL_ITEM_TYPES,
   spirit: ['skill', 'weapon', 'armor', 'gear', 'spell', 'power', 'focus'],
-  vehicle: ['weapon', 'gear', 'program'],
+  // v0.94.2: armor too (a vehicle's boot), and a safehouse's stash holds weapons, armor and gear (applications/nesting942.ts).
+  vehicle: ['weapon', 'armor', 'gear', 'program'],
   ic: ['program'],
-  host: [], barrier: [], site: [], safehouse: [],
+  host: [], barrier: [], site: [], safehouse: ['weapon', 'armor', 'gear'],
 };
 
 /** Physical things that change hands (moved, not copied, between actors). */
@@ -121,7 +123,8 @@ export async function dropItemOnActor(sheet: any, event: DragEvent | any, item: 
   const actor: any = sheet.actor;
   if (!actor?.isOwner || !item) return null;
   const source: any = item.parent ?? null;
-  if (source?.uuid === actor.uuid) return fallback();
+  // v0.94.2: dropped on another row of the same sheet, it goes on or in that item (applications/nesting942.ts).
+  if (source?.uuid === actor.uuid) return (await nestDropOnRow(sheet, event, item)) ? item : fallback();
   const problem = itemTypeProblem(actor.type, item.type);
   if (problem) { ui.notifications?.warn?.(escHtml(problem)); return null; }
   const gm = Boolean((game as any).user?.isGM);
@@ -163,6 +166,9 @@ export async function dropItemOnActor(sheet: any, event: DragEvent | any, item: 
     ? (await stack.update({ 'system.quantity': before + take }), stack)
     : await (Item as any).implementation.create(data, { parent: actor, keepId, sr2eComplexFormFrom: item.uuid });
   if (!made) return null;
+  // v0.94.2: a parent moved whole takes its children along; a new copy dropped on a row goes on or in that item.
+  if (moves && take === have) await carryChildren(source, item.id, actor, made.id, asIs ? undefined : arrivalReset);
+  if (!stack) await nestAfterForeignDrop(sheet, event, made);
   if (moves) {
     // Part of a stack: the giver keeps the rest. Review 4: if the giver can't be changed, the receiver's side is undone.
     try { if (take < have) await item.update({ 'system.quantity': have - take }); else await source.deleteEmbeddedDocuments('Item', [item.id]); }

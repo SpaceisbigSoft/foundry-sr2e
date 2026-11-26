@@ -10,6 +10,7 @@
  */
 import { RULES } from './config.ts';
 import { t as tx, tKey } from '../helpers/i18n.ts';
+import { resolveParent, lookupFromItem, isStowed } from './nesting942.ts';
 
 export const TWEAK_TARGETS = ['attribute', 'reaction', 'initiativeDice', 'pool', 'skillDice', 'skillTn', 'damage', 'armor', 'note'] as const;
 export type TweakTarget = typeof TWEAK_TARGETS[number];
@@ -83,9 +84,22 @@ export function normalizeTweaks(list: unknown, idFor?: () => string): Tweak[] {
 
 /** v0.92.1: whether an item counts as carried (RULES.SHEET_V921.carried; only weapons, armor and gear can be left behind). */
 export function isCarried(item: { type?: string; system?: any } | null | undefined): boolean {
+  return carriedAt(item, 0);
+}
+function carriedAt(item: { type?: string; system?: any } | null | undefined, depth: number): boolean {
   if (!item || RULES.SHEET_V921.carried !== 'on') return true;
   if (!['weapon', 'armor', 'gear'].includes(String(item.type ?? ''))) return true;
-  return item.system?.carried !== false;
+  // v0.94.2 (rules/nesting942.ts): an attached accessory goes where its weapon goes; what is in a container is carried
+  // only while the container is.
+  const up = depth < 8 ? resolveParent(item as any, lookupFromItem(item)) : null;
+  if (up?.kind === 'mounted') return carriedAt(up.parent, depth + 1);
+  if (item.system?.carried === false) return false;
+  return up ? carriedAt(up.parent, depth + 1) : true;
+}
+
+/** v0.94.2: carried and at hand: not packed in a container (goggles in a bag give no vision, a chip in one isn't slotted). */
+export function isAtHand(item: { type?: string; system?: any } | null | undefined): boolean {
+  return isCarried(item) && !isStowed(item as any, lookupFromItem(item));
 }
 
 /**
@@ -97,8 +111,9 @@ export function tweakItemLive(item: { id?: string; type?: string; system?: any }
   switch (String(item?.type ?? '')) {
     case 'cyberware': return Boolean(s.installed) && !s.damaged && !(o.recovering?.has(String(item.id ?? '')));
     case 'armor': return Boolean(s.worn) && isCarried(item);
-    case 'weapon': return isCarried(item) && !s.damaged;
-    case 'gear': return isCarried(item) && !s.damaged && Number(s.quantity ?? 1) > 0;
+    // v0.94.2: packed in a container, it is carried but not at hand (rules/nesting942.ts isStowed).
+    case 'weapon': return isCarried(item) && !s.damaged && !isStowed(item as any, lookupFromItem(item));
+    case 'gear': return isCarried(item) && !s.damaged && Number(s.quantity ?? 1) > 0 && !isStowed(item as any, lookupFromItem(item));
     case 'focus': return Boolean(s.bonded) && s.active !== false;
     case 'adeptpower': return s.active !== false && !(o.adeptOver?.has(String(item.id ?? '')));
     case 'power': return s.active !== false;

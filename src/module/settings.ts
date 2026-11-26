@@ -1705,6 +1705,11 @@ export function registerSettings(): void {
     name: "SR2E.Settings.hideNpcNumbers.Name", hint: "SR2E.Settings.hideNpcNumbers.Hint",
     scope: "world", config: true, type: Boolean, default: true,
   });
+  // v0.94.2 (plan items 39/44): a row dropped onto another row of the same sheet goes on or in that item (else it sorts).
+  game.settings.register(SYSTEM.id, "nestOnDrop", {
+    name: "SR2E.Settings.nestOnDrop.Name", hint: "SR2E.Settings.nestOnDrop.Hint",
+    scope: "client", config: true, type: Boolean, default: true,
+  });
   game.settings.register(SYSTEM.id, "floatingDamageWho", {
     name: "SR2E.Settings.floatingDamageWho.Name", hint: "SR2E.Settings.floatingDamageWho.Hint",
     scope: "world", config: true, type: String, default: "owners",

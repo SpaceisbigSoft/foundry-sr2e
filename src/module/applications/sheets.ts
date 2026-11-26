@@ -20,6 +20,7 @@ import { SYSTEM } from "../config/system.ts";
 import { SR2Actor } from "../documents/index.ts";
 // v0.94.1 (report item 30): typed physical-dice results in the main roll windows.
 import { typedDiceRow, readTypedDice, withTypedDice, armTypedDice, typedScoped } from "./typed941.ts";
+import { formSystem942 } from "../helpers/nesting942.ts";
 import { tokenOf, tokenDistance, attackerToken, attackTargetOptions, measureTokens, lineOfSight, sightCover, movedThisTurn, tokensNear, targetLight, barriersBetween, tokensInCone, friendsInMelee, isProne, scatterPoint, wallsBetweenPoints, smokeBetweenTokens, placeArea } from "./canvas.ts";
 import { wardsBetween } from "./regions.ts";
 import {
@@ -5649,7 +5650,8 @@ export class SR2ItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
     return {
       ...context,
       item,
-      system: item.system,
+      // v0.94.2: the stored values of the fields nested items change (helpers/nesting942.ts), so saving never writes an effective one.
+      system: formSystem942(item),
       type: item.type,
       // v0.41.0: templates, warnings, the weapon's layout.
       templates: templatesFor(item.type, worldTemplates()),

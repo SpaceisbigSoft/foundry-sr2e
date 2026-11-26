@@ -117,6 +117,11 @@ The system registers itself with Token Action HUD Core 2.x (`tokenActionHudSyste
 | `interpretations(id?)` | v0.92.0: the rules interpretations window, at an entry. |
 | `reference(actor)` | v0.92.1: the reference pane beside an actor's sheet. |
 
+## v0.94.2 additions (`game.sr2e.api.nesting`)
+
+Nested items (`rules/nesting942.ts`): the link is the item flag `flags.shadowrun2e_unified.nest942 = { parent, kind }` (`kind`: `mounted` or `inside`); a link whose parent isn't on the same actor is ignored.
+`listChildren(item, kind?)`, `familyOf(item)`, `parentOf(item)`, `attach(child, parent)`, `detach(item)`, `detachAll(item)`, `detachUpdate(item)` (update entries), `carryChildren(sourceActor, oldParentId, targetActor, newParentId)`, `loadClip(actor, weapon, clip)`, `makeAccessoryItems(weapon)`, `accessoryItemsToFields(weapon)`, `convertAccessories(actors?)` and `revertAccessories(actors?)` (GM; default every world actor), `openConversionTool()`.
+
 ## API changes
 
 The interface's history from v0.93.2, newest first. Each version's `CHANGELOG.md` entry repeats its line.

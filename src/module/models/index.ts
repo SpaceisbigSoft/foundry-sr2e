@@ -40,7 +40,8 @@ import { bleedEveryText } from '../rules/urr80-health-social.ts';
 import { deathBody, dwarfDiceAgainst } from '../rules/health923.ts';
 import { magicPoolBase, sorceryRating } from '../rules/docs79-drones-magic.ts';
 import { poolLayers, narrowLeft, sorcerySkillOf } from '../rules/magicpool.ts';
-import { TWEAK_TARGETS, sumTweaks, isCarried } from '../rules/tweaks.ts';
+import { TWEAK_TARGETS, sumTweaks, isCarried, isAtHand } from '../rules/tweaks.ts';
+import { nestDerived942 } from '../helpers/nesting942.ts';
 import * as U80C from '../rules/urr80-combat.ts';
 import { astralCombatPool } from '../rules/spirits923.ts';
 import { dermalArmor, threatBook } from '../rules/core923.ts';
@@ -271,7 +272,7 @@ function cyberDerived(actor: any, ware: any[]) {
       ballistic: i.system.armorBallistic ?? 0, impact: i.system.armorImpact ?? 0 };
   });
   const wiring = { skillwires, chipjack, datajack };
-  const chipItems = [...(actor?.items ?? [])].filter((i: any) => i.type === 'gear' && i.system.chip?.kind && isCarried(i));
+  const chipItems = [...(actor?.items ?? [])].filter((i: any) => i.type === 'gear' && i.system.chip?.kind && isAtHand(i));
   const running = chipsRunning(chipItems.map((i: any) => ({ kind: i.system.chip.kind, rating: i.system.chip.rating ?? 0, slotted: Boolean(i.system.chip.slotted) })), chipSlots({ chipjacks, datajack, memoryMp }));
   const softs = chipItems.map((i: any, n: number) => {
     const chip = { name: i.name, kind: i.system.chip.kind, skill: i.system.chip.skill, rating: i.system.chip.rating, slotted: Boolean(i.system.chip.slotted) };
@@ -283,7 +284,7 @@ function cyberDerived(actor: any, ware: any[]) {
     return { gearId: i.id, ...chip, effective: blocked && enforce === 'block' ? 0 : r.rating, reason: blocked ? run.reason : r.reason, via: run.via };
   });
   // v0.58.0: worn vision gear (goggles, glasses, binoculars, visors) adds to the eyes.
-  const gearOptics = opticsOf([...(actor?.items ?? [])].filter((i: any) => i.type === 'gear' && isCarried(i)).map((i: any) => ({ ...(i.system.optics ?? {}), damaged: Boolean(i.system.damaged) })));
+  const gearOptics = opticsOf([...(actor?.items ?? [])].filter((i: any) => i.type === 'gear' && isAtHand(i)).map((i: any) => ({ ...(i.system.optics ?? {}), damaged: Boolean(i.system.damaged) })));
   const eyes = mergeVision({ magnification: max((i) => i.system.magnification), flareComp: live.some((i: any) => i.system.flareComp) }, gearOptics);
   return {
     smartlinkLevel: max((i) => Math.max(i.system.smartlinkLevel ?? 0, i.system.smartlink || /smart\s*-?link/i.test(i.name ?? '') ? 1 : 0)),
@@ -1418,6 +1419,9 @@ export class WeaponDataModel extends foundry.abstract.TypeDataModel {
       carried: carriedField(),
     };
   }
+
+  /** v0.94.2: attached accessories give their values; packed in a container, not ready (helpers/nesting942.ts). */
+  prepareDerivedData(): void { nestDerived942(this); }
 }
 
 export class ArmorDataModel extends foundry.abstract.TypeDataModel {
@@ -1453,6 +1457,9 @@ export class ArmorDataModel extends foundry.abstract.TypeDataModel {
       carried: carriedField(),
     };
   }
+
+  /** v0.94.2: packed in a container, not worn (helpers/nesting942.ts). */
+  prepareDerivedData(): void { nestDerived942(this); }
 }
 
 export class GearDataModel extends foundry.abstract.TypeDataModel {
@@ -1618,6 +1625,14 @@ export class GearDataModel extends foundry.abstract.TypeDataModel {
       tweaks: tweaksField(),
       /** v0.92.1: carried on the person (RULES.SHEET_V921.carried). */
       carried: carriedField(),
+      /** v0.94.2 (rules/nesting942.ts): a container (capacity in kg, 0 = no limit), or a weapon accessory (kind, rating, option). */
+      nest942: new fields.SchemaField({
+        container: new fields.BooleanField({ required: true, initial: false }),
+        capacity: new fields.NumberField({ required: true, min: 0, initial: 0 }),
+        accessory: new fields.StringField({ required: true, blank: true, initial: '' }),
+        rating: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
+        option: new fields.StringField({ required: true, blank: true, initial: '' }),
+      }),
     };
   }
 }
@@ -1989,6 +2004,9 @@ export class ProgramDataModel extends foundry.abstract.TypeDataModel {
       tweaks: tweaksField(),
     };
   }
+
+  /** v0.94.2: stored on a deck that isn't in use, not loaded (helpers/nesting942.ts). */
+  prepareDerivedData(): void { nestDerived942(this); }
 }
 
 /** A Matrix host: security code and value, subsystem ratings, security tally, sheaf and alert. */
