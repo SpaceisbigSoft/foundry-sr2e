@@ -270,7 +270,7 @@ describe('v0.93.0: right-click lowers a value by one', () => {
     assert.match(SRC('applications/ui.ts'), /bindLower\(root\);/);
     assert.match(read('public', 'templates', 'status-strip.hbs'), /data-sr2e-lower="ammo" data-item-id="\{\{strip\.weapon\.id\}\}"/);
     assert.match(read('public', 'templates', 'combat-column.hbs'), /data-sr2e-lower="ammo" data-item-id="\{\{id\}\}"/);
-    assert.match(SRC('applications/lower.ts'), /if \(ev\.shiftKey\) return;/, 'Shift keeps the browser menu');
+    assert.match(SRC('applications/lower.ts'), /if \(ev\.shiftKey\) return;/, 'Shift + right-click leaves the value alone');
   });
 });
 

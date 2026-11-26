@@ -2,7 +2,8 @@
  * v0.93.0 (the owner's decision 7, plan item 4): right-click lowers a value by one, on the controls a click raises or sets:
  * condition-monitor boxes (Physical, Stun, Overflow, a vehicle's damage, an IC's monitor), pool pips, the − / + pairs (a
  * track's steps, the GM panel's boxes), number fields with − / + (quantity and the other play numbers) and a weapon's
- * rounds. The − / + buttons and the click stay as the other way. Shift + right-click keeps the browser's own menu.
+ * rounds. The − / + buttons and the click stay as the other way. Shift + right-click leaves the value alone (Foundry keeps
+ * the browser's own menu shut everywhere, so there is no menu to fall back on).
  *
  * It works through the controls that are already there (it clicks the box or button that lowers the value), so every
  * permission and undo path stays the click's. Only the rounds have no such control: they are written here, on the
