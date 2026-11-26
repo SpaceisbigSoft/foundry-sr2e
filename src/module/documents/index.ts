@@ -196,6 +196,7 @@ import { gearBook, housedEssenceCost, awakenedBioEssence, culturedBodyCost, surg
 import { GEAR_V923_TABLES } from '../rules/config923/gear.ts';
 
 import { SYSTEM_ID } from '../config/system.ts';
+import { ruleAuto } from '../rules/automation941.ts';
 
 /**
  * Adapter between the pure rules engine and Foundry's dice: every wave the engine
@@ -3470,7 +3471,7 @@ export class SR2Actor extends Actor {
     let cyberCheck = ctx.cyberCheck;
     const hasWare = [...this.items].some((i: any) => i.type === 'cyberware' && i.system.installed && !i.system.damaged);
     if (cyberCheck && !cyberCheck.rolled && hasWare && cyberDamageDue(level, ctx.type)) {
-      if (RULES.GEAR.cyberDamage.mode === 'auto') {
+      if (ruleAuto('GEAR.cyberDamage.mode', RULES.GEAR.cyberDamage.mode) === 'auto') {
         await this.cyberDamageCheck(cyberCheck.location, level ?? '');
         cyberCheck = { ...cyberCheck, rolled: true };
       } else {
@@ -10282,7 +10283,7 @@ export class SR2Actor extends Actor {
     // v0.71.0 (R12): invisible targets are resisted first (once per spell on them).
     if (!opts.ritual && !touch) await this.spotInvisible([...targets, ...vehicles.map((v) => v.actor)]);
     // v0.50.0: no line of sight from the caster's token (RULES.TN_AUTO.magic.lineOfSight 'block'); a ritual reaches by link.
-    if (RULES.TN_AUTO.magic.lineOfSight === 'block' && !opts.ritual && !touch) {
+    if (ruleAuto('TN_AUTO.magic.lineOfSight', RULES.TN_AUTO.magic.lineOfSight) === 'block' && !opts.ritual && !touch) {
       const unseen = this.#unseenTargets([...targets, ...vehicles.map((v) => v.actor)]);
       if (unseen.length) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.hasNoLineOfSightTo', { name: escHtml(this.name), unseen: escHtml(unseen.join(', ')) })); return null; }
     }
@@ -12202,7 +12203,7 @@ export class SR2Actor extends Actor {
       return null;
     }
     await this.spotInvisible([spirit]);
-    if (RULES.TN_AUTO.magic.lineOfSight === 'block' && this.#unseenTargets([spirit]).length) {
+    if (ruleAuto('TN_AUTO.magic.lineOfSight', RULES.TN_AUTO.magic.lineOfSight) === 'block' && this.#unseenTargets([spirit]).length) {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.hasNoLineOfSightTo2', { name: escHtml(this.name), spiritName: escHtml(spirit.name) }));
       return null;
     }
@@ -13413,7 +13414,7 @@ export class SR2Actor extends Actor {
     }
     // v0.50.0: no line of sight, no power (RULES.TN_AUTO.magic.lineOfSight 'block'); v0.71.0 (R12): invisibility first.
     await this.spotInvisible(targets);
-    if (RULES.TN_AUTO.magic.lineOfSight === 'block') {
+    if (ruleAuto('TN_AUTO.magic.lineOfSight', RULES.TN_AUTO.magic.lineOfSight) === 'block') {
       const unseen = this.#unseenTargets(targets);
       if (unseen.length) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.hasNoLineOfSightTo', { name: escHtml(this.name), unseen: escHtml(unseen.join(', ')) })); return null; }
     }

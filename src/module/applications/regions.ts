@@ -12,14 +12,11 @@ import {
 } from '../rules/index.ts';
 import { escHtml } from '../rules/html.ts';
 import { isLeadGm } from './leader.ts';
+import { auto } from '../helpers/automation.ts';
 import { t as tx } from '../helpers/i18n.ts';
 
 /** A-15: the shared escape helper (rules/html.ts). */
 const esc = escHtml;
-
-function setting(key: string, fallback: string): string {
-  try { return String((game as any).settings.get(SYSTEM_ID, key) ?? fallback); } catch { return fallback; }
-}
 
 /** A region document's shapes as plain data. */
 function shapesOf(doc: any): any[] {
@@ -232,7 +229,7 @@ function seedSeen(scene: any): void {
 
 /** A camera's region: someone walked in (the active GM's client). Posts a GM card, or rolls detection (setting). */
 async function noticeEntry(tokenDoc: any, region: any): Promise<void> {
-  const mode = setting('regionDetect', 'prompt');
+  const mode = String(auto('regionDetect', 'prompt'));
   if (mode === 'off') return;
   const env = readRegionEnv(region.flags?.[SYSTEM_ID]?.env);
   const site: any = await (globalThis as any).fromUuid?.(env.siteUuid);
@@ -255,7 +252,7 @@ async function noticeEntry(tokenDoc: any, region: any): Promise<void> {
 /** A token's move across a ward's edge (setting `wardsStopAstral`): false stops it. */
 function wardMove(doc: any, change: any, userId: string): boolean {
   if (userId !== (game as any).user?.id || (change?.x === undefined && change?.y === undefined)) return true;
-  const mode = setting('wardsStopAstral', 'block');
+  const mode = String(auto('wardsStopAstral', 'block'));
   // v0.72.0 (O19): anything with an astral presence (dual-natured critters, materialized spirits) meets a ward;
   // a physical barrier (O17) stops bodies (MAGIC_V72.wardPresence). Off: only astral forms, as before.
   const a: any = doc.actor;

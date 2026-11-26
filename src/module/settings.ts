@@ -20,6 +20,8 @@ import { isLeadGm, leadSettled } from "./applications/leader.ts";
 import { t as tx, tKey, tCount } from './helpers/i18n.ts';
 import { localizeRules, localizePatch, localizeTable } from "./rules/rulestext.ts";
 import { TEXT_TABLES } from "./rules/texttables.ts";
+import { AutomationConfig, applyRulesetPreset, presetsRowHtml } from "./applications/automation941.ts";
+import { setManualTable } from "./rules/automation941.ts";
 
 /**
  * House rules (v0.23.0): selected rule values exposed in Foundry's game settings, plus an
@@ -1383,7 +1385,7 @@ export class HouseRulesConfig extends foundry.applications.api.ApplicationV2 {
     window: { title: 'SR2E.Window.Settings.sr2eHouseRules', icon: "fa-solid fa-scale-balanced", resizable: true },
     position: { width: 560, height: 680 },
     form: { handler: HouseRulesConfig.#onSubmit, closeOnSubmit: true },
-    actions: { resetRules: HouseRulesConfig.#onReset },
+    actions: { resetRules: HouseRulesConfig.#onReset, applyPreset: HouseRulesConfig.#onPreset },
   };
 
   async _renderHTML(): Promise<string> {
@@ -1417,6 +1419,7 @@ export class HouseRulesConfig extends foundry.applications.api.ApplicationV2 {
     return `<div class="sr2e-house-rules standard-form scrollable">
       <p class="hint">${tx('SR2E.App.Settings.changesApplyForEveryoneStraightAway')} <code>RULES</code> ${tx('SR2E.App.Settings.in')} <code>src/module/rules/config.ts</code>. ${((n) => tCount(n, 'SR2E.App.Settings.ofTheRulesBelowDifferFrom'))(changedRules().length)}</p>
       <p class="hint sr2e-hr-source">${source === "urr" ? tx('SR2E.App.Settings.rulesSourceRevamp', { source: `<strong>${esc(tKey(RULES_SOURCES[source]))}</strong>`, value: Object.keys(sourcePatch(source)).length - 1, bySourceSize: bySource.size }) : tx('SR2E.App.Settings.rulesSourceConfigure', { source: `<strong>${esc(tKey(RULES_SOURCES[source]))}</strong>` })}</p>
+      ${presetsRowHtml()}
       ${tools}
       ${body}
       <fieldset id="sr2e-hr-advanced"><legend>${tx('SR2E.App.Settings.advanced')}</legend>
@@ -1503,6 +1506,11 @@ export class HouseRulesConfig extends foundry.applications.api.ApplicationV2 {
     else ui.notifications?.info?.(tx('SR2E.Notify.Settings.sr2eHouseRulesSavedChanged', { value: Object.keys(values).length + Object.keys(advanced).length }));
   }
 
+  /** v0.94.1 (report item 37): a ruleset preset, confirmed by the GM (applications/automation941.ts). */
+  static async #onPreset(this: HouseRulesConfig, _event: Event, target: HTMLElement): Promise<void> {
+    if (await applyRulesetPreset(target?.dataset?.["sr2ePreset"])) this.render();
+  }
+
   static async #onReset(this: HouseRulesConfig): Promise<void> {
     const ok = await foundry.applications.api.DialogV2.confirm({ window: { title: tx('SR2E.Dialog.Settings.resetHouseRules') }, content: `<p>${tx('SR2E.Dialog.Settings.putEveryRuleBackToThe')} <strong>${esc(tKey(RULES_SOURCES[currentRulesSource()]))}</strong>${tx('SR2E.Dialog.Settings.yourHouseRulesForBothRules')}</p>` });
     if (!ok) return;
@@ -1558,6 +1566,18 @@ export function registerSettings(): void {
   game.settings.registerMenu(SYSTEM.id, "houseRulesMenu", {
     name: "SR2E.Settings.houseRulesMenu.Name", label: "SR2E.Settings.houseRulesMenu.Label", hint: "SR2E.Settings.houseRulesMenu.Hint",
     icon: "fa-solid fa-scale-balanced", type: HouseRulesConfig, restricted: true,
+  });
+  // v0.94.1 (report item 23): the master switch Manual table (an effective-value layer, rules/automation941.ts) and the
+  // Automation window gathering the automation settings (open to everyone: players edit their own client settings).
+  game.settings.register(SYSTEM.id, "manualTable", {
+    name: "SR2E.Settings.manualTable.Name", hint: "SR2E.Settings.manualTable.Hint",
+    scope: "world", config: false, type: Boolean, default: false,
+    onChange: (v: boolean) => { setManualTable(v); refreshAfterRulesChange({ houseWindow: true }); },
+  });
+  setManualTable(game.settings.get(SYSTEM.id, "manualTable"));
+  game.settings.registerMenu(SYSTEM.id, "automationMenu", {
+    name: "SR2E.Settings.automationMenu.Name", label: "SR2E.Settings.automationMenu.Label", hint: "SR2E.Settings.automationMenu.Hint",
+    icon: "fa-solid fa-robot", type: AutomationConfig, restricted: false,
   });
   game.settings.register(SYSTEM.id, "defendPrompt", {
     name: "SR2E.Settings.defendPrompt.Name", hint: "SR2E.Settings.defendPrompt.Hint",

@@ -1,6 +1,7 @@
 import { RULES } from './config.ts';
 import { t as tx } from '../helpers/i18n.ts';
 import { delayCarries } from './combat923.ts';
+import { ruleAuto } from './automation941.ts';
 
 /** Combat flow at the table (v0.35.0): delaying, full defense, buying successes, disasters, Karma refresh. */
 
@@ -45,7 +46,7 @@ export function disasterSuggestion(kind: string): string {
 
 /** Session refresh: due when the date (YYYY-MM-DD) differs from the last refresh. */
 export function sessionRefreshDue(last: string, today: string): boolean {
-  return RULES.KARMA.refresh === 'session' && Boolean(today) && last !== today;
+  return ruleAuto('KARMA.refresh', RULES.KARMA.refresh) === 'session' && Boolean(today) && last !== today;
 }
 
 /**

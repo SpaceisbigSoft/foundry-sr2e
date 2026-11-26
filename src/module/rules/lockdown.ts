@@ -1,6 +1,7 @@
 import { RULES, type DamageLevel } from './config.ts';
 import { DAMAGE_LEVELS as LEVELS, num } from './util.ts';
 import { IC_BEHAVIORS, behaviorFromName, type IcBehavior, type SheafStep } from './matrix.ts';
+import { ruleAuto } from './automation941.ts';
 
 /**
  * Lockdown (v0.61.0): security sheaf steps that launch their IC, and security devices that gas a
@@ -150,7 +151,7 @@ export function icFromStep(step: { event?: string; ic?: unknown }, host: { secur
  * (the GM launches by hand). Whether a step names any IC is icFromStep's job.
  */
 export function stepsToLaunch(triggered: SheafStep[], launched: number[]): number[] {
-  if (!C().sheafIc.autoLaunch) return [];
+  if (!ruleAuto('SECURITY_V61.sheafIc.autoLaunch', C().sheafIc.autoLaunch)) return [];
   const done = new Set((Array.isArray(launched) ? launched : []).map((n) => num(n)));
   const out: number[] = [];
   const list = (Array.isArray(triggered) ? triggered : []).filter((s) => obj(s) && Number.isFinite(Number(s.step)));

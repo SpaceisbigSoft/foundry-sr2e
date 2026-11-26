@@ -98,6 +98,7 @@ import { openHelp } from "./help.ts";
 import { artSheetContext, useDefaultArt } from "./tokenart.ts";
 import { t as tx, tCount, tList, tKey } from '../helpers/i18n.ts';
 import { SYSTEM_ID } from "../config/system.ts";
+import { ruleAuto } from '../rules/automation941.ts';
 // v0.93.5: firing-mode-only rows and the Perception boxes by sense (agent A's dialog helpers).
 import { wireFireModeRows, senseChecksHtml } from './dialogs935.ts';
 
@@ -4029,7 +4030,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       ? `<label class="sr2e-check"><input type="checkbox" name="anchor"> ${tx('SR2E.Dialog.Sheet.anchorItInsteadReleaseLater')}</label>
          <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.trigger')}</label><input name="trigger" type="text" placeholder="${tx('SR2E.Dialog.Sheet.eGWhenTheDoorOpens')}"></div>` : "";
     const areaHint = sp.area ? `<p class="hint">${centre ? tx('SR2E.Dialog.Sheet.areaRadiusMAround', { radius, name: escHtml(targetToken ? targetToken.name : actor.name), part: areaTicked ? tx('SR2E.Dialog.Sheet.targetsWithinItAreTicked') : "" }) : tx('SR2E.Dialog.Sheet.areaRadiusM', { radius, part: areaTicked ? tx('SR2E.Dialog.Sheet.targetsWithinItAreTicked') : "" })}</p>` : "";
-    const losHint = blind.length && targeted ? `<p class="hint sr2e-warn">${tx('SR2E.Dialog.Sheet.noLineOfSightTo', { blind: escHtml(blind.join(", ")), part: RULES.TN_AUTO.magic.lineOfSight === "block" ? tx('SR2E.Dialog.Sheet.theSpellCanTReachThem') : "" })}</p>` : "";
+    const losHint = blind.length && targeted ? `<p class="hint sr2e-warn">${tx('SR2E.Dialog.Sheet.noLineOfSightTo', { blind: escHtml(blind.join(", ")), part: ruleAuto('TN_AUTO.magic.lineOfSight', RULES.TN_AUTO.magic.lineOfSight) === "block" ? tx('SR2E.Dialog.Sheet.theSpellCanTReachThem') : "" })}</p>` : "";
     const elementalHint = sp.elemental ? `<p class="hint">${RULES.MAGIC_EXTRA.elemental.dodge ? tx('SR2E.Dialog.Sheet.elementalSpellTargetsMayDodge', { spTargetNumber: escHtml(sp.targetNumber), spLearnedForce: escHtml(sp.learnedForce), elementalArmorKind: RULES.MAGIC_EXTRA.elemental.armorKind }) : tx('SR2E.Dialog.Sheet.elementalSpellTnResistPowerWith', { spTargetNumber: escHtml(sp.targetNumber), spLearnedForce: escHtml(sp.learnedForce), elementalArmorKind: RULES.MAGIC_EXTRA.elemental.armorKind })}</p>` : "";
     const bonusHint = fd.dice || td ? `<p class="hint">${tx('SR2E.Dialog.Sheet.extraSorceryDice', { value: escHtml([...fd.notes, ...(td ? [`totem ${td > 0 ? "+" : ""}${td}`] : [])].join(", ")) })}</p>` : "";
     const choice = await foundry.applications.api.DialogV2.prompt({
@@ -5012,7 +5013,7 @@ export class SR2HostSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
             <label title="${tx('SR2E.Dialog.Sheet.n0TheHostSSecurityValue')}">${tx('SR2E.Dialog.Sheet.rating2')} <input name="icRating" type="number" value="${escHtml(ic.rating)}" min="0" style="width:4em"></label>
             <label>${tx('SR2E.Dialog.Sheet.damage')} <select name="icLevel">${opt(["L", "M", "S", "D"], ic.damageLevel)}</select></label>
             <label>${tx('SR2E.Dialog.Sheet.copies')} <input name="icCopies" type="number" value="${escHtml(ic.copies)}" min="1" max="${RULES.SECURITY_V61.sheafIc.maxCopies}" style="width:4em"></label></div>
-          <p class="hint">${RULES.SECURITY_V61.sheafIc.autoLaunch ? tx('SR2E.Dialog.Sheet.reachingTheStepLaunchesItOnce') : tx('SR2E.Dialog.Sheet.launchingByItselfIsSwitchedOff')}</p>
+          <p class="hint">${ruleAuto('SECURITY_V61.sheafIc.autoLaunch', RULES.SECURITY_V61.sheafIc.autoLaunch) ? tx('SR2E.Dialog.Sheet.reachingTheStepLaunchesItOnce') : tx('SR2E.Dialog.Sheet.launchingByItselfIsSwitchedOff')}</p>
         </fieldset>`,
       ok: {
         label: tx('SR2E.Dialog.Sheet.save'),
