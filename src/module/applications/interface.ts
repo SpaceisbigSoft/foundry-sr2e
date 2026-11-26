@@ -26,6 +26,7 @@ import { quickRollArmed } from './hotkeys.ts';
 import { t as tx, tCount } from '../helpers/i18n.ts';
 import { remember, store } from './sheettools.ts';
 import { escHtml } from '../rules/html.ts';
+import { bindLower } from './lower.ts';
 import { initiativeFormula } from '../helpers/initiative.ts';
 import { headingName } from '../helpers/heading.ts';
 
@@ -140,6 +141,8 @@ export function decorateInterface(sheet: any): void {
   try { monitorTrack(body); } catch (err) { console.warn('sr2e | monitor', err); }
   try { if (setting('numberSteppers', true)) addSteppers(body, SHEET_STEP_FIELDS); } catch (err) { console.warn('sr2e | steppers', err); }
   bindWheel(body);
+  // v0.93.0: right-click lowers a box, pip, number or a weapon's rounds by one (applications/lower.ts).
+  bindLower(body, actor, SHEET_STEP_FIELDS);
 }
 
 function layoutPicker(body: HTMLElement, actor: any, layout: SheetLayout): void {
@@ -448,6 +451,8 @@ export function enhanceRollDialog(app: any, root: HTMLElement | null): void {
   const content = form.querySelector<HTMLElement>('.dialog-content') ?? form;
   const ok = form.querySelector<HTMLElement>('footer button[data-action="ok"], footer button.default, footer button[autofocus]') ?? form.querySelector<HTMLElement>('footer button');
   if (setting('numberSteppers', true)) { addSteppers(content, 'input[type="number"]'); bindWheel(content); }
+  // v0.93.0: right-click lowers a number by one here too.
+  bindLower(content, null, 'input[type="number"]');
   const marker = content.querySelector<HTMLElement>('[data-sr2e-remember]');
   if (marker && setting('rememberRolls', true) && !quickRollArmed(app)) rollMemory(form, marker, ok);
   const preview = content.querySelector<HTMLElement>('.sr2e-preview');

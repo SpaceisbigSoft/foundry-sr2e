@@ -2,6 +2,14 @@
 
 This is the history of the unofficial Shadowrun 2nd Edition system for Foundry VTT (system id `sr2e`), newest version first. Every rules change since v0.70.0 has a house-rule switch that puts the old behaviour back. The system was built with AI (Anthropic's Claude) under human direction, and it has not yet been play-tested at a real table.
 
+## v0.93.0 — Safety and the table's requests (25 Nov 2026)
+- **Other systems' worlds are left alone.** Another Shadowrun 2e system for Foundry uses the same id (`sr2e`), so its worlds open with this one. SR2e now recognises them (that system's update marker, or document types only it has) and changes nothing: no world updates, no session-start Karma refresh, no timer sweep. The GM gets a message saying why. The id changes in 0.93.1, which ends the clash for good.
+- **Back up first.** Before an update changes a world's data, the GM is asked to make a backup, with **Continue** or **Not now** (asked again next time). Afterwards a short message lists what ran and what failed.
+- **SR2e's look only on SR2e's own chat cards.** Typed chat, Foundry's own rolls and other modules' cards keep their own appearance, and two dialog layout rules now reach only SR2e's dialogs.
+- **The outcome banner is back on top** of a roll card, so the verdict is the first line, also in Foundry's chat pop-up.
+- **Right-click lowers a value by one:** condition monitor boxes, pool pips, the − / + pairs (also in the GM panel), number fields such as quantity, and a weapon's rounds (on the status strip and in the Combat column). The click and the − / + buttons still work. Shift + right-click opens the browser's menu as before.
+- **"How many?"** when a stack (quantity over 1) is dragged from one character to another: the rest stays with the giver, and the moved ones join a matching stack the receiver already has.
+
 ## v0.92.5 — First Rules Audit (12 Nov 2026)
 The rules checked against the SR2 books, and everything else since the last GitHub build (v0.91.6). Not yet play-tested at a table; built with AI (Anthropic's Claude) under human direction.
 

@@ -2039,11 +2039,12 @@
       "woundModifierAddedToTheTarget": "Wound modifier: added to the target number of every test",
       "initiativeReactionDice": "Initiative: Reaction + dice",
       "poolOfLeft": "{label} Pool: {left} of {total} left",
-      "poolOfLeftClickAPip": "{label} Pool: {left} of {total} left (click a pip to set)",
+      "poolOfLeftClickAPip": "{label} Pool: {left} of {total} left (click a pip to set, right-click for one less)",
       "pool": "{label} Pool {value}",
       "readiedWeaponClickToAttackWith": "Readied weapon: click to attack with it",
       "attackWith": "Attack with {name}",
       "roundsLeft": "Rounds left",
+      "roundsLeftRightClick": "Rounds left (right-click: one less)",
       "itSSActionPhaseLeft": "It's {name}'s action phase: {label} left. Buttons that need more are greyed.",
       "yourTurn": "Your turn",
       "left3": ": {label} left",
@@ -2603,7 +2604,10 @@
       "Drops": {
         "isSOnlyTheirOwnerOr": "{itemName} is {sourceName}'s: only their owner or the GM can hand it over.",
         "handsTo": "{source} hands {made} to {actor}",
-        "addedTo": "{made} added to {actor}"
+        "addedTo": "{made} added to {actor}",
+        "howManyBad": "SR2e: nothing moved: give a number from 1 to {have}.",
+        "stackGone": "SR2e: {itemName} is no longer there to move.",
+        "moveFailed": "SR2e: {itemName} couldn't be taken from the giver, so nothing moved (see the console)."
       },
       "Gmlock": {
         "sr2eAGmActionIsWaiting": "SR2e: a GM action is waiting for an earlier one to finish. If nothing happens, reload this window."
@@ -3378,7 +3382,8 @@
         "noKarmaAfterOops": "Karma turned this test's disaster into a failure: no more Karma can be spent on it (Core p. 191)."
       },
       "Migrations": {
-        "sr2eMigrationToFailedSeeThe": "SR2e: migration to {version} failed; see the console. Later migrations were not run."
+        "sr2eMigrationToFailedSeeThe": "SR2e: migration to {version} failed; see the console. Later migrations were not run.",
+        "foreignWorld": "SR2e: this world looks like another system's (the same id, {id}), so it was not updated."
       },
       "Settings": {
         "sr2eHouseRulesTheAdvancedBox": "SR2e house rules: the advanced box is not valid JSON ({errMessage}). Nothing was saved.",
@@ -5042,6 +5047,18 @@
         "publicRep": "Public rep (blank: private rep, the career Karma)",
         "recognitionHint": "Each picked character's Etiquette (else Charisma at +4) vs (1,000 − rep) ÷ 50: private rep {rep} gives TN {tn} (whispered to the GM).",
         "athleticsHint": "{skill} (or {attribute} at +{attributeDefaultTnMod}). Climbing: a quarter of (the average of Quickness and Strength + 2 per success) metres a turn; a Rule of One is a fall. Swimming: a fifth of the running distance, Quickness + 1 per success. Jumping: {jumpMetresPerSuccess} m per success."
+      },
+      "Migrations": {
+        "backupTitle": "SR2e: back up your world first",
+        "backupBody": "SR2e is about to update this world's data. Updates can't be undone, so make a backup first (Foundry's setup screen: Worlds, then Backups). These updates change data:",
+        "backupContinue": "Continue",
+        "backupLater": "Not now"
+      },
+      "Drops": {
+        "howManyTitle": "How many? ({name})",
+        "howManyLabel": "How many to move (of {have})",
+        "howManyMove": "Move",
+        "howManyCancel": "Cancel"
       }
     },
     "Window": {
@@ -8138,7 +8155,13 @@
         },
         "movedToTheRuleThatReplaced": " Moved to the rule that replaced it: {list}.",
         "droppedTheRuleIsGoneSo": " Dropped (the rule is gone, so the setting did nothing): {list}.",
-        "notAppliedTheValueIsnT": " Not applied (the value isn't the kind the rule takes): {list}."
+        "notAppliedTheValueIsnT": " Not applied (the value isn't the kind the rule takes): {list}.",
+        "ranSteps": "These updates ran:",
+        "failedStep": "This update failed: {version}: {label}. Later updates were not run; see the console, and restore your backup if the world looks wrong.",
+        "reportTitle": "SR2e: world updates",
+        "foreignTitle": "SR2e: this world looks like another system's",
+        "foreignBody": "Another Shadowrun 2e system for Foundry uses the same id ({id}), and this world carries its marks, so SR2e has not updated it and changed nothing. Open it with the system it was made with. These marks were found:",
+        "foreignOverride": "If you have checked the world and backed it up, a GM can let SR2e update it anyway: run {command} in the console and reload."
       },
       "Arcana": {
         "sustainingSpells": {
@@ -14614,8 +14637,8 @@
         "persona": "Persona",
         "physical": "Physical",
         "clickToSetBox": {
-          "one": "{label}: click to set {count} box",
-          "other": "{label}: click to set {count} boxes"
+          "one": "{label}: click to set {count} box (right-click: one less)",
+          "other": "{label}: click to set {count} boxes (right-click: one less)"
         },
         "oneLess": "One less",
         "oneMore": "One more"

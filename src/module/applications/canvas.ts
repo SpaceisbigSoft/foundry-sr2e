@@ -1,5 +1,6 @@
 import { RULES, metresPerUnit, withElevation, nearest, coverFromSightLines, lightFromDarkness, lightFromSource, brighter, inShotgunCone, smokeOnLine, worseSmoke, type LightLevel, type AreaSweepCause } from "../rules/index.ts";
 import { sysNow } from '../helpers/clock.ts';
+import { isForeignWorld } from '../helpers/foreign.ts';
 import { SYSTEM } from "../config/system.ts";
 import { requestGm, onRelay } from "./socket.ts";
 import { withGmLock } from "./gmlock.ts";
@@ -621,5 +622,6 @@ export function registerAreaHooks(): void {
   Hooks.on('updateWorldTime', () => setTimeout(() => sweep('clock'), 100));
   // Areas drawn outside combat (and any left over from before a reload) go when their time is up.
   // v0.85.0: the first sweep waits until the GM windows have heard each other.
-  Hooks.once('ready', () => { void leadSettled().then(() => sweep('timer')); setInterval(() => sweep('timer'), 10000); });
+  // v0.93.0: not in another system's world (the same id): its templates may carry our flags' namespace.
+  Hooks.once('ready', () => { if (isForeignWorld()) return; void leadSettled().then(() => sweep('timer')); setInterval(() => sweep('timer'), 10000); });
 }

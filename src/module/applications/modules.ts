@@ -10,6 +10,7 @@
  *   (world setting `moduleSupportLook`), only where they are still Monk's default; a user's own choice is kept.
  */
 import { SYSTEM } from '../config/system.ts';
+import { isForeignWorld } from '../helpers/foreign.ts';
 import { RULES, entryPrice, healthFraction, itemPilesConfig, NO_HEALTH_TYPES } from '../rules/index.ts';
 
 /** Bump when the Item Piles setup changes (Item Piles re-applies it then, over the GM's own edits). */
@@ -107,7 +108,8 @@ export async function matchModuleLook(): Promise<Record<string, string>> {
 }
 
 export function registerModuleSupport(): void {
-  Hooks.once('ready', () => { void matchModuleLook(); });
+  // v0.93.0 (review 2): not in another system's world (the same id): it writes module settings.
+  Hooks.once('ready', () => { if (!isForeignWorld()) void matchModuleLook(); });
   Hooks.once('item-piles-ready', () => { if (supportOn()) registerItemPiles(); });
   Hooks.once('ready', () => {
     if (!supportOn()) return;

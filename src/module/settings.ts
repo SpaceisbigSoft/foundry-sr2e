@@ -1,5 +1,6 @@
 import { HOUSE_CORE_V923 } from "./rules/config923/core.ts";
 import { HOUSE_COMBAT_V923 } from "./rules/config923/combat.ts";
+import { isForeignWorld } from './helpers/foreign.ts';
 import { HOUSE_HEALTH_V923 } from "./rules/config923/health.ts";
 import { HOUSE_SORCERY_V923 } from "./rules/config923/sorcery.ts";
 import { HOUSE_SPIRITS_V923 } from "./rules/config923/spirits.ts";
@@ -1682,6 +1683,8 @@ export async function reportRefusedHouseRules(problems: readonly string[]): Prom
     if (!(game as any).user?.isGM) return false;
     await leadSettled();
     if (!isLeadGm()) return false;
+    // v0.93.0 (review 2): nothing is written to another system's world (the same id).
+    if (isForeignWorld()) return false;
     const key = problems.join("\n");
     if (key === String(game.settings.get(SYSTEM.id, "houseRulesReported") ?? "")) return false;
     await game.settings.set(SYSTEM.id, "houseRulesReported", key);

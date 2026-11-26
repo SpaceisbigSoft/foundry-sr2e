@@ -27,6 +27,8 @@ You need **Foundry VTT version 14** (older versions won't load it) and your own 
 
 **Updating:** when there is a new version, Foundry shows an **Update** button next to the system in the **Game Systems** tab. After updating, fully quit and restart Foundry if something looks missing (some changes are only read when Foundry starts).
 
+**Back up your worlds before updating.** An update can change a world's data when the GM next opens it, and that can't be undone. Make a backup first (Foundry's setup screen: **Worlds**, then **Backups**). SR2e asks the GM before it changes anything, lists what it is about to change, and reports afterwards what ran. It never updates a world made with another Shadowrun 2e system that uses the same id (`sr2e`); it says so instead.
+
 **Installing by hand instead:** download `sr2e.zip` from the [Releases page](https://github.com/SpaceisbigSoft/foundry-sr2e/releases), make a folder named `sr2e` inside your Foundry `Data/systems` folder, and unzip the file into it, so that `Data/systems/sr2e/system.json` exists. (Foundry's setup screen shows where your Data folder is under **Configuration → User Data Path**.) Then restart Foundry.
 
 **Found a problem?** Please report it on the [issue tracker](https://github.com/SpaceisbigSoft/foundry-sr2e/issues). The **Report a bug** button in the in-game guide collects the details (versions, modules, settings) for you to paste in; nothing is sent automatically.
@@ -48,7 +50,7 @@ That has two consequences you should know about:
 - **The rules numbers came from the AI's memory of the books**, not from a human typing them out of a rulebook, so some were wrong. In v0.92.3 the AI checked the default rules against the SR2 books and corrected them; a human has not re-checked that work, so every number is listed with its source in `docs/VERIFY.md` for checking against your book.
 - **No human has play-tested it at a table yet.** Expect bugs, and please report them.
 
-## Status: v0.92.5, the First Rules Audit (pre-release)
+## Status: v0.93.0 (pre-release; the First Rules Audit was v0.92.5)
 
 The system is feature-complete for SR2 core play and much of the sourcebook material, and public for testing ahead of a 1.0 release. It is tested by 4,104 automated tests, by in-Foundry test batches (Quench), by live runs in Foundry v14 as a GM and a player, and by an upgrade test from worlds saved with v0.50 and v0.72, and v0.81 had a full code and security review. It has not yet been play-tested at a real table, so expect rough edges. In the *First Rules Audit* (v0.92.3–v0.92.5) every default rule was checked against the SR2 books and made to follow them; `docs/VERIFY.md` lists every rules number with its source (and what is still unchecked), and every rules change since v0.70.0 has a house-rule switch that puts the earlier behaviour back.
 

@@ -1,4 +1,5 @@
 import { individualAwardRows } from '../rules/core923.ts';
+import { isForeignWorld } from '../helpers/foreign.ts';
 import type { AttackState, DamageState, SpellState, TestSnapshot, PoolKind, BlastContext, Contest } from '../documents/index.ts';
 import { opposedMelee, SR2Actor, serialTicks } from '../documents/index.ts';
 import { settleClock } from './clock.ts';
@@ -1970,7 +1971,8 @@ function registerKarmaRefresh(): void {
       // v0.81.0: the local date (a UTC date changed at UTC midnight, mid-session), checked by rules/flow.ts.
       const today = localDateKey();
       const last = String(game.settings.get(SYSTEM_ID, 'karmaRefreshDay') ?? '');
-      if (!sessionRefreshDue(last, today)) return;
+      // v0.93.0: another system's world (the same id) is left alone.
+      if (isForeignWorld() || !sessionRefreshDue(last, today)) return;
       void game.settings.set(SYSTEM_ID, 'karmaRefreshDay', today);
       void cls().refreshAllKarma(tx('SR2E.Card.Chat.newSession'));
     } catch (err) { console.warn('sr2e | Karma refresh', err); }
