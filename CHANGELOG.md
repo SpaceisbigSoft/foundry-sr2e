@@ -11,7 +11,7 @@ This is the history of the unofficial Shadowrun 2nd Edition system for Foundry V
 - **One Automation window** (Configure Settings) gathers everything the system does by itself, apart from the rules, with **Manual table** at the top: it switches all of that off (no auto-applied cards, no NPC auto-resist, no Defend window popping up, no floating damage, detection rolls and IC launches by hand) while rolls and buttons keep working. Stored settings aren't changed, so switching it off puts everything back.
 - **Ruleset presets** at the top of the house-rules window: *Book rules*, *Revamp* and *Light automation*, each listing what it will change before it does.
 - **Imports:** a refused file no longer makes and deletes an empty character, its preview no longer says where it was read from first, and a contact written "Doe, Jane" comes in as "Jane Doe".
-- API changes: none removed; `importCharacter()` and the inline-test grammar take `secret`.
+- API changes: nothing removed; the inline-test grammar (and so `rollTest()`) takes `secret`.
 
 ## v0.94.0 — Imports (26 Nov 2026)
 - **Bring your character from Nullsheen:** the character import window (a character's Bio tab, or the GM's *New character from a stat block*) has a **Choose a file…** button. A Nullsheen generator file brings in the name, metatype, attributes (natural and augmented), skills with concentrations and specializations, cyberware and bioware with grades, spells, adept powers, weapons, armor, gear, foci, contacts, nuyen, Karma, lifestyle and notes. SR3 files are read too, with a warning that their values may not match SR2.
