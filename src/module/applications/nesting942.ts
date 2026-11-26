@@ -559,13 +559,18 @@ export function decorateItemSheet(app: any, root: HTMLElement): void {
 const isOurs = (app: any): boolean => Array.isArray(app?.options?.classes) && app.options.classes.includes('sr2e');
 const elementOf = (html: any, app: any): HTMLElement | null => (html instanceof HTMLElement ? html : html?.[0] ?? app?.element ?? null);
 
+function tradeIsOn(): boolean {
+  try { return (game as any).settings.get(SYSTEM_ID, 'tradeOn') !== false; } catch { return false; }
+}
+
 export function registerNesting942(): void {
   Hooks.on('renderActorSheetV2', (app: any, html: any) => {
     try {
       if (!isOurs(app)) return;
       const root = elementOf(html, app);
       if (!root) return;
-      if (app.document?.type === 'safehouse') decorateSafehouseSheet(app, root);
+      // v0.94.2 (lead): the trade work's stash list (draggable, Give to…) is the one shown; this one only when trading is off.
+      if (app.document?.type === 'safehouse' && !tradeIsOn()) decorateSafehouseSheet(app, root);
       decorateActorSheet(app, root);
     } catch (err) { console.warn('sr2e | nested rows', err); }
   });

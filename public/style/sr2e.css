@@ -204,6 +204,12 @@ a.sr2e-ic-act { display: inline-block; min-width: 1.5rem; min-height: 1.5rem; pa
 .sr2e-tracker-pools { font-size: 0.8rem; opacity: 1; line-height: 1.3; color: var(--color-text-primary, inherit); }
 .sr2e-tracker-wound { display: inline-block; margin: 0.1rem 0 0 0.35rem; padding: 0 0.35rem; border: 1px solid #111; border-radius: 3px; font-size: 0.78rem; font-weight: 700; line-height: 1.35; white-space: nowrap; vertical-align: middle; cursor: help; }
 .sr2e-tracker-wound.sr2e-wound-L { background: #f2c94c; color: #1a1a1a; }
+/* v0.94.2 (crowd, trade): the grunt-group tools and badge in the combat tracker; the GM's loot mark on the token HUD. */
+.sr2e-group-tools { display: flex; gap: 0.3em; padding: 0.2em 0.4em; }
+.sr2e-group-tools button { flex: 1; line-height: 1.6; font-size: 0.85em; }
+.sr2e-group-badge { margin-left: 0.4em; font-size: 0.8em; color: var(--color-text-secondary, inherit); }
+.sr2e-group-badge.broken strong { color: var(--color-level-error, #c03030); }
+.control-icon.sr2e-loot942-hud.active { color: var(--color-warm-1, #ff6400); }
 .sr2e-tracker-wound.sr2e-wound-M { background: #f2994a; color: #1a1a1a; }
 .sr2e-tracker-wound.sr2e-wound-S { background: #eb5757; color: #111; }
 .sr2e-tracker-wound.sr2e-wound-D { background: #7b0000; color: #fff; border-color: #fff; }
@@ -2017,3 +2023,47 @@ li.chat-message.sr2e-card .sr2e-banner ~ .sr2e-roll details.sr2e-fold .sr2e-sum-
 .sr2e-card .sr2e-typed-mark { margin: 0.25rem 0; padding: 0.15rem 0.4rem; border-left: 3px solid var(--sr2e-accent); font-style: italic; }
 .application.sr2e-look .sr2e-typed-dice { margin: 0.4rem 0; }
 .application.sr2e-look .sr2e-typed-dice > summary { cursor: pointer; }
+
+/* v0.94.2 (gear): nested items (applications/nesting942.ts): accessories on their weapon, a container's contents. */
+.application.sr2e-look li.sr2e-nest942-parent { flex-wrap: wrap; }
+.application.sr2e-look ul.sr2e-nest942 { flex-basis: 100%; margin: 0.15rem 0 0.15rem 1.1rem; padding: 0 0 0 0.5rem; border-left: 2px solid var(--sr2e-rule); list-style: none; }
+.application.sr2e-look li.sr2e-nest942-folded > ul.sr2e-nest942 { display: none; }
+.application.sr2e-look a.sr2e-nest942-fold { cursor: pointer; width: 1rem; text-align: center; }
+.application.sr2e-look li.sr2e-nest942-folded > a.sr2e-nest942-fold i { transform: rotate(-90deg); }
+.application.sr2e-look li.sr2e-nest942-child { font-size: 0.95em; }
+.application.sr2e-look li.sr2e-nest942-inside > a[data-action="editItem"]::before { content: "\2514\00a0"; color: var(--sr2e-muted); }
+.application.sr2e-look .sr2e-nest942-ctl { cursor: pointer; color: var(--sr2e-muted); }
+.application.sr2e-look .sr2e-nest942-ctl:hover { color: var(--sr2e-accent); }
+.application.sr2e-look span.sr2e-nest942-load { cursor: default; white-space: nowrap; font-size: 0.9em; }
+.application.sr2e-look li.sr2e-nest942-over { outline: 1px dashed var(--sr2e-accent); outline-offset: -1px; }
+.application.sr2e-look fieldset.sr2e-nest942-box { margin: 0.4rem 0; padding: 0.3rem 0.5rem; }
+.application.sr2e-look fieldset.sr2e-nest942-box h4 { margin: 0.3rem 0 0.15rem; }
+
+/* v0.94.2 (trade): give, stash and loot (applications/trade942.ts); the catalogue compendium row in the GM panel. */
+.application.sr2e-look :is(.sr2e-give942, .sr2e-givenuyen942) { cursor: pointer; margin: 0 0.15em; color: var(--sr2e-muted); }
+.application.sr2e-look :is(.sr2e-give942, .sr2e-givenuyen942):hover { color: var(--sr2e-accent); }
+.application.sr2e-look .sr2e-givenuyen942 { margin-left: 0.35em; }
+.application.sr2e-look .sr2e-stash942 { margin-top: 0.75em; }
+.application.sr2e-look .sr2e-loot942-list { list-style: none; margin: 0.4em 0; padding: 0; }
+.application.sr2e-look .sr2e-loot942-row { display: flex; align-items: center; justify-content: space-between; gap: 0.5em; padding: 0.2em 0.1em; border-bottom: 1px solid var(--sr2e-line); }
+.application.sr2e-look .sr2e-stash942 .sr2e-loot942-row[draggable="true"] { cursor: grab; }
+.application.sr2e-look .sr2e-loot942-row button { flex: 0 0 auto; width: auto; }
+.application.sr2e-look .sr2e-loot942-body { padding: 0.25em; }
+.sr2e-gm-panel .sr2e-cat942-old { align-items: center; gap: 0.5em; }
+
+/* v0.94.2 (crowd): crew stations on the vehicle sheet, advancement revert. */
+.application.sr2e-look .sr2e-crew { margin: 0.4em 0; }
+.application.sr2e-look .sr2e-crew-tabs { display: flex; flex-wrap: wrap; gap: 0.25em; border-bottom: 1px solid var(--sr2e-rule-strong); margin-bottom: 0.3em; }
+.application.sr2e-look .sr2e-crew-tab { padding: 0.15em 0.5em; border: 1px solid transparent; border-bottom: none; border-radius: 4px 4px 0 0; cursor: pointer; color: var(--sr2e-muted); }
+.application.sr2e-look .sr2e-crew-tab.active { border-color: var(--sr2e-rule-strong); color: var(--sr2e-ink); font-weight: bold; }
+.application.sr2e-look .sr2e-crew-tab.mine { text-decoration: underline; }
+.application.sr2e-look .sr2e-crew-tab small { font-weight: normal; color: var(--sr2e-muted); }
+.application.sr2e-look :is(.sr2e-crew-ready, .sr2e-crew-allready, .sr2e-crew-readybox.on) { color: var(--sr2e-good); }
+.application.sr2e-look .sr2e-crew-panel { display: none; }
+.application.sr2e-look .sr2e-crew-panel.active { display: block; }
+.application.sr2e-look .sr2e-crew-seat { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4em; margin: 0.2em 0; }
+.application.sr2e-look .sr2e-crew-readybox { cursor: pointer; }
+.application.sr2e-look .sr2e-crew-readybox.on { font-weight: bold; }
+.application.sr2e-look .sr2e-advlog .sr2e-adv-reverted .sr2e-adv-what { text-decoration: line-through; color: var(--sr2e-muted); }
+.application.sr2e-look .sr2e-advlog .sr2e-adv-revmark { font-size: 0.85em; font-style: italic; color: var(--sr2e-muted); }
+.application.sr2e-look .sr2e-advlog .sr2e-adv-revert.sr2e-disabled { color: var(--sr2e-muted); cursor: help; }

@@ -278,12 +278,22 @@ export function planTransfer(r: TransferRequest, from: TradeActor, to: TradeActo
     const newId = fresh(oldId);
     data['_id'] = newId;
     plan.target.create.push(data);
+    // v0.94.2 (lead): every id that changed is remapped in every child, so a grandchild (a scope on a gun in a bag)
+    // follows its own parent's new id too, not only the top item's.
+    const moved: Array<{ cd: Record<string, any>; id: string }> = [];
+    const changed: Array<[string, string]> = newId !== oldId ? [[oldId, newId]] : [];
     for (const c of kids) {
-      let cd = arrive(clone(c.data), c.type);
-      cd['_id'] = fresh(String(cd['_id'] ?? c.id));
-      if (newId !== oldId && o.relink) cd = o.relink(cd, oldId, newId);
+      const cd = arrive(clone(c.data), c.type);
+      const was = String(cd['_id'] ?? c.id);
+      cd['_id'] = fresh(was);
+      if (cd['_id'] !== was) changed.push([was, cd['_id']]);
+      moved.push({ cd, id: c.id });
+    }
+    for (const m of moved) {
+      let cd = m.cd;
+      if (o.relink) for (const [a, b] of changed) cd = o.relink(cd, a, b);
       plan.target.create.push(cd);
-      plan.children.push(c.id);
+      plan.children.push(m.id);
     }
   }
   if (whole) plan.source.deleteIds.push(item.id, ...plan.children);

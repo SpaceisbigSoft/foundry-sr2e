@@ -356,3 +356,22 @@ export function withoutLink<T extends { flags?: any }>(d: T): T {
   delete sys[NEST_FLAG];
   return { ...d, flags: { ...d.flags, [SYSTEM_ID]: sys } };
 }
+
+/**
+ * v0.94.2 (lead): the nesting hooks for a give, stash or loot (rules/trade942.ts PlanOptions): the whole family moves
+ * with a whole item, the moved item leaves its own parent, children follow a parent whose id changed.
+ * Items are rules/trade942.ts TradeItem (their full data in `data`).
+ */
+export const TRADE_NEST_HOOKS: {
+  childrenOf: <T extends { id: string; type: string; system?: any; data?: Record<string, any> }>(item: T, all: readonly T[]) => T[];
+  clearFlags: readonly string[];
+  relink: (child: Record<string, any>, oldParentId: string, newParentId: string) => Record<string, any>;
+} = {
+  childrenOf: (item, all) => {
+    const byId = new Map(all.map((t) => [t.id, t]));
+    return descendantsOf(item.id, all.map((t) => ({ id: t.id, type: t.type, system: t.system, flags: t.data?.['flags'] })))
+      .map((n) => byId.get(n.id)).filter((t): t is NonNullable<typeof t> => Boolean(t));
+  },
+  clearFlags: [NEST_FLAG],
+  relink: (child, oldParentId, newParentId) => remapLinks([child], new Map([[oldParentId, newParentId]]))[0] ?? child,
+};

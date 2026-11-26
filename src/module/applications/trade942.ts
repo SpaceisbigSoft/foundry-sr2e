@@ -18,10 +18,11 @@
  * - Item nesting: `setTradeNesting({ childrenOf, clearFlags, relink })` wires the parent links (see rules/trade942.ts).
  */
 import { SYSTEM_ID } from '../config/system.ts';
-import { t as tx, tKey } from '../helpers/i18n.ts';
+import { t as tx, tKey, tCount } from '../helpers/i18n.ts';
 import { escHtml } from '../rules/html.ts';
 import { userOwns } from '../rules/trust.ts';
 import { clearFlag } from '../helpers/flags.ts';
+import { descendantsOf, readLink, TRADE_NEST_HOOKS } from '../rules/nesting942.ts';
 import {
   lootMarkOf, transferRoute, gmMayTransfer, transferShapeOk, transferProblems, planTransfer, tradeable, tradeableItems, tradeStackSize, countAnswer,
   MAX_TRANSFER_NUYEN, type TransferRequest, type TradeActor, type TradeItem, type TransferPlan, type PlanOptions, type TradeProblem, type TransferKind,
@@ -47,8 +48,12 @@ const gmIds = (): string[] => [...((game as any).users ?? [])].filter((u: any) =
 
 // ---------------------------------------------------------------- item nesting hook point
 
-/** The nesting hooks (rules/trade942.ts PlanOptions); empty until the item-nesting work wires them. */
-const nesting: Pick<PlanOptions, 'childrenOf' | 'clearFlags' | 'relink'> = {};
+/**
+ * The nesting hooks (rules/trade942.ts PlanOptions), wired to the item nesting (rules/nesting942.ts): the whole family
+ * (accessories, programs on a deck, a container's contents, and theirs) moves with a whole item; the moved item leaves
+ * its own parent; children whose parent got a new id follow it.
+ */
+const nesting: Pick<PlanOptions, 'childrenOf' | 'clearFlags' | 'relink'> = { ...TRADE_NEST_HOOKS };
 
 /**
  * Wire item nesting into every transfer: `childrenOf(item, all)` lists an item's children (they move with the whole
@@ -487,11 +492,15 @@ function decorateSafehouse(app: any, el: HTMLElement): void {
   if (!actor || actor.type !== 'safehouse' || !tradeOn()) return;
   const host = el.querySelector('.window-content') ?? el;
   host.querySelector('.sr2e-stash942')?.remove();
-  const items = tradeableItems([...(actor.items ?? [])] as any[]);
+  // v0.94.2 (lead): only what sits loose in the stash; a bag's contents and a gun's accessories travel with it.
+  const all: any[] = [...(actor.items ?? [])];
+  const ids = new Set(all.map((i: any) => String(i.id)));
+  const inner = (i: any): number => descendantsOf(i.id, all.map((x: any) => ({ id: x.id, type: x.type, system: x.system, flags: x.flags }))).length;
+  const items = tradeableItems(all.filter((i: any) => { const l = readLink(i); return !l || !ids.has(l.parent); }));
   const sec = document.createElement('section');
   sec.className = 'sr2e-stash942';
   sec.innerHTML = `<h2>${tx('SR2E.Trade.stashHeading')}</h2><p class="hint">${tx('SR2E.Trade.stashHint')}</p>
-    <ul class="sr2e-loot942-list">${items.map((i: any) => `<li class="sr2e-loot942-row" draggable="true" data-item-id="${esc(i.id)}"><span>${esc(i.name)}${tradeStackSize(i.system) > 1 ? ` <span class="hint">×${tradeStackSize(i.system)}</span>` : ''}</span>
+    <ul class="sr2e-loot942-list">${items.map((i: any) => `<li class="sr2e-loot942-row" draggable="true" data-item-id="${esc(i.id)}"><span><a class="sr2e-stash942-open" data-item-id="${esc(i.id)}">${esc(i.name)}</a>${tradeStackSize(i.system) > 1 ? ` <span class="hint">×${tradeStackSize(i.system)}</span>` : ''}${inner(i) ? ` <span class="hint">${esc(tCount(inner(i), 'SR2E.Count.itemInside'))}</span>` : ''}</span>
       ${actor.isOwner ? `<a class="sr2e-give942" role="button" data-item-id="${esc(i.id)}" title="${esc(tx('SR2E.Trade.giveControl'))}"><i class="fa-solid fa-hand-holding-hand"></i></a>` : ''}</li>`).join('') || `<li><em>${tx('SR2E.Trade.stashEmpty')}</em></li>`}</ul>`;
   sec.querySelectorAll('li[data-item-id]').forEach((li) => {
     li.addEventListener('dragstart', (ev) => {
@@ -499,6 +508,10 @@ function decorateSafehouse(app: any, el: HTMLElement): void {
       if (it) (ev as DragEvent).dataTransfer?.setData(MIME_TEXT, JSON.stringify({ type: 'Item', uuid: it.uuid }));
     });
   });
+  sec.querySelectorAll('a.sr2e-stash942-open').forEach((a) => a.addEventListener('click', (ev) => {
+    ev.preventDefault();
+    actor.items?.get?.((a as HTMLElement).dataset['itemId'] ?? '')?.sheet?.render?.(true);
+  }));
   sec.querySelectorAll('a.sr2e-give942').forEach((a) => a.addEventListener('click', (ev) => {
     ev.preventDefault();
     const it = actor.items?.get?.((a as HTMLElement).dataset['itemId'] ?? '');

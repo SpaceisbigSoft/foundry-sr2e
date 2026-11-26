@@ -313,6 +313,8 @@ See `docs/TRANSLATING.md` for the rest.
 | `SR2E.Card.Npcgen.createdActorsFor`: Created {length} actors for {name}{part}. | `{part}` | `SR2E.Card.Npcgen.andVehicles2` (, and {count} vehicle \| , and {count} vehicles) |
 | `SR2E.Card.Safehouse.comfortSecurityConcealmentBarrier`: Comfort {lifeLabel} · Security {security} · Concealment {concealment} · Barrier {barrier}{part} | `{part}` | `SR2E.Card.Safehouse.ward` ( · Ward {ward}) |
 | `SR2E.Card.Safehouse.monthSOfUpkeepOn`: {part} {yen}: {choiceMonths} month(s) of upkeep on | `{part}` | `SR2E.Card.Safehouse.paid` (Paid)<br>`SR2E.Card.Safehouse.pays` (pays) |
+| `SR2E.Catalogue942.moved`: SR2e: your catalogue ({n}) now lives in the world compendium {pack}. The old setting keeps its copy until you remove it (GM panel, Setup tab). | `{n}` | `SR2E.Count.template` ({count} template \| {count} templates) |
+| `SR2E.Catalogue942.removeBody`: Every one of the {n} in the old world setting is in the catalogue compendium. Remove the old copy? This can't be undone (save a catalogue file first if unsure). | `{n}` | `SR2E.Count.template` ({count} template \| {count} templates) |
 | `SR2E.Dialog.Catalogue.alreadyInTheWorld`: , {plural} already in the world{part} | `{part}` | `SR2E.Dialog.Catalogue.leftAsTheyAre` ( (left as they are))<br>`SR2E.Dialog.Catalogue.theirItemsMissingValuesFilledIn` ( (their items' missing values filled in)) |
 | `SR2E.Dialog.Chat.aRatingIsCreated`: A {barrierKind} "{name}" (rating {rating}) is created, {owner} | `{barrierKind}` | `SR2E.Dialog.Chat.barrier` (barrier) |
 | `SR2E.Dialog.Chat.aSpiritForceIsCreated`: A spirit "{name}" (Force {force}{part}) is created, {owner} | `{part}` | `SR2E.Dialog.Chat.services` (, {services} services) |
@@ -528,6 +530,7 @@ See `docs/TRANSLATING.md` for the rest.
 | `SR2E.Notify.Chat.hasnTTakenEffectYet`: {tName} hasn't taken effect yet ({left}). | `{tName}` | `SR2E.Notify.Chat.it` (It) |
 | `SR2E.Notify.Chat.moreTargetOnThisCardUse`: {mineLength} on this card: use its buttons. | `{mineLength}` | `SR2E.Count.moreTarget` ({count} more target \| {count} more targets) |
 | `SR2E.Notify.Creation.sCreationIsFinishedCreationTab`: {actorName}'s creation is finished (Creation tab). {part} | `{part}` | `SR2E.Notify.Creation.reopenItThereToBuildAgain` (Reopen it there to build again.)<br>`SR2E.Notify.Creation.theGmCanReopenIt` (The GM can reopen it.) |
+| `SR2E.Notify.Fixes942.addedToCombat`: Added {count} to the combat. | `{count}` | `SR2E.Count.actor` ({count} actor \| {count} actors) |
 | `SR2E.Notify.Look.portraitsFoundForActor`: Portraits found for {n}. | `{n}` | `SR2E.Count.actor` ({count} actor \| {count} actors) |
 | `SR2E.Notify.Qol.exportedTemplateToTheCompendium`: Exported {uniqueLength} to the compendium "{metadataLabel}". | `{uniqueLength}` | `SR2E.Count.template` ({count} template \| {count} templates) |
 | `SR2E.Notify.Qol.tookInItemTemplateFrom`: Took in {n} from {metadataLabel}. | `{n}` | `SR2E.Count.itemTemplate` ({count} item template \| {count} item templates) |

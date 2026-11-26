@@ -5482,6 +5482,10 @@
       "skill": {
         "one": "{count} skill",
         "other": "{count} skills"
+      },
+      "itemInside": {
+        "one": "({count} item on or in it)",
+        "other": "({count} items on or in it)"
       }
     },
     "Card": {
