@@ -362,7 +362,9 @@ Skill dialogs have a *Use specialization* box; the **Sneak** dialog has *Use the
 
 **Shift-click** a roll button to skip the dialog and roll at once with its defaults. A spell or skill rolls without your remembered choices; a weapon uses its remembered firing mode and pool dice, but never fires twice.
 
-How many dice you roll and what the TN should be come from the rules: see your SR2 rulebook. You choose who sees each kind of test you roll (Configure Settings: **Set roll privacy**, under *Roll privacy by kind of test*). *Foundry's chat mode* follows the mode picked under the chat box. Cards someone else must answer (Defend, Resist, a blast) are always public.
+How many dice you roll and what the TN should be come from the rules: see your SR2 rulebook. You choose who sees each kind of test you roll (Configure Settings: **Set roll privacy**, under *Roll privacy by kind of test*). *Foundry's chat mode* follows the mode picked under the chat box. Cards someone else must answer (Defend, Resist, a blast) are always public. The GM can set a **table default** for each kind of test in the same window (*GM only* or *Blind*); players can then only make those cards more private, and the less private choices are greyed for them.
+
+Some numbers are kept for the GM: on the cards of tests no player owns (an NPC's attack, a guard's Perception), players see the successes but not the target number or its modifiers (the GM's setting *Hide NPC target numbers from players*, on by default). Floating damage shows for the GM and the token's owners only, unless the GM's setting *Who sees floating damage* shows it to everyone, and it waits for Dice So Nice's dice to stop. All of this hides things on screen; it isn't security, since the numbers are still in the chat message's data.
 
 ## Targets and automatic modifiers
 
@@ -449,6 +451,7 @@ In the chat, type `/sr2` (or `/sr2e`) and the same words, for example `/sr2 Fire
 - `tn 5`: the target number (4 when left out).
 - `mod -1`: a TN modifier. Several add up.
 - `pool 2`: pool dice (Combat Pool for attributes and skills, extra dice for a bare number of dice).
+- `secret` (after what to roll): only the GM sees the card, not even the roller (for a hidden Perception test in a journal, for example).
 - `label Climb the fence`: the card's title. Everything after `label` is the title.
 
 ## Rolling physical dice

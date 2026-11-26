@@ -4,6 +4,7 @@
  * guide), and Shift-click quick rolls for every test dialog.
  */
 import { floatVisible, DICE_WAIT_MS } from '../rules/hidden941.ts';
+import { auto } from '../helpers/automation.ts';
 import { SYSTEM_ID } from "../config/system.ts";
 import { rememberFocus } from "./a11y.ts";
 import { t as tx } from '../helpers/i18n.ts';
@@ -38,7 +39,8 @@ function diceStopped(): Promise<void> {
 
 function floatOver(actor: any, texts: Array<{ text: string; damage: boolean }>): void {
   try {
-    if (game.settings.get(SYSTEM_ID, 'floatingDamage') === false) return;
+    // v0.94.1: Manual table turns it off too (helpers/automation.ts).
+    if (auto<boolean>('floatingDamage', true) === false) return;
   } catch { /* not registered */ }
   // v0.94.1 (item 21): only the GM and the actor's owners see it, unless the GM shows it to everyone.
   let who = 'owners';
