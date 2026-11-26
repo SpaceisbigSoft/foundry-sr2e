@@ -1753,6 +1753,11 @@ export function registerSettings(): void {
     scope: "client", config: true, type: Boolean, default: true,
   });
   // The Skill Web (v0.38.0): the GM's links between skills, one per line.
+  // v0.94.2 (item 42): the vehicle sheet's crew stations panel (applications/crew942.ts).
+  game.settings.register(SYSTEM.id, "crewStations", {
+    name: "SR2E.Settings.crewStations.Name", hint: "SR2E.Settings.crewStations.Hint",
+    scope: "world", config: true, type: Boolean, default: true,
+  });
   // v0.93.3 (report item 7): the book's web (SR2 Core p. 69) by default; a GM who saved a web keeps theirs, and an
   // empty text still means no web (every related skill +2, an attribute +4).
   game.settings.register(SYSTEM.id, "skillWeb", {

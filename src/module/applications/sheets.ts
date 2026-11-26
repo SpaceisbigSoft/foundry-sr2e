@@ -91,6 +91,7 @@ import { currentContext, creationContext } from "./charinfo.ts";
 import { underwayRows, PROJECT_SHEET_ACTIONS } from "./projects.ts";
 import { recordCreation, reopenCreation, addAdvancementNote, deleteAdvancementLine, refuseLockedRaises } from "./advancement.ts";
 import { revertFromSheet } from "./revert942.ts";
+import { CREW_ACTIONS, decorateCrewStations } from "./crew942.ts";
 import { refusePermitTick, permitRowFor, vehiclePermitPayer } from "./permits.ts";
 import { timeLabel } from "../rules/waiting.ts";
 import { dropRequest, approvalNeeded, inCreation as inCreationNow, creationRecordOf, draftTable } from "./approvals.ts";
@@ -314,7 +315,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       advNote: SR2CharacterSheet.#onAdvNote,
       advDelete: SR2CharacterSheet.#onAdvDelete,
       // v0.94.2 (item 31): revert a log line (applications/revert942.ts).
-      advRevert: function (this: any, _e: Event, t: HTMLElement) { const id = t.dataset["id"]; if (id) return revertFromSheet(this.document, id); },
+      advRevert: function (this: any, _e: Event, t: HTMLElement) { const id = t.dataset["id"]; return id ? revertFromSheet(this.document, id) : undefined; },
       // Withdraw one of this character's pending approval requests (data-id).
       cancelRequest: async function (this: any, _e: Event, t: HTMLElement) { const id = t.dataset["id"]; if (id) await dropRequest(this.document, id); },
       delayAction: SR2CharacterSheet.#onDelayAction,
@@ -6614,6 +6615,8 @@ export class SR2VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       pushSpeed: SR2VehicleSheet.#onPushSpeed,
       crashTest: SR2VehicleSheet.#onCrashTest,
       designVehicle: SR2VehicleSheet.#onDesign,
+      // v0.94.2 (item 42): crew stations (applications/crew942.ts).
+      ...CREW_ACTIONS,
     },
   };
 
@@ -6627,6 +6630,7 @@ export class SR2VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     decorateSheet(this);
     decorateInterface(this);
     decorateSheet935(this);
+    decorateCrewStations(this);
   }
 
   async _prepareContext(options: any): Promise<any> {
