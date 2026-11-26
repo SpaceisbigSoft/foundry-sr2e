@@ -19,6 +19,7 @@ How to use the unofficial Shadowrun 2nd Edition system for Foundry VTT: what the
 - [Your look: theme, colours and text size](#your-look-theme-colours-and-text-size)
 - [Shortcuts, hotkeys and token actions](#shortcuts-hotkeys-and-token-actions)
 - [Printing a sheet and reporting a bug](#printing-a-sheet-and-reporting-a-bug)
+- [Troubleshooting](#troubleshooting)
 - [Rules interpretations (†)](#rules-interpretations-)
 - [Credits and licence](#credits-and-licence)
 
@@ -30,6 +31,7 @@ How to use the unofficial Shadowrun 2nd Edition system for Foundry VTT: what the
 - [Karma Pool on chat cards](#karma-pool-on-chat-cards)
 - [Dice pools](#dice-pools)
 - [Inline tests and /sr2](#inline-tests-and-sr2)
+- [Rolling physical dice](#rolling-physical-dice)
 
 **Your character**
 
@@ -302,6 +304,25 @@ The printout is black on white with thin lines, so it uses little ink: the name,
 
 **Report a bug.** The **Report a bug** button at the top of this guide's topic list (also in Configure Settings, under the system's settings) opens a text ready to paste into a new issue on the project's GitHub page. It holds the system and Foundry versions, your browser, your active modules, the rules source, the house rules your GM changed and the system's recent errors in this browser. Press **Copy**, paste it into the issue and describe what happened. **Nothing is sent anywhere by itself.** Read it before posting: error messages can name things in your world. (Configure Settings: *Keep recent errors for bug reports* turns the error log off in your browser.)
 
+## Troubleshooting
+
+Something not working? Look for it below. Most problems have a simple cause: a setting, who owns what, or a GM who isn't logged in.
+
+- **Something is missing after an update** (a new kind of actor or item, a button): quit Foundry completely and start it again. Some files are read only when Foundry starts; reloading the browser is not enough.
+- **SR2e: back up your world first**: the world's data is about to be updated, and that can't be undone. Click *Not now*, make a backup (setup screen: *Worlds*, then *Backups*), open the world again and click *Continue*.
+- **This world looks like another system's**: another Shadowrun 2e system used the same id, and SR2e never updates its worlds. Open the world with the system it was made with. If you are sure it is SR2e's and have a backup, the GM can run `game.settings.set('shadowrun2e_unified', 'ignoreForeignWorld', true)` in the console (<kbd>F12</kbd>) and reload.
+- **SR2e: house rules not applied**: a stored house rule names a rule that doesn't exist or has the wrong kind of value. The GM corrects the listed lines in *Edit house rules*.
+- **Text too small, or glows and flashes bother you**: Configure Settings, *Look: text size (%)* and *Look: reduced motion* (see [Your look](#your-look-theme-colours-and-text-size)). They change only SR2e's own windows and cards.
+- **You can't click Defend or Resist**: only the owner of the character named on the button, or the GM, can. After you have defended, the button stays greyed. See [Chat cards](#chat-cards-defend-resist-and-apply).
+- **An Apply (GM) card just sits there**: your test changes something you don't own, so it waits for the GM's click. *Apply players' GM-only changes by themselves* is off by default, and covers only a few harmless kinds even when on.
+- **No GM is logged in to do this**: some actions, the timers, self-resisting NPCs and camera regions run in the GM's browser. Keep a GM logged in during play.
+- **A purchase or Karma spend became a request**: the [approval queue](#the-approval-queue) is on. The GM approves it in the GM panel's Requests tab.
+- **A player can't import a stat block**: players import only into an unfinished character of their own, and not while the approval queue is on. Ask the GM. Only the GM changes the catalogue; a player sends a [new entry](#new-entries) instead.
+- **Token Action HUD shows nothing**: Token Action HUD Core needs the socketlib module. For Item Piles and Health Estimate, keep *Support for Item Piles and Health Estimate* on and reload.
+- **A world from before v0.93.1** (system id `sr2e`) must be moved to the new id `shadowrun2e_unified`: see `docs/MOVING.md`. Macros keep working: `game.sr2e` and the `sr2e.*` hooks didn't change.
+
+The full page is `docs/TROUBLESHOOTING.md` on the project's GitHub. To report a bug, press **Report a bug** (in this guide, or the SR2e tools window, <kbd>Alt</kbd>+<kbd>T</kbd>), press **Copy** and paste the text into the *Bug report* form on the GitHub issue tracker, with the steps that make it happen. Nothing is sent by itself; read the text before posting.
+
 ## Rules interpretations (†)
 
 Where the rules as written leave something unclear, the system uses the creator's reading and marks it with a small **†**: beside a value (the narrow Spell Pool dice on the strip) or as a line at the foot of a chat card. Hover a † for a one-line summary; click it to open **Rules interpretations** at that entry.
@@ -314,13 +335,15 @@ They are interpretations, not rulings: the GM's call always wins.
 
 ## Credits and licence
 
-**Built with AI.** This system was written by an AI model, Anthropic's Claude, under the direction of its human owner: the code, the rules numbers and this guide. The numbers first came from the AI's memory of the books; in v0.92.3 the AI checked the default rules against the books and corrected them (a person has not re-checked that yet), and every number is listed with its source in `docs/VERIFY.md`. Check anything that looks off against your rulebook and tell your GM; the GM can correct values in the house rules. It has not yet been play-tested at a real table.
+**Built with AI.** This system was written by an AI model, Anthropic's Claude, under the direction of its human owner: the code, the rules numbers and this guide. The owner chose what to build and made the design and rules decisions (the licence, no book content, following the official books by default, the security model, the look); Claude made the smaller calls. The numbers first came from the AI's memory of the books; in v0.92.3 the AI checked the default rules against the books and corrected them (a person has not re-checked that yet), and every number is listed with its source in `docs/VERIFY.md`. Check anything that looks off against your rulebook and tell your GM; the GM can correct values in the house rules. It has not yet been play-tested at a real table.
 
 This is an **unofficial** fan system for Shadowrun, Second Edition. It is not affiliated with or endorsed by The Topps Company, Catalyst Game Labs or Black Book Editions. Shadowrun and Matrix are registered trademarks and/or trademarks of The Topps Company, Inc.
 
 It contains **no rulebook text or art**: it automates the rules, and you need your own copy of the rulebook for them. The default pictures and tokens (people, critters, spirits, vehicles and drones, IC and the rest) and the Scene builder's backdrops are the system's own art, drawn by the AI for it (vector art written as code in `src/art/`), under the same licence; they show no book art, logos or trademarks. The cover picture (the runner team in the neon alley, also the background of new worlds on the setup screen) was painted with another AI, OpenAI's ChatGPT image generation, by the project's owner from a brief Claude wrote; Claude added the title. It is under the same licence and shows no book art, logos or trademarks either. The game numbers it needs (rule constants, starter item templates, a totem table) were written from memory; the GM can check them against the book and change them as house rules.
 
 The system is licensed under **CC BY-SA 4.0** (the `LICENSE.md` file in the system folder). It started from the project setup of SRA2, the community Shadowrun Anarchy 2 system by the Anarchy development team: only the build configuration and folder layout came from SRA2; all of the game code, sheets, art and text were written for this system. The fonts (Chakra Petch, JetBrains Mono, Inter) are under the SIL Open Font License.
+
+**If you hold rights in Shadowrun** and object to any part of this system, open an issue on the project's GitHub page or contact its owner there. The owner will reply within a week and take the named part (or the whole project) down while it is discussed.
 
 # Rolling and chat cards
 
@@ -411,7 +434,7 @@ A test dialog that can take pool dice has a box for them. What you use comes off
 
 An encephalon gives a small **Task Pool** for Intelligence, knowledge and Build/Repair skills: the skill dialog has a box for it (used up only in combat). An adept's Combat Sense adds to the Combat Pool, and a power focus adds its rating to the Spell Pool.
 
-The Combat, Spell, Hacking, Control and Task Pools refill when a combat starts and at each new Combat Turn. The GM can also refill them from the GM panel (Party tab: **Refresh pools**). The Karma Pool refills by itself when a combat ends; between other scenes use the circular arrow beside **Karma Pool left** on the Main tab, or the GM's **Refresh Karma Pools**. A house rule can refill Karma Pools at the start of each session instead, or only by hand.
+The Combat Pool refills at the start of each of your actions (by the book; a house rule can refill it at each new Combat Turn instead). The Spell, Hacking, Control and Task Pools refill when a combat starts and at each new Combat Turn. The GM can also refill them from the GM panel (Party tab: **Refresh pools**). The Karma Pool refills by itself when a combat ends; between other scenes use the circular arrow beside **Karma Pool left** on the Main tab, or the GM's **Refresh Karma Pools**. A house rule can refill Karma Pools at the start of each session instead, or only by hand.
 
 On the Current tab, **Initiative and pools** lists the initiative (and Matrix or rigged initiative) and each pool, read only. Your combatants in the combat tracker show their pools too.
 
@@ -426,6 +449,17 @@ In the chat, type `/sr2` (or `/sr2e`) and the same words, for example `/sr2 Fire
 - `mod -1`: a TN modifier. Several add up.
 - `pool 2`: pool dice (Combat Pool for attributes and skills, extra dice for a bare number of dice).
 - `label Climb the fence`: the card's title. Everything after `label` is the title.
+
+## Rolling physical dice
+
+A table that rolls real dice can type them in. SR2e asks Foundry for every die it rolls, so Foundry's own **manual dice entry** works for every SR2e test: attributes, skills, attacks, defence, damage resistance, spells, drain and the rest.
+
+- **Turn it on** for yourself: *Game Settings*, *Configure Settings*, *Core*, then *Dice Configuration*; choose manual input for the **d6**. Each player chooses for their own browser.
+- **When you roll**, Foundry opens a window with one box per die. Type each die as it landed and confirm. The card then counts successes from those dice.
+- **The Rule of Six** comes as a second window: re-roll each six and type the new die; SR2e adds it to the six. A six again asks again.
+- **Pool dice and Karma re-rolls** ask the same way, each when it is rolled. Dice So Nice shows nothing for typed dice.
+
+The GM still sees every card and applies what needs a GM, as with digital dice. Typing a die is trusted like any roll in Foundry; a group that wants a check can roll where the GM can see.
 
 # Your character
 
@@ -650,7 +684,7 @@ It lists what the shop reads: the GM’s catalogue, the system’s generic templ
 
 Something the catalogue doesn't have (or there is no catalogue at all)? Make a new entry from your own book: **New entry…** in the shop (the Add window), in the SR2e tools window, or the GM panel's Setup tab.
 
-- Pick the **Kind**: weapon, armor, gear, cyberware, bioware, spell, adept power, focus, program or cyberdeck. The form shows the fields its stat line has, each with a hint.
+- Pick the **Kind**: weapon, armor, gear, cyberware, bioware, spell, adept power, focus, program, cyberdeck, vehicle or drone. The form shows the fields its stat line has, each with a hint.
 - **Paste the stat line** and press **Read it**: the name, numbers and codes fill the fields (damage like 9M, Availability like 4/48 hrs, ammo like 15(c), drain like (F/2)+1S, cost, Street Index and the rest in the book's column order). Check them: what was read and what wasn't is listed, and words it doesn't know are never kept.
 - The line under the form shows the entry as the shop will: what it is, its price and its Availability.
 - The **Description** is for your own words, not the book's text.

@@ -1,0 +1,43 @@
+# v0.93.2: the checks on every push and pull request (the release workflow, release.yml, runs them again on a tag).
+# Type-check, the full test suite and the build, on Linux and on Windows (the owner's machine runs Windows, so the
+# tests and scripts must work there too). Nothing is published from here.
+name: CI
+on:
+  push:
+    branches: ["**"]
+    tags-ignore: ["v*"]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  check:
+    name: Check (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: The versions agree (package.json, system.json)
+        shell: bash
+        run: |
+          a=$(node -p "require('./package.json').version")
+          b=$(node -p "require('./public/system.json').version")
+          test "$a" = "$b" || { echo "package.json says $a, public/system.json says $b"; exit 1; }
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - name: The macro pack builds
+        if: matrix.os == 'ubuntu-latest'
+        run: npm run packs

@@ -558,6 +558,94 @@ function batchPerformance(ctx: Ctx): void {
   });
 }
 
+/**
+ * v0.93.2: the card flow (attack → Defend → Resist → the monitor) and Foundry's dice fulfilment. Dice come from a test
+ * method registered in `CONFIG.Dice.fulfillment.methods` and chosen for d6 in this user's Dice Configuration: the same
+ * path Foundry's manual dice entry takes, so these tests also show that every SR2e roll asks Foundry for its dice (a
+ * table with physical dice can type them in). The user's Dice Configuration is put back afterwards.
+ */
+const FIXED = 'sr2eQuenchFixed';
+function batchCardFlow(ctx: Ctx): void {
+  const { describe, it, before, after, assert } = ctx;
+  describe('v0.93.2 the card flow and dice entry', function (this: any) {
+    this.timeout(30000);
+    const made = new Made();
+    let pc: any; let foe: any;
+    let face = 5; let queue: number[] = []; let calls = 0;
+    let oldConfig: any = undefined; let hadMethod = false;
+    before(async function (this: any) {
+      const methods = (CONFIG as any).Dice?.fulfillment?.methods;
+      if (!methods || !made.start()) this.skip();
+      hadMethod = Boolean(methods[FIXED]);
+      methods[FIXED] = { label: 'SR2e Quench: fixed dice', interactive: false, handler: async () => { calls++; return queue.length ? queue.shift() : face; } };
+      oldConfig = game.settings.get('core', 'diceConfiguration');
+      await game.settings.set('core', 'diceConfiguration', { ...(oldConfig ?? {}), d6: FIXED });
+      pc = await runner(made);
+      foe = await made.actor({ type: 'npc', name: 'Defender', items: [{ name: 'Armed Combat', type: 'skill', system: { rating: 3, attribute: 'strength' } }] });
+    });
+    after(async () => {
+      try { if (oldConfig !== undefined) await game.settings.set('core', 'diceConfiguration', oldConfig); } catch (err) { console.warn('sr2e | Quench dice config', err); }
+      if (!hadMethod) delete (CONFIG as any).Dice?.fulfillment?.methods?.[FIXED];
+      await made.cleanup();
+    });
+
+    it('every die of a test comes from Foundry\'s dice fulfilment (so manual entry works)', async () => {
+      queue = [5, 5, 2, 1]; calls = 0; face = 2;
+      const r = await pc.rollAttribute('body');
+      assert.ok(r, 'rolled');
+      assert.equal(calls, Number(r.totalDice), 'one fulfilment call per die (no sixes, so no Rule of Six re-rolls)');
+      const faces = r.dice.map((d: any) => d.faces[0]);
+      assert.deepEqual(faces.slice(0, 4), [5, 5, 2, 1].slice(0, Math.min(4, faces.length)));
+      assert.equal(r.successes, r.dice.filter((d: any) => d.total >= r.targetNumber).length);
+    });
+
+    it('the Rule of Six asks for each re-roll as more dice', async () => {
+      // Body 4: the first wave is 6, 3, 2, 2; the six's re-roll is the next die asked for (4).
+      queue = [6, 3, 2, 2, 4]; calls = 0; face = 2;
+      const r = await pc.rollAttribute('body');
+      assert.ok(r);
+      assert.equal(Number(r.totalDice), 4, 'Body 4');
+      assert.equal(calls, 5, 'one more die for the six');
+      assert.deepEqual(r.dice[0].faces, [6, 4]);
+      assert.equal(r.dice[0].total, 10);
+    });
+
+    it('attack → Defend → Resist reaches the defender\'s monitor (sr2e.damageTaken)', async () => {
+      let hit: any = null;
+      const hook = Hooks.on('sr2e.damageTaken', (a: any, change: any) => { if (a?.id === foe.id) hit = change; });
+      try {
+        queue = []; face = 5;
+        const knife = pc.items.find((i: any) => i.name === 'Knife');
+        const atk = await pc.attackWith(knife, { targetUuid: foe.uuid });
+        assert.ok(atk && atk.successes > 0, 'the attack hits');
+        await wait(400);
+        face = 2;
+        assert.ok(game.sr2e.api.defendNewest(foe), 'Defend found the attack');
+        await confirmDialogs();
+        await wait(800);
+        const resist = [...document.querySelectorAll('[data-message-id] button[data-sr2e-action="resist"]')].pop() as HTMLElement | undefined;
+        assert.ok(resist, 'a Resist button for the defender');
+        resist!.click();
+        await confirmDialogs();
+        for (let i = 0; i < 20 && !hit; i++) await wait(200);
+        assert.ok(hit, 'damage was applied');
+        const sum = (m: any) => Number(m?.physical ?? 0) + Number(m?.stun ?? 0);
+        assert.isAbove(sum(hit.after), sum(hit.before), 'the monitor went up');
+      } finally { Hooks.off('sr2e.damageTaken', hook); }
+    });
+  });
+}
+
+/** Click OK on any SR2e dialog that opened (a pool or weapon prompt), a few times over. */
+async function confirmDialogs(): Promise<void> {
+  for (let i = 0; i < 4; i++) {
+    await wait(300);
+    const ok = [...document.querySelectorAll('dialog button[data-action="ok"], .application.dialog button[data-action="ok"]')].pop() as HTMLElement | undefined;
+    if (!ok) return;
+    ok.click();
+  }
+}
+
 /** Register the batches (call at init; they appear once Quench is ready). */
 export function registerQuenchBatches(): void {
   Hooks.once('quenchReady', (quench: any) => {
@@ -566,6 +654,7 @@ export function registerQuenchBatches(): void {
     reg('documents', 'every document type and sheet', batchDocuments);
     reg('rolls', 'tests, cards and combat', batchRolls);
     reg('sheet921', 'v0.92.1 record sheet', batchSheet921);
+    reg('cardflow', 'card flow and dice entry', batchCardFlow);
     reg('translation', 'translation', batchTranslation);
     reg('migrations', 'migrations and world data', batchMigrations);
     // Opt-in: builds a temporary busy scene (50 tokens, a long combat, 300 cards) and removes it.

@@ -20,13 +20,17 @@ sr2e started from the project setup of **SRA2**, the community Shadowrun Anarchy
 
 ## Made with AI
 
-This system's code, tests, documentation, default token art and scene backdrops were written by an AI model (Anthropic's Claude) under the direction of the project's human owner, Spaceisbig. The cover painting was made with another AI (OpenAI's ChatGPT image generation; see "Cover picture"). Its game numbers were first recalled by the AI from memory; in v0.92.3 the AI checked the default rules against the books and corrected them, which a human has not yet re-checked (see "No rulebook content").
+This system's code, tests, documentation, default token art and scene backdrops were written by an AI model (Anthropic's Claude) under the direction of the project's human owner, Spaceisbig. The owner chose what to build and made the design and rules decisions (among them this licence, shipping no book content, following the official books by default, the security model and the look); Claude made the smaller calls and wrote the work. The README's "Built with AI" section lists the owner's decisions. The cover painting was made with another AI (OpenAI's ChatGPT image generation; see "Cover picture"). Its game numbers were first recalled by the AI from memory; in v0.92.3 the AI checked the default rules against the books and corrected them, which a human has not yet re-checked (see "No rulebook content").
 
 ## Unofficial; trademarks
 
 This is an unofficial fan project. It is not affiliated with, endorsed by or sponsored by The Topps Company, Inc., Catalyst Game Labs or Black Book Editions.
 
 Shadowrun and Matrix are registered trademarks and/or trademarks of The Topps Company, Inc. in the United States and/or other countries. Catalyst Game Labs is a trademark of InMediaRes Productions, LLC. Other names of the game's products, rules and organisations used in this system (for example DocWagon) refer to the game it plays and belong to their owners. Foundry Virtual Tabletop is a product of Foundry Gaming, LLC.
+
+## If you hold rights in Shadowrun
+
+If The Topps Company, Catalyst Game Labs or another rights holder objects to any part of this work, open an issue at <https://github.com/SpaceisbigSoft/foundry-sr2e/issues> or contact the owner through GitHub. The owner will reply within a week, take the named part (or the whole project, if asked) down while it is discussed, and not put it back without the rights holder's agreement.
 
 ## No rulebook content
 

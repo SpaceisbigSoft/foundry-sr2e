@@ -2,6 +2,16 @@
 
 This is the history of the unofficial Shadowrun 2nd Edition system for Foundry VTT (system id `shadowrun2e_unified`; `sr2e` until v0.93.0), newest version first. Every rules change since v0.70.0 has a house-rule switch that puts the old behaviour back. The system was built with AI (Anthropic's Claude) under human direction, and it has not yet been play-tested at a real table.
 
+## v0.93.2 — Docs, policy and CI (25 Nov 2026)
+- **Which Foundry versions work:** a table in the README. Foundry 14 is supported, and `system.json` now names 14 as the highest version, so Foundry v15 marks SR2e as not compatible rather than letting a world half-work; a release raises the limit after SR2e has run on v15. The README also says how to stay on an older release.
+- **What SR2e does for you:** a new page, `docs/AUTOMATION.md`, lists per area what is automatic, what is partly automatic and what stays by hand, and which optional modules add what. Outside testers can use it as a checklist.
+- **Troubleshooting:** `docs/TROUBLESHOOTING.md` and a *Troubleshooting* topic in the in-game guide. **Data formats:** `docs/DATA-FORMATS.md` describes every paste and import format (catalogue rows, write-ups, stat lines, templates, kits).
+- **Rolling physical dice:** a new guide topic. Every SR2e die goes through Foundry's dice, so Foundry's own manual dice entry (Dice Configuration) works for every test, the Rule of Six re-rolls included.
+- **If you hold rights in Shadowrun:** a take-down statement in the README, `LICENSE.md` and the guide's credits. The AI statement now names which decisions were the owner's and which were Claude's.
+- **The pools topic** in the guide now says the Combat Pool refills at each of your actions (the book's way since v0.92.3).
+- **API changes:** none. The scripting interface (`docs/API.md`) now has stability rules: a fix release never removes or changes a call, a feature release only after a deprecation, and every change is listed under "API changes". The calls added in v0.87.0–v0.92.1 are listed there for the first time.
+- For developers: the tests, type-check and build run on GitHub for every push and pull request, on Linux and Windows; a new in-Foundry test batch (Quench) runs an attack through Defend and Resist to the monitor and checks the dice path. Moving a world no longer counts a document whose old flags were empty as changed.
+
 ## v0.93.1 — The new system id (25 Nov 2026)
 - **The system id is now `shadowrun2e_unified`** (it was `sr2e`). Another Shadowrun 2e system for Foundry uses `sr2e` too, so the two could replace each other's install folder and open each other's worlds. Now they can be installed side by side.
 - **Moving a world:** install this version from the new manifest address (it goes in beside the old one), back up the world, change one line in its `world.json`, and open it. SR2e asks the GM, then copies the world's flags, settings and file paths (token art, backdrops, links, chosen sheets) to the new id and reports what it moved; each player's own settings come across when they next log in. Nothing old is deleted, so the world still opens with v0.93.0 if you point it back. The steps are in `docs/MOVING.md`.

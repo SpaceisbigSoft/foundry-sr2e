@@ -63,7 +63,8 @@ export function moveUpdate(source: Record<string, any> | null | undefined, newId
   // Review 2: merged key by key under what the new id already holds (it wins), so a flag written before the move (an
   // approval request, a combatant's wound) doesn't keep the rest from coming across.
   const old = source.flags?.[OLD_ID];
-  if (old && typeof old === 'object' && !Array.isArray(old)) {
+  // v0.93.2: an empty old flags object has nothing to bring across (it was counted as a changed document).
+  if (old && typeof old === 'object' && !Array.isArray(old) && Object.keys(old).length) {
     const cur = source.flags?.[newId];
     const merged = mergeUnder(movePathsDeep(old, newId), cur && typeof cur === 'object' && !Array.isArray(cur) ? cur : {});
     if (!sameJson(merged, cur ?? undefined)) up[`flags.${newId}`] = merged;

@@ -87,6 +87,8 @@ export const GUIDE_TOPICS: GuideTopic[] = [
   topic('pools', 'both', ['Initiative and pools'], ['p', 'p', 'p', 'p', 'p']),
   topic('shortcuts', 'both', [], [11, 'p', 'p', 'p', 4, 'p', 'p', 'p', 'p']),
   topic('inline-tests', 'both', [], ['p', 'p', 5]),
+  // v0.93.2: Foundry's manual dice entry (every SR2e die goes through Foundry's dice fulfilment).
+  topic('physical-dice', 'both', [], ['p', 4, 'p']),
   // ---------------------------------------------------------------- Main tab
   topic('attributes', 'both', ['Attributes', 'Derived'], ['p', 'p', 'p', 'p', 'p', 'p', 'p']),
   topic('condition-monitor', 'both', ['Condition Monitor'], ['p', 'p', 'p', 'p', 4, 'p']),
@@ -136,8 +138,10 @@ export const GUIDE_TOPICS: GuideTopic[] = [
   topic('vehicles', 'both', ['Control', 'Sensors', 'Chase', 'Aboard', 'Modifications', 'Cargo'], ['p', 7, 'p']),
 
   topic('printing', 'both', [], ['p', 3, 'p', 'p', 'p']),
+  // v0.93.2: common problems and fixes (the full page is docs/TROUBLESHOOTING.md).
+  topic('troubleshooting', 'both', [], ['p', 12, 'p']),
   // ================================================================ For the GM
-  topic('credits', 'both', [], ['p', 'p', 'p', 'p']),
+  topic('credits', 'both', [], ['p', 'p', 'p', 'p', 'p']),
   topic('gm-panel', 'gm', ['Scene', 'Regions with an SR2e environment', 'Presets', 'Encounter notes', 'Charges on a timer', 'Fires', 'Damaged walls'], ['p', 'p', 'p', 9]),
   topic('gm-time', 'gm', ['Time'], ['p', 'p', 'p', 'p']),
   topic('gm-combat', 'gm', ['Combat', 'NPCs and groups', 'On this scene'], ['p', 'p', 'p', 'p', 'p']),
@@ -161,8 +165,8 @@ const category = (id: string, audience: GuideCategory['audience'], topics: strin
   ({ id, audience, topics, get label() { return tKey(`SR2E.Guide.Category.${guideKeyPart(id)}`); } });
 
 export const GUIDE_CATEGORIES: GuideCategory[] = [
-  category('start', 'players', ['getting-started', 'tools', 'rules-v079', 'rules-v0923-combat', 'rules-urr', 'sheet-tools', 'summary-bar', 'layouts', 'look', 'shortcuts', 'printing', 'interpretations', 'credits']),
-  category('rolls', 'players', ['rolling', 'targeting', 'chat-cards', 'karma-pool', 'pools', 'inline-tests']),
+  category('start', 'players', ['getting-started', 'tools', 'rules-v079', 'rules-v0923-combat', 'rules-urr', 'sheet-tools', 'summary-bar', 'layouts', 'look', 'shortcuts', 'printing', 'troubleshooting', 'interpretations', 'credits']),
+  category('rolls', 'players', ['rolling', 'targeting', 'chat-cards', 'karma-pool', 'pools', 'inline-tests', 'physical-dice']),
   category('character', 'players', ['attributes', 'condition-monitor', 'skills', 'skill-picker', 'current-tab', 'effects', 'health', 'contacts', 'bio', 'token-art']),
   category('gear', 'players', ['weapons', 'cyberware', 'gear', 'item-sheet', 'money', 'adding', 'catalogue', 'new-entry']),
   category('advancement', 'players', ['creation-wizard', 'creation-record', 'spend-karma', 'under-way', 'approval']),

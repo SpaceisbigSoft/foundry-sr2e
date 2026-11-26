@@ -17793,7 +17793,7 @@
           "b1": "The pools are the Combat Pool, Spell Pool, Hacking Pool (Matrix), Control Pool (rigging) and Karma Pool. The <a href=\"#layouts\">status strip</a> shows each as pips; click a pip to set how many are left (clicking the last filled pip takes one die off).",
           "b2": "A test dialog that can take pool dice has a box for them. What you use comes off what is left. The Main tab shows the Combat Pool spent; the Matrix and Rigging tabs show theirs, with a box to correct the spent number. Skill and attribute dialogs also have a box for <strong>Karma Pool dice</strong>: one point a die, up to the test's own dice.",
           "b3": "An encephalon gives a small <strong>Task Pool</strong> for Intelligence, knowledge and Build/Repair skills: the skill dialog has a box for it (used up only in combat). An adept's Combat Sense adds to the Combat Pool, and a power focus adds its rating to the Spell Pool.",
-          "b4": "The Combat, Spell, Hacking, Control and Task Pools refill when a combat starts and at each new Combat Turn. The GM can also refill them from the GM panel (Party tab: <strong>Refresh pools</strong>). The Karma Pool refills by itself when a combat ends; between other scenes use the circular arrow beside <strong>Karma Pool left</strong> on the Main tab, or the GM's <strong>Refresh Karma Pools</strong>. A house rule can refill Karma Pools at the start of each session instead, or only by hand.",
+          "b4": "The Combat Pool refills at the start of each of your actions (by the book; a house rule can refill it at each new Combat Turn instead). The Spell, Hacking, Control and Task Pools refill when a combat starts and at each new Combat Turn. The GM can also refill them from the GM panel (Party tab: <strong>Refresh pools</strong>). The Karma Pool refills by itself when a combat ends; between other scenes use the circular arrow beside <strong>Karma Pool left</strong> on the Main tab, or the GM's <strong>Refresh Karma Pools</strong>. A house rule can refill Karma Pools at the start of each session instead, or only by hand.",
           "b5": "On the Current tab, <strong>Initiative and pools</strong> lists the initiative (and Matrix or rigged initiative) and each pool, read only. Your combatants in the combat tracker show their pools too."
         },
         "shortcuts": {
@@ -18197,10 +18197,11 @@
         },
         "credits": {
           "title": "Credits and licence",
-          "b1": "<strong>Built with AI.</strong> This system was written by an AI model, Anthropic's Claude, under the direction of its human owner: the code, the rules numbers and this guide. The numbers first came from the AI's memory of the books; in v0.92.3 the AI checked the default rules against the books and corrected them (a person has not re-checked that yet), and every number is listed with its source in <code>docs/VERIFY.md</code>. Check anything that looks off against your rulebook and tell your GM; the GM can correct values in the house rules. It has not yet been play-tested at a real table.",
+          "b1": "<strong>Built with AI.</strong> This system was written by an AI model, Anthropic's Claude, under the direction of its human owner: the code, the rules numbers and this guide. The owner chose what to build and made the design and rules decisions (the licence, no book content, following the official books by default, the security model, the look); Claude made the smaller calls. The numbers first came from the AI's memory of the books; in v0.92.3 the AI checked the default rules against the books and corrected them (a person has not re-checked that yet), and every number is listed with its source in <code>docs/VERIFY.md</code>. Check anything that looks off against your rulebook and tell your GM; the GM can correct values in the house rules. It has not yet been play-tested at a real table.",
           "b2": "This is an <strong>unofficial</strong> fan system for Shadowrun, Second Edition. It is not affiliated with or endorsed by The Topps Company, Catalyst Game Labs or Black Book Editions. Shadowrun and Matrix are registered trademarks and/or trademarks of The Topps Company, Inc.",
           "b3": "It contains <strong>no rulebook text or art</strong>: it automates the rules, and you need your own copy of the rulebook for them. The default pictures and tokens (people, critters, spirits, vehicles and drones, IC and the rest) and the Scene builder's backdrops are the system's own art, drawn by the AI for it (vector art written as code in <code>src/art/</code>), under the same licence; they show no book art, logos or trademarks. The cover picture (the runner team in the neon alley, also the background of new worlds on the setup screen) was painted with another AI, OpenAI's ChatGPT image generation, by the project's owner from a brief Claude wrote; Claude added the title. It is under the same licence and shows no book art, logos or trademarks either. The game numbers it needs (rule constants, starter item templates, a totem table) were written from memory; the GM can check them against the book and change them as house rules.",
-          "b4": "The system is licensed under <strong>CC BY-SA 4.0</strong> (the <code>LICENSE.md</code> file in the system folder). It started from the project setup of SRA2, the community Shadowrun Anarchy 2 system by the Anarchy development team: only the build configuration and folder layout came from SRA2; all of the game code, sheets, art and text were written for this system. The fonts (Chakra Petch, JetBrains Mono, Inter) are under the SIL Open Font License."
+          "b4": "The system is licensed under <strong>CC BY-SA 4.0</strong> (the <code>LICENSE.md</code> file in the system folder). It started from the project setup of SRA2, the community Shadowrun Anarchy 2 system by the Anarchy development team: only the build configuration and folder layout came from SRA2; all of the game code, sheets, art and text were written for this system. The fonts (Chakra Petch, JetBrains Mono, Inter) are under the SIL Open Font License.",
+          "b5": "<strong>If you hold rights in Shadowrun</strong> and object to any part of this system, open an issue on the project's GitHub page or contact its owner there. The owner will reply within a week and take the named part (or the whole project) down while it is discussed."
         },
         "gmPanel": {
           "title": "The GM panel",
@@ -18325,7 +18326,7 @@
           "title": "New entries",
           "b1": "Something the catalogue doesn't have (or there is no catalogue at all)? Make a new entry from your own book: <strong>New entry…</strong> in the shop (the Add window), in the SR2e tools window, or the GM panel's Setup tab.",
           "b2": {
-            "i1": "Pick the <strong>Kind</strong>: weapon, armor, gear, cyberware, bioware, spell, adept power, focus, program or cyberdeck. The form shows the fields its stat line has, each with a hint.",
+            "i1": "Pick the <strong>Kind</strong>: weapon, armor, gear, cyberware, bioware, spell, adept power, focus, program, cyberdeck, vehicle or drone. The form shows the fields its stat line has, each with a hint.",
             "i2": "<strong>Paste the stat line</strong> and press <strong>Read it</strong>: the name, numbers and codes fill the fields (damage like 9M, Availability like 4/48 hrs, ammo like 15(c), drain like (F/2)+1S, cost, Street Index and the rest in the book's column order). Check them: what was read and what wasn't is listed, and words it doesn't know are never kept.",
             "i3": "The line under the form shows the entry as the shop will: what it is, its price and its Availability.",
             "i4": "The <strong>Description</strong> is for your own words, not the book's text."
@@ -18394,6 +18395,36 @@
             "i8": "<strong>Attack dialog and armor:</strong> target running (+2), target stationary (−1), attacker in melee (+2 per opponent), difficult ground and smart goggles (−1) are new rows. Heavy armor costs a Combat Pool die per point of Ballistic over your Quickness, instead of Quickness.",
             "i9": "<strong>Initiative and actions:</strong> ties go to Reaction, then natural Reaction. A wound changes your initiative at the next roll, not mid-turn. A delayed action lasts through the Combat Turn and into the next, but using pool dice while you wait loses it. Ambushers waiting on a delayed action roll the surprise test at TN 2."
           }
+        },
+        "physicalDice": {
+          "title": "Rolling physical dice",
+          "b1": "A table that rolls real dice can type them in. SR2e asks Foundry for every die it rolls, so Foundry's own <strong>manual dice entry</strong> works for every SR2e test: attributes, skills, attacks, defence, damage resistance, spells, drain and the rest.",
+          "b2": {
+            "i1": "<strong>Turn it on</strong> for yourself: <em>Game Settings</em>, <em>Configure Settings</em>, <em>Core</em>, then <em>Dice Configuration</em>; choose manual input for the <strong>d6</strong>. Each player chooses for their own browser.",
+            "i2": "<strong>When you roll</strong>, Foundry opens a window with one box per die. Type each die as it landed and confirm. The card then counts successes from those dice.",
+            "i3": "<strong>The Rule of Six</strong> comes as a second window: re-roll each six and type the new die; SR2e adds it to the six. A six again asks again.",
+            "i4": "<strong>Pool dice and Karma re-rolls</strong> ask the same way, each when it is rolled. Dice So Nice shows nothing for typed dice."
+          },
+          "b3": "The GM still sees every card and applies what needs a GM, as with digital dice. Typing a die is trusted like any roll in Foundry; a group that wants a check can roll where the GM can see."
+        },
+        "troubleshooting": {
+          "title": "Troubleshooting",
+          "b1": "Something not working? Look for it below. Most problems have a simple cause: a setting, who owns what, or a GM who isn't logged in.",
+          "b2": {
+            "i1": "<strong>Something is missing after an update</strong> (a new kind of actor or item, a button): quit Foundry completely and start it again. Some files are read only when Foundry starts; reloading the browser is not enough.",
+            "i2": "<strong>SR2e: back up your world first</strong>: the world's data is about to be updated, and that can't be undone. Click <em>Not now</em>, make a backup (setup screen: <em>Worlds</em>, then <em>Backups</em>), open the world again and click <em>Continue</em>.",
+            "i3": "<strong>This world looks like another system's</strong>: another Shadowrun 2e system used the same id, and SR2e never updates its worlds. Open the world with the system it was made with. If you are sure it is SR2e's and have a backup, the GM can run <code>game.settings.set('shadowrun2e_unified', 'ignoreForeignWorld', true)</code> in the console (<kbd>F12</kbd>) and reload.",
+            "i4": "<strong>SR2e: house rules not applied</strong>: a stored house rule names a rule that doesn't exist or has the wrong kind of value. The GM corrects the listed lines in <em>Edit house rules</em>.",
+            "i5": "<strong>Text too small, or glows and flashes bother you</strong>: Configure Settings, <em>Look: text size (%)</em> and <em>Look: reduced motion</em> (see <a href=\"#look\">Your look</a>). They change only SR2e's own windows and cards.",
+            "i6": "<strong>You can't click Defend or Resist</strong>: only the owner of the character named on the button, or the GM, can. After you have defended, the button stays greyed. See <a href=\"#chat-cards\">Chat cards</a>.",
+            "i7": "<strong>An Apply (GM) card just sits there</strong>: your test changes something you don't own, so it waits for the GM's click. <em>Apply players' GM-only changes by themselves</em> is off by default, and covers only a few harmless kinds even when on.",
+            "i8": "<strong>No GM is logged in to do this</strong>: some actions, the timers, self-resisting NPCs and camera regions run in the GM's browser. Keep a GM logged in during play.",
+            "i9": "<strong>A purchase or Karma spend became a request</strong>: the <a href=\"#approval\">approval queue</a> is on. The GM approves it in the GM panel's Requests tab.",
+            "i10": "<strong>A player can't import a stat block</strong>: players import only into an unfinished character of their own, and not while the approval queue is on. Ask the GM. Only the GM changes the catalogue; a player sends a <a href=\"#new-entry\">new entry</a> instead.",
+            "i11": "<strong>Token Action HUD shows nothing</strong>: Token Action HUD Core needs the socketlib module. For Item Piles and Health Estimate, keep <em>Support for Item Piles and Health Estimate</em> on and reload.",
+            "i12": "<strong>A world from before v0.93.1</strong> (system id <code>sr2e</code>) must be moved to the new id <code>shadowrun2e_unified</code>: see <code>docs/MOVING.md</code>. Macros keep working: <code>game.sr2e</code> and the <code>sr2e.*</code> hooks didn't change."
+          },
+          "b3": "The full page is <code>docs/TROUBLESHOOTING.md</code> on the project's GitHub. To report a bug, press <strong>Report a bug</strong> (in this guide, or the SR2e tools window, <kbd>Alt</kbd>+<kbd>T</kbd>), press <strong>Copy</strong> and paste the text into the <em>Bug report</em> form on the GitHub issue tracker, with the steps that make it happen. Nothing is sent by itself; read the text before posting."
         }
       }
     },

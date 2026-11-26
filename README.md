@@ -33,7 +33,21 @@ You need **Foundry VTT version 14** (older versions won't load it) and your own 
 
 **Installing by hand instead:** download `shadowrun2e_unified.zip` from the [Releases page](https://github.com/SpaceisbigSoft/foundry-sr2e/releases), make a folder named `shadowrun2e_unified` inside your Foundry `Data/systems` folder, and unzip the file into it, so that `Data/systems/shadowrun2e_unified/system.json` exists. (Foundry's setup screen shows where your Data folder is under **Configuration → User Data Path**.) Then restart Foundry.
 
-**Found a problem?** Please report it on the [issue tracker](https://github.com/SpaceisbigSoft/foundry-sr2e/issues). The **Report a bug** button in the in-game guide collects the details (versions, modules, settings) for you to paste in; nothing is sent automatically.
+**Something not working?** `docs/TROUBLESHOOTING.md` lists the common problems and their fixes (the in-game guide has a short version). **Found a problem?** Please report it on the [issue tracker](https://github.com/SpaceisbigSoft/foundry-sr2e/issues). The **Report a bug** button in the in-game guide collects the details (versions, modules, settings) for you to paste in; nothing is sent automatically.
+
+## Foundry versions
+
+| Foundry | SR2e | What to expect |
+|---|---|---|
+| **v14** | every release | Supported. Each release is tested live on v14 before it is published. |
+| v13 and older | none | Won't load. SR2e is built on v14's interface; use v14. |
+| **v15** | not yet | SR2e's `system.json` names **14** as its highest version, so Foundry v15 marks SR2e as not compatible and won't launch its worlds, rather than letting them half-work. When v15's test builds appear, SR2e is checked against them, and a release raises the limit. |
+
+**The promise:** the highest Foundry version is raised only after SR2e has been run on it, and a release that raises the lowest version says so at the top of its changelog entry. **Before you update Foundry itself** to a new major version, check here that SR2e supports it.
+
+**Staying on an older release:** every release stays on the [Releases page](https://github.com/SpaceisbigSoft/foundry-sr2e/releases). To install one, paste that release's own manifest address into **Install System** (`https://github.com/SpaceisbigSoft/foundry-sr2e/releases/download/vX.Y.Z/shadowrun2e_unified.json`, with the version you want), or install it by hand as above. Foundry won't then offer the newer version as an update unless you ask. Going back to an older release after a newer one has updated a world is not supported: restore the world's backup instead.
+
+**Is SR2e's version 1.0?** Not yet. Until 1.0, a new middle number (0.93 → 0.94) can change how things work; the last number (0.93.1 → 0.93.2) is fixes and additions only. `CHANGELOG.md` says which.
 
 ## Screenshots
 
@@ -45,20 +59,32 @@ The pictures show the starter demo (GM panel, Setup, Create the demo).
 
 ## Built with AI
 
-**This system was built with AI.** Its code, tests and documentation, including this README and the in-game player guide, were written by Anthropic's Claude, an AI model, working under the direction of the project's human owner, Spaceisbig ([GitHub](https://github.com/SpaceisbigSoft)). The owner chose what to build, made the design and rules decisions, and reviewed the results. Claude wrote the code, ran the automated tests, deployed builds to a test world and played through them in Foundry as a GM and a player. Independent AI reviews checked each version before release. The cover painting was made by the owner with another AI, OpenAI's ChatGPT image generation, from a brief Claude wrote; Claude added the title.
+**This system was built with AI.** Its code, tests and documentation, including this README and the in-game player guide, were written by Anthropic's Claude, an AI model, working under the direction of the project's human owner, Spaceisbig ([GitHub](https://github.com/SpaceisbigSoft)). Claude wrote the code, ran the automated tests, deployed builds to a test world and played through them in Foundry as a GM and a player. Independent AI reviews checked each version before release. The cover painting was made by the owner with another AI, OpenAI's ChatGPT image generation, from a brief Claude wrote; Claude added the title.
+
+**Who decided what.** The owner chose what to build and in what order, and made these decisions himself:
+- the licence (CC BY-SA 4.0), and that no rulebook text, art or book compendia ship;
+- that the default rules follow the official SR2 books, with every rules change switchable back as a house rule, and that rules from fan summaries or later editions go only into a separate, GM-chosen ruleset;
+- the security model: players are untrusted, and changes to things a player doesn't own wait for a GM's **Apply**;
+- the look: one theme per window, the outcome first on every card, right-click to lower a value;
+- the system id `shadowrun2e_unified`, the importers to build, and the take-down policy below;
+- to disclose the AI's part in full, as here.
+
+Claude made the smaller calls itself (wording, layout details, how a feature is built) and recorded them in the changelog. Claude also proposed most of the features, from its own reviews and from research into what Foundry players and GMs ask for; the owner accepted or rejected each.
 
 That has two consequences you should know about:
 
 - **The rules numbers came from the AI's memory of the books**, not from a human typing them out of a rulebook, so some were wrong. In v0.92.3 the AI checked the default rules against the SR2 books and corrected them; a human has not re-checked that work, so every number is listed with its source in `docs/VERIFY.md` for checking against your book.
 - **No human has play-tested it at a table yet.** Expect bugs, and please report them.
 
-## Status: v0.93.1 (pre-release; the First Rules Audit was v0.92.5)
+## Status: v0.93.2 (pre-release; the First Rules Audit was v0.92.5)
 
-The system is feature-complete for SR2 core play and much of the sourcebook material, and public for testing ahead of a 1.0 release. It is tested by 4,104 automated tests, by in-Foundry test batches (Quench), by live runs in Foundry v14 as a GM and a player, and by an upgrade test from worlds saved with v0.50 and v0.72, and v0.81 had a full code and security review. It has not yet been play-tested at a real table, so expect rough edges. In the *First Rules Audit* (v0.92.3–v0.92.5) every default rule was checked against the SR2 books and made to follow them; `docs/VERIFY.md` lists every rules number with its source (and what is still unchecked), and every rules change since v0.70.0 has a house-rule switch that puts the earlier behaviour back.
+The system is feature-complete for SR2 core play and much of the sourcebook material, and public for testing ahead of a 1.0 release. It is tested by more than 4,100 automated tests (run on every push to GitHub), by in-Foundry test batches (Quench), by live runs in Foundry v14 as a GM and a player, and by an upgrade test from worlds saved with v0.50 and v0.72, and v0.81 had a full code and security review. It has not yet been play-tested at a real table, so expect rough edges. In the *First Rules Audit* (v0.92.3–v0.92.5) every default rule was checked against the SR2 books and made to follow them; `docs/VERIFY.md` lists every rules number with its source (and what is still unchecked), and every rules change since v0.70.0 has a house-rule switch that puts the earlier behaviour back.
 
 What changed in each version: `CHANGELOG.md`.
 
 ## What it does
+
+**Area by area, what is automatic and what stays by hand:** `docs/AUTOMATION.md`. **Formats for pasting and importing** (catalogue rows, write-ups, stat lines, templates): `docs/DATA-FORMATS.md`. **For macros and modules:** `docs/API.md`.
 
 - **Rules from the books:** the default rules follow the SR2 books (Core Rulebook, Companion, Grimoire, Awakenings, Virtual Realities 2.0 for the Matrix, Rigger 2 for vehicles, Shadowtech, Cybertechnology, Fields of Fire, the Corporate Security Handbook and others), checked rule by rule in the *First Rules Audit*; `docs/VERIFY.md` gives each rule's book and page. Every rule can be played differently through the house rules, and after an update the GM is shown which characters' numbers changed and the house rule that puts the old way back.
 - **Tests and pools:** success tests with automatic target-number modifiers (wounds, light, smoke, range, cover, movement, background count and more, each one switchable in the roll dialog), Combat, Spell, Hacking, Control and Karma Pools, Karma re-rolls and Avoid disaster on roll cards, open, complementary and teamwork tests.
@@ -108,3 +134,5 @@ The rules engine (`src/module/rules`) is pure TypeScript with no Foundry depende
 Licensed under **CC BY-SA 4.0**; see `LICENSE.md` for the full notice. sr2e started from the project setup of [SRA2](https://github.com/VincentVk9373/sra2), the community Shadowrun Anarchy 2 system by the Anarchy development team (Half, Vincent VK, Los Brutos, Cefyl, Dirt, Romano, Carmody, Asimov). Only that setup (the build configuration and folder layout) came from SRA2; all of the game code, sheets, art and text were written for sr2e, and no SRA2 game content is included. The bundled fonts (Chakra Petch, JetBrains Mono, Inter) are under the SIL Open Font License 1.1. The default token art in `tokens/` and the scene backdrops in `backdrops/` are the system's own, drawn by the AI for it, under CC BY-SA 4.0 like the rest, and so is the cover picture (painted with ChatGPT image generation from Claude's brief, title by Claude).
 
 This is an unofficial fan project, not affiliated with or endorsed by The Topps Company, Catalyst Game Labs or Black Book Editions. Shadowrun and Matrix are registered trademarks and/or trademarks of The Topps Company, Inc. in the United States and/or other countries. The system contains no rulebook text or art; the game numbers it needs to run the mechanics (rule constants, starter item templates, a totem modifier table) are listed in `docs/VERIFY.md`.
+
+**If you hold rights in Shadowrun.** This project tries to stay well inside fan use: it ships no rulebook text, art, maps or compendia of book entries (only the game numbers the mechanics need, each with a book and page reference), uses no Shadowrun logo, and says plainly that it is unofficial and needs the rulebook. If The Topps Company, Catalyst Game Labs or another rights holder objects to any part of it, please open an issue or contact the owner through [GitHub](https://github.com/SpaceisbigSoft). The owner will reply within a week, take down the named part (or the whole project, if asked) while it is discussed, and not put it back without the rights holder's agreement. Nothing in this project is meant to replace buying the books.

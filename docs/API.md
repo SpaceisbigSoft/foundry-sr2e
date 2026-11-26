@@ -1,6 +1,18 @@
-# SR2e system API and hooks (v0.82.0)
+# SR2e system API and hooks (v0.93.2)
 
 For macros and other modules. **v0.93.1:** the system id is `shadowrun2e_unified` (it was `sr2e`): flags, settings, the socket (`system.shadowrun2e_unified`) and file paths follow it, but the names below stay as they were (`game.sr2e`, the `sr2e.*` hooks), so macros keep working. Everything here is available once the world is ready (`Hooks.once('sr2e.ready', api => …)`, or `game.sr2e.api` afterwards). The system is unofficial and ships no rulebook data.
+
+## Stability (v0.93.2)
+
+Everything named on this page is SR2e's **public scripting interface**: the calls on `game.sr2e` and `game.sr2e.api`, the hooks, and the flags documented here. From v0.93.2 it is kept stable like this:
+
+- **A fix release** (the last number, 0.93.1 → 0.93.2) never removes or renames anything here, and never changes what a call takes or returns, except to fix a bug.
+- **A feature release** (the middle number, 0.93 → 0.94) may change or remove something only after it has been **deprecated** for at least one feature release: it keeps working, says so once per session in the console (`sr2e | … is deprecated, use …`), and is marked *deprecated* here.
+- **Every change** to this page's interface (added, deprecated, changed, removed) is listed under **"API changes"** in that version's `CHANGELOG.md` entry, and in "API changes" at the end of this page.
+- **Not covered:** anything not on this page (the classes' other methods, `game.sr2e.api.rules`' inner layout, `CONFIG` entries, CSS classes, templates, the chat cards' HTML and their flags). Those can change in any release. `rules` is safe to read; its keys follow `src/module/rules/config.ts`.
+- **After 1.0** the same rules hold with the major number (1.x → 2.0) in place of the middle one.
+
+A test (`src/module/__tests__/v0932.test.ts`) checks that every call the system registers is listed here and every call listed here still exists, so nothing is added or dropped without this page and the changelog saying so.
 
 ## `game.sr2e`
 
@@ -82,3 +94,27 @@ The system registers itself with Token Action HUD Core 2.x (`tokenActionHudSyste
 | `applyDefaultArt(actor)` | v0.83.0: gives the actor its default art where its picture or token is Foundry's stand-in or older default art (a picture set by hand is kept); returns true when something changed. |
 | `defaultArtForAll()` | v0.83.0, GM: the same for every actor; returns how many changed. |
 | `windowRole()` | v0.85.0: `{lead, prompts, otherWindows}` for this window: whether it runs the automation (the active GM's lead window), whether it shows the automatic prompts (the window used most recently), and how many other windows of this user it hears. |
+
+## v0.87.0–v0.92.1 additions (`game.sr2e.api`; listed in v0.93.2)
+
+| Call | What it does |
+|---|---|
+| `printActor(actor)` | v0.87.0: open the print dialog for an actor's sheet. |
+| `printPage(actor, options)` | v0.87.0: the printable page's HTML (a string); `options.secrets` adds GM-only parts for a GM. |
+| `bugReport()`, `openBugReport()` | v0.87.0: the bug report text (versions, modules, settings), or the window that shows it. Nothing is sent anywhere. |
+| `createDemo()`, `removeDemo({confirm})` | v0.88.0, GM: make the starter demo (runners, a scene, a journal), or remove it. Both resolve to a short report. |
+| `openTools()`, `runTool(id)` | v0.89.8: the SR2e tools window, or run one of its tools by id (false when there is no such tool or you may not use it). |
+| `sortCatalogue()` | v0.90.2, GM: sort the "Catalogue (SR2e)" actor folder into subfolders; resolves to how many moved. |
+| `openShop(actor?)` | v0.91.1: the shop for an actor (else your character, or the GM's selected token). |
+| `newEntry({kind, actorUuid})` | v0.91.1: the new-entry form. |
+| `openCatalogue({type, key})` | v0.91.3: the Catalogue window, at a tab and an entry. |
+| `sceneBuilder({sceneId})` | v0.91.7, GM: the Scene builder (with `sceneId`, to change a scene it built). |
+| `buildScene(spec)`, `applyToScene(sceneId, spec)`, `removeBuiltScene(sceneId, {confirm})` | v0.91.7, GM: build a scene from a spec, change one, or remove one it built. |
+| `interpretations(id?)` | v0.92.0: the rules interpretations window, at an entry. |
+| `reference(actor)` | v0.92.1: the reference pane beside an actor's sheet. |
+
+## API changes
+
+The interface's history from v0.93.2, newest first. Each version's `CHANGELOG.md` entry repeats its line.
+
+- **v0.93.2:** the stability rules above. Nothing changed; the calls added in v0.87.0–v0.92.1 are listed here for the first time. Since v0.93.1 (the system id change) the flags and settings live under `shadowrun2e_unified`; the names `game.sr2e` and the `sr2e.*` hooks stayed.
