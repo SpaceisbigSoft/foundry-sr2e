@@ -123,6 +123,9 @@ import {
 import { ATTRIBUTE_KEYS, adeptPowersOf, activeDeckOf, fociOf, type AttributeKey } from '../models/index.ts';
 import { sysNow } from '../helpers/clock.ts';
 import { dsnColoursOn, dsnColorsetFor, dsnFirstWave } from '../applications/dice.ts';
+// v0.94.1: re-rolls update their card in place; typed physical-dice results (report items 24, 30).
+import * as D941 from '../rules/dice941.ts';
+import { mayTypeFor, takeTypedPending } from '../applications/typed941.ts';
 import { allActors } from '../helpers/actors.ts';
 import { initiativeFormula } from '../helpers/initiative.ts';
 import type { BarrierAttackKind } from '../rules/config78.ts';
@@ -262,6 +265,9 @@ function realUser(user: any): boolean {
  */
 let actingAuthor: any = null;
 
+/** v0.94.1: a typed test's card is being posted: every card this client posts meanwhile is marked `typedDice` (chat.ts never auto-applies it). */
+let typedPosting = false;
+
 /**
  * v0.81.1: whether this resolution may write `doc` directly: the acting author owns it, or (no acting author) this
  * client's user does. Write-or-card routing only; pure UI checks keep `isOwner`.
@@ -343,6 +349,8 @@ export function registerActingAuthorHooks(): void {
       if (name === 'ChatMessage') {
         const a = actingAuthorFor(data, userId);
         if (a) { try { doc.updateSource?.({ author: a }); } catch { /* older core */ } }
+        // v0.94.1: a card that follows from a typed result is marked, so the GM's client applies nothing from it by itself.
+        if (typedPosting && userId === (game as any)?.user?.id) { try { doc.updateSource?.({ [`flags.${SYSTEM_ID}.typedDice`]: true }); } catch { /* older core */ } }
         return true;
       }
       return o?.sr2eRelay || actingMayWrite(doc, 'create', name, userId) ? undefined : actingRefused(doc?.parent ?? doc, name);
@@ -393,9 +401,13 @@ function dieSource(d: { karma?: boolean; pool?: boolean; poolKind?: string }): {
  * A test card's body. `label` is plain text (names, typed text): it is escaped here, once (v0.81.0), so callers
  * pass it raw and never pre-escape it.
  */
-function describeResult(label: string, r: SuccessTestResult): string {
+function describeResult(label: string, r: SuccessTestResult, replacedIn: unknown = null): string {
   const mods = escText(r.modifiers.map((m) => `${m.label} ${m.value >= 0 ? '+' : ''}${m.value}`).join(', '));
-  const dice = r.dice
+  // v0.94.1 (report item 24): the dice a Karma re-roll replaced on this card, greyed and struck, before the dice now.
+  const replaced = D941.cleanDice(replacedIn)
+    .map((d) => { const src = dieSource(d); return `<span class="sr2e-die sr2e-die-replaced${escText(src.cls)}" title="${escText(tx('SR2E.Card.Dice941.replacedDie'))}">${escText(d.faces.join('+'))}${d.faces.length > 1 ? `=${escText(d.total)}` : ''}<span class="sr2e-sr-only"> ${escText(tx('SR2E.Card.Dice941.replaced'))}</span></span>`; })
+    .join(' ');
+  const dice = (replaced ? `${replaced} <span class="sr2e-dice-then" aria-hidden="true">→</span> ` : '') + r.dice
     .map((d) => { const src = dieSource(d); return `<span class="sr2e-die ${d.success ? 'hit' : 'miss'}${escText(src.cls)}" title="${escText(src.title)}">${escText(d.faces.join('+'))}${d.faces.length > 1 ? `=${d.total}` : ''}</span>`; })
     .join(' ');
   const outcome = r.botch
@@ -1136,6 +1148,10 @@ export interface TestSnapshot {
   need80?: number;
   botch: boolean;
   rerolls: number;
+  /** v0.94.1 (report item 24): the dice Karma re-rolls replaced on this same card (shown greyed before the dice now). */
+  replacedDice?: DieResult[];
+  /** v0.94.1 (report item 30): the successes were typed from physical dice (no faces); nothing applies by itself. */
+  typed?: boolean;
   disasterAvoided?: boolean;
   /** Successes bought with Karma Pool (v0.35.0). */
   bought?: number;
@@ -2797,7 +2813,10 @@ export class SR2Actor extends Actor {
     // never spent.
     // v0.93.3 (report item 38): Karma and pool dice keep their colours (the card's dice, and Dice So Nice).
     const groups = { base: Math.max(0, dice + aligned), karma: karmaDice, pool: poolDice, threat, poolKind: pool };
-    const result = await successTest({
+    // v0.94.1 (report item 30): a result typed from physical dice in the roll window stands for the roll (no faces).
+    const typed = this.#takeTypedDice(context.kind);
+    if (typed) context = { ...context, typed: true };
+    const result = typed ? D941.typedResult({ successes: typed.successes, allOnes: typed.allOnes, pool: dice + aligned + karmaDice + poolDice + threat, baseTargetNumber: opts.targetNumber ?? 4, modifiers: this.#testModifiers(opts) }) : await successTest({
       dice: dice + aligned + karmaDice,
       poolDice: poolDice + threat,
       targetNumber: opts.targetNumber ?? 4,
@@ -2816,6 +2835,18 @@ export class SR2Actor extends Actor {
     if (opts.requestOf) context = { ...context, requestOf: String(opts.requestOf).slice(0, 64), ...(opts.requestPrivate && !context.privateTo?.length ? { privateTo: [...((game as any).users ?? [])].filter((u: any) => u.isGM).map((u: any) => String(u.id)) } : {}) };
     await this.#post(this.#snapshot(label, result, context), result, rolls);
     return result;
+  }
+
+  /**
+   * v0.94.1 (report item 30): the typed result waiting for this actor's test, taken once (null: roll as usual). A
+   * resistance test (Drain, soak) never takes it; one this user may not type (the setting, or not their actor) is
+   * dropped with a warning, and the dice are rolled.
+   */
+  #takeTypedDice(kind: string): D941.TypedDice | null {
+    const p = takeTypedPending(String(this.uuid ?? ''), kind);
+    if (!p) return null;
+    if (!mayTypeFor(this)) { ui.notifications?.warn?.(tx('SR2E.Notify.Dice941.typedNotAllowed')); return null; }
+    return p;
   }
 
   /** v0.92.3 (RULES.CORE_V923.threat 'book', Core p. 187): this NPC's Threat Rating dice for a test (0 otherwise). */
@@ -3552,22 +3583,27 @@ export class SR2Actor extends Actor {
     return out;
   }
 
-  async #post(snapIn: TestSnapshot, result: SuccessTestResult, rolls: any[], note = '', like: any = null): Promise<any> {
+  async #post(snapIn: TestSnapshot, result: SuccessTestResult, rolls: any[], note = '', like: any = null, inPlace: any = null): Promise<any> {
+    // v0.94.1 (report item 30): every card a typed test leads to is marked (chat.ts applies nothing from it by itself).
+    if (snapIn?.typed && !typedPosting) { typedPosting = true; try { return await this.#post(snapIn, result, rolls, note, like, inPlace); } finally { typedPosting = false; } }
     const fu: FollowUps = {};
     const { html, flags, snap } = await this.#resolve(SR2Actor.#cleanSnapshot(snapIn), fu);
     const data = {
       speaker: ChatMessage.getSpeaker({ actor: this }),
       // v0.92.0: the rules interpretations the card rests on, as a line of † links.
-      content: outcomeBanner(snap, html) + describeResult(`${snap.label}${note}`, result) + html + interpLine(interpsForSnapshot(snap, RULES)) + this.#karmaButtons(snap),
+      // v0.94.1: the dice a re-roll replaced on this card (greyed), and the typed-result mark (report items 24, 30).
+      content: outcomeBanner(snap, html) + describeResult(`${snap.label}${note}`, result, snap.replacedDice) + (snap.typed ? `<p class="sr2e-typed-mark" data-sr2e-typed="1"><i class="fa-solid fa-hand" aria-hidden="true"></i> ${escText(tCount(snap.successes, 'SR2E.Card.Dice941.typedMark'))}</p>` : '') + html + interpLine(interpsForSnapshot(snap, RULES)) + this.#karmaButtons(snap),
       rolls,
-      flags: { [SYSTEM_ID]: { ...flags, test: snap } },
+      // v0.94.1: the card lists its resolution's flag keys, so a re-roll updating it in place knows which became stale.
+      flags: { [SYSTEM_ID]: { ...flags, test: snap, resolvedKeys: Object.keys(flags) } },
       ...(snap.privateTo?.length ? { whisper: snap.privateTo } : {}),
     };
     // v0.50.0: a GM's retroactive TN change keeps the original card's speaker and who can see it.
     // The replacement keeps its author (so the player can still mark its buttons used) and asks nobody to defend again.
-    const posted = await ChatMessage.create(like
+    // v0.94.1 (report item 24): a Karma re-roll, Avoid Disaster or a bought success updates its own card instead.
+    const posted = inPlace ? await SR2Actor.#updateInPlace(inPlace, data, rolls) : await ChatMessage.create(like
       ? { ...data, speaker: like.speaker ?? data.speaker, ...SR2Actor.#sameAuthor(like), ...(like.whisper?.length ? { whisper: [...like.whisper], blind: Boolean(like.blind) } : {}),
-        flags: { [SYSTEM_ID]: { ...flags, test: snap, retargetOf: like.id ?? '' } } }
+        flags: { [SYSTEM_ID]: { ...flags, test: snap, resolvedKeys: Object.keys(flags), retargetOf: like.id ?? '' } } }
       // v0.81.1 (SEC1-5): a GM re-running a player's card (Karma, Buy, Avoid) posts it as that player.
       : withRollMode(actingAuthor && !realGm(actingAuthor) ? { ...data, author: String(actingAuthor.id) } : data));
     SR2Actor.#postsBy.set(String(this.uuid ?? ''), (SR2Actor.#postsBy.get(String(this.uuid ?? '')) ?? 0) + 1);
@@ -3676,13 +3712,50 @@ export class SR2Actor extends Actor {
     return true;
   }
 
+  /**
+   * v0.94.1 (report item 24): the card a re-roll updates in place, or null for a new card (as before): the setting is
+   * on, the card is this test's and was posted by this version, no GM replaced it, and this resolution may write it
+   * (its author, or a GM acting as that author: `canWriteNow`). A player's Karma on a GM's card still posts a new one.
+   */
+  #inPlaceCard(message: any, snap: TestSnapshot): any {
+    let setting = true;
+    try { setting = (game as any).settings.get(SYSTEM_ID, 'rerollInPlace') !== false; } catch { setting = true; }
+    const own = message?.getFlag?.(SYSTEM_ID, 'test') as TestSnapshot | undefined;
+    return D941.rerollInPlace({
+      setting, hasMessage: Boolean(message && typeof message.update === 'function'), sameTest: Boolean(own?.testId && own.testId === snap?.testId),
+      newFormat: Array.isArray(message?.getFlag?.(SYSTEM_ID, 'resolvedKeys')), superseded: Boolean(message?.getFlag?.(SYSTEM_ID, 'supersededBy')), canWrite: canWriteNow(message),
+    }) ? message : null;
+  }
+
+  /**
+   * v0.94.1 (report item 24): write a re-resolved test onto its own card: the new content and flags (each replaced
+   * whole; the old resolution's keys the new one lacks removed; use marks such as "defended" kept), the new rolls
+   * after the old ones, and Dice So Nice shows the new dice.
+   */
+  static async #updateInPlace(message: any, data: any, rolls: any[]): Promise<any> {
+    const f: Record<string, unknown> = data.flags?.[SYSTEM_ID] ?? {};
+    const stale = D941.staleFlagKeys(message.getFlag?.(SYSTEM_ID, 'resolvedKeys'), Object.keys(f));
+    const upd: Record<string, unknown> = { content: data.content, ...clearFlagUpdate(message, ...stale) };
+    for (const [k, v] of Object.entries(f)) upd[`flags.${SYSTEM_ID}.==${k}`] = v;
+    if (rolls.length) upd['rolls'] = [...(Array.isArray(message._source?.rolls) ? message._source.rolls : []), ...rolls.map((r: any) => (typeof r?.toJSON === 'function' ? r.toJSON() : r))];
+    // `sr2eReroll`: every client asks the card's targets to Defend or Resist again, as a new card would (chat.ts).
+    await message.update(upd, { sr2eReroll: true });
+    const d3: any = (game as any).dice3d;
+    if (typeof d3?.showForRoll === 'function') {
+      for (const r of rolls) { try { await d3.showForRoll(r, (game as any).user, true, message.whisper?.length ? [...message.whisper] : null, Boolean(message.blind)); } catch { /* Dice So Nice: shown or not, the card is right */ } }
+    }
+    return message;
+  }
+
   /** Karma Pool: re-roll every failed die of the test on a chat card, and re-resolve what it led to. */
-  async karmaReroll(snapIn: TestSnapshot): Promise<void> {
+  async karmaReroll(snapIn: TestSnapshot, message: any = null): Promise<void> {
     // v0.81.0 (SEC2-8): the snapshot comes from a card's flags: a sane dice list and re-roll count, or nothing.
     if (!Array.isArray(snapIn?.dice) || snapIn.dice.length > MAX_TEST_DICE) {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.thatTestCanTBeRe'));
       return;
     }
+    // v0.94.1 (report item 30): a typed result has no dice here to re-roll (re-roll them at the table and roll again).
+    if (snapIn.typed) { ui.notifications?.warn?.(tx('SR2E.Notify.Dice941.typedNoReroll')); return; }
     const snap: TestSnapshot = { ...snapIn, rerolls: safeInt(snapIn.rerolls, 0, 1000, 0), bought: safeInt(snapIn.bought, 0, MAX_TEST_DICE, 0) };
     if (!CO923.karmaAfterOops(snap.disasterAvoided)) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.noKarmaAfterOops')); return; }
     const failures = snap.dice.filter((d) => !d.success).length;
@@ -3697,7 +3770,10 @@ export class SR2Actor extends Actor {
     // v0.71.0 review (F7): successes bought earlier stay bought (and a later GM TN change counts them once).
     const result = { ...rr, successes: rr.successes + Math.max(0, snap.bought ?? 0) };
     const next = withResult({ ...snap, rerolls: snap.rerolls + 1 }, result);
-    await this.#post(next, result, rolls, tx('SR2E.Card.Actor.karmaReRollCost', { nextRerolls: next.rerolls, cost }));
+    // v0.94.1 (report item 24): on its own card, the replaced dice stay shown (greyed).
+    const inPlace = this.#inPlaceCard(message, snap);
+    if (inPlace) next.replacedDice = D941.withReplaced(snap.replacedDice, asResult(snap).dice);
+    await this.#post(next, result, rolls, tx('SR2E.Card.Actor.karmaReRollCost', { nextRerolls: next.rerolls, cost }), null, inPlace);
   }
 
   /** v0.50.0: a card replaced since: by a GM's TN change, or by a later card of the same test (a Karma re-roll, a bought success). */
@@ -3779,6 +3855,8 @@ export class SR2Actor extends Actor {
       // (runAsAuthor): what they don't own gets the Apply (GM) cards their own re-roll would post, never a direct
       // write with the GM's rights. A snapshot naming a roller the author doesn't own is refused outright.
       if (!Array.isArray(snap.dice) || snap.dice.length > MAX_TEST_DICE) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.thatCardSDiceAreMissing')); return null; }
+      // v0.94.1 (report item 30): a typed result has no dice to score again: the GM asks for the test again instead.
+      if (snap.typed) { ui.notifications?.warn?.(tx('SR2E.Notify.Dice941.typedNoRetarget')); return null; }
       const author = SR2Actor.#cardAuthorOf(message);
       const actor: any = await fromUuid(snap.actorUuid);
       if (!actor || !isActorDoc(actor)) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.theActorWhoRolledThisNo')); return null; }
@@ -3830,15 +3908,16 @@ export class SR2Actor extends Actor {
   }
 
   /** Karma Pool: turn a disaster (all ones) into an ordinary failure. */
-  async avoidDisaster(snap: TestSnapshot): Promise<void> {
+  async avoidDisaster(snap: TestSnapshot, message: any = null): Promise<void> {
     if (!snap.botch) return;
     if (!(await this.#spendKarma(avoidDisasterCost()))) return;
     const next: TestSnapshot = { ...snap, botch: false, disasterAvoided: true };
-    await this.#post(next, asResult(next), [], tx('SR2E.Card.Actor.disasterAvoidedKarma'));
+    // v0.94.1 (report item 24): on the same card when it may be.
+    await this.#post(next, asResult(next), [], tx('SR2E.Card.Actor.disasterAvoidedKarma'), null, this.#inPlaceCard(message, snap));
   }
 
   /** Karma Pool: buy one more success on a test (v0.35.0; permanent by default), and re-resolve it. */
-  async buySuccess(snap: TestSnapshot): Promise<boolean> {
+  async buySuccess(snap: TestSnapshot, message: any = null): Promise<boolean> {
     if (!CO923.karmaAfterOops(snap.disasterAvoided)) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.noKarmaAfterOops')); return false; }
     const k = this.sys.karma ?? {};
     const left = Math.max(0, (k.pool ?? 0) - (k.poolSpent ?? 0));
@@ -3848,7 +3927,8 @@ export class SR2Actor extends Actor {
     const r = asResult(snap);
     const result = { ...r, successes: r.successes + 1 };
     const next = withResult({ ...snap, bought: (snap.bought ?? 0) + 1 }, result);
-    await this.#post(next, result, [], tx('SR2E.Card.Actor.boughtSuccessKarma', { nextBought: next.bought, cost: c.cost, part: RULES.KARMA.buyPermanent ? tx('SR2E.Card.Actor.permanent') : '' }));
+    // v0.94.1 (report item 24): on the same card when it may be (a typed result may buy one too).
+    await this.#post(next, result, [], tx('SR2E.Card.Actor.boughtSuccessKarma', { nextBought: next.bought, cost: c.cost, part: RULES.KARMA.buyPermanent ? tx('SR2E.Card.Actor.permanent') : '' }), null, this.#inPlaceCard(message, snap));
     return true;
   }
 

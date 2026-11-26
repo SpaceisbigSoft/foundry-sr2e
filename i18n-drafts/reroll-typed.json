@@ -1,0 +1,21 @@
+{
+  "SR2E.Card.Dice941.replacedDie": "Replaced by a Karma Pool re-roll",
+  "SR2E.Card.Dice941.replaced": "(replaced)",
+  "SR2E.Card.Dice941.typedMark.one": "Typed: {count} success (physical dice)",
+  "SR2E.Card.Dice941.typedMark.other": "Typed: {count} successes (physical dice)",
+  "SR2E.Notify.Dice941.typedNotAllowed": "You can't type a dice result for this test here: the dice were rolled.",
+  "SR2E.Notify.Dice941.typedNoReroll": "That result was typed from physical dice: there are no dice here to re-roll. Re-roll them at the table and roll again.",
+  "SR2E.Notify.Dice941.typedNoRetarget": "That result was typed from physical dice: there are no dice to score against a new target number. Ask for the test again.",
+  "SR2E.Dialog.Dice941.typedSummary": "I rolled the dice myself",
+  "SR2E.Dialog.Dice941.typedOn": "Use my own dice result instead of rolling",
+  "SR2E.Dialog.Dice941.typedSuccesses": "Successes",
+  "SR2E.Dialog.Dice941.typedOnes": "Every die came up 1 (Rule of One)",
+  "SR2E.Dialog.Dice941.typedHint": "Count the successes yourself, Combat Pool and Karma dice included. The card is marked as typed, and the GM applies what follows from it.",
+  "SR2E.Settings.rerollInPlace.Name": "Re-rolls update the same card",
+  "SR2E.Settings.rerollInPlace.Hint": "A Karma Pool re-roll, Avoid Disaster or a bought success updates the test's own chat card, keeping the replaced dice greyed. Off: each posts a new card that replaces the old one (as before).",
+  "SR2E.Settings.typedDice.Name": "Typed physical-dice results",
+  "SR2E.Settings.typedDice.Hint": "Who may type the successes of real dice rolled at the table in a roll window instead of letting Foundry roll. The card is marked as typed, and nothing from it applies by itself: the GM applies.",
+  "SR2E.Settings.typedDice.Choices.off": "Nobody",
+  "SR2E.Settings.typedDice.Choices.gm": "The GM only",
+  "SR2E.Settings.typedDice.Choices.all": "Everyone, for their own tests"
+}

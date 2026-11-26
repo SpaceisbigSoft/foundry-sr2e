@@ -10203,3 +10203,174 @@ describe("v0.79.0 review fixes", () => {
     assert.equal(a.getFlag("shadowrun2e_unified", "healStage") ?? null, null);
   });
 });
+
+// v0.94.1: a Karma re-roll updates its own card (report item 24); typed physical-dice results (report item 30).
+describe("v0.94.1 re-roll in place and typed dice", () => {
+  const NS = "shadowrun2e_unified";
+  const runner = () => {
+    const a = makeActor(A, { karma: { pool: 6, poolSpent: 0, good: 0 } });
+    a.name = "Runner";
+    uuidRegistry.set(a.uuid, a);
+    return a;
+  };
+  /** The posted card as a ChatMessage: its update applies `==` (replace), `-=` (remove) and the rest as Foundry would. */
+  const asCard = (d: any, o: any = {}) => {
+    const m: any = { id: "card1", content: d.content, flags: structuredClone(d.flags), _source: { rolls: ["r0"] }, isOwner: true, updates: [] as any[], ...o,
+      getFlag(s: string, k: string) { return this.flags[s]?.[k]; },
+      async update(u: any) {
+        this.updates.push(u);
+        for (const [k, v] of Object.entries(u)) {
+          const fm = /^flags\.([^.]+)\.(==|-=)?(.+)$/.exec(k);
+          if (fm) { const f = (this.flags[fm[1]!] ??= {}); if (fm[2] === "-=") delete f[fm[3]!]; else f[fm[3]!] = v; } else this[k] = v;
+        }
+        return this;
+      } };
+    return m;
+  };
+  let prevSettings: any;
+  before(() => { prevSettings = g.game.settings; });
+  afterEach(() => { g.game.settings = prevSettings; });
+
+  test("a Karma re-roll updates the same card: the replaced dice stay, greyed, before the new ones", async () => {
+    chat.length = 0; faces.length = 0;
+    const a = runner();
+    faces.push(1, 2, 5, 5, 3);                                   // Body 5 vs 4: 2 successes
+    await a.rollAttribute("body", { targetNumber: 4 });
+    const card = asCard(chat.at(-1));
+    assert.deepEqual(card.flags[NS].resolvedKeys, []);
+    card.flags[NS].defended = [0];                                // a use mark set later
+    faces.push(4, 6, 2, 1);                                      // the 3 failures: 4, 6+2, 1
+    await a.karmaReroll(card.flags[NS].test, card);
+    assert.equal(chat.length, 1, "no new card");
+    assert.equal(card.flags[NS].test.successes, 4);
+    assert.equal(card.flags[NS].test.rerolls, 1);
+    assert.deepEqual(card.flags[NS].test.replacedDice.map((d: any) => d.faces[0]), [1, 2, 3]);
+    assert.deepEqual(card.flags[NS].defended, [0], "a used button stays used");
+    assert.equal((card.content.match(/class="sr2e-die sr2e-die-replaced"/g) ?? []).length, 3);
+    assert.match(card.content, /sr2e-die-replaced[^>]*title="[^"]+">1<span class="sr2e-sr-only">/);
+    assert.ok(card.content.indexOf("sr2e-die-replaced") < card.content.indexOf("sr2e-die hit"));
+    assert.match(card.content, /Karma re-roll #1/);
+    assert.equal(card.updates[0].rolls.length, 3, "the new rolls after the old one");
+    assert.equal(card.updates[0].rolls[0], "r0");
+    assert.equal(a.system.karma.poolSpent, 1);
+    // A second re-roll adds to the replaced dice.
+    faces.push(2);
+    await a.karmaReroll(card.flags[NS].test, card);
+    assert.equal(chat.length, 1);
+    assert.equal(card.flags[NS].test.replacedDice.length, 4);
+    assert.equal(a.system.karma.poolSpent, 3);
+  });
+
+  test("the old resolution's flag keys the new one lacks are removed; the kept ones replaced whole", async () => {
+    chat.length = 0; faces.length = 0;
+    const a = runner();
+    faces.push(1, 2, 5, 5, 3);
+    await a.rollAttribute("body", { targetNumber: 4 });
+    const card = asCard(chat.at(-1));
+    card.flags[NS].resolvedKeys = ["attack", "test"];             // as if the first roll had hit
+    card.flags[NS].attack = { attackSuccesses: 2 };
+    faces.push(1, 1, 1);
+    await a.karmaReroll(card.flags[NS].test, card);
+    assert.equal(card.flags[NS].attack, undefined);
+    assert.ok(Object.hasOwn(card.updates[0], `flags.${NS}.-=attack`));
+    assert.ok(Object.hasOwn(card.updates[0], `flags.${NS}.==test`));
+  });
+
+  test("a new card as before: with the setting off, on a card from an older version, or one this client can't write", async () => {
+    for (const how of ["setting", "old", "notMine"] as const) {
+      chat.length = 0; faces.length = 0;
+      const a = runner();
+      faces.push(1, 2, 5, 5, 3);
+      await a.rollAttribute("body", { targetNumber: 4 });
+      const card = asCard(chat.at(-1), how === "notMine" ? { isOwner: false } : {});
+      if (how === "old") delete card.flags[NS].resolvedKeys;
+      g.game.settings = { get: (_s: string, k: string) => (k === "rerollInPlace" ? how !== "setting" : undefined) };
+      faces.push(4, 4, 4);
+      await a.karmaReroll(card.flags[NS].test, card);
+      assert.equal(chat.length, 2, how);
+      assert.equal(card.updates.length, 0, how);
+      assert.equal(chat.at(-1).flags[NS].test.replacedDice, undefined, how);
+    }
+  });
+
+  test("Buy a success and Avoid Disaster update the same card too", async () => {
+    chat.length = 0; faces.length = 0;
+    const a = runner();
+    faces.push(1, 2, 5, 5, 3);
+    await a.rollAttribute("body", { targetNumber: 4 });
+    const card = asCard(chat.at(-1));
+    assert.equal(await a.buySuccess(card.flags[NS].test, card), true);
+    assert.equal(chat.length, 1);
+    assert.equal(card.flags[NS].test.successes, 3);
+    assert.equal(card.flags[NS].test.bought, 1);
+    faces.push(1, 1, 1, 1, 1);
+    await a.rollAttribute("body", { targetNumber: 4 });
+    const oops = asCard(chat.at(-1), { id: "card2" });
+    await a.avoidDisaster(oops.flags[NS].test, oops);
+    assert.equal(chat.length, 2);
+    assert.equal(oops.flags[NS].test.botch, false);
+    assert.equal(oops.flags[NS].test.disasterAvoided, true);
+  });
+
+  test("a typed result: no dice rolled, marked on the card, clamped to the pool; no Karma re-roll", async () => {
+    const { withTypedDice } = await import("../applications/typed941.ts");
+    chat.length = 0; faces.length = 0; warnings.length = 0;
+    const a = runner();
+    const r: any = await withTypedDice(a, { successes: 9, allOnes: false }, () => a.rollAttribute("body", { targetNumber: 4 }));
+    assert.equal(r.successes, 5, "at most the 5 dice of the pool");
+    assert.deepEqual(r.dice, []);
+    const card = chat.at(-1);
+    assert.equal(card.flags[NS].test.typed, true);
+    assert.match(card.content, /<p class="sr2e-typed-mark" data-sr2e-typed="1">/);
+    assert.doesNotMatch(card.content, /data-sr2e-action="karmaReroll"/);
+    assert.match(card.content, /data-sr2e-action="buySuccess"/, "a typed result may still buy a success");
+    await a.karmaReroll(card.flags[NS].test, asCard(card));
+    assert.equal(a.system.karma.poolSpent, 0);
+    assert.match(warnings.join("|"), /typedNoReroll|physical dice/);
+    // Every die a 1: a disaster.
+    const b: any = await withTypedDice(a, { successes: 2, allOnes: true }, () => a.rollAttribute("body", { targetNumber: 4 }));
+    assert.equal(b.botch, true);
+    assert.equal(b.successes, 0);
+    // The next test rolls as usual.
+    faces.push(5, 5, 5, 1, 1);
+    assert.equal((await a.rollAttribute("body", { targetNumber: 4 })).successes, 3);
+  });
+
+  test("a typed result the setting doesn't allow is dropped: the dice are rolled", async () => {
+    const { withTypedDice } = await import("../applications/typed941.ts");
+    chat.length = 0; faces.length = 0; warnings.length = 0;
+    const a = runner();
+    g.game.settings = { get: (_s: string, k: string) => (k === "typedDice" ? "off" : undefined) };
+    faces.push(5, 1, 1, 1, 1);
+    const r: any = await withTypedDice(a, { successes: 4, allOnes: false }, () => a.rollAttribute("body", { targetNumber: 4 }));
+    assert.equal(r.successes, 1);
+    assert.equal(chat.at(-1).flags[NS].test.typed, undefined);
+    assert.match(warnings.join("|"), /typedNotAllowed|dice were rolled/);
+  });
+
+  test("a GM can't change a typed result's TN (no dice to score again)", async () => {
+    chat.length = 0; warnings.length = 0;
+    const prevUser = g.game.user;
+    g.game.user = { id: "gm", isGM: true };
+    try {
+      const msg = { id: "m9", getFlag: (_s: string, k: string) => (k === "test" ? { actorUuid: "Actor.x", typed: true, dice: [], kind: "plain" } : undefined) };
+      assert.equal(await SR2Actor.retarget(msg, { baseTargetNumber: 5, modifiers: [] }), null);
+      assert.match(warnings.join("|"), /typedNoRetarget|physical dice/);
+    } finally { g.game.user = prevUser; }
+  });
+
+  test("chat: a typed card is never auto-resisted", async () => {
+    const { autoResistPlanned, typedCard } = await import("../applications/chat.ts");
+    g.game.settings = { get: (s: string, k: string) => (s === NS && k === "autoResistNpc") };
+    const prevUsers = g.game.users;
+    g.game.users = [{ id: "gm", isGM: true, active: true }];
+    try {
+      const npc = { testUserPermission: () => false };
+      const msg = (flags: any) => ({ content: '<button data-sr2e-action="resistSpell"></button>', getFlag: (_s: string, k: string) => flags[k] });
+      assert.equal(autoResistPlanned(msg({}), "resistSpell", 0, npc), true);
+      assert.equal(autoResistPlanned(msg({ test: { typed: true } }), "resistSpell", 0, npc), false);
+      assert.equal(autoResistPlanned(msg({ typedDice: true }), "resistSpell", 0, npc), false);
+      assert.equal(typedCard(msg({})), false);
+    } finally { g.game.users = prevUsers; }
+  });
+});
