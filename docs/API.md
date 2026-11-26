@@ -9,7 +9,7 @@ Everything named on this page is SR2e's **public scripting interface**: the call
 - **A fix release** (the last number, 0.93.1 → 0.93.2) never removes or renames anything here, and never changes what a call takes or returns, except to fix a bug.
 - **A feature release** (the middle number, 0.93 → 0.94) may change or remove something only after it has been **deprecated** for at least one feature release: it keeps working, says so once per session in the console (`sr2e | … is deprecated, use …`), and is marked *deprecated* here.
 - **Every change** to this page's interface (added, deprecated, changed, removed) is listed under **"API changes"** in that version's `CHANGELOG.md` entry, and in "API changes" at the end of this page.
-- **Not covered:** anything not on this page (the classes' other methods, `game.sr2e.api.rules`' inner layout, `CONFIG` entries, CSS classes, templates, the chat cards' HTML and their flags). Those can change in any release. `rules` is safe to read; its keys follow `src/module/rules/config.ts`.
+- **Not covered:** anything not on this page (the classes' other methods, `game.sr2e.api.rules`' inner layout, `CONFIG` entries, CSS classes, templates, the chat cards' HTML and their flags, and the internal hook `shadowrun2e_unified.undoChanged`, which refreshes the GM panel). Those can change in any release. `rules` is safe to read; its keys follow `src/module/rules/config.ts`.
 - **After 1.0** the same rules hold with the major number (1.x → 2.0) in place of the middle one.
 
 A test (`src/module/__tests__/v0932.test.ts`) checks that every call the system registers is listed here and every call listed here still exists, so nothing is added or dropped without this page and the changelog saying so.
@@ -100,7 +100,7 @@ The system registers itself with Token Action HUD Core 2.x (`tokenActionHudSyste
 | Call | What it does |
 |---|---|
 | `printActor(actor)` | v0.87.0: open the print dialog for an actor's sheet. |
-| `printPage(actor, options)` | v0.87.0: the printable page's HTML (a string); `options.secrets` adds GM-only parts for a GM. |
+| `printPage(actor, options)` | v0.87.0: the printable page's HTML (a string); `options.secrets` includes the notes' secret sections (the caller decides; no ownership check). |
 | `bugReport()`, `openBugReport()` | v0.87.0: the bug report text (versions, modules, settings), or the window that shows it. Nothing is sent anywhere. |
 | `createDemo()`, `removeDemo({confirm})` | v0.88.0, GM: make the starter demo (runners, a scene, a journal), or remove it. Both resolve to a short report. |
 | `openTools()`, `runTool(id)` | v0.89.8: the SR2e tools window, or run one of its tools by id (false when there is no such tool or you may not use it). |

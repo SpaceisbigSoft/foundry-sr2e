@@ -620,13 +620,17 @@ function batchCardFlow(ctx: Ctx): void {
         assert.ok(atk && atk.successes > 0, 'the attack hits');
         await wait(400);
         face = 2;
+        let seen = openDialogs();
         assert.ok(game.sr2e.api.defendNewest(foe), 'Defend found the attack');
-        await confirmDialogs();
+        await confirmDialogs(seen);
         await wait(800);
-        const resist = [...document.querySelectorAll('[data-message-id] button[data-sr2e-action="resist"]')].pop() as HTMLElement | undefined;
+        // Review: only an enabled Resist button on one of this run's own cards.
+        const resist = [...made.messages].map((id) => document.querySelector(`[data-message-id="${id}"] button[data-sr2e-action="resist"]:not([disabled])`))
+          .filter(Boolean).pop() as HTMLElement | undefined;
         assert.ok(resist, 'a Resist button for the defender');
+        seen = openDialogs();
         resist!.click();
-        await confirmDialogs();
+        await confirmDialogs(seen);
         for (let i = 0; i < 20 && !hit; i++) await wait(200);
         assert.ok(hit, 'damage was applied');
         const sum = (m: any) => Number(m?.physical ?? 0) + Number(m?.stun ?? 0);
@@ -636,18 +640,35 @@ function batchCardFlow(ctx: Ctx): void {
   });
 }
 
-/** Click OK on any SR2e dialog that opened (a pool or weapon prompt), a few times over. */
-async function confirmDialogs(): Promise<void> {
+const DIALOGS = 'dialog, .application.dialog';
+/** The dialogs open now (so only ones that open later are confirmed). */
+function openDialogs(): Set<Element> { return new Set(document.querySelectorAll(DIALOGS)); }
+/** Click OK on the dialogs that opened after `before` (a pool or weapon prompt), a few times over; never on one open earlier. */
+async function confirmDialogs(before: Set<Element>): Promise<void> {
   for (let i = 0; i < 4; i++) {
     await wait(300);
-    const ok = [...document.querySelectorAll('dialog button[data-action="ok"], .application.dialog button[data-action="ok"]')].pop() as HTMLElement | undefined;
+    const fresh = [...document.querySelectorAll(DIALOGS)].filter((d) => !before.has(d));
+    const ok = fresh.map((d) => d.querySelector('button[data-action="ok"]')).filter(Boolean).pop() as HTMLElement | undefined;
     if (!ok) return;
+    before.add(ok.closest(DIALOGS)!);
     ok.click();
   }
 }
 
+/** Review: a batch cut short by a reload leaves d6 on the test method; put it back to Foundry's default at the next start. */
+async function resetStaleDiceMethod(): Promise<void> {
+  try {
+    const cfg: any = game.settings.get('core', 'diceConfiguration');
+    if (cfg?.d6 !== FIXED) return;
+    const next = { ...cfg }; delete next.d6;
+    await game.settings.set('core', 'diceConfiguration', next);
+    console.log('sr2e | Quench: the d6 dice method was put back to the default');
+  } catch { /* no dice configuration */ }
+}
+
 /** Register the batches (call at init; they appear once Quench is ready). */
 export function registerQuenchBatches(): void {
+  Hooks.once('ready', () => { void resetStaleDiceMethod(); });
   Hooks.once('quenchReady', (quench: any) => {
     const reg = (key: string, name: string, fn: (ctx: Ctx) => void, preSelected = true) => quench.registerBatch(`${SYSTEM.id}.${key}`, fn, { displayName: `SR2e: ${name}`, preSelected });
     reg('api', 'system and API', batchApi);

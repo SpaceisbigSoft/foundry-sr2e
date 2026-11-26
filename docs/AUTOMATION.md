@@ -41,7 +41,7 @@ Item Piles and Health Estimate support can be turned off with the world setting 
 | Gang, followers, group perception, racism at creation or in play | **By hand** | Listed as not built in `docs/VERIFY.md`. |
 | Printing a sheet | **Automatic** | Print, open as a page, or save as an HTML file. |
 
-Known gaps: 8 entries under "Not built" in `docs/VERIFY.md`, *Core mechanics and characters* (among them the team Karma Pool and racism).
+Known gaps: 4 entries under "Not built" in `docs/VERIFY.md`, *Core mechanics and characters* (one lists several; among them the team Karma Pool and racism).
 
 ## Tests and dice
 
@@ -62,7 +62,7 @@ Known gaps: 8 entries under "Not built" in `docs/VERIFY.md`, *Core mechanics and
 | GM re-scores a card with another TN | **Partly** | Right-click the card; cards that followed from it are not changed. |
 | Dice and TN calculator | **Automatic** | Chances of each number of successes and of a disaster. |
 
-Known gaps: see `docs/REVIEW-v0.92.3.md`, Known limits (2 entries: pool refresh timing, Karma Pool in attack and spell dialogs).
+Known gaps: see `docs/REVIEW-v0.92.3.md`, Known limits (2 of its entries: pool refresh timing, Karma Pool in attack and spell dialogs).
 
 ## Combat
 
@@ -197,7 +197,7 @@ Known gaps: 11 entries under "Not built" in `docs/VERIFY.md`, *Damage, health an
 | Safehouses: build cost, upkeep | **Partly** | The GM sets one up; the player pays from the sheet. |
 | Missed lifestyle payments | **By hand** | Not built. |
 
-Known gaps: in the 8 *Core mechanics and characters* entries.
+Known gaps: in the 4 *Core mechanics and characters* entries.
 
 ## Security, scenes and the GM's tools
 

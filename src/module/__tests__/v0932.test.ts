@@ -68,8 +68,14 @@ describe('v0.93.2: the stable scripting interface', () => {
     const files = (readdirSync(join(ROOT, 'src', 'module'), { recursive: true }) as string[])
       .map((f) => String(f).replace(/\\/g, '/')).filter((f) => f.endsWith('.ts') && !f.includes('__tests__')).map((f) => join('src', 'module', f));
     const hooks = new Set<string>();
-    for (const f of files) for (const m of read(f).matchAll(/Hooks\.call(?:All)?\(\s*["'](sr2e\.[A-Za-z]+)["']/g)) hooks.add(m[1]!);
+    for (const f of files) {
+      const src = read(f);
+      for (const m of src.matchAll(/Hooks\.call(?:All)?\(\s*["'](sr2e\.[A-Za-z]+)["']/g)) hooks.add(m[1]!);
+      // Review: hooks named after the system id (`${SYSTEM.id}.x`) count too; API.md names them as internal or public.
+      for (const m of src.matchAll(/Hooks\.call(?:All)?\(\s*`\$\{SYSTEM\.id\}\.([A-Za-z]+)`/g)) hooks.add(`${NEW}.${m[1]}`);
+    }
     assert.ok(hooks.has('sr2e.ready'));
+    assert.ok(hooks.has(`${NEW}.undoChanged`), 'the template-literal hook is found');
     assert.deepEqual([...hooks].filter((h) => !doc.includes(`\`${h}\``)), []);
   });
 
