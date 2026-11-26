@@ -1,0 +1,27 @@
+{
+  "edition": "SR2",
+  "street_name": "Example Adept",
+  "name": "",
+  "race": "Human",
+  "magicalChoice": "Human Physical Adept",
+  "magical": true,
+  "raceBonuses": { "Body": 0, "Quickness": 0, "Strength": 0, "Charisma": 0, "Willpower": 0, "Intelligence": 0 },
+  "cyberAttributeBonuses": {},
+  "magicalAttributeBonuses": { "Strength": 1, "Reaction": 0, "Initative": 2 },
+  "attributes": { "Body": 4, "Quickness": 6, "Strength": 4, "Charisma": 2, "Willpower": 5, "Intelligence": 4, "Essence": 6, "Initative": 1, "Magic": 6, "Reaction": 3 },
+  "skills": [
+    { "name": "Unarmed Combat", "rating": 6, "type": "Active", "selectedConcentrations": [] },
+    { "name": "Athletics", "rating": 4, "type": "Active", "selectedConcentrations": [{ "name": "Running" }, { "name": "Climbing" }] }
+  ],
+  "powers": [
+    { "Name": "Improved Reflexes", "Cost": 4, "Level": 2, "HasLevels": true },
+    { "Name": "Improved Ability", "Cost": 1, "Level": "2", "HasLevels": true, "Notes": "Unarmed Combat" },
+    { "Name": "Increased Strength", "Cost": 0.5, "Level": 1, "HasLevels": true },
+    { "Name": "Astral Perception", "Cost": 2, "HasLevels": false }
+  ],
+  "foci": [{ "Name": "Weapon focus", "Rating": 1 }],
+  "contacts": [],
+  "cash": 300,
+  "karma": "0",
+  "karmaPool": "1"
+}

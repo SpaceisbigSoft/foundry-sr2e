@@ -1,0 +1,150 @@
+{
+ "name": "Sample Adept",
+ "type": "character",
+ "system": {
+  "race": "elf",
+  "metavariant": {
+   "name": "Sample Variant",
+   "source": "",
+   "book": "",
+   "base": "elf",
+   "attributeMods": {
+    "body": 0,
+    "quickness": "1",
+    "strength": 0,
+    "charisma": 1,
+    "intelligence": 1,
+    "willpower": 0
+   },
+   "abilities": []
+  },
+  "body": {
+   "base": "4",
+   "mod": "0",
+   "value": "3",
+   "racial": 0
+  },
+  "quickness": {
+   "base": "5"
+  },
+  "strength": {
+   "base": 4
+  },
+  "charisma": {
+   "base": 3
+  },
+  "intelligence": {
+   "base": "4"
+  },
+  "willpower": {
+   "base": 4
+  },
+  "magic": {
+   "value": "6",
+   "tradition": "none",
+   "type": "physical_adept",
+   "skill": "none",
+   "totem": "",
+   "initiateGrade": "0"
+  },
+  "karma": {
+   "current": "2",
+   "total": "9"
+  },
+  "nuyen": 250.5,
+  "lifestyle": "streets",
+  "biography": "",
+  "notes": ""
+ },
+ "items": [
+  {
+   "name": "Armed Combat",
+   "type": "skill",
+   "system": {
+    "category": "active",
+    "linkedAttribute": "strength",
+    "rating": "6",
+    "specialization": {
+     "name": "",
+     "rating": 0
+    },
+    "concentration": {
+     "name": "",
+     "rating": 0
+    },
+    "freeLanguage": "",
+    "notes": ""
+   }
+  },
+  {
+   "name": "Improved Reflexes",
+   "type": "adept_power",
+   "system": {
+    "pointCost": 1.5,
+    "level": 2,
+    "maxLevel": 3,
+    "attributeMods": {
+     "body": 0,
+     "quickness": 0,
+     "strength": 0,
+     "reaction": 0,
+     "initiativeDice": 0
+    }
+   }
+  },
+  {
+   "name": "Improved Ability",
+   "type": "adept_power",
+   "system": {
+    "pointCost": 0.5,
+    "level": "2",
+    "maxLevel": 6,
+    "improvedSkill": "Armed Combat",
+    "attributeMods": {}
+   }
+  },
+  {
+   "name": "Improved Physical Attribute (Strength)",
+   "type": "adept_power",
+   "system": {
+    "pointCost": 0.5,
+    "level": 2,
+    "maxLevel": 6,
+    "attributeMods": {
+     "strength": 1
+    }
+   }
+  },
+  {
+   "name": "Killing Hands",
+   "type": "adept_power",
+   "system": {
+    "pointCost": 0.5,
+    "level": 1,
+    "maxLevel": 1,
+    "attributeMods": {}
+   }
+  },
+  {
+   "name": "Sample Charm",
+   "type": "focus",
+   "system": {
+    "focusType": "power",
+    "force": "2",
+    "bonded": true
+   }
+  }
+ ],
+ "_stats": {
+  "coreVersion": "13.351",
+  "systemId": "sr2e",
+  "systemVersion": "0.170.0",
+  "exportSource": {
+   "worldId": "sample-world",
+   "uuid": "Actor.ZyXwVu0987654321",
+   "coreVersion": "13.351",
+   "systemId": "sr2e",
+   "systemVersion": "0.170.0"
+  }
+ }
+}

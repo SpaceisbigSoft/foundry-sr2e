@@ -2,6 +2,13 @@
 
 This is the history of the unofficial Shadowrun 2nd Edition system for Foundry VTT (system id `shadowrun2e_unified`; `sr2e` until v0.93.0), newest version first. Every rules change since v0.70.0 has a house-rule switch that puts the old behaviour back. The system was built with AI (Anthropic's Claude) under human direction, and it has not yet been play-tested at a real table.
 
+## v0.94.0 — Imports (26 Nov 2026)
+- **Bring your character from Nullsheen:** the character import window (a character's Bio tab, or the GM's *New character from a stat block*) has a **Choose a file…** button. A Nullsheen generator file brings in the name, metatype, attributes (natural and augmented), skills with concentrations and specializations, cyberware and bioware with grades, spells, adept powers, weapons, armor, gear, foci, contacts, nuyen, Karma, lifestyle and notes. SR3 files are read too, with a warning that their values may not match SR2.
+- **Bring your character from the futurekill SR2 system:** a character exported there with Foundry's *Export Data* is read the same way, its item types mapped to SR2e's (metavariants become their base metatype; programs, vehicle mods and other things SR2e's import can't carry are listed in a warning).
+- **The preview shows what will come in** before you import, with every guess and everything skipped listed. Nothing is uploaded: the file is read in your browser. SR2e ships nothing from either tool; only your own files are read.
+- **Importing the same file again updates the same character:** items with the same name are updated, not doubled, and the GM is asked whether to update the character imported before or make a new one.
+- API changes: `importCharacter()` also takes a Nullsheen or futurekill file's text; nothing was changed or removed.
+
 ## v0.93.5 — Interface polish (26 Nov 2026)
 - **The next step stands out on chat cards:** the button you should press next is highlighted for you (your character's Defend or Resist; for the GM, an Apply (GM) button or the NPCs' rows), and each target's row reads "✓ Raptor defended" once it is done. The attack card's banner now says where things stand: "Hit (2): awaiting defense", then "1 of 2 defended", then "every target defended".
 - **Cards say the result once:** under the banner, the big success count gives way to one line such as "4 successes · 5 dice vs TN 3", in the normal text colour, so red and green no longer clash on one card.

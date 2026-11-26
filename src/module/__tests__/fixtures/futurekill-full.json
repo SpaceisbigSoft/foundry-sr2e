@@ -1,0 +1,552 @@
+{
+ "name": "Sample Runner",
+ "type": "character",
+ "img": "icons/svg/mystery-man.svg",
+ "system": {
+  "realName": "Sample Legal Name",
+  "biography": "<p>Invented for the tests, born in a sample city.</p><p>Contacts: too many, they say &amp; laugh.</p>",
+  "notes": "<p>Owes a favour.<br>Keeps a sample notebook.</p>",
+  "race": "ork",
+  "metavariant": {
+   "name": "",
+   "source": "",
+   "book": "",
+   "base": "",
+   "attributeMods": {
+    "body": 0,
+    "quickness": 0,
+    "strength": 0,
+    "charisma": 0,
+    "intelligence": 0,
+    "willpower": 0
+   },
+   "abilities": []
+  },
+  "body": {
+   "base": 4,
+   "mod": 0,
+   "value": 3,
+   "racial": 0
+  },
+  "quickness": {
+   "base": 4,
+   "mod": 0,
+   "value": 3,
+   "racial": 0
+  },
+  "strength": {
+   "base": 4,
+   "mod": 0,
+   "value": 3,
+   "racial": 0
+  },
+  "charisma": {
+   "base": 3,
+   "mod": 0,
+   "value": 3,
+   "racial": 0
+  },
+  "intelligence": {
+   "base": 4,
+   "mod": 0,
+   "value": 3,
+   "racial": 0
+  },
+  "willpower": {
+   "base": 3,
+   "mod": 0,
+   "value": 3,
+   "racial": 0
+  },
+  "essence": {
+   "value": 6,
+   "max": 6,
+   "signed": null,
+   "manualSigned": null
+  },
+  "magic": {
+   "value": 0,
+   "max": 0,
+   "tradition": "none",
+   "type": "none",
+   "skill": "none",
+   "totem": "",
+   "initiateGrade": 0,
+   "metamagic": [],
+   "centeringSkill": ""
+  },
+  "reaction": {
+   "base": 0,
+   "mod": 0,
+   "value": 3
+  },
+  "conditionMonitor": {
+   "physical": {
+    "value": 0,
+    "max": 10,
+    "overflow": 0
+   },
+   "stun": {
+    "value": 2,
+    "max": 10,
+    "overflow": 0
+   },
+   "overflow": 0
+  },
+  "dicePools": {
+   "combat": {
+    "value": 0,
+    "max": 0,
+    "bonus": 0
+   }
+  },
+  "initiative": {
+   "base": 3,
+   "dice": 1,
+   "mod": 0,
+   "value": 3,
+   "passes": 1
+  },
+  "karma": {
+   "current": 5,
+   "total": 23,
+   "burned": 0,
+   "spent": 0,
+   "drawn": 0,
+   "poolAdjust": 0
+  },
+  "nuyen": "1500",
+  "lifestyle": "low"
+ },
+ "items": [
+  {
+   "name": "Firearms",
+   "type": "skill",
+   "system": {
+    "category": "active",
+    "linkedAttribute": "quickness",
+    "rating": 5,
+    "specialization": {
+     "name": "Pistols",
+     "rating": 7
+    },
+    "concentration": {
+     "name": "",
+     "rating": 0
+    },
+    "freeLanguage": "",
+    "notes": ""
+   }
+  },
+  {
+   "name": "Unarmed Combat",
+   "type": "skill",
+   "system": {
+    "category": "active",
+    "linkedAttribute": "strength",
+    "rating": 3,
+    "specialization": {
+     "name": "",
+     "rating": 0
+    },
+    "concentration": {
+     "name": "",
+     "rating": 0
+    },
+    "freeLanguage": "",
+    "notes": ""
+   }
+  },
+  {
+   "name": "Etiquette",
+   "type": "skill",
+   "system": {
+    "category": "active",
+    "linkedAttribute": "charisma",
+    "rating": 2,
+    "specialization": {
+     "name": "Street",
+     "rating": 4
+    },
+    "concentration": {
+     "name": "Gangs",
+     "rating": 3
+    },
+    "freeLanguage": "",
+    "notes": ""
+   }
+  },
+  {
+   "name": "Street Gangs, Seattle",
+   "type": "skill",
+   "system": {
+    "category": "knowledge",
+    "linkedAttribute": "intelligence",
+    "rating": 3,
+    "specialization": {
+     "name": "",
+     "rating": 0
+    },
+    "concentration": {
+     "name": "",
+     "rating": 0
+    },
+    "freeLanguage": "",
+    "notes": ""
+   }
+  },
+  {
+   "name": "English",
+   "type": "skill",
+   "system": {
+    "category": "language",
+    "linkedAttribute": "intelligence",
+    "rating": 4,
+    "specialization": {
+     "name": "",
+     "rating": 0
+    },
+    "concentration": {
+     "name": "",
+     "rating": 0
+    },
+    "freeLanguage": "native",
+    "notes": ""
+   }
+  },
+  {
+   "name": "Car",
+   "type": "skill",
+   "system": {
+    "category": "build_repair",
+    "linkedAttribute": "intelligence",
+    "rating": 2,
+    "specialization": {
+     "name": "",
+     "rating": 0
+    },
+    "concentration": {
+     "name": "",
+     "rating": 0
+    },
+    "freeLanguage": "",
+    "notes": ""
+   }
+  },
+  {
+   "name": "Sample Heavy Pistol",
+   "type": "weapon",
+   "system": {
+    "weaponType": "firearm",
+    "skill": "firearms",
+    "damageCode": "9M",
+    "damageType": "physical",
+    "concealability": 5,
+    "reach": 0,
+    "firingModes": {
+     "ss": false,
+     "sa": true,
+     "bf": false,
+     "fa": false
+    },
+    "ammo": {
+     "current": 12,
+     "max": 12,
+     "type": "regular"
+    },
+    "smartgunCompatible": true,
+    "quantity": 1,
+    "notes": ""
+   }
+  },
+  {
+   "name": "Sample Blade",
+   "type": "weapon",
+   "system": {
+    "weaponType": "melee",
+    "skill": "edged weapons",
+    "damageCode": "(Str+3)M",
+    "damageType": "physical",
+    "concealability": 4,
+    "reach": 1,
+    "firingModes": {
+     "ss": false,
+     "sa": false,
+     "bf": false,
+     "fa": false
+    },
+    "ammo": {
+     "current": 0,
+     "max": 0
+    },
+    "quantity": 1
+   }
+  },
+  {
+   "name": "Sample Grenade, Smoke",
+   "type": "weapon",
+   "system": {
+    "weaponType": "grenade",
+    "damageCode": "",
+    "quantity": "3"
+   }
+  },
+  {
+   "name": "Armor Vest",
+   "type": "armor",
+   "system": {
+    "ballistic": 2,
+    "impact": 1,
+    "equipped": true
+   }
+  },
+  {
+   "name": "Medkit",
+   "type": "gear",
+   "system": {
+    "category": "general",
+    "rating": 3,
+    "quantity": 1
+   }
+  },
+  {
+   "name": "Rope; 20m",
+   "type": "gear",
+   "system": {
+    "category": "general",
+    "rating": 0,
+    "quantity": 2
+   }
+  },
+  {
+   "name": "Regular rounds",
+   "type": "ammo",
+   "system": {
+    "ammoType": "regular",
+    "quantity": 50
+   }
+  },
+  {
+   "name": "Smartlink",
+   "type": "cyberware",
+   "system": {
+    "grade": "standard",
+    "essenceCost": 0.5,
+    "rating": 1,
+    "installed": true,
+    "attributeMods": {
+     "body": 0,
+     "quickness": 0,
+     "strength": 0,
+     "charisma": 0,
+     "intelligence": 0,
+     "willpower": 0,
+     "reaction": 0,
+     "initiativeDice": 0
+    }
+   }
+  },
+  {
+   "name": "Wired Reflexes",
+   "type": "cyberware",
+   "system": {
+    "grade": "alpha",
+    "essenceCost": 2,
+    "rating": 1,
+    "installed": true,
+    "ratingStats": [
+     {
+      "rating": 1,
+      "essenceCost": 2
+     },
+     {
+      "rating": 2,
+      "essenceCost": 3
+     }
+    ],
+    "attributeMods": {
+     "body": 0,
+     "quickness": 0,
+     "strength": 0,
+     "charisma": 0,
+     "intelligence": 0,
+     "willpower": 0,
+     "reaction": 2,
+     "initiativeDice": 1
+    }
+   }
+  },
+  {
+   "name": "Muscle Replacement",
+   "type": "cyberware",
+   "system": {
+    "grade": "standard",
+    "essenceCost": 2,
+    "rating": 2,
+    "installed": true,
+    "ratingStats": [
+     {
+      "rating": 1,
+      "essenceCost": 1
+     },
+     {
+      "rating": 2,
+      "essenceCost": 2
+     }
+    ],
+    "attributeMods": {
+     "body": 0,
+     "quickness": 2,
+     "strength": 2,
+     "charisma": 0,
+     "intelligence": 0,
+     "willpower": 0,
+     "reaction": 0,
+     "initiativeDice": 0
+    }
+   }
+  },
+  {
+   "name": "Cybereyes",
+   "type": "cyberware",
+   "system": {
+    "grade": "standard",
+    "essenceCost": 0.2,
+    "rating": 1,
+    "installed": false,
+    "attributeMods": {
+     "body": 0,
+     "quickness": 0,
+     "strength": 0,
+     "charisma": 0,
+     "intelligence": 0,
+     "willpower": 0,
+     "reaction": 0,
+     "initiativeDice": 0
+    }
+   }
+  },
+  {
+   "name": "Sample Cartilage",
+   "type": "bioware",
+   "system": {
+    "grade": "cultured",
+    "bodyCost": 0.6,
+    "rating": 1,
+    "installed": true,
+    "attributeMods": {
+     "body": 0,
+     "quickness": 0,
+     "strength": 0,
+     "charisma": 0,
+     "intelligence": 0,
+     "willpower": 0,
+     "reaction": 0,
+     "initiativeDice": 0
+    }
+   }
+  },
+  {
+   "name": "Sample Fixer",
+   "type": "contact",
+   "system": {
+    "contactType": "buddy",
+    "archetype": "Fixer",
+    "loyalty": 3
+   }
+  },
+  {
+   "name": "Doe, Jane",
+   "type": "contact",
+   "system": {
+    "contactType": "contact",
+    "archetype": "Talismonger",
+    "loyalty": 1
+   }
+  },
+  {
+   "name": "Sample Rival",
+   "type": "contact",
+   "system": {
+    "contactType": "enemy",
+    "archetype": "Mercenary",
+    "loyalty": 1
+   }
+  },
+  {
+   "name": "Sample Grit",
+   "type": "quality",
+   "system": {
+    "kind": "edge",
+    "category": "attribute",
+    "pointValue": 1,
+    "attribute": "willpower",
+    "attributeBonus": 1
+   }
+  },
+  {
+   "name": "Sample Allergy",
+   "type": "quality",
+   "system": {
+    "kind": "flaw",
+    "category": "physical",
+    "pointValue": -2,
+    "attribute": ""
+   }
+  },
+  {
+   "name": "Sample Flat",
+   "type": "lifestyle",
+   "system": {
+    "level": "middle",
+    "monthlyCost": 5000,
+    "monthsPaid": 2
+   }
+  },
+  {
+   "name": "Sample Attack",
+   "type": "program",
+   "system": {
+    "category": "combat",
+    "rating": 4
+   }
+  },
+  {
+   "name": "Sample Shield",
+   "type": "program",
+   "system": {
+    "category": "defense",
+    "rating": 3
+   }
+  },
+  {
+   "name": "Sample Tires",
+   "type": "vehicle_mod",
+   "system": {
+    "modType": "general",
+    "rating": 1
+   }
+  },
+  {
+   "name": "Ork",
+   "type": "race",
+   "system": {
+    "raceKey": "ork"
+   }
+  }
+ ],
+ "effects": [],
+ "flags": {},
+ "_stats": {
+  "coreVersion": "13.351",
+  "systemId": "sr2e",
+  "systemVersion": "0.170.0",
+  "exportSource": {
+   "worldId": "sample-world",
+   "uuid": "Actor.AbCdEf1234567890",
+   "coreVersion": "13.351",
+   "systemId": "sr2e",
+   "systemVersion": "0.170.0"
+  }
+ }
+}

@@ -1,0 +1,69 @@
+{
+  "edition": "SR2",
+  "cgmethod": "priorities",
+  "step": "chargen",
+  "priorities": { "Race": "D", "Magic": "E", "Attributes": "B", "Skills": "C", "Resources": "A" },
+  "maxAttributePoints": 27,
+  "name": "Pat Example",
+  "street_name": "Sample Runner",
+  "age": "27",
+  "race": "Ork",
+  "magicalChoice": "None",
+  "magical": false,
+  "raceBonuses": { "Body": 3, "Quickness": 0, "Strength": 2, "Charisma": -1, "Willpower": 0, "Intelligence": -1, "Notes": "" },
+  "cyberAttributeBonuses": { "Body": 0, "Quickness": 1, "Strength": "1", "Charisma": 0, "Willpower": 0, "Intelligence": 0, "Reaction": 2, "Initative": 1 },
+  "magicalAttributeBonuses": { "Body": 0, "Quickness": 0, "Strength": 0, "Charisma": 0, "Willpower": 0, "Intelligence": 0, "Reaction": 0, "Initative": 0, "Impact": 0, "Ballastic": 0 },
+  "attributes": { "Body": 3, "Quickness": "5", "Strength": "4", "Charisma": 2, "Willpower": 3, "Intelligence": 3, "Essence": 6, "Initative": 1, "Magic": 0, "Reaction": 4 },
+  "skills": [
+    { "name": "Firearms", "rating": 5, "type": "Active", "selectedConcentrations": [{ "name": "Pistols" }] },
+    { "name": "Armed Combat", "rating": "4", "type": "Active", "selectedConcentrations": [{ "name": "Edged Weapons", "selectedSpecializations": ["Katana"] }] },
+    { "name": "Stealth", "rating": "3", "type": "Active", "selectedConcentrations": [] },
+    { "name": "etiquette: Street", "rating": 2, "type": "Active", "selectedConcentrations": [] },
+    { "name": "Street Gangs, Local", "rating": 3, "type": "Knowledge", "selectedConcentrations": [] },
+    { "name": "English", "rating": 3, "type": "Language", "native": true },
+    { "name": "Language", "rating": 1, "type": "Language", "selectedConcentrations": ["Spanish"] },
+    { "name": "Motorcycle B/R", "rating": 1, "type": "Active", "selectedConcentrations": [] },
+    { "rating": 2 },
+    "not a skill"
+  ],
+  "cyberware": [
+    { "Name": "Wired Reflexes", "Level": 1, "EssCost": 2, "Grade": "Standard", "Category": "Bodyware", "Cost": "55000" },
+    { "Name": "Muscle Replacement", "Level": "1", "EssCost": "1", "Grade": "Standard", "Category": "Bodyware", "Cost": "20000" },
+    { "Name": "Smartlink", "EssCost": ".5", "Grade": "", "Category": "Headware", "Notes": "Linked to the heavy pistol" },
+    { "Name": "Datajack", "EssCost": 0.2, "Grade": "Standard", "Category": "Headware" }
+  ],
+  "bioware": [
+    { "Name": "Trauma Damper", "BioIndex": "0.4", "Grade": "Standard", "Category": "Basic" }
+  ],
+  "weapons": [
+    { "Name": "Example Heavy Pistol", "Type": "Firearms", "Damage": "9M", "Mode": "SA", "Ammo": "10(c)", "Concealability": "5", "Cost": "500", "Amount": 1 },
+    { "Name": "Sample SMG, folding stock", "Type": "Firearms", "Damage": "6M", "Mode": "SA/BF", "Ammo": "32 (c)", "Recoil": "1", "Amount": "1" },
+    { "Name": "Example Katana", "Type": "Edged weapon", "Damage": "(STR+3)M", "Reach": "1", "Concealability": "3" },
+    { "Name": "Mystery Device", "Type": "Firearms", "Damage": "Special" }
+  ],
+  "gear": [
+    { "Name": "Armor Jacket", "Concealability": "5", "Ballistic": "5", "Impact": "3", "Type": "Clothing and Armor", "Amount": 1 },
+    { "Name": "Ordinary Clothing", "Concealability": "-", "Ballistic": "-", "Impact": "-", "Type": "Clothing and Armor", "Amount": 1 },
+    { "Name": "Medkit", "Rating": "3", "Type": "Biotech", "Amount": 1 },
+    { "Name": "Rope, 50m (synthetic)", "Type": "Survival", "Amount": "2" },
+    { "Name": "Combat Knife", "Damage": "(STR+2)L", "Type": "Edged weapon", "Amount": 1 },
+    { "Name": "Low Lifestyle", "Type": "Lifestyle", "Amount": 2 }
+  ],
+  "contacts": [
+    { "Name": "Sample Fixer", "Type": "free", "Archtype": "Fixer", "Level": 1, "GeneralInfo": "Finds work" },
+    { "Name": "Doe, Jane", "Type": "free", "Archtype": "Street Doc", "Level": "2", "GeneralInfo": "Patches people up; no questions (usually)" }
+  ],
+  "vehicles": [{ "name": "Example Bike" }],
+  "drones": [],
+  "decks": [],
+  "spells": [],
+  "powers": [],
+  "chargenCash": 5000,
+  "cashSpent": "3800",
+  "cash": "250",
+  "karma": 5,
+  "karmaSpent": 2,
+  "karmaPool": 1,
+  "description": "Tall, scarred.\nWears a long coat.",
+  "notes": "Invented for the tests. Skills: none of this is a label | Karma: 99"
+}

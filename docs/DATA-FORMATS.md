@@ -626,6 +626,15 @@ Source: `src/module/rules/charimport.ts` (`parseCharacterSheet`, `characterImpor
 
 The window previews the summary and warnings 200 ms after you stop typing.
 
+**Files from other tools (v0.94.0):** the window's **Choose a file…** loads a file into the box (it is read in your browser, not uploaded), or paste its text. Besides a write-up it reads:
+
+- a **Nullsheen** generator file (`.json`, SR2 or SR3; an SR3 file is read too, with a warning that its values may not match SR2);
+- a character **exported from the futurekill SR2 system** (Foundry's *Export Data* on the actor).
+
+Either one is first turned into a write-up (`src/module/rules/nullsheen.ts`, `src/module/rules/fkimport.ts`, dispatched by `src/module/rules/imports094.ts`), so everything below applies, and the preview shows what will be read. The conversion is forgiving: missing or odd values are skipped and listed as warnings, never stopping the import. What the write-up can't carry is named in a warning: vehicles, drones, decks and programs, among others. Attributes come in as natural and augmented ratings (the import takes off what the imported cyberware, bioware and adept powers add, so nothing counts twice); Essence, Reaction, initiative and pools are worked out by SR2e from the imported items, so they may differ slightly from the other tool's. Other JSON (including SR2e's own exports: use Foundry's *Import Data* for those) is refused with a reason. Only your own files: SR2e ships nothing from either tool.
+
+**Importing the same file again** updates the same character: from its Bio tab as before (items with the same type and name are updated), and the GM's *New character from a stat block* recognises a file whose character was imported before and asks whether to update that character or make a new one. The character remembers its source in the flag `importedFrom` (`{ source, key }`).
+
 **Who may:** the actor's owner. A player can't import into a character whose creation is finished (*…'s creation is finished: ask the GM to import into it.*) or while the approval queue is on (*The approval queue is on: ask the GM to import it.*). The GM always can.
 
 ### Example

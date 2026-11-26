@@ -1,0 +1,138 @@
+{
+ "name": "Sample Mage",
+ "type": "character",
+ "system": {
+  "race": "human",
+  "body": {
+   "base": 3,
+   "mod": 0,
+   "value": 3,
+   "racial": 0
+  },
+  "quickness": {
+   "base": 3,
+   "mod": 0,
+   "value": 3,
+   "racial": 0
+  },
+  "strength": {
+   "base": 2,
+   "mod": 0,
+   "value": 3,
+   "racial": 0
+  },
+  "charisma": {
+   "base": 4,
+   "mod": 0,
+   "value": 3,
+   "racial": 0
+  },
+  "intelligence": {
+   "base": 6,
+   "mod": 0,
+   "value": 3,
+   "racial": 0
+  },
+  "willpower": {
+   "base": 6,
+   "mod": 0,
+   "value": 3,
+   "racial": 0
+  },
+  "magic": {
+   "value": 6,
+   "tradition": "hermetic",
+   "type": "full_magician",
+   "skill": "both",
+   "totem": "",
+   "initiateGrade": 1
+  },
+  "karma": {
+   "current": 0,
+   "total": 4
+  },
+  "nuyen": 0,
+  "lifestyle": "high"
+ },
+ "items": [
+  {
+   "name": "Sorcery",
+   "type": "skill",
+   "system": {
+    "category": "active",
+    "linkedAttribute": "willpower",
+    "rating": 6,
+    "specialization": {
+     "name": "Spellcasting",
+     "rating": 8
+    },
+    "concentration": {
+     "name": "",
+     "rating": 0
+    },
+    "freeLanguage": "",
+    "notes": ""
+   }
+  },
+  {
+   "name": "Conjuring",
+   "type": "skill",
+   "system": {
+    "category": "active",
+    "linkedAttribute": "willpower",
+    "rating": 4,
+    "specialization": {
+     "name": "",
+     "rating": 0
+    },
+    "concentration": {
+     "name": "",
+     "rating": 0
+    },
+    "freeLanguage": "",
+    "notes": ""
+   }
+  },
+  {
+   "name": "Manabolt",
+   "type": "spell",
+   "system": {
+    "category": "combat",
+    "type": "mana",
+    "force": 5,
+    "drainCode": "((F / 2) + 1)S",
+    "restriction": ""
+   }
+  },
+  {
+   "name": "Heal",
+   "type": "spell",
+   "system": {
+    "category": "health",
+    "force": "4",
+    "drainCode": "(F / 2)W"
+   }
+  },
+  {
+   "name": "Sample Barrier, Mass",
+   "type": "spell",
+   "system": {
+    "category": "manipulation",
+    "force": 3,
+    "drainCode": "((F / 2) \u2013 1)M",
+    "restriction": "exclusive"
+   }
+  },
+  {
+   "name": "Sample Locket",
+   "type": "focus",
+   "system": {
+    "focusType": "spell_lock",
+    "force": 3
+   }
+  }
+ ],
+ "_stats": {
+  "systemId": "sr2e"
+ }
+}

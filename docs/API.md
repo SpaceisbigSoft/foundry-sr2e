@@ -122,6 +122,7 @@ The system registers itself with Token Action HUD Core 2.x (`tokenActionHudSyste
 The interface's history from v0.93.2, newest first. Each version's `CHANGELOG.md` entry repeats its line.
 
 - **v0.93.4:** none.
+- **v0.94.0:** `importCharacter(actor, text)` also takes the text of a Nullsheen generator file or a futurekill actor export (it is turned into a write-up first). Nothing was removed.
 - **v0.93.5:** added `partyView()`; `gmPanel()` takes an optional tab. Nothing was changed or removed.
 - **v0.93.3:** added `requestRoll({ actors? })`, `postRollRequest({ kind, key, tn, hidden?, actors })` and `teamKarma()`. Nothing was changed or removed.
 - **v0.93.2:** the stability rules above. Nothing changed; the calls added in v0.87.0–v0.92.1 are listed here for the first time. Since v0.93.1 (the system id change) the flags and settings live under `shadowrun2e_unified`; the names `game.sr2e` and the `sr2e.*` hooks stayed.

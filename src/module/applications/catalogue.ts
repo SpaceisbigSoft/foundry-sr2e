@@ -23,6 +23,8 @@ import { escHtml } from '../rules/html.ts';
 import { itemTypeProblem } from './drops.ts';
 import { t as tx, tKey, tCount, tNoun, type CountNoun } from '../helpers/i18n.ts';
 import { startProgress, type Progress } from './progress.ts';
+// v0.94.0: Nullsheen and futurekill files are turned into a write-up first (rules/imports094.ts).
+import { importInput, sameImport, type ImportInput } from '../rules/imports094.ts';
 
 const { DialogV2 } = foundry.applications.api;
 /** A-15: the shared escape helper (rules/html.ts). */
@@ -521,6 +523,10 @@ async function manageTemplates(): Promise<void> {
  */
 export async function importCharacter(actor: any, text: string): Promise<{ lines: string[]; warnings: string[] }> {
   if (!actor?.isOwner) throw new Error(tx('SR2E.App.Catalogue.onlyTheOwnerCanImportInto'));
+  // v0.94.0: a Nullsheen or futurekill file becomes a write-up; a file that can't be read stops here, with why.
+  const input: ImportInput = importInput(text);
+  if (input.source === 'writeup' && !input.text.trim() && input.warnings.length) throw new Error(input.warnings[0]);
+  text = input.text;
   // A player fills only a character that isn't finished, and not past the approval queue (the GM can).
   if (!(game as any).user?.isGM) {
     if (creationRecordOf(actor)) throw new Error(tx('SR2E.App.Catalogue.sCreationIsFinishedAskThe', { name: actor.name }));
@@ -564,7 +570,9 @@ export async function importCharacter(actor: any, text: string): Promise<{ lines
   if (typeof after.initiativeDice === 'number') second['system.initiativeDiceBonus'] = Math.max(0, after.initiativeDice - (Number(d.initiativeDice ?? 1) - Number(actor.system?.initiativeDiceBonus ?? 0)));
   if (typeof after.lifestyleSeconds === 'number' && after.lifestyleSeconds > 0) second['system.lifestyle.paidUntil'] = sysNow() + after.lifestyleSeconds;
   if (Object.keys(second).length) await actor.update(second);
-  return { lines: plan.summary, warnings: [...plan.warnings] };
+  // v0.94.0: remember which file's character this is, so importing the same file again updates this character.
+  if (input.source !== 'writeup' && input.key) await actor.setFlag(SYSTEM.id, 'importedFrom', { source: input.source, key: input.key });
+  return { lines: [...(input.source !== 'writeup' ? [tx('SR2E.Import.from', { source: tKey(`SR2E.Import.source.${input.source}`) })] : []), ...plan.summary], warnings: [...input.warnings, ...plan.warnings] };
 }
 
 const IMPORT_HINT = (): string => `<p class="hint">${tx('SR2E.App.Catalogue.pasteACharacterWriteUp')}</p>`;
@@ -573,7 +581,8 @@ async function importDialog(title: string, withRecord: boolean): Promise<{ text:
   const r = await DialogV2.wait({
     window: { title, icon: 'fa-solid fa-file-import' },
     position: { width: 680 },
-    content: `${IMPORT_HINT()}<textarea name="text" rows="14" style="width:100%;font-family:monospace"></textarea>
+    content: `${IMPORT_HINT()}<p class="sr2e-import-file"><button type="button" data-sr2e-import-file><i class="fa-solid fa-folder-open" aria-hidden="true"></i> ${tx('SR2E.Import.chooseFile')}</button> <span class="hint">${tx('SR2E.Import.fileHint')}</span><input type="file" name="file" accept=".json,.txt,application/json,text/plain" hidden></p>
+      <textarea name="text" rows="14" style="width:100%;font-family:monospace"></textarea>
       <div class="sr2e-cat-preview hint"></div>
       ${withRecord ? `<label class="sr2e-check"><input type="checkbox" name="record"> ${tx('SR2E.Dialog.Catalogue.recordItAsTheCharacterS')}</label>` : ''}`,
     buttons: [
@@ -586,16 +595,27 @@ async function importDialog(title: string, withRecord: boolean): Promise<{ text:
       const out = root?.querySelector<HTMLElement>('.sr2e-cat-preview');
       // v0.81.0 (RC-9): re-parse 200 ms after the last keystroke, not on every one.
       let timer: ReturnType<typeof setTimeout> | undefined;
-      area?.addEventListener('input', () => {
-        clearTimeout(timer);
-        timer = setTimeout(() => {
-          if (!out || !area) return;
-          if (!area.value.trim()) { out.innerHTML = ''; return; }
-          try {
-            const p = characterImportPlan(parseCharacterSheet(area.value));
-            out.innerHTML = `<ul>${p.summary.map((l: string) => `<li>${esc(l)}</li>`).join('')}</ul>${p.warnings.length ? `<ul class="sr2e-warn">${p.warnings.slice(0, 8).map((w: string) => `<li>${esc(w)}</li>`).join('')}</ul>` : ''}`;
-          } catch (err) { out.textContent = String(err); }
-        }, 200);
+      const preview = () => {
+        if (!out || !area) return;
+        if (!area.value.trim()) { out.innerHTML = ''; return; }
+        try {
+          // v0.94.0: a Nullsheen or futurekill file previews as the write-up it becomes.
+          const input = importInput(area.value);
+          const p = characterImportPlan(parseCharacterSheet(input.text));
+          const warns = [...input.warnings, ...p.warnings];
+          const from = input.source !== 'writeup' ? `<p>${esc(tx('SR2E.Import.from', { source: tKey(`SR2E.Import.source.${input.source}`) }))}</p>` : '';
+          out.innerHTML = `${from}<ul>${p.summary.map((l: string) => `<li>${esc(l)}</li>`).join('')}</ul>${warns.length ? `<ul class="sr2e-warn">${warns.slice(0, 10).map((w: string) => `<li>${esc(w)}</li>`).join('')}</ul>` : ''}`;
+        } catch (err) { out.textContent = String(err); }
+      };
+      area?.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(preview, 200); });
+      // v0.94.0: load a file into the box (read here, never uploaded); the preview runs at once.
+      const file = root?.querySelector('input[name="file"]') as HTMLInputElement | null | undefined;
+      root?.querySelector<HTMLButtonElement>('[data-sr2e-import-file]')?.addEventListener('click', () => file?.click());
+      file?.addEventListener('change', () => {
+        const f = file.files?.[0];
+        if (!f || !area) return;
+        if (f.size > 5_000_000) { ui.notifications.warn(tx('SR2E.Import.tooBig', { max: 5 })); return; }
+        void f.text().then((txt) => { area.value = txt; preview(); }).catch(() => ui.notifications.warn(tx('SR2E.Import.unreadable')));
       });
     },
     rejectClose: false,
@@ -633,8 +653,22 @@ async function runImport(actor: any, text: string, record: boolean): Promise<boo
 async function newCharacterFromBlock(): Promise<void> {
   const r = await importDialog(tx('SR2E.Dialog.Catalogue.newCharacterFromAStatBlock'), true);
   if (!r) return;
-  const parsed = parseCharacterSheet(r.text);
-  const name = (parsed as any).name || 'Imported character';
+  // v0.94.0: a file whose character was imported before updates that character, if the GM wants.
+  const input = importInput(r.text);
+  if (input.key) {
+    const earlier = [...((game as any).actors ?? [])].find((a: any) => a.type === 'character' && sameImport(a.getFlag?.(SYSTEM.id, 'importedFrom'), input));
+    if (earlier) {
+      const update = await DialogV2.confirm({
+        window: { title: tx('SR2E.Import.againTitle') },
+        content: `<p>${tx('SR2E.Import.againText', { name: esc(earlier.name) })}</p>`,
+        yes: { label: tx('SR2E.Import.againUpdate') }, no: { label: tx('SR2E.Import.againNew') }, rejectClose: false,
+      });
+      if (update === null || update === undefined) return;
+      if (update) { await runImport(earlier, r.text, r.record); return; }
+    }
+  }
+  const parsed = parseCharacterSheet(input.text);
+  const name = input.name || (parsed as any).name || 'Imported character';
   const ActorCls: any = (CONFIG as any).Actor.documentClass;
   const actor = await ActorCls.create({ name, type: 'character' });
   if (!actor) return;
