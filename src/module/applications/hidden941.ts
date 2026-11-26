@@ -9,7 +9,8 @@ import { hidesNumbers } from '../rules/hidden941.ts';
 
 /** The actor of a test card, from its snapshot's uuid (null when it isn't a test card or the actor is gone). */
 function testActor(message: any): any {
-  const uuid = message?.flags?.[SYSTEM_ID]?.test?.actorUuid;
+  // A test card's snapshot, or (v0.94.1 review) a plain inline test's own flag.
+  const uuid = message?.flags?.[SYSTEM_ID]?.test?.actorUuid ?? message?.flags?.[SYSTEM_ID]?.actorUuid;
   if (typeof uuid !== 'string' || !uuid) return null;
   try { return (globalThis as any).fromUuidSync?.(uuid) ?? null; } catch { return null; }
 }

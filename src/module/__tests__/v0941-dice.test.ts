@@ -196,7 +196,8 @@ describe('v0.94.1 wiring', () => {
     assert.match(docs, /resolvedKeys: Object\.keys\(flags\) \} \}/);
     // The targets are asked again on every client, as a new card would ask them.
     assert.match(docs, /await message\.update\(upd, \{ sr2eReroll: true \}\)/);
-    assert.match(chat, /Hooks\.on\('updateChatMessage', \(message: any, _change: any, options: any\) => \{\n\s*if \(!options\?\.sr2eReroll\) return;\n\s*prompted\.delete\(message\.id\);/);
+    assert.match(chat, /Hooks\.on\('updateChatMessage', \(message: any, _change: any, options: any, userId: string\) => \{\n\s*if \(!options\?\.sr2eReroll\) return;/);
+    assert.match(chat, /\n\s*prompted\.delete\(message\.id\);\n\s*setTimeout\(\(\) => quietly\('prompt', \(\) => promptForCard\(message\)\), 300\);\n\s*\/\/ v0\.94\.1 \(review\)/);
   });
 
   test('typed results: refused for Karma re-rolls and GM TN changes; never auto-applied or auto-resisted', () => {

@@ -2412,7 +2412,7 @@
       },
       "hideNpcNumbers": {
         "Name": "Hide NPC target numbers from players",
-        "Hint": "On the cards of tests no player owns, players see the successes but not the target number or its modifiers. This hides them on screen; it isn't security."
+        "Hint": "On the cards of tests no player owns, players see the successes but not the target number in the dice line or its modifiers (a title that names its TN, such as Drain, still shows it). This hides them on screen; it isn't security."
       },
       "floatingDamageWho": {
         "Name": "Who sees floating damage",
@@ -2666,7 +2666,8 @@
         "alreadyConfirmed": "Already confirmed.",
         "hasNoInitiationWaitingOnThis": "{name} has no initiation waiting on this deed.",
         "thatCardHasNoRollWhose": "That card has no roll whose target number can be changed.",
-        "thisIsBeingAppliedByItself": "This is being applied by itself."
+        "thisIsBeingAppliedByItself": "This is being applied by itself.",
+        "alreadyResistedKarma": "A target has already resisted this card: use Karma before it is resisted."
       },
       "Creation": {
         "theCreationWizardIsForCharacters": "The creation wizard is for characters.",
@@ -3554,7 +3555,8 @@
       "Dice941": {
         "typedNotAllowed": "You can't type a dice result for this test here: the dice were rolled.",
         "typedNoReroll": "That result was typed from physical dice: there are no dice here to re-roll. Re-roll them at the table and roll again.",
-        "typedNoRetarget": "That result was typed from physical dice: there are no dice to score against a new target number. Ask for the test again."
+        "typedNoRetarget": "That result was typed from physical dice: there are no dice to score against a new target number. Ask for the test again.",
+        "typedUnused": "The typed result wasn't used (the test rolled its dice, or didn't happen): type it again if you need it."
       }
     },
     "Dialog": {
@@ -18005,7 +18007,7 @@
           "b6": "<strong>Shift-click</strong> a roll button to skip the dialog and roll at once with its defaults. A spell or skill rolls without your remembered choices; a weapon uses its remembered firing mode and pool dice, but never fires twice.",
           "b7": "How many dice you roll and what the TN should be come from the rules: see your SR2 rulebook. You choose who sees each kind of test you roll (Configure Settings: <strong>Set roll privacy</strong>, under <em>Roll privacy by kind of test</em>). <em>Foundry's chat mode</em> follows the mode picked under the chat box. Cards someone else must answer (Defend, Resist, a blast) are always public.",
           "b8": "The GM can set a <strong>table default</strong> for each kind of test in the same window (<em>GM only</em> or <em>Blind</em>); players can then only make those cards more private, and the less private choices are greyed for them.",
-          "b9": "Some numbers are kept for the GM: on the cards of tests no player owns (an NPC's attack, a guard's Perception), players see the successes but not the target number or its modifiers (the GM's setting <em>Hide NPC target numbers from players</em>, on by default). Floating damage shows for the GM and the token's owners only, unless the GM's setting <em>Who sees floating damage</em> shows it to everyone, and it waits for Dice So Nice's dice to stop. This hides things on screen; it isn't security, since the numbers are still in the chat message's data."
+          "b9": "Some numbers are kept for the GM: on the cards of tests no player owns (an NPC's attack, a guard's Perception), players see the successes but not the target number in the card's dice line or its modifiers (the GM's setting <em>Hide NPC target numbers from players</em>, on by default). Floating damage shows for the GM and the token's owners only, unless the GM's setting <em>Who sees floating damage</em> shows it to everyone, and it waits for Dice So Nice's dice to stop. This hides things on screen; it isn't security, since the numbers are still in the chat message's data, and a card whose title names its TN (Drain, a knockdown test) still shows it there."
         },
         "targeting": {
           "title": "Targets and automatic modifiers",

@@ -116,7 +116,8 @@ async function plainTest(actor: any | null, label: string, dice: number, tn: num
   await ChatMessage.create(withRollMode({
     speaker: actor ? ChatMessage.getSpeaker({ actor }) : ChatMessage.getSpeaker(),
     rolls,
-    flags: { [SYSTEM_ID]: { privacyKind: 'plain' } },
+    // v0.94.1 (review): the actor's uuid, so a secret test finds its arming and an NPC's numbers can be hidden.
+    flags: { [SYSTEM_ID]: { privacyKind: 'plain', actorUuid: String(actor?.uuid ?? '') } },
     content: `${banner}<div class="sr2e-roll">
       <h3>${esc(label)}</h3>
       ${r.botch ? `<div class="sr2e-count sr2e-count-botch"><b>✕</b><span>${tx('SR2E.Card.Inline.disaster2')}</span></div>` : `<div class="sr2e-count"><b>${r.successes}</b><span>${tCount(r.successes, 'SR2E.Card.Inline.successes2')}</span></div>`}

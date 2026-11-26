@@ -366,7 +366,7 @@ How many dice you roll and what the TN should be come from the rules: see your S
 
 The GM can set a **table default** for each kind of test in the same window (*GM only* or *Blind*); players can then only make those cards more private, and the less private choices are greyed for them.
 
-Some numbers are kept for the GM: on the cards of tests no player owns (an NPC's attack, a guard's Perception), players see the successes but not the target number or its modifiers (the GM's setting *Hide NPC target numbers from players*, on by default). Floating damage shows for the GM and the token's owners only, unless the GM's setting *Who sees floating damage* shows it to everyone, and it waits for Dice So Nice's dice to stop. This hides things on screen; it isn't security, since the numbers are still in the chat message's data.
+Some numbers are kept for the GM: on the cards of tests no player owns (an NPC's attack, a guard's Perception), players see the successes but not the target number in the card's dice line or its modifiers (the GM's setting *Hide NPC target numbers from players*, on by default). Floating damage shows for the GM and the token's owners only, unless the GM's setting *Who sees floating damage* shows it to everyone, and it waits for Dice So Nice's dice to stop. This hides things on screen; it isn't security, since the numbers are still in the chat message's data, and a card whose title names its TN (Drain, a knockdown test) still shows it there.
 
 ## Targets and automatic modifiers
 

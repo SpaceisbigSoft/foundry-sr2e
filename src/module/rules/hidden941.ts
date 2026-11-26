@@ -49,6 +49,12 @@ export function disarmSecret(key: string): void {
   armed.delete(String(key ?? ''));
 }
 
+/** Whether a secret test is armed for this actor, without taking it (its side cards, such as a complementary skill). */
+export function secretArmed(key: string, now = Date.now()): boolean {
+  const until = armed.get(String(key ?? ''));
+  return until !== undefined && until >= now;
+}
+
 /** Pure-ish: whether this actor's next card is secret; takes the arming (one card only). */
 export function takeSecret(key: string, now = Date.now()): boolean {
   const k = String(key ?? '');

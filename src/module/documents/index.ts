@@ -270,6 +270,16 @@ let actingAuthor: any = null;
 let typedPosting = false;
 
 /**
+ * v0.94.1 (review): cards a client posts while answering a typed card (the Defend against a typed attack) are marked
+ * typed too, so the GM's client doesn't resist or apply from them by itself. The mark only removes automation.
+ */
+export async function postingTyped<T>(fn: () => Promise<T>): Promise<T> {
+  if (typedPosting) return fn();
+  typedPosting = true;
+  try { return await fn(); } finally { typedPosting = false; }
+}
+
+/**
  * v0.81.1: whether this resolution may write `doc` directly: the acting author owns it, or (no acting author) this
  * client's user does. Write-or-card routing only; pure UI checks keep `isOwner`.
  */
@@ -460,7 +470,13 @@ function outcomeBanner(snap: { kind: string; botch: boolean; disasterAvoided?: b
   return snap.successes > 0 ? b('ok', tx('SR2E.Card.Actor.success', { successes: snap.successes })) : b('miss', tx('SR2E.Card.Actor.failed'));
 }
 
-import { takeSecret, worldFloor, flooredMode } from '../rules/hidden941.ts';
+import { takeSecret, secretArmed, worldFloor, flooredMode } from '../rules/hidden941.ts';
+
+/** v0.94.1 (review): a side card of a secret test (a complementary skill) goes to the GMs only too, without taking the arming. */
+export function blindIfSecret(key: string, data: any): any {
+  if (!secretArmed(key)) return data;
+  return { ...data, whisper: [...((game as any).users ?? [])].filter((u: any) => u.isGM).map((u: any) => u.id), blind: true };
+}
 import { privacyGroup } from '../rules/qol.ts';
 
 /**
@@ -471,7 +487,7 @@ export function withRollMode(data: any): any {
   const content = String(data?.content ?? '');
   const CMs: any = ChatMessage;
   // v0.94.1 (item 21): a secret inline test's card goes to the GMs only, blind for the roller.
-  if (takeSecret(String(data?.flags?.[SYSTEM_ID]?.test?.actorUuid ?? ''))) {
+  if (takeSecret(String(data?.flags?.[SYSTEM_ID]?.test?.actorUuid ?? data?.flags?.[SYSTEM_ID]?.actorUuid ?? ''))) {
     const d = { ...data }; delete d.whisper;
     if (typeof CMs.applyMode === 'function') return CMs.applyMode(d, 'blind') ?? d;
     if (typeof CMs.applyRollMode === 'function') return CMs.applyRollMode(d, 'blindroll') ?? d;
@@ -489,8 +505,10 @@ export function withRollMode(data: any): any {
   let floor = '';
   if (kind) try { floor = worldFloor(privacyGroup(kind), (game.settings.get(SYSTEM_ID, 'rollPrivacyWorld') ?? {}) as Record<string, unknown>); } catch { /* not registered */ }
   const isGM = Boolean((game as any).user?.isGM);
-  // The GM's own empty choice takes the table default too.
-  if (isGM && floor && !prefs[privacyGroup(kind)]) prefs = { ...prefs, [privacyGroup(kind)]: floor };
+  // The GM's own empty choice takes the table default too, unless the GM picked a mode under the chat box (v0.94.1 review).
+  let coreNow = '';
+  try { coreNow = String(game.settings.get('core', 'messageMode') ?? game.settings.get('core', 'rollMode') ?? ''); } catch { /* no setting */ }
+  if (isGM && floor && !prefs[privacyGroup(kind)] && (coreNow === '' || coreNow === 'public' || coreNow === 'publicroll' || coreNow === 'ic')) prefs = { ...prefs, [privacyGroup(kind)]: floor };
   // Foundry v14: core.messageMode (public, gm, blind, self, ic) and ChatMessage.applyMode.
   if (typeof CM.applyMode === 'function') {
     let mode = 'public';
@@ -2585,7 +2603,7 @@ export class SR2Actor extends Actor {
         const add = complementaryDice(r.successes);
         extra += add;
         notes.push(`${comp.name} +${add}`);
-        await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), rolls, content: `${describeResult(tx('SR2E.Card.Actor.complementary', { compName: comp.name, cdSuffix: cd.suffix }), r)}<p>${tx('SR2E.Card.Actor.adds')} <strong>${add}</strong> ${tCount(add, 'SR2E.Card.Actor.diceTo', { skillName: escText(skill?.name ?? tx('SR2E.Card.Actor.theTest')) })}</p>` });
+        await ChatMessage.create(blindIfSecret(String(this.uuid ?? ''), { speaker: ChatMessage.getSpeaker({ actor: this }), rolls, content: `${describeResult(tx('SR2E.Card.Actor.complementary', { compName: comp.name, cdSuffix: cd.suffix }), r)}<p>${tx('SR2E.Card.Actor.adds')} <strong>${add}</strong> ${tCount(add, 'SR2E.Card.Actor.diceTo', { skillName: escText(skill?.name ?? tx('SR2E.Card.Actor.theTest')) })}</p>` }));
       }
     }
     if (opts.helperUuids?.length) {
@@ -3604,6 +3622,8 @@ export class SR2Actor extends Actor {
   async #post(snapIn: TestSnapshot, result: SuccessTestResult, rolls: any[], note = '', like: any = null, inPlace: any = null): Promise<any> {
     // v0.94.1 (report item 30): every card a typed test leads to is marked (chat.ts applies nothing from it by itself).
     if (snapIn?.typed && !typedPosting) { typedPosting = true; try { return await this.#post(snapIn, result, rolls, note, like, inPlace); } finally { typedPosting = false; } }
+    // v0.94.1 (review): replaced dice belong to the card they were re-rolled on; a new card starts without them.
+    if (!inPlace && snapIn?.replacedDice) { snapIn = { ...snapIn }; delete snapIn.replacedDice; }
     const fu: FollowUps = {};
     const { html, flags, snap } = await this.#resolve(SR2Actor.#cleanSnapshot(snapIn), fu);
     const data = {

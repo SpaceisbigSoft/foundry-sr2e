@@ -133,3 +133,49 @@ describe('v0.94.1 import fixes from the 0.94.0 live check', () => {
     assert.ok(c.includes("const from = input.source !== 'writeup' && input.text.trim() ? `<p>"));
   });
 });
+
+describe('v0.94.1 review fixes', () => {
+  const idx = () => read('src', 'module', 'documents', 'index.ts');
+  const chat = () => read('src', 'module', 'applications', 'chat.ts');
+  test('1: a secret plain inline test (dice, Reaction) finds its arming through the card\'s own actor flag', () => {
+    assert.ok(read('src', 'module', 'applications', 'inline.ts').includes("flags: { [SYSTEM_ID]: { privacyKind: 'plain', actorUuid: String(actor?.uuid ?? '') } },"));
+    assert.ok(idx().includes("takeSecret(String(data?.flags?.[SYSTEM_ID]?.test?.actorUuid ?? data?.flags?.[SYSTEM_ID]?.actorUuid ?? ''))"));
+    assert.ok(read('src', 'module', 'applications', 'hidden941.ts').includes('?? message?.flags?.[SYSTEM_ID]?.actorUuid;'), 'an NPC\'s plain card hides its numbers too');
+  });
+  test('1: a secret test\'s complementary card is GM-only too, and doesn\'t take the arming', async () => {
+    const { secretArmed } = await import('../rules/hidden941.ts');
+    armSecret('Actor.c', 100);
+    assert.equal(secretArmed('Actor.c', 101), true);
+    assert.equal(secretArmed('Actor.c', 102), true, 'not taken');
+    assert.equal(takeSecret('Actor.c', 103), true);
+    assert.equal(secretArmed('Actor.c', 104), false);
+    assert.ok(idx().includes("await ChatMessage.create(blindIfSecret(String(this.uuid ?? ''), { speaker: ChatMessage.getSpeaker({ actor: this }), rolls, content: `${describeResult(tx('SR2E.Card.Actor.complementary',"));
+  });
+  test('2–3: a re-roll in place prompts, applies and resists again, only on the author\'s or a GM\'s update', () => {
+    const c = chat();
+    const hook = c.slice(c.indexOf("Hooks.on('updateChatMessage', (message: any, _change: any, options: any, userId: string) => {"), c.indexOf('// v0.93.3 (visual review 0.93.2, finding 5)'));
+    assert.ok(hook.includes("if (!by || (!by.isGM && message.author?.id !== userId)) return;"));
+    assert.ok(hook.includes('autoApplied.delete(message.id);') && hook.includes('autoResisting.delete(message.id);'));
+    assert.ok(hook.includes("quietly('auto-apply', () => autoApplyGmCard(message));") && hook.includes("quietly('auto-resist', () => autoResistCard(message))"));
+    assert.ok(c.includes("if (e.kind === 'defend' && defendedOn(message, target).includes(e.index)) continue;"), 'a target that defended isn\'t asked again');
+  });
+  test('3–4: no Karma on a card already defended (Avoid disaster too) or resisted', () => {
+    const c = chat();
+    const onKarma = c.slice(c.indexOf('async function onKarma('), c.indexOf('async function onKarma(') + 900);
+    assert.ok(onKarma.includes("if (snap.kind === 'attack' && defendedAgainst(message)) return"), 'not only for karmaReroll');
+    assert.ok(onKarma.includes("if (resistedAgainst(message)) return ui.notifications.warn(tx('SR2E.Notify.Chat.alreadyResistedKarma'));"));
+    assert.equal((c.match(/if \(resistedAgainst\(message\)\) return/g) ?? []).length, 2, 'Buy a success too');
+  });
+  test('6: the Defend against a typed attack is marked typed', () => {
+    assert.ok(chat().includes("if (action === 'defend') return typedCard(message) ? postingTyped(() => onDefend(message, button)) : onDefend(message, button);"));
+    assert.ok(idx().includes('export async function postingTyped<T>(fn: () => Promise<T>): Promise<T> {'));
+  });
+  test('7: the GM\'s chat-box mode wins over the table default', () => {
+    assert.ok(idx().includes("(coreNow === '' || coreNow === 'public' || coreNow === 'publicroll' || coreNow === 'ic')"));
+  });
+  test('8–9: an unused typed result is dropped with a word; replaced dice stay on their own card', () => {
+    const t = read('src', 'module', 'applications', 'typed941.ts');
+    assert.equal((t.match(/finally \{ dropPending\(\); \}/g) ?? []).length, 2);
+    assert.ok(idx().includes('if (!inPlace && snapIn?.replacedDice) { snapIn = { ...snapIn }; delete snapIn.replacedDice; }'));
+  });
+});

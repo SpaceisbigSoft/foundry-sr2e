@@ -2,7 +2,7 @@ import { individualAwardRows } from '../rules/core923.ts';
 import { isForeignWorld } from '../helpers/foreign.ts';
 import { needsMove } from '../helpers/move.ts';
 import type { AttackState, DamageState, SpellState, TestSnapshot, PoolKind, BlastContext, Contest } from '../documents/index.ts';
-import { opposedMelee, SR2Actor, serialTicks } from '../documents/index.ts';
+import { opposedMelee, SR2Actor, serialTicks, postingTyped } from '../documents/index.ts';
 import { settleClock } from './clock.ts';
 import { nextInitiationGrade } from '../rules/sorcery923.ts';
 import { sysNow, toSysTime } from '../helpers/clock.ts';
@@ -1254,10 +1254,23 @@ function defendedAgainst(message: any): boolean {
   });
 }
 
+/**
+ * v0.94.1 (review): a card a target already resisted (damage or a spell) was worked out against this result too: its
+ * result can't change any more (a re-roll in place would show new successes while the effect stays the old one).
+ */
+function resistedAgainst(message: any): boolean {
+  const rows = (many: string, one: string): any[] => { const v = message.getFlag?.(SYSTEM_ID, many); return (Array.isArray(v) ? v : [message.getFlag?.(SYSTEM_ID, one)]).filter((x: any) => x && typeof x === 'object'); };
+  const target = (u: unknown): any => { try { return typeof u === 'string' && u ? fromUuidSync(u) : null; } catch { return null; } };
+  return rows('damages', 'damage').some((d, i) => usedOn(message, 'resisted', target(d?.targetUuid)).includes(i))
+    || rows('spells', 'spell').some((sp, i) => usedOn(message, 'spellResisted', target(sp?.targetUuid)).includes(i));
+}
+
 async function onKarma(message: any, button: HTMLButtonElement, action: 'karmaReroll' | 'avoidDisaster'): Promise<void> {
   const snap = message.getFlag(SYSTEM_ID, 'test') as TestSnapshot | undefined;
   if (!snap || button.disabled) return;
-  if (action === 'karmaReroll' && snap.kind === 'attack' && defendedAgainst(message)) return ui.notifications.warn(tx('SR2E.Notify.Chat.theTargetHasAlreadyDefendedAgainst'));
+  // v0.94.1 (review): Avoid disaster too, and any card already resisted.
+  if (snap.kind === 'attack' && defendedAgainst(message)) return ui.notifications.warn(tx('SR2E.Notify.Chat.theTargetHasAlreadyDefendedAgainst'));
+  if (resistedAgainst(message)) return ui.notifications.warn(tx('SR2E.Notify.Chat.alreadyResistedKarma'));
   // v0.56.0: disabled at once, so a double click can't re-roll twice while the actor loads.
   button.disabled = true;
   const actor: any = await fromUuid(snap.actorUuid);
@@ -1969,6 +1982,7 @@ async function onBuySuccess(message: any, button: HTMLButtonElement): Promise<vo
   if (!actor.isOwner) return ui.notifications.warn(tx('SR2E.Notify.Chat.onlySOwnerOrTheGm11', { actorName: escHtml(actor.name) }));
   if (!(await playerMay(message, actor))) return;
   if (snap.kind === 'attack' && defendedAgainst(message)) return ui.notifications.warn(tx('SR2E.Notify.Chat.theTargetHasAlreadyDefendedAgainst'));
+  if (resistedAgainst(message)) return ui.notifications.warn(tx('SR2E.Notify.Chat.alreadyResistedKarma'));
   button.disabled = true;
   // v0.81.1 (SEC1-1, design 1): a GM's click on a player's card re-resolves it as that player.
   if (!(await asCardAuthor(message, tx('SR2E.Card.Chat.buyASuccess'), () => actor.buySuccess(snap, message)))) button.disabled = false;
@@ -2726,6 +2740,8 @@ async function promptForCard(message: any): Promise<void> {
     let target: any = null;
     try { target = fromUuidSync(e.uuid); } catch { target = null; }
     if (!target) continue;
+    // v0.94.1 (review): a target that already defended isn't asked again (a re-roll in place re-runs the prompt).
+    if (e.kind === 'defend' && defendedOn(message, target).includes(e.index)) continue;
     if (e.kind === 'resist' && resistedOn(message).includes(e.index)) continue;
     if (e.kind === 'resistSpell' && spellResistedOn(message).includes(e.index)) continue;
     if (!leadWindow || !promptRecipients(target, [...(game.users ?? [])], gm).includes(game.user?.id)) continue;
@@ -3394,10 +3410,19 @@ export function registerChatHandlers(): void {
   });
   // v0.94.1 (report item 24): a re-roll that updated its own card asks its targets again, as the new card it replaces
   // would have (a missed attack that now hits has Defend buttons). The option only re-runs the usual prompt rules.
-  Hooks.on('updateChatMessage', (message: any, _change: any, options: any) => {
+  Hooks.on('updateChatMessage', (message: any, _change: any, options: any, userId: string) => {
     if (!options?.sr2eReroll) return;
+    // v0.94.1 (review): only the card's author's (or a GM's) re-roll; anyone else's option is ignored.
+    const by: any = (game as any).users?.get?.(userId);
+    if (!by || (!by.isGM && message.author?.id !== userId)) return;
     prompted.delete(message.id);
     setTimeout(() => quietly('prompt', () => promptForCard(message)), 300);
+    // v0.94.1 (review): the GM's client applies and resists from the new result, as it would for a new card (the
+    // cards' own marks keep anything already resisted or applied from being done twice).
+    autoApplied.delete(message.id);
+    autoResisting.delete(message.id);
+    quietly('auto-apply', () => autoApplyGmCard(message));
+    setTimeout(() => quietly('auto-resist', () => autoResistCard(message)), 200);
   });
   // v0.93.3 (visual review 0.93.2, finding 5): a player's Defend or Resist on someone else's card is kept on the
   // target actor (cardRolls), which doesn't re-render the card: mark the shown copies on every other client too.
@@ -3501,7 +3526,8 @@ export function stripCardStyles(html: HTMLElement, message?: any): void {
 
 /** Run a card button's action (the click handler above guards it first). */
 function dispatch(message: any, button: HTMLButtonElement, action: string): Promise<unknown> | void {
-  if (action === 'defend') return onDefend(message, button);
+  // v0.94.1 (review): the Defend against a typed attack is marked typed too (nothing applies by itself from it).
+  if (action === 'defend') return typedCard(message) ? postingTyped(() => onDefend(message, button)) : onDefend(message, button);
   else if (action === 'resist') return onResist(message, button);
   else if (action === 'toxinHit') return onToxinHit(message, button);
   else if (action === 'putOutFire') return onPutOutFire(message, button);

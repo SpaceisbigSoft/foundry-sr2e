@@ -45,17 +45,22 @@ export function armTypedDice(actor: any, typed: TypedDice | null): void {
   pending = actor && typed ? { successes: clampTyped(typed.successes, MAX_TYPED_DICE), allOnes: Boolean(typed.allOnes), actorUuid: String(actor.uuid ?? ''), at: Date.now() } : null;
 }
 
+/** v0.94.1 (review): a typed result the test didn't take is dropped with a word, not silently. */
+function dropPending(): void {
+  if (pending) { pending = null; try { ui.notifications?.warn?.(tx('SR2E.Notify.Dice941.typedUnused')); } catch { /* no UI */ } }
+}
+
 /** Run a roll window's test with its typed result (if any); one its test didn't take is dropped after. */
 export async function withTypedDice<T>(actor: any, typed: TypedDice | null, fn: () => Promise<T>): Promise<T> {
   if (!typed) return fn();
   armTypedDice(actor, typed);
-  try { return await fn(); } finally { pending = null; }
+  try { return await fn(); } finally { dropPending(); }
 }
 
 /** A sheet action whose window may arm a typed result: whatever its test did with it, it is dropped when it ends. */
 export function typedScoped<A extends unknown[], R>(fn: (this: any, ...args: A) => Promise<R>): (this: any, ...args: A) => Promise<R> {
   return async function (this: any, ...args: A): Promise<R> {
-    try { return await fn.apply(this, args); } finally { pending = null; }
+    try { return await fn.apply(this, args); } finally { dropPending(); }
   };
 }
 

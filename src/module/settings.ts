@@ -1402,6 +1402,8 @@ export class RollPrivacyConfig extends foundry.applications.api.ApplicationV2 {
   }
 }
 
+let presetBusy = false;
+
 /** The settings window: the curated rules by section, the advanced overrides, Save and Reset. */
 export class HouseRulesConfig extends foundry.applications.api.ApplicationV2 {
   static DEFAULT_OPTIONS = {
@@ -1533,7 +1535,10 @@ export class HouseRulesConfig extends foundry.applications.api.ApplicationV2 {
 
   /** v0.94.1 (report item 37): a ruleset preset, confirmed by the GM (applications/automation941.ts). */
   static async #onPreset(this: HouseRulesConfig, _event: Event, target: HTMLElement): Promise<void> {
-    if (await applyRulesetPreset(target?.dataset?.["sr2ePreset"])) this.render();
+    // v0.94.1 (test plan): one preset window at a time (a double click opened two confirmations).
+    if (presetBusy) return;
+    presetBusy = true;
+    try { if (await applyRulesetPreset(target?.dataset?.["sr2ePreset"])) this.render(); } finally { presetBusy = false; }
   }
 
   static async #onReset(this: HouseRulesConfig): Promise<void> {
