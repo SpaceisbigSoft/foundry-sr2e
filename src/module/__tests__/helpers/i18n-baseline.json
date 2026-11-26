@@ -1,6 +1,6 @@
 {
- "note": "v0.89.0: English text left in the code per file (helpers/i18n-scan.ts). Counts may only go down; lower them here when a slice moves text into lang/en.json. v0.89.1: lowered after the notifications; v0.89.2 after the dialogs; v0.89.3 after the chat cards; v0.89.4 after the rule labels (and the scanner stopped counting CONSTANT_CASE names and rule paths). v0.89.5: the scanner no longer counts code the literal pattern cuts out between nested template literals (a piece that calls a translation): 4,382 by the old count was 4,008 by the new one; after v0.89.5, 3,999. v0.89.6: lowered after the code-built text (sheets, windows, rules run-time text) moved into lang/en.json. v0.89.7: after the guide (its heading aliases stay English: they are the templates' data-heading ids). v0.89.8: +1 for applications/tools.ts, its template path (`${SYSTEM.PATH.TEMPLATES}/tools.hbs`, counted like help.ts's). v0.91.1: +2, the new-entry window's template path (as every window has) and its guide topic's heading alias (as every topic has). v0.91.3: +3, the Catalogue window's template path, the MIME type it parses descriptions with (`text/html`) and its guide topic's heading alias. v0.91.4: +16, all code or kept English on purpose: the catalogue folder's name (`Catalogue (SR2e)`, as catalogue.ts has it) and a compendium actor's uuid pattern (shop.ts), the ledger and order lines of a vehicle purchase (\"Bought …\", \"… on order\": the advancement log and refunds read them by their words, also for an order given back), and the vehicle columns' help (catalogcsv.ts, translated through SR2E.Tables.vehicleColumns as every column's is). v0.92.1: +2 for applications/reference.ts (the reference pane): its template path (as every window has) and the MIME type its drag data is written with (`text/plain`). v0.92.3: +27 for rules/config923/core.ts, the book tables' labels (the Language Skills Table, the Perception Test Modifiers Table's sense rows, the Climbing Table's modifiers, the individual Karma awards), rules texts translated through SR2E.Rules as every config file's are. v0.92.3: raised for the book alignment's new rule labels (the Ranged Combat Modifiers, Climbing, Driving Test and matrix rows in rules/config.ts and the old driving rows kept in config923/vehicles.ts, written like their neighbours), the Magical Theory skill name the spell-learning test looks up (index.ts), a tooltip path the scanner miscounts (tooltips.ts) and a nested dialog template piece (sheets.ts). v0.92.3 review: +2 for migrations.ts, the 0.92.3 migration's console label (as every migration's is) and the module path it loads. v0.93.0: +1 for applications/interface.ts, the number-field selector the roll dialogs' right-click lowers (as the steppers' is), and +1 for migrations.ts, the start of the console command that lets a GM update a world the foreign-world guard refuses (code, shown in a <code> block). v0.93.1: +1 for migrations.ts, the new-id step's console label (as every migration's is).",
- "total": 2424,
+ "note": "v0.89.0: English text left in the code per file (helpers/i18n-scan.ts). Counts may only go down; lower them here when a slice moves text into lang/en.json. v0.89.1: lowered after the notifications; v0.89.2 after the dialogs; v0.89.3 after the chat cards; v0.89.4 after the rule labels (and the scanner stopped counting CONSTANT_CASE names and rule paths). v0.89.5: the scanner no longer counts code the literal pattern cuts out between nested template literals (a piece that calls a translation): 4,382 by the old count was 4,008 by the new one; after v0.89.5, 3,999. v0.89.6: lowered after the code-built text (sheets, windows, rules run-time text) moved into lang/en.json. v0.89.7: after the guide (its heading aliases stay English: they are the templates' data-heading ids). v0.89.8: +1 for applications/tools.ts, its template path (`${SYSTEM.PATH.TEMPLATES}/tools.hbs`, counted like help.ts's). v0.91.1: +2, the new-entry window's template path (as every window has) and its guide topic's heading alias (as every topic has). v0.91.3: +3, the Catalogue window's template path, the MIME type it parses descriptions with (`text/html`) and its guide topic's heading alias. v0.91.4: +16, all code or kept English on purpose: the catalogue folder's name (`Catalogue (SR2e)`, as catalogue.ts has it) and a compendium actor's uuid pattern (shop.ts), the ledger and order lines of a vehicle purchase (\"Bought …\", \"… on order\": the advancement log and refunds read them by their words, also for an order given back), and the vehicle columns' help (catalogcsv.ts, translated through SR2E.Tables.vehicleColumns as every column's is). v0.92.1: +2 for applications/reference.ts (the reference pane): its template path (as every window has) and the MIME type its drag data is written with (`text/plain`). v0.92.3: +27 for rules/config923/core.ts, the book tables' labels (the Language Skills Table, the Perception Test Modifiers Table's sense rows, the Climbing Table's modifiers, the individual Karma awards), rules texts translated through SR2E.Rules as every config file's are. v0.92.3: raised for the book alignment's new rule labels (the Ranged Combat Modifiers, Climbing, Driving Test and matrix rows in rules/config.ts and the old driving rows kept in config923/vehicles.ts, written like their neighbours), the Magical Theory skill name the spell-learning test looks up (index.ts), a tooltip path the scanner miscounts (tooltips.ts) and a nested dialog template piece (sheets.ts). v0.92.3 review: +2 for migrations.ts, the 0.92.3 migration's console label (as every migration's is) and the module path it loads. v0.93.0: +1 for applications/interface.ts, the number-field selector the roll dialogs' right-click lowers (as the steppers' is), and +1 for migrations.ts, the start of the console command that lets a GM update a world the foreign-world guard refuses (code, shown in a <code> block). v0.93.1: +1 for migrations.ts, the new-id step's console label (as every migration's is). v0.93.3: raised, all data or code: rules/skillweb-default.ts, the book's Skill Web as links between skill names (mechanics data in the setting's own format, as the GM types it; skill names stay English like the catalogue's); applications/dice.ts, the Dice So Nice colour sets' descriptions (shown in that module's own list, as sr2e-base's and sr2e-six's are); rules/npcdata.ts, the metatype tags name their lines by the English text (the tables are translated by position); rules/customlists.ts, 'build/repair' as a typed kind alias; settings.ts, the Skill Web window's textarea selector; and nested template pieces the literal pattern cuts out (chat.ts, sheets.ts, rules/rollrequest.ts, applications/rollrequest.ts: their text calls translations).",
+ "total": 2615,
  "files": {
   "src/module/applications/a11y.ts": 5,
   "src/module/applications/adding.ts": 5,
@@ -8,11 +8,11 @@
   "src/module/applications/approvals.ts": 1,
   "src/module/applications/bugreport.ts": 7,
   "src/module/applications/catalogue.ts": 12,
-  "src/module/applications/chat.ts": 16,
+  "src/module/applications/chat.ts": 17,
   "src/module/applications/codex.ts": 2,
   "src/module/applications/creation.ts": 4,
   "src/module/applications/demo.ts": 3,
-  "src/module/applications/dice.ts": 1,
+  "src/module/applications/dice.ts": 7,
   "src/module/applications/effects.ts": 4,
   "src/module/applications/groups.ts": 1,
   "src/module/applications/help.ts": 1,
@@ -27,7 +27,7 @@
   "src/module/applications/richtext.ts": 4,
   "src/module/applications/safehouse.ts": 2,
   "src/module/applications/setup.ts": 12,
-  "src/module/applications/sheets.ts": 68,
+  "src/module/applications/sheets.ts": 74,
   "src/module/applications/sheettools.ts": 1,
   "src/module/applications/spendkarma.ts": 1,
   "src/module/applications/tah.ts": 4,
@@ -78,7 +78,7 @@
   "src/module/rules/look.ts": 18,
   "src/module/rules/matrix.ts": 4,
   "src/module/rules/mysticism.ts": 5,
-  "src/module/rules/npcdata.ts": 596,
+  "src/module/rules/npcdata.ts": 599,
   "src/module/rules/npcgen.ts": 162,
   "src/module/rules/occult.ts": 1,
   "src/module/rules/outfit.ts": 1,
@@ -93,9 +93,13 @@
   "src/module/rules/tokenart.ts": 17,
   "src/module/rules/trust.ts": 1,
   "src/module/rules/urr80-drones-security.ts": 4,
-  "src/module/settings.ts": 10,
+  "src/module/settings.ts": 11,
   "src/module/sr2e-system.ts": 21,
   "src/module/applications/reference.ts": 2,
-  "src/module/rules/config923/vehicles.ts": 5
+  "src/module/rules/config923/vehicles.ts": 5,
+  "src/module/applications/rollrequest.ts": 1,
+  "src/module/rules/customlists.ts": 1,
+  "src/module/rules/rollrequest.ts": 3,
+  "src/module/rules/skillweb-default.ts": 170
  }
 }
