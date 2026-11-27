@@ -2,6 +2,23 @@
 
 This is the history of the unofficial Shadowrun 2nd Edition system for Foundry VTT (system id `shadowrun2e_unified`; `sr2e` until v0.93.0), newest version first. Every rules change since v0.70.0 has a house-rule switch that puts the old behaviour back. The system was built with AI (Anthropic's Claude) under human direction, and it has not yet been play-tested at a real table.
 
+## v0.96.0 — Rules completeness: health, sorcery and spirits (27 Nov 2026)
+About 45 book rules the system didn't have yet. Each one has a switch in the GM's house rules whose other choice puts v0.95.1 back. *Rules completeness (v0.96.0)* in `docs/VERIFY.md` says what each does, its book page and what was left out.
+- **Resting and care.** A Stun rest that gets interrupted keeps its first roll as a cap; the rest card warns when the lifestyle is below the healing minimum; a doctor's fee per day is shown in the Rest dialog and charged when a doctor is involved; an NPC giving a player's character first aid posts a paramedic's fee with a Pay button (Core pp. 112–113).
+- **Healing spells** stay sustained for their Healing Table time, divided by the successes left after the boxes (Core p. 155).
+- **Patches and bioware.** An antidote on a dying patient counts as professional help (first aid may be tried again); dermal armor weakens patches and blood filtration stops all but the trauma patch; a stim patch can cost a magician Magic; the nephritic screen, trauma damper and pain editor do what Shadowtech says.
+- **Addiction.** A drug can be both physically and mentally addictive; the tests come when the dose wears off; after recovery there is a rest period; forced withdrawal falls a point a day; each addicted week the GM gets a card for the Essence loss (Shadowtech pp. 87–88).
+- **DocWagon.** The response time is rolled (by air or ground, HTR included); HTR has a fee that Gold halves and Platinum waives; Gold and Platinum take money off care.
+- **Neuro-stun** leaves anyone exposed disoriented for an hour; a medkit lends its Biotech 3 to an unskilled healer.
+- **Spellcasting.** A magician without Sorcery can default from Magical Theory, Conjuring or Enchanting; an area spell can be shaped smaller or larger with withheld dice; stacked spells add +2 TN each; the cast card gives onlookers' Perception TN to notice it; totem dice count as Magic Pool dice; the Armor spell counts half its successes; centering can help the casting or the Drain test.
+- **Foci, wards and initiation.** No more active foci than Intelligence (players are refused, the GM warned); a ward falls when its days run out; quickening, anchoring and masking work the Grimoire's way; a dispelled spell's effect shrinks with its Force; Grade 0 can be ticked on the sheet.
+- **The importer** fills core spells' drain codes and prices adept powers by the book's bands.
+- **Spirits.** An idle bound elemental uses a service a day; its unused Aid Sorcery dice can help spell defense; tech melee upgrades don't add Power against spirits; a GM tool for spirit against spirit; a disrupted spirit returns after 28 − Force days; only the true-name holder can banish a free spirit; watchers by the Grimoire.
+- **Astral.** Astral combat can use Unarmed or Armed Combat; reading an aura again costs +2 TN each time; reflecting uses only the shielding dice and can bounce again; cleansing is limited by grade and causes Drain; a perceiving magician fights with the Astral Combat Pool.
+- **Critter powers.** Confusion and Fear are opposed tests (Essence vs Willpower).
+- Not built from these areas yet: radiation by rads, replacement body parts, the ally design test, great forms, critter stat lines, circle and lodge target numbers, splitting a spell over several targets.
+- API changes: new `RULES.HEALTH_V96`, `RULES.SORCERY_V96`, `RULES.SPIRITS_V96`; new data fields on existing types (addiction entries, barriers, the character's astral pool count); no new document types.
+
 ## v0.95.1 — Live-check fixes (27 Nov 2026)
 - **Fixed:** a GM paying a Karma re-roll (or avoided disaster) on their own card from the Team Karma Pool no longer freezes: the payment waited for the GM lock its own re-roll was holding, and every later GM action hung until a reload.
 - **Fixed:** a social test against an NPC's racism now hides its target number and modifiers from players on the posted card too (social tests are contest cards, which the check didn't read).
