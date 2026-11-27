@@ -21,8 +21,9 @@ export const HEALTH_V96 = {
   /** healingLifestyle 'book': the Healing Table's minimum lifestyle by wound level (Core p. 113); 'hospital' = hospitalized. */
   healingMinLifestyle: { L: 'low', M: 'middle', S: 'high', D: 'hospital' } as Record<'L' | 'M' | 'S' | 'D', string>,
   /**
-   * Medical costs (Core p. 113, Medical Costs Table). 'book': a Physical rest under a doctor's care outside a hospital
-   * (care "With a medkit and care") pays the doctor's fee per day by wound level, a hospital stay 500¥ a day (the
+   * Medical costs (Core p. 113, Medical Costs Table). 'book': a Physical rest with a doctor involved outside a hospital
+   * (the Doctoring Table's doctor rows under DOCS_V79.doctoring 'table'; none under 'care') pays the doctor's fee per
+   * day by wound level (shown in the Rest dialog; "Pay for hospital care" off waives it), a hospital stay 500¥ a day (the
    * doctor included), intensive care 1,000¥ a day; first aid by an NPC (a paramedic) on a player's character posts the
    * paramedic's fee by wound level with a Pay button. 'off' (v0.95.1): only RULES.HEALTH.careCosts (hospital and
    * intensive care), no paramedic fee.
@@ -44,8 +45,9 @@ export const HEALTH_V96 = {
   healingSpellTime: 'book' as 'book' | 'off',
   healingSpellTurns: { L: 5, M: 10, S: 15, D: 20 } as Record<'L' | 'M' | 'S' | 'D', number>,
   /**
-   * The antidote as professional attention (Core p. 186): an antidote patch slapped on a dying patient gives the GM a
-   * button that stabilises them when the toxin put them down. 'off' (v0.95.1).
+   * The antidote as professional attention (Core pp. 186, 115): an antidote patch slapped on a dying patient gives the
+   * GM a button that counts it as professional help when the toxin put them down: first aid may be tried again (a
+   * failed one brings the patient's own Body test, as always). 'off' (v0.95.1).
    */
   antidoteAttention: 'book' as 'book' | 'off',
   /**
@@ -70,7 +72,8 @@ export const HEALTH_V96 = {
   nephriticVectors: ['injection'] as readonly string[],
   /**
    * The trauma damper (Shadowtech p. 29). 'book': a Physical hit shifts one box onto the Stun track (Stun hits keep
-   * losing a box as before); not with a pain editor (the system keeps a pain editor on). 'off' (v0.95.1): Stun hits only.
+   * losing a box as before); not with a pain editor (the system keeps a pain editor on); with a damage compensator only
+   * once its boxes are exceeded on both tracks; never a box of the Overflow. 'off' (v0.95.1): Stun hits only.
    */
   traumaDamper: 'book' as 'book' | 'off',
   /**
@@ -126,8 +129,9 @@ export const HEALTH_V96 = {
   neuroStunTn: 2,
   /**
    * The medkit's advice (Core p. 250: an expert system with Biotech 3 that advises the user). 'book': first aid with a
-   * medkit rolls at least the kit's Biotech, without defaulting (VERIFY: the book's "advise the user" read as lending
-   * its rating). 'off' (v0.95.1).
+   * medkit rolls the kit's Biotech when it beats the healer's dice or the healer would default (then without the
+   * defaulting modifier; other modifiers stay) (VERIFY: the book's "advise the user" read as lending its rating).
+   * 'off' (v0.95.1).
    */
   medkitAdvice: 'book' as 'book' | 'off',
   medkitBiotech: 3,

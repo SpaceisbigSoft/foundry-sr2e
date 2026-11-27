@@ -66,6 +66,7 @@ import { urrCoreTnPresetRow, urrCoreInstructorRule } from "../rules/urr80-core.t
 import * as CO923 from "../rules/core923.ts";
 // v0.95.0 (RULES.CORE_V95): the core book rules' glue.
 import * as C95G from "./core95.ts";
+import * as H96G from "./health96.ts";
 import { sensorTableRows, sensorTableModifiers, segRows, segConditionModifiers } from "../rules/docs79-vehicles.ts";
 import { modKey, modIn, type TargetNumberModifier } from "../rules/dice.ts";
 import { quickRollArmed } from "./hotkeys.ts";
@@ -3850,11 +3851,13 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         ${(() => {
           // v0.79.0 (RULES.DOCS_V79.doctoring 'table'): Physical healing takes the Doctoring Table, Stun keeps the care rows;
           // with both, the dialog shows a select for each and uses the one for the chosen track.
-          const opts = (list: Array<{ id: string; label: string; tn: number }>) => list.map((c) => `<option value="${escHtml(c.id)}">${escHtml(c.label)}${c.tn ? ` (${c.tn > 0 ? "+" : ""}${c.tn})` : ""}${(RULES.HEALTH.careCosts as Record<string, number>)[c.id] ? tx('SR2E.Dialog.Sheet.day2', { healthCareCosts: (RULES.HEALTH.careCosts as Record<string, number>)[c.id] }) : ""}</option>`).join("");
+          // v0.96.0 (RULES.HEALTH_V96.medicalCosts, Core p. 113): the Physical select shows the Medical Costs Table's price a day.
+          const dayCost = (id: string, physical: boolean): number => (physical ? H96G.careDay(actor, id) : null) ?? Number((RULES.HEALTH.careCosts as Record<string, number>)[id] ?? 0);
+          const opts = (list: Array<{ id: string; label: string; tn: number }>, physical = false) => list.map((c) => `<option value="${escHtml(c.id)}">${escHtml(c.label)}${c.tn ? ` (${c.tn > 0 ? "+" : ""}${c.tn})` : ""}${dayCost(c.id, physical) ? tx('SR2E.Dialog.Sheet.day2', { healthCareCosts: dayCost(c.id, physical) }) : ""}</option>`).join("");
           const doc = doctoringCareOptions();
           return doc
             ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.careStun')}</label><select name="care">${opts(n.care as any)}</select></div>
-               <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.carePhysicalDoctoringTable')}</label><select name="carePhysical">${opts(doc)}</select></div>`
+               <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.carePhysicalDoctoringTable')}</label><select name="carePhysical">${opts(doc, true)}</select></div>`
             : `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.care')}</label><select name="care">${opts(n.care as any)}</select></div>`;
         })()}
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.payForHospitalCare')}</label><input name="pay" type="checkbox" checked></div>

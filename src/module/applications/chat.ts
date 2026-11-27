@@ -2906,7 +2906,7 @@ async function onApplyPatch(message: any, button: HTMLButtonElement): Promise<vo
     try {
       target = await fromUuid(v.targetUuid);
       if (!target?.system?.monitor) { button.disabled = false; return ui.notifications.warn(tx('SR2E.Notify.Chat.thatCharacterIsGone')); }
-      text = await (SR2Actor as any).patchEffect(target, { ...v, rating: safeInt(v.rating, 0, 20, 0), name: String(v.name ?? 'Patch').slice(0, 120), kind: String(v.kind ?? '') });
+      text = await (SR2Actor as any).patchEffect(target, { ...v, rating: safeInt(v.rating, 0, 20, 0), name: String(v.name ?? 'Patch').slice(0, 120), kind: String(v.kind ?? '') }, typeof (v as any).sourceUuid === 'string' ? String((v as any).sourceUuid).slice(0, 400) : '');
       await message.setFlag(SYSTEM_ID, 'patchApplied', true);
     } finally { patching.delete(message.id); }
     await ChatMessage.create({ speaker: message.speaker, content: `<p><strong>${escHtml(v.name)}</strong> ${tx('SR2E.Card.Chat.on', { kind: escHtml(v.kind), rating: safeInt(v.rating, 0, 20, 0), targetName: escHtml(target.name), text })}</p>` });

@@ -1,0 +1,7 @@
+{
+  "SR2E.Health96.Patch.antidoteProfessional": "An antidote patch is on {name}, who is dying. If a toxin put them down, the antidote counts as professional help (Core pp. 115, 186): another Biotech test, and the patient's Body test if it fails.",
+  "SR2E.Health96.Patch.antidoteProfessionalNote": "The GM decides whether it counts as professional help.",
+  "SR2E.Health96.Patch.professional": "Professional help (GM)",
+  "SR2E.Health96.Patch.professionalOpen": "gets professional help: first aid may be tried again on the wound.",
+  "SR2E.Health96.Damper.moved": "(The trauma damper moved a box onto the Stun track.)"
+}

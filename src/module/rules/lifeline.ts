@@ -72,7 +72,7 @@ export function docwagonCall(o: { tier: string; active: boolean; status: 'wounde
     if (t.htrAvailable) {
       htr = true;
       // v0.96.0 (RULES.HEALTH_V96.docwagonHtr, Core p. 250): the HTR charge less the contract's discount.
-      const htr96 = htrCharge(t.id);
+      const htr96 = htrCharge(t.id, Boolean(t.htrIncluded));
       if (htr96 != null ? htr96 > 0 : !t.htrIncluded && num(t.htrFee) > 0) fees.push({ label: tx('SR2E.Text.Lifeline.highThreatResponse'), amount: htr96 ?? num(t.htrFee) });
       notes.push(tx('SR2E.Text.Lifeline.htrTeamSent'));
     } else notes.push(tx('SR2E.Text.Lifeline.noHtr', { tier: t.label }));

@@ -1953,8 +1953,9 @@ export class SR2Actor extends Actor {
     const tableMods = firstAidModifiers({ medkit: Boolean(medkit), conditions: opts.conditions ?? 'normal', magician: Number(patient?.system?.magic ?? 0) > 0 && patient?.type !== 'spirit', applyMagician: opts.applyMagician, naturalBody: Number(patient?.system?.attributes?.body?.natural ?? patient?.system?.attributes?.body?.total ?? 0) });
     const sd0 = this.#skillDice(this.findSkill(f.skill), false, null, f.fallbackAttribute as AttributeKey);
     // v0.96.0 (RULES.HEALTH_V96.medkitAdvice, Core p. 250): the kit's expert system lends its Biotech 3.
-    const adv96 = H96.medkitAdviceDice(Number(this.findSkill(f.skill)?.system?.rating ?? 0), Boolean(medkit));
-    const sd = adv96 != null ? { ...sd0, dice: adv96, modifiers: [], suffix: tx('SR2E.Health96.Medkit.advice', { dice: adv96 }) } : sd0;
+    const defaulting96 = sd0.modifiers.some((m: any) => String(m?.id ?? '').startsWith('defaulting'));
+    const adv96 = H96.medkitAdviceDice(sd0.dice, defaulting96, Boolean(medkit));
+    const sd = adv96 != null ? { ...sd0, dice: adv96, modifiers: sd0.modifiers.filter((m: any) => !String(m?.id ?? '').startsWith('defaulting')), suffix: tx('SR2E.Health96.Medkit.advice', { dice: adv96 }) } : sd0;
     const faResult = await this.#runTest(tx('SR2E.Card.Actor.firstAidOnWoundHealsUp', { patientName: patient.name, track, level: t.level, maxBoxes: t.maxBoxes, sdSuffix: sd.suffix, part: kitDice ? ` [${medkit.name} +${kitDice}]` : '' }),
       sd.dice + kitDice, { targetNumber: t.tn, modifiers: [...sd.modifiers, ...tableMods, ...(H923.bodyIndexOn('firstAid') ? SR2Actor.bodyIndexHealingMods(patient) : [])], poolDice: opts.poolDice ?? 0 },
       { kind: 'heal', heal: { targetUuid: patient.uuid, targetName: patient.name, track, before, mode: 'firstAid' } });
@@ -2108,7 +2109,8 @@ export class SR2Actor extends Actor {
     // v0.92.3 review fix: a trauma patch's +2 belongs to the wound it was used on: healed fully, it goes.
     if (Number(this.sys.monitor?.physical ?? 0) === 0 && this.getFlag?.(SYSTEM_ID, 'traumaPatched923')) await clearFlag(this, 'traumaPatched923');
     // v0.96.0 (RULES.HEALTH_V96.stunRestInterrupted): a clear Stun track ends the rest in progress.
-    if (Number(this.sys.monitor?.stun ?? 0) === 0 && this.getFlag?.(SYSTEM_ID, H96G.STUN_REST_FLAG) != null) await clearFlag(this, H96G.STUN_REST_FLAG);
+    // New Stun damage ends it too: a later rest is a fresh one.
+    if ((Number(this.sys.monitor?.stun ?? 0) === 0 || grew.stun) && this.getFlag?.(SYSTEM_ID, H96G.STUN_REST_FLAG) != null) await clearFlag(this, H96G.STUN_REST_FLAG);
     const status = this.sys.derived?.status as string | undefined;
     // v0.61.0: hurt in a fight, a shaman of a berserk totem may go berserk (MAGIC_V61.totems).
     if ((grew.physical || grew.stun) && !incapacitated(status) && berserkTriggered(this.totemDrawbacks(), { damaged: true, inCombat: Boolean((game.combat as any)?.started) })) await this.berserkCheck(tx('SR2E.Card.Actor.wounded'));
@@ -3555,8 +3557,8 @@ export class SR2Actor extends Actor {
     }
     // v0.96.0 (RULES.HEALTH_V96.traumaDamper, painEditor; Shadowtech pp. 26, 29): a damper moves a Physical box onto
     // the Stun track; a pain editor's wearer isn't knocked out by Stun.
-    const sh96 = ctx.type === 'physical' && ctx.noun === 'damage' ? H96.damperShift(ctx.before, result.monitor, { damper: H96.hasBio(this.items, 'traumaDamper'), painEditor: H96.hasBio(this.items, 'painEditor') }) : null;
-    if (sh96) { result.monitor.physical = sh96.physical; result.monitor.stun = sh96.stun; result.status = monitorStatus(result.monitor, ctxBody); }
+    const sh96 = ctx.type === 'physical' && ctx.noun === 'damage' ? H96.damperShift(ctx.before, result.monitor, { damper: H96G.bioOn(this, 'traumaDamper'), painEditor: H96G.bioOn(this, 'painEditor'), compensatorBoxes: H96G.bioOn(this, 'damageCompensator') ? Number(this.sys.derived?.bio?.ignoreBoxes ?? 0) : 0 }) : null;
+    if (sh96) { result.monitor.physical = sh96.physical; result.monitor.stun = sh96.stun; result.boxes = Math.max(0, result.boxes - 1); result.status = monitorStatus(result.monitor, ctxBody); }
     result.status = H96.painEditorStatus(result.status, Boolean(this.sys.derived?.bio?.ignoreStunWounds)) as typeof result.status;
     const current: Monitor = { physical: this.sys.monitor.physical, stun: this.sys.monitor.stun };
     let note = '';
@@ -3590,6 +3592,8 @@ export class SR2Actor extends Actor {
         : (track === 'stun' ? 'SR2E.Card.Outcome.takesStunDamage' : 'SR2E.Card.Outcome.takesPhysicalDamage');
       body = `${lead}${takenMark(level, track, tKey(key, { level: `<strong>${level}</strong>`, plural: escText(plural(result.boxes, 'box')), status: `<strong>${escText(statusText(result.status))}</strong>` }))}`;
     }
+    // v0.96.0 (RULES.HEALTH_V96.traumaDamper): say that the damper moved a box.
+    if (sh96) body += ` <em>${tx('SR2E.Health96.Damper.moved')}</em>`;
     // Armor degrading (house rule, v0.37.0): a heavy hit takes points off the best worn piece, once.
     let degradeNote = '';
     let degradedNow = Boolean(ctx.degraded);
@@ -6816,7 +6820,7 @@ export class SR2Actor extends Actor {
     }
     const now = sysNow();
     // v0.96.0 (RULES.HEALTH_V96.docwagonResponse, Neo-Anarchist's Guide p. 95): the unit and 3D6 minutes, rolled.
-    const resp96 = await H96G.docwagonResponse();
+    const resp96 = await H96G.docwagonResponse(Boolean(call.htr));
     const responseSeconds = resp96 ? resp96.seconds : call.responseSeconds;
     const arriveAt = docwagonArrivalAt(now, responseSeconds);
     const fees = call.fees.length ? call.fees.map((f) => `${escText(f.label)} ¥${f.amount.toLocaleString()}`).join(', ') : tx('SR2E.Card.Actor.none');
@@ -7816,7 +7820,7 @@ export class SR2Actor extends Actor {
     // v0.78.0 (RULES.BOOK_V78.toxinBioware 'power'): a toxin extractor or tracheal filter lowers the Power (not for disease).
     const power0 = t.kind === 'disease' ? t.power : toxinPower(t.power, d.bio?.toxinPowerOff, t.vector);
     // v0.96.0 (RULES.HEALTH_V96.nephriticPower, Shadowtech p. 30): a nephritic screen lowers a pathogen's or a blood-vectored toxin's Power.
-    const neph96 = Math.min(power0, H96.nephriticCut({ kind: t.kind, vector: t.vector, screen: H96.hasBio(this.items, 'nephriticScreen') }));
+    const neph96 = Math.min(power0, H96.nephriticCut({ kind: t.kind, vector: t.vector, screen: H96G.bioOn(this, 'nephriticScreen') }));
     const power = power0 - neph96;
     const powerCut = t.power - power0;
     if (neph96 > 0 && power <= 0) {
@@ -8158,7 +8162,7 @@ export class SR2Actor extends Actor {
       ...(crash ? { flags: { [SYSTEM_ID]: { drugCrash: { actorUuid: this.uuid, name: d.name, power: d.crashPower, level: d.crashLevel } } } } : {}),
     });
     // v0.96.0 (RULES.HEALTH_V96.addictionTiming 'wearOff', Shadowtech p. 87): the addiction and Tolerance tests now.
-    await H96G.afterWearOff(this, String(d.name ?? ''));
+    await H96G.afterWearOff(this, String(d.name ?? ''), Number(d.doses ?? 1) || 1);
   }
 
   /** Falling, fire, drowning, cold or fatigue (RULES.HAZARDS). `amount`: metres, intensity, turns, severity or hours. */
@@ -9810,7 +9814,7 @@ export class SR2Actor extends Actor {
       });
       return true;
     }
-    const text = await SR2Actor.patchEffect(target, { kind: p.kind, rating, name: String(it.name) });
+    const text = await SR2Actor.patchEffect(target, { kind: p.kind, rating, name: String(it.name) }, String(this.uuid ?? ''));
     await it.update({ 'system.quantity': Math.max(0, Number(it.system.quantity ?? 1) - 1) });
     await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p><strong>${escText(it.name)}</strong> ${tx('SR2E.Card.Actor.on3', { kind: escText(p.kind), rating, targetName: escText(target.name), text })}</p>` });
     return true;
@@ -9868,7 +9872,7 @@ export class SR2Actor extends Actor {
   }
 
   /** v0.70.0: what a slap patch does to its target (the owner's client, or the GM's from an Apply (GM) card). */
-  static async patchEffect(target: any, p: { kind: string; rating: number; name: string }): Promise<string> {
+  static async patchEffect(target: any, p: { kind: string; rating: number; name: string }, sourceUuid = ''): Promise<string> {
     let rating = Math.max(0, Math.floor(Number(p.rating) || 0));
     const now = sysNow();
     let text = '';
@@ -9922,7 +9926,7 @@ export class SR2Actor extends Actor {
     }
     // v0.96.0 (RULES.HEALTH_V96): the armor's cut; the antidote as professional attention; the stim patch's Magic test.
     if (imp96 && imp96.armor > 0) text += ` ${tx('SR2E.Health96.Patch.armor', { armor: imp96.armor, rating })}`;
-    text += await H96G.patchAfter(target, p.kind, rating);
+    text += await H96G.patchAfter(target, p.kind, rating, String(sourceUuid ?? ''));
     return text;
   }
 

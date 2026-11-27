@@ -544,6 +544,11 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
         immune: new fields.BooleanField({ required: true, initial: false }),
         recovering: new fields.NumberField({ required: true, initial: -1 }),
         riseAtKick: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
+        /** v0.96.0 (RULES.HEALTH_V96, Shadowtech pp. 87–88): world times (0 = none) when forced withdrawal began (its
+         * 24-hour fall), when the rest after a recovery ends, and when the next weekly attrition card is due. */
+        withdrawalAt96: new fields.NumberField({ required: true, min: 0, initial: 0 }),
+        restUntil96: new fields.NumberField({ required: true, min: 0, initial: 0 }),
+        attritionAt96: new fields.NumberField({ required: true, min: 0, initial: 0 }),
       })),
       diseases: new fields.ArrayField(new fields.SchemaField({
         name: new fields.StringField({ required: true, initial: '' }),

@@ -2,15 +2,17 @@ import { test, describe, before, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { RULES } from '../rules/index.ts';
 import { oldWay } from '../rules/__tests__/oldway.ts';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-// Until the lead merges i18n-drafts/health96.json into public/lang/en.json: its English, for keys not there yet.
-try {
-  const draft = JSON.parse(readFileSync(fileURLToPath(new URL('../../../i18n-drafts/health96.json', import.meta.url)), 'utf8'));
+// Until the lead merges an i18n draft into public/lang/en.json: its English, for keys not there yet (no draft, no harm).
+for (const name of ['health96.json', 'health96-fix.json']) {
+  const file = fileURLToPath(new URL(`../../../i18n-drafts/${name}`, import.meta.url));
+  if (!existsSync(file)) continue;
+  const draft = JSON.parse(readFileSync(file, 'utf8'));
   const en = ((globalThis as any).__SR2E_EN__ ??= {});
   for (const [k, v] of Object.entries(draft)) if (!(k in en)) en[k] = v;
-} catch { /* merged already */ }
+}
 
 const g = globalThis as any;
 const faces: number[] = [];
@@ -248,6 +250,7 @@ describe('v0.96.0 health glue: patches (Core pp. 186, 250)', () => {
     await SR2Actor.patchEffect(a, { kind: 'stim', rating: 3, name: 'Stim' });
     const m = chat.find((x) => x.flags?.[SYS]?.magicLossFor === a.uuid);
     assert.ok(m, 'magic loss card');
+    assert.equal((String(m.content).match(/data-sr2e-action="magicLoss"/g) ?? []).length, 2, 'as a Deadly wound: two tests (HEALTH_V923.magicLossUntreated)');
   });
   test('off: no Magic test', async (t) => {
     t.after(oldWay({ 'HEALTH_V96.stimMagic': 'off' }));
@@ -256,18 +259,27 @@ describe('v0.96.0 health glue: patches (Core pp. 186, 250)', () => {
     await SR2Actor.patchEffect(a, { kind: 'stim', rating: 3, name: 'Stim' });
     assert.equal(chat.some((x) => x.flags?.[SYS]?.magicLossFor), false);
   });
-  test('an antidote patch on the dying: the GM stabilises them from the card', async () => {
-    const a = pc({ monitor: { physical: 10, stun: 0 } }); world(a);
+  test('an antidote patch on the dying: professional help opens first aid again (not stabilised outright)', async () => {
+    const a = pc({ monitor: { physical: 10, stun: 0 } }, [], undefined); world(a);
+    a.flags = { [SYS]: { firstAidAt: { physical: 10 }, firstAidBy: { physical: 2 } } };
     assert.equal(a.system.derived.status, 'dying');
-    await SR2Actor.patchEffect(a, { kind: 'antidote', rating: 3, name: 'Antidote' });
+    await SR2Actor.patchEffect(a, { kind: 'antidote', rating: 3, name: 'Antidote' }, 'Actor.medic');
     const msg = chat.find((x) => x.flags?.[SYS]?.h96Antidote);
     assert.ok(msg);
+    assert.equal(msg.flags[SYS].h96Antidote.sourceUuid, 'Actor.medic', 'the source for gmMay');
     g.game.user = PLAYER();
-    await H96G.onCard(msg, btn(), 'h96Stabilise');
-    assert.equal(a.system.care.stabilised, false, 'a player can\'t');
+    await H96G.onCard(msg, btn(), 'h96Professional');
+    assert.equal(a.getFlag(SYS, 'firstAidAt').physical, 10, 'a player can\'t');
     g.game.user = GM(); msg.author = GM();
-    await H96G.onCard(msg, btn(), 'h96Stabilise');
-    assert.equal(a.system.care.stabilised, true);
+    await H96G.onCard(msg, btn(), 'h96Professional');
+    assert.equal(a.getFlag(SYS, 'firstAidAt').physical, undefined);
+    assert.equal(a.getFlag(SYS, 'firstAidBy').physical, undefined);
+    assert.equal(a.system.care.stabilised, false);
+  });
+  test('a stim patch cut to 0 by dermal armor rolls no Magic test', async () => {
+    const a = pc({ magic: 4, tradition: 'hermetic', monitor: { physical: 0, stun: 4 } }, [{ id: 'd1', type: 'cyberware', name: 'Dermal plating', system: { installed: true, armorBallistic: 3, essenceCost: 0 } }]); world(a);
+    await SR2Actor.patchEffect(a, { kind: 'stim', rating: 2, name: 'Stim' });
+    assert.equal(chat.some((x) => x.flags?.[SYS]?.magicLossFor), false);
   });
 });
 
@@ -311,11 +323,12 @@ describe('v0.96.0 health glue: DocWagon (Neo-Anarchist\'s Guide p. 95)', () => {
 });
 
 describe('v0.96.0 health glue: addiction (Shadowtech pp. 87–88)', () => {
-  test('the weekly card; the GM takes the Essence', async () => {
-    const a = pc({ addictions: [{ drug: 'Novacoke', rating: 4, type: 'physical', recent: [], lastDose: 0, addicted: true, dosesAddicted: 1, withdrawalNoted: false, attritionAt96: 100 }] }); world(a);
-    const ad = a.system.addictions.map((x: any) => ({ ...x }));
-    const changed = await H96G.addictionTick(a, ad, 200);
-    assert.equal(changed, true);
+  test('the weekly card through the GM\'s tick; the GM takes the Essence', async () => {
+    const a = pc({ addictions: [{ drug: 'Novacoke', rating: 4, type: 'physical', recent: [], lastDose: 0, addicted: true, dosesAddicted: 1, withdrawalNoted: true }] }); world(a);
+    await SR2Actor.timedEffects({ worldTime: 100, anyGm: true });
+    assert.equal(a.system.addictions[0].attritionAt96, 100 + 7 * 86400, 'the clock starts');
+    assert.equal(chat.some((x) => x.flags?.[SYS]?.h96Attrition), false);
+    await SR2Actor.timedEffects({ worldTime: 100 + 7 * 86400 + 5, anyGm: true });
     const msg = chat.find((x) => x.flags?.[SYS]?.h96Attrition);
     assert.ok(msg);
     msg.author = GM();
@@ -333,5 +346,77 @@ describe('v0.96.0 health glue: addiction (Shadowtech pp. 87–88)', () => {
     t.after(oldWay({ 'HEALTH_V96.addictionTiming': 'dose' }));
     await H96G.afterWearOff(a, 'Novacoke');
     assert.equal(chat.length, 0);
+  });
+});
+
+describe('v0.96.0 health glue: review fixes', () => {
+  test('the addictions schema declares every key the code writes (Foundry would drop the others)', () => {
+    const src = readFileSync(fileURLToPath(new URL('../models/index.ts', import.meta.url)), 'utf8');
+    const start = src.indexOf('addictions: new fields.ArrayField(');
+    const block = src.slice(start, src.indexOf('diseases: new fields.ArrayField(', start));
+    const glue = readFileSync(fileURLToPath(new URL('../applications/health96.ts', import.meta.url)), 'utf8');
+    const keys = new Set([...glue.matchAll(/\bx\.(\w+96)\s*=/g)].map((m) => m[1]!));
+    assert.ok(keys.size >= 3);
+    for (const k of keys) assert.match(block, new RegExp(`\\b${k}: new fields\\.NumberField`), k);
+  });
+  test('the rest after a recovery ends through the tick; forced withdrawal\'s start is kept for the 24-hour fall', async () => {
+    const a = pc({ addictions: [
+      { drug: 'Novacoke', rating: 4, type: 'physical', recent: [], lastDose: 0, addicted: false, dosesAddicted: 0, withdrawalNoted: false, restUntil96: 1000 },
+      { drug: 'Bliss', rating: 3, type: 'mental', recent: [], lastDose: 0, addicted: true, dosesAddicted: 1, withdrawalNoted: true, rise: 2 },
+    ] }); world(a);
+    await SR2Actor.timedEffects({ worldTime: 2000, anyGm: true });
+    assert.equal(a.system.addictions[0].restUntil96, 0);
+    assert.match(text(), /fully cured/);
+    assert.equal(a.system.addictions[1].withdrawalAt96, 5 * 4 * 3600, 'Willpower 5 × 4 hours');
+    const { currentRise } = await import('../rules/health923.ts');
+    assert.equal(currentRise(a.system.addictions[1], 20 * 3600 + 86400 + 1), 1, 'a day of forced withdrawal: −1');
+  });
+  test('a drug both physically and mentally addictive: two test cards', async () => {
+    const a = pc({ addictions: [{ drug: 'Kamikaze', rating: 4, type: 'both', recent: [], lastDose: 0, addicted: false, dosesAddicted: 0, withdrawalNoted: false }] }); world(a);
+    faces.push(...Array(9).fill(5));
+    await a.drugAddictionTest('Kamikaze', 'dose');
+    assert.equal(chat.filter((m) => m.flags?.[SYS]?.test?.addiction).length, 2);
+  });
+  test('the trauma damper in the damage card: a box moves to Stun and the card says so', async () => {
+    const a = pc({}, [bio('traumaDamper')]); world(a);
+    faces.push(1, 1, 1, 1);
+    await a.resistDamage({ power: 6, level: 'M', armor: 0, type: 'physical' });
+    assert.deepEqual({ p: a.system.monitor.physical, s: a.system.monitor.stun }, { p: 2, s: 1 });
+    assert.match(text(), /trauma damper moved a box/);
+  });
+  test('the trauma damper with a damage compensator that still copes: nothing moves', async () => {
+    const a = pc({}, [bio('traumaDamper'), bio('damageCompensator', { rating: 4 })]); world(a);
+    faces.push(1, 1, 1, 1);
+    await a.resistDamage({ power: 6, level: 'M', armor: 0, type: 'physical' });
+    assert.equal(a.system.monitor.stun, 0);
+  });
+  test('new Stun damage ends a rest in progress', async () => {
+    const a = pc({ monitor: { physical: 0, stun: 5 } }); world(a);
+    await a.setFlag(SYS, 'stunRest96', { successes: 1 });
+    await a.syncCondition('ok', { physical: false, stun: true }, { physical: 0, stun: 3 });
+    assert.equal(a.getFlag(SYS, 'stunRest96'), undefined);
+  });
+  test('the medkit\'s advice in first aid: a healer with no Biotech rolls the kit\'s 3 dice, no defaulting', async () => {
+    const medkit = { id: 'mk', type: 'gear', name: 'Medkit', system: { medkitRating: 3, carried: true, quantity: 1 } };
+    const healer = pc({}, [medkit]);
+    const patient = pc({ monitor: { physical: 4, stun: 0 } }); world(healer, patient);
+    faces.push(5, 5, 5);
+    await healer.firstAid(patient, { medkitId: 'mk', ignoreWindow: true });
+    const snap = chat.map((m) => m.flags?.[SYS]?.test).find((x) => x?.heal);
+    assert.ok(snap, 'the first aid card');
+    assert.equal(snap.dice.length, 3);
+    assert.equal((snap.modifiers ?? []).some((m: any) => String(m.id ?? '').startsWith('defaulting')), false);
+  });
+  test('a healing spell is sustained for its Healing Table time ÷ the extra successes (#applySustain)', async () => {
+    const heal = { id: 'he', type: 'spell', name: 'Heal', system: { category: 'health', spellType: 'mana', learnedForce: 4, targetNumber: 4, damageLevel: 'M', damageType: 'stun', duration: 'permanent', resist: 'none', drainModifier: 0, drainLevel: 'L', range: 'los', effects: { attributes: {}, reaction: 0, initiativeDice: 0, ballistic: 0, impact: 0, testsTn: 0, perceivedTn: 0, attackedTn: 0, movementFactor: 1 }, effectPerSuccess: false, heals: true, healTrack: 'physical', healDrain: 'fixed', treat: false } };
+    const mage = pc({ magic: 6, tradition: 'hermetic' }, [{ id: 'sorc', type: 'skill', name: 'Sorcery', system: { rating: 5, attribute: 'willpower', kind: 'active' } }, heal]);
+    const patient = pc({ name: 'Patient', monitor: { physical: 3, stun: 0 } }); world(mage, patient);
+    faces.push(...Array(5).fill(5), ...Array(12).fill(5));
+    await mage.castSpell(mage.items.get('he'), { targetUuid: patient.uuid, force: 4 });
+    const e = mage.system.sustaining[0];
+    assert.ok(e, 'sustained');
+    assert.equal(patient.system.monitor.physical, 0);
+    // Moderate: 10 turns ÷ (5 successes − 3 boxes) = 5 turns of 3 s.
+    assert.equal(e.permanentAt, 5 * 3);
   });
 });

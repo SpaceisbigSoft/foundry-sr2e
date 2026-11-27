@@ -64,6 +64,14 @@ describe('v0.96.0 health: the minimum lifestyle and medical costs (Core p. 113)'
     assert.equal(H.restCareCost({ care: 'hospital', hours: 24, boxes: 4, tier: 'platinum' }), 250);
     assert.equal(H.restCareCost({ care: 'hospital', hours: 24, boxes: 4, tier: 'gold' }), 450);
   });
+  test('a doctor\'s fee only where a doctor is involved: the Doctoring Table\'s doctor rows', (t) => {
+    assert.equal(H.restCareCost({ care: 'home', hours: 24, boxes: 4 }), 100);
+    assert.equal(H.restCareCost({ care: 'poor', hours: 24, boxes: 7 }), 200);
+    assert.equal(H.restCareCost({ care: 'none', hours: 24, boxes: 7 }), 0);
+    t.after(oldWay({ 'DOCS_V79.doctoring': 'care' }));
+    assert.equal(H.restCareCost({ care: 'medkit', hours: 24, boxes: 4 }), 0, 'the care rows name no doctor');
+    assert.equal(H.restCareCost({ care: 'hospital', hours: 24, boxes: 4 }), 500);
+  });
   test('off: null (RULES.HEALTH.careCosts), no paramedic fee, no discount', (t) => {
     t.after(oldWay({ 'HEALTH_V96.medicalCosts': 'off', 'HEALTH_V96.docwagonExtendedCare': 'off' }));
     assert.equal(H.restCareCost({ care: 'hospital', hours: 24, boxes: 4 }), null);
@@ -102,8 +110,9 @@ describe('v0.96.0 health: patches (Core pp. 186, 250; Awakenings p. 99)', () => 
     assert.equal(H.antidoteAttentionDue('dying', true), false);
     assert.equal(H.antidoteAttentionDue('ok', false), false);
   });
-  test('the stim patch: Core against the rating; Awakenings against the 24-hour total', (t) => {
+  test('the stim patch: Core against the rating; Awakenings against the 24-hour total; rating 0 rolls nothing', (t) => {
     assert.equal(H.stimMagicTest(3, [{ t: 0, rating: 2 }], 100)?.tn, 3);
+    assert.equal(H.stimMagicTest(0, [], 100), null);
     t.after(oldWay({ 'HEALTH_V96.stimMagic': 'awakenings' }));
     const r = H.stimMagicTest(3, [{ t: 0, rating: 2 }, { t: -DAY - 1, rating: 6 }], 100)!;
     assert.equal(r.tn, 5);
@@ -128,15 +137,25 @@ describe('v0.96.0 health: bioware (Shadowtech pp. 26, 29, 30)', () => {
     assert.deepEqual(H.damperShift({ physical: 0, stun: 0 }, { physical: 3, stun: 0 }, { damper: true, painEditor: false }), { physical: 2, stun: 1 });
     assert.equal(H.damperShift({ physical: 0, stun: 0 }, { physical: 3, stun: 0 }, { damper: true, painEditor: true }), null);
     assert.equal(H.damperShift({ physical: 0, stun: 10 }, { physical: 3, stun: 10 }, { damper: true, painEditor: false }), null);
+    assert.equal(H.damperShift({ physical: 9, stun: 0 }, { physical: 12, stun: 0 }, { damper: true, painEditor: false }), null, 'not from the Overflow');
+    assert.equal(H.damperShift({ physical: 0, stun: 0 }, { physical: 3, stun: 0 }, { damper: true, painEditor: false, compensatorBoxes: 2 }), null, 'the compensator still copes with Stun');
+    assert.deepEqual(H.damperShift({ physical: 0, stun: 3 }, { physical: 3, stun: 3 }, { damper: true, painEditor: false, compensatorBoxes: 2 }), { physical: 2, stun: 4 }, 'both tracks past it');
   });
   test('pain editor: not knocked out by Stun', () => {
     assert.equal(H.painEditorStatus('unconscious', true), 'ok');
     assert.equal(H.painEditorStatus('dying', true), 'dying');
     assert.equal(H.painEditorStatus('unconscious', false), 'unconscious');
   });
-  test('hasBio reads installed, working bioware', () => {
-    assert.equal(H.hasBio([{ type: 'cyberware', system: { installed: true, bioKind: 'traumaDamper' } }], 'traumaDamper'), true);
-    assert.equal(H.hasBio([{ type: 'cyberware', system: { installed: false, bioKind: 'traumaDamper' } }], 'traumaDamper'), false);
+  test('hasBio reads installed, working bioware (as bioEffect and bioVitals do)', (t) => {
+    t.after(oldWay({ 'HEALTH_V72.bioware.enabled': true }));
+    assert.equal(H.hasBio([{ type: 'cyberware', system: { installed: true, bioKind: 'traumaDamper', rating: 1 } }], 'traumaDamper'), true);
+    assert.equal(H.hasBio([{ type: 'cyberware', system: { installed: false, bioKind: 'traumaDamper', rating: 1 } }], 'traumaDamper'), false);
+    assert.equal(H.hasBio([{ type: 'cyberware', system: { installed: true, bioKind: 'traumaDamper', rating: 0 } }], 'traumaDamper'), false, 'rating 0 does nothing');
+    assert.equal(H.hasBio([{ id: 'x', type: 'cyberware', system: { installed: true, bioKind: 'traumaDamper', rating: 1 } }], 'traumaDamper', ['x']), false, 'still healing in');
+    const screen = [{ type: 'cyberware', system: { installed: true, bioKind: 'nephriticScreen', rating: 1 } }];
+    assert.equal(H.hasBio(screen, 'nephriticScreen'), true);
+    (RULES.HEALTH_V72.bioware as any).enabled = false;
+    assert.equal(H.hasBio(screen, 'nephriticScreen'), false, 'a Shadowtech kind only while HEALTH_V72.bioware is on');
   });
   test('off: the v0.95.1 results', (t) => {
     t.after(oldWay({ 'HEALTH_V96.nephriticPower': 'off', 'HEALTH_V96.traumaDamper': 'off', 'HEALTH_V96.painEditor': 'off' }));
@@ -193,6 +212,8 @@ describe('v0.96.0 health: DocWagon (Neo-Anarchist\'s Guide p. 95; Core p. 250)',
     assert.equal(H.docwagonMinutes(3, true), 4);
     assert.equal(H.docwagonMinutes(12, true), 10);
     assert.equal(H.docwagonMinutes(12, false, 2), 14);
+    assert.equal(H.docwagonMinutes(12, false, 0, true), 11, 'an HTR team dispatched at once −1');
+    assert.equal(H.htrCharge('gold', true), 0, 'a tier with HTR included pays nothing');
   });
   test('HTR: Gold half, Platinum free (through docwagonCall)', () => {
     const gold = docwagonCall({ tier: 'gold', active: true, status: 'dying', hostile: true, resuscitationsUsed: 0 });
@@ -214,14 +235,15 @@ describe('v0.96.0 health: neuro-stun and the medkit (Core pp. 186, 250)', () => 
     assert.deepEqual(H.neuroStunEffect('Neuro-Stun VIII'), { seconds: 3600, tn: 2 });
     assert.equal(H.neuroStunEffect('Gamma-scopolamine'), null);
   });
-  test('the medkit lends Biotech 3 to a weaker healer', () => {
-    assert.equal(H.medkitAdviceDice(1, true), 3);
-    assert.equal(H.medkitAdviceDice(4, true), null);
-    assert.equal(H.medkitAdviceDice(0, false), null);
+  test('the medkit lends Biotech 3 when it beats the healer\'s dice, or the healer would default', () => {
+    assert.equal(H.medkitAdviceDice(1, false, true), 3);
+    assert.equal(H.medkitAdviceDice(4, false, true), null);
+    assert.equal(H.medkitAdviceDice(5, true, true), 3, 'defaulting to Intelligence: the kit advises');
+    assert.equal(H.medkitAdviceDice(0, true, false), null);
   });
   test('off: nothing', (t) => {
     t.after(oldWay({ 'HEALTH_V96.neuroStun': 'off', 'HEALTH_V96.medkitAdvice': 'off' }));
     assert.equal(H.neuroStunEffect('Neuro-Stun VIII'), null);
-    assert.equal(H.medkitAdviceDice(0, true), null);
+    assert.equal(H.medkitAdviceDice(0, true, true), null);
   });
 });

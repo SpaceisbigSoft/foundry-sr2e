@@ -85,17 +85,30 @@ export function extendedCareDiscount(tier: string | null | undefined): number {
   return Math.min(1, Math.max(0, num(V().extendedCareDiscount[String(tier)])));
 }
 
+/** The care rows with a doctor outside a hospital: the Doctoring Table's doctor rows (DOCS_V79.doctoring 'table'), else none. */
+export const DOCTOR_ROWS: readonly string[] = ['medkit', 'home', 'poor', 'terrible'];
+export function doctorInvolved(care: string): boolean {
+  return RULES.DOCS_V79.doctoring === 'table' && DOCTOR_ROWS.includes(String(care));
+}
+
+/** What a day of this care costs by the Medical Costs Table for a wound (before any discount); null when off. */
+export function careDayCost(care: string, boxes: number): number | null {
+  if (!medicalCostsOn()) return null;
+  const t = V().medicalCostsTable;
+  const lvl = levelOf(boxes);
+  return care === 'hospital' ? whole(t.hospitalPerDay) : care === 'intensive' ? whole(t.intensivePerDay) : doctorInvolved(care) && lvl ? whole(t.doctorPerDay[lvl]) : 0;
+}
+
 /**
- * What a Physical rest costs by the Medical Costs Table: per started day, a hospital (doctor included) or intensive
- * care, or the doctor's fee for the wound when a doctor treats outside a hospital ('medkit' care); less a DocWagon
- * extended care discount. Null when the rule is off (the caller keeps RULES.HEALTH.careCosts).
+ * What a Physical rest costs by the Medical Costs Table (Core p. 113: a bill when a doctor is involved): per started
+ * day, a hospital (doctor included) or intensive care, or the doctor's fee for the wound when a doctor treats outside a
+ * hospital (the Doctoring Table's doctor rows); less a DocWagon extended care discount. Null when the rule is off (the
+ * caller keeps RULES.HEALTH.careCosts).
  */
 export function restCareCost(o: { care: string; hours: number; boxes: number; tier?: string | null }): number | null {
-  if (!medicalCostsOn()) return null;
+  const perDay = careDayCost(o.care, o.boxes);
+  if (perDay == null) return null;
   const days = Math.max(1, Math.ceil(Math.max(0, num(o.hours)) / 24));
-  const t = V().medicalCostsTable;
-  const lvl = levelOf(o.boxes);
-  const perDay = o.care === 'hospital' ? whole(t.hospitalPerDay) : o.care === 'intensive' ? whole(t.intensivePerDay) : o.care === 'medkit' && lvl ? whole(t.doctorPerDay[lvl]) : 0;
   return Math.round(perDay * days * (1 - extendedCareDiscount(o.tier)));
 }
 
@@ -163,7 +176,10 @@ export function patchAfterImplants(kind: string, rating: number, items: Iterable
   return { rating: Math.max(0, whole(rating) - inh.armor), blocked: false, armor: inh.armor };
 }
 
-/** Whether an antidote patch on this patient asks the GM about professional attention (Core p. 186). */
+/**
+ * Whether an antidote patch on this patient asks the GM about professional attention (Core p. 186): it counts as
+ * professional help (Core p. 115), which allows another Biotech test and the patient's Body test.
+ */
 export function antidoteAttentionDue(status: string, stabilised: boolean): boolean {
   return V().antidoteAttention === 'book' && status === 'dying' && !stabilised;
 }
@@ -178,6 +194,8 @@ export function stimMagicTest(rating: number, history: unknown, now: number): { 
   const mode = V().stimMagic;
   if (mode === 'off') return null;
   const r = whole(rating);
+  // A patch brought to 0 by dermal armor does nothing, so there is nothing to test.
+  if (r <= 0) return null;
   const prev = Array.isArray(history) ? history.filter((h: any) => h && Number.isFinite(Number(h.t)) && num(now) - Number(h.t) < DAY).map((h: any) => ({ t: Number(h.t), rating: whole(h.rating) })) : [];
   const kept = [...prev, { t: num(now), rating: r }].slice(-50);
   const tn = mode === 'awakenings' ? kept.reduce((n, h) => n + h.rating, 0) : r;
@@ -186,9 +204,20 @@ export function stimMagicTest(rating: number, history: unknown, now: number): { 
 
 // ---------------------------------------------------------------- Bioware (Shadowtech pp. 26, 29, 30)
 
-/** Whether a working implant of this bioware kind is installed. */
-export function hasBio(items: Iterable<ItemLike> | null | undefined, kind: string): boolean {
-  for (const it of items ?? []) if (installed(it) && it.system?.['bioKind'] === kind && !it.system?.['damaged']) return true;
+/**
+ * Whether a working implant of this bioware kind is installed, read as bioEffect and bioVitals read it: installed, not
+ * damaged, rating above 0, not still healing in after surgery (`healingIds`), and a Shadowtech kind of
+ * RULES.HEALTH_V72.bioware only while that is enabled.
+ */
+export function hasBio(items: Iterable<ItemLike & { id?: string }> | null | undefined, kind: string, healingIds: Iterable<string> = []): boolean {
+  const b: any = (RULES as any).HEALTH_V72?.bioware;
+  if (b && (b.kinds as readonly string[] | undefined)?.includes(kind) && !b.enabled) return false;
+  const healing = new Set(healingIds);
+  for (const it of items ?? []) {
+    if (!installed(it) || it.system?.['bioKind'] !== kind || it.system?.['damaged'] || !(num(it.system?.['rating']) > 0)) continue;
+    if (it.id && healing.has(String(it.id))) continue;
+    return true;
+  }
   return false;
 }
 
@@ -199,11 +228,18 @@ export function nephriticCut(o: { kind?: string; vector: string; screen: boolean
   return blood ? whole(V().nephriticPowerCut) : 0;
 }
 
-/** A trauma damper on a Physical hit: one of the new boxes moves onto the Stun track. Null when nothing moves. */
-export function damperShift(before: { physical: number; stun: number }, after: { physical: number; stun: number }, o: { damper: boolean; painEditor: boolean }): { physical: number; stun: number } | null {
+/**
+ * A trauma damper on a Physical hit: one of the new boxes moves onto the Stun track. Not with a pain editor; with a
+ * damage compensator only once its boxes are exceeded on both tracks (Shadowtech p. 29); never a box past the track
+ * (the Overflow) and never onto a full Stun track. Null when nothing moves.
+ */
+export function damperShift(before: { physical: number; stun: number }, after: { physical: number; stun: number }, o: { damper: boolean; painEditor: boolean; compensatorBoxes?: number }): { physical: number; stun: number } | null {
   if (V().traumaDamper !== 'book' || !o.damper || o.painEditor) return null;
   if (!(num(after.physical) > num(before.physical))) return null;
+  if (num(after.physical) > RULES.MONITOR_BOXES) return null;
   if (num(after.stun) >= RULES.MONITOR_BOXES) return null;
+  const comp = whole(o.compensatorBoxes);
+  if (comp > 0 && !(num(after.physical) > comp && num(after.stun) > comp)) return null;
   return { physical: num(after.physical) - 1, stun: num(after.stun) + 1 };
 }
 
@@ -275,14 +311,15 @@ export function docwagonAir(d6: number, htr = false): boolean {
   return whole(d6) >= (htr ? 4 : 5);
 }
 
-/** The response time in minutes: 3D6 + air − 2 + the GM's modifier, at least 4. */
-export function docwagonMinutes(threeD6: number, air: boolean, modifier = 0): number {
-  return Math.max(whole(V().docwagonResponseMin), Math.floor(num(threeD6) + (air ? num(V().docwagonAirModifier) : 0) + num(modifier)));
+/** The response time in minutes: 3D6 + air − 2 (+ HTR dispatched at once −1) + the GM's modifier, at least 4. */
+export function docwagonMinutes(threeD6: number, air: boolean, modifier = 0, htr = false): number {
+  return Math.max(whole(V().docwagonResponseMin), Math.floor(num(threeD6) + (air ? num(V().docwagonAirModifier) : 0) + (htr ? -1 : 0) + num(modifier)));
 }
 
-/** The HTR charge for a contract (Core p. 250); null when off (the tier's own fee). */
-export function htrCharge(tier: string): number | null {
+/** The HTR charge for a contract (Core p. 250); null when off (the tier's own fee). A tier whose HTR is included pays nothing. */
+export function htrCharge(tier: string, included = false): number | null {
   if (V().docwagonHtr !== 'book') return null;
+  if (included) return 0;
   const d = Math.min(1, Math.max(0, num(V().htrDiscount[String(tier)])));
   return Math.round(whole(V().htrFee) * (1 - d));
 }
@@ -297,11 +334,14 @@ export function neuroStunEffect(name: string): { seconds: number; tn: number } |
   return { seconds: whole(V().neuroStunMinutes) * 60, tn: whole(V().neuroStunTn) };
 }
 
-/** The Biotech dice first aid with a medkit rolls by its advice (null: the healer's own are as good, or off). */
-export function medkitAdviceDice(ownRating: number, medkit: boolean): number | null {
+/**
+ * The Biotech dice first aid with a medkit rolls by its advice: the kit's rating when it beats the healer's own dice,
+ * or when the healer would default (the kit advises, so no defaulting). Null: the healer's own, or off.
+ */
+export function medkitAdviceDice(ownDice: number, defaulting: boolean, medkit: boolean): number | null {
   if (V().medkitAdvice !== 'book' || !medkit) return null;
   const kit = whole(V().medkitBiotech);
-  return whole(ownRating) < kit ? kit : null;
+  return kit > whole(ownDice) || (defaulting && kit > 0) ? kit : null;
 }
 
 export const LEVEL_IDS = LEVELS;
