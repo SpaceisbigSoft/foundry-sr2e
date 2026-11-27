@@ -6,7 +6,7 @@ This is the history of the unofficial Shadowrun 2nd Edition system for Foundry V
 - **Fixed:** an elemental on an unlinked token that was given services again after departing no longer loses them all at the next world-clock tick (its cleared waiting clock read as time 0).
 - **Fixed:** masking's second try (+2) and its limit of two now count: the try counter's key held a dot, which Foundry stores as nested data, so the count was never read back.
 - **Changed:** magical defaulting picks the skill with the most expected successes at the casting TN, not simply the most dice (Magical Theory 3 at +2 now beats Willpower 4 at +8).
-- **Fixed:** no "fully cured" card when an addiction's rest ends while the character is addicted again; the interrupted-rest note says how many successes this roll counts; the watcher summon card's title shows the hours TN it rolls against; the exclusive-spell stacking warning shows its apostrophe; the withdrawal and Neuro-stun TN rows carry ids, so re-rolls and GM TN changes keep them.
+- **Fixed:** no "fully cured" card when an addiction's rest ends while the character is addicted again; the interrupted-rest note no longer reads "1 successes"; the watcher summon card's title shows the hours TN it rolls against; the exclusive-spell stacking warning shows its apostrophe; the withdrawal and Neuro-stun TN rows carry ids, so re-rolls and GM TN changes keep them.
 - **Changed:** a departed elemental's card asks the GM to take its token off the scene (the system doesn't delete it: an unlinked token is the spirit itself).
 - API changes: none.
 

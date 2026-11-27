@@ -20280,7 +20280,7 @@
       "Rest": {
         "hospitalized": "Hospitalized",
         "lifestyleShort": "Below the minimum lifestyle for this wound ({need}; resting at {own}): the GM may add modifiers (Core p. 113).",
-        "interrupted": "Interrupted rest: this re-test counts {counted} of the {rolled} rolled, never more than the first roll (it had {cap}; Core p. 112)."
+        "interrupted": "Interrupted rest: this re-test counts no more successes than the first roll (first roll: {cap}; Core p. 112)."
       },
       "Fee": {
         "paramedic": "{healer} gave {patient} paramedic first aid: the fee is {fee}¥ (Medical Costs Table).",

@@ -360,10 +360,10 @@ describe('v0.96.1 health glue: live-run fixes', () => {
     await H96G.addictionTick(a, ad, 100);
     assert.equal(chat.some((m) => /cured/i.test(String(m.content ?? ''))), true, 'a clean entry is still cured');
   });
-  test('the interrupted-rest note says what this roll counts, not "1 successes"', () => {
+  test('the interrupted-rest note gives only the cap (it stays true after a re-roll), not "1 successes"', () => {
     const a = pc({ monitor: { physical: 0, stun: 5 } });
-    const note = H96G.restNote(a, { care: 'none', track: 'stun', before: 5, cap: 1, rolled: 4 });
-    assert.match(note, /counts 1 of the 4 rolled/);
+    const note = H96G.restNote(a, { care: 'none', track: 'stun', before: 5, cap: 1 });
+    assert.match(note, /first roll: 1/);
     assert.doesNotMatch(note, /1 successes/);
   });
 });

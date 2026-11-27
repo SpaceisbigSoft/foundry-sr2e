@@ -73,7 +73,7 @@ export function docwagonTierOf(actor: any): string | null {
 const lifestyleLabel = (id: string): string => id === 'hospital' ? tx('SR2E.Health96.Rest.hospitalized') : String(RULES.UPKEEP.lifestyles.find((l) => l.id === id)?.label ?? id);
 
 /** Plain text for the rest card's title: the lifestyle short of the minimum (Physical), or the re-test's cap (Stun). */
-export function restNote(actor: any, o: { care: string; track: string; before: number; cap?: number; rolled?: number }): string {
+export function restNote(actor: any, o: { care: string; track: string; before: number; cap?: number }): string {
   const parts: string[] = [];
   if (o.track === 'physical') {
     let days: number | null = null;
@@ -83,10 +83,9 @@ export function restNote(actor: any, o: { care: string; track: string; before: n
     if (need) parts.push(tx('SR2E.Health96.Rest.lifestyleShort', { need: lifestyleLabel(need), own: lifestyleLabel(H.restLifestyle(o.care, own)) }));
   }
   if (o.track === 'stun' && o.cap != null) {
-    // v0.96.1: say what this roll counts (the card's header shows the dice rolled), with no "1 successes".
-    const cap = int(o.cap, 0, 40);
-    const rolled = o.rolled == null ? cap : int(o.rolled, 0, 99);
-    parts.push(tx('SR2E.Health96.Rest.interrupted', { cap, counted: Math.min(cap, rolled), rolled }));
+    // v0.96.1: no "1 successes". Only the cap goes in the title: the title is kept as the card's label, so a count of
+    // this roll's successes would go stale after a Karma re-roll (Apply counts the re-rolled successes up to the cap).
+    parts.push(tx('SR2E.Health96.Rest.interrupted', { cap: int(o.cap, 0, 40) }));
   }
   return parts.length ? ` ${parts.join(' ')}` : '';
 }
