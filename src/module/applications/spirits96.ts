@@ -19,6 +19,7 @@ import { allActors } from '../helpers/actors.ts';
 import { successTest, type SuccessTestResult } from '../rules/dice.ts';
 import { elementalServes } from '../rules/thaumaturgy.ts';
 import * as S from '../rules/spirits96.ts';
+import { isLeadGm } from './leader.ts';
 
 const G = (): any => (globalThis as any).game;
 const isGm = (): boolean => Boolean(G()?.user?.isGM);
@@ -72,7 +73,9 @@ export async function elementalWaitTick(a: any, time: number): Promise<boolean> 
     if (Number.isFinite(since)) await clearFlag(a, WAIT_FLAG);
     return false;
   }
-  if (!Number.isFinite(since)) { await a.setFlag(SYSTEM_ID, WAIT_FLAG, time); return false; }
+  // Not started yet (no token was placed while the GM watched), or a time in the future (the flag is the owner's to
+  // write): the clock starts now.
+  if (!Number.isFinite(since) || since > time) { await a.setFlag(SYSTEM_ID, WAIT_FLAG, time); return false; }
   const used = Math.min(services, S.waitingServices(since, time));
   if (used <= 0) return false;
   const left = services - used;
@@ -91,19 +94,25 @@ export async function disrupted(a: any): Promise<string> {
   if (!S.on('disruption') || a?.type !== 'spirit') return '';
   if (a.system?.spiritKind === 'watcher') return tx('SR2E.Spirits96.Disrupt.watcher', { name: name(a) });
   const force = Math.max(0, Math.floor(Number(a.system?.force ?? 0)));
-  const until = S.disruptedUntil(sysNow(), force);
+  const at = sysNow();
+  const until = S.disruptedUntil(at, force);
   if (until === null) return '';
-  try { await a.setFlag(SYSTEM_ID, DISRUPTED_FLAG, until); } catch { /* not ours to write: the GM's card says it anyway */ }
+  try { await a.setFlag(SYSTEM_ID, DISRUPTED_FLAG, { at, until }); } catch { /* not ours to write: the GM's card says it anyway */ }
   return tx('SR2E.Spirits96.Disrupt.until', { name: name(a), days: S.disruptionDays(force), day: Math.floor(until / DAY) + 1 });
 }
 
 /** A disrupted spirit's time is up: it may appear again (its damage gone). */
 export async function disruptionTick(a: any, time: number): Promise<boolean> {
   if (a?.type !== 'spirit') return false;
-  const until = Number(a.getFlag?.(SYSTEM_ID, DISRUPTED_FLAG));
-  if (!Number.isFinite(until) || time < until) return false;
+  const raw: any = a.getFlag?.(SYSTEM_ID, DISRUPTED_FLAG);
+  if (raw === undefined || raw === null) return false;
+  const at = Number(raw?.at), until = Number(raw?.until);
+  // The flag is the spirit owner's to write: it heals only a spirit that is disrupted, after exactly its 28 − Force
+  // days from a disruption that isn't in the future; anything else just drops the flag.
+  const sound = Number.isFinite(at) && Number.isFinite(until) && at <= time && until === at + S.disruptionDays(Number(a.system?.force ?? 0)) * DAY;
+  if (sound && time < until) return false;
   await clearFlag(a, DISRUPTED_FLAG);
-  if (!S.on('disruption')) return false;
+  if (!S.on('disruption') || !sound || String(a.system?.derived?.status ?? '') !== 'disrupted') return false;
   await a.update({ 'system.monitor.physical': 0, 'system.monitor.stun': 0 });
   await post(`<p>${tx('SR2E.Spirits96.Disrupt.back', { name: name(a) })}</p>`, { speaker: speaker(a) });
   return true;
@@ -178,29 +187,51 @@ export function techPowerLost(weapon: any, tweaks: any, targetUuid: string | nul
 // ================================================================ Reflecting (Awakenings p. 99)
 
 /**
- * A reflecting initiate's rebound the book's way (Awakenings p. 99): the shielding dice's successes (`r.shield96`)
- * against the caster's; more, and the spell comes back at a Force of the difference (at most its own), the defender
- * rolling that Force against the caster's resisting attribute as the new casting test; a Force 1 spell reflected again
- * dissipates. The card line and its Resist button's flags (the same shape as the v0.95.1 reflection).
+ * A reflecting initiate's rebound the book's way (Awakenings p. 99): the shielding dice's successes (`shield`, counted
+ * from the tagged dice at the test's current TN) against the caster's; more, and the spell comes back at a Force of the
+ * difference (at most its own), the defender rolling that Force against the caster's resisting attribute as the new
+ * casting test; a Force 1 spell reflected again dissipates. That test is rolled once and kept on the card
+ * (`reflect.rebound96`): resolving the card again (a re-roll, a TN change) reuses its dice, rolling only dice a higher
+ * Force adds. Returns the card line, its Resist button's flags and the reflect context to keep.
  */
-export async function reflectRebound(actor: any, r: any, casterSuccesses: number): Promise<{ html: string; flags: Record<string, unknown> }> {
-  const o = S.reflectBook({ shieldSuccesses: Number(r?.shield96 ?? 0), casterSuccesses, force: Number(r?.force ?? 0), reflected: Boolean(r?.reflected96) });
-  if (!o) return { html: '', flags: {} };
-  if ('dissipates' in o) return { html: `<p><strong>${tx('SR2E.Spirits96.Reflect.dissipates', { spell: escHtml(String(r.spellName ?? '')) })}</strong></p>`, flags: {} };
+export async function reflectRebound(actor: any, r: any, casterSuccesses: number, shield: number): Promise<{ html: string; flags: Record<string, unknown>; reflect: any }> {
+  const o = S.reflectBook({ shieldSuccesses: shield, casterSuccesses, force: Number(r?.force ?? 0), reflected: Boolean(r?.reflected96) });
+  if (!o) return { html: '', flags: {}, reflect: r };
+  if ('dissipates' in o) return { html: `<p><strong>${tx('SR2E.Spirits96.Reflect.dissipates', { spell: escHtml(String(r.spellName ?? '')) })}</strong></p>`, flags: {}, reflect: r };
   const caster: any = (globalThis as any).fromUuidSync?.(String(r.casterUuid ?? '')) ?? null;
   const attr = String(r.resistAttribute ?? 'willpower');
-  const tn = Math.max(2, Math.floor(Number(caster?.system?.attributes?.[attr]?.total ?? 4)) || 4);
-  const rolls: any[] = [];
-  const test = await successTest({ dice: o.force, targetNumber: tn, roll: roller(rolls) });
+  const kept: any = r?.rebound96 && typeof r.rebound96 === 'object' ? r.rebound96 : null;
+  const tn = kept ? int(kept.tn, 2, 30, 4) : Math.max(2, Math.floor(Number(caster?.system?.attributes?.[attr]?.total ?? 4)) || 4);
+  const had: number[] = Array.isArray(kept?.dice) ? kept.dice.slice(0, 30).map((d: unknown) => int(d, 1, 200, 1)) : [];
+  if (had.length < o.force) {
+    const more = await successTest({ dice: o.force - had.length, targetNumber: tn, roll: roller([]) });
+    had.push(...more.dice.map((d) => Number(d.total)));
+  }
+  const used = had.slice(0, o.force);
+  const successes = used.filter((d) => d >= tn).length;
   const spell = {
     casterUuid: String(actor.uuid), targetUuid: String(r.casterUuid), spellName: tx('SR2E.Spirits96.Reflect.name', { spell: String(r.spellName ?? '') }), force: o.force,
-    resistAttribute: attr, level: r.level, damageType: r.damageType, casterSuccesses: test.successes,
-    noun: r.noun === 'power' ? 'power' : 'spell', resistPool: r.noun === 'power' ? (r.resistPool ?? 'none') : 'spell', reflected: true,
+    resistAttribute: attr, level: r.level, damageType: r.damageType, casterSuccesses: successes,
+    noun: 'spell', resistPool: 'spell', reflected: true,
     ...(r.effectOnly ? { effectOnly: true } : {}),
   };
-  const html = `<p><strong>${tx('SR2E.Spirits96.Reflect.rebounds', { name: name(actor), spell: escHtml(String(r.spellName ?? '')), force: o.force })}</strong> ${tx('SR2E.Spirits96.Reflect.test', { dice: o.force, tn, rolled: escHtml(diceText(test)), successes: test.successes })}`
-    + (test.successes > 0 ? ` <button type="button" data-sr2e-action="resistSpell" data-index="0">${tx('SR2E.Spirits96.Reflect.resist', { caster: escHtml(String(caster?.name ?? '')) })}</button>` : '') + '</p>';
-  return { html, flags: test.successes > 0 ? { spell, spells: [spell] } : {} };
+  const html = `<p><strong>${tx('SR2E.Spirits96.Reflect.rebounds', { name: name(actor), spell: escHtml(String(r.spellName ?? '')), force: o.force })}</strong> ${tx('SR2E.Spirits96.Reflect.test', { dice: o.force, tn, rolled: escHtml(used.join(', ')), successes })}`
+    + (successes > 0 ? ` <button type="button" data-sr2e-action="resistSpell" data-index="0">${tx('SR2E.Spirits96.Reflect.resist', { caster: escHtml(String(caster?.name ?? '')) })}</button>` : '') + '</p>';
+  return { html, flags: successes > 0 ? { spell, spells: [spell] } : {}, reflect: { ...r, rebound96: { dice: had, tn } } };
+}
+
+// ================================================================ Registration
+
+/** A bound elemental's token placed on a scene starts its day of waiting (the lead GM's client). */
+export async function tokenPlaced(token: any): Promise<void> {
+  const a: any = token?.actor;
+  if (!S.on('elementalWaiting') || a?.type !== 'spirit' || a.system?.spiritKind !== 'elemental' || !a.system?.summonerUuid || !(Number(a.system?.services ?? 0) > 0)) return;
+  if (!isLeadGm() || Number.isFinite(Number(a.getFlag?.(SYSTEM_ID, WAIT_FLAG)))) return;
+  await a.setFlag(SYSTEM_ID, WAIT_FLAG, sysNow());
+}
+
+export function registerSpirits96(): void {
+  (globalThis as any).Hooks?.on?.('createToken', (token: any) => { void tokenPlaced(token).catch((err) => console.warn('sr2e | elemental waiting', err)); });
 }
 
 // ================================================================ A free spirit's true name (Grimoire p. 77)
@@ -230,24 +261,51 @@ export async function mayBanish(banisher: any, spirit: any): Promise<boolean> {
 
 // ================================================================ Aid Sorcery in spell defense (Core p. 141)
 
-/**
- * The aid dice a magician adds to resisting a spell (Core p. 141): from an aid already started by one of their own
- * elementals that serves the spell's category, as many as they ask for (asked like Magic Pool dice). The dice used
- * are gone from the aid. 0 when there is none, the switch is off, or nothing is asked.
- */
-export async function aidDefense(defender: any, spell: { category?: string; element?: string }, canWrite: (doc: any) => boolean): Promise<{ dice: number; note: string }> {
-  if (!S.on('aidDefense') || !defender?.uuid) return { dice: 0, note: '' };
+/** The dice still left in an elemental's aid: its own count, never more than its Force (the flag is the owner's to write). */
+export function aidLeftOf(aid: any): number {
+  return Math.max(0, Math.min(Math.floor(Number(aid?.system?.force ?? 0)) || 0, Math.floor(Number(aid?.getFlag?.(SYSTEM_ID, 'aidLeft') ?? 0)) || 0));
+}
+
+/** Whether an elemental aid may join spell defense at all (this switch and SORCERY_V923.elementalAid, both book). */
+const aidDefenseOn = (): boolean => S.on('aidDefense') && RULES.SORCERY_V923.elementalAid === 'book';
+
+/** The defender's elemental whose started aid serves this spell (the first found), or null. */
+function aidFor(defender: any, spell: { category?: string; element?: string }, may: (doc: any) => boolean): any | null {
+  if (!aidDefenseOn() || !defender?.uuid) return null;
   const mine: string[] = typeof defender.selfUuids === 'function' ? defender.selfUuids() : [String(defender.uuid)];
-  const aid = allActors().find((a: any) => a?.type === 'spirit' && a.system?.spiritKind === 'elemental' && mine.includes(String(a.system?.summonerUuid ?? ''))
-    && Number(a.getFlag?.(SYSTEM_ID, 'aidLeft') ?? 0) > 0 && elementalServes(String(a.system?.element ?? ''), { element: spell.element ?? '', category: spell.category ?? '' }) && canWrite(a));
-  if (!aid) return { dice: 0, note: '' };
-  const left = Math.max(0, Math.floor(Number(aid.getFlag(SYSTEM_ID, 'aidLeft') ?? 0)));
+  return allActors().find((a: any) => a?.type === 'spirit' && a.system?.spiritKind === 'elemental' && mine.includes(String(a.system?.summonerUuid ?? ''))
+    && aidLeftOf(a) > 0 && elementalServes(String(a.system?.element ?? ''), { element: spell.element ?? '', category: spell.category ?? '' }) && may(a)) ?? null;
+}
+
+/**
+ * Asked before the resistance roll (the chat card's Resist click, never under the GM lock or when resisting by
+ * itself): how many of an own elemental's aid dice to add (Core p. 141: allocated like Magic Pool dice). Only the
+ * user who owns that elemental is asked. 0 when there is none; null when the dialog was cancelled.
+ */
+export async function askAidDefense(defender: any, spell: { category?: string; element?: string }): Promise<number | null> {
+  // A GM isn't asked to spend a player's elemental's dice.
+  const aid = aidFor(defender, spell, (a: any) => Boolean(a?.isOwner) && !(isGm() && a?.hasPlayerOwner));
+  if (!aid) return 0;
+  const left = aidLeftOf(aid);
   const asked = await dialogs()?.prompt?.({
     window: { title: tx('SR2E.Spirits96.Aid.title', { name: String(aid.name ?? '') }) },
     content: `<div class="form-group"><label>${tx('SR2E.Spirits96.Aid.label', { name: name(aid), left })}</label><input name="aid" type="number" value="0" min="0" max="${left}" autofocus></div>`,
     ok: { label: tx('SR2E.Spirits96.Aid.ok'), callback: (_e: Event, b: any) => Number(b.form?.elements?.aid?.value) || 0 },
     rejectClose: false,
   });
+  return asked === null || asked === undefined ? null : int(asked, 0, left, 0);
+}
+
+/**
+ * The aid dice a magician adds to resisting a spell (Core p. 141): `asked` (from askAidDefense) of an aid already
+ * started by one of their own elementals that serves the spell, written only when this resolution may write it. Never
+ * asks anything (resistSpell may run under the GM lock). The dice used are gone from the aid.
+ */
+export async function aidDefense(defender: any, spell: { category?: string; element?: string }, canWrite: (doc: any) => boolean, asked = 0): Promise<{ dice: number; note: string }> {
+  if (!(Number(asked) > 0)) return { dice: 0, note: '' };
+  const aid = aidFor(defender, spell, canWrite);
+  if (!aid) return { dice: 0, note: '' };
+  const left = aidLeftOf(aid);
   const use = S.aidDefenseDice(left, int(asked, 0, left, 0));
   if (use.dice <= 0) return { dice: 0, note: '' };
   await aid.setFlag(SYSTEM_ID, 'aidLeft', use.left);

@@ -82,10 +82,12 @@ export const SPIRITS_V96 = {
    */
   adeptCosts: 'book' as 'book' | 'v951',
   /**
-   * Confusion, Fear and Engulf (Predator and Prey pp. 89–92, which replaces the SRII text): opposed tests of the
-   * being's Essence against the victim's Willpower. Confusion adds half the net successes (round down) to the victim's
-   * target numbers; Fear's net successes give its severity (1 runs, 2 does not return, 4 sweats blood, 6 a phobia);
-   * Engulf takes the victim in at one net success, who breaks free with a net success of Strength against Essence.
+   * Confusion, Fear and Engulf (Predator and Prey pp. 89–92, which replaces the SRII text). Confusion and Fear become
+   * opposed tests of the being's Essence against the victim's Willpower; Confusion adds half the net successes (round
+   * down) to the victim's target numbers; Fear's net successes give its severity (1 runs, 2 does not return, 4 sweats
+   * blood, 6 a phobia). Engulf keeps the power's own test (for a spirit, a melee attack with Quickness: not automated);
+   * a hit's card says how the victim is taken in (1 net success walking, more running) and that it breaks free with a
+   * net success of Strength against Essence.
    * 'v951': the power's own dice and TN; Confusion + the being's Essence (CRITTERS_V56.powerMods), no severity line.
    */
   critterOpposed: 'book' as 'book' | 'v951',

@@ -10,7 +10,8 @@ import { sensoryEssence } from './cyberware.ts';
 import { gearBook, gradeEssenceFactor, isDermalPlating, dermalRating, boneLacingBook, cyberReplacements, limbPairsBody } from './gear923.ts';
 import { own } from './util.ts';
 import { attributeMaximums } from './core.ts';
-import { adeptItemCost } from './spirits96.ts';
+import { adeptItemCost, on as on96 } from './spirits96.ts';
+const adeptCostsOn96 = (): boolean => on96('adeptCosts');
 import { t as tx } from '../helpers/i18n.ts';
 
 /**
@@ -1068,9 +1069,13 @@ export function statBlockItems(p: ParsedStatBlock, ctx: { adept?: boolean; metat
   }
 
   const guessedCost: string[] = [];
+  /** v0.96.0: which item each guessed cost belongs to (its index in `items`). */
+  const guessedAt96: number[] = [];
   for (const pw of p.powers ?? []) {
     const adept = pw.section === 'powers' && ctx.adept !== undefined ? ctx.adept : pw.adept;
+    const before96 = guessedCost.length;
     items.push(adept && !pw.weakness ? adeptItem(pw, warnings, guessedCost) : critterItem(pw, warnings));
+    if (guessedCost.length > before96) guessedAt96.push(items.length - 1);
   }
   // v0.96.0 (RULES.SPIRITS_V96.adeptCosts 'book', Core pp. 125–126; Awakenings p. 116): the book's costs by band.
   const adeptSys96 = items.filter((i) => i.type === 'adeptpower').map((i) => i.system as Record<string, any>);
@@ -1080,7 +1085,7 @@ export function statBlockItems(p: ParsedStatBlock, ctx: { adept?: boolean; metat
       racialMax: (k) => attributeMaximums(ctx.metatype ?? 'human', k as any).natural });
     if (c96 !== null) sys96.cost = c96;
   }
-  if (adeptSys96.length) for (const [i, g] of guessedCost.entries()) { const it = items.find((x) => x.type === 'adeptpower' && g.startsWith(`${x.name} (`)); if (it) guessedCost[i] = `${it.name} (${round2(Number((it.system as any).cost ?? 0))})`; }
+  if (adeptSys96.length && adeptCostsOn96()) for (const [i, at] of guessedAt96.entries()) { const it = items[at]; if (it) guessedCost[i] = `${it.name} (${round2(Number((it.system as any).cost ?? 0))})`; }
 
   if (notes.essence.length) warnCoded(warnings, 'essenceGuessed', tx('SR2E.Text.Statblock.essenceGuessedFromStandardSr2', { list: notes.essence.join(', ') }));
   if (notes.unknownEssence.length) warnCoded(warnings, 'essenceUnknown', tx('SR2E.Text.Statblock.essenceUnknownSetTo0', { list: notes.unknownEssence.join(', ') }));

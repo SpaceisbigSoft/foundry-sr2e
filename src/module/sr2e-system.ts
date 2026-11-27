@@ -55,6 +55,7 @@ import { isLeadGm, isPromptWindow, otherWindows } from "./applications/leader.ts
 import { registerTours, startTour } from "./applications/tours.ts";
 import { registerTools, openTools, runTool } from "./applications/tools.ts";
 import { registerTeamKarma, SR2TeamKarma } from './applications/teamkarma.ts';
+import { registerSpirits96 } from './applications/spirits96.ts';
 import { registerTrade942, TRADE_API } from './applications/trade942.ts';
 import { registerCatalogue942, removeOldCatalogueCopy, openCataloguePack } from './applications/catalogue942.ts';
 import { registerRollRequests, openRollRequestDialog, postRollRequest } from './applications/rollrequest.ts';
@@ -200,6 +201,8 @@ export class SR2System {
     registerTools();
     // v0.93.3: the shared Team Karma tracker (report item 38).
     registerTeamKarma();
+    // v0.96.0 (RULES.SPIRITS_V96): an elemental's day of waiting starts when its token is placed.
+    registerSpirits96();
     // v0.94.2: give, stash and loot (item 28); the GM's catalogue in a world compendium (item 32).
     registerTrade942();
     registerCatalogue942();

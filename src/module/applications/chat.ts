@@ -33,6 +33,7 @@ import { reboundBook } from '../rules/fire95.ts';
 import { confirmAdvRevertCard, applyAdvRevertAsGm } from './revert942.ts';
 import { RULES, autoResists, blastRadius, blastLoss, scatter, damageLabel, scatterDiceFor, scatterMetres, confinedBlast, throwBackScatter, blastScatterDice, fusedScatter, canThrowBack, stopsAtWalls, grenadeKind, toxinOnsetLabel, scatterDirection, bearingDeg, type TargetNumberModifier } from '../rules/index.ts';
 import { modKey } from '../rules/dice.ts';
+import * as SP96G from './spirits96.ts';
 import { isLeadGm, isPromptWindow, leadSettled } from './leader.ts';
 import { t as tx, tCount, tKey } from '../helpers/i18n.ts';
 // v0.93.5: the next step on a card, and the attack banner's waiting state (rules/cards935.ts).
@@ -1094,12 +1095,15 @@ async function onResistSpell(message: any, button: HTMLButtonElement): Promise<v
     pool = await promptPoolDice(target, tx('SR2E.Dialog.Chat.resist', { spellSpellName: spell.spellName, targetName: target.name }), poolType);
   }
   if (pool === null) return;
+  // v0.96.0 (RULES.SPIRITS_V96.aidDefense 'book', Core p. 141): an own elemental's aid dice, asked here, before the lock.
+  const aid96 = spell.noun === 'power' ? 0 : await SP96G.askAidDefense(target, { category: String(spell.aid96?.category ?? spell.category ?? ''), element: String(spell.aid96?.element ?? '') });
+  if (aid96 === null) return;
   if (spellResistedOn(message, target).includes(index) && !game.user?.isGM) return ui.notifications.warn(tx('SR2E.Notify.Chat.thatTargetHasAlreadyResistedThis'));
   button.disabled = true;
   const rolled = await gmRoll(message, button, async () => {
     // v0.85.0: checked again inside the lock (the NPC may have resisted by itself meanwhile).
     if (!resistedBefore && game.user?.isGM && spellResistedOn(message, target).includes(index)) { button.disabled = false; ui.notifications.warn(tx('SR2E.Notify.Chat.thatTargetHasAlreadyResistedThis')); return false; }
-    await target.resistSpell(spell, pool, { protectorUuid });
+    await target.resistSpell(spell, pool, { protectorUuid, ...(aid96 > 0 ? { aidDice: aid96 } : {}) });
     return true;
   });
   if (!rolled) return;

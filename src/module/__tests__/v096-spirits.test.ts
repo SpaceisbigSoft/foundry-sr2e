@@ -139,9 +139,12 @@ describe('reflecting (Awakenings p. 99)', () => {
     assert.equal(S.reflectBook({ shieldSuccesses: 2, casterSuccesses: 2, force: 4 }), null);
     assert.deepEqual(S.reflectBook({ shieldSuccesses: 3, casterSuccesses: 0, force: 1, reflected: true }), { dissipates: true });
   });
-  test('the shielding dice are counted from their place in the roll', () => {
-    assert.equal(S.shieldSuccesses([6, 6, 1, 5, 2, 4], { from: 2, count: 3, tn: 4 }), 1);
-    assert.equal(S.shieldSuccesses([1, 1, 5, 5, 5], { from: 2, count: 3, tn: 5 }), 3);
+  test('the shielding dice are tagged as rolled and counted at the current TN, wherever they end up', () => {
+    const dice: any[] = [6, 6, 1, 5, 2, 4].map((t) => ({ total: t }));
+    S.tagShieldDice(dice, { from: 2, count: 3 });
+    assert.deepEqual(dice.map((d) => Boolean(d.shield)), [false, false, true, true, true, false]);
+    assert.equal(S.shieldSuccesses96(dice, 4), 1);
+    assert.equal(S.shieldSuccesses96([...dice].reverse(), 2), 2, 'a re-roll reorders the dice: the tags go with them');
   });
 });
 

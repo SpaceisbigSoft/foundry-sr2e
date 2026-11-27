@@ -3042,7 +3042,9 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     if (!choice) return;
     const spirit: any = await fromUuid(choice.uuid);
     if (choice.control && spirit && actor.selfUuids?.().includes(String(spirit.system?.summonerUuid ?? ""))) return ui.notifications.warn(tx('SR2E.Notify.Sheet.isAlreadyS', { spiritName: escHtml(spirit.name), actorName: escHtml(actor.name) }));
-    if (spirit && (await actor.useAction("banish", tx('SR2E.Card.Sheet.banishing')))) await actor.banish(spirit, { ...(choice.exclude?.length ? { exclude: choice.exclude } : {}), ...(choice.control ? { control: true } : {}) });
+    // v0.96.0 (RULES.SPIRITS_V96.freeSpiritBanish 'book', Grimoire p. 77): a free spirit's true name first, before the action is spent.
+    if (spirit && !choice.control && !(await SP96G.mayBanish(actor, spirit))) return;
+    if (spirit && (await actor.useAction("banish", tx('SR2E.Card.Sheet.banishing')))) await actor.banish(spirit, { ...(choice.exclude?.length ? { exclude: choice.exclude } : {}), ...(choice.control ? { control: true } : { trueNameKnown96: true }) });
   }
 
   /** v0.56.0: manifest in the physical world while projecting (or stop). */
