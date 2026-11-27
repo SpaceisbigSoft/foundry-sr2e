@@ -20356,11 +20356,14 @@
         "quickenTn": "The casting test's target number",
         "quickenKarma": "Good Karma to pay ({min} to {max})",
         "quickenHint": "Sorcery + grade against the casting TN; the dice ÷ successes give the actions to sustain. Karma above the Force makes it harder to dispel. A second Drain test follows.",
-        "quickenOk": "Quicken"
+        "quickenOk": "Quicken",
+        "wardDays": "It lasts {days} day(s)."
       },
       "Mod": {
         "defaulting": "Defaulting to {from}",
-        "stacked": "Stacked spells ({count})"
+        "stacked": "Stacked spells ({count})",
+        "castDrain": "The cast's own Drain modifiers",
+        "maskRetry": "Second try"
       },
       "From": {
         "magicalTheory": "Magical Theory",
@@ -20373,7 +20376,9 @@
         "areaBelowZero": "The radius can't go below 0 m.",
         "fociLimit": "{name} already has as many active foci as Intelligence ({intelligence}).",
         "quickenKarma": "Quickening costs from {min} to {max} Good Karma.",
-        "centerPerceive": "{name} must be perceiving astrally to center for a spell; cast without it."
+        "centerPerceive": "{name} must be perceiving astrally to center for a spell; cast without it.",
+        "stackExclusive": "{spellName} is exclusive: it can't be stacked with other spells.",
+        "quickenFiled": "Quickening's Karma ({karma}) isn't the Karma filed ({filed})."
       },
       "UI": {
         "gradeZero": "Initiated (Grade 0)",

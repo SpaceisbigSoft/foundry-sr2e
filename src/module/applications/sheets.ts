@@ -2862,9 +2862,11 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const index = Number(target.dataset["index"]);
     const entry = (this.document as any).sustained?.()[index];
     if (S96.s96("quickening") && entry && (this.document as any).system?.metamagic?.quickening) {
-      const q = await G96.askQuicken(entry);
-      if (!q) return;
-      await (this.document as any).quicken(index, String(entry.spellName ?? ""), q);
+      // Review: one window and one spend per spell at a time.
+      await G96.oneQuicken(`${(this.document as any).uuid}|${String(entry.spellName ?? "")}`, async () => {
+        const q = await G96.askQuicken(entry);
+        if (q) await (this.document as any).quicken(index, String(entry.spellName ?? ""), q);
+      });
       return;
     }
     await (this.document as any).quicken(index);
@@ -4022,7 +4024,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     // v0.96.0 (RULES.SORCERY_V96.totemPool 'book', Core p. 119): the totem's dice are pool dice for this cast only.
     const left = S96.totemPoolMax(totemDice(actor.system.tradition ?? "none", actor.system.totem, sp.category), left0);
     // v0.92.0 review (R5): Drain may take the narrow dice only with RULES.MAGIC_V920.drainNarrow.
-    const drainLeft = Math.min(left, Number(actor.drainPoolFor?.(castUse) ?? left0));
+    // Review: the totem's dice may pay for the Drain too.
+    const drainLeft = Math.min(left, Number(actor.drainPoolFor?.(castUse) ?? left0) + Math.max(0, left - left0));
 
     const targetToken: any = game.user.targets?.first?.() ?? null;
     // Vehicles too (v0.43.0), for physical spells (mana spells only affect the living).
@@ -4198,9 +4201,11 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     if (!spell) return;
     const sp = spell.system;
     const castUse = actor.sorceryUseFor?.("cast", { category: sp.category, spellName: spell.name });
-    const left = Number(actor.spellPoolFor?.(castUse) ?? actor.system.derived.spellPoolLeft);
+    const left0 = Number(actor.spellPoolFor?.(castUse) ?? actor.system.derived.spellPoolLeft);
+    // v0.96.0 (RULES.SORCERY_V96.totemPool 'book', Core p. 119): the totem's dice are pool dice for this cast only.
+    const left = S96.totemPoolMax(totemDice(actor.system.tradition ?? "none", actor.system.totem, spell.system.category), left0);
     // v0.92.0 review (R5): Drain may take the narrow dice only with RULES.MAGIC_V920.drainNarrow.
-    const drainLeft = Math.min(left, Number(actor.drainPoolFor?.(castUse) ?? left));
+    const drainLeft = Math.min(left, Number(actor.drainPoolFor?.(castUse) ?? left0) + Math.max(0, left - left0));
     const t = RULES.GEAR.spellsVsObjects.tns as Record<string, number>;
     const kinds: Record<string, string> = { natural: tx('SR2E.App.Sheets.naturalTreesEarth'), lowTech: tx('SR2E.App.Sheets.lowTechWoodBrick'), highTech: tx('SR2E.App.Sheets.highTechPlasticsAlloys'), processed: tx('SR2E.App.Sheets.highlyProcessedElectronics') };
     const from: any = tokenOf(actor);

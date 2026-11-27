@@ -268,7 +268,6 @@
       <div class="sr2e-row sr2e-initiation">
         <label>{{sr2eT "SR2E.UI.initiateGrade2"}} <input type="number" name="system.initiateGrade" value="{{system.initiateGrade}}" min="0"></label>
         {{#if gradeZero96}}<label class="sr2e-check" title="{{sr2eT "SR2E.Sorcery96.UI.gradeZeroHint"}}"><input type="checkbox" name="flags.shadowrun2e_unified.initiated" {{checked initiated96}}> {{sr2eT "SR2E.Sorcery96.UI.gradeZero"}}</label>{{/if}}
-        {{#if gradeZero96}}<label class="sr2e-check" title="{{sr2eT "SR2E.Sorcery96.UI.gradeZeroHint"}}"><input type="checkbox" name="flags.shadowrun2e_unified.initiated" {{checked initiated96}}> {{sr2eT "SR2E.Sorcery96.UI.gradeZero"}}</label>{{/if}}
         <span class="sr2e-metamagic">{{#each metamagicList}}<label class="sr2e-check"><input type="checkbox" name="system.metamagic.{{key}}" {{checked known}}> {{label}}</label>{{/each}}</span>
       </div>
       {{#if knowsCentering}}

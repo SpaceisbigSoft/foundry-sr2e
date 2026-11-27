@@ -17,11 +17,11 @@ export const SORCERY_V96 = {
   magicDefault: 'book' as 'book' | 'off',
   /**
    * magicDefault 'book': steps on the web from Sorcery to each skill or attribute it defaults to, when the GM's web
-   * doesn't link them. VERIFY: the Awakenings p. 94 diagram wasn't readable; read as one circle to Magical Theory,
-   * two to the other magical skills (through Magical Theory) and four to Willpower (Core p. 69: Willpower to Magical
-   * Theory is 3, plus one).
+   * doesn't link them. Awakenings p. 93: Sorcery, Conjuring and Enchanting default to Magical Theory and to each other
+   * (one step each). VERIFY: the Awakenings p. 94 diagram wasn't readable for Willpower; read as four steps (Core p. 69:
+   * Willpower to Magical Theory is 3, plus one).
    */
-  magicDefaultSteps: { magicalTheory: 1, conjuring: 2, enchanting: 2, willpower: 4 } as Record<string, number>,
+  magicDefaultSteps: { magicalTheory: 1, conjuring: 1, enchanting: 1, willpower: 4 } as Record<string, number>,
   /**
    * Shaping an area spell (Core p. 130). 'book': the Cast window takes a change of radius in metres: every 2 dice
    * withheld from the Spell Success Test take a metre off, every die withheld adds one; at most the spell's Force in

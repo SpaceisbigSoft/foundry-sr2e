@@ -81,28 +81,84 @@ export function noticeNote(magic: number, force: number): string {
  * Whether switching this focus on breaks the limit: `refuse` (the update is stopped) or a warning only. Null: allowed,
  * not a focus being switched on, or the switch off.
  */
-export function fociLimitBlocks(item: any, change: any): { refuse: boolean; why: string } | null {
-  if (item?.type !== 'focus' || change?.system?.active !== true || item.system?.active) return null;
+export function fociLimitBlocks(item: any, change: any, created = false): { refuse: boolean; why: string } | null {
+  if (item?.type !== 'focus' || change?.system?.active !== true || (!created && item.system?.active)) return null;
   const actor = item.parent;
   if (!actor || actor.documentName !== 'Actor') return null;
+  // Review: an actor with no Intelligence rating (a spirit without one, an odd import) isn't checked.
+  const int = actor.system?.attributes?.intelligence?.total;
+  if (!Number.isFinite(Number(int)) || int === null || int === undefined) return null;
   const active = [...(actor.items ?? [])].filter((i: any) => i.type === 'focus' && i.system?.active && i.id !== item.id).length;
-  return S.fociLimit(active, num(actor.system?.attributes?.intelligence?.total));
+  return S.fociLimit(active, num(int));
+}
+
+/**
+ * The preUpdateItem hook: one focus too many isn't switched on (book); only the `active` change is dropped, the rest
+ * of the update goes through. A GM's own change is only warned about. False: nothing left to update.
+ */
+export function preUpdateFocus(item: any, change: any, userId?: string): false | void {
+  const b = fociLimitBlocks(item, change);
+  if (!b) return;
+  g().ui?.notifications?.warn?.(escHtml(tKey(b.why, { name: item.parent?.name ?? '', intelligence: num(item.parent?.system?.attributes?.intelligence?.total) })));
+  const gm = Boolean(g().game?.users?.get?.(userId)?.isGM ?? (userId === undefined && g().game?.user?.isGM));
+  if (!b.refuse || gm) return;
+  delete change.system.active;
+  if (!Object.keys(change.system).length) delete change.system;
+  if (!Object.keys(change).filter((k) => k !== '_id').length) return false;
+}
+
+/**
+ * The preCreateItem hook: a focus created already active (new items, imports, duplicates) on an actor at the limit is
+ * created switched off for a player (with the warning); a GM is only warned.
+ */
+export function preCreateFocus(item: any, data: any, userId?: string): void {
+  const b = fociLimitBlocks(item, { system: { active: Boolean(data?.system?.active ?? item?.system?.active) } }, true);
+  if (!b) return;
+  g().ui?.notifications?.warn?.(escHtml(tKey(b.why, { name: item.parent?.name ?? '', intelligence: num(item.parent?.system?.attributes?.intelligence?.total) })));
+  const gm = Boolean(g().game?.users?.get?.(userId)?.isGM ?? (userId === undefined && g().game?.user?.isGM));
+  if (!b.refuse || gm) return;
+  item.updateSource?.({ 'system.active': false });
+}
+
+/** Quickenings under way (actor uuid | spell name): a double click opens one window and spends Karma once. */
+const quickening = new Set<string>();
+export async function oneQuicken<T>(key: string, fn: () => Promise<T>): Promise<T | null> {
+  if (quickening.has(key)) return null;
+  quickening.add(key);
+  try { return await fn(); } finally { quickening.delete(key); }
 }
 
 // ---------------------------------------------------------------- Wards (Grimoire p. 92)
 
+/**
+ * A ward's days and end for its creation data, made by the creating client from the days alone (a card's own end is
+ * never taken): days clamped to 0..30, the end the system time now + the days (0: none kept).
+ */
+export function wardCreateSystem96(system: any, now: number): { wardDays96: number; wardEnds96: number } {
+  const days = Math.max(0, Math.min(30, Math.floor(num(system?.wardDays96))));
+  return { wardDays96: days, wardEnds96: S.wardEndsAt(now, days) };
+}
+
 /** A new ward with days: its end on the world clock (the creating GM's update data, or null). */
 export function wardStamp(actor: any, now: number): Record<string, number> | null {
-  if (actor?.type !== 'barrier' || num(actor.system?.wardEnds96) > 0) return null;
+  if (actor?.type !== 'barrier' || !(num(actor.system?.wardDays96) > 0) || num(actor.system?.wardEnds96) > 0) return null;
   const ends = S.wardEndsAt(now, num(actor.system?.wardDays96));
   return ends > 0 ? { 'system.wardEnds96': ends } : null;
 }
 
-/** The wards whose days have run out by `now`: each falls (rating 0, by the book) and the GMs get a card. */
+let sweeping = false;
+
+/** The wards whose days have run out by `now`: each falls (rating 0, by the book) and the GMs get a card. One sweep at a time. */
 export async function wardSweep(actors: readonly any[], now: number): Promise<number> {
+  if (sweeping) return 0;
+  sweeping = true;
+  try { return await sweepNow(actors, now); } finally { sweeping = false; }
+}
+
+async function sweepNow(actors: readonly any[], now: number): Promise<number> {
   let n = 0;
   for (const a of actors) {
-    if (a?.type !== 'barrier') continue;
+    if (a?.type !== 'barrier' || !(num(a.system?.wardDays96) > 0)) continue;
     const ends = num(a.system?.wardEnds96);
     const f = S.wardFalls(ends, now);
     if (!f.fall) continue;
@@ -120,7 +176,7 @@ export async function wardSweep(actors: readonly any[], now: number): Promise<nu
  * the threshold. Whispered to the GMs. True: seen through (or nothing to see through); false: it reads as mundane.
  * Null with the switch off.
  */
-export async function maskTest(viewer: any, subject: any, roll?: DiceRoller): Promise<boolean | null> {
+export async function maskTest(viewer: any, subject: any, roll?: DiceRoller, retry = false): Promise<boolean | null> {
   const sub = subject?.initiate;
   if (!sub || !sub.techniques?.includes?.('masking')) return null;
   const view = viewer?.initiate ?? { grade: 0, techniques: [] };
@@ -129,7 +185,8 @@ export async function maskTest(viewer: any, subject: any, roll?: DiceRoller): Pr
   if (!th) return null;
   if (!th.can) return false;
   const rolls: any[] = [];
-  const r = await successTest({ dice: num(viewer.system?.derived?.magic), targetNumber: Math.max(RULES.MIN_TARGET_NUMBER, num(subject.system?.derived?.magic)), roll: roll ?? roller(rolls) });
+  // Grimoire p. 46: one more try at +2.
+  const r = await successTest({ dice: num(viewer.system?.derived?.magic), targetNumber: Math.max(RULES.MIN_TARGET_NUMBER, num(subject.system?.derived?.magic)), modifiers: retry ? [{ id: 'maskRetry96', label: tx('SR2E.Sorcery96.Mod.maskRetry'), value: 2 }] : [], roll: roll ?? roller(rolls) });
   const seen = r.successes >= th.need;
   await post({ speaker: alias(), whisper: gmIds(), rolls, content: `${resultLine(tx('SR2E.Sorcery96.Card.maskTest', { viewer: viewer.name, subject: subject.name }), r)}<p>${seen ? tx('SR2E.Sorcery96.Card.maskSeen', { need: th.need }) : tx('SR2E.Sorcery96.Card.maskHolds', { need: th.need })}</p>` });
   return seen;
@@ -213,16 +270,17 @@ export function shapedRadius(radius: number, metres: number): number {
 
 export function registerSorcery96(): void {
   const H = g().Hooks;
-  H?.on?.('preUpdateItem', (item: any, change: any) => {
-    const b = fociLimitBlocks(item, change);
-    if (!b) return;
-    g().ui?.notifications?.warn?.(escHtml(tKey(b.why, { name: item.parent?.name ?? '', intelligence: num(item.parent?.system?.attributes?.intelligence?.total) })));
-    return b.refuse ? false : undefined;
-  });
+  H?.on?.('preUpdateItem', (item: any, change: any, _opts: any, userId: string) => preUpdateFocus(item, change, userId));
+  H?.on?.('preCreateItem', (item: any, data: any, _opts: any, userId: string) => preCreateFocus(item, data, userId));
   H?.on?.('createActor', (actor: any) => {
     if (!isLeadGm()) return;
     const upd = wardStamp(actor, num(sysNow()));
     if (upd) void Promise.resolve(actor.update(upd)).catch((err: unknown) => console.warn('sr2e | ward days', err));
+  });
+  // A ward created with days but no end (created before its end could be set): stamped on the lead GM's ready.
+  H?.once?.('ready', () => {
+    if (!isLeadGm() || RULES.SORCERY_V96.wardExpiry === 'off') return;
+    for (const a of [...(g().game?.actors ?? [])]) { const upd = wardStamp(a, num(sysNow())); if (upd) void Promise.resolve(a.update(upd)).catch(() => undefined); }
   });
   H?.on?.('updateWorldTime', () => {
     if (!isLeadGm() || RULES.SORCERY_V96.wardExpiry === 'off') return;
