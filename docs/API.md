@@ -128,6 +128,7 @@ Nested items (`rules/nesting942.ts`): the link is the item flag `flags.shadowrun
 
 The interface's history from v0.93.2, newest first. Each version's `CHANGELOG.md` entry repeats its line.
 
+- **v0.95.0:** nothing added to or removed from `game.sr2e.api`. New rule groups `RULES.CORE_V95`, `RULES.FIRE_V95` and `RULES.MELEE_V95`; the GM relay takes the new ops `melee95` and `core95`, and the `teamKarma` op more requests (internal, not part of the stable interface).
 - **v0.94.2:** added `nesting` (accessories, programs on decks, containers), `trade`, `catalogueCompendium()` and `removeOldCatalogue()`; `exportTemplates()` now moves the catalogue into its world compendium and opens it (the compendium is the catalogue's home). Nothing was removed.
 - **v0.94.1:** `rollTest(spec)` (and every roll link) takes the word `secret`: the card goes to the GMs only. Nothing was changed or removed.
 - **v0.94.0:** `importCharacter(actor, text)` also takes the text of a Nullsheen generator file or a futurekill actor export (it is turned into a write-up first). Nothing was removed.

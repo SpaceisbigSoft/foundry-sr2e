@@ -81,7 +81,7 @@ Kept (the owner's decisions)
 - Timed training (`CHARACTERS_V58.training.mode` 'timed', the decision of 22 Oct 2026); the book's default is instant (training is the Companion's optional rule, p. 50). Only the days now follow the Companion's table.
 - Availability tests in the shop (`SHOP_V91` finding before buying): the book has the source (fixer) roll its skill or Etiquette + 2 vs the Availability TN (Core p. 184).
 
-Not built
+Not built (v0.95.0 built the Team Karma Pool, racism and Charisma, the training self-test and instructor, jumping, swimming, missed payments, selling a lifestyle, contact fees and upkeep, arranging a meet, group perception and a group's averaged ratings: see "Rules completeness (v0.95.0)"; still open: gang/tribe and followers at creation, the street dialect named automatically)
 
 - Team Karma Pool (Core p. 191, p. 47): a world pool the members feed from their own (for good), starting at 2, drawn on by vote, half lost when a member leaves. Needs a world store, a GM view and a "from the team pool" choice on every Karma button.
 - Racism and Charisma (Core p. 182): 2D6−6 racism points against one or two races, added to social TNs, offset by a secret Charisma (2 × racism) test. Needs an NPC field, a GM roll, and an extra test before the social test; the attitude row "Prejudiced" and the metatype prejudice table (`TN_AUTO.social.prejudice`) stand in.
@@ -150,7 +150,7 @@ same code.
 Kept (the owner's decisions):
 - Grenade long-range TN stays 6 (the owner's decision, 12 Nov 2026): the Core prints 8, which a FASA staff ruling calls a misprint for 6.
 
-Not built:
+Not built (v0.95.0 built every item in this list except the Control and Task Pools per action, which stay per Combat Turn by Rigger 2: see "Rules completeness (v0.95.0)" for what each now does and what was cut down):
 - Interception (Core p. 83): a free melee attack on anyone passing within 1 m; needs movement tracking.
 - Stray shots (Core p. 93, optional).
 - Suppressive fire as in Fields of Fire (rounds per metre for 10 phases, rounds-fired dice vs 4 + cover).
@@ -524,6 +524,122 @@ Note: switching `GEAR_V923.surgery` back to 'old' doesn't undo an Essence cost t
 item (its cost before surgery stays in the item's flag `surgeryEssence`; set the cost back by hand if needed).
 The remote control deck's Flux (signal) Rating is 2 (Rigger 2 p. 30, Flux Rating Table; p. 97); the examples' higher
 Flux comes from vehicle and amplifier boosts.
+
+## Rules completeness (v0.95.0, 26 Nov 2026)
+
+v0.95.0 built book rules from the "Not built" lists above (core and combat). Each has a house-rule switch whose first choice is the book's way (optional book rules ship off) and whose other choice puts v0.94.2 back: `RULES.CORE_V95`, `RULES.FIRE_V95`, `RULES.MELEE_V95` (`rules/config95/*.ts`). Rows marked VERIFY below are readings the builders could not settle from the books.
+
+#### Core mechanics and characters (v0.95.0, RULES.CORE_V95)
+
+Built
+
+- Team Karma Pool (Core p. 191, p. 47; `CORE_V95.teamKarma` 'book' | 'tracker', `teamKarmaStart` 2, `teamKarmaJoin` 1, `teamKarmaGoodTerms` off): a world store (setting `teamPool95`: members, points, used) written only by the GM's client through the `teamKarma` relay. The GM adds members (each pays 1 of their own Karma Pool for good; a new team starts with 2 more), corrects the count and removes a member (half the points lost; nothing on a death; Companion pp. 89–90 "good terms" share when the optional switch is on). A member gives own points for good. Karma re-rolls, avoid disaster, buy a success (for good; the GM's client checks it is the player's own card) and the contest card's Karma buttons ask "own pool or team pool"; roll dialogs with a Karma dice row get a "from the Team Karma Pool" tick. Refreshes with "Refresh Karma Pools". The table's vote is not automated (a reminder line). 'tracker' = the v0.93.3 counter.
+- Racism and Charisma (Core p. 182; `CORE_V95.racism` 'book' | 'table'): the GM's "Book rules" tool rolls an NPC's racism (2D6 − 6; the Racism Table, own metatype re-rolled, two biases or all), kept in flag `racism95` and whispered to the GM. Social tests against that NPC add the points for the speaker's metatype in place of the metatype table row; the speaker's secret Charisma (2 × points) test runs once per NPC on the GM's client (relay op `core95`; GM-only card; kept on the NPC, flag `racismOffsets95`); a player's dialog preview never shows the points, not when the speaker has no rating in the skill (defaulting). NPCs not rolled keep `TN_AUTO.social.prejudice`.
+- Training self-test and instructor (Companion pp. 50, 52; `CORE_V95.trainingTest` 'book' | 'off', `trainingFailFactor` 1.5, `instructorPerSuccess` 2): the Instructor button first offers the student's own test (skill vs new rating + 2, new skill vs 4, attribute vs new rating); successes divide the base time, none × 1.5; an instructor's test adds 1 success per 2; Karma re-rolls re-time it. Suggested daily fee shown (Companion p. 52 table). The Revamp's coreTraining wins.
+- Jumping (Fields of Fire p. 76 with FASA errata; `CORE_V95.jumping` 'book' | 'old'): half Strength (down) − natural Body, min 1 m, + Quickness running, vertical ÷ 4; the test is against the metres to clear (+1 if Strength < Body), each success +10 %.
+- Swimming (Cyberpirates pp. 155–156; `CORE_V95.swimming` 'book' | 'old'): swimming vs 4 (distance as before, CORE_V923), treading water vs 2 and floating (Body vs 4, Body × successes Combat Turns) with the Treading Water table (VERIFY: the swimming TN 4 is the running test's TN, Fields of Fire p. 77, not a printed number).
+- Missed lifestyle payments (Core p. 190; `CORE_V95.missedPayments` 'book' | 'grace'): each month missed in a row, 1D6 vs the months; above = absorbed, else down a level (by itself or the GM's card per `UPKEEP.effects.overdue`) and a month of the old lifestyle owed (flag `lifestyleDebt95`, Pay button).
+- Selling a permanent lifestyle (Core p. 190; `CORE_V95.sellLifestyle` 'book' | 'off'): Middle or better, from the Pay button, moving to a lower lifestyle the player picks: 2D6 × 10 % of the price, or 1D6 (no SIN, in a hurry, through an agent).
+- Contact fee and arranging a meet (Core p. 200; `CORE_V95.contactFee` 'book' | 'flat', `contactMeet` 'book' | 'off'): after legwork the GM's client posts a card to the GMs only: "Set the meet" rolls the secret 2D6 × 30 minutes and divides it by the successes traded; "Work out the fee" (Etiquette × successes × (Cha + Int) × 10) posts a fee card with a Pay button.
+- Contact upkeep (Companion p. 62, optional; `CORE_V95.contactUpkeep` 'off' | 'book'): yearly 500 / 3,000 / 7,000¥ by level; when due, a card with Pay and "lower the level" (GM; a level 1 contact is lost).
+- Group Perception (Core p. 185; `CORE_V95.groupPerception`) and a leaderless group's averaged ratings (Core p. 180; `CORE_V95.groupAverage`): the GM's "Book rules" tool for the selected tokens.
+
+Still not built
+
+- Gang/tribe and followers at creation (Core p. 44) and a street dialect named automatically: cut for time (lowest priority).
+- Team Karma: the vote; a character on several teams (contributions lose value per extra team).
+- Racism: the attitude dialog's "Prejudiced" row is not removed when the book's racism applies (the picked row wins as before).
+- Contact upkeep: the roleplaying half and the Flaws for losing all contacts are the GM's.
+
+#### Combat (v0.95.0, ranged: RULES.FIRE_V95)
+
+- Laser sight in bad air (Core p. 90): mist, fog, rain or snow at the shooter (the scene/region weather), or smoke on the line of fire, cancels the laser sight's −1. The Attack dialog leaves the tick off, and the attack drops it even when ticked (card note). `FIRE_V95.laser` 'book' / 'off' (v0.94.2: only cleared by hand). Weather ids in `laserWeather`; counting snow as the book's Mist row is the system's reading.
+- Two firearms (Core p. 90): with "Using a second firearm" ticked, each gun counts only its own rounds that Combat Phase, and the other gun's uncompensated recoil is added ("Recoil from the other gun"). Per-gun record in the actor flag `recoil95`. `FIRE_V95.sharedRecoil` 'book' / 'off' (v0.94.2: every round is the firing gun's recoil).
+- Take Aim over several phases (Core p. 82): an aim that began in an earlier Combat Phase is lost when any pool dice are used: the aimed shot's own pool dice (the preview shows it) or any other pool spend (chat line). The aim flag records the phase it began in (`phase95`). Aims saved before v0.95.0 have no record and are kept. `FIRE_V95.aimPool` 'book' / 'off'.
+- Explosive-round misfire (Core p. 93): explosive or EX-explosive rounds with an Attack Test of all ones post a misfire card. The shooter resists the weapon's normal round (no ammo or burst bonus) against 1D6 attack successes, with no Combat Pool, through the normal Resist button. The card is posted at once: a Karma re-roll or an avoided disaster doesn't take it back, and the card says to ignore it then. `FIRE_V95.misfire` 'book' / 'off'. VERIFY: EX-explosive counted as explosive (`misfireAmmo`).
+- Shotgun shot (Core p. 95): each target in the spread rolls +1 resistance die for every other target in the spread closer to the gun (the dice go from the hit to the attack card to the damage; at most `shotScreenMax` 10). `FIRE_V95.shotScreen` 'book' / 'off'.
+- Blast in a confined space (Core p. 98): each target gets its own calculation along the line through the blast and the target. A wall past the target or behind the blast that holds (the blast-through-walls test, COMBAT_V72.blastBarriers) sends the wave back, and each pass that still has Power adds that Power. Walls that hold on both sides repeat (chunky salsa), at most `reboundPasses` 12 passes. Shown as "(+N rebound)" on the blast card. A wall damaged through (rated 0) doesn't hold, and with `COMBAT.wallsBlock` off nothing rebounds. `FIRE_V95.rebound` 'book' / 'nearest' (v0.94.2: RULES.COMBAT.confined, a share of the Power at the nearest wall for everyone). `COMBAT.confined.enabled` off turns both off.
+- Stray shots (Core p. 93, optional, ships off): after full auto is walked between targets, the shooter's card says rounds may have strayed and names nobody. The GM's "Who is in the way (GM)" button works it out again on the GM's client: the wasted rounds (none from a smartgun with a smartlink; at most a full-auto burst), and everyone in range and not out of sight within the arc walked through (±`strayMetres` 1 m), in random order. It posts that list as the GM's own whispered card, once per card. Each row has a Roll (GM) button (only on a GM-posted list): 2 dice vs the range's TN, and a hit posts one round's damage with the successes + 1D6 and a Resist button. At most one test per stray round. `FIRE_V95.stray` 'book' / 'off'.
+- Suppressive fire as in Fields of Fire (FoF p. 78, optional, ships off): only during a running combat, the Suppress button asks for the rounds and the area width (the rounds must divide evenly by the metres). It spends the action and the rounds and posts a card that records where the combat stood. The card's GM button works for 10 Combat Phases in that combat. It tests each targeted token: rounds-per-metre dice vs 4 + cover (partial cover found on the canvas, the GM can change it) + the shooter's wounds. Every 2 successes is one round hitting, each with its own Resist button. A player's card is refused for a shooter they don't own, and otherwise needs the GM's confirmation. `FIRE_V95.suppression` 'fof' / 'house' (v0.94.2: RULES.COMBAT.suppressive).
+
+Still not built:
+- Laser sights: the Fields of Fire night/day ranges and weather divisors (FoF Target Designators): only the Core's cancel-outright.
+- Suppressive fire (FoF): the covered metres aren't drawn on the map, and the GM decides who showed themselves by targeting tokens. The 10 Combat Phases are counted as combatant turns (the current turn order's length per pass, and a Combat Turn that has ended as only the passes seen in it): a lower bound, VERIFY. An uneven split (FoF doesn't say how to count the remainder) is refused. The start recorded on a player's card is theirs; the GM's confirmation names it.
+- Explosive misfire: not re-checked after a Karma re-roll or an avoided disaster (the card says to ignore it then).
+- Stray shots: the line of fire is approximated by the arc swept between targets seen from the shooter; fire walked across empty ground beyond the second target is not followed.
+- Confined blasts: only walls on the line through blast and target count (no reflections off side walls at an angle). The wall's own damage from the rebound is not applied.
+- Two firearms: the recoil record is per gun per phase; a gun swapped mid-phase starts fresh.
+
+#### Melee, actions and Dice Pools (v0.95.0)
+
+Switches in `RULES.MELEE_V95` (`src/module/rules/config95/melee.ts`; pure logic `rules/melee95.ts`, Foundry side
+`applications/melee95.ts`). The first choice is the book's way and the default; the second gives v0.94.2. Under the
+Unified Rules Revamp: quick draw keeps the Revamp's test (Quickness vs 4, no modifiers), there is no total surprise, and
+every pool refreshes at the new Combat Turn (`REVAMP_MELEE_RULES`); the other switches act under either source.
+
+- **Reaction 0 or less from wounds** (Core p. 112): a character, NPC or spirit in a started fight whose Initiative
+  modifier takes Reaction to 0 or less takes no turn (`SR2Combat.canTakeTurns`), has every action-bar button but
+  Initiative greyed with the reason (`rules/actions935.ts` `noActions`), the other action buttons greyed
+  (`greyNoActions`), is named in the tracker's banner, and `SR2Actor.canAct` refuses (the GM is warned and may go on;
+  a plain attribute test still rolls). Checked live, not frozen at the initiative roll: healed, the character acts
+  again from the next turn order. `MELEE_V95.reactionOut` 'book' / 'off'.
+- **Quick draw** (Core p. 82): an attack in the character's own action with a holstered firearm of Concealability 4+
+  in SS, SA or BF asks "quick draw or draw first". Quick draw: Reaction vs 4, +2 without a quick-draw holster (the
+  weapon's `quickDraw` tick), +2 with the Attack window's second-firearm row, wound modifiers; 1 success draws and
+  fires in the attack's own action; a failure spends a Simple Action, nothing fires, the weapon stays holstered. A
+  quick-draw holster no longer makes drawing free. `opts.quickDraw95` (true/false) answers without the window.
+  `MELEE_V95.quickDraw` 'test' / 'holster' (`quickDrawTn` 4, `quickDrawNoHolsterTn` 2, `quickDrawSecondTn` 2,
+  `quickDrawConceal` 4). VERIFY: a failed quick draw is taken to leave the weapon holstered (the book only says it
+  can't fire this phase).
+- **Total surprise** (Core p. 86): in the surprise test ('order' mode) a combatant who out-rolled no opponent and was
+  out-rolled by at least one is completely surprised: no turn in the surprise turn, actions refused, buttons greyed,
+  named on the surprise card. Sides: player-owned actors count as the friendly disposition, others by token
+  disposition; when every combatant shows the same disposition, everyone else is an opponent (as before). The surprise
+  turn's target limit no longer blocks allies. The book's "10 Combat Phases" is the surprise turn here (its scores are
+  at most 10). `MELEE_V95.totalSurprise` 'book' / 'off'.
+- **Subduing with Stun weapons only** (Core p. 103): the Attack window's Subdue tick is disabled for a weapon whose
+  damage isn't Stun (and not a stun weapon); a counterattack "to subdue" with one keeps its own damage.
+  `MELEE_V95.subdue` 'stunOnly' / 'any'.
+- **Control of a subdued opponent, the maintenance test** (Core p. 103): the Stun a subduing blow (attack or
+  counterattack) does is recorded on the target by attacker when the soak is applied (flag `subdueDone95`; a re-roll
+  corrects it). Hold by that attacker on someone whose Stun track is full, within 2 m (no tokens: both in the running
+  fight), takes control with no test; only that subduing Stun counts (flag `subdued95`: holder, boxes, total, time;
+  the restrained status through the existing hold). The Stun then wears off 1 box per 60 s of system time (lead GM,
+  only the actors in its index of the subdued), and the hold ends with it. Hold again by the same holder, on the
+  holder's own action in a fight (the Simple Action is paid where the test is rolled, the GM's client for a player): the best of Unarmed Combat, Strength, Quickness vs the lowest of the other's three; the held one rolls
+  the same way with wound modifiers and +2; each net success puts back one box that had worn off and restarts the
+  clock. The card's Let go button (the holder's owner or the GM) takes the remaining subduing Stun off and ends the
+  hold. A player who can't write the held actor asks the GM's client (relay op `melee95`; judged by the sender, both
+  rolls made on the GM's client, one step at a time per held actor). `MELEE_V95.subdueControl` 'book' / 'off'
+  (`subdueReleaseSeconds` 60, `subdueResistTn` 2, `subdueReachMetres` 2). The Defend window's counterattack-to-subdue tick is disabled while a weapon that can't subdue is picked.
+- **Knocked back into a wall** (Core p. 102): after a knockdown test that staggers, a movement-blocking wall within
+  1 m (or the stagger distance) straight behind the character, away from the last attacker named on a recent attack
+  card, puts the status "Against a wall" on them: +2 on their own tests (not Matrix or rigged tests, not resistance
+  tests: melee attacks and melee defense only) in the roll's modifier list, until their token moves or the status is cleared by hand.
+  `MELEE_V95.wall` 'book' / 'off' (`wallTn` 2, `wallMetres` 1). The token is not moved by the system.
+- **Interception** (Core p. 83): in a started fight, when a combatant's token move passes within 1 m (between bodies)
+  of an opposing combatant who can make a melee attack, and does not end beside them, the lead GM's client whispers a
+  card to that opponent's owners and the GMs. Intercept asks for Combat Pool dice (and subduing, with a Stun weapon)
+  and makes the attack with a readied melee weapon, else unarmed: TN 4 with only reach, the attacker's movement rows
+  and condition (wounds, a wall); the mover defends as on full defense (no counterattack, no cost). An attack marked
+  as an interception counts only when a GM's offer card names the pair, once per offer; out of turn it spends no action. One offer per mover, interceptor and Combat Phase.
+  The button works only on a GM-authored card and only for an owner of the interceptor. A hidden mover makes no offer;
+  a hidden interceptor's offer goes to the GM only. `MELEE_V95.interception` 'offer' / 'off' (`interceptMetres` 1).
+- **Spell and Hacking Pools at each action** (Core p. 84; spell defense Core p. 132): with
+  `COMBAT_V923.poolRefresh` at 'action', these pools refresh at the start of each of the character's actions and
+  dice left at a Combat Turn's end last until the first action of the next; spell defense dice go back to the Spell
+  Pool at that action (after any spend in flight), with a whispered line to the owners and the GM. A character who had
+  no action in a Combat Turn gets them back at the next. The Control and Task Pools stay per Combat Turn (Rigger 2
+  p. 16: all pools at the start of each Combat Turn; the Task Pool is Rigger 2's). `MELEE_V95.otherPools` 'action' /
+  'turn'.
+
+Still not built:
+- Interception: the mover is not stopped automatically when hurt.
+- The surprise target limit for spells and other non-weapon actions against a better-rolling opponent (weapon attacks
+  only, as before).
+- "Declare subduing at the start of the fight", and stopping subduing mid-fight taking the subduing damage off.
+- Reaction 0 frozen for the whole Combat Turn at the initiative roll (it is checked live).
+- The adept power Quick Draw (Awakenings) for melee weapons.
 
 ## Verified fixes to the official SR2 rules (v0.79.0, 23 Oct 2026)
 

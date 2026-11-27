@@ -2,6 +2,29 @@
 
 This is the history of the unofficial Shadowrun 2nd Edition system for Foundry VTT (system id `shadowrun2e_unified`; `sr2e` until v0.93.0), newest version first. Every rules change since v0.70.0 has a house-rule switch that puts the old behaviour back. The system was built with AI (Anthropic's Claude) under human direction, and it has not yet been play-tested at a real table.
 
+## v0.95.0 — Rules completeness: core and combat (26 Nov 2026)
+About 25 book rules the system didn't have yet. Each one has a switch in the GM's house rules whose other choice puts v0.94.2 back; the two the book calls optional (stray shots, Fields of Fire suppressive fire) and contact upkeep ship off. *Rules completeness (v0.95.0)* in `docs/VERIFY.md` says what each does, its book page and what was left out.
+- **Too hurt to act.** When wounds take a character's Reaction to 0 or less, they take no actions in the fight: no turn in the tracker, the action buttons greyed with the reason (Core p. 112).
+- **Quick draw.** Attacking with a holstered pistol on your action now asks: quick draw (Reaction vs 4, +2 without a quick-draw holster, +2 with a second firearm) to draw and fire in one action, or draw first for a Simple Action. A quick-draw holster no longer draws for free (Core p. 82).
+- **Surprise.** Anyone out-rolled by an opponent who beat nobody themselves takes no actions at all in the surprise turn, and allies no longer block each other (Core p. 86).
+- **Subduing.** Only Stun weapons can subdue. When your subduing blows fill someone's Stun track, Hold (from close by) takes control of them; that Stun wears off a box a minute unless you keep control with the maintenance test (Hold again); Let go ends it and takes only the subduing Stun off (Core p. 103).
+- **Against a wall and interception.** A stagger back into a wall gives +2 on melee tests until the token moves (Core p. 102). In a fight, passing within 1 m of an opponent whispers them an Intercept button: a free melee attack at TN 4, the one passing on full defense (Core p. 83).
+- **Pools.** The Spell and Hacking Pools refill at the start of each of your actions, like the Combat Pool; spell defense dice go back to the Spell Pool then, and you are told (Core p. 84).
+- **Gunfire rules from the book** (each a GM house rule, Ranged combat): a laser sight stops helping in mist, fog, rain or through smoke; with two guns each keeps its own recoil and takes the other's leftover recoil; an aim held over several Combat Phases is lost to pool dice.
+- **Explosive rounds can misfire**: an attack of all ones posts a card, and the shooter resists the weapon's normal damage with no Combat Pool.
+- **Shotgun shot**: a target behind others in the spread rolls one more resistance die for each of them.
+- **Grenades indoors**: walls that hold bounce the blast back, and each target's Power now counts the returning wave along its own line (shown as "+N rebound").
+- **Optional, off by default**: stray shots from walking full auto (a GM card to test everyone in between), and suppressive fire the Fields of Fire way (rounds over an area, tested against whoever shows themselves).
+- **Team Karma Pool by the book:** the GM lists the team in the Team Karma window; members pay in from their own Karma Pool, give more for good, and can draw on the team's pool wherever they spend Karma (re-rolls, avoiding a disaster, buying a success, Karma dice in roll windows). A member leaving takes half of it away.
+- **Racism:** the GM's new "Book rules" tool rolls an NPC's racism; social tests against that NPC add it for the speaker's metatype, offset by a secret Charisma test.
+- **Training:** the Instructor button first offers your own training test, which divides the time; an instructor adds one success for every two of theirs.
+- **Athletics:** jumps use Strength, Body and Quickness and are rolled against the distance to clear; treading water and floating join swimming.
+- **Lifestyle and contacts:** missed payments are rolled for each month (1D6 against the months missed), a lifestyle owned outright can be sold, and after legwork the GM gets the time to arrange the meet and the contact's fee. Contact upkeep is an optional house rule (off).
+- **Group tests (GM):** one Perception test for a group, and a leaderless group's averaged ratings.
+- **Fixed:** the Loot window no longer throws an error the first time it opens.
+- Not built from this area yet: gangs, tribes and followers at creation, and the street dialect named automatically.
+- API changes: none removed. New relay ops `melee95` and `core95`; the `teamKarma` op takes more requests; new rule groups `RULES.CORE_V95`, `RULES.FIRE_V95`, `RULES.MELEE_V95`.
+
 ## v0.94.2 — Crowds and gear (26 Nov 2026)
 - **Accessories as items:** drop a scope, laser sight, gyro, silencer and so on onto a weapon's row (or its sheet) and it sits under the weapon; its effect counts in the weapon's rolls without changing the weapon's own fields, and taking it off puts things back. **Make accessory items** on a weapon turns its accessory fields into items (and **Back to fields** undoes it); the GM's tools window does many at once. Nothing is converted by itself. Dropping a clip on a gun reloads it. A program kept on a deck loads only while that deck is in use.
 - **Containers:** mark any gear as a container (a bag, a vehicle's boot, a safehouse stash) with an optional weight limit, and put weapons, armor and gear in it by dragging or with **Put in…**. A packed gun isn't ready, packed armor isn't worn, and a bag left behind leaves its contents behind. Deleting a weapon or bag frees what was on or in it.
