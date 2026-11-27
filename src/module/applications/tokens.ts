@@ -1,6 +1,7 @@
 import { SYSTEM_ID } from '../config/system.ts';
 import { escHtml } from '../rules/html.ts';
 import { clearFlag } from '../helpers/flags.ts';
+import { trackerNotes as trackerNotes95 } from './melee95.ts';
 import { RULES, tokenVision, visionMatches, WOUND_STATUS_IDS, midTurnWoundDrop, tokenInvisible, STATE_STATUSES, V61_STATUSES, SR2_CORE_STATUSES, stateStatusChanges, prunedStatusEffects, movementBand, movementColour, metresPerUnit, type StateFlags, trackerGroups, passBanner, astralWoundRules, combatEndUnsets, initiativeWoundScore } from '../rules/index.ts';
 import { isLeadGm, madeHere } from './leader.ts';
 import { t as tx } from '../helpers/i18n.ts';
@@ -506,6 +507,8 @@ function arrangeTracker(html: HTMLElement, combat: any): void {
     acting: actingId ? String(combat.combatant?.name ?? '') : '', fullDefense: groups.counts.fullDefense, delayed: groups.counts.delayed });
   let banner = html.querySelector<HTMLElement>('.sr2e-pass-banner');
   if (!view) { banner?.remove(); return; }
+  // v0.95.0 (MELEE_V95.reactionOut, totalSurprise): who takes no actions, and why.
+  try { view.notes.push(...trackerNotes95(combat)); } catch { /* none */ }
   if (!banner) {
     banner = document.createElement('div');
     banner.className = 'sr2e-pass-banner';

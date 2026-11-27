@@ -21,6 +21,7 @@ import { tokensNear, scatterPoint, blastBlocked, wallDistances, wallsBetweenPoin
 import { escHtml } from '../rules/html.ts';
 import { foldDiceOn } from './fixes942.ts';
 import { safeAutoApply, gmApplyShapeOk, describeGmChange, cardTargetUuid, cardSourceUuids, safeInt, safePath, boundPower, boundLevel, safeStr, deepSafeKeys, trustedSource, GM_APPLY_SPECS } from '../rules/trust.ts';
+import { onIntercept95, onRelease95 } from './melee95.ts';
 import { authorIsGm, authorOwns, cardAuthor, cardTrust, speakerActorUuid, nameOfUuid, playerMay, gmMay } from './trust.ts';
 import { applyTransferAsGm, transferLiveLines } from './trade942.ts';
 import { disarmQuickRoll } from './hotkeys.ts';
@@ -3584,6 +3585,9 @@ function dispatch(message: any, button: HTMLButtonElement, action: string): Prom
   else if (action === 'dumpShock') return onDumpShock(message, button);
   else if (action === 'applyTally') return onApplyTally(message, button);
   else if (action === 'knockdown') return onKnockdown(message, button);
+  // v0.95.0 (applications/melee95.ts): the interception offer, and letting a subdued opponent go.
+  else if (action === 'intercept95') return onIntercept95(message, button);
+  else if (action === 'release95') return onRelease95(message, button);
   else if (action === 'blastScatter') return onBlastScatter(message, button);
   else if (action === 'spellWall') return onSpellWall(message, button);
   else if (action === 'vehicleCrash') return onVehicleCrash(message, button);

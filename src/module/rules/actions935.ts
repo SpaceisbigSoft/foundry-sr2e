@@ -45,6 +45,8 @@ export interface ActionFacts {
   bypass: boolean;
   rallySkill: boolean;
   morale: boolean;
+  /** v0.95.0 (rules/melee95.ts NO_ACTIONS): why the character takes no actions in this fight ('' or left out: it may). */
+  noActions?: string;
 }
 
 export interface BarAction {
@@ -91,6 +93,8 @@ export function actionBar(f: ActionFacts): BarAction[] {
   const out: BarAction[] = [];
   const add = (action: string, group: BarAction['group'], show: boolean, enabled: boolean, why = '', variant = action, extra: Partial<BarAction> = {}) => {
     if (!show) return;
+    // v0.95.0: no actions at all in this fight (Reaction 0 or less from wounds, completely surprised): all but Initiative.
+    if (f.noActions && enabled && action !== 'rollInit') { enabled = false; why = f.noActions; }
     if (!enabled && !greys) return;
     out.push({ action, variant, enabled, why: enabled ? '' : why, group, ...extra });
   };

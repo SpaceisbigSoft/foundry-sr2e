@@ -200,6 +200,8 @@ import { GEAR_V923_TABLES } from '../rules/config923/gear.ts';
 
 import { SYSTEM_ID } from '../config/system.ts';
 import { ruleAuto } from '../rules/automation941.ts';
+import * as M95 from '../rules/melee95.ts';
+import * as G95 from '../applications/melee95.ts';
 import { programMayLoad, programDeck, lookupOf } from '../rules/nesting942.ts';
 
 /**
@@ -1666,6 +1668,9 @@ export class SR2Actor extends Actor {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.isOutsideItsDomain', { name: escHtml(this.name), domain: escHtml(this.sys.domain), part: mode === 'block' ? tx('SR2E.Notify.Actor.itCannotActHere') : '' }));
       if (mode === 'block') return false;
     }
+    // v0.95.0 (MELEE_V95.reactionOut, totalSurprise; Core pp. 86, 112): no actions in the fight (the GM is only told).
+    const no95 = G95.noActionsRefusal(this, what);
+    if (no95) { ui.notifications?.warn?.(escHtml(no95)); if (!isGmNow()) return false; }
     // v0.59.0: paralysed or asleep (token statuses) means no actions either.
     if (RULES.STATUSES.paralysis.blocksActions && (this.hasStatus('paralysis') || this.hasStatus('sleep'))) {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.isAndCannot', { name: escHtml(this.name), part: this.hasStatus('paralysis') ? tx('SR2E.Notify.Actor.paralysed') : tx('SR2E.Notify.Actor.asleep'), part2: what === 'act' ? tx('SR2E.Notify.Actor.act') : tx('SR2E.Notify.Actor.doThat', { what }) }));
@@ -2811,6 +2816,8 @@ export class SR2Actor extends Actor {
     // Every Matrix test rolls with the Hacking Pool, so that marks one too.
     const matrix = Boolean(opts.matrix) || opts.pool === 'hacking';
     const bodyStatuses = !(matrix && RULES.TN_AUTO.matrix.skipBodyStatuses) && !(opts.vehicle && RULES.TN_AUTO.rigging.skipBodyStatuses && this.isJumpedIn());
+    // v0.95.0 (MELEE_V95.wall, Core p. 102): knocked back against a wall.
+    if (bodyStatuses && !opts.noPenalties) extra.push(...G95.wallMods(this));
     // Astral perception makes every physical test harder, not only attacks (v0.39.0).
     if (bodyStatuses && RULES.MAGIC_V39.perceiving.allTests && !opts.magical && !opts.background && !opts.astralAct && !this.sys.derived?.dualNatured
       && this.sys.derived?.astralMode === 'perceiving' && !(opts.modifiers ?? []).some((m) => modifierIs(m, 'astralPerception', 'Astral perception'))) {
@@ -8773,7 +8780,9 @@ export class SR2Actor extends Actor {
       extras.armorMultiplier = f.armorMultiplier;
       notes.push(tx('SR2E.Card.Actor.flamethrower'));
     }
-    if (melee && opts.subdue) {
+    // v0.95.0 (MELEE_V95.subdue 'stunOnly', Core p. 103): only a weapon that does Stun damage can subdue.
+    if (melee && opts.subdue && !M95.subdueAllowed({ damageType, stunWeapon: w.stunWeapon })) notes.push(tx('SR2E.Melee95.subdueStunOnly'));
+    else if (melee && opts.subdue) {
       damageType = RULES.COMBAT.subdue.damageType;
       notes.push(tx('SR2E.Card.Actor.subduing'));
     }
@@ -9166,9 +9175,9 @@ export class SR2Actor extends Actor {
     // v0.92.3 review fix: with 'action' (now the default, Core p. 82) a weapon that isn't ready is drawn as part of the
     // attack, spending the Simple Action (useAction refuses only when the action rules block it), instead of refusing:
     // weapons a v0.92.2 world saved holstered (which 'off' ignored) still fire.
-    const drawFirst = Boolean(weapon?.system && weapon.system.ready === false && typeof weapon.update === 'function' && RULES.COMBAT.ready.rule === 'action' && !weapon.system.quickDraw);
+    const drawFirst = Boolean(weapon?.system && weapon.system.ready === false && typeof weapon.update === 'function' && RULES.COMBAT.ready.rule === 'action' && !M95.freeDraw(weapon.system));
     if (weapon?.system && weapon.system.ready === false && typeof weapon.update === 'function' && RULES.COMBAT.ready.rule !== 'off') {
-      opts = { ...opts, note: [opts.note, weapon.system.quickDraw ? tx('SR2E.Card.Actor.quickDrawn') : tx('SR2E.Card.Actor.drawnASimpleAction')].filter(Boolean).join(', ') };
+      opts = { ...opts, note: [opts.note, M95.freeDraw(weapon.system) ? tx('SR2E.Card.Actor.quickDrawn') : tx('SR2E.Card.Actor.drawnASimpleAction')].filter(Boolean).join(', ') };
     }
     // v0.71.0 (R12): every attack (group, mounted, quick rolls) resists an invisibility spell on its targets first,
     // not only the Attack dialog's (a target already resisted isn't rolled again).
@@ -9184,10 +9193,14 @@ export class SR2Actor extends Actor {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.isManifestingSeenAndHeardIn', { name: escHtml(this.name) }));
       return null;
     }
-    if (drawFirst && !(await this.useAction('draw', tx('SR2E.Card.Sheet.drawing', { name: weapon.name })))) return null;
+    // v0.95.0 (MELEE_V95.quickDraw 'test', Core p. 82): a holstered pistol may be quick-drawn (a Reaction test) instead.
+    const qd95 = drawFirst ? await G95.quickDraw(this, weapon, opts) : 'draw';
+    if (qd95 === 'failed' || qd95 === 'cancel') return null;
+    if (qd95 === 'quick') opts = { ...opts, note: G95.quickDrawNote(opts.note) };
+    if (drawFirst && qd95 === 'draw' && !(await this.useAction('draw', tx('SR2E.Card.Sheet.drawing', { name: weapon.name })))) return null;
     const seen = [opts.targetUuid, ...(opts.hits ?? []).map((h: any) => h.targetUuid)].filter(Boolean).map((u) => fromUuidSync(u as string)).filter(Boolean);
     await this.spotInvisible(seen);
-    const plan = seen.length ? this.planAttack(weapon, opts) : pre;
+    const plan = seen.length || qd95 === 'quick' ? this.planAttack(weapon, opts) : pre;
     const { w, melee, blast, base, power, level, damageType, modeLabel, rounds, earlier, wasted, extras, notes, dice, suffix, modifiers } = plan;
     // v0.81.0 (D2-15): drawn only once the attack isn't refused.
     if (weapon?.system?.ready === false && typeof weapon.update === 'function' && RULES.COMBAT.ready.rule !== 'off') await weapon.update({ 'system.ready': true });
@@ -9553,7 +9566,7 @@ export class SR2Actor extends Actor {
     const extras: Partial<AttackState> = {};
     const own = weaponArmorKind({ armorKind: ws.armorKind, melee: true, thrown: false, skill: ws.skill, name: wpn.name });
     if (own !== armorKindFor(true)) extras.armorKind = own;
-    if (o.subdue) counter.damageType = RULES.COMBAT.subdue.damageType as DamageType;
+    if (o.subdue && M95.subdueAllowed({ damageType: counter.damageType, stunWeapon: wpn?.system?.stunWeapon })) counter.damageType = RULES.COMBAT.subdue.damageType as DamageType;
     const charge = ws.stunWeapon ? stunCharge({ stunWeapon: true, ammo: Number(ws.ammo ?? 0), ammoMax: Number(ws.ammoMax ?? 0) }) : null;
     if (ws.stunWeapon && charge?.stun) {
       counter.damageType = 'stun';
@@ -9798,6 +9811,9 @@ export class SR2Actor extends Actor {
   async holdTarget(targetUuid: string): Promise<'held' | 'free' | null> {
     const t: any = targetUuid ? fromUuidSync(targetUuid) : null;
     if (!t?.system?.attributes) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.targetSomeoneToHold')); return null; }
+    // v0.95.0 (MELEE_V95.subdueControl 'book', Core p. 103): control of a subdued opponent, and the maintenance test.
+    const sub95 = await G95.subdueHold(this, t);
+    if (sub95 !== undefined) return sub95;
     if (!(await this.useAction('hold', tx('SR2E.Card.Actor.holding', { name: t.name })))) return null;
     const h = RULES.COMBAT.hold;
     const mine = Number(this.sys.attributes?.[h.attackerAttr]?.total ?? 0), theirs = Number(t.system.attributes?.[h.defenderAttr]?.total ?? 0);
@@ -9920,6 +9936,8 @@ export class SR2Actor extends Actor {
     // v0.80.0 (URR_V80.cbtKnockdown 'urr', URR): 2 / 3 / 4 successes needed for L / M / S (Deadly: down); short of it, a stagger.
     const kd80 = U80C.cbtKnockdownResult(result.successes, level80);
     if (!kd80.down && kd80.staggerMetres > 0) await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p><strong>${tx('SR2E.Card.Actor.staggersBackM', { name: escText(this.name), kd80StaggerMetres: kd80.staggerMetres })}</strong></p>` });
+    // v0.95.0 (MELEE_V95.wall, Core p. 102): knocked back into a wall.
+    if (!kd80.down && kd80.staggerMetres > 0) await G95.staggered(this, kd80.staggerMetres);
     if (kd80.down) {
       try { await (this as any).toggleStatusEffect?.('prone', { active: true }); } catch { /* no token or status */ }
       await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p><strong>${tx('SR2E.Card.Actor.isKnockedDown', { name: escText(this.name) })}</strong></p>` });
@@ -21035,7 +21053,9 @@ export class SR2Actor extends Actor {
    */
   async refreshPools(opts: { keepCombat?: boolean } = {}): Promise<void> {
     if (!this.sys.poolSpent) return;
-    await this.update({ ...(opts.keepCombat ? {} : { 'system.poolSpent.combat': 0 }), 'system.poolSpent.spell': 0, 'system.poolSpent.spellConc': 0, 'system.poolSpent.spellSpec': 0, 'system.poolSpent.hacking': 0, 'system.poolSpent.control': 0, 'system.poolSpent.task': 0, 'system.spellDefense': 0 });
+    // v0.95.0 (MELEE_V95.otherPools 'action', Core p. 84): with `keepCombat` the Spell, Hacking and Task Pools (and the
+    // spell defense dice) last until the first action too (M95.turnRefresh drops them from the update).
+    await this.update(M95.turnRefresh({ ...(opts.keepCombat ? {} : { 'system.poolSpent.combat': 0 }), 'system.poolSpent.spell': 0, 'system.poolSpent.spellConc': 0, 'system.poolSpent.spellSpec': 0, 'system.poolSpent.hacking': 0, 'system.poolSpent.control': 0, 'system.poolSpent.task': 0, 'system.spellDefense': 0 }, Boolean(opts.keepCombat)));
   }
 
   /** v0.92.3 (COMBAT_V923.poolRefresh 'action', Core p. 84): the Combat Pool refreshes at the start of the character's action. */
@@ -21225,6 +21245,8 @@ export class SR2Combat extends Combat {
   static canTakeTurns(c: any, all: any[]): boolean {
     return !(RULES.CONDITIONS.skipInCombat && incapacitated(c.actor?.system?.derived?.status))
       && !c.actor?.system?.derived?.destroyed
+      // v0.95.0 (MELEE_V95.reactionOut, Core p. 112): wounds have taken Reaction to 0 or less.
+      && !G95.takesNoTurn(c.actor)
       && !SR2Combat.matrixIdle(c.actor)
       && !SR2Combat.drivenByCombatant(c, all);
   }
@@ -21298,7 +21320,8 @@ export class SR2Combat extends Combat {
     });
     // (Token dispositions are too unreliable to tell sides apart (a world's default may be hostile for everyone), so
     // any target with more successes is blocked, allies included; attacking an ally in the surprise turn is rare.)
-    return targets.filter((t) => ids.includes(cid(t) ?? ''));
+    // v0.95.0 (MELEE_V95.totalSurprise 'book'): sides are told apart where the tokens' dispositions differ.
+    return G95.surpriseOpponents(this, attacker, targets.filter((t) => ids.includes(cid(t) ?? '')));
   }
 
   /** Combatants surprised in the current pass (they lose the first RULES.SURPRISE.losesPasses passes). */
@@ -21334,14 +21357,16 @@ export class SR2Combat extends Combat {
     // and nobody may act against an opponent who rolled more successes; nobody loses a pass. Initiative is rolled as normal next turn.
     if (surpriseByOrder()) {
       const successes = Object.fromEntries(entries.map((e) => [e.id, e.successes]));
-      await this.setFlag(SYSTEM_ID, 'surprise', { round: (this as any).round ?? 0, ids: [], successes, order: true });
+      // v0.95.0 (MELEE_V95.totalSurprise 'book', Core p. 86): out-rolled by an opponent and out-rolling none: no actions.
+      const out95 = G95.totallySurprisedIn(this, entries);
+      await this.setFlag(SYSTEM_ID, 'surprise', { round: (this as any).round ?? 0, ids: out95, successes, order: true });
       await this.updateEmbeddedDocuments('Combatant', entries.map((e) => ({ _id: e.id, initiative: surpriseInitiative(e.successes) })));
       await ChatMessage.create({
         speaker: { alias: tx('SR2E.Card.Actor.surprise') },
-        content: `<div class="sr2e-roll"><h3>${tx('SR2E.Card.Actor.surpriseTestVs', { spAttribute: sp.attribute, spTn: sp.tn })}</h3><ul>${rows.join('')}</ul></div><p><strong>${tx('SR2E.Card.Actor.surpriseTurn')}</strong> ${tx('SR2E.Card.Actor.everyoneActsOnceMostSuccessesFirst')}</p>`,
+        content: `<div class="sr2e-roll"><h3>${tx('SR2E.Card.Actor.surpriseTestVs', { spAttribute: sp.attribute, spTn: sp.tn })}</h3><ul>${rows.join('')}</ul></div><p><strong>${tx('SR2E.Card.Actor.surpriseTurn')}</strong> ${tx('SR2E.Card.Actor.everyoneActsOnceMostSuccessesFirst')}</p>${G95.surpriseNote(this, out95)}`,
       });
       this.setupTurns();
-      return [];
+      return out95;
     }
     const ids = surprised(entries);
     await this.setFlag(SYSTEM_ID, 'surprise', { round: (this as any).round ?? 0, ids });
@@ -21411,6 +21436,8 @@ export class SR2Combat extends Combat {
     if (done.includes(key)) return;
     await this.setFlag(SYSTEM_ID, 'poolRefreshed', { round, keys: [...done, key] });
     await c.actor.refreshCombatPool?.();
+    // v0.95.0 (MELEE_V95.otherPools 'action', Core p. 84): the Spell, Hacking and Task Pools too.
+    await G95.refreshActionPools(c.actor);
   }
 
   /** v0.59.0: the initiative of the pass about to end, kept for Previous Round (set by nextTurn, read by nextRound). */
