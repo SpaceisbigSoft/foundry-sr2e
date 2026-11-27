@@ -9,7 +9,7 @@
  */
 import { SYSTEM } from '../config/system.ts';
 import { sysNow } from '../helpers/clock.ts';
-import { dropItemOnActor } from "./drops.ts";
+import { dropItemOnActor, sheetTakesDrops } from "./drops.ts";
 import {
   RULES, safehouseOption, describeOption, defaultRating, optionRating, paySafehouse, safehouseUpkeepStatus, safehouseComfort,
   searchTarget, searchDays, safehouseHostData, siteDevicesFor, lifestyleOf,
@@ -45,6 +45,12 @@ export class SR2SafehouseSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
   /** v0.59.0: dropped items arrive uninstalled / unbonded / unloaded, move between actors, and only fitting types (applications/drops.ts). */
   async _onDropItem(event: any, item: any): Promise<any> {
     return dropItemOnActor(this, event, item, () => (super._onDropItem as any)(event, item));
+  }
+
+  /** v0.94.2 (test plan 49): a safehouse the user doesn't own takes a drop too (their own item becomes a stash or gift). */
+  _canDragDrop(selector: string): boolean {
+    const base: any = (super._canDragDrop as any);
+    return sheetTakesDrops(this, typeof base === 'function' ? base.call(this, selector) : Boolean((this as any).isEditable));
   }
 
   static DEFAULT_OPTIONS: Record<string, any> = {

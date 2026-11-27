@@ -16,6 +16,7 @@
  * had to take a new id on the receiving side. All three default to doing nothing.
  */
 import { gearStackKey } from './catalogue.ts';
+import { normalizeTweaks, tweakText } from './tweaks.ts';
 
 export type TransferKind = 'give' | 'stash' | 'loot';
 export const TRANSFER_KINDS: readonly TransferKind[] = ['give', 'stash', 'loot'];
@@ -124,7 +125,7 @@ export function gmMayTransfer(kind: TransferKind, who: TradeAuthority, loot: Loo
 /** Problem codes (text: `SR2E.Trade.Problem.<code>`). */
 export type TradeProblem =
   | 'badRequest' | 'noSource' | 'noTarget' | 'sameActor' | 'noItem' | 'notTradeable' | 'targetRefuses'
-  | 'badQty' | 'notEnough' | 'noNuyenField' | 'notEnoughNuyen';
+  | 'badQty' | 'notEnough' | 'noNuyenField' | 'notEnoughNuyen' | 'childRefused' | 'hiddenSource';
 
 const isUuid = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.length < 400;
 const isWhole = (v: unknown, min: number, max: number): v is number => typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max;
@@ -152,7 +153,7 @@ export function transferShapeOk(r: unknown): r is TransferRequest {
  * Pure: what is wrong with a transfer as the documents stand now (empty when it can go). `typesFor` is the item types
  * each actor type holds (applications/drops.ts ITEM_TYPES_FOR); an actor type it doesn't name holds anything.
  */
-export function transferProblems(r: TransferRequest, from: TradeActor | null, to: TradeActor | null, typesFor: Readonly<Record<string, readonly string[]>> = {}): TradeProblem[] {
+export function transferProblems(r: TransferRequest, from: TradeActor | null, to: TradeActor | null, typesFor: Readonly<Record<string, readonly string[]>> = {}, o: Pick<PlanOptions, 'childrenOf'> = {}): TradeProblem[] {
   if (!transferShapeOk(r)) return ['badRequest'];
   if (!from) return ['noSource'];
   if (!to) return ['noTarget'];
@@ -172,7 +173,74 @@ export function transferProblems(r: TransferRequest, from: TradeActor | null, to
   const want = r.qty ?? 1;
   if (!isWhole(want, 1, MAX_TRANSFER_QTY)) out.push('badQty');
   else if (tradeStackSize(item.system) < want) out.push('notEnough');
+  // v0.94.2 review (finding 1): every child that would go along must fit the receiver too, or nothing moves (the
+  // receiver's type guard would refuse it and the giver would lose it).
+  else if (refusedChildren(r, from, to, typesFor, o).length) out.push('childRefused');
   return out;
+}
+
+/**
+ * Pure: the items that move with a request: the item, and its children when the whole stack moves (as `planTransfer`
+ * takes them). Empty when the item isn't there; nuyen moves no item.
+ */
+export function transferFamily(r: TransferRequest, from: TradeActor | null, o: Pick<PlanOptions, 'childrenOf'> = {}): TradeItem[] {
+  if (!from || r.nuyen !== undefined) return [];
+  const item = from.items.find((i) => i.id === r.itemId);
+  if (!item) return [];
+  const whole = Math.floor(r.qty ?? tradeStackSize(item.system)) >= tradeStackSize(item.system);
+  const kids = whole && o.childrenOf ? [...o.childrenOf(item, from.items)].filter((c) => c.id !== item.id) : [];
+  return [item, ...kids];
+}
+
+/** Pure (review finding 1): the children going along that the receiver's type can't hold (their names; empty: all fit). */
+export function refusedChildren(r: TransferRequest, from: TradeActor | null, to: TradeActor | null, typesFor: Readonly<Record<string, readonly string[]>> = {}, o: Pick<PlanOptions, 'childrenOf'> = {}): string[] {
+  const takes = to ? typesFor[to.type] : undefined;
+  if (!takes) return [];
+  return transferFamily(r, from, o).slice(1).filter((c) => !takes.includes(c.type)).map((c) => c.name);
+}
+
+/** What an item carries beyond its plain data: its custom tweaks and its Active Effects (review finding 2). */
+export interface ItemExtras {
+  name: string;
+  tweaks: string[];
+  effects: Array<{ name: string; disabled: boolean; changes: string[] }>;
+}
+
+/** Pure: an item's tweaks (as the sheets word them) and Active Effects (each change as `key mode value`); null when it has neither. */
+export function itemExtras(item: Pick<TradeItem, 'name' | 'type' | 'system' | 'data'>): ItemExtras | null {
+  const tweaks = normalizeTweaks(item.system?.tweaks ?? item.data?.['system']?.tweaks, () => 'x').map((t) => (t.label ? `${t.label}: ` : '') + tweakText(t, item.type));
+  const raw = Array.isArray(item.data?.['effects']) ? item.data['effects'] as any[] : [];
+  const effects = raw.slice(0, 20).map((e: any) => ({
+    name: String(e?.name ?? '').slice(0, 80),
+    disabled: Boolean(e?.disabled),
+    changes: (Array.isArray(e?.changes) ? e.changes : []).slice(0, 12).map((c: any) => `${String(c?.key ?? '').slice(0, 80)} ${String(c?.mode ?? '')} ${String(c?.value ?? '').slice(0, 40)}`.trim()),
+  }));
+  if (!tweaks.length && !raw.length) return null;
+  return { name: item.name, tweaks, effects };
+}
+
+/**
+ * Pure (review finding 2): whether a transfer moves only plain items (no tweaks, no Active Effects on the item or any
+ * child going along). Nuyen is plain; an item that isn't there is not (nothing to vouch for).
+ */
+export function transferIsPlain(r: TransferRequest, from: TradeActor | null, o: Pick<PlanOptions, 'childrenOf'> = {}): boolean {
+  if (r.nuyen !== undefined) return true;
+  const fam = transferFamily(r, from, o);
+  return fam.length > 0 && fam.every((i) => itemExtras(i) === null);
+}
+
+/**
+ * Pure (review finding 11): whether players may loot an actor by its tokens: a synthetic token's own `hidden`, or for a
+ * world actor any of its linked tokens shown. An actor with no token at all isn't on any scene to loot from.
+ */
+export function lootSourceVisible(tokens: ReadonlyArray<{ hidden?: boolean } | null | undefined>): boolean {
+  return tokens.some((t) => t && !t.hidden);
+}
+
+/** Pure (review finding 1): the ids a plan creates on the receiver that weren't made (empty: all of them were). */
+export function missingCreates(plan: Pick<TransferPlan, 'target'>, madeIds: Iterable<string>): string[] {
+  const made = new Set([...madeIds].map(String));
+  return plan.target.create.map((d) => String(d['_id'] ?? '')).filter((id) => !made.has(id));
 }
 
 /** The hook points for item nesting (see the file comment). */

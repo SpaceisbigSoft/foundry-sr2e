@@ -14,6 +14,7 @@
 import { escHtml } from '../rules/html.ts';
 import { userOwns, trustedSource, uuidsOf, type CardTrust, type TrustUser } from '../rules/trust.ts';
 import { t as tx } from '../helpers/i18n.ts';
+import { transferPlainNow } from './trade942.ts';
 
 /** The User who posted a message (server-set), or null. */
 export function cardAuthor(message: any): any | null {
@@ -46,7 +47,7 @@ export function authorOwns(message: any, docOrUuid: any): boolean {
 
 /** The card's trust for the pure checks (`safeAutoApply`, `trustedSource`). */
 export function cardTrust(message: any): CardTrust {
-  return { authorIsGm: authorIsGm(message), owns: (uuid: string) => authorOwns(message, uuid) };
+  return { authorIsGm: authorIsGm(message), owns: (uuid: string) => authorOwns(message, uuid), transferPlain: transferPlainNow };
 }
 
 /** The uuid of the actor a message speaks for (its speaker), or ''. */

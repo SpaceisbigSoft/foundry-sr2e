@@ -113,22 +113,35 @@ async function applyPlan(pack: any, plan: CatalogueSyncPlan): Promise<void> {
  */
 export function saveCatalogueTemplates(list: readonly ItemTemplate[]): Promise<void> {
   const clean = list.map(({ world: _w, ...t }: any) => t as ItemTemplate);
+  // v0.94.2 review (finding 14): the compendium items the caller's list could have been built from (the store as it is
+  // now, and only once the catalogue lives there). Only those may be removed by this save.
+  const known = new Set(catalogueInPack() ? (stored ?? []).map((s) => s.docId) : []);
   const run = async () => {
     if (!isGm()) return;
     const pack = catalogueInPack() ? cataloguePack() : null;
     if (!pack) { await (game as any).settings.set(SYSTEM_ID, 'itemTemplates', clean); return; }
     await loadCatalogue942();
-    await applyPlan(pack, catalogueSyncPlan(stored ?? [], clean));
+    await applyPlan(pack, catalogueSyncPlan(stored ?? [], clean, { removable: known }));
     await loadCatalogue942();
     refreshCatalogueWindows();
   };
+  return onWriting(run);
+}
+
+/** Run a catalogue write after every earlier one (saves and the one-time move share the queue). */
+function onWriting<T>(run: () => Promise<T>): Promise<T> {
   const next = writing.then(run, run);
   writing = next.catch(() => undefined);
   return next;
 }
 
 /** GM, once per world: make the compendium and copy the old setting into it (nothing is removed anywhere). */
-export async function migrateCatalogue942(): Promise<number> {
+export function migrateCatalogue942(): Promise<number> {
+  // v0.94.2 review (finding 14): on the write queue, so a save made meanwhile waits for the move and lands in the compendium.
+  return onWriting(migrateNow);
+}
+
+async function migrateNow(): Promise<number> {
   if (!isGm()) return 0;
   // Moved before and the compendium still there: read it. (A compendium the GM deleted is made again from the setting.)
   if (settingOr<boolean>(CATALOGUE_MOVED, false) === true && cataloguePack()) { await loadCatalogue942(); return 0; }

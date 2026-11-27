@@ -136,6 +136,23 @@ export function accessoryName(step: { kind: string; rating: number; option: stri
  * cleared, so its effective values never change. Returns how many items were made. Undo: `accessoryItemsToFields`.
  */
 export async function makeAccessoryItems(weapon: any, o: { quiet?: boolean } = {}): Promise<number> {
+  return onceAtATime(weapon, () => makeAccessoryItemsNow(weapon, o));
+}
+
+/**
+ * v0.94.2 (lead, test plan): weapons being converted or reverted right now on this client (by uuid). A second click while
+ * the first is still writing does nothing, and the work reads the weapon again from its actor once it has the slot.
+ */
+const converting = new Set<string>();
+async function onceAtATime(weapon: any, fn: () => Promise<number>): Promise<number> {
+  const key = String(weapon?.uuid ?? weapon?.id ?? '');
+  if (!key || converting.has(key)) return 0;
+  converting.add(key);
+  try { return await fn(); } finally { converting.delete(key); }
+}
+
+async function makeAccessoryItemsNow(weaponIn: any, o: { quiet?: boolean }): Promise<number> {
+  const weapon = weaponIn?.parent?.items?.get?.(weaponIn.id) ?? weaponIn;
   const actor = weapon?.parent;
   if (weapon?.type !== 'weapon' || !actor || !weapon.isOwner) return 0;
   const plan = conversionPlan(weapon._source?.system ?? weapon.system);
@@ -154,9 +171,16 @@ export async function makeAccessoryItems(weapon: any, o: { quiet?: boolean } = {
 
 /** "Back to fields": the accessory items a conversion made go back into the weapon's fields and are deleted. */
 export async function accessoryItemsToFields(weapon: any, o: { quiet?: boolean } = {}): Promise<number> {
+  return onceAtATime(weapon, () => accessoryItemsToFieldsNow(weapon, o));
+}
+
+async function accessoryItemsToFieldsNow(weaponIn: any, o: { quiet?: boolean }): Promise<number> {
+  const weapon = weaponIn?.parent?.items?.get?.(weaponIn.id) ?? weaponIn;
   const actor = weapon?.parent;
   if (weapon?.type !== 'weapon' || !actor || !weapon.isOwner) return 0;
-  const kids = listChildren(weapon, 'mounted').filter((c: any) => readLink(c)?.conv && accessoryOf(c));
+  // v0.94.2 review (finding 13): only what the weapon gets from them now (nestDerived942 skips damaged or used-up
+  // accessories): those stay items, so "Back to fields" never gives the gun a part it doesn't have.
+  const kids = listChildren(weapon, 'mounted').filter((c: any) => readLink(c)?.conv && accessoryOf(c) && !c.system?.damaged && Number(c.system?.quantity ?? 1) > 0);
   if (!kids.length) return 0;
   const update = revertUpdate(weapon._source?.system ?? {}, kids.map((c: any) => accessoryOf(c)));
   if (Object.keys(update).length) await weapon.update(update);
@@ -225,9 +249,23 @@ export async function openConversionTool(): Promise<void> {
  * Returns how many moved.
  */
 export async function carryChildren(source: any, oldParentId: string, target: any, newParentId: string, reset?: (type: string, system: any) => Record<string, unknown>): Promise<number> {
-  if (!source?.isOwner || !target || source === target) return 0;
-  const kids = descendantsOf(oldParentId, itemsOf(source));
-  if (!kids.length) return 0;
+  const c = await copyChildren(source, oldParentId, target, newParentId, reset);
+  // v0.94.2 review (finding 1): only the children whose copies were made leave the giver (a refused one stays, and is
+  // detached when its parent goes).
+  const gone = c.sourceIds.filter((id: string) => source.items.has(id));
+  if (gone.length) await source.deleteEmbeddedDocuments('Item', gone);
+  return c.made.length;
+}
+
+/**
+ * The first half of `carryChildren`: copies of a parent's children made on `target` under `newParentId`, nothing removed
+ * from `source`. `kids` are the children found (on the source), `made` the copies, `sourceIds` the originals whose copy
+ * was made (the caller removes them from the source once the parent itself has left it).
+ */
+export async function copyChildren(source: any, oldParentId: string, target: any, newParentId: string, reset?: (type: string, system: any) => Record<string, unknown>, given?: any[]): Promise<{ kids: any[]; made: any[]; sourceIds: string[] }> {
+  if (!source?.isOwner || !target || source === target) return { kids: [], made: [], sourceIds: [] };
+  const kids = given ?? descendantsOf(oldParentId, itemsOf(source));
+  if (!kids.length) return { kids, made: [], sourceIds: [] };
   const idMap = new Map<string, string>([[oldParentId, newParentId]]);
   const randomID = (foundry as any).utils.randomID as () => string;
   const data = kids.map((k: any) => {
@@ -239,8 +277,8 @@ export async function carryChildren(source: any, oldParentId: string, target: an
     return d;
   });
   const made: any[] = (await target.createEmbeddedDocuments('Item', remapLinks(data, idMap), { keepId: true })) ?? [];
-  if (made.length) await source.deleteEmbeddedDocuments('Item', kids.map((k: any) => k.id).filter((id: string) => source.items.has(id)));
-  return made.length;
+  const madeIds = new Set(made.map((d: any) => String(d?.id ?? d?._id ?? '')));
+  return { kids, made, sourceIds: kids.map((k: any) => String(k.id)).filter((id: string) => madeIds.has(idMap.get(id) ?? id)) };
 }
 
 /** A copy's data before it is made: a copy of an attached accessory or program arrives free (a copy in a bag stays in it). */
@@ -616,7 +654,7 @@ export function registerNesting942(): void {
   Hooks.once('sr2e.ready', (api: any) => {
     if (!api || typeof api !== 'object') return;
     api.nesting = {
-      listChildren, familyOf, parentOf, attach, detach, detachAll, detachUpdate, carryChildren, loadClip,
+      listChildren, familyOf, parentOf, attach, detach, detachAll, detachUpdate, carryChildren, copyChildren, loadClip,
       makeAccessoryItems, accessoryItemsToFields, convertAccessories, revertAccessories, openConversionTool,
       flag: `flags.${SYSTEM.id}.${NEST_FLAG}`,
     };

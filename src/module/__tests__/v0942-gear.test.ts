@@ -252,7 +252,7 @@ describe('v0.94.2 nesting: sheets and wiring', () => {
     assert.match(read('src', 'module', 'applications', 'sheets.ts'), /system: formSystem942\(item\)/);
     const drops = read('src', 'module', 'applications', 'drops.ts');
     assert.match(drops, /nestDropOnRow\(sheet, event, item\)/);
-    assert.match(drops, /carryChildren\(source, item\.id, actor, made\.id/);
+    assert.match(drops, /copyChildren\(source, item\.id, actor, made\.id/);
     assert.match(read('src', 'module', 'applications', 'adding.ts'), /duplicateChildren\(actor, item, made\[0\]\)/);
     assert.match(read('src', 'module', 'documents', 'index.ts'), /programMayLoad\(p, lookupOf\(this\.items\)\)/);
     assert.match(read('src', 'module', 'settings.ts'), /"nestOnDrop"/);
@@ -263,5 +263,103 @@ describe('v0.94.2 nesting: sheets and wiring', () => {
     assert.ok(!/unsetFlag|-=nest942/.test(glue + read('src', 'module', 'rules', 'nesting942.ts')), 'links are cleared through helpers/flags.ts');
     const draft = JSON.parse(readFileSync('/home/claude/work/strings-gear.json', 'utf8'));
     for (const [k, v] of Object.entries(draft)) assert.equal(en[k], v, k);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------------------------------
+// v0.94.2 review fixes (review-0942-gear-trade.md): findings 3, 4 and 13
+// ---------------------------------------------------------------------------------------------------------------------
+import { sumTweaks } from '../rules/tweaks.ts';
+import { accessoryItemsToFields } from '../applications/nesting942.ts';
+
+describe('v0.94.2 review 3: tweaks follow nesting (and nothing changes without it)', () => {
+  const tw = (value: number) => [{ id: 't1', label: '', target: 'attribute', key: 'body', value, on: true }];
+  const withRules = (fn: () => void) => {
+    const prev = { ...RULES.SHEET_V921 };
+    Object.assign(RULES.SHEET_V921 as any, { carried: 'on', tweaks: 'on' });
+    try { fn(); } finally { Object.assign(RULES.SHEET_V921 as any, prev); }
+  };
+  test('regression: with no nesting, the item documents sum exactly as the plain copies did', () => withRules(() => {
+    const items = onActor([gear('goggles', {}, { system: { tweaks: tw(1) } }), weapon('gun', { tweaks: tw(2) }), gear('left', {}, { system: { tweaks: tw(4), carried: false } }), { id: 'ware', type: 'cyberware', name: 'ware', system: { installed: true, tweaks: tw(8) }, flags: {} }]);
+    const plain = sumTweaks(items.map((i: any) => ({ id: i.id, name: i.name, type: i.type, system: i.system })));
+    const docs = sumTweaks(items);
+    assert.deepEqual(docs, plain);
+    assert.equal(docs.attributes['body'], 11);
+  }));
+  test('packed goggles and an accessory on a gun in a left-behind bag give nothing; taken out they count', () => withRules(() => {
+    const items = onActor([gear('bag', { container: true }), gear('goggles', {}, { flags: link('bag', 'inside'), system: { tweaks: tw(1) } }), weapon('gun', {}, {}), gear('laser', { accessory: 'laserSight' }, { flags: link('gun', 'mounted'), system: { tweaks: tw(2) } }), gear('pack2', { container: true }, { system: { carried: false } })]);
+    assert.equal(sumTweaks(items).attributes['body'] ?? 0, 2, 'the packed goggles stop; the laser on a carried gun counts');
+    items[2].flags = link('pack2', 'inside');
+    assert.equal(sumTweaks(items).attributes['body'] ?? 0, 0, 'the gun went into a bag left behind: its laser goes with it');
+    items[1].flags = {};
+    assert.equal(sumTweaks(items).attributes['body'] ?? 0, 1);
+  }));
+  test('wiring: models pass the item documents; the HUD reads carried from the document', () => {
+    assert.match(read('src', 'module', 'models', 'index.ts'), /const tw = sumTweaks\(\[\.\.\.\(\(this as any\)\.parent\?\.items \?\? \[\]\)\], \{ recovering: healing, adeptOver: overIds \}\);/);
+    assert.match(read('src', 'module', 'applications', 'tah.ts'), /if \(i\.type === 'weapon'\) system\['carried'\] = isCarried\(i\);/);
+  });
+});
+
+describe('v0.94.2 review 4: saving an off-deck program keeps its stored loaded', () => {
+  test('the sheet drops system.loaded from the form while the program\'s deck is not in use', () => {
+    const sheets = read('src', 'module', 'applications', 'sheets.ts');
+    const at = sheets.indexOf('doc.system?.nest942Derived?.offDeck');
+    assert.ok(at > 0);
+    assert.ok(at < sheets.indexOf('if (data && doc.type === "program" && doc.parent?.swapProgram)'), 'before the Swap Memory compare');
+    assert.match(sheets.slice(at, at + 300), /delete flatO\["system\.loaded"\]/);
+  });
+  test('the effective value is false off-deck while the stored one stays true (what the form must not write)', () => {
+    const items = onActor([{ id: 'deck', type: 'cyberdeck', name: 'deck', system: { active: false }, flags: {} }, { id: 'p', type: 'program', name: 'p', system: { loaded: true }, flags: link('deck', 'mounted') }]);
+    const p = items[1];
+    nestDerived942(Object.assign(p.system, { parent: p }));
+    assert.equal(p.system.loaded, false);
+    assert.equal(p.system.nest942Derived.offDeck, true);
+    assert.equal(p._source.system.loaded, true);
+  });
+});
+
+describe('v0.94.2 review 13: "Back to fields" leaves damaged and used-up accessories as items', () => {
+  test('only working converted accessories go back into the fields', async () => {
+    const items = onActor([weapon('gun'), gear('sc', { accessory: 'scope', rating: 2 }, { flags: link('gun', 'mounted', { conv: true }), system: { damaged: true } }), gear('las', { accessory: 'laserSight' }, { flags: link('gun', 'mounted', { conv: true }) }), gear('gy', { accessory: 'gyro', rating: 3 }, { flags: link('gun', 'mounted', { conv: true }), system: { quantity: 0 } })]);
+    const gun = items[0]; const actor = gun.parent;
+    const updates: any[] = []; const deleted: string[] = [];
+    gun.isOwner = true;
+    gun.update = async (u: any) => { updates.push(u); };
+    actor.deleteEmbeddedDocuments = async (_t: string, ids: string[]) => { deleted.push(...ids); };
+    assert.equal(await accessoryItemsToFields(gun, { quiet: true }), 1);
+    assert.deepEqual(updates, [{ 'system.laserSight': true }]);
+    assert.deepEqual(deleted, ['las']);
+  });
+});
+
+describe('v0.94.2 (lead, test plan): conversions run once at a time; a non-owner\'s sheet takes a gift drop', () => {
+  test('a second "Make accessory items" click while the first writes does nothing, and the weapon is read again', async () => {
+    const { makeAccessoryItems } = await import('../applications/nesting942.ts');
+    const items = onActor([weapon('gun', { laserSight: true, scope: 2 })]);
+    const gun = items[0]; const actor = gun.parent;
+    gun.isOwner = true;
+    let creates = 0;
+    actor.createEmbeddedDocuments = async (_t: string, list: any[]) => { creates++; await new Promise((r) => setTimeout(r, 5)); return list.map((d, n) => ({ ...d, id: `new${creates}${n}` })); };
+    gun.update = async (u: any) => { for (const [k, v] of Object.entries(u)) gun._source.system[k.replace('system.', '')] = v; };
+    const [a, b] = await Promise.all([makeAccessoryItems(gun, { quiet: true }), makeAccessoryItems(gun, { quiet: true })]);
+    assert.deepEqual([a, b], [2, 0]);
+    assert.equal(creates, 1);
+    assert.equal(await makeAccessoryItems(gun, { quiet: true }), 0, 'the fields were cleared: nothing left to convert');
+  });
+  test('sheetTakesDrops: an editable sheet always; any actor sheet while trading is on', async () => {
+    const { sheetTakesDrops } = await import('../applications/drops.ts');
+    const g: any = globalThis;
+    const prev = g.game;
+    try {
+      g.game = { settings: { get: () => true } };
+      assert.equal(sheetTakesDrops({ document: { documentName: 'Actor' } }, false), true);
+      g.game = { settings: { get: () => false } };
+      assert.equal(sheetTakesDrops({ document: { documentName: 'Actor' } }, false), false);
+      assert.equal(sheetTakesDrops({ document: { documentName: 'Actor' } }, true), true);
+    } finally { g.game = prev; }
+    const sheets = read('src', 'module', 'applications', 'sheets.ts');
+    assert.equal((sheets.match(/_canDragDrop\(selector: string\): boolean \{/g) ?? []).length, 2, 'character (npc, spirit) and vehicle sheets');
+    assert.match(sheets, /if \(!this\.document\?\.isOwner && data\?\.type !== "Item"\) return;/);
+    assert.match(read('src', 'module', 'applications', 'safehouse.ts'), /sheetTakesDrops\(this,/);
   });
 });

@@ -22,13 +22,15 @@ import { t as tx, tKey, tCount } from '../helpers/i18n.ts';
 import { escHtml } from '../rules/html.ts';
 import { userOwns } from '../rules/trust.ts';
 import { clearFlag } from '../helpers/flags.ts';
-import { descendantsOf, readLink, TRADE_NEST_HOOKS } from '../rules/nesting942.ts';
+import { descendantsOf, readLink, TRADE_NEST_HOOKS, NEST_FLAG } from '../rules/nesting942.ts';
 import {
   lootMarkOf, transferRoute, gmMayTransfer, transferShapeOk, transferProblems, planTransfer, tradeable, tradeableItems, tradeStackSize, countAnswer,
+  transferFamily, refusedChildren, itemExtras, transferIsPlain, lootSourceVisible, missingCreates,
   MAX_TRANSFER_NUYEN, type TransferRequest, type TradeActor, type TradeItem, type TransferPlan, type PlanOptions, type TradeProblem, type TransferKind,
 } from '../rules/trade942.ts';
 import { ITEM_TYPES_FOR, arrivalReset, askHowMany } from './drops.ts';
 import { requestGm, onRelay } from './socket.ts';
+import { withGmLock } from './gmlock.ts';
 
 const esc = escHtml;
 /** The world setting that turns these tools on (off when the table uses Item Piles instead). */
@@ -88,6 +90,39 @@ export function problemText(p: TradeProblem | string): string {
   return tKey(`SR2E.Trade.Problem.${p}`);
 }
 
+/**
+ * A problem as plain text (escaped where it is shown). A refused child names the children the receiver can't hold
+ * (review finding 1: nothing moves, so nothing is lost or split).
+ */
+function problemNote(p: TradeProblem, r: TransferRequest, fa: TradeActor | null, ta: TradeActor | null): string {
+  if (p === 'childRefused') return tx('SR2E.Trade.childRefusedNamed', { to: String(ta?.name ?? ''), names: refusedChildren(r, fa, ta, ITEM_TYPES_FOR, nesting).slice(0, 8).join(', ') });
+  return problemText(p);
+}
+
+/** A card's or relay's request as the core reads it (an item's count defaults to 1, as the GM side applies it). */
+function requestOf(f: TransferRequest): TransferRequest {
+  return { kind: f.kind, fromUuid: f.fromUuid, toUuid: f.toUuid, ...(f.itemId !== undefined ? { itemId: f.itemId, qty: f.qty ?? 1 } : { nuyen: f.nuyen! }) };
+}
+
+/**
+ * v0.94.2 review (finding 2): whether a transfer card moves only plain items now (no tweaks or Active Effects on the item
+ * or a child going along), read from the documents. rules/trust.ts `safeAutoApply` asks it (applications/trust.ts cardTrust).
+ */
+export function transferPlainNow(f: unknown): boolean {
+  if (!transferShapeOk(f)) return false;
+  if (f.nuyen !== undefined) return true;
+  return transferIsPlain(requestOf(f), tradeActorOf(docSync(f.fromUuid)), nesting);
+}
+
+/** The tokens a source actor shows on the scenes (a synthetic token's own; a world actor's linked ones). */
+function tokensOf(actor: any): any[] {
+  if (!actor) return [];
+  if (actor.isToken || actor.token) return actor.token ? [actor.token] : [];
+  const out: any[] = [];
+  for (const sc of ((game as any).scenes ?? [])) for (const t of (sc?.tokens ?? [])) if (t?.actorLink && t.actorId === actor.id) out.push(t);
+  return out;
+}
+
 /** What a request moves, as text (the item's real name when the source still has it). */
 function whatText(r: TransferRequest, from: any): string {
   if (r.nuyen !== undefined) return tx('SR2E.Trade.nuyenAmount', { amount: r.nuyen });
@@ -103,6 +138,22 @@ export function transferLiveLines(f: any): string[] {
   if (f.itemId !== undefined) {
     const item = from?.items?.get?.(f.itemId);
     out.push(item ? tx('SR2E.Trade.liveItem', { name: String(item.name), have: tradeStackSize(item.system) }) : problemText('noItem'));
+    // v0.94.2 review (finding 2): what arrives besides the name: the children going along, every tweak and Active Effect
+    // (targets and values) and the system's own flags, so the GM sees what the receiver gets.
+    const r = requestOf(f);
+    const fa = tradeActorOf(from);
+    const fam = transferFamily(r, fa, nesting);
+    if (fam.length > 1) out.push(tx('SR2E.Trade.liveFamily', { names: fam.slice(1, 13).map((i) => i.name).join(', ') }));
+    for (const i of fam) {
+      const x = itemExtras(i);
+      for (const tw of x?.tweaks.slice(0, 12) ?? []) out.push(tx('SR2E.Trade.liveTweak', { item: i.name, text: tw }));
+      for (const e of x?.effects ?? []) out.push(tx('SR2E.Trade.liveEffect', { item: i.name, name: e.name, changes: e.changes.join('; ') || tx('SR2E.Trade.liveEffectNone') }));
+      const own = i.data?.['flags']?.[SYSTEM_ID];
+      const keys = own && typeof own === 'object' ? Object.keys(own).filter((k) => k !== NEST_FLAG && own[k] !== null && own[k] !== undefined) : [];
+      if (keys.length) out.push(tx('SR2E.Trade.liveFlags', { item: i.name, keys: keys.slice(0, 10).join(', ') }));
+    }
+    const refused = refusedChildren(r, fa, tradeActorOf(docSync(f.toUuid)), ITEM_TYPES_FOR, nesting);
+    if (refused.length) out.push(problemNote('childRefused', r, fa, tradeActorOf(docSync(f.toUuid))));
   }
   if (f.kind === 'loot') out.push(lootMarkOf(from?.getFlag?.(SYSTEM_ID, LOOT_FLAG)) ? tx('SR2E.Trade.liveLootable') : tx('SR2E.Trade.liveNotLootable'));
   return out;
@@ -134,6 +185,9 @@ export async function executePlan(from: any, to: any, plan: TransferPlan, r: Tra
   };
   try {
     if (plan.target.create.length) made = (await to.createEmbeddedDocuments('Item', plan.target.create, { keepId: true })) ?? [];
+    // v0.94.2 review (finding 1): a create refused on the receiver (its type guard, a module) leaves the giver untouched:
+    // nothing on the giver is deleted unless its copy was made.
+    if (missingCreates(plan, made.map((d: any) => String(d?.id ?? d?._id ?? ''))).length) throw new Error(tx('SR2E.Trade.failed'));
     if (plan.target.updates.length) await to.updateEmbeddedDocuments('Item', plan.target.updates);
   } catch (err) { await undoTarget(); throw err; }
   try {
@@ -157,16 +211,25 @@ async function postLine(r: TransferRequest, from: any, to: any, what: string, us
  * GM's client: carry out a transfer someone else asked for (a GM-apply card's author, or the relay's sender). Checked
  * again from the documents; never queues on the GM lock itself (the card's step and the relay already hold it).
  */
-export async function applyTransferAsGm(raw: unknown, user: any, via: 'card' | 'relay'): Promise<{ ok: boolean; note?: string }> {
+export async function applyTransferAsGm(raw: unknown, user: any, via: 'card' | 'relay', o: { plainOnly?: boolean } = {}): Promise<{ ok: boolean; note?: string }> {
+  // Review finding 10: trading turned off (Item Piles instead) refuses the card and the relay too.
+  if (!tradeOn()) return { ok: false, note: tx('SR2E.Trade.off') };
   if (!transferShapeOk(raw)) return { ok: false, note: problemText('badRequest') };
-  const r: TransferRequest = { kind: raw.kind, fromUuid: raw.fromUuid, toUuid: raw.toUuid, ...(raw.itemId !== undefined ? { itemId: raw.itemId, qty: raw.qty ?? 1 } : { nuyen: raw.nuyen! }) };
+  const r: TransferRequest = requestOf(raw);
   let from: any = null, to: any = null;
   try { from = await fromUuid(r.fromUuid); to = await fromUuid(r.toUuid); } catch { /* checked below */ }
+  // Review finding 12: two uuids for one actor (a linked token's path and the world actor's) are the same actor.
+  if (from && from === to) return { ok: false, note: problemText('sameActor') };
   const fa = tradeActorOf(from), ta = tradeActorOf(to);
   const who = { isGm: Boolean(user?.isGM), ownsFrom: Boolean(from && userOwns(user, from)), ownsTo: Boolean(to && userOwns(user, to)) };
-  if (!gmMayTransfer(r.kind, who, fa?.loot ?? null, via)) return { ok: false, note: tx('SR2E.Trade.notAllowed', { who: esc(String(user?.name ?? '?')) }) };
-  const probs = transferProblems(r, fa, ta, ITEM_TYPES_FOR);
-  if (probs.length) return { ok: false, note: problemText(probs[0]!) };
+  // Review finding 15: notes are plain text (escaped where they are shown).
+  if (!gmMayTransfer(r.kind, who, fa?.loot ?? null, via)) return { ok: false, note: tx('SR2E.Trade.notAllowed', { who: String(user?.name ?? '?') }) };
+  // Review finding 11: a player loots only what a token shows (hidden loot stays hidden).
+  if (r.kind === 'loot' && !who.isGm && !lootSourceVisible(tokensOf(from))) return { ok: false, note: problemText('hiddenSource') };
+  const probs = transferProblems(r, fa, ta, ITEM_TYPES_FOR, nesting);
+  if (probs.length) return { ok: false, note: problemNote(probs[0]!, r, fa, ta) };
+  // Review finding 2: applying by itself, an item with tweaks or Active Effects (or such a child) waits for the GM.
+  if (o.plainOnly && !transferIsPlain(r, fa, nesting)) return { ok: false, note: tx('SR2E.Trade.notPlain') };
   const what = whatText(r, from);
   try { await executePlan(from, to, planTransfer(r, fa!, ta!, planOptions()), r); } catch (err) {
     console.warn('sr2e | transfer', err);
@@ -197,19 +260,32 @@ async function postTransferCard(r: TransferRequest, from: any, to: any): Promise
  */
 export async function requestTransfer(r: TransferRequest): Promise<boolean> {
   const from = docSync(r.fromUuid), to = docSync(r.toUuid);
+  if (from && from === to) { ui.notifications?.warn?.(esc(problemText('sameActor'))); return false; }
   const fa = tradeActorOf(from), ta = tradeActorOf(to);
   const who = { isGm: isGm(), ownsFrom: Boolean(from?.isOwner), ownsTo: Boolean(to?.isOwner) };
   const route = transferRoute(r.kind, who, fa?.loot ?? null);
   if (route === 'refused') { ui.notifications?.warn?.((r.kind === 'loot' ? tx('SR2E.Trade.refusedLoot') : tx('SR2E.Trade.refusedGive'))); return false; }
-  const probs = transferProblems(r, fa, ta, ITEM_TYPES_FOR);
-  if (probs.length) { ui.notifications?.warn?.(esc(problemText(probs[0]!))); return false; }
+  const probs = transferProblems(r, fa, ta, ITEM_TYPES_FOR, nesting);
+  if (probs.length) { ui.notifications?.warn?.(esc(problemNote(probs[0]!, r, fa, ta))); return false; }
   const what = whatText(r, from);
   if (route === 'direct') {
-    try { await executePlan(from, to, planTransfer(r, fa!, ta!, planOptions()), r); } catch (err) {
+    // Review finding 6: on the GM's client the move runs under the GM lock (after every prompt), read again inside it,
+    // so a relay loot or a re-run can't act between the read and the writes. A player's own move needs no lock.
+    const move = async (): Promise<string | null> => {
+      const f2 = docSync(r.fromUuid), t2 = docSync(r.toUuid);
+      const fa2 = tradeActorOf(f2), ta2 = tradeActorOf(t2);
+      const p2 = transferProblems(r, fa2, ta2, ITEM_TYPES_FOR, nesting);
+      if (p2.length) return problemNote(p2[0]!, r, fa2, ta2);
+      await executePlan(f2, t2, planTransfer(r, fa2!, ta2!, planOptions()), r);
+      return null;
+    };
+    let note: string | null = null;
+    try { note = isGm() ? await withGmLock(move) : await move(); } catch (err) {
       console.warn('sr2e | transfer', err);
       ui.notifications?.error?.(tx('SR2E.Trade.failed'));
       return false;
     }
+    if (note) { ui.notifications?.warn?.(esc(note)); return false; }
     ui.notifications?.info?.(tx('SR2E.Trade.done', { from: esc(from.name), to: esc(to.name), what: esc(what) }));
     // The GM sees loot taken by a GM's own hand only in the log; a player's own stash needs no line.
     return true;

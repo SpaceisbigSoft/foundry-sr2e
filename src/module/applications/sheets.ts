@@ -11,7 +11,7 @@ import { castingPoolMax } from '../rules/docs79-drones-magic.ts';
 import { metamagicAllowed } from "../rules/sorcery.ts";
 import { orderAreaTargets } from "../rules/areatargets.ts";
 import { ATTRIBUTE_KEYS, type AttributeKey } from "../models/index.ts";
-import { dropItemOnActor } from "./drops.ts";
+import { dropItemOnActor, sheetTakesDrops } from "./drops.ts";
 import { allActors, actorLabel } from "../helpers/actors.ts";
 import { clearFlag, replaceFlag, replaceFlagUpdate } from "../helpers/flags.ts";
 import { effectsContext } from "./effects.ts";
@@ -162,6 +162,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const TE: any = (foundry as any).applications?.ux?.TextEditor?.implementation;
     let data: any = null;
     try { data = TE?.getDragEventData?.(event) ?? null; } catch { data = null; }
+    // v0.94.2 (test plan 49): on a sheet the user doesn't own, only an item drop (a gift) goes on.
+    if (!this.document?.isOwner && data?.type !== "Item") return;
     if (data?.type === REFERENCE_DRAG_TYPE) return dropReferenceEntry(this.document, data);
     // v0.93.5 (plan item 51): a pin dragged off the pinned bar onto the rest of its sheet is unpinned.
     if (await pinDropOnSheet(this, data)) return;
@@ -170,6 +172,12 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
 
   async _onDropItem(event: any, item: any): Promise<any> {
     return dropItemOnActor(this, event, item, () => (super._onDropItem as any)(event, item));
+  }
+
+  /** v0.94.2 (test plan 49): a sheet the user doesn't own takes a drop too, so their own item dropped on it is a gift (applications/drops.ts). */
+  _canDragDrop(selector: string): boolean {
+    const base: any = (super._canDragDrop as any);
+    return sheetTakesDrops(this, typeof base === 'function' ? base.call(this, selector) : Boolean((this as any).isEditable));
   }
 
   // Foundry merges DEFAULT_OPTIONS down the class chain, so subclasses list only what they add.
@@ -5506,6 +5514,12 @@ export class SR2ItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
     }
     // v0.70.0: loading or unloading a program on an actor goes through Swap Memory (its time and action), as the Matrix tab does.
     const doc: any = this.document;
+    // v0.94.2 review (finding 4): a program stored on a deck that isn't in use shows unloaded; saving its form keeps the
+    // stored value (it loads again when its deck is back in use).
+    if (data && doc.type === "program" && doc.system?.nest942Derived?.offDeck) {
+      const flatO: Record<string, unknown> = foundry.utils.flattenObject(data);
+      if ("system.loaded" in flatO) { delete flatO["system.loaded"]; data = foundry.utils.expandObject(flatO); }
+    }
     if (data && doc.type === "program" && doc.parent?.swapProgram) {
       const flatL: Record<string, unknown> = foundry.utils.flattenObject(data);
       if ("system.loaded" in flatL && Boolean(flatL["system.loaded"]) !== Boolean(doc.system.loaded)) {
@@ -6558,6 +6572,12 @@ export class SR2VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   /** v0.59.0: dropped items arrive uninstalled / unbonded / unloaded, move between actors, and only fitting types (applications/drops.ts). */
   async _onDropItem(event: any, item: any): Promise<any> {
     return dropItemOnActor(this, event, item, () => (super._onDropItem as any)(event, item));
+  }
+
+  /** v0.94.2 (test plan 49): a sheet the user doesn't own takes a drop too, so their own item dropped on it is a gift (applications/drops.ts). */
+  _canDragDrop(selector: string): boolean {
+    const base: any = (super._canDragDrop as any);
+    return sheetTakesDrops(this, typeof base === 'function' ? base.call(this, selector) : Boolean((this as any).isEditable));
   }
 
   /** v0.91.5 (RULES.SHOP_V915.permits 'buy'): a player gets the vehicle's permit with Get a permit…, not by ticking the box. */

@@ -2724,7 +2724,8 @@
         "addedTo": "{made} added to {actor}",
         "howManyBad": "SR2e: nothing moved: give a number from 1 to {have}.",
         "stackGone": "SR2e: {itemName} is no longer there to move.",
-        "moveFailed": "SR2e: {itemName} couldn't be taken from the giver, so nothing moved (see the console)."
+        "moveFailed": "SR2e: {itemName} couldn't be taken from the giver, so nothing moved (see the console).",
+        "childRefused": "{actor} can't hold what goes with {itemName}: {names}. Take those off or out first; nothing was moved."
       },
       "Gmlock": {
         "sr2eAGmActionIsWaiting": "SR2e: a GM action is waiting for an earlier one to finish. If nothing happens, reload this window."
@@ -19723,7 +19724,9 @@
         "badQty": "That isn't a count of the stack.",
         "notEnough": "There aren't that many left.",
         "noNuyenField": "One of them has no nuyen.",
-        "notEnoughNuyen": "Not enough nuyen."
+        "notEnoughNuyen": "Not enough nuyen.",
+        "childRefused": "The receiver can't hold something attached to it or packed in it.",
+        "hiddenSource": "That loot isn't on any token you can see."
       },
       "nuyen": "Nuyen",
       "nuyenAmount": "{amount}¥",
@@ -19773,7 +19776,14 @@
       "hudOff": "Not lootable: click to mark lootable (right-click: Loot window)",
       "hudOn": "Lootable (takes wait for the GM): click for free for all",
       "hudFree": "Lootable, free for all: click to unmark",
-      "safehouseNamed": "{name} (safehouse)"
+      "safehouseNamed": "{name} (safehouse)",
+      "childRefusedNamed": "{to} can't hold what goes with it: {names}. Take those off or out first; nothing was moved.",
+      "liveFamily": "Goes along with it: {names}",
+      "liveTweak": "{item} carries a tweak: {text}",
+      "liveEffect": "{item} carries an Active Effect “{name}”: {changes}",
+      "liveEffectNone": "no changes",
+      "liveFlags": "{item} carries system data: {keys}",
+      "notPlain": "This item carries tweaks or Active Effects, so it doesn't apply by itself: the GM applies it from the card."
     },
     "Catalogue942": {
       "packLabel": "SR2e catalogue",

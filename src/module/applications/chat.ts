@@ -2869,10 +2869,12 @@ async function onApplyTransfer(message: any, button: HTMLButtonElement): Promise
   await gmLocked(message, button, async () => {
     if (message.getFlag(SYSTEM_ID, 'transferApplied')) return;
     button.disabled = true;
+    // v0.94.2 review (finding 9): claimed before it moves (a second GM's client sees it applied), released on failure.
+    await message.setFlag(SYSTEM_ID, 'transferApplied', true);
     // Bound to the card's author (message.author): applyTransferAsGm reads ownership and the loot mark from the documents.
-    const r = await applyTransferAsGm(v, message.author ?? null, 'card');
-    if (r.ok) await message.setFlag(SYSTEM_ID, 'transferApplied', true);
-    else { button.disabled = false; ui.notifications.warn(escHtml(r.note ?? '')); }
+    // Applying by itself (finding 2), an item with tweaks or Active Effects waits for the GM's click.
+    const r = await applyTransferAsGm(v, message.author ?? null, 'card', { plainOnly: autoButtons.has(button) });
+    if (!r.ok) { await message.setFlag(SYSTEM_ID, 'transferApplied', false); button.disabled = false; ui.notifications.warn(escHtml(r.note ?? '')); }
   });
 }
 
