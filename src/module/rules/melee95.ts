@@ -294,7 +294,7 @@ export function offerKey(o: { moverId: string; interceptorId: string; round: num
 // ---------------------------------------------------------------- the other Dice Pools (Core p. 84)
 
 /**
- * Whether the Spell, Hacking and Task Pools refresh at each of the character's actions: the switch, with the Combat
+ * Whether the Spell and Hacking Pools refresh at each of the character's actions: the switch, with the Combat
  * Pool doing the same (COMBAT_V923.poolRefresh 'action'), and never under the Revamp (every pool at the new turn).
  */
 export function otherPoolsPerAction(): boolean {
@@ -302,22 +302,26 @@ export function otherPoolsPerAction(): boolean {
 }
 
 const SPELL_KEYS = ['system.poolSpent.spell', 'system.poolSpent.spellConc', 'system.poolSpent.spellSpec'] as const;
-const ACTION_KEYS = [...SPELL_KEYS, 'system.poolSpent.hacking', 'system.poolSpent.task'] as const;
+// The Task Pool is Rigger 2's (and Shadowtech's): "all Dice Pools refresh at the beginning of each Combat Turn" there, so
+// it stays per Combat Turn like the Control Pool.
+const ACTION_KEYS = [...SPELL_KEYS, 'system.poolSpent.hacking'] as const;
 
 /**
  * The update a new Combat Turn makes to an actor's pools, cut down. `keepCombat` (COMBAT_V923.poolRefresh 'action'):
  * the Combat Pool's dice last until the first action; with the other pools per action so do the Spell, Hacking and
- * Task Pools and the spell defense dice, so their keys are dropped. The Control Pool always refreshes here (Rigger 2).
+ * the spell defense dice, so their keys are dropped. The Control and Task Pools always refresh here (Rigger 2).
+ * `acted` false: the character had no action last Combat Turn (Reaction 0, surprised): their other pools refresh here,
+ * at least once a Combat Turn.
  */
-export function turnRefresh<T extends Record<string, unknown>>(update: T, keepCombat: boolean): Partial<T> {
-  if (!keepCombat || !otherPoolsPerAction()) return update;
+export function turnRefresh<T extends Record<string, unknown>>(update: T, keepCombat: boolean, acted = true): Partial<T> {
+  if (!keepCombat || !acted || !otherPoolsPerAction()) return update;
   const out: Record<string, unknown> = { ...update };
   for (const k of [...ACTION_KEYS, 'system.spellDefense']) delete out[k];
   return out as Partial<T>;
 }
 
 /**
- * The update the start of a character's action makes to the other pools (null: nothing to change, or the rule is
+ * The update the start of a character's action makes to the Spell and Hacking Pools (null: nothing to change, or the rule is
  * off), and the spell defense dice that went back to the Spell Pool (Core p. 132: allotted again each time).
  */
 export function actionRefreshUpdate(sys: { poolSpent?: Record<string, unknown> | null; spellDefense?: unknown } | null | undefined): { update: Record<string, number>; defenseBack: number } | null {
@@ -330,4 +334,55 @@ export function actionRefreshUpdate(sys: { poolSpent?: Record<string, unknown> |
   const defenseBack = Math.max(0, int(sys.spellDefense));
   if (defenseBack > 0) update['system.spellDefense'] = 0;
   return Object.keys(update).length ? { update, defenseBack } : null;
+}
+
+/** Whether a character had an action in the Combat Turn just ended: a `poolRefreshed` key of theirs that round. */
+export function actedIn(refreshed: { round?: unknown; keys?: unknown } | null | undefined, round: number, combatantId: string): boolean {
+  if (!refreshed || int(refreshed.round) !== int(round) || !Array.isArray(refreshed.keys)) return false;
+  return refreshed.keys.some((k) => String(k).split('|')[3] === String(combatantId));
+}
+
+// ---------------------------------------------------------------- subduing damage done (Core p. 103)
+
+/** The subduing Stun each attacker did to one character (flag `subdueDone95`, a list: uuids have dots). */
+export interface SubdueDone { by: string; boxes: number }
+
+/** A stored list cleaned (bad entries dropped, one entry per attacker, at most the monitor's boxes). */
+export function subdueDoneOf(raw: unknown): SubdueDone[] {
+  const max = int(RULES.MONITOR_BOXES) || 10;
+  const out = new Map<string, number>();
+  for (const e of Array.isArray(raw) ? raw : []) {
+    const by = typeof e?.by === 'string' ? e.by : '';
+    const boxes = Math.max(0, Math.min(max, int(e?.boxes)));
+    if (by && boxes > 0) out.set(by, Math.min(max, (out.get(by) ?? 0) + boxes));
+  }
+  return [...out].slice(0, 20).map(([by, boxes]) => ({ by, boxes }));
+}
+
+/** The list after `delta` Stun boxes from `by`'s subduing blow (a re-roll can take some back). */
+export function addSubdueDone(raw: unknown, by: string, delta: number): SubdueDone[] {
+  const list = subdueDoneOf(raw).filter((e) => e.by !== by);
+  const had = subdueDoneOf(raw).find((e) => e.by === by)?.boxes ?? 0;
+  const now = Math.max(0, Math.min(int(RULES.MONITOR_BOXES) || 10, had + int(delta)));
+  return now > 0 ? [...list, { by, boxes: now }] : list;
+}
+
+/** The subduing Stun `by` did that is still on the track (never more than the Stun there is). */
+export function subdueBoxesBy(raw: unknown, by: string, stun: number): number {
+  return Math.min(Math.max(0, int(stun)), subdueDoneOf(raw).find((e) => e.by === by)?.boxes ?? 0);
+}
+
+/** Whether the holder is close enough to take control: within `metres` of each other (unknown distance: no). */
+export function closeEnough(metres: number | null | undefined, limit: number): boolean {
+  return metres !== null && metres !== undefined && Number.isFinite(Number(metres)) && num(metres) <= Math.max(0, num(limit)) + 1e-6;
+}
+
+// ---------------------------------------------------------------- the interception attack (Core p. 83)
+
+/** The Attack's situational rows an interception keeps: the attacker's own movement. */
+export const INTERCEPT_SITUATIONAL: readonly string[] = ['attackerWalking', 'attackerRunning', 'attackerWalkingRough', 'attackerRunningRough'];
+
+/** The situational ids an interception keeps (the rest are dropped). */
+export function interceptSituational(ids: readonly string[]): string[] {
+  return ids.filter((id) => INTERCEPT_SITUATIONAL.includes(id));
 }

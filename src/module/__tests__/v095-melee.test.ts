@@ -244,9 +244,10 @@ describe('v0.95.0 the other Dice Pools (Core p. 84)', () => {
     assert.deepEqual(M.turnRefresh(full(), false), full());
     assert.deepEqual(M.turnRefresh({ ...OLD }, true), OLD);
   });
-  test('per action: only the Control Pool refreshes at the new Combat Turn', () => {
+  test('per action: only the Control and Task Pools refresh at the new Combat Turn (Rigger 2)', () => {
     assert.equal(M.otherPoolsPerAction(), true);
-    assert.deepEqual(M.turnRefresh({ ...OLD }, true), { 'system.poolSpent.control': 0 });
+    assert.deepEqual(M.turnRefresh({ ...OLD }, true), { 'system.poolSpent.control': 0, 'system.poolSpent.task': 0 });
+    assert.deepEqual(M.turnRefresh({ ...OLD }, true, false), OLD, 'review L4: no action last Combat Turn: everything refreshes');
     assert.deepEqual(M.turnRefresh(full(), false), full(), 'a plain refresh (no fight running) still clears everything');
   });
   test('it follows the Combat Pool\'s switch, and the Revamp keeps the turn', () => {
@@ -257,9 +258,10 @@ describe('v0.95.0 the other Dice Pools (Core p. 84)', () => {
     assert.equal(M.otherPoolsPerAction(), false);
     assert.equal(M.actionRefreshUpdate({ poolSpent: { spell: 3 }, spellDefense: 2 }), null);
   });
-  test('the start of an action: the Spell, Hacking and Task Pools, spell defense back to the pool', () => {
+  test('the start of an action: the Spell and Hacking Pools, spell defense back to the pool (not the Task Pool)', () => {
     assert.deepEqual(M.actionRefreshUpdate({ poolSpent: { combat: 4, spell: 3, spellConc: 0, spellSpec: 1, hacking: 2, control: 5, task: 1 }, spellDefense: 2 }),
-      { update: { 'system.poolSpent.spell': 0, 'system.poolSpent.spellSpec': 0, 'system.poolSpent.hacking': 0, 'system.poolSpent.task': 0, 'system.spellDefense': 0 }, defenseBack: 2 });
+      { update: { 'system.poolSpent.spell': 0, 'system.poolSpent.spellSpec': 0, 'system.poolSpent.hacking': 0, 'system.spellDefense': 0 }, defenseBack: 2 });
+    assert.equal(M.actionRefreshUpdate({ poolSpent: { task: 3 }, spellDefense: 0 }), null);
     assert.equal(M.actionRefreshUpdate({ poolSpent: { combat: 4, control: 5, spell: 0 }, spellDefense: 0 }), null, 'nothing spent: no write (the Control Pool is left alone)');
     assert.equal(M.actionRefreshUpdate({ poolSpent: null }), null);
     set({ otherPools: 'turn' });
@@ -267,15 +269,49 @@ describe('v0.95.0 the other Dice Pools (Core p. 84)', () => {
   });
 });
 
+describe('v0.95.0 review fixes: the pure parts', () => {
+  test('L4: who had an action last Combat Turn', () => {
+    const f = { round: 3, keys: ['c1|3|0|A', 'c1|3|1|B'] };
+    assert.equal(M.actedIn(f, 3, 'A'), true);
+    assert.equal(M.actedIn(f, 3, 'C'), false);
+    assert.equal(M.actedIn(f, 2, 'A'), false, 'another round');
+    assert.equal(M.actedIn(null, 3, 'A'), false);
+  });
+  test('H1: subduing damage by attacker, a re-roll corrects it, never past the track', () => {
+    let d = M.addSubdueDone(null, 'Actor.h', 4);
+    d = M.addSubdueDone(d, 'Actor.h', 3);
+    d = M.addSubdueDone(d, 'Actor.x', 2);
+    assert.deepEqual(d, [{ by: 'Actor.h', boxes: 7 }, { by: 'Actor.x', boxes: 2 }]);
+    assert.deepEqual(M.addSubdueDone(d, 'Actor.x', -5), [{ by: 'Actor.h', boxes: 7 }]);
+    assert.equal(M.subdueBoxesBy(d, 'Actor.h', 10), 7);
+    assert.equal(M.subdueBoxesBy(d, 'Actor.h', 5), 5, 'never more than the Stun there is');
+    assert.equal(M.subdueBoxesBy(d, 'Actor.nobody', 10), 0, 'Drain or someone else\'s blows: nothing');
+    assert.deepEqual(M.subdueDoneOf([{ by: '', boxes: 3 }, { by: 'Actor.a', boxes: 99 }, 'junk']), [{ by: 'Actor.a', boxes: 10 }]);
+  });
+  test('H1: close enough to take control', () => {
+    assert.equal(M.closeEnough(1.5, 2), true);
+    assert.equal(M.closeEnough(2.5, 2), false);
+    assert.equal(M.closeEnough(null, 2), false);
+  });
+  test('M2: an interception keeps only the attacker\'s movement rows', () => {
+    assert.deepEqual(M.interceptSituational(['attackerRunning', 'targetRunning', 'smartlink', 'attackerWalkingRough']), ['attackerRunning', 'attackerWalkingRough']);
+  });
+});
+
 describe('v0.95.0 melee: wiring', () => {
   const index = read('src', 'module', 'documents', 'index.ts');
+  test('M3: the wall is on melee attack and defense tests only, not every test', () => {
+    const body = index.slice(index.indexOf('  #allTestModifiers(opts: TestOptions)'), index.indexOf('  /** Roll this actor\'s own test'));
+    assert.equal(body.includes('wallMods'), false);
+    assert.equal((index.match(/G95\.wallMods\(this\)/g) ?? []).length, 3, 'the melee attack and both melee defenses');
+  });
   test('the pure file has no Foundry globals', () => {
     const src = read('src', 'module', 'rules', 'melee95.ts');
     for (const word of ['game.', 'canvas', 'Hooks', 'ChatMessage', 'ui.notifications', 'fromUuid']) assert.equal(src.includes(word), false, word);
   });
   test('the documents call into the rule at each place', () => {
-    for (const call of ['G95.noActionsRefusal(this, what)', 'G95.wallMods(this)', 'M95.subdueAllowed(', 'G95.quickDraw(this, weapon, opts)', 'G95.subdueHold(this, t)', 'G95.staggered(this, kd80.staggerMetres)',
-      'M95.turnRefresh({', 'G95.takesNoTurn(c.actor)', 'G95.surpriseOpponents(this, attacker,', 'G95.totallySurprisedIn(this, entries)', 'G95.refreshActionPools(c.actor)', 'M95.freeDraw(weapon.system)']) {
+    for (const call of ['G95.noActionsRefusal(this, what)', 'G95.wallMods(this)', 'G95.interceptVouched(this, opts.targetUuid)', 'M95.subdueAllowed(', 'G95.quickDraw(this, weapon, opts)', 'G95.subdueHold(this, t)', 'G95.staggered(this, kd80.staggerMetres)',
+      'M95.turnRefresh({', 'G95.takesNoTurn(c.actor)', 'G95.recordSubdue(this, ctx.subdueBy95,', 'G95.interceptVouchedFor(', 'queueSpellDefense(', 'G95.surpriseOpponents(this, attacker,', 'G95.totallySurprisedIn(this, entries)', 'G95.refreshActionPools(c.actor)', 'M95.freeDraw(weapon.system)']) {
       assert.ok(index.includes(call), call);
     }
   });

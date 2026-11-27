@@ -21,7 +21,7 @@ import { tokensNear, scatterPoint, blastBlocked, wallDistances, wallsBetweenPoin
 import { escHtml } from '../rules/html.ts';
 import { foldDiceOn } from './fixes942.ts';
 import { safeAutoApply, gmApplyShapeOk, describeGmChange, cardTargetUuid, cardSourceUuids, safeInt, safePath, boundPower, boundLevel, safeStr, deepSafeKeys, trustedSource, GM_APPLY_SPECS } from '../rules/trust.ts';
-import { onIntercept95, onRelease95 } from './melee95.ts';
+import { onIntercept95, onRelease95, subdueOptionAttr, bindSubdueBox } from './melee95.ts';
 import { authorIsGm, authorOwns, cardAuthor, cardTrust, speakerActorUuid, nameOfUuid, playerMay, gmMay } from './trust.ts';
 import { applyTransferAsGm, transferLiveLines } from './trade942.ts';
 import { disarmQuickRoll } from './hotkeys.ts';
@@ -312,12 +312,14 @@ async function onDefend(message: any, button: HTMLButtonElement): Promise<void> 
     const choice = await foundry.applications.api.DialogV2.prompt({
       window: { title: tx('SR2E.Dialog.Chat.meleeDefense', { defenderName: defender.name }) },
       content: `<div class="form-group"><label>${tx('SR2E.Dialog.Chat.defendWith')}</label><select name="weapon">
-          ${weapons.map((w: any) => `<option value="${escHtml(w.id)}">${escHtml(w.name)} (${damageLabel(w.system)}${w.system.reach ? tx('SR2E.Dialog.Chat.reach', { reach: escHtml(w.system.reach) }) : ''})</option>`).join('')}</select></div>
+          ${weapons.map((w: any) => `<option value="${escHtml(w.id)}"${subdueOptionAttr(w.system)}>${escHtml(w.name)} (${damageLabel(w.system)}${w.system.reach ? tx('SR2E.Dialog.Chat.reach', { reach: escHtml(w.system.reach) }) : ''})</option>`).join('')}</select></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Chat.combatPoolDiceLeft', { left })}</label><input name="pool" type="number" value="0" min="0" max="${left}"></div>
         ${fullDefenseRow(defender)}
         ${RULES.COMBAT.melee.counterattack && RULES.FIXES_V71.counterWeaponExtras ? `<label class="sr2e-check"><input type="checkbox" name="subdue"> ${tx('SR2E.Dialog.Chat.counterattackToSubdueDamage', { subdueDamageType: RULES.COMBAT.subdue.damageType })}</label>` : ''}
         <p class="hint">${tx('SR2E.Dialog.Chat.opposedTestWhoeverScoresMoreSuccesses', { part: RULES.COMBAT.melee.counterattack ? tx('SR2E.Dialog.Chat.soWinningLetsYouCounterattack') : '', part2: RULES.URR_V80.cbtDefense === 'cleanMiss' || C923.fullDefenseBook() ? tx('SR2E.Dialog.Chat.onFullDefenseLeaveThePool') : '' })}</p>`,
-      ok: { label: tx('SR2E.Dialog.Chat.defend'), callback: (_e: Event, b: any) => ({ weapon: b.form.elements.weapon.value as string, pool: Math.max(0, Math.min(left, Math.floor(Number(b.form.elements.pool.value) || 0))), full: Boolean(b.form.elements.full?.checked), subdue: Boolean(b.form.elements.subdue?.checked) }) },
+      ok: { label: tx('SR2E.Dialog.Chat.defend'), callback: (_e: Event, b: any) => ({ weapon: b.form.elements.weapon.value as string, pool: Math.max(0, Math.min(left, Math.floor(Number(b.form.elements.pool.value) || 0))), full: Boolean(b.form.elements.full?.checked), subdue: Boolean(b.form.elements.subdue?.checked && !b.form.elements.subdue.disabled) }) },
+      // v0.95.0 (MELEE_V95.subdue 'stunOnly'): the subdue tick follows the weapon picked.
+      render: (_e: Event, d: any) => { try { bindSubdueBox(d?.element ?? d); } catch { /* no window */ } },
       rejectClose: false,
     });
     if (!choice) return;

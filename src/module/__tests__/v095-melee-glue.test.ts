@@ -9,6 +9,7 @@ import * as M from '../rules/melee95.ts';
 import {
   noActionsKey, noActionsText, noActionsRefusal, takesNoTurn, trackerNotes, totallySurprisedIn, surpriseOpponents, surpriseNote, quickDraw, subdueBoxAttr, subdueHold,
   onRelease95, staggered, wallMods, watchMove, onIntercept95, refreshActionPools, _resetOffers,
+  recordSubdue, relayMelee95, subdueTick, _subduedIndex, bindSubdueBox, subdueOptionAttr, interceptVouched, interceptVouchedFor,
 } from '../applications/melee95.ts';
 
 const G: any = globalThis;
@@ -60,6 +61,7 @@ const text = (m: any): string => String(m?.content ?? '');
 
 beforeEach(() => {
   _resetOffers();
+  _subduedIndex().clear();
   posted = []; warned = []; faces = []; docs = new Map(); held = []; sheetRuns = [];
   G.game = {
     user: { id: 'gm', isGM: true, name: 'GM' }, users: [{ id: 'gm', isGM: true }, { id: 'p1', isGM: false }], combat: null, time: { worldTime: 1000 }, actors: [], scenes: [], messages: { contents: [] },
@@ -186,17 +188,58 @@ describe('v0.95.0 glue: subduing', () => {
     RULES.MELEE_V95.subdue = 'any';
     assert.equal(subdueBoxAttr({ damageType: 'physical' }), '');
   });
-  test('Hold on someone with a full Stun track takes control', async () => {
+  /** Subduing Stun `by` did to `t` (as the soak records it). */
+  const subdued = (t: any, by: any, boxes: number) => { t.flags[NS].subdueDone95 = [{ by: by.uuid, boxes }]; };
+  test('Hold takes control only for the one whose subduing blows filled the track (review H1)', async () => {
     const h = actor('h'), t = actor('t', { stun: 10 });
     assert.equal(await subdueHold(h, actor('u', { stun: 9 })), undefined, 'not subdued: the old hold');
+    assert.equal(await subdueHold(h, t), undefined, 'Stun from Drain or anyone else: the old hold, nothing taken off');
+    subdued(t, h, 6);
     assert.equal(await subdueHold(h, t), 'held');
-    assert.deepEqual(t.flags[NS].subdued95, { by: 'Actor.h', boxes: 10, total: 10, at: 1000 });
+    assert.deepEqual(t.flags[NS].subdued95, { by: 'Actor.h', boxes: 6, total: 6, at: 1000 }, 'only the subduing Stun counts');
+    assert.equal(t.flags[NS].subdueDone95 ?? null, null, 'moved into the control state');
     assert.deepEqual(held, [['Actor.t', 'Actor.h', true]]);
     assert.ok(text(posted[0]).includes('release95'));
     assert.deepEqual(posted[0].flags[NS].subdue95, { holderUuid: 'Actor.h', targetUuid: 'Actor.t' });
+    assert.ok(_subduedIndex().has('Actor.t'), 'L1: indexed');
     assert.equal(await subdueHold(actor('x'), t), undefined, 'someone else\'s captive: the old hold');
     RULES.MELEE_V95.subdueControl = 'off';
     assert.equal(await subdueHold(h, t), undefined);
+  });
+  test('H1: Let go after taking control removes only the subduing Stun, never Drain', async () => {
+    const h = actor('h'), t = actor('t', { stun: 10 });
+    subdued(t, h, 4);
+    await subdueHold(h, t);
+    await onRelease95({ getFlag: () => ({ targetUuid: t.uuid }) }, { disabled: false } as any);
+    assert.equal(t.system.monitor.stun, 6, 'the 6 boxes of Drain stay');
+  });
+  test('H1: too far away to take control; in the same fight without tokens is close enough', async () => {
+    const h = actor('h'), t = actor('t', { stun: 10 });
+    subdued(t, h, 10);
+    h.tokenObj = { center: { x: 0, y: 0 } }; t.tokenObj = { center: { x: 900, y: 0 } };
+    G.canvas.grid.measurePath = (pts: any[]) => ({ distance: Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y) / 100 });
+    G.canvas.grid.isGridless = true;
+    assert.equal(await subdueHold(h, t), null);
+    assert.equal(t.flags[NS].subdued95, undefined);
+    t.tokenObj = { center: { x: 150, y: 0 } };
+    assert.equal(await subdueHold(h, t), 'held', '1.5 m');
+    const h2 = actor('h2'), t2 = actor('t2', { stun: 10 });
+    subdued(t2, h2, 10);
+    combat([combatant('1', h2)]);
+    assert.equal(await subdueHold(h2, t2), null, 'no tokens, a fight the target is not in: refused');
+    combat([combatant('1', h2), combatant('2', t2)]);
+    h2.acting = true;
+    assert.equal(await subdueHold(h2, t2), 'held', 'no tokens, both in the fight');
+  });
+  test('the soak records the subduing Stun by attacker; a re-roll corrects it', async () => {
+    const t = actor('t');
+    await recordSubdue(t, 'Actor.h', 5);
+    await recordSubdue(t, 'Actor.h', -2);
+    assert.deepEqual(t.flags[NS].subdueDone95, [{ by: 'Actor.h', boxes: 3 }]);
+    await recordSubdue(t, 'Actor.h', -3);
+    assert.equal(t.flags[NS].subdueDone95, undefined);
+    await recordSubdue(t, 7 as any, 3);
+    assert.equal(t.flags[NS].subdueDone95, undefined, 'no attacker: nothing');
   });
   test('Hold again is the maintenance test', async () => {
     const h = actor('h', { strength: 5, quickness: 3, unarmed: 2 }), t = actor('t', { stun: 7, strength: 3, quickness: 4, wound: 2 });
@@ -204,19 +247,80 @@ describe('v0.95.0 glue: subduing', () => {
     // The holder: 5 dice vs 2 (the held one's lowest: no Unarmed Combat); the held: 4 dice vs 2 + 2 wounds + 2.
     faces = [2, 2, 2, 1, 1, 6, 1, 1, 1, 3];
     assert.equal(await subdueHold(h, t), 'held');
-    assert.deepEqual(h.used, ['hold']);
     assert.equal(t.system.monitor.stun, 9, '3 successes against 1: 2 boxes back');
     assert.deepEqual(t.flags[NS].subdued95, { by: 'Actor.h', boxes: 9, total: 10, at: 1000 });
     assert.ok(text(posted[0]).includes('vs 6'));
   });
+  test('M4: in a fight the maintenance test needs the holder\'s own action, paid where it is rolled', async () => {
+    const h = actor('h'), t = actor('t', { stun: 7 });
+    t.flags[NS].subdued95 = { by: 'Actor.h', boxes: 7, total: 10, at: 400 };
+    combat([combatant('1', h), combatant('2', t)]);
+    h.acting = false;
+    assert.equal(await subdueHold(h, t), null);
+    assert.deepEqual(h.used, []);
+    h.acting = true;
+    faces = [1, 1, 1, 1, 1, 1, 1, 1];
+    assert.equal(await subdueHold(h, t), 'held');
+    assert.deepEqual(h.used, ['hold']);
+  });
+  test('M4: the relay op judges its sender, pays the action GM-side, and one take of two goes through', async () => {
+    const h = actor('h', { owners: ['p1'] }), t = actor('t', { stun: 10 });
+    subdued(t, h, 10);
+    const stranger = { id: 'p2', isGM: false }, owner = { id: 'p1', isGM: false };
+    assert.equal((await relayMelee95({ op: 'take', holderUuid: h.uuid, targetUuid: t.uuid }, stranger)).ok, false);
+    assert.equal((await relayMelee95({ op: 'steal', holderUuid: h.uuid, targetUuid: t.uuid }, owner)).ok, false);
+    assert.equal(t.flags[NS].subdued95, undefined);
+    const [a, b] = await Promise.all([relayMelee95({ op: 'take', holderUuid: h.uuid, targetUuid: t.uuid }, owner), relayMelee95({ op: 'take', holderUuid: h.uuid, targetUuid: t.uuid }, owner)]);
+    assert.deepEqual([a.ok, b.ok], [true, false]);
+    assert.equal(posted.length, 1, 'one card');
+    combat([combatant('1', h), combatant('2', t)]);
+    h.acting = false;
+    const r = await relayMelee95({ op: 'maintain', holderUuid: h.uuid, targetUuid: t.uuid }, owner);
+    assert.equal(r.ok, false, 'a forged maintain out of the holder\'s action is refused');
+    assert.equal(posted.length, 1);
+  });
   test('a player who can\'t write the held actor is refused without a GM', async () => {
     const h = actor('h'), t = actor('t', { stun: 10, isOwner: false });
+    subdued(t, h, 10);
     G.game.user = { id: 'p1', isGM: false };
     G.game.socket = { emit: () => {} };
     G.game.users = Object.assign([{ id: 'p1', isGM: false, active: true }], { get: () => null });
     assert.equal(await subdueHold(h, t), null);
     assert.equal(t.flags[NS].subdued95, undefined);
     assert.equal(warned.length, 1);
+  });
+  test('M1, L1: the Stun wears off on the clock for the indexed actors; the hold ends with it', async () => {
+    const h = actor('h'), t = actor('t', { stun: 2 });
+    t.flags[NS].subdued95 = { by: 'Actor.h', boxes: 2, total: 6, at: 1000 };
+    G.game.time.worldTime = 1100;
+    await subdueTick();
+    assert.equal(t.system.monitor.stun, 2, 'not indexed: not looked at');
+    _subduedIndex().add(t.uuid);
+    await subdueTick();
+    assert.equal(t.system.monitor.stun, 1);
+    G.game.time.worldTime = 1200;
+    await subdueTick();
+    assert.equal(t.system.monitor.stun, 0);
+    assert.equal(t.flags[NS].subdued95 ?? null, null);
+    assert.deepEqual(held.at(-1), ['Actor.t', '', false], 'the hold status comes off');
+    assert.equal(_subduedIndex().size, 0);
+    void h;
+  });
+  test('L3: the Defend window\'s subdue tick follows the weapon picked', () => {
+    assert.equal(subdueOptionAttr({ damageType: 'stun' }), '');
+    assert.equal(subdueOptionAttr({ damageType: 'physical' }), ' data-sr2e-nosubdue="1"');
+    const opts = [{ getAttribute: () => null }, { getAttribute: (k: string) => (k === 'data-sr2e-nosubdue' ? '1' : null) }];
+    let onChange: any = null;
+    const select: any = { selectedIndex: 0, options: opts, addEventListener: (_e: string, f: any) => { onChange = f; } };
+    const box: any = { disabled: false, checked: true, title: '' };
+    bindSubdueBox({ querySelector: (q: string) => (q.startsWith('select') ? select : box) });
+    assert.equal(box.disabled, false);
+    select.selectedIndex = 1; onChange();
+    assert.equal(box.disabled, true);
+    assert.equal(box.checked, false);
+    assert.ok(box.title.length > 5);
+    RULES.MELEE_V95.subdue = 'any';
+    assert.equal(subdueOptionAttr({ damageType: 'physical' }), '');
   });
   test('Let go: only the holder the actor\'s own state names', async () => {
     const h = actor('h'), other = actor('o', { isOwner: true }), t = actor('t', { stun: 8 });
@@ -330,29 +434,41 @@ describe('v0.95.0 glue: interception', () => {
     f.mover.token.x = 400; f.mover.token.y = 0;
     assert.equal(await moved(f, { x: 0, y: 0 }), 0);
   });
-  test('the button: a GM\'s card, the interceptor\'s owner, the mover targeted, the melee attack opened', async () => {
+  test('M2: the button opens the interception: TN 4 rules, pool dice, the mover targeted, once per offer', async () => {
     const f = fight();
     const g = f.guard.actor;
-    g.items = [{ id: 'gun', type: 'weapon', system: { melee: false } }, { id: 'holstered', type: 'weapon', system: { melee: true, ready: false } }, { id: 'club', type: 'weapon', system: { melee: true, ready: true } }];
-    const flags = { interceptorUuid: g.uuid, moverUuid: 'Actor.m', tokenId: 'tm', sceneId: 's1' };
-    const msg = (isGM: boolean) => ({ author: { isGM }, getFlag: () => flags });
+    const club = { id: 'club', name: 'Club', type: 'weapon', system: { melee: true, ready: true, damageType: 'stun' } };
+    g.items = [{ id: 'gun', type: 'weapon', system: { melee: false } }, { id: 'holstered', type: 'weapon', system: { melee: true, ready: false } }, club];
+    g.system.derived.combatPoolLeft = 4;
+    const mover = f.mover.actor;
+    mover.items = [{ type: 'weapon', system: { melee: true, reach: 1 } }];
+    const flags = { interceptorUuid: g.uuid, moverUuid: mover.uuid, tokenId: 'tm', sceneId: 's1' };
+    const offer = (isGM: boolean) => ({ author: { isGM }, getFlag: (_n: string, k: string) => (k === 'intercept95' ? flags : undefined) });
+    G.game.messages.contents = [offer(true)];
+    const attacks: any[] = [];
+    g.attackWith = async (w: any, o: any) => { attacks.push([w, o]); G.game.messages.contents.push({ author: { isGM: false }, getFlag: (_n: string, k: string) => (k === 'attack' ? { intercept95: true, attackerUuid: g.uuid, targetUuid: mover.uuid } : undefined) }); return {}; };
+    let asked: any = null;
+    G.foundry.applications.api.DialogV2 = { prompt: async (o: any) => { asked = o; return o.ok.callback(null, { form: { elements: { pool: { value: '9' }, subdue: { checked: true } } } }); } };
     const button: any = { disabled: false };
-    let targeted = 0;
-    G.canvas.tokens.get = (id: string) => (id === 'tm' ? { setTarget: () => { targeted++; } } : null);
-    await onIntercept95(msg(false), button);
-    assert.equal(sheetRuns.length, 0, 'a player\'s card does nothing');
+    await onIntercept95(offer(false), button);
+    assert.equal(attacks.length, 0, 'a player\'s card does nothing');
     g.isOwner = false;
-    await onIntercept95(msg(true), button);
-    assert.equal(sheetRuns.length, 0, 'not the interceptor\'s owner');
+    await onIntercept95(offer(true), button);
+    assert.equal(attacks.length, 0, 'not the interceptor\'s owner');
     g.isOwner = true;
-    await onIntercept95(msg(true), button);
-    assert.equal(targeted, 1);
-    assert.deepEqual(sheetRuns[0].slice(1), ['attackWeapon', { itemId: 'club' }]);
-    assert.equal(sheetRuns[0][0], g);
-    g.items = [];
-    await onIntercept95(msg(true), button);
-    assert.deepEqual(sheetRuns[1][2], { itemId: 'unarmed' });
-    assert.equal(warned.length, 2);
+    assert.equal(interceptVouched(g, mover.uuid), true);
+    await onIntercept95(offer(true), button);
+    assert.equal(attacks.length, 1);
+    assert.equal(attacks[0][0], club);
+    assert.deepEqual(attacks[0][1], { targetUuid: mover.uuid, poolDice: 4, subdue: true, targetReach: 1, intercept95: true });
+    assert.ok(String(asked.content).includes('name="pool"'));
+    assert.equal(interceptVouched(g, mover.uuid), false, 'used: one attack per offer');
+    assert.equal(interceptVouchedFor(g.uuid, mover.uuid), true, 'the defender still sees the offer');
+    await onIntercept95(offer(true), button);
+    assert.equal(attacks.length, 1);
+    assert.equal(interceptVouchedFor(g.uuid, 'Actor.other'), false);
+    G.game.messages.contents = [offer(false)];
+    assert.equal(interceptVouchedFor(g.uuid, mover.uuid), false, 'a player\'s offer card vouches for nothing');
   });
 });
 

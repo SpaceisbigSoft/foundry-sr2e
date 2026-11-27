@@ -213,23 +213,82 @@ describe('v0.95.0 documents: quick draw (Core p. 82)', () => {
 });
 
 describe('v0.95.0 documents: subduing (Core p. 103)', () => {
-  test('Hold on a full Stun track takes control; Hold again is the maintenance test; the old way is the hold test', async (t) => {
+  test('H1: the soak records a subduing blow\'s Stun; Hold takes only that; Let go leaves the Drain; the old way is the hold test', async (t) => {
     t.after(restore);
-    const h = who({ name: 'Holder' }), v = who({ name: 'Victim', monitor: { physical: 0, stun: 10 } });
+    const h = who({ name: 'Holder' }), v = who({ name: 'Victim' });
+    faces.push(1, 1, 1, 1);                                           // Drain-like: Body 4 vs 3, no successes: M Stun (3 boxes)
+    await v.resistDamage({ power: 3, level: 'M', type: 'stun', poolDice: 0 });
+    assert.equal(v.system.monitor.stun, 3);
+    assert.equal(v.flags[NS]?.subdueDone95, undefined, 'not subduing damage');
+    faces.push(1, 1, 1, 1);                                           // the subduing blow: D Stun, the track fills (7 more)
+    await v.resistDamage({ power: 3, level: 'D', type: 'stun', poolDice: 0, subdueBy95: h.uuid });
+    assert.equal(v.system.monitor.stun, 10);
+    assert.deepEqual(v.flags[NS].subdueDone95, [{ by: h.uuid, boxes: 7 }]);
+    const other = who({ name: 'Bystander' });
+    faces.push(1, 1, 1, 1, 1, 1, 1, 1);
+    assert.equal(await other.holdTarget(v.uuid), 'free', 'not their subduing: the old hold test');
+    assert.equal(v.flags[NS]?.subdued95, undefined);
+    faces.length = 0;
     assert.equal(await h.holdTarget(v.uuid), 'held');
-    assert.equal(v.flags[NS].subdued95.by, h.uuid);
+    assert.deepEqual([v.flags[NS].subdued95.by, v.flags[NS].subdued95.boxes], [h.uuid, 7]);
     assert.equal(v.flags[NS].heldBy, h.uuid);
     assert.equal(faces.length, 0, 'no test to take control');
-    v.system.monitor.stun = 8; v.flags[NS].subdued95.boxes = 8;
-    // The holder: Quickness 5 dice vs the victim's lowest (no Unarmed Combat: TN 2); the victim: 5 dice vs 2 + 3 (S Stun) + 2.
-    faces.push(2, 2, 2, 1, 1, 1, 1, 1, 1, 1);
-    assert.equal(await h.holdTarget(v.uuid), 'held');
-    assert.equal(v.system.monitor.stun, 10, '3 net successes, 2 boxes had worn off');
+    const card = chat.at(-1);
+    await (await import('../applications/melee95.ts')).onRelease95(card, { disabled: false } as any);
+    assert.equal(v.system.monitor.stun, 3, 'only the subduing Stun comes off');
+    assert.equal(v.flags[NS]?.heldBy ?? null, null);
     RULES.MELEE_V95.subdueControl = 'off';
     const w = who({ name: 'Other', monitor: { physical: 0, stun: 10 } });
     faces.push(1, 1, 1, 1, 1, 1, 1, 1);
     assert.equal(await h.holdTarget(w.uuid), 'free');
     assert.equal(w.flags[NS]?.subdued95, undefined);
+  });
+  test('H1: a subduing attack carries its attacker to the card; a Physical weapon\'s does not', async (t) => {
+    t.after(restore);
+    const a = who({ name: 'A' }, [skill('s1', 'Clubs', 3, 'strength')]), d = who({ name: 'D' });
+    const club = { id: 'c', name: 'Club', system: { melee: true, skill: 'Clubs', damagePower: 1, damageLevel: 'M', damageType: 'stun', reach: 1, strengthPower: true } };
+    faces.push(5, 5, 5);
+    await a.attackWith(club, { targetUuid: d.uuid, subdue: true });
+    assert.equal(chat.at(-1).flags[NS].attack.subdueBy95, a.uuid);
+    faces.push(5, 5, 5);
+    await a.attackWith({ ...club, system: { ...club.system, damageType: 'physical' } }, { targetUuid: d.uuid, subdue: true });
+    assert.equal(chat.at(-1).flags[NS].attack.subdueBy95, undefined);
+  });
+});
+
+describe('v0.95.0 documents: interception (Core p. 83)', () => {
+  const offer = (a: any, m: any) => asMessage({ author: { isGM: true }, flags: { [NS]: { intercept95: { interceptorUuid: a.uuid, moverUuid: m.uuid } } } });
+  test('M2: TN 4 with only reach and the attacker\'s movement; without the GM\'s offer it is refused', async (t) => {
+    t.after(() => { restore(); g.game.messages.contents = []; });
+    const a = who({ name: 'Guard' }, [skill('s1', 'Clubs', 3, 'strength')]), m = who({ name: 'Runner' });
+    const club = { id: 'c', name: 'Club', system: { melee: true, skill: 'Clubs', damagePower: 1, damageLevel: 'M', damageType: 'stun', reach: 1, strengthPower: true } };
+    const o = { targetUuid: m.uuid, intercept95: true, situational: ['attackerRunning', 'targetRunning'], modifiers: [{ label: 'Other', value: 3 }], targetReach: 0 };
+    const plan = a.planAttack(club, o);
+    assert.deepEqual(plan.modifiers.map((x: any) => x.value), [4, -1], 'running +4, reach −1; the rest dropped');
+    assert.equal(plan.base.value, 4);
+    assert.equal(await a.attackWith(club, o), null, 'no offer');
+    assert.equal(chat.length, 0);
+    g.game.messages.contents = [offer(a, m)];
+    faces.push(5, 5, 5);
+    assert.ok(await a.attackWith(club, o));
+    assert.equal(chat.at(-1).flags[NS].attack.intercept95, true);
+    g.game.messages.contents.push(chat.at(-1));
+    faces.push(5, 5, 5);
+    assert.equal(await a.attackWith(club, o), null, 'one attack per offer');
+  });
+  test('M2: the one intercepted defends as on full defense: no counterattack', async (t) => {
+    t.after(() => { restore(); g.game.messages.contents = []; });
+    const a = who({ name: 'Guard' }), m = who({ name: 'Runner' }, [skill('s1', 'Unarmed Combat', 4, 'strength')]);
+    const blow = { attackerUuid: a.uuid, targetUuid: m.uuid, weaponName: 'Club', melee: true, damageType: 'stun', power: 4, level: 'M', attackSuccesses: 1, targetNumber: 4, reach: 1, intercept95: true };
+    faces.push(5, 5, 5, 5);                                           // the runner wins the melee test
+    await m.defend(blow, 0, { weaponId: 'unarmed' });
+    assert.match(chat.at(-1).content, /data-sr2e-action="resist"/, 'marked as an interception without the GM\'s offer: the counterattack stands');
+    chat.length = 0;
+    g.game.messages.contents = [offer(a, m)];
+    faces.push(5, 5, 5, 5);
+    await m.defend(blow, 0, { weaponId: 'unarmed' });
+    assert.doesNotMatch(chat.at(-1).content, /data-sr2e-action="resist"/);
+    assert.equal(m.flags[NS]?.fullDefense, undefined, 'no full-defense cost of its own');
   });
 });
 
@@ -245,10 +304,18 @@ describe('v0.95.0 documents: against a wall (Core p. 102)', () => {
     faces.push(4, 1, 1, 1);                                           // Body 4 vs 4: 1 success, a Moderate wound: staggered
     await def.rollKnockdown(4, 'M');
     assert.ok(def.statuses.has(WALL_STATUS));
-    assert.deepEqual(def.previewModifiers().filter((m: any) => m.id === 'againstWall95').map((m: any) => m.value), [2]);
-    assert.deepEqual(def.previewModifiers({ noPenalties: true }).filter((m: any) => m.id === 'againstWall95'), [], 'not on a resistance test');
+    // M3: on melee attacks (and melee defense), not on every test.
+    const wallOn = (mods: any[]) => mods.filter((m: any) => m.id === 'againstWall95').map((m: any) => m.value);
+    const club = { id: 'c', name: 'Club', system: { melee: true, skill: 'Clubs', damagePower: 1, damageLevel: 'M', damageType: 'stun', reach: 1, strengthPower: true } };
+    assert.deepEqual(wallOn(def.planAttack(club, {}).modifiers), [2]);
+    assert.deepEqual(wallOn(def.planAttack(pistol(), {}).modifiers), [], 'not a ranged attack');
+    assert.deepEqual(wallOn(def.previewModifiers()), [], 'not a Perception test or a spell');
+    chat.length = 0;
+    faces.push(1, 1, 1, 1, 1);
+    await def.defend({ attackerUuid: atk.uuid, targetUuid: def.uuid, weaponName: 'Club', melee: true, damageType: 'stun', power: 4, level: 'M', attackSuccesses: 1, targetNumber: 4, reach: 0 }, 0, { weaponId: 'unarmed' });
+    assert.match(chat.at(-1).content, /Against a wall/, 'the melee defense test lists it');
     def.statuses.delete(WALL_STATUS);
-    assert.deepEqual(def.previewModifiers().filter((m: any) => m.id === 'againstWall95'), []);
+    assert.deepEqual(wallOn(def.planAttack(club, {}).modifiers), []);
     RULES.MELEE_V95.wall = 'off';
     faces.push(4, 1, 1, 1);
     await def.rollKnockdown(4, 'M');
@@ -283,14 +350,13 @@ describe('v0.95.0 documents: the other pools (Core p. 84)', () => {
     t.after(restore);
     const a = who({ poolSpent: { combat: 3, spell: 2, hacking: 1, control: 2, task: 1 }, spellDefense: 2 });
     await a.refreshPools({ keepCombat: true });
-    assert.deepEqual([a.system.poolSpent.combat, a.system.poolSpent.spell, a.system.poolSpent.hacking, a.system.poolSpent.control, a.system.poolSpent.task], [3, 2, 1, 0, 1]);
+    assert.deepEqual([a.system.poolSpent.combat, a.system.poolSpent.spell, a.system.poolSpent.hacking, a.system.poolSpent.control, a.system.poolSpent.task], [3, 2, 1, 0, 0], 'the Control and Task Pools per Combat Turn (Rigger 2)');
     assert.equal(a.system.spellDefense, 2);
     const c = fight(a);
     await c.refreshActingPool();
     assert.equal(a.system.poolSpent.combat, 0);
     assert.equal(a.system.poolSpent.spell, 0);
     assert.equal(a.system.poolSpent.hacking, 0);
-    assert.equal(a.system.poolSpent.task, 0);
     assert.equal(a.system.spellDefense, 0);
     assert.equal(chat.length, 1);
     assert.match(chat[0].content, /2 spell defense dice/);
@@ -311,6 +377,30 @@ describe('v0.95.0 documents: the other pools (Core p. 84)', () => {
     await c.refreshActingPool();
     assert.equal(a.system.poolSpent.spell, 2);
     assert.equal(chat.length, 0);
+  });
+  test('L4: no action last Combat Turn: the Spell and Hacking Pools refresh at the new one', async (t) => {
+    t.after(restore);
+    const a = who({ poolSpent: { combat: 3, spell: 2, hacking: 1, control: 2, task: 1 }, spellDefense: 2 });
+    await a.refreshPools({ keepCombat: true, acted: false });
+    assert.deepEqual([a.system.poolSpent.spell, a.system.poolSpent.hacking, a.system.spellDefense], [0, 0, 0]);
+    assert.equal(a.system.poolSpent.combat, 3);
+  });
+  test('L5: the refresh at the action waits for a spell defense spend in flight', async (t) => {
+    t.after(restore);
+    const { queueSpellDefense } = await import('../documents/index.ts');
+    const a = who({ poolSpent: { combat: 0, spell: 1, hacking: 0, control: 0, task: 0 }, spellDefense: 3 });
+    const c = fight(a);
+    let release: () => void = () => {};
+    const order: string[] = [];
+    const spend = queueSpellDefense(String(a.uuid), () => new Promise<void>((r) => { release = () => { a.system.spellDefense = 1; a.system.poolSpent.spell = 3; order.push('spend'); r(); }; }));
+    const refresh = c.refreshActingPool().then(() => order.push('refresh'));
+    await new Promise((r) => setTimeout(r, 5));
+    assert.equal(a.system.spellDefense, 3, 'not written while the spend runs');
+    release();
+    await Promise.all([spend, refresh]);
+    assert.deepEqual(order, ['spend', 'refresh']);
+    assert.deepEqual([a.system.spellDefense, a.system.poolSpent.spell], [0, 0]);
+    assert.match(chat.at(-1).content, /1 spell defense die/, 'the value after the spend');
   });
   test('a plain refresh (no fight) clears every pool as before', async () => {
     const a = who({ poolSpent: { combat: 3, spell: 2, hacking: 1, control: 2, task: 1 }, spellDefense: 2 });

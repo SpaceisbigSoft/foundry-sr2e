@@ -21,7 +21,7 @@ import { SYSTEM_ID } from '../config/system.ts';
 import { RULES } from '../rules/config.ts';
 import { successTest, type TargetNumberModifier, type DiceRoller } from '../rules/dice.ts';
 import { incapacitated } from '../rules/core.ts';
-import { buttonCost } from '../rules/interface.ts';
+import { buttonCost, affordable } from '../rules/interface.ts';
 import { parseFiringModes } from '../rules/firing.ts';
 import { escHtml } from '../rules/html.ts';
 import { t as tx, tCount } from '../helpers/i18n.ts';
@@ -32,7 +32,7 @@ import { isLeadGm } from './leader.ts';
 import { activeGm, onRelay, requestGm } from './socket.ts';
 import { withGmLock } from './gmlock.ts';
 import { authorIsGm } from './trust.ts';
-import { pxPerMetre, pointsBlocked, sceneMetres } from './canvas.ts';
+import { pxPerMetre, pointsBlocked, sceneMetres, measureTokens } from './canvas.ts';
 import * as M from '../rules/melee95.ts';
 
 const PEOPLE = ['character', 'npc', 'spirit'];
@@ -232,28 +232,100 @@ const releaseButton = (): string => `<button type="button" data-sr2e-action="rel
 const subdueFlags = (holder: any, target: any): Record<string, unknown> => ({ [SYSTEM_ID]: { subdue95: { holderUuid: String(holder.uuid), targetUuid: String(target.uuid) } } });
 
 type SubdueOp = 'take' | 'maintain' | 'release';
+const FLAG_DONE = 'subdueDone95';
 
 /** Whether `user` may ask for this on behalf of `holder` (the relay judges its sender with it). */
 function mayHold(holder: any, user: any): boolean {
   return Boolean(user?.isGM) || Boolean(holder?.testUserPermission?.(user, 'OWNER'));
 }
 
+/**
+ * Subduing Stun put on `target` by `byUuid`'s blow (`SR2Actor`'s soak, where the monitor is written): kept on the
+ * target (flag `subdueDone95`), so taking control and letting go only ever count that damage (Core p. 103).
+ */
+export async function recordSubdue(target: any, byUuid: unknown, delta: number): Promise<void> {
+  if (!target || typeof byUuid !== 'string' || !byUuid || !Number.isFinite(Number(delta)) || Number(delta) === 0) return;
+  const now = M.addSubdueDone(target.getFlag?.(SYSTEM_ID, FLAG_DONE), byUuid, Number(delta));
+  try {
+    if (now.length) await target.setFlag(SYSTEM_ID, FLAG_DONE, now);
+    else await clearFlag(target, FLAG_DONE);
+  } catch (err) { console.warn('sr2e | subduing damage', err); }
+}
+
+const tokenOfActor = (actor: any): any => { try { return actor?.token?.object ?? actor?.getActiveTokens?.()[0] ?? null; } catch { return null; } };
+
+/** Metres between two actors' tokens (null when either has none on the viewed scene). */
+function metresBetween(a: any, b: any): number | null {
+  const ta = tokenOfActor(a), tb = tokenOfActor(b);
+  if (!ta || !tb) return null;
+  try { return measureTokens(ta, tb)?.metres ?? null; } catch { return null; }
+}
+
+/**
+ * Whether the holder may take control now: close enough on the map; with no tokens to measure, both in the running fight
+ * (or, with no fight running, as the GM tells it).
+ */
+function nearEnough(holder: any, target: any): boolean {
+  const m = metresBetween(holder, target);
+  if (m !== null) return M.closeEnough(m, num(RULES.MELEE_V95.subdueReachMetres));
+  const combat: any = gameNow()?.combat;
+  if (!combat?.started) return true;
+  return Boolean(combatantOf(combat, holder) && combatantOf(combat, target));
+}
+
+/**
+ * The maintenance test's action (a Simple Action, the Hold's), paid where the test is made: refused out of the holder's
+ * own action in a fight, and when the phase has no room under the action rules' 'block'.
+ */
+async function payMaintain(holder: any, targetName: string): Promise<boolean> {
+  const combat: any = gameNow()?.combat;
+  if (!combat?.started || RULES.ACTIONS.enforce === 'off') return true;
+  if (!holder?.isActing?.()) return false;
+  if (RULES.ACTIONS.enforce === 'block' && !affordable(buttonCost('holdTarget'), num(holder.actionsUsed?.()))) return false;
+  return Boolean(await holder.useAction?.('hold', tx('SR2E.Melee95.maintainAction', { name: targetName })));
+}
+
+/** One step at a time per held actor on this client (a double click, or two requests at once). */
+const subdueQueue = new Map<string, Promise<unknown>>();
+function oneAtATime<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  const prev = subdueQueue.get(key) ?? Promise.resolve();
+  const run = prev.catch(() => undefined).then(fn);
+  const settled = run.catch(() => undefined);
+  subdueQueue.set(key, settled);
+  void settled.then(() => { if (subdueQueue.get(key) === settled) subdueQueue.delete(key); });
+  return run;
+}
+
 /** Run a subdue step where the held actor can be written: here, or on the GM's client. */
 async function subdueStep(op: SubdueOp, holder: any, target: any): Promise<{ ok: boolean; note?: string }> {
   if (target?.isOwner) return applySubdue(op, holder, target, gameNow()?.user);
-  return requestGm('melee95' as any, { op, holderUuid: String(holder?.uuid ?? ''), targetUuid: String(target?.uuid ?? '') });
+  return requestGm('melee95', { op, holderUuid: String(holder?.uuid ?? ''), targetUuid: String(target?.uuid ?? '') });
 }
 
-/** One subdue step, on a client that may write the held actor. Everything is read from the documents, not the request. */
-async function applySubdue(op: SubdueOp, holder: any, target: any, user: any): Promise<{ ok: boolean; note?: string }> {
+/**
+ * One subdue step, on a client that may write the held actor. Everything is read from the documents (again, inside the
+ * per-actor queue), never from the request; the maintenance test's action is paid here.
+ */
+export function applySubdue(op: SubdueOp, holder: any, target: any, user: any): Promise<{ ok: boolean; note?: string }> {
+  return oneAtATime(String(target?.uuid ?? ''), () => applySubdueNow(op, holder, target, user));
+}
+
+async function applySubdueNow(op: SubdueOp, holder: any, target: any, user: any): Promise<{ ok: boolean; note?: string }> {
   if (!M.subdueControlOn() || !holder || !target || !PEOPLE.includes(String(target.type)) || !mayHold(holder, user)) return { ok: false, note: tx('SR2E.Melee95.notAllowed') };
   const state = subduedState(target);
   const cls: any = g().CONFIG?.Actor?.documentClass;
   if (op === 'take') {
     if (state) return { ok: false, note: tx('SR2E.Melee95.alreadySubdued', { name: String(target.name) }) };
     if (stunOf(target) < maxBoxes()) return { ok: false, note: tx('SR2E.Melee95.notSubduable', { name: String(target.name) }) };
-    const boxes = stunOf(target);
+    // Only the subduing Stun this holder did counts (Core p. 103), and only from close by.
+    const done = target.getFlag?.(SYSTEM_ID, FLAG_DONE);
+    const boxes = M.subdueBoxesBy(done, String(holder.uuid), stunOf(target));
+    if (boxes <= 0) return { ok: false, note: tx('SR2E.Melee95.notYourSubduing', { name: String(target.name) }) };
+    if (!nearEnough(holder, target)) return { ok: false, note: tx('SR2E.Melee95.tooFar', { name: String(target.name) }) };
     await target.setFlag(SYSTEM_ID, FLAG_SUBDUED, { by: String(holder.uuid), boxes, total: boxes, at: worldNow() });
+    const rest = M.subdueDoneOf(done).filter((e) => e.by !== String(holder.uuid));
+    if (rest.length) await target.setFlag(SYSTEM_ID, FLAG_DONE, rest); else await clearFlag(target, FLAG_DONE);
+    subduedIndex.add(String(target.uuid));
     try { await cls?.setHeld?.(target, String(holder.uuid), true); } catch (err) { console.warn('sr2e | subdue hold', err); }
     await post({ speaker: g().ChatMessage?.getSpeaker?.({ actor: holder }), flags: subdueFlags(holder, target),
       content: `<p><strong>${escHtml(target.name)}</strong> ${tx('SR2E.Melee95.subduedBy', { name: escHtml(holder.name) })}</p><p class="hint">${tx('SR2E.Melee95.subduedHint', { seconds: Math.max(1, num(RULES.MELEE_V95.subdueReleaseSeconds)) })}</p><p>${releaseButton()}</p>` });
@@ -263,10 +335,12 @@ async function applySubdue(op: SubdueOp, holder: any, target: any, user: any): P
   if (op === 'release') {
     await target.update({ 'system.monitor.stun': Math.max(0, stunOf(target) - state.boxes) });
     await clearFlag(target, FLAG_SUBDUED);
+    subduedIndex.delete(String(target.uuid));
     try { await cls?.setHeld?.(target, '', false); } catch (err) { console.warn('sr2e | subdue release', err); }
     await post({ speaker: g().ChatMessage?.getSpeaker?.({ actor: holder }), content: `<p><strong>${escHtml(holder.name)}</strong> ${tx('SR2E.Melee95.letsGo', { name: escHtml(target.name) })} ${tCount(state.boxes, 'SR2E.Melee95.stunOff')}</p>` });
     return { ok: true };
   }
+  if (!(await payMaintain(holder, String(target.name)))) return { ok: false, note: tx('SR2E.Melee95.noActionLeft', { name: String(holder.name) }) };
   // The maintenance test: both sides rolled here.
   const plan = M.maintainPlan(ratings(holder), ratings(target));
   const rolls: any[] = [];
@@ -285,19 +359,25 @@ async function applySubdue(op: SubdueOp, holder: any, target: any, user: any): P
   return { ok: true };
 }
 
+/** The relay op `melee95` on the GM's client: the sender (never the payload) is judged; the steps queue per actor. */
+export async function relayMelee95(data: Record<string, any>, user: any): Promise<{ ok: boolean; note?: string }> {
+  const op = String(data?.['op'] ?? '');
+  if (op !== 'take' && op !== 'maintain' && op !== 'release') return { ok: false, note: tx('SR2E.Melee95.notAllowed') };
+  return applySubdue(op, fromUuidQuiet(data?.['holderUuid']), fromUuidQuiet(data?.['targetUuid']), user);
+}
+
 /**
- * The Hold button by the book (`SR2Actor.holdTarget` calls it first): control of someone whose Stun track is full, or
- * the maintenance test on someone this actor already controls. `undefined`: not this rule's case (the Strength vs
- * Body hold goes on as before).
+ * The Hold button by the book (`SR2Actor.holdTarget` calls it first): control of someone whose Stun track is full by
+ * this actor's subduing blows, or the maintenance test on someone this actor already controls. `undefined`: not this
+ * rule's case (the Strength vs Body hold goes on as before).
  */
 export async function subdueHold(holder: any, target: any): Promise<'held' | 'free' | null | undefined> {
   if (!M.subdueControlOn() || !holder || !target || !PEOPLE.includes(String(target.type))) return undefined;
   const state = subduedState(target);
   let op: SubdueOp;
   if (state && state.by === String(holder.uuid)) op = 'maintain';
-  else if (!state && stunOf(target) >= maxBoxes()) op = 'take';
+  else if (!state && stunOf(target) >= maxBoxes() && M.subdueBoxesBy(target.getFlag?.(SYSTEM_ID, FLAG_DONE), String(holder.uuid), stunOf(target)) > 0) op = 'take';
   else return undefined;
-  if (op === 'maintain' && !(await holder.useAction?.('hold', tx('SR2E.Melee95.maintainAction', { name: String(target.name) })))) return null;
   const r = await subdueStep(op, holder, target);
   if (!r.ok) { g().ui?.notifications?.warn?.(escHtml(r.note ?? tx('SR2E.Melee95.notAllowed'))); return null; }
   return 'held';
@@ -318,18 +398,29 @@ export async function onRelease95(message: any, button: HTMLButtonElement): Prom
   if (!r.ok) { button.disabled = false; warn(r.note ?? tx('SR2E.Melee95.notAllowed')); }
 }
 
-/** Subduing Stun wears off with game time (the lead GM's client). */
-async function subdueTick(): Promise<void> {
-  if (!M.subdueControlOn()) return;
-  const now = worldNow();
-  const seen = new Set<string>();
+/**
+ * The actors under someone's control (the lead GM's client): filled by one scan at ready, kept up by the flag's
+ * changes (updateActor), so the clock's tick looks only at them.
+ */
+const subduedIndex = new Set<string>();
+/** The index (tests). */
+export function _subduedIndex(): Set<string> { return subduedIndex; }
+
+function scanSubdued(): void {
+  subduedIndex.clear();
   const actors: any[] = [...(gameNow()?.actors ?? [])];
   for (const sc of [...(gameNow()?.scenes ?? [])] as any[]) for (const t of [...(sc?.tokens ?? [])] as any[]) if (t?.actor && !t.actorLink) actors.push(t.actor);
-  for (const a of actors) {
-    if (!a?.uuid || seen.has(a.uuid)) continue;
-    seen.add(a.uuid);
+  for (const a of actors) if (a?.uuid && subduedState(a)) subduedIndex.add(String(a.uuid));
+}
+
+/** Subduing Stun wears off with game time (the lead GM's client), for the indexed actors only. */
+export async function subdueTick(): Promise<void> {
+  if (!M.subdueControlOn() || !subduedIndex.size) return;
+  const now = worldNow();
+  for (const uuid of [...subduedIndex]) {
+    const a = fromUuidQuiet(uuid);
     const state = subduedState(a);
-    if (!state) continue;
+    if (!a || !state) { subduedIndex.delete(uuid); continue; }
     // A clock set back starts the wait again.
     if (now < state.at) { await a.setFlag(SYSTEM_ID, FLAG_SUBDUED, { ...state, total: totalOf(a) || state.boxes, at: now }); continue; }
     const w = M.subdueWearOff(state, now, stunOf(a));
@@ -338,14 +429,38 @@ async function subdueTick(): Promise<void> {
     if (w.left) await a.setFlag(SYSTEM_ID, FLAG_SUBDUED, { ...w.left, total: totalOf(a) || state.boxes });
     else {
       await clearFlag(a, FLAG_SUBDUED);
+      subduedIndex.delete(uuid);
+      // Nobody controls them any more: the hold ends too.
+      try { await g().CONFIG?.Actor?.documentClass?.setHeld?.(a, '', false); } catch (err) { console.warn('sr2e | subdue over', err); }
       await post({ speaker: g().ChatMessage?.getSpeaker?.({ actor: a }), whisper: [...new Set([...gmIds(), ...ownerIds(a), ...ownerIds(fromUuidQuiet(state.by))])], content: `<p>${tx('SR2E.Melee95.subdueOver', { name: escHtml(a.name) })}</p>` });
     }
   }
 }
 
+/** The Defend window's option for a weapon that can't subdue (its counterattack-to-subdue tick is disabled then). */
+export function subdueOptionAttr(weaponSystem: any): string {
+  return M.subdueStunOnly() && !M.subdueAllowed(weaponSystem) ? ' data-sr2e-nosubdue="1"' : '';
+}
+
+/** Wire the Defend window: the tick is disabled, with the reason, while a weapon that can't subdue is picked. */
+export function bindSubdueBox(root: any): void {
+  const el: any = root?.querySelector ? root : root?.element;
+  const select = el?.querySelector?.('select[name="weapon"]');
+  const box = el?.querySelector?.('input[name="subdue"]');
+  if (!select || !box) return;
+  const why = tx('SR2E.Melee95.subdueStunOnly');
+  const sync = (): void => {
+    const opt = select.options?.[select.selectedIndex] ?? null;
+    const no = Boolean(opt?.getAttribute?.('data-sr2e-nosubdue'));
+    box.disabled = no;
+    if (no) { box.checked = false; box.title = why; } else box.title = '';
+  };
+  select.addEventListener?.('change', sync);
+  sync();
+}
+
 // ---------------------------------------------------------------- knocked back into a wall (Core p. 102)
 
-const tokenOfActor = (actor: any): any => { try { return actor?.token?.object ?? actor?.getActiveTokens?.()[0] ?? null; } catch { return null; } };
 
 /** Who hit this actor last: the other side of the newest attack card naming it (only used to find a direction). */
 function lastAttackerOf(actor: any): any {
@@ -460,24 +575,73 @@ export async function watchMove(doc: any, change: any, options: any): Promise<nu
 }
 
 /**
- * Chat action `intercept95`: open the interceptor's melee attack on the mover. Only a GM's card counts (the offer is
- * made by the GM's client), and only for a user who owns the interceptor; the card's data only picks the target.
+ * Whether `attacker` has an interception on `moverUuid` to make: a GM's offer card names the pair, and no interception
+ * attack by them on the mover came after it (one attack per offer). The offer is the GM client's; a player's card
+ * never counts.
+ */
+export function interceptVouched(attacker: any, moverUuid: unknown): boolean {
+  if (!M.interceptionOn() || !attacker?.uuid || typeof moverUuid !== 'string' || !moverUuid) return false;
+  const msgs = [...(gameNow()?.messages?.contents ?? [])].slice(-60).reverse();
+  for (const m of msgs) {
+    const list: any[] = (m.getFlag?.(SYSTEM_ID, 'attacks') as any[] | undefined) ?? [m.getFlag?.(SYSTEM_ID, 'attack')].filter(Boolean);
+    if (list.some((x: any) => x?.intercept95 && x.attackerUuid === attacker.uuid && x.targetUuid === moverUuid)) return false;
+    const o = m.getFlag?.(SYSTEM_ID, 'intercept95') as { interceptorUuid?: unknown; moverUuid?: unknown } | undefined;
+    if (o && authorIsGm(m) && o.interceptorUuid === attacker.uuid && o.moverUuid === moverUuid) return true;
+  }
+  return false;
+}
+
+/** The defender's side: an attack marked as an interception counts only when a GM's offer names the pair. */
+export function interceptVouchedFor(attackerUuid: unknown, moverUuid: unknown): boolean {
+  if (!M.interceptionOn() || typeof attackerUuid !== 'string' || typeof moverUuid !== 'string') return false;
+  return [...(gameNow()?.messages?.contents ?? [])].slice(-60).some((m: any) => {
+    const o = m.getFlag?.(SYSTEM_ID, 'intercept95') as { interceptorUuid?: unknown; moverUuid?: unknown } | undefined;
+    return Boolean(o && authorIsGm(m) && o.interceptorUuid === attackerUuid && o.moverUuid === moverUuid);
+  });
+}
+
+/** The interceptor's weapon: a readied, working melee weapon, else the unarmed attack. */
+function interceptWeapon(actor: any): any {
+  const ready = [...(actor.items ?? [])].find((i: any) => i.type === 'weapon' && i.system?.melee && i.system?.ready !== false && !i.system?.damaged);
+  if (ready) return ready;
+  return actor.weaponById?.('unarmed') ?? g().CONFIG?.Actor?.documentClass?.unarmed?.() ?? null;
+}
+
+/**
+ * Chat action `intercept95`: the free melee attack on the mover (Core p. 83). Only a GM's card counts (the offer is
+ * made by the GM's client), only for a user who owns the interceptor; the card's data only picks the target. A small
+ * window asks for Combat Pool dice (and subduing, with a Stun weapon); the attack is TN 4 with only reach, movement
+ * and the attacker's condition (`AttackOptions.intercept95`), and the mover defends as on full defense.
  */
 export async function onIntercept95(message: any, button: HTMLButtonElement): Promise<void> {
   const warn = (text: string): void => { g().ui?.notifications?.warn?.(escHtml(text)); };
   if (!authorIsGm(message)) return warn(tx('SR2E.Melee95.notAllowed'));
-  const f = message?.getFlag?.(SYSTEM_ID, 'intercept95') as { interceptorUuid?: unknown; tokenId?: unknown; sceneId?: unknown } | undefined;
+  const f = message?.getFlag?.(SYSTEM_ID, 'intercept95') as { interceptorUuid?: unknown; moverUuid?: unknown; tokenId?: unknown; sceneId?: unknown } | undefined;
   const actor = fromUuidQuiet(f?.interceptorUuid);
   if (!actor) return warn(tx('SR2E.Melee95.interceptGone'));
   if (!actor.isOwner) return warn(tx('SR2E.Melee95.onlyHolder', { name: String(actor.name) }));
   if (!canMelee(actor)) return warn(tx('SR2E.Melee95.cantIntercept', { name: String(actor.name) }));
-  const canvas: any = g().canvas;
-  const token = canvas?.scene?.id === f?.sceneId ? canvas?.tokens?.get?.(String(f?.tokenId ?? '')) : null;
-  if (!token) return warn(tx('SR2E.Melee95.interceptGone'));
-  try { token.setTarget?.(true, { releaseOthers: true }); } catch { /* targeted by hand */ }
-  const ready = [...(actor.items ?? [])].find((i: any) => i.type === 'weapon' && i.system?.melee && i.system?.ready !== false && !i.system?.damaged);
+  const mover = fromUuidQuiet(f?.moverUuid);
+  if (!mover) return warn(tx('SR2E.Melee95.interceptGone'));
+  if (!interceptVouched(actor, mover.uuid)) return warn(tx('SR2E.Melee95.interceptUsed'));
+  const weapon = interceptWeapon(actor);
+  if (!weapon) return warn(tx('SR2E.Melee95.cantIntercept', { name: String(actor.name) }));
+  const left = Math.max(0, Math.floor(num(actor.system?.derived?.combatPoolLeft)));
+  const canSubdue = M.subdueAllowed(weapon.system);
+  const dlg: any = g().foundry?.applications?.api?.DialogV2;
+  if (!dlg?.prompt) return;
+  const choice = await dlg.prompt({
+    window: { title: tx('SR2E.Melee95.intercept') },
+    content: `<p>${tx('SR2E.Melee95.interceptAsk', { name: escHtml(actor.name), weapon: escHtml(weapon.name), mover: escHtml(mover.name) })}</p>`
+      + `<div class="form-group"><label>${tx('SR2E.Melee95.poolDice', { left })}</label><input name="pool" type="number" value="0" min="0" max="${left}"></div>`
+      + `<label class="sr2e-check"><input type="checkbox" name="subdue"${canSubdue ? '' : ` disabled title="${escHtml(tx('SR2E.Melee95.subdueStunOnly'))}"`}> ${tx('SR2E.Melee95.interceptSubdue')}</label>`,
+    ok: { label: tx('SR2E.Melee95.intercept'), callback: (_e: Event, b: any) => ({ pool: Math.max(0, Math.min(left, Math.floor(Number(b.form.elements.pool.value) || 0))), subdue: canSubdue && Boolean(b.form.elements.subdue?.checked) }) },
+    rejectClose: false,
+  }).catch(() => null);
+  if (!choice) return;
   button.disabled = true;
-  await gameNow()?.sr2e?.runSheetAction?.(actor, 'attackWeapon', { itemId: String(ready?.id ?? 'unarmed') });
+  const targetReach = Math.max(0, ...[...(mover.items ?? [])].filter((i: any) => i.type === 'weapon' && i.system?.melee).map((i: any) => num(i.system.reach))) + num(mover.reachBonus);
+  await actor.attackWith?.(weapon, { targetUuid: String(mover.uuid), poolDice: choice.pool, subdue: choice.subdue, targetReach, intercept95: true });
 }
 
 // ---------------------------------------------------------------- the other Dice Pools (Core p. 84)
@@ -508,11 +672,7 @@ export function registerMelee95(): void {
     const se: any[] = g().CONFIG?.statusEffects ?? [];
     if (!se.some((x: any) => x?.id === M.WALL_STATUS)) se.push({ id: M.WALL_STATUS, name: 'SR2E.Melee95.againstWall', img: 'icons/svg/downgrade.svg' });
   } catch (err) { console.warn('sr2e | melee95 status', err); }
-  onRelay('melee95', async (data, user) => {
-    const op = String(data?.['op'] ?? '');
-    if (op !== 'take' && op !== 'maintain' && op !== 'release') return { ok: false, note: tx('SR2E.Melee95.notAllowed') };
-    return applySubdue(op, fromUuidQuiet(data?.['holderUuid']), fromUuidQuiet(data?.['targetUuid']), user);
-  });
+  onRelay('melee95', relayMelee95);
   const H: any = g().Hooks;
   // Where the token stood before the move (the mover's client knows; the GM's client reads it from the options).
   H?.on?.('preUpdateToken', (doc: any, change: any, options: any) => {
@@ -530,8 +690,15 @@ export function registerMelee95(): void {
     void watchMove(doc, change, options).catch((err) => console.warn('sr2e | interception', err));
   });
   H?.on?.('updateWorldTime', () => {
-    if (!isLeadGm() || !M.subdueControlOn()) return;
+    if (!isLeadGm() || !M.subdueControlOn() || !subduedIndex.size) return;
     void withGmLock(() => subdueTick()).catch((err) => console.warn('sr2e | subdue', err));
   });
   H?.on?.('deleteCombat', () => { offered.clear(); });
+  // The subdued index (the lead GM's): one scan at ready, then the flag's changes.
+  H?.once?.('ready', () => { try { scanSubdued(); } catch (err) { console.warn('sr2e | subdued index', err); } });
+  H?.on?.('updateActor', (actor: any, change: any) => {
+    const f = change?.flags?.[SYSTEM_ID];
+    if (!f || !(FLAG_SUBDUED in f || `-=${FLAG_SUBDUED}` in f) || !actor?.uuid) return;
+    if (subduedState(actor)) subduedIndex.add(String(actor.uuid)); else subduedIndex.delete(String(actor.uuid));
+  });
 }

@@ -42,8 +42,9 @@ export const MELEE_V95 = {
    */
   subdue: 'stunOnly' as 'stunOnly' | 'any',
   /**
-   * Control of a subdued opponent (Core p. 103). 'book': Hold on someone whose Stun track is full takes control of them
-   * with no test; the Stun wears off 1 box per `subdueReleaseSeconds` of game time unless control is kept; Hold again
+   * Control of a subdued opponent (Core p. 103). 'book': Hold on someone whose Stun track is full, by the one who did
+   * subduing Stun to them (recorded when the damage is applied) and within `subdueReachMetres`, takes control with no
+   * test (only that subduing Stun counts); the Stun wears off 1 box per `subdueReleaseSeconds` of game time unless control is kept; Hold again
    * is the maintenance test (the best of Unarmed Combat, Strength and Quickness vs the lowest of the other's three;
    * the other resists the same way with wound modifiers and + `subdueResistTn`), each net success putting a box back.
    * Letting go takes the remaining subduing Stun off. 'off' (v0.94.2): Hold is always the Strength vs Body hold.
@@ -51,10 +52,11 @@ export const MELEE_V95 = {
   subdueControl: 'book' as 'book' | 'off',
   subdueReleaseSeconds: 60,
   subdueResistTn: 2,
+  subdueReachMetres: 2,
   /**
    * Knocked back into a wall (Core p. 102). 'book': a knockdown test that staggers the character back, with a wall
    * (one that blocks movement) within `wallMetres` straight behind them, marks them "against a wall": + `wallTn` on
-   * their tests until their token moves or the status is taken off. 'off' (v0.94.2): no check.
+   * their melee attack and melee defense tests until their token moves or the status is taken off. 'off' (v0.94.2): no check.
    */
   wall: 'book' as 'book' | 'off',
   wallTn: 2,
@@ -62,16 +64,18 @@ export const MELEE_V95 = {
   /**
    * Interception (Core p. 83). 'offer': in a fight, when a token's move passes within `interceptMetres` of an
    * opponent who can make a melee attack, that opponent's owners and the GM get a whispered card with an Intercept
-   * button that opens the melee attack on the mover (no action spent out of turn). 'off' (v0.94.2): nothing.
+   * button: the free melee attack on the mover at TN 4 with only reach, the attacker's movement and condition, the
+   * Combat Pool allowed; the mover defends as on full defense (no counterattack). 'off' (v0.94.2): nothing.
    */
   interception: 'offer' as 'offer' | 'off',
   interceptMetres: 1,
   /**
-   * The Spell, Hacking and Task Pools (Core p. 84). 'action': they refresh at the start of each of the character's
+   * The Spell and Hacking Pools (Core p. 84). 'action': they refresh at the start of each of the character's
    * actions, like the Combat Pool, and dice left at the end of a Combat Turn last until the first action of the next
    * (it needs COMBAT_V923.poolRefresh at 'action'); spell defense dice go back to the Spell Pool then (Core p. 132),
-   * and the player is told. 'turn' (v0.94.2): at each new Combat Turn. The Control Pool always refreshes each Combat
-   * Turn (Rigger 2).
+   * and the player is told. A character who had no action in a Combat Turn gets them back at the next. 'turn'
+   * (v0.94.2): at each new Combat Turn. The Control and Task Pools always refresh each Combat Turn (Rigger 2 p. 16:
+   * all pools at the start of each Combat Turn).
    */
   otherPools: 'action' as 'action' | 'turn',
 };
@@ -86,6 +90,7 @@ export const HOUSE_MELEE_V95: Array<{ path: string; section: string; type: 'numb
   { section: 'initiativeAndActions', path: 'MELEE_V95.totalSurprise', type: 'select', choices: ['book', 'off'] },
   { section: 'melee', path: 'MELEE_V95.subdue', type: 'select', choices: ['stunOnly', 'any'] },
   { section: 'melee', path: 'MELEE_V95.subdueControl', type: 'select', choices: ['book', 'off'] },
+  { section: 'melee', path: 'MELEE_V95.subdueReachMetres', type: 'number' },
   { section: 'melee', path: 'MELEE_V95.wall', type: 'select', choices: ['book', 'off'] },
   { section: 'melee', path: 'MELEE_V95.wallTn', type: 'number' },
   { section: 'melee', path: 'MELEE_V95.interception', type: 'select', choices: ['offer', 'off'] },
