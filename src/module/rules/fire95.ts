@@ -135,7 +135,8 @@ export function wallHolds(powerAt: number, wall: ReboundWall): boolean {
  * (`passes`, in the order they arrive; `extra` their sum). Null when the rule is off.
  */
 export function reboundPower(o: { power: number; perMetre: number; metres: number; ahead?: ReboundWall | null; behind?: ReboundWall | null }): { extra: number; passes: number[] } | null {
-  if (!reboundBook() || !RULES.COMBAT.confined.enabled) return null;
+  // Walls that don't stop blasts (RULES.COMBAT.wallsBlock off) send nothing back either.
+  if (!reboundBook() || !RULES.COMBAT.confined.enabled || !RULES.COMBAT.wallsBlock) return null;
   const power = num(o.power), d = Math.max(0, num(o.metres));
   const a = o.ahead && num(o.ahead.metres) >= d ? { pos: num(o.ahead.metres), wall: o.ahead } : null;
   const b = o.behind && num(o.behind.metres) >= 0 ? { pos: -num(o.behind.metres), wall: o.behind } : null;
@@ -196,12 +197,37 @@ export function suppressionFof(): boolean { return V().suppression === 'fof'; }
 
 /**
  * Rounds laid over an area `metres` wide: each round covers one metre, so at least one round per metre (the area
- * shrinks to the rounds fired); the rounds are spread evenly and `perMetre` (rounded down) is each metre's share.
+ * shrinks to the rounds fired). The rounds go evenly on every metre: `even` false when they don't divide (the
+ * system has no layout for an uneven split, so the dialog refuses it; FoF p. 78 doesn't say how one would count).
  */
-export function fofArea(rounds: number, metres: number): { rounds: number; metres: number; perMetre: number; phases: number } {
+export function fofArea(rounds: number, metres: number): { rounds: number; metres: number; perMetre: number; phases: number; even: boolean } {
   const r = int(rounds, 0, 999);
   const m = r > 0 ? int(metres, 1, r) : 0;
-  return { rounds: r, metres: m, perMetre: m > 0 ? Math.floor(r / m) : 0, phases: int(V().fofPhases, 0, 99) };
+  return { rounds: r, metres: m, perMetre: m > 0 ? Math.floor(r / m) : 0, phases: int(V().fofPhases, 0, 99), even: m > 0 && r % m === 0 };
+}
+
+/** Where a combat stood: its id, Combat Turn (round), initiative pass and turn (the acting combatant's index). */
+export interface CombatSpot { combatId: string; round: number; pass: number; turn: number }
+
+/**
+ * Combat Phases (combatant turns) from `start` to `now`, `turnsPerPass` turns a pass. A Combat Turn that has ended
+ * is counted as having had only the passes seen in it (one if the card was posted in its last), so the count is a
+ * lower bound. Null when `now` is another combat (or none).
+ */
+export function phasesSince(start: CombatSpot | null | undefined, now: CombatSpot | null | undefined, turnsPerPass: number): number | null {
+  if (!start || !now || !start.combatId || start.combatId !== now.combatId) return null;
+  const k = Math.max(1, int(turnsPerPass, 1, 999));
+  const r0 = int(start.round, 0, 1e6), p0 = int(start.pass, 0, 99), t0 = int(start.turn, 0, 999);
+  const r = int(now.round, 0, 1e6), p = int(now.pass, 0, 99), t = int(now.turn, 0, 999);
+  if (r < r0 || (r === r0 && (p < p0 || (p === p0 && t < t0)))) return 0;
+  if (r === r0) return (p - p0) * k + (t - t0);
+  return (k - t0) + (r - r0 - 1) * k + p * k + t;
+}
+
+/** Whether a suppression laid at `start` still covers its area now (fewer than `fofPhases` Combat Phases since). */
+export function fofActive(start: CombatSpot | null | undefined, now: CombatSpot | null | undefined, turnsPerPass: number): boolean {
+  const n = phasesSince(start, now, turnsPerPass);
+  return n !== null && n < int(V().fofPhases, 0, 99);
 }
 
 /** The test against someone who shows themselves: one die per round on their metre, TN base + cover + the shooter's wounds. */

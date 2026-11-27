@@ -199,10 +199,10 @@ describe('v0.95.0 fire: stray shots (Core p. 93, optional)', () => {
 describe('v0.95.0 fire: suppressive fire (Fields of Fire p. 78, optional)', () => {
   test('ships the house way', () => { assert.equal(R95.suppressionFof(), false); });
   test('the area: a round a metre at least, the rounds spread evenly', () => {
-    assert.deepEqual(R95.fofArea(10, 5), { rounds: 10, metres: 5, perMetre: 2, phases: 10 });
-    assert.deepEqual(R95.fofArea(10, 3), { rounds: 10, metres: 3, perMetre: 3, phases: 10 });
-    assert.deepEqual(R95.fofArea(4, 9), { rounds: 4, metres: 4, perMetre: 1, phases: 10 });
-    assert.deepEqual(R95.fofArea(0, 3), { rounds: 0, metres: 0, perMetre: 0, phases: 10 });
+    assert.deepEqual(R95.fofArea(10, 5), { rounds: 10, metres: 5, perMetre: 2, phases: 10, even: true });
+    assert.deepEqual(R95.fofArea(10, 3), { rounds: 10, metres: 3, perMetre: 3, phases: 10, even: false });   // refused by the dialog
+    assert.deepEqual(R95.fofArea(4, 9), { rounds: 4, metres: 4, perMetre: 1, phases: 10, even: true });
+    assert.deepEqual(R95.fofArea(0, 3), { rounds: 0, metres: 0, perMetre: 0, phases: 10, even: false });
   });
   test('the test: a die per round on the metre against 4 + cover + the shooter\'s wounds; a hit per 2 successes', () => {
     assert.deepEqual(R95.fofTest({ perMetre: 5 }), { dice: 5, tn: 4 });
@@ -210,5 +210,29 @@ describe('v0.95.0 fire: suppressive fire (Fields of Fire p. 78, optional)', () =
     assert.equal(R95.fofHits(5, 5), 2);
     assert.equal(R95.fofHits(1, 5), 0);
     assert.equal(R95.fofHits(9, 3), 3);                                                  // at most the rounds there
+  });
+  test('the 10 Combat Phases: turns counted from where it was laid, in the same combat only', () => {
+    const at = { combatId: 'c', round: 1, pass: 0, turn: 1 };
+    assert.equal(R95.phasesSince(at, { combatId: 'c', round: 1, pass: 0, turn: 3 }, 4), 2);
+    assert.equal(R95.phasesSince(at, { combatId: 'c', round: 1, pass: 1, turn: 0 }, 4), 3);
+    assert.equal(R95.phasesSince(at, { combatId: 'c', round: 2, pass: 0, turn: 0 }, 4), 3);       // the rest of the turn
+    assert.equal(R95.phasesSince(at, { combatId: 'c', round: 3, pass: 1, turn: 2 }, 4), 3 + 4 + 4 + 2);
+    assert.equal(R95.phasesSince(at, { combatId: 'c', round: 0, pass: 0, turn: 0 }, 4), 0);
+    assert.equal(R95.phasesSince(at, { combatId: 'd', round: 1, pass: 0, turn: 3 }, 4), null);
+    assert.equal(R95.phasesSince(null, { combatId: 'c', round: 1, pass: 0, turn: 3 }, 4), null);
+    assert.equal(R95.fofActive(at, { combatId: 'c', round: 3, pass: 0, turn: 2 }, 4), true);       // 9
+    assert.equal(R95.fofActive(at, { combatId: 'c', round: 3, pass: 0, turn: 3 }, 4), false);      // 10
+    assert.equal(R95.fofActive(at, null, 4), false);
+  });
+});
+
+describe('v0.95.0 fire: review fixes (pure)', () => {
+  test('rebound: no wave comes back when walls don\'t stop blasts', (t) => {
+    t.after(oldWay({ 'COMBAT.wallsBlock': false, 'COMBAT_V72.blastBarriers.mode': 'block' }));
+    assert.equal(R95.reboundPower({ power: 10, perMetre: 1, metres: 4, ahead: { metres: 6, rating: 8 } }), null);
+  });
+  test('rebound: a wall rated 0 (damaged through) doesn\'t hold', () => {
+    assert.equal(R95.wallHolds(4, { metres: 6, rating: 0 }), false);
+    assert.deepEqual(R95.reboundPower({ power: 10, perMetre: 1, metres: 4, ahead: { metres: 6, rating: 0 } }), { extra: 0, passes: [] });
   });
 });

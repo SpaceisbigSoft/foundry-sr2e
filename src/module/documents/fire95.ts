@@ -77,7 +77,8 @@ export async function recordGun(actor: any, weapon: any, plan: { extras: object;
   const state = actor.getFlag?.(SYSTEM_ID, 'recoil95') as R95.TwoGunState | undefined;
   const own = R95.twoGunShare(state, phase, String(weapon.id)).ownRounds;
   await actor.setFlag(SYSTEM_ID, 'recoil95', R95.twoGunRecord(state, phase, String(weapon.id), {
-    ownEarlier: p?.ownEarlier ?? own, rounds: plan.rounds + plan.wasted, recoil: p?.recoil ?? 0,
+    // The plan's `earlier` already holds the rounds wasted walking the fire (planAttack): counted once, as recordRounds does.
+    ownEarlier: p?.ownEarlier ?? own + plan.wasted, rounds: plan.rounds, recoil: p?.recoil ?? 0,
     ...(typeof plan.firstShotSingle === 'boolean' ? { firstSingle: plan.firstShotSingle } : {}),
   }));
 }
@@ -118,7 +119,7 @@ export async function afterAttack(actor: any, weapon: any, plan: { melee: boolea
   const damage = { targetUuid: actor.uuid as string, melee: false, damageType: type, power: hit.power, level: hit.level, noPool: true, cleanMiss80: { hits: hit.successes, net: hit.successes, noClean: true } };
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }), rolls: [roll],
-    content: `<div class="sr2e-roll"><h3>${tx('SR2E.Fire95.misfireTitle', { weapon: escHtml(weapon?.name ?? '') })}</h3><p>${tx('SR2E.Fire95.misfireText', { name: escHtml(actor.name), successes: hit.successes })}</p></div>`
+    content: `<div class="sr2e-roll"><h3>${tx('SR2E.Fire95.misfireTitle', { weapon: escHtml(weapon?.name ?? '') })}</h3><p>${tx('SR2E.Fire95.misfireText', { name: escHtml(actor.name), successes: hit.successes })}</p><p class="hint">${tx('SR2E.Fire95.misfireUndo')}</p></div>`
       + `<ul class="sr2e-blast"><li>${escHtml(actor.name)}: <strong>${escHtml(hit.power)}${escHtml(hit.level)}</strong> <button type="button" data-sr2e-action="resist" data-index="0">${tx('SR2E.Card.Actor.resist')}</button></li></ul>`,
     flags: { [SYSTEM_ID]: { damages: [damage], damage } },
   });

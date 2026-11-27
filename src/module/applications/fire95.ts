@@ -10,21 +10,28 @@
 import { RULES } from '../rules/config.ts';
 import { successTest } from '../rules/dice.ts';
 import { attackBaseTargetNumber, rangeBandForDistance } from '../rules/combat.ts';
-import { weaponRange, weaponPower, blastRadius } from '../rules/weapons.ts';
+import { weaponRange, weaponPower, blastRadius, wastedRounds } from '../rules/weapons.ts';
 import { parseFiringModes } from '../rules/firing.ts';
 import { crossingFraction } from '../rules/fieldsfire.ts';
 import { safeInt, boundLevel } from '../rules/trust.ts';
 import { escHtml } from '../rules/html.ts';
 import * as R95 from '../rules/fire95.ts';
 import { laserAir } from '../documents/fire95.ts';
-import { attackerToken, measureTokens, sightCover, pxPerMetre, wallsBetweenPoints } from './canvas.ts';
-import { gmMay } from './trust.ts';
+import { attackerToken, measureTokens, sightCover, pxPerMetre, wallsBetweenPoints, tokenOf } from './canvas.ts';
+import { gmMay, authorIsGm } from './trust.ts';
 import { withGmLock } from './gmlock.ts';
 import { t as tx, tCount } from '../helpers/i18n.ts';
 import { SYSTEM_ID } from '../config/system.ts';
 
 declare const game: any, canvas: any, ui: any, ChatMessage: any, Roll: any, foundry: any, fromUuid: any;
 
+/** Where the running combat stands now (null: none started). */
+function spotNow(): R95.CombatSpot | null {
+  const c: any = game.combat;
+  if (!c?.started || !c.id) return null;
+  return { combatId: String(c.id), round: Number(c.round ?? 0) || 0, pass: Number(c.pass ?? 0) || 0, turn: Number(c.turn ?? 0) || 0 };
+}
+const turnsPerPass = (): number => Math.max(1, Number(game.combat?.turns?.length ?? game.combat?.combatants?.length ?? 1) || 1);
 const gmIds = (): string[] => [...(game.users ?? [])].filter((u: any) => u.isGM).map((u: any) => u.id);
 const roller = (sink: any[]) => async (count: number): Promise<number[]> => {
   const roll = await new Roll(`${count}d6`).evaluate();
@@ -75,6 +82,20 @@ export function screenHits95<T extends { targetUuid: string }>(hits: T[], spread
   return hits.map((h) => (dice[h.targetUuid] ? { ...h, screen95: dice[h.targetUuid]! } : h));
 }
 
+/**
+ * How far along the line of fire a token stands, centre to centre in metres: the measure the shotgun cone
+ * (canvas.ts tokensInCone) gives the people in the spread, so the main target is compared on the same footing.
+ */
+export function alongLine95(from: any, to: any, t: any): number | null {
+  try {
+    if (!from?.center || !to?.center || !t?.center) return null;
+    const dx = to.center.x - from.center.x, dy = to.center.y - from.center.y;
+    const len = Math.hypot(dx, dy);
+    if (!len) return null;
+    return ((t.center.x - from.center.x) * dx + (t.center.y - from.center.y) * dy) / len / pxPerMetre();
+  } catch { return null; }
+}
+
 // ---------------------------------------------------------------- blast in a confined space (Core p. 98)
 
 /** The first wall on the way from `a` to `b` (pixels): metres from `a`, its barrier rating (null: not set). */
@@ -85,7 +106,10 @@ function firstWall(a: { x: number; y: number }, b: { x: number; y: number }): { 
     const t = crossingFraction(a, b, w.doc?.c ?? []);
     if (t == null) continue;
     const raw = w.doc?.getFlag?.(SYSTEM_ID, 'barrierRating') ?? w.doc?.flags?.[SYSTEM_ID]?.barrierRating;
-    const rating = raw === null || raw === undefined || raw === '' || !(Number(raw) > 0) ? null : Number(raw);
+    // A wall damaged down to 0 (its barrierFull mark set, as canvas.ts wallRating reads it) holds nothing; a wall
+    // never rated is unrated (null).
+    const damaged = (w.doc?.getFlag?.(SYSTEM_ID, 'barrierFull') ?? w.doc?.flags?.[SYSTEM_ID]?.barrierFull) != null;
+    const rating = Number(raw) > 0 ? Number(raw) : damaged ? 0 : null;
     if (!best || t * len < best.metres) best = { metres: t * len, rating };
   }
   return best;
@@ -97,7 +121,7 @@ function firstWall(a: { x: number; y: number }, b: { x: number; y: number }): { 
  * the far side of the blast, within the blast's reach.
  */
 export function rebound95(point: { x: number; y: number }, token: any, ctx: { power: number; perMetre: number }, shielded: boolean): { rebound95?: number } {
-  if (shielded || !R95.reboundBook()) return {};
+  if (shielded || !R95.reboundBook() || !RULES.COMBAT.wallsBlock) return {};
   try {
     const ppm = pxPerMetre();
     const c = token?.center;
@@ -117,47 +141,101 @@ export function rebound95(point: { x: number; y: number }, token: any, ctx: { po
 
 // ---------------------------------------------------------------- stray shots (Core p. 93, optional)
 
+/** A token for an actor on the viewed scene (an unlinked token's own actor too). */
+function tokenOfActor(a: any): any | null {
+  if (!a) return null;
+  try { return a.constructor?.tokenFor?.(a) ?? a.token?.object ?? tokenOf(a); } catch { return null; }
+}
+
 /**
- * The Attack dialog, after full auto was walked over several targets: a card for the GM with everyone standing in
- * the arcs the fire was walked through (in sight, in range, in random order), each with the test and a Roll button.
- * `targets`: the tokens fired at, in order. Nothing when the rule is off, no rounds strayed or nobody is there.
+ * The Attack dialog, after full auto was walked over several targets: a short card saying rounds strayed, with a
+ * button for the GM. Only the GM's client looks for who stands in the way (`onStrayList95`), so a player never
+ * sees a list built from tokens they can't see. Nothing when the rule is off or no round strayed.
  */
-export async function strayCard95(actor: any, weapon: any, o: { from: any; targets: readonly any[]; wasted: number; smartlinked: boolean; opts?: Record<string, unknown> }): Promise<void> {
+export async function strayCard95(actor: any, weapon: any, o: { from?: any; targets: readonly any[]; wasted: number; smartlinked: boolean; opts?: Record<string, unknown> }): Promise<void> {
   const rounds = R95.strayRounds(o.wasted, o.smartlinked);
-  const from = o.from;
-  if (!rounds || !from?.center || o.targets.length < 2) return;
+  const uuids = o.targets.map((t: any) => t?.actor?.uuid).filter((u: unknown): u is string => typeof u === 'string');
+  if (!rounds || uuids.length < 2) return;
+  const ammo = typeof o.opts?.['ammoType'] === 'string' ? String(o.opts['ammoType']).slice(0, 40) : '';
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="sr2e-roll"><h3>${tx('SR2E.Fire95.strayTitle', { weapon: escHtml(weapon.name) })}</h3><p>${tCount(rounds, 'SR2E.Fire95.strayAsk', { name: escHtml(actor.name) })}</p></div>`
+      + `<p><button type="button" data-sr2e-action="strayList95">${tx('SR2E.Fire95.strayList')}</button></p>`,
+    flags: { [SYSTEM_ID]: { strayAsk95: { attackerUuid: actor.uuid, weaponId: String(weapon.id ?? '').slice(0, 60), ammoType: ammo, targets: uuids.slice(0, 10) } } },
+  });
+}
+
+/**
+ * The GM's side of stray shots: from the shooter and the targets (actors named on the card), work out again on the
+ * canvas the rounds wasted walking the fire and who stands in the arcs walked through (in range, not out of sight),
+ * in random order. Pure enough to test: returns the rows and the rounds.
+ */
+export function strayRows95(attacker: any, weapon: any, targets: readonly any[]): { rounds: number; rows: Array<{ uuid: string; name: string; metres: number; tn: number }> } {
+  const from = tokenOfActor(attacker);
+  const tks = targets.map(tokenOfActor).filter((t: any) => t?.center);
+  if (!from?.center || tks.length < 2) return { rounds: 0, rows: [] };
+  const gaps = tks.slice(1).map((t: any, i: number) => measureTokens(tks[i], t)?.metres ?? 0);
+  const smartlinked = Boolean(weapon.system?.smartgun && attacker.system?.derived?.smartlink);
+  // No more rounds can stray than a burst holds (the card doesn't say how many were fired).
+  const rounds = Math.min(safeInt(RULES.FIRING.fullAutoMax, 1, 999, 10), R95.strayRounds(wastedRounds(gaps), smartlinked));
+  if (!rounds) return { rounds: 0, rows: [] };
   const bearing = (t: any): number => Math.atan2(t.center.y - from.center.y, t.center.x - from.center.x);
-  const limits = weaponRange(weapon.system, Number(actor.system?.attributes?.strength?.total ?? 0), weapon.name);
+  const limits = weaponRange(weapon.system, Number(attacker.system?.attributes?.strength?.total ?? 0), weapon.name);
   const near = Math.max(0, Number(RULES.FIRE_V95.strayMetres) || 0);
   const rows: Array<{ uuid: string; name: string; metres: number; tn: number }> = [];
   let placeables: any[] = [];
   try { placeables = canvas?.tokens?.placeables ?? []; } catch { /* no canvas */ }
   for (const t of placeables) {
-    if (t === from || o.targets.includes(t) || !t.actor?.uuid || !t.center) continue;
+    if (t === from || tks.includes(t) || !t.actor?.uuid || !t.center) continue;
+    if (!['character', 'npc', 'spirit'].includes(String(t.actor.type ?? 'character'))) continue;
     const m = measureTokens(from, t)?.metres;
     if (m == null) continue;
     const band = rangeBandForDistance(m, limits);
     if (!band) continue;
     const margin = Math.atan2(near, Math.max(0.5, m));
-    if (!o.targets.slice(1).some((b, i) => o.targets[i]?.center && b?.center && R95.inSweep(bearing(o.targets[i]), bearing(b), bearing(t), margin))) continue;
+    if (!tks.slice(1).some((b: any, i: number) => R95.inSweep(bearing(tks[i]), bearing(b), bearing(t), margin))) continue;
     if (sightCover(from, t)?.cover === 'blind') continue;
     rows.push({ uuid: t.actor.uuid as string, name: String(t.name ?? t.actor.name ?? ''), metres: Math.round(m * 10) / 10, tn: attackBaseTargetNumber({ melee: false, range: band }).value });
   }
-  if (!rows.length) return;
-  const list = R95.strayOrder(rows).slice(0, 20);
-  const dmg = roundDamage(actor, weapon, o.opts ?? {});
+  return { rounds, rows: R95.strayOrder(rows).slice(0, 20) };
+}
+
+/** The stray card's button (GM): build the list on the GM's client and post it as the GM's own card (whispered). */
+export async function onStrayList95(message: any, button: HTMLButtonElement): Promise<void> {
+  if (!game.user?.isGM) return ui.notifications?.warn?.(tx('SR2E.Fire95.gmOnly'));
+  if (!R95.strayOn()) return;
+  const f = message.getFlag(SYSTEM_ID, 'strayAsk95') as any;
+  if (!f || typeof f !== 'object' || typeof f.attackerUuid !== 'string' || f.attackerUuid.length > 400 || !Array.isArray(f.targets)) return;
+  // Once per card: the GM's own list card names the card it came from (a flag the player can't write).
+  const done = [...((game as any).messages?.contents ?? [])].some((m: any) => authorIsGm(m) && m.getFlag?.(SYSTEM_ID, 'stray95')?.source === message.id);
+  if (done) return ui.notifications?.warn?.(tx('SR2E.Fire95.strayListed'));
+  const attacker: any = await fromUuid(f.attackerUuid);
+  const weapon: any = attacker?.weaponById?.(String(f.weaponId ?? '')) ?? attacker?.items?.get?.(String(f.weaponId ?? ''));
+  if (!attacker || !weapon?.system) return ui.notifications?.warn?.(tx('SR2E.Notify.Chat.theTargetActorNoLongerExists'));
+  const targets = (await Promise.all(f.targets.slice(0, 10).filter((u: unknown) => typeof u === 'string' && u.length <= 400).map((u: string) => fromUuid(u)))).filter(Boolean);
+  if (!(await gmMay(message, { title: tx('SR2E.Fire95.strayDialog'), lines: [tx('SR2E.Fire95.strayListLine', { name: attacker.name, weapon: weapon.name, targets: targets.map((t: any) => t.name).join(', ') })], sources: [attacker.uuid], always: true }))) return;
+  const { rounds, rows } = strayRows95(attacker, weapon, targets);
+  if (!rounds) return ui.notifications?.warn?.(tx('SR2E.Fire95.strayNone'));
+  button.disabled = true;
+  const dmg = roundDamage(attacker, weapon, { ammoType: typeof f.ammoType === 'string' ? f.ammoType.slice(0, 40) : undefined });
   const dice = safeInt(RULES.FIRE_V95.strayDice, 1, 20, 2);
   await ChatMessage.create({
-    speaker: ChatMessage.getSpeaker({ actor }), whisper: gmIds(),
-    content: `<div class="sr2e-roll"><h3>${tx('SR2E.Fire95.strayTitle', { weapon: escHtml(weapon.name) })}</h3><p>${tCount(rounds, 'SR2E.Fire95.strayText', { name: escHtml(actor.name), dice, code: `${escHtml(dmg.power)}${escHtml(dmg.level)}` })}</p></div>`
-      + `<ul class="sr2e-blast">${list.map((r, i) => `<li>${escHtml(r.name)} (${escHtml(r.metres)} m): ${tx('SR2E.Fire95.strayRow', { dice, tn: escHtml(r.tn) })} <button type="button" data-sr2e-action="stray95" data-index="${i}">${tx('SR2E.Fire95.strayRoll')}</button></li>`).join('')}</ul>`,
-    flags: { [SYSTEM_ID]: { stray95: { attackerUuid: actor.uuid, weaponName: String(weapon.name ?? '').slice(0, 120), rounds, power: dmg.power, level: dmg.level, damageType: dmg.damageType, extra: dmg.extra, rows: list.map((r) => ({ uuid: r.uuid, name: r.name.slice(0, 120), tn: r.tn })) } } },
+    speaker: ChatMessage.getSpeaker({ actor: attacker }), whisper: gmIds(),
+    content: `<div class="sr2e-roll"><h3>${tx('SR2E.Fire95.strayTitle', { weapon: escHtml(weapon.name) })}</h3><p>${tCount(rounds, 'SR2E.Fire95.strayText', { name: escHtml(attacker.name), dice, code: `${escHtml(dmg.power)}${escHtml(dmg.level)}` })}</p></div>`
+      + (rows.length
+        ? `<ul class="sr2e-blast">${rows.map((r, i) => `<li>${escHtml(r.name)} (${escHtml(r.metres)} m): ${tx('SR2E.Fire95.strayRow', { dice, tn: escHtml(r.tn) })} <button type="button" data-sr2e-action="stray95" data-index="${i}">${tx('SR2E.Fire95.strayRoll')}</button></li>`).join('')}</ul>`
+        : `<p><em>${tx('SR2E.Fire95.strayNobody')}</em></p>`),
+    flags: { [SYSTEM_ID]: { stray95: { source: String(message.id ?? ''), attackerUuid: attacker.uuid, weaponName: String(weapon.name ?? '').slice(0, 120), rounds, power: dmg.power, level: dmg.level, damageType: dmg.damageType, extra: dmg.extra, rows: rows.map((r) => ({ uuid: r.uuid, name: r.name.slice(0, 120), tn: r.tn })) } } },
   });
 }
 
-/** The stray-shot card's Roll button (GM): the test against one bystander; a hit posts its damage with a Resist button. */
+/**
+ * The stray list's Roll button (GM): the test against one bystander; a hit posts its damage with a Resist button.
+ * Only a list the GM posted counts (its flags, the tested rows included, are the GM's own).
+ */
 export async function onStray95(message: any, button: HTMLButtonElement): Promise<void> {
   if (!game.user?.isGM) return ui.notifications?.warn?.(tx('SR2E.Fire95.gmOnly'));
+  if (!authorIsGm(message)) return ui.notifications?.warn?.(tx('SR2E.Fire95.strayNotGm'));
   const f = message.getFlag(SYSTEM_ID, 'stray95') as any;
   if (!f || typeof f !== 'object' || !Array.isArray(f.rows)) return;
   const i = safeInt(button.dataset['index'], 0, 19, 0);
@@ -176,7 +254,6 @@ export async function onStray95(message: any, button: HTMLButtonElement): Promis
   const tn = safeInt(row.tn, RULES.MIN_TARGET_NUMBER, 30, 4), dice = safeInt(RULES.FIRE_V95.strayDice, 1, 20, 2);
   const power = safeInt(f.power, 0, 60, 0), level = boundLevel(f.level), damageType = f.damageType === 'stun' ? 'stun' : 'physical';
   const weaponName = String(f.weaponName ?? '').slice(0, 120);
-  if (!(await gmMay(message, { title: tx('SR2E.Fire95.strayDialog'), lines: [tx('SR2E.Fire95.strayLine', { name: target.name, dice, tn, code: `${power}${level}`, type: damageType })], sources: [f.attackerUuid], always: true }))) return;
   button.disabled = true;
   await withGmLock(async () => {
     if (spent()) return;
@@ -225,6 +302,9 @@ export async function suppressFof95(actor: any, weaponId: string): Promise<boole
   if (!asked || typeof asked !== 'object') return true;
   const area = R95.fofArea(Math.min(most, Math.max(1, Math.floor(Number(asked.rounds) || 0))), Number(asked.metres) || 1);
   if (!area.rounds) return true;
+  if (!area.even) { ui.notifications?.warn?.(tx('SR2E.Fire95.fofUneven', { rounds: area.rounds, metres: area.metres })); return true; }
+  const at = spotNow();
+  if (!at) { ui.notifications?.warn?.(tx('SR2E.Fire95.fofNeedsCombat')); return true; }
   if (!(await actor.useAction('suppress', tx('SR2E.Card.Actor.suppressiveFireWith', { weaponName: weapon.name })))) return true;
   if (Number(w.ammoMax) > 0 && typeof weapon.update === 'function') await weapon.update({ 'system.ammo': Math.max(0, Number(w.ammo) - area.rounds) });
   const dmg = roundDamage(actor, weapon, {});
@@ -233,7 +313,7 @@ export async function suppressFof95(actor: any, weaponId: string): Promise<boole
     speaker: ChatMessage.getSpeaker({ actor }),
     content: `<div class="sr2e-roll"><h3>${tx('SR2E.Fire95.fofCardTitle', { weapon: escHtml(weapon.name) })}</h3><p>${tx('SR2E.Fire95.fofCardText', { name: escHtml(actor.name), rounds: area.rounds, metres: area.metres, perMetre: area.perMetre, phases: area.phases, tn: test.tn, perHit: safeInt(RULES.FIRE_V95.fofPerHit, 1, 99, 2), code: `${escHtml(dmg.power)}${escHtml(dmg.level)}` })}</p></div>`
       + `<p><button type="button" data-sr2e-action="suppress95">${tx('SR2E.Fire95.fofButton')}</button></p>`,
-    flags: { [SYSTEM_ID]: { suppress95: { attackerUuid: actor.uuid, weaponName: String(weapon.name ?? '').slice(0, 120), rounds: area.rounds, metres: area.metres, perMetre: area.perMetre, power: dmg.power, level: dmg.level, damageType: dmg.damageType, extra: dmg.extra } } },
+    flags: { [SYSTEM_ID]: { suppress95: { at, attackerUuid: actor.uuid, weaponName: String(weapon.name ?? '').slice(0, 120), rounds: area.rounds, metres: area.metres, perMetre: area.perMetre, power: dmg.power, level: dmg.level, damageType: dmg.damageType, extra: dmg.extra } } },
   });
   return true;
 }
@@ -247,6 +327,9 @@ export async function onSuppress95(message: any, button: HTMLButtonElement): Pro
   if (!game.user?.isGM) return ui.notifications?.warn?.(tx('SR2E.Fire95.gmOnly'));
   const f = message.getFlag(SYSTEM_ID, 'suppress95') as any;
   if (!f || typeof f !== 'object') return;
+  // The book's 10 Combat Phases (a lower bound, rules/fire95.ts phasesSince), in the combat it was laid in.
+  const at = f.at && typeof f.at === 'object' ? { combatId: String(f.at.combatId ?? '').slice(0, 60), round: safeInt(f.at.round, 0, 1e6, 0), pass: safeInt(f.at.pass, 0, 99, 0), turn: safeInt(f.at.turn, 0, 999, 0) } : null;
+  if (!R95.fofActive(at, spotNow(), turnsPerPass())) return ui.notifications?.warn?.(tx('SR2E.Fire95.fofOver'));
   const tokens = [...(game.user?.targets ?? [])].filter((t: any) => t?.actor?.uuid).slice(0, 10);
   if (!tokens.length) return ui.notifications?.warn?.(tx('SR2E.Fire95.fofTargetFirst'));
   const attacker: any = typeof f.attackerUuid === 'string' && f.attackerUuid.length <= 400 ? await fromUuid(f.attackerUuid) : null;
@@ -257,7 +340,7 @@ export async function onSuppress95(message: any, button: HTMLButtonElement): Pro
   const wounds = Math.max(0, safeInt(attacker?.system?.derived?.woundModifier, 0, 20, 0));
   const from = attacker ? attackerToken(attacker) : null;
   const partial = Number(RULES.SITUATIONAL_MODIFIERS.find((m) => m.id === 'partialCover')?.value ?? 4);
-  if (!(await gmMay(message, { title: tx('SR2E.Fire95.fofTitle'), lines: [tx('SR2E.Fire95.fofLine', { names: tokens.map((t: any) => t.name).join(', '), dice: perMetre, code: `${power}${level}`, type: damageType })], sources: [f.attackerUuid], always: true }))) return;
+  if (!(await gmMay(message, { title: tx('SR2E.Fire95.fofTitle'), lines: [tx('SR2E.Fire95.fofLine', { names: tokens.map((t: any) => t.name).join(', '), round: at?.round ?? 0, dice: perMetre, code: `${power}${level}`, type: damageType })], sources: [f.attackerUuid], always: true }))) return;
   for (const t of tokens) {
     const seen = from ? sightCover(from, t)?.cover ?? 'none' : 'none';
     if (seen === 'blind') { ui.notifications?.warn?.(tx('SR2E.Fire95.fofUnseen', { name: escHtml(t.name) })); continue; }

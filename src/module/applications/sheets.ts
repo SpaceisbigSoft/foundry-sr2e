@@ -21,7 +21,7 @@ import { SR2Actor } from "../documents/index.ts";
 // v0.94.1 (report item 30): typed physical-dice results in the main roll windows.
 import { typedDiceRow, readTypedDice, withTypedDice, armTypedDice, typedScoped } from "./typed941.ts";
 import { formSystem942 } from "../helpers/nesting942.ts";
-import { laserAir95, screenHits95, strayCard95, suppressFof95 } from "./fire95.ts";
+import { laserAir95, screenHits95, strayCard95, suppressFof95, alongLine95 } from "./fire95.ts";
 import { tokenOf, tokenDistance, attackerToken, attackTargetOptions, measureTokens, lineOfSight, sightCover, movedThisTurn, tokensNear, targetLight, barriersBetween, tokensInCone, friendsInMelee, isProne, scatterPoint, wallsBetweenPoints, smokeBetweenTokens, placeArea } from "./canvas.ts";
 import { wardsBetween } from "./regions.ts";
 import {
@@ -3710,7 +3710,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       // v0.95.0 (FIRE_V95.shotScreen 'book', Core p. 95): +1 resistance die per other target in the spread in front.
       const hits = screenHits95([{ targetUuid: choice.targetUuid, powerDelta: -atTarget.loss },
         ...inSpread.filter((c) => c.token.actor?.uuid !== choice.targetUuid).map((c) => ({ targetUuid: c.token.actor.uuid as string, powerDelta: -U80C.cbtShotgunSpread(shotgunSpread(c.metres, choke, 0), c.metres, choke, 0).loss }))],
-        [...inSpread.map((c) => ({ uuid: c.token.actor?.uuid as string | undefined, metres: c.metres })), ...(inSpread.some((c) => c.token.actor?.uuid === choice.targetUuid) ? [] : [{ uuid: choice.targetUuid, metres: latest.metres }])]);
+        [...inSpread.map((c) => ({ uuid: c.token.actor?.uuid as string | undefined, metres: c.metres })), ...(inSpread.some((c) => c.token.actor?.uuid === choice.targetUuid) ? [] : [{ uuid: choice.targetUuid, metres: alongLine95(fromToken, to, to) ?? latest.metres }])]);
       await actor.attackWith(weapon, {
         ...common, ...distance, earlierRoundsThisPhase: choice.earlier, barrierArmor: choice.barrier,
         note: atTarget.loss

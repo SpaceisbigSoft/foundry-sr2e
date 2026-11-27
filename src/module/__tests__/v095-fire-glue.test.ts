@@ -412,38 +412,81 @@ describe('v0.95.0 fire glue: blast in a confined space (Core p. 98)', () => {
 });
 
 describe('v0.95.0 fire glue: stray shots (Core p. 93, optional)', () => {
-  const smg = () => ({ id: 'w9', name: 'SMG', system: { melee: false, modes: 'FA', skill: 'Pistols', damagePower: 6, damageLevel: 'M', damageType: 'physical', ammo: 30, ammoMax: 30, recoilComp: 0, range: { short: 10, medium: 40, long: 80, extreme: 150 } } });
-  const scene = () => {
-    const a = shooter();
+  const smg = (over: any = {}) => ({ id: 'w9', type: 'weapon', name: 'SMG', system: { melee: false, modes: 'FA', skill: 'Pistols', damagePower: 6, damageLevel: 'M', damageType: 'physical', ammo: 30, ammoMax: 30, recoilComp: 0, range: { short: 10, medium: 40, long: 80, extreme: 150 }, ...over } });
+  const player = () => ({ id: 'p1', name: 'Player', isGM: false });
+  const scene = (gunOver: any = {}) => {
+    const a = who({ name: 'Shooter' }, [skill('s1', 'Pistols', 4), smg(gunOver)]);
+    a.weaponById = (id: string) => a.items.get(id);
     const t1 = who({ name: 'First' }), t2 = who({ name: 'Second' }), mid = who({ name: 'Between' }), out = who({ name: 'Behind' });
     const from = token(a, 0, 0), k1 = token(t1, 1000, 0), k2 = token(t2, 0, 1000), km = token(mid, 500, 500), ko = token(out, -500, 0);
+    for (const [act, tk] of [[a, from], [t1, k1], [t2, k2], [mid, km], [out, ko]] as const) act.getActiveTokens = () => [tk];
     stage([from, k1, k2, km, ko]);
-    return { a, from, k1, k2, mid, out };
+    return { a, from, k1, k2, t1, t2, mid };
   };
   test('ships off: no card', async (t) => {
     const { strayCard95 } = await import('../applications/fire95.ts');
     t.after(() => { delete g.canvas; });
     const { a, from, k1, k2 } = scene();
-    await strayCard95(a, smg(), { from, targets: [k1, k2], wasted: 4, smartlinked: false });
+    await strayCard95(a, a.items.get('w9'), { from, targets: [k1, k2], wasted: 4, smartlinked: false });
     assert.equal(chat.length, 0);
   });
-  test('book: a GM card with whoever stands in the arc walked through, the test and one round\'s damage', async (t) => {
+  test('book: the shooter\'s card names nobody in the way (only the GM\'s client looks), and carries only uuids', async (t) => {
     const { strayCard95 } = await import('../applications/fire95.ts');
     t.after(oldWay({ 'FIRE_V95.stray': 'book' }));
     t.after(() => { delete g.canvas; });
-    const { a, from, k1, k2, mid } = scene();
-    await strayCard95(a, smg(), { from, targets: [k1, k2], wasted: 4, smartlinked: true });
+    const { a, from, k1, k2, t1, t2 } = scene();
+    await strayCard95(a, a.items.get('w9'), { from, targets: [k1, k2], wasted: 4, smartlinked: true });
     assert.equal(chat.length, 0);                                       // a smartlinked smartgun: never
-    await strayCard95(a, smg(), { from, targets: [k1, k2], wasted: 4, smartlinked: false });
+    await strayCard95(a, a.items.get('w9'), { from, targets: [k1, k2], wasted: 4, smartlinked: false, opts: { ammoType: 'explosive' } });
+    const m = chat.at(-1);
+    assert.doesNotMatch(m.content, /Between|Behind/);
+    assert.match(m.content, /4 rounds may have strayed/);
+    assert.match(m.content, /data-sr2e-action="strayList95"/);
+    assert.deepEqual(m.flags[F].strayAsk95, { attackerUuid: a.uuid, weaponId: 'w9', ammoType: 'explosive', targets: [t1.uuid, t2.uuid] });
+  });
+  test('book: the GM\'s list: worked out again on the GM\'s canvas, posted as the GM\'s whisper, once per card', async (t) => {
+    const { onStrayList95 } = await import('../applications/fire95.ts');
+    t.after(oldWay({ 'FIRE_V95.stray': 'book' }));
+    t.after(() => { delete g.canvas; delete g.game.messages.contents; g.game.messages = { contents: [] }; });
+    const { a, t1, t2, mid } = scene();
+    const ask = card({ strayAsk95: { attackerUuid: a.uuid, weaponId: 'w9', ammoType: '', targets: [t1.uuid, t2.uuid] } });
+    g.game.messages = { contents: chat };
+    await onStrayList95(ask, button());
     const m = chat.at(-1);
     assert.deepEqual(m.whisper, ['gm1']);
     const f = m.flags[F].stray95;
-    assert.equal(f.rounds, 4);
+    assert.equal(f.source, ask.id);
+    assert.equal(f.rounds, 10);                                         // the 14.1 m gap, worked out again: 10 wasted (capped)
     assert.deepEqual(f.rows, [{ uuid: mid.uuid, name: 'Between', tn: 4 }]);            // 7.1 m with an SMG: short range
     assert.deepEqual([f.power, f.level, f.damageType], [6, 'M', 'physical']);
-    assert.match(m.content, /4 stray rounds/);
     assert.match(m.content, /Between \(7\.1 m\): 2 dice vs TN 4 <button type="button" data-sr2e-action="stray95" data-index="0">/);
     assert.doesNotMatch(m.content, /Behind/);
+    m.author = GM();                                                    // Foundry sets the author (the stub doesn't)
+    const n = chat.length;
+    await onStrayList95(ask, button());                                 // listed already
+    assert.equal(chat.length, n);
+    assert.equal(warnings.length, 1);
+  });
+  test('the GM\'s list: a smartlinked smartgun strays nothing (from the documents, not the card); a player can\'t list', async (t) => {
+    const { onStrayList95 } = await import('../applications/fire95.ts');
+    t.after(oldWay({ 'FIRE_V95.stray': 'book' }));
+    t.after(() => { delete g.canvas; });
+    const { a, t1, t2 } = scene({ smartgun: true });
+    a.system.derived.smartlink = true;
+    const ask = card({ strayAsk95: { attackerUuid: a.uuid, weaponId: 'w9', targets: [t1.uuid, t2.uuid] } });
+    await onStrayList95(ask, button());
+    assert.equal(chat.length, 0);
+    g.game.user = player();
+    await onStrayList95(card({ strayAsk95: { attackerUuid: a.uuid, weaponId: 'w9', targets: [t1.uuid, t2.uuid] } }), button());
+    assert.equal(chat.length, 0);
+  });
+  test('the GM\'s list: a player\'s card for a shooter they don\'t own is refused', async (t) => {
+    const { onStrayList95 } = await import('../applications/fire95.ts');
+    t.after(oldWay({ 'FIRE_V95.stray': 'book' }));
+    t.after(() => { delete g.canvas; });
+    const { a, t1, t2 } = scene();
+    await onStrayList95(card({ strayAsk95: { attackerUuid: a.uuid, weaponId: 'w9', targets: [t1.uuid, t2.uuid] } }, player()), button());
+    assert.equal(chat.length, 0);
   });
   test('the Roll button (GM): a hit posts the damage with the successes + 1D6; each person once, at most the stray rounds', async (t) => {
     const { onStray95 } = await import('../applications/fire95.ts');
@@ -463,80 +506,82 @@ describe('v0.95.0 fire glue: stray shots (Core p. 93, optional)', () => {
     assert.equal(chat.length, n);
     assert.equal(warnings.length, 2);
   });
-  test('the Roll button: a miss posts no damage; a player can\'t roll; a player\'s card needs the GM\'s yes and its numbers are bounded', async (t) => {
+  test('the Roll button: a miss posts no damage; a player can\'t roll; a list a player posted is refused (its used marks are theirs)', async (t) => {
     const { onStray95 } = await import('../applications/fire95.ts');
     t.after(oldWay({ 'FIRE_V95.stray': 'book' }));
     const a = shooter();
     const by = who({ name: 'Between' });
     const flags = () => ({ stray95: { attackerUuid: a.uuid, weaponName: 'SMG', rounds: 9, power: 6, level: 'M', damageType: 'physical', rows: [{ uuid: by.uuid, name: 'Between', tn: 4 }] } });
     faces.push(2, 3);
-    const m = card(flags());
-    await onStray95(m, button(0));
+    await onStray95(card(flags()), button(0));
     assert.match(chat.at(-1).content, /The round misses/);
     assert.equal(chat.at(-1).flags, undefined);
-    g.game.user = { id: 'p1', name: 'Player', isGM: false };
     const n = chat.length;
+    g.game.user = player();
     await onStray95(card(flags()), button(0));
-    assert.equal(chat.length, n);
     g.game.user = GM();
-    const forged = card({ stray95: { ...flags().stray95, power: 9999, level: 'X', rows: [{ uuid: by.uuid, name: 'Between', tn: -40 }] } }, { id: 'p1', name: 'Player', isGM: false });
-    await onStray95(forged, button(0));                                 // the stub's confirm says no
+    await onStray95(card({ stray95: { ...flags().stray95, power: 9999 } }, player()), button(0));
     assert.equal(chat.length, n);
-    g.foundry.applications.api.DialogV2.confirm = async () => true;
-    t.after(() => { g.foundry.applications.api.DialogV2.confirm = async () => false; });
-    a.ownership = { default: 0, p1: 3 };
-    g.game.users = Object.assign([GM(), { id: 'p1', name: 'Player', isGM: false }], { activeGM: { id: 'gm1', isSelf: true }, get: (id: string) => (id === 'p1' ? { id: 'p1', name: 'Player', isGM: false } : GM()) });
-    faces.push(5, 5, 1);
-    await onStray95(forged, button(0));
-    assert.equal(chat.length, n + 1);                                   // confirmed: the numbers were bounded
-    const d = chat.at(-1).flags[F].damage;
-    assert.equal(d.power, 60);
-    assert.equal(d.level, 'L');
-    assert.match(chat.at(-1).content, /2 dice vs TN 2,/);
+    assert.equal(faces.length, 0);
   });
 });
 
 describe('v0.95.0 fire glue: suppressive fire the Fields of Fire way (FoF p. 78, optional)', () => {
   const lmg = () => gun('w1', { modes: 'FA', damagePower: 7, damageLevel: 'S', ammo: 30, ammoMax: 30 });
+  const fofCombat = (over: any = {}) => combatOn({ turn: 0, turns: [{}, {}, {}], ...over });
+  const at = { combatId: 'c95', round: 1, pass: 0, turn: 0 };
+  const supp = (a: any, over: any = {}) => ({ suppress95: { at, attackerUuid: a.uuid, weaponName: 'LMG', rounds: 10, metres: 2, perMetre: 5, power: 7, level: 'S', damageType: 'physical', extra: {}, ...over } });
   test('ships the house way: the Suppress button is not taken over', async () => {
     const { suppressFof95 } = await import('../applications/fire95.ts');
     const a = shooter([lmg()]);
     assert.equal(await suppressFof95(a, 'w1'), false);
     assert.equal(chat.length, 0);
   });
-  test('fof: rounds and width asked, the action and the rounds spent, a card with the GM button', async (t) => {
+  test('fof: rounds and width asked, the action and the rounds spent, a card with the GM button and when it was laid', async (t) => {
     const { suppressFof95 } = await import('../applications/fire95.ts');
     t.after(oldWay({ 'FIRE_V95.suppression': 'fof' }));
+    fofCombat({ round: 2, pass: 1, turn: 2 });
     const a = shooter([lmg()]);
     a.weaponById = (id: string) => a.items.get(id);
     const used: string[] = [];
     a.useAction = async (k: string) => { used.push(k); return true; };
-    g.foundry.applications.api.DialogV2.prompt = async () => ({ rounds: 10, metres: 4 });
+    g.foundry.applications.api.DialogV2.prompt = async () => ({ rounds: 8, metres: 4 });
     t.after(() => { g.foundry.applications.api.DialogV2.prompt = async () => null; });
     assert.equal(await suppressFof95(a, 'w1'), true);
     assert.deepEqual(used, ['suppress']);
-    assert.equal(a.items.get('w1').system.ammo, 20);
+    assert.equal(a.items.get('w1').system.ammo, 22);
     const m = chat.at(-1);
-    assert.match(m.content, /10 rounds over 4 m \(2 per metre\) for 10 Combat Phases/);
+    assert.match(m.content, /8 rounds over 4 m \(2 per metre\) for 10 Combat Phases/);
     assert.match(m.content, /data-sr2e-action="suppress95"/);
-    assert.deepEqual(m.flags[F].suppress95, { attackerUuid: a.uuid, weaponName: 'Predator', rounds: 10, metres: 4, perMetre: 2, power: 7, level: 'S', damageType: 'physical', extra: {} });
+    assert.deepEqual(m.flags[F].suppress95, { at: { combatId: 'c95', round: 2, pass: 1, turn: 2 }, attackerUuid: a.uuid, weaponName: 'Predator', rounds: 8, metres: 4, perMetre: 2, power: 7, level: 'S', damageType: 'physical', extra: {} });
   });
-  test('fof: a weapon without full auto is refused; a closed dialog spends nothing', async (t) => {
+  test('fof: an uneven split, no running combat, no full auto, a closed dialog: refused, nothing spent', async (t) => {
     const { suppressFof95 } = await import('../applications/fire95.ts');
     t.after(oldWay({ 'FIRE_V95.suppression': 'fof' }));
     const a = shooter([gun('w1'), gun('w2', { modes: 'FA', ammo: 30, ammoMax: 30 })]);
     a.weaponById = (id: string) => a.items.get(id);
-    assert.equal(await suppressFof95(a, 'w1'), true);
-    assert.equal(warnings.length, 1);
+    a.useAction = async () => true;
+    assert.equal(await suppressFof95(a, 'w1'), true);                   // no full auto
     assert.equal(await suppressFof95(a, 'w2'), true);                   // the stub's prompt answers null
+    g.foundry.applications.api.DialogV2.prompt = async () => ({ rounds: 10, metres: 3 });
+    t.after(() => { g.foundry.applications.api.DialogV2.prompt = async () => null; });
+    fofCombat();
+    assert.equal(await suppressFof95(a, 'w2'), true);                   // 10 over 3 m: uneven
+    assert.match(warnings.at(-1)!, /don't spread evenly/);
+    delete g.game.combat;
+    g.foundry.applications.api.DialogV2.prompt = async () => ({ rounds: 9, metres: 3 });
+    assert.equal(await suppressFof95(a, 'w2'), true);                   // no combat
+    assert.match(warnings.at(-1)!, /running combat/);
     assert.equal(a.items.get('w2').system.ammo, 30);
     assert.equal(chat.length, 0);
+    assert.equal(warnings.length, 3);
   });
   test('the card\'s button (GM): the targeted tokens are tested: dice per metre vs 4 + cover + wounds, a hit per 2 successes', async (t) => {
     const { onSuppress95 } = await import('../applications/fire95.ts');
+    fofCombat();
     const a = shooter();
     const out = who({ name: 'Exposed' });
-    const m = card({ suppress95: { attackerUuid: a.uuid, weaponName: 'LMG', rounds: 10, metres: 2, perMetre: 5, power: 7, level: 'S', damageType: 'physical', extra: {} } });
+    const m = card(supp(a));
     await onSuppress95(m, button());
     assert.equal(warnings.length, 1);                                   // nobody targeted
     g.game.user = { ...GM(), targets: new Set([token(out, 300, 0)]) };
@@ -549,7 +594,6 @@ describe('v0.95.0 fire glue: suppressive fire the Fields of Fire way (FoF p. 78,
     assert.match(c.content, /Exposed: 5 dice vs TN 8, 4 successes\. <strong>2 rounds hit\.<\/strong>/);
     assert.equal(c.flags[F].damages.length, 2);
     assert.deepEqual(c.flags[F].damages[0], { targetUuid: out.uuid, melee: false, damageType: 'physical', power: 7, level: 'S' });
-    assert.match(c.content, /data-index="1"/);
     faces.push(1, 2, 3, 2, 1);                                          // TN 4 (no cover): none
     g.foundry.applications.api.DialogV2.prompt = async () => 0;
     await onSuppress95(m, button());
@@ -560,16 +604,114 @@ describe('v0.95.0 fire glue: suppressive fire the Fields of Fire way (FoF p. 78,
     await onSuppress95(m, button());
     assert.equal(chat.length, n);                                       // a player can't
   });
+  test('the card\'s button: after 10 Combat Phases, in another combat, or with none, the fire is over', async () => {
+    const { onSuppress95 } = await import('../applications/fire95.ts');
+    const a = shooter();
+    const out = who({ name: 'Exposed' });
+    g.game.user = { ...GM(), targets: new Set([token(out, 300, 0)]) };
+    for (const now of [{ round: 4, pass: 0, turn: 1 }, { id: 'other' }, { started: false }]) {
+      fofCombat(now);
+      await onSuppress95(card(supp(a)), button());
+    }
+    fofCombat();
+    await onSuppress95(card(supp(a, { at: null })), button());           // a card without its start
+    assert.equal(chat.length, 0);
+    assert.equal(warnings.filter((w) => /suppressive fire is over/.test(w)).length, 4);
+    fofCombat({ round: 3, pass: 0, turn: 2 });                          // 3 + 3 + 2 = 8 phases: still on (the stub's prompt cancels)
+    await onSuppress95(card(supp(a)), button());
+    assert.equal(warnings.filter((w) => /suppressive fire is over/.test(w)).length, 4);
+  });
+  test('the card\'s button: a player\'s card is refused for a shooter they don\'t own (a forged attacker), and needs the GM\'s yes otherwise', async (t) => {
+    const { onSuppress95 } = await import('../applications/fire95.ts');
+    fofCombat();
+    const a = shooter();
+    const out = who({ name: 'Exposed' });
+    g.game.user = { ...GM(), targets: new Set([token(out, 300, 0)]) };
+    let asked = 0;
+    g.foundry.applications.api.DialogV2.confirm = async () => { asked++; return false; };
+    t.after(() => { g.foundry.applications.api.DialogV2.confirm = async () => false; });
+    await onSuppress95(card(supp(a), { id: 'p1', name: 'Player', isGM: false }), button());
+    assert.equal(asked, 0);                                             // refused before any dialog: they don't own the shooter
+    assert.match(warnings.at(-1)!, /Player/);
+    a.ownership = { default: 0, p1: 3 };
+    g.game.users = Object.assign([GM(), { id: 'p1', name: 'Player', isGM: false }], { activeGM: { id: 'gm1', isSelf: true }, get: (id: string) => (id === 'p1' ? { id: 'p1', name: 'Player', isGM: false } : GM()) });
+    t.after(() => { g.game.users = Object.assign([GM()], { activeGM: { id: 'gm1', isSelf: true } }); });
+    await onSuppress95(card(supp(a), { id: 'p1', name: 'Player', isGM: false }), button());
+    assert.equal(asked, 1);                                             // their own shooter: the GM is asked (and says no)
+    assert.equal(chat.length, 0);
+  });
+});
+
+describe('v0.95.0 fire glue: the review fixes', () => {
+  test('two guns with walking fire: the wasted rounds count once in the gun\'s record', async () => {
+    combatOn();
+    const a = shooter([gun('w1', { modes: 'FA', ammo: 30, ammoMax: 30 }), gun('w2')]);
+    a.useAction = async () => true;
+    faces.push(...Array(10).fill(2));
+    await a.attackWith(a.items.get('w1'), { mode: 'FA', rounds: 5, wastedRounds: 3, sight: {}, situational: ['secondWeapon'] });
+    assert.equal(a.getFlag(F, 'recoil95').guns.w1.rounds, 8);
+    assert.equal(a.getFlag(F, 'recoil').rounds, 8);                     // the same count as the old total
+    const p = a.planAttack(a.items.get('w2'), { mode: 'SA', sight: {}, situational: ['secondWeapon'] });
+    assert.equal(mod(p, /^Recoil$/), undefined);                        // the second gun's own first shot: no recoil
+    faces.length = 0;
+  });
+  test('the misfire card says a re-roll or an avoided disaster cancels it', async () => {
+    const a = shooter();
+    faces.push(1, 1, 1, 1, 3);
+    await a.attackWith(pistol(), { mode: 'SA', sight: {}, ammoType: 'explosive' });
+    assert.match(chat.at(-1).content, /Karma re-roll or an avoided disaster/);
+  });
+  test('the shot cone\'s main target is measured centre to centre along the line, like the others', async (t) => {
+    const { alongLine95 } = await import('../applications/fire95.ts');
+    stage([]);
+    t.after(() => { delete g.canvas; });
+    const from = { center: { x: 0, y: 0 } }, to = { center: { x: 600, y: 0 } };
+    assert.equal(alongLine95(from, to, to), 6);
+    assert.equal(alongLine95(from, to, { center: { x: 600, y: 200 } }), 6);   // level with the target: not in front
+    assert.equal(alongLine95(from, to, { center: { x: 300, y: 50 } }), 3);
+    assert.equal(alongLine95(from, from, to), null);
+  });
+  test('rebound: a wall damaged to 0 holds nothing; with walls not stopping blasts, none rebounds', async (t) => {
+    const { rebound95 } = await import('../applications/fire95.ts');
+    const ctx = { power: 10, perMetre: 1 };
+    const tok = token(who({ name: 'Cornered' }), 400, 0);
+    t.after(() => { delete g.canvas; });
+    const broken = { document: { c: [600, -500, 600, 500], move: 1, flags: { [F]: { barrierRating: 0, barrierFull: 8 } }, getFlag: (_s: string, k: string) => (k === 'barrierRating' ? 0 : k === 'barrierFull' ? 8 : null) } };
+    stage([tok], [broken]);
+    assert.deepEqual(rebound95({ x: 0, y: 0 }, tok, ctx, false), {});
+    stage([tok], [wall([600, -500, 600, 500], 8)]);
+    assert.deepEqual(rebound95({ x: 0, y: 0 }, tok, ctx, false), { rebound95: 2 });
+    t.after(oldWay({ 'COMBAT.wallsBlock': false }));
+    assert.deepEqual(rebound95({ x: 0, y: 0 }, tok, ctx, false), {});
+  });
+  test('detonateAt end to end: the cornered target\'s card row carries the rebound; the old way adds the nearest-wall share instead', async (t) => {
+    const { detonateAt } = await import('../applications/chat.ts');
+    const thrower = who({ name: 'Thrower' });
+    const cornered = who({ name: 'Cornered' }), open = who({ name: 'Open' });
+    stage([token(cornered, 400, 0), token(open, 0, 400)], [wall([600, -50, 600, 50], 8)]);
+    t.after(() => { delete g.canvas; });
+    const ctx: any = { attackerUuid: thrower.uuid, weaponName: 'Grenade', power: 10, level: 'S', damageType: 'physical', perMetre: 1, kind: 'offensive', successes: 0 };
+    await detonateAt(thrower, ctx, { x: 0, y: 0 }, '');
+    const m = chat.at(-1);
+    const byName = Object.fromEntries(m.flags[F].damages.map((d: any) => [d.targetUuid === cornered.uuid ? 'c' : 'o', d.power]));
+    assert.deepEqual(byName, { c: 8, o: 6 });                           // 6 passing + 2 back off the wall; 6 in the open
+    assert.match(m.content, /\(\+2 rebound\)/);
+    chat.length = 0;
+    t.after(oldWay({ 'FIRE_V95.rebound': 'nearest' }));
+    await detonateAt(thrower, ctx, { x: 0, y: 0 }, '');
+    assert.deepEqual(chat.at(-1).flags[F].damages.map((d: any) => d.power), [6, 6]);   // no 8-ray walls on the stub: no confined share
+    assert.doesNotMatch(chat.at(-1).content, /rebound/);
+  });
 });
 
 describe('v0.95.0 fire glue: the wiring', () => {
-  test('chat.ts dispatches the two GM buttons; sheets.ts calls the dialog hooks', async () => {
+  // The Attack dialog and the chat dispatch are not exported (no stubbed render): their small hooks are checked as
+  // source; everything they call is exercised above.
+  test('chat.ts dispatches the three GM buttons; sheets.ts calls the dialog hooks', async () => {
     const { readFileSync } = await import('node:fs');
     const src = (f: string) => readFileSync(new URL(`../applications/${f}`, import.meta.url), 'utf8');
     const chatSrc = src('chat.ts'), sheets = src('sheets.ts');
-    assert.ok(chatSrc.includes("else if (action === 'stray95') return onStray95(message, button);"));
-    assert.ok(chatSrc.includes("else if (action === 'suppress95') return onSuppress95(message, button);"));
-    assert.ok(chatSrc.includes('rebound95(point, c.token, ctx, Boolean(r))'));
-    for (const call of ['laserAir95(actor, h.smoke?.kind)', 'screenHits95([', 'strayCard95(actor, weapon,', 'suppressFof95(this.document,']) assert.ok(sheets.includes(call), call);
+    for (const a of ['stray95', 'strayList95', 'suppress95']) assert.ok(new RegExp(`else if \\(action === '${a}'\\) return on[A-Za-z0-9]+\\(message, button\\);`).test(chatSrc), a);
+    for (const call of ['laserAir95(actor, h.smoke?.kind)', 'screenHits95([', 'alongLine95(fromToken, to, to)', 'strayCard95(actor, weapon,', 'suppressFof95(this.document,']) assert.ok(sheets.includes(call), call);
   });
 });

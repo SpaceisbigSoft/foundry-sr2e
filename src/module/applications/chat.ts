@@ -25,7 +25,7 @@ import { authorIsGm, authorOwns, cardAuthor, cardTrust, speakerActorUuid, nameOf
 import { applyTransferAsGm, transferLiveLines } from './trade942.ts';
 import { disarmQuickRoll } from './hotkeys.ts';
 import { withGmLock } from './gmlock.ts';
-import { rebound95, onStray95, onSuppress95 } from './fire95.ts';
+import { rebound95, onStray95, onStrayList95, onSuppress95 } from './fire95.ts';
 import { reboundBook } from '../rules/fire95.ts';
 import { confirmAdvRevertCard, applyAdvRevertAsGm } from './revert942.ts';
 import { RULES, autoResists, blastRadius, blastLoss, scatter, damageLabel, scatterDiceFor, scatterMetres, confinedBlast, throwBackScatter, blastScatterDice, fusedScatter, canThrowBack, stopsAtWalls, grenadeKind, toxinOnsetLabel, scatterDirection, bearingDeg, type TargetNumberModifier } from '../rules/index.ts';
@@ -3659,5 +3659,6 @@ function dispatch(message: any, button: HTMLButtonElement, action: string): Prom
   else if (action === 'removeBug') return onRemoveBug(message, button);
   else if (action === 'regionDetect') return onRegionDetect(message, button);
   else if (action === 'stray95') return onStray95(message, button);
+  else if (action === 'strayList95') return onStrayList95(message, button);
   else if (action === 'suppress95') return onSuppress95(message, button);
 }
