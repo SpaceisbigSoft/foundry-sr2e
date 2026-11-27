@@ -256,6 +256,9 @@ describe('v0.95.0 core glue: racism in the social sides', () => {
     assert.equal(carriesRacism({ flags: { [SYS]: { test: { modifiers: [{ id: 'racism95', label: 'x', value: 2 }] } } } }), true);
     assert.equal(carriesRacism({ flags: { [SYS]: { test: { modifiers: [{ id: 'prejudice', label: 'x', value: 2 }] } } } }), false, 'the metatype table row is public as before');
     assert.equal(carriesRacism({ flags: {} }), false);
+    // A social test is a contest card: its sides carry the results.
+    assert.equal(carriesRacism({ flags: { [SYS]: { contest: { kind: 'social', sides: [{ result: { modifiers: [{ id: 'racism95', label: 'x', value: 2 }] } }] } } } }), true, 'a social (contest) card');
+    assert.equal(carriesRacism({ flags: { [SYS]: { contest: { kind: 'social', sides: [{ result: { modifiers: [{ id: 'prejudice', label: 'x', value: 2 }] } }] } } } }), false);
   });
   test('the GM\'s preview shows it; a player\'s preview never does', () => {
     const { sp, npc } = setup();
@@ -530,6 +533,17 @@ describe('v0.95.0 core glue: the review fixes', () => {
     assert.equal(pool().spent, 0, 'not while another locked task runs');
     release(); await held; await spend;
     assert.equal(pool().spent, 1);
+  });
+  test('a GM\'s own card: a team spend inside its re-run (which holds the GM lock) runs inline, no deadlock', async () => {
+    const a = pc(1); world(a); team([a.id], 3);
+    const cls: any = (globalThis as any).CONFIG?.Actor?.documentClass;
+    assert.equal(typeof cls?.runAsAuthor, 'function', 'the real actor class is the document class here');
+    const gm = (globalThis as any).game.user;
+    const run = cls.runAsAuthor(gm, () => C95.spendTeam(a, 1));
+    const out = await Promise.race([run, new Promise((r) => setTimeout(() => r('deadlock'), 500))]);
+    assert.equal(out, true, 'spent from the team pool, not waiting for itself');
+    assert.equal(pool().spent, 1);
+    assert.equal(cls.inAuthorRun, false, 'the count goes back down');
   });
   test('a player\'s request to take points for good without a card is refused', async () => {
     const a = pc(0); world(a); team([a.id], 3);

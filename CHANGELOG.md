@@ -2,6 +2,11 @@
 
 This is the history of the unofficial Shadowrun 2nd Edition system for Foundry VTT (system id `shadowrun2e_unified`; `sr2e` until v0.93.0), newest version first. Every rules change since v0.70.0 has a house-rule switch that puts the old behaviour back. The system was built with AI (Anthropic's Claude) under human direction, and it has not yet been play-tested at a real table.
 
+## v0.95.1 — Live-check fixes (27 Nov 2026)
+- **Fixed:** a GM paying a Karma re-roll (or avoided disaster) on their own card from the Team Karma Pool no longer freezes: the payment waited for the GM lock its own re-roll was holding, and every later GM action hung until a reload.
+- **Fixed:** a social test against an NPC's racism now hides its target number and modifiers from players on the posted card too (social tests are contest cards, which the check didn't read).
+- API changes: none.
+
 ## v0.95.0 — Rules completeness: core and combat (26 Nov 2026)
 About 25 book rules the system didn't have yet. Each one has a switch in the GM's house rules whose other choice puts v0.94.2 back; the two the book calls optional (stray shots, Fields of Fire suppressive fire) and contact upkeep ship off. *Rules completeness (v0.95.0)* in `docs/VERIFY.md` says what each does, its book page and what was left out.
 - **Too hurt to act.** When wounds take a character's Reaction to 0 or less, they take no actions in the fight: no turn in the tracker, the action buttons greyed with the reason (Core p. 112).

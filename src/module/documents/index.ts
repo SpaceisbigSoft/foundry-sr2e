@@ -271,6 +271,8 @@ function realUser(user: any): boolean {
  * Apply (GM) card" by what that author owns, not by the GM's own rights. Null otherwise.
  */
 let actingAuthor: any = null;
+/** v0.95.0: how many runAsAuthor tasks are running (they hold the GM lock; see SR2Actor.inAuthorRun). */
+let authorRuns = 0;
 
 /** v0.94.1: a typed test's card is being posted: every card this client posts meanwhile is marked `typedDice` (chat.ts never auto-applies it). */
 let typedPosting = false;
@@ -1611,12 +1613,22 @@ export class SR2Actor extends Actor {
     const next = author && !realGm(author) ? author : null;
     return withGmLock(async () => {
       actingAuthor = next;
+      authorRuns++;
       try {
         return await fn();
       } finally {
+        authorRuns--;
         actingAuthor = null;
       }
     });
+  }
+
+  /**
+   * v0.95.0: whether a `runAsAuthor` task (which holds the GM lock) is running, a GM's own card included (where
+   * `actingAuthor` stays null). A GM-side step it calls runs inline: awaiting the lock again would deadlock.
+   */
+  static get inAuthorRun(): boolean {
+    return authorRuns > 0;
   }
 
   /**

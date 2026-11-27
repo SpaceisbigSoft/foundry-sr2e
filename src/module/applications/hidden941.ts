@@ -17,8 +17,12 @@ function testActor(message: any): any {
 
 /** Whether a test card's modifiers include an NPC's racism (RACISM_MOD_ID in applications/core95.ts). */
 export function carriesRacism(message: any): boolean {
-  const mods = message?.flags?.[SYSTEM_ID]?.test?.modifiers;
-  return Array.isArray(mods) && mods.some((m: any) => m?.id === 'racism95');
+  const f: any = message?.flags?.[SYSTEM_ID] ?? {};
+  const has = (mods: unknown): boolean => Array.isArray(mods) && mods.some((m: any) => m?.id === 'racism95');
+  // A test card's modifiers, or (social tests are contest cards) each side's result.
+  if (has(f.test?.modifiers) || has(f.test?.result?.modifiers)) return true;
+  const sides = f.contest?.sides;
+  return Array.isArray(sides) && sides.some((x: any) => has(x?.result?.modifiers));
 }
 
 /** Hide the numbers in one rendered card (exported for the glue tests). */

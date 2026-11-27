@@ -74,8 +74,12 @@ export async function gmRun(op: 'teamKarma' | 'core95', data: Record<string, any
   const gm: any = activeGm();
   if (gm?.isSelf) {
     const fn = op === 'teamKarma' ? teamRelay : core95Relay;
-    const acting: any = (globalThis as any).CONFIG?.Actor?.documentClass?.actingAuthor ?? null;
-    try { return acting ? await fn(data, acting) : await withGmLock(() => fn(data, G().user)); } catch (err) { console.warn('sr2e | core95', err); return { ok: false }; }
+    const cls: any = (globalThis as any).CONFIG?.Actor?.documentClass;
+    const acting: any = cls?.actingAuthor ?? null;
+    // Inside a card's re-run (runAsAuthor holds the GM lock; a GM's own card has no acting author): inline, or the
+    // step would wait for the lock its own caller holds.
+    const inRun = Boolean(acting) || Boolean(cls?.inAuthorRun);
+    try { return inRun ? await fn(data, acting ?? G().user) : await withGmLock(() => fn(data, G().user)); } catch (err) { console.warn('sr2e | core95', err); return { ok: false }; }
   }
   return requestGm(op, data);
 }
