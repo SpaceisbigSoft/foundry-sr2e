@@ -90,7 +90,7 @@ describe('v0.66.0 player guide topics', () => {
     const anchors = GUIDE_TOPICS.map((t) => markdownAnchor(t.title));
     assert.equal(new Set(anchors).size, anchors.length);
     assert.ok(!anchors.includes('contents') && !anchors.includes('for-the-gm') && !anchors.includes('sr2e-player-guide'));
-    assert.ok(GUIDE_TOPICS.length >= 25 && GUIDE_TOPICS.length <= 70)  // v0.79.0: 51 topics (was <= 50);
+    assert.ok(GUIDE_TOPICS.length >= 25 && GUIDE_TOPICS.length <= 90)  // v0.79.0: 51 topics (was <= 50); v0.96.0: 71 (was <= 70);
     assert.equal(GUIDE_TOPICS[0]!.id, 'getting-started');
   });
 
