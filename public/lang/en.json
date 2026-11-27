@@ -1317,7 +1317,6 @@
       "saveACatalogueFile": "Save a catalogue file",
       "loadACatalogueFile": "Load a catalogue file…",
       "aCatalogueFileHoldsTheTemplates": "A catalogue file holds the templates and the kits, to take to another world. A file can also carry vehicles, NPCs, critters and spirits, and fill in the missing values of matching items already in the world.",
-      "templatesToACompendium": "Templates to a compendium",
       "templatesFromACompendium": "Templates from a compendium…",
       "charactersFromAStatBlock": "Characters from a stat block",
       "pasteACharacterWriteUpAttributes": "Paste a character write-up (attributes, skills, cyberware, spells, gear, contacts, nuyen, Karma, lifestyle) to make a new character, or use Import on a character's Bio tab.",
