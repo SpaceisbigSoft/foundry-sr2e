@@ -178,6 +178,7 @@ import * as M923 from '../rules/matrix923.ts';
 import { attackPowerTweak, isCarried, accessoryPlan, readAccessories, normalizeTweaks, ACCESSORY_NAME_KEYS, TWEAK_MAX } from '../rules/index.ts';
 import * as U80C from '../rules/urr80-combat.ts';
 import * as C923 from '../rules/combat923.ts';
+import * as F95 from './fire95.ts';
 import { dsInterceptPlan, dsDecryptPassed, dsRadioDecrypt, dsDeviceStepWords, dsSequencerSeconds, dsMadScanOn, dsHighestDie, dsMadFinds, dsDisorientation } from '../rules/urr80-drones-security.ts';
 import {
   noticeTest, noticeReveal, timeTaken, toolsModifier, bestTools, gearRepairPlan, readWriteRating, languageReveal,
@@ -639,6 +640,8 @@ export interface AttackState {
   infection?: InfectionState;
   /** v0.55.0: a toxin the weapon delivers on a hit; the target didn't know it was coming (no dodge, no pool); suppressive fire. */
   toxinHit?: ToxinHit; unaware?: boolean; suppressive?: boolean;
+  /** v0.95.0 (FIRE_V95.shotScreen, Core p. 95): shotgun shot: other targets in the spread in front of this one (extra resistance dice). */
+  screen95?: number;
   /** An IC's action (v0.27.0): what it does on a hit. */
   ic?: IcAction;
   /** v0.57.0: a called shot at part of a vehicle; an occupant shot through it (and the vehicle's armor that counts). */
@@ -730,7 +733,7 @@ export interface AttackOptions {
   /** Rounds wasted walking fire to this target: they use ammo and add recoil, but no damage. */
   wastedRounds?: number;
   /** Several targets with their own Power (shotgun spread, blasts). Replaces targetUuid. */
-  hits?: Array<{ targetUuid: string; power?: number; powerDelta?: number; level?: DamageLevel }>;
+  hits?: Array<{ targetUuid: string; power?: number; powerDelta?: number; level?: DamageLevel; screen95?: number }>;
   /** Blast weapons: where it lands (pixels, elevation in scene units), for scatter. */
   blastPoint?: { x: number; y: number; elevation: number } | null;
   /** Extra note for the card title (e.g. a shotgun's spread). */
@@ -850,6 +853,7 @@ function armorExtras(a: Partial<AttackState>): Partial<DamageState> {
     ...(a.flechette ? { flechette: true } : {}),
     ...(a.gel ? { gel: true } : {}),
     ...(a.barrierStopped ? { barrierStopped: true } : {}),
+    ...F95.screenExtras(a),
     ...(a.shock ? { shock: true } : {}),
     ...(a.armorKind ? { armorKind: a.armorKind } : {}),
     ...(a.ignoreArmor ? { ignoreArmor: true } : {}),
@@ -942,6 +946,8 @@ export interface DamageState {
   occupantShot?: boolean;
   /** v0.92.3 review fix (Rigger 2 p. 50): someone aboard in a collision or crash: no Combat Pool on the resistance test. */
   noPool?: boolean;
+  /** v0.95.0 (FIRE_V95.shotScreen, Core p. 95): extra resistance dice behind other targets in a shot spread. */
+  screen95?: number;
   damageType: DamageType;
   power: number;
   level: DamageLevel;
@@ -8638,7 +8644,7 @@ export class SR2Actor extends Actor {
     if (!c?.started) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.takingAimOnlyCountsInA')); return 0; }
     if (!(await this.useAction('aim', tx('SR2E.Card.Actor.takingAimWith', { weaponName: weapon.name })))) return 0;
     const now = { targetUuid: target.uuid as string, weaponId, round: Number(c.round ?? 0), combatId: String(c.id) };
-    const next = nextAimV72(this.getFlag?.(SYSTEM_ID, 'aim') as AimState | undefined, now);
+    const next = F95.stampAim(this, nextAimV72(this.getFlag?.(SYSTEM_ID, 'aim') as AimState | undefined, now), this.getFlag?.(SYSTEM_ID, 'aim'));
     await this.setFlag(SYSTEM_ID, 'aim', next);
     const skill = this.findSkill(weapon.system?.skill);
     // v0.72.0 (O2): capped by the rating rolled with this weapon (a specialization naming it).
@@ -8705,8 +8711,12 @@ export class SR2Actor extends Actor {
       // v0.79.0 (RULES.DOCS_V79.rangedRecoil 'book'): the phase's first shot is free only when it was a single shot.
       firstShotSingle = earlier - wasted > 0 ? this.trackedFirstShotSingle() : rounds === 1 && wasted === 0;
       // v0.80.0 (URR_V80.cbtStrengthRecoil, URR): a strong shooter takes some recoil off what is left.
-      const recoil = U80C.cbtStrengthRecoil(opts.suppressive ? 0 : mountedRecoil({ rounds, earlierRoundsThisPhase: earlier, recoilComp: (w.recoilComp ?? 0) + acc.value, mount: w.mount, mounted: Boolean(opts.mounted), heavy: veh80HeavyRecoil(Boolean(w.heavy), Boolean(opts.mounted)), ...(firstShotSingle === undefined ? {} : { firstShotSingle }) }), strength, !opts.mounted && this.type !== 'vehicle');
+      // v0.95.0 (FIRE_V95.sharedRecoil 'book', Core p. 90): firing two guns, each builds its own recoil and takes the other's.
+      const two95 = F95.twoGuns(this, weapon, opts);
+      if (two95 && two95.otherRounds > 0) firstShotSingle = two95.ownRounds > 0 ? two95.firstSingle : rounds === 1 && wasted === 0;
+      const recoil = U80C.cbtStrengthRecoil(opts.suppressive ? 0 : mountedRecoil({ rounds, earlierRoundsThisPhase: earlier - (two95?.otherRounds ?? 0), recoilComp: (w.recoilComp ?? 0) + acc.value, mount: w.mount, mounted: Boolean(opts.mounted), heavy: veh80HeavyRecoil(Boolean(w.heavy), Boolean(opts.mounted)), ...(firstShotSingle === undefined ? {} : { firstShotSingle }) }), strength, !opts.mounted && this.type !== 'vehicle');
       if (recoil > 0) fireMods.push({ label: w.heavy ? tx('SR2E.Card.Mod.recoilHeavy') : tx('SR2E.Card.Mod.recoil'), value: recoil });
+      fireMods.push(...F95.sharedRecoil(two95, extras, recoil, earlier));
       // A gyro mount cancels recoil, then the attacker's walking/running penalty.
       if ((w.gyro ?? 0) > 0) {
         const moving = RULES.SITUATIONAL_MODIFIERS.filter((m) => (opts.situational ?? []).includes(m.id) && /^attacker(Walking|Running)(Rough)?$/.test(m.id)).reduce((n, m) => n + m.value, 0);
@@ -8808,6 +8818,8 @@ export class SR2Actor extends Actor {
     const ls = laserAndSmartlink(opts.situational ?? []);
     const situational = ls.situational;
     if (ls.dropped) notes.push(tx('SR2E.Card.Actor.laserSightNotUsedWithThe'));
+    // v0.95.0 (FIRE_V95.laser 'book', Core p. 90): mist, smoke, fog or rain cancels the laser sight.
+    F95.laserInAir(this, situational, notes, opts);
     // v0.92.3 (COMBAT_V923.secondFirearm 'book', Core p. 90): a second firearm cancels smartlink, smart goggles and laser
     // sight; (COMBAT_V923.shotgun 'book', Core p. 95) shot gets only −1 from a smartlink and nothing from goggles or a laser.
     const sightAids = C923.sightAidsDropped({ melee, secondWeapon: situational.includes('secondWeapon'), shot: Boolean(w.shotgun) && String(opts.ammoType ?? w.ammoType ?? '') === RULES.URR_V80.cbtShotAmmo });
@@ -8985,13 +8997,14 @@ export class SR2Actor extends Actor {
       ...sd.modifiers,
       // v0.55.0: Take Aim at this target with this weapon; ranged shots at another target than earlier this phase.
       // v0.72.0 (O2): the aim cap uses the rating actually rolled (RULES.COMBAT_V72.aim.capBy).
-      ...this.#aimMods(weapon.id ?? '', targetDoc?.uuid ?? '', aimRating({
+      // v0.95.0 (FIRE_V95.aimPool 'book', Core p. 82): an aim held over several phases is lost to the shot's own pool dice.
+      ...F95.aimKept(this, this.#aimMods(weapon.id ?? '', targetDoc?.uuid ?? '', aimRating({
         rating: Number(skill?.system?.rating ?? 0),
         specializationRating: Number(skill?.system?.specializationRating ?? 0),
         concentrationRating: Number(skill?.system?.concentrationRating ?? 0),
         useSpecialization: Boolean(opts.useSpecialization), useConcentration: Boolean(opts.useConcentration),
         relatedRating: opts.relatedSkillId ? Number(this.items.get(opts.relatedSkillId)?.system?.rating ?? 0) : 0,
-      })),
+      })), opts.poolDice, notes),
       // (not for full-auto spread: it has its own per-target modifier)
       // v0.92.3 (COMBAT_V923.meleeTargets 'book', Core p. 102): melee too, +2 per other target this phase.
       ...((melee && !C923.meleeTargetsBook()) || opts.suppressive || (opts.spreadExtraTargets ?? 0) > 0 ? [] : this.#otherTargetMods(targetDoc?.uuid ?? '')),
@@ -9239,6 +9252,7 @@ export class SR2Actor extends Actor {
       ...(melee && w.selfHit ? { selfHit: true, selfHitSkill: String(w.skill || 'Armed Combat') } : {}),
       ...(melee && (opts.superior === 'attacker' || opts.superior === 'defender') && RULES.COMBAT_V61.superiorPosition.enabled ? { superior: opts.superior } : {}),
       ...extras,
+      ...(h.screen95 ? { screen95: h.screen95 } : {}),
       ...(blast ? { fixedDamage: true, ...(dodge ? {} : { noDodge: true }) } : {}),
       // The dialog's "Target unaware" is for the chosen target, not bystanders in a spread or a blast.
       ...(surprised.includes(h.targetUuid) || (opts.unaware && h.targetUuid === (opts.targetUuid ?? opts.hits?.[0]?.targetUuid)) ? { unaware: true } : {}),
@@ -9261,6 +9275,7 @@ export class SR2Actor extends Actor {
     const phase = melee ? null : this.currentPhaseKey();
     // v0.79.0 (RULES.DOCS_V79.rangedRecoil): and whether the phase's first shot was a single shot.
     if (phase) await this.setFlag(SYSTEM_ID, 'recoil', { ...recordRounds(phase, earlier, rounds), firstSingle: plan.firstShotSingle ?? true });
+    await F95.recordGun(this, weapon, plan, phase);
     // v0.55.0: the targets shot at this phase (another target next costs TN), and an aim used up.
     const phaseNow = this.currentPhaseKey();
     if (phaseNow && (!melee || C923.meleeTargetsBook())) {
@@ -9291,12 +9306,15 @@ export class SR2Actor extends Actor {
       ? `, ${Math.round(opts.measuredMetres * 10) / 10} m${opts.outOfRange ? (melee ? tx('SR2E.Card.Actor.outOfReach') : tx('SR2E.Card.Actor.beyondExtreme')) : ''}`
       : '';
     const title = `${weapon.name}${modeLabel ? ` [${modeLabel}]` : ''} (${base.label}${measured}, ${power}${level}${damageType !== w.damageType ? ` ${damageType}` : ''})${notes.length ? ` [${notes.join(', ')}]` : ''}${blast ? tx('SR2E.Card.Actor.blast2') : ''}${suffix}`;
-    return this.#runTest(title, willOnly ? Number(this.sys.attributes?.willpower?.total ?? 0) : dice, { targetNumber: base.value, modifiers, poolDice: poolUsed, pool: plan.pool, sightHandled: true, ...(opts.karmaDice ? { karmaDice: opts.karmaDice } : {}), ...(opts.exclude?.length ? { exclude: opts.exclude } : {}), ...(opts.mounted ? { vehicle: true } : {}) }, {
+    const rolled95 = await this.#runTest(title, willOnly ? Number(this.sys.attributes?.willpower?.total ?? 0) : dice, { targetNumber: base.value, modifiers, poolDice: poolUsed, pool: plan.pool, sightHandled: true, ...(opts.karmaDice ? { karmaDice: opts.karmaDice } : {}), ...(opts.exclude?.length ? { exclude: opts.exclude } : {}), ...(opts.mounted ? { vehicle: true } : {}) }, {
       kind: 'attack', ...(weapon?.id && typeof weapon.update === 'function' ? { weaponId: weapon.id } : {}),
       ...(attackTargets.length === 1 ? { attack: attackTargets[0] } : {}),
       ...(attackTargets.length > 1 ? { attackTargets } : {}),
       ...(blastCtx ? { blast: blastCtx } : {}),
     });
+    // v0.95.0 (FIRE_V95.misfire 'book', Core p. 93): explosive rounds and all ones: the round goes off in the gun.
+    await F95.afterAttack(this, weapon, plan, opts, rolled95);
+    return rolled95;
   }
 
   /**
@@ -9304,14 +9322,15 @@ export class SR2Actor extends Actor {
    * `hits` come from the canvas (distance from the landing point). `note` is HTML (v0.81.0): callers escape
    * the names in it (applications/chat.ts), so it is not escaped again here.
    */
-  async postBlast(ctx: BlastContext, hits: Array<{ targetUuid: string; name: string; metres: number; barrierLoss?: number; barrierArmor?: number }>, note: string, bonus = 0, at?: { x: number; y: number }): Promise<void> {
+  async postBlast(ctx: BlastContext, hits: Array<{ targetUuid: string; name: string; metres: number; barrierLoss?: number; barrierArmor?: number; rebound95?: number }>, note: string, bonus = 0, at?: { x: number; y: number }): Promise<void> {
     // Where it went off (v0.37.0): the GM can then damage the walls nearby.
     // v0.81.1 (FX-APP design 2): the blast's real source for the routine rule (chat.ts damageSources).
     const blastAt = { point: at ?? ctx.point, power: ctx.power + bonus, perMetre: ctx.perMetre, ...(ctx.shaped ? { shaped: true } : {}), ...(ctx.antiVehicle ? { antiVehicle: true } : {}), ...(typeof ctx.attackerUuid === 'string' && ctx.attackerUuid && ctx.attackerUuid.length <= 400 ? { attackerUuid: ctx.attackerUuid } : {}) };
     const kind = grenadeKind(ctx.kind);
     const caught = hits
       // v0.72.0 (O1): Power lost to walls on the way (RULES.COMBAT_V72.blastBarriers).
-      .map((h) => ({ h, p: ctx.power - blastLoss(h.metres, ctx.perMetre) + bonus - Math.max(0, h.barrierLoss ?? 0) }))
+      // v0.95.0 (FIRE_V95.rebound 'book', Core p. 98): plus the rebounding wave's Power for this target.
+      .map((h) => ({ h, p: ctx.power - blastLoss(h.metres, ctx.perMetre) + bonus - Math.max(0, h.barrierLoss ?? 0) + F95.reboundOf(h) }))
       .filter((e) => e.p > 0);
     // v0.61.0: a smoke grenade fills the area with smoke (a smoke region) that lingers some Combat Turns.
     if (kind.effect === 'smoke') {
@@ -9386,7 +9405,7 @@ export class SR2Actor extends Actor {
     const bt923 = C923.blastTally(Number(ctx.successes ?? 0));
     const damages: DamageState[] = caught
       .map(({ h, p }) => ({ targetUuid: h.targetUuid, melee: false, damageType: ctx.damageType, power: p, level: ctx.level, armorKind: RULES.COMBAT.blast.armorKind, ...(h.barrierArmor ? { extraArmor: h.barrierArmor } : {}), ...(bt923 ? { cleanMiss80: bt923 } : {}) }));
-    const rows = damages.map((d, i) => `<li>${escText(hits.find((h) => h.targetUuid === d.targetUuid)?.name ?? tx('SR2E.Card.Actor.target'))}: <strong>${d.power}${d.level}</strong> <button type="button" data-sr2e-action="resist" data-index="${i}">${tx('SR2E.Card.Actor.resist')}</button></li>`).join('');
+    const rows = damages.map((d, i) => `<li>${escText(hits.find((h) => h.targetUuid === d.targetUuid)?.name ?? tx('SR2E.Card.Actor.target'))}: <strong>${d.power}${d.level}</strong>${F95.reboundNote(hits.find((h) => h.targetUuid === d.targetUuid))} <button type="button" data-sr2e-action="resist" data-index="${i}">${tx('SR2E.Card.Actor.resist')}</button></li>`).join('');
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor: this }),
       content: `<div class="sr2e-roll"><h3>${tx('SR2E.Card.Actor.detonation', { weaponName: escText(ctx.weaponName) })}</h3><p>${note}${bonus ? tx('SR2E.Card.Actor.confinedSpacePower', { bonus }) : ''}</p></div>${damages.length ? `<ul class="sr2e-blast">${rows}</ul><p><button type="button" data-sr2e-action="combineBlast" title="${tx('SR2E.Card.Actor.gmThisAndTheBlastBefore')}">${tx('SR2E.Card.Actor.combineWithTheLastBlastGm')}</button></p>` : `<p><em>${tx('SR2E.Card.Actor.noOneIsCaughtInThe')}</em></p>`}`,
@@ -10036,7 +10055,7 @@ export class SR2Actor extends Actor {
     damage = ap.damage;
     const { kind, armor, occ, occTn, opts } = ap;
     if (occ || damage.noPool) poolDice = 0;
-    await this.resistDamage({ power: damage.power, level: damage.level, type: damage.damageType, armor, poolDice, ...(occTn ? { tnPlus: occTn } : {}), knockdown: !damage.black, ...(damage.spiritAttacker ? { spiritAttacker: true } : {}), knockdownMelee: damage.melee, ...(damage.gel ? { knockdownGel: true } : {}), ...(Number(damage.strength ?? 0) > 0 ? { knockdownStrength: Number(damage.strength) } : {}), ...(damage.cleanMiss80 ? { cleanMiss80: damage.cleanMiss80 } : {}), ...(damage.ignoreArmor || damage.elemental || noArmor ? {} : { armorKind: kind }), ...(noArmor ? { armorSkipped: true } : {}), ...(vuln ? { noRegen: true } : {}),
+    await this.resistDamage({ power: damage.power, level: damage.level, type: damage.damageType, armor, poolDice, ...(occTn ? { tnPlus: occTn } : {}), knockdown: !damage.black, ...(damage.spiritAttacker ? { spiritAttacker: true } : {}), knockdownMelee: damage.melee, ...(damage.gel ? { knockdownGel: true } : {}), ...(Number(damage.strength ?? 0) > 0 ? { knockdownStrength: Number(damage.strength) } : {}), ...(damage.cleanMiss80 ? { cleanMiss80: damage.cleanMiss80 } : {}), ...(damage.ignoreArmor || damage.elemental || noArmor ? {} : { armorKind: kind }), ...(noArmor ? { armorSkipped: true } : {}), ...(vuln ? { noRegen: true } : {}), ...F95.screenDice(damage),
       ...(damage.black ? {} : { cyberCheck: { location: damage.calledLocation ?? '' } }), ...(damage.infection ? { infection: damage.infection } : {}), ...(damage.toxinHit ? { toxinHit: damage.toxinHit } : {}) });
     // v0.92.3 (RULES.HEALTH_V923.shock 'disorient', Core p. 103): a stun weapon's hit disorients the target.
     if (damage.shock) await this.shockDisorient(Number(damage.power) || 0, this.armorRating('impact', opts));
@@ -10142,6 +10161,8 @@ export class SR2Actor extends Actor {
     spiritAttacker?: boolean;
     /** v0.93.3: the Resist window's "count no armor this time" was ticked (said on the card). */
     armorSkipped?: boolean;
+    /** v0.95.0 (FIRE_V95.shotScreen, Core p. 95): extra dice behind other targets in a shot spread. */
+    extraDice95?: number;
   }): Promise<void> {
     const type: DamageType = opts.type ?? 'physical';
     const tn = resistanceTargetNumber(opts.power, opts.armor ?? 0) + Math.max(0, Number(opts.tnPlus ?? 0) || 0);
@@ -10151,7 +10172,7 @@ export class SR2Actor extends Actor {
     const { lacing, tough, conjDice, dermal, threat, dice } = this.resistDicePlan(type, Boolean(opts.astral), Boolean(opts.spiritAttacker));
     const result = await successTest({
       // v0.58.0: bone lacing adds to Body for damage resistance only.
-      dice,
+      dice: dice + (opts.extraDice95 ?? 0),
       // Threat dice count as Combat Pool dice for a clean miss (Core p. 86), never spent.
       poolDice: poolDice + threat,
       targetNumber: tn,
@@ -10160,7 +10181,7 @@ export class SR2Actor extends Actor {
       roll: foundryRoller(rolls),
     });
     if (poolDice > 0) await this.#spendPool(poolType, poolDice);
-    const armorNote = `${conjDice ? tx('SR2E.Card.Actor.conjuringVsSpirit', { dice: conjDice }) : ''}${opts.armor ? tx('SR2E.Card.Actor.armor', { armor: opts.armor }) : ''}${opts.armorSkipped ? tx('SR2E.Card.Actor.armorSkipped') : ''}${dermal ? tx('SR2E.Card.Actor.dermalBody', { dermal }) : ''}${threat ? tx('SR2E.Card.Actor.threatDice', { threat }) : ''}${!conjDice && lacing ? tx('SR2E.Card.Actor.boneLacing', { lacingLabel: this.sys.derived.cyber.lacing.label, lacing }) : ''}${!conjDice && tough ? tx('SR2E.Card.Actor.toughness2', { tough }) : ''}`;
+    const armorNote = `${conjDice ? tx('SR2E.Card.Actor.conjuringVsSpirit', { dice: conjDice }) : ''}${opts.armor ? tx('SR2E.Card.Actor.armor', { armor: opts.armor }) : ''}${opts.armorSkipped ? tx('SR2E.Card.Actor.armorSkipped') : ''}${dermal ? tx('SR2E.Card.Actor.dermalBody', { dermal }) : ''}${threat ? tx('SR2E.Card.Actor.threatDice', { threat }) : ''}${!conjDice && lacing ? tx('SR2E.Card.Actor.boneLacing', { lacingLabel: this.sys.derived.cyber.lacing.label, lacing }) : ''}${!conjDice && tough ? tx('SR2E.Card.Actor.toughness2', { tough }) : ''}${F95.screenNote(opts.extraDice95)}`;
     await this.#post(this.#snapshot((opts.astral ? tx('SR2E.Card.Actor.resist7WithAstral', { power: opts.power, level: opts.level, type, armorNote }) : tx('SR2E.Card.Actor.resist7Plain', { power: opts.power, level: opts.level, type, armorNote })), result, {
       kind: 'soak',
       soak: {
@@ -10233,6 +10254,8 @@ export class SR2Actor extends Actor {
 
   async #spendPool(pool: PoolKind, dice: number): Promise<void> {
     await this.update({ [`system.poolSpent.${pool}`]: ((this.sys.poolSpent[pool] as number | undefined) ?? 0) + dice });
+    // v0.95.0 (FIRE_V95.aimPool 'book', Core p. 82): pool dice lose an aim held over several Combat Phases.
+    await F95.aimPoolSpent(this, dice);
     // v0.92.3 (COMBAT_V923.delay 'book', Core pp. 80, 84): pool dice used while delaying break the delay.
     if (dice > 0 && C923.delayBook() && this.isDelaying()) {
       await clearFlag(this, 'delayed');

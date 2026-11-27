@@ -25,6 +25,8 @@ import { authorIsGm, authorOwns, cardAuthor, cardTrust, speakerActorUuid, nameOf
 import { applyTransferAsGm, transferLiveLines } from './trade942.ts';
 import { disarmQuickRoll } from './hotkeys.ts';
 import { withGmLock } from './gmlock.ts';
+import { rebound95, onStray95, onSuppress95 } from './fire95.ts';
+import { reboundBook } from '../rules/fire95.ts';
 import { confirmAdvRevertCard, applyAdvRevertAsGm } from './revert942.ts';
 import { RULES, autoResists, blastRadius, blastLoss, scatter, damageLabel, scatterDiceFor, scatterMetres, confinedBlast, throwBackScatter, blastScatterDice, fusedScatter, canThrowBack, stopsAtWalls, grenadeKind, toxinOnsetLabel, scatterDirection, bearingDeg, type TargetNumberModifier } from '../rules/index.ts';
 import { modKey } from '../rules/dice.ts';
@@ -482,7 +484,8 @@ export async function detonateAt(actor: any, ctx: BlastContext, point: { x: numb
   if (grenadeKind(ctx.kind).effect !== 'smoke') void drawArea(point, radius, `${ctx.weaponName ?? 'Blast'} (${radius} m)`);
   // v0.43.0: vehicles are caught by damaging blasts (not flash or gas).
   const all = tokensNear(point, radius, { vehicles: !grenadeKind(ctx.kind).effect });
-  const conf = confinedBlast(ctx.power, ctx.perMetre, wallDistances(point, radius));
+  // v0.95.0 (FIRE_V95.rebound 'book', Core p. 98): the rebounding wave is worked out for each target (rebound95 below).
+  const conf = reboundBook() ? { confined: false, bonus: 0 } : confinedBlast(ctx.power, ctx.perMetre, wallDistances(point, radius));
   // v0.72.0 (O1): walls take Power off a blast by their barrier rating; a strong one holds (RULES.COMBAT_V72.blastBarriers).
   // 'block' (the old way) keeps the movement-collision test.
   const graded = all.map((c) => {
@@ -504,7 +507,7 @@ export async function detonateAt(actor: any, ctx: BlastContext, point: { x: numb
   const shielded = all.length - passed.length;
   // Review fix: list "through walls" only for those the blast still reaches with some Power.
   const through = passed.filter((g) => g.r && (g.r.loss || g.r.extraArmor) && ctx.power + conf.bonus - blastLoss(g.c.metres, ctx.perMetre) - (g.r.loss || 0) > 0).map((g) => `${escHtml(g.c.token.name)} (${escHtml(g.r!.note)})`);
-  await actor.postBlast(U80C.cbtBlastStaged(ctx), passed.map(({ c, r }) => ({ targetUuid: c.token.actor.uuid, name: c.token.name, metres: c.metres, ...(r?.loss ? { barrierLoss: r.loss } : {}), ...(r?.extraArmor ? { barrierArmor: r.extraArmor } : {}) })),
+  await actor.postBlast(U80C.cbtBlastStaged(ctx), passed.map(({ c, r }) => ({ targetUuid: c.token.actor.uuid, name: c.token.name, metres: c.metres, ...(r?.loss ? { barrierLoss: r.loss } : {}), ...(r?.extraArmor ? { barrierArmor: r.extraArmor } : {}), ...(flashBook ? {} : rebound95(point, c.token, ctx, Boolean(r))) })),
     `${note}${shielded ? tx('SR2E.Card.Chat.shielded', { part: shielded === 1 ? tx('SR2E.Card.Chat.n1TargetBehindAWallIs') : tx('SR2E.Card.Chat.targetsBehindWallsAre', { shielded }) }) : ''}${through.length ? tx('SR2E.Card.Chat.throughWalls', { through: through.join(', ') }) : ''}`,
     conf.bonus, point);
 }
@@ -3655,4 +3658,6 @@ function dispatch(message: any, button: HTMLButtonElement, action: string): Prom
   else if (action === 'confirmDeed') return onConfirmDeed(message, button);
   else if (action === 'removeBug') return onRemoveBug(message, button);
   else if (action === 'regionDetect') return onRegionDetect(message, button);
+  else if (action === 'stray95') return onStray95(message, button);
+  else if (action === 'suppress95') return onSuppress95(message, button);
 }
