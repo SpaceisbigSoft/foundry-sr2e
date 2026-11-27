@@ -102,7 +102,7 @@ describe('v0.93.3 Karma Pool dice in the attack and spell windows (a known limit
     const src = read('src', 'module', 'applications', 'sheets.ts');
     assert.ok(src.includes('...(c.karmaDice > 0 ? { karmaDice: c.karmaDice } : {}),'));
     assert.ok(src.includes('...(choice.karmaDice > 0 ? { karmaDice: choice.karmaDice } : {}),\n      useSustainingFocus'));
-    assert.ok((src.match(/CO923\.karmaDiceRow\(/g) ?? []).length >= 4, 'attribute, skill, attack and spell windows');
+    assert.ok((src.match(/(?:CO923|C95G)\.karmaDiceRow\(/g) ?? []).length >= 4, 'attribute, skill, attack and spell windows');
   });
   test('attackWith and castSpell hand them to #runTest (which caps and spends them)', () => {
     const src = read('src', 'module', 'documents', 'index.ts');

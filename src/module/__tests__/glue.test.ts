@@ -4571,6 +4571,8 @@ describe("v0.33.0 upkeep: Karma, nuyen, lifestyle, contacts, buying", () => {
   });
 
   test("legwork through a contact; finding and buying gear", async (t) => {
+    // v0.95.0: the v0.94.2 rule this test pins (RULES.CORE_V95).
+    t.after(oldWay({ 'CORE_V95.contactMeet': 'off', 'CORE_V95.contactFee': 'flat' }));
     t.after(oldWay({"BOOK_V78.legwork.mode": "tn"})); // v0.78.0: the old rule (a house rule)
     chat.length = 0;
     const a = person([
@@ -5920,6 +5922,8 @@ describe("v0.44.0 characters and the street", () => {
   });
 
   test("athletics: distance by successes; movement rates by metatype; Threat Rating adds Combat Pool dice", async (tt) => {
+    // v0.95.0: the v0.94.2 rule this test pins (RULES.CORE_V95).
+    tt.after(oldWay({ 'CORE_V95.jumping': 'old', 'CORE_V95.swimming': 'old' }));
     // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
     tt.after(oldWay({ 'CORE_V923.athletics': 'old', 'CORE_V923.threat': 'pool', 'METATYPES.types.troll.run': 3 }));
     chat.length = 0;
@@ -5959,6 +5963,8 @@ describe("v0.44.0 characters and the street", () => {
   });
 
   test("contacts: the fee and paid dice; haggling posts a new price; fencing sells for a share", async (tt) => {
+    // v0.95.0: the v0.94.2 rule this test pins (RULES.CORE_V95).
+    tt.after(oldWay({ 'CORE_V95.contactMeet': 'off', 'CORE_V95.contactFee': 'flat' }));
     // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
     tt.after(oldWay({ 'CORE_V923.fence': 'old', 'CORE_V923.haggle': 'old' }));
     chat.length = 0;
@@ -7364,7 +7370,9 @@ describe("v0.49.0 street, Matrix, rigging and security leftovers", () => {
     } finally { g.game.user = prevUser; g.game.settings = prevSettings; g.foundry.utils.randomID = prevRandom; }
   });
 
-  test("legwork: the contact digs with their own dice (the better counts) and a favour asked of one who owes none is a debt", async () => {
+  test("legwork: the contact digs with their own dice (the better counts) and a favour asked of one who owes none is a debt", async (t) => {
+    // v0.95.0: the v0.94.2 rule this test pins (RULES.CORE_V95).
+    t.after(oldWay({ 'CORE_V95.contactMeet': 'off', 'CORE_V95.contactFee': 'flat' }));
     chat.length = 0;
     const a = person([skill("et", "Etiquette", 3, "charisma")], { nuyen: 1000, contacts: [{ id: "c", name: "Fixer", level: 1, role: "", notes: "", loyalty: 2, skills: "", fee: 200, dice: 3, favours: 0 }] });
     faces.push(5, 5, 1, 1, 1);                                         // Etiquette 3 + favour 2 vs TN 4: 2
@@ -7423,7 +7431,9 @@ describe("v0.49.0 street, Matrix, rigging and security leftovers", () => {
     assert.ok(!boss.isBroken() && !ganger.isBroken());
   });
 
-  test("lifestyle: overdue past the grace days, the GM is asked once; moving down; connections when finding gear", async () => {
+  test("lifestyle: overdue past the grace days, the GM is asked once; moving down; connections when finding gear", async (t) => {
+    // v0.95.0: the v0.94.2 rule this test pins (RULES.CORE_V95).
+    t.after(oldWay({ 'CORE_V95.missedPayments': 'grace' }));
     chat.length = 0;
     const a = person([{ id: "x", type: "gear", name: "Widget", system: { cost: 100, availability: "4/12 hrs", streetIndex: 1 } }], { lifestyle: { level: "middle", paidUntil: 0 } });
     (a as any).hasPlayerOwner = true;
@@ -9346,6 +9356,8 @@ describe("v0.58.0 characters, gear and integration", () => {
   });
 
   test("training time: the Karma goes at once, an instructor shortens it, the rating rises when it is done", async (tt) => {
+    // v0.95.0: the v0.94.2 rule this test pins (RULES.CORE_V95).
+    tt.after(oldWay({ 'CORE_V95.trainingTest': 'off' }));
     // v0.92.3: the old (v0.92.2) rule this test pins (RULES.CORE_V923 / book alignment).
     tt.after(oldWay({ 'CORE_V923.trainingTime': 'rating', 'UPKEEP.karma.attributeMultiplier': 2 }));
     chat.length = 0;

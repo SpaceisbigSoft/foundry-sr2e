@@ -14,6 +14,7 @@ How to use the unofficial Shadowrun 2nd Edition system for Foundry VTT: what the
 - [Combat rules updated in v0.92.3](#combat-rules-updated-in-v0923)
 - [Gunfire rules added in v0.95.0](#gunfire-rules-added-in-v0950)
 - [Melee, actions and pools added in v0.95.0](#melee-actions-and-pools-added-in-v0950)
+- [Book rules added in v0.95.0: Team Karma, training, contacts and more](#book-rules-added-in-v0950-team-karma-training-contacts-and-more)
 - [The Unified Rules Revamp (alternate rules)](#the-unified-rules-revamp-alternate-rules)
 - [Edit mode, Play mode and the toolbar](#edit-mode-play-mode-and-the-toolbar)
 - [The summary bar](#the-summary-bar)
@@ -193,6 +194,18 @@ v0.95.0 adds book rules for melee, actions and Dice Pools. The GM can switch eac
 - **Against a wall:** a knockdown test that staggers you back into a wall leaves you against it: +2 to your melee attack and defense tests until your token moves. The GM can also set or clear the status on the token.
 - **Interception:** in a fight, when a token passes within 1 m of an opponent without stopping beside them, that opponent's player and the GM get a whispered card. **Intercept** makes a free melee attack on the one passing: target number 4, changed only by reach, your own movement and your condition, with Combat Pool dice if you like. The one passing defends as on full defense and can't counterattack. It costs no action.
 - **Pools:** the Spell and Hacking Pools now refill at the start of each of your actions, like the Combat Pool, and dice left at the end of a Combat Turn last until your first action of the next. If you get no action in a Combat Turn, they refill at the next one. Spell defense dice go back to the Spell Pool when your action starts, and you are told, so allot them again. The Control and Task Pools still refill each Combat Turn.
+
+## Book rules added in v0.95.0: Team Karma, training, contacts and more
+
+These rules follow the SR2 books and are on by default; each has a switch in the house rules window (search for "v0.94.2" to find the old behaviour). Contact upkeep is an optional rule and ships off.
+
+- **Team Karma Pool:** open *Team Karma* in the SR2e tools. The GM adds the members: each pays 1 point of their own Karma Pool, and a new team starts with 2 more. A member can give more points (they never come back). Wherever you spend Karma Pool (re-roll, avoid a disaster, buy a success, Karma dice in a roll window, with a tick for the team pool) a member is asked whether it comes from their own pool or the team's. Agree at the table first. The pool refreshes when the GM refreshes Karma Pools. When a member leaves, the GM presses *Leaves*: the pool loses half (nothing if the character died).
+- **Racism:** the GM selects NPC tokens and uses *Book rules (GM)* in the SR2e tools to roll their racism. A social test against such an NPC adds the points for the speaker's metatype by itself; the speaker's secret Charisma test (rolled once, shown to the GM only) takes points off. NPCs the GM has not rolled for keep the metatype table.
+- **Training:** with timed training on, the *Instructor* button on a training first offers your own training test. Its successes divide the time; an instructor then adds one success for every two of theirs. A Karma re-roll of either test changes the time again.
+- **Jumping and water:** the Athletics window asks how many metres a jump must clear and shows how far you jump without a test. Under "In the water" you can swim, tread water or float; the ticks are the treading-water conditions.
+- **Lifestyle:** a missed payment is rolled for by the GM's client each month: usually your credit covers it, otherwise the lifestyle drops a level and the card has a button to pay the debt. A lifestyle owned outright (Middle or better) can be sold from the *Pay* button.
+- **Contacts:** after legwork the GM gets a private card with the time it takes to arrange the meet and a button to work out the contact's fee; the fee card has a Pay button. With contact upkeep on, a card asks for each contact's yearly upkeep.
+- **Groups (GM):** *Book rules (GM)* also rolls one Perception test for the selected tokens and gives a leaderless group's averaged ratings for social tests.
 
 ## The Unified Rules Revamp (alternate rules)
 

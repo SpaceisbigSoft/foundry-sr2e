@@ -8334,7 +8334,8 @@
         "formulaNoTeacher": "Formula, no teacher",
         "speakingDialect": "Speaking a dialect",
         "stealthSuccesses": "The sneaker's Stealth successes",
-        "iccm": "ICCM"
+        "iccm": "ICCM",
+        "athleticsMetatype": "Treading water: metatype"
       },
       "Drops": {
         "notInstalledTickInstalledAfterSurgery": "not installed (tick Installed after surgery)",
@@ -9854,7 +9855,24 @@
         "MELEE_V95__wallTn": "Against a wall: + TN (book 2)",
         "MELEE_V95__interception": "Interception: offer a free melee attack (TN 4, reach, movement and condition only; the one passing on full defense) on anyone passing within 1 m (offer, book), or nothing (off, v0.94.2)",
         "MELEE_V95__otherPools": "Spell and Hacking Pools refresh at the start of each of the character's actions, with the Combat Pool (action, book), or at each new Combat Turn (turn, v0.94.2); the Control and Task Pools always refresh each Combat Turn",
-        "MELEE_V95__subdueReachMetres": "Taking control of a subdued opponent: at most this many metres away (2)"
+        "MELEE_V95__subdueReachMetres": "Taking control of a subdued opponent: at most this many metres away (2)",
+        "CORE_V95__teamKarma": "Team Karma: the book's Team Karma Pool with members, giving, drawing and leaving (book) or the plain shared counter (tracker, v0.94.2)",
+        "CORE_V95__teamKarmaStart": "Team Karma (book): points a new team starts with",
+        "CORE_V95__teamKarmaJoin": "Team Karma (book): points of their own Karma Pool a new member pays",
+        "CORE_V95__teamKarmaGoodTerms": "Team Karma (book): offer \"leaves on good terms\" (the pool loses one share instead of half; optional, Companion)",
+        "CORE_V95__racism": "Racism: the GM rolls an NPC's racism, added to social target numbers and offset by a secret Charisma test (book) or the metatype table only (table, v0.94.2)",
+        "CORE_V95__trainingTest": "Timed training: the student's own test divides the time and an instructor adds one success per two (book) or the instructor's successes divide the time (off, v0.94.2)",
+        "CORE_V95__trainingFailFactor": "Training (book): the time is multiplied by this when the student's test fails",
+        "CORE_V95__instructorPerSuccess": "Training (book): instructor's successes for one more of the student's",
+        "CORE_V95__jumping": "Jumping: distance by Strength, Body and Quickness, the test against the metres to clear (book) or a fixed distance per success (old, v0.94.2)",
+        "CORE_V95__swimming": "Swimming: target 4, with treading water and floating tests (book) or target numbers by water condition (old, v0.94.2)",
+        "CORE_V95__missedPayments": "Missed lifestyle payments: 1D6 against the months missed, then a level down and a debt (book) or grace days, then a level down (grace, v0.94.2)",
+        "CORE_V95__sellLifestyle": "Selling a lifestyle owned outright: Middle or better, for 2D6 or 1D6 × 10 percent of its price (book) or never (off, v0.94.2)",
+        "CORE_V95__contactFee": "Contact's fee: the GM's card after legwork works out the book's fee (book) or only the contact's fixed fee (flat, v0.94.2)",
+        "CORE_V95__contactMeet": "Arranging a meet: legwork rolls the secret time to arrange it for the GM (book) or nothing (off, v0.94.2)",
+        "CORE_V95__contactUpkeep": "Contact upkeep (optional, Companion): none (off) or a yearly cost by contact level, else the level drops (book)",
+        "CORE_V95__groupPerception": "Group Perception test in the GM's Book rules tool: average Intelligence plus a die per member (book) or not offered (off, v0.94.2)",
+        "CORE_V95__groupAverage": "A leaderless group's averaged ratings in the GM's Book rules tool (book) or not offered (off, v0.94.2)"
       }
     },
     "Rules": {
@@ -11608,6 +11626,40 @@
           },
           "poorVisibility": {
             "label": "Poor visibility"
+          }
+        }
+      },
+      "CORE_V95": {
+        "treadModifiers": {
+          "cyberlimb": {
+            "label": "Cyberlimb or torso (each)"
+          },
+          "boneLacing": {
+            "label": "Aluminum or titanium bone lacing"
+          },
+          "waterlogged": {
+            "label": "Waterlogged clothing"
+          },
+          "deadWeight": {
+            "label": "Dead weight (per 2 kg)"
+          },
+          "obese": {
+            "label": "Obese"
+          },
+          "outOfShape": {
+            "label": "Out of shape"
+          },
+          "muscular": {
+            "label": "Highly developed muscles or very low body fat"
+          },
+          "plank": {
+            "label": "Mildly buoyant support (a plank)"
+          },
+          "lifeJacket": {
+            "label": "Very buoyant support (a life jacket)"
+          },
+          "roughSeas": {
+            "label": "Rough seas"
           }
         }
       }
@@ -18865,6 +18917,19 @@
             "i6": "<strong>Interception:</strong> in a fight, when a token passes within 1 m of an opponent without stopping beside them, that opponent's player and the GM get a whispered card. <strong>Intercept</strong> makes a free melee attack on the one passing: target number 4, changed only by reach, your own movement and your condition, with Combat Pool dice if you like. The one passing defends as on full defense and can't counterattack. It costs no action.",
             "i7": "<strong>Pools:</strong> the Spell and Hacking Pools now refill at the start of each of your actions, like the Combat Pool, and dice left at the end of a Combat Turn last until your first action of the next. If you get no action in a Combat Turn, they refill at the next one. Spell defense dice go back to the Spell Pool when your action starts, and you are told, so allot them again. The Control and Task Pools still refill each Combat Turn."
           }
+        },
+        "rulesV095Core": {
+          "title": "Book rules added in v0.95.0: Team Karma, training, contacts and more",
+          "b1": "These rules follow the SR2 books and are on by default; each has a switch in the house rules window (search for \"v0.94.2\" to find the old behaviour). Contact upkeep is an optional rule and ships off.",
+          "b2": {
+            "i1": "<strong>Team Karma Pool:</strong> open <em>Team Karma</em> in the SR2e tools. The GM adds the members: each pays 1 point of their own Karma Pool, and a new team starts with 2 more. A member can give more points (they never come back). Wherever you spend Karma Pool (re-roll, avoid a disaster, buy a success, Karma dice in a roll window, with a tick for the team pool) a member is asked whether it comes from their own pool or the team's. Agree at the table first. The pool refreshes when the GM refreshes Karma Pools. When a member leaves, the GM presses <em>Leaves</em>: the pool loses half (nothing if the character died).",
+            "i2": "<strong>Racism:</strong> the GM selects NPC tokens and uses <em>Book rules (GM)</em> in the SR2e tools to roll their racism. A social test against such an NPC adds the points for the speaker's metatype by itself; the speaker's secret Charisma test (rolled once, shown to the GM only) takes points off. NPCs the GM has not rolled for keep the metatype table.",
+            "i3": "<strong>Training:</strong> with timed training on, the <em>Instructor</em> button on a training first offers your own training test. Its successes divide the time; an instructor then adds one success for every two of theirs. A Karma re-roll of either test changes the time again.",
+            "i4": "<strong>Jumping and water:</strong> the Athletics window asks how many metres a jump must clear and shows how far you jump without a test. Under \"In the water\" you can swim, tread water or float; the ticks are the treading-water conditions.",
+            "i5": "<strong>Lifestyle:</strong> a missed payment is rolled for by the GM's client each month: usually your credit covers it, otherwise the lifestyle drops a level and the card has a button to pay the debt. A lifestyle owned outright (Middle or better) can be sold from the <em>Pay</em> button.",
+            "i6": "<strong>Contacts:</strong> after legwork the GM gets a private card with the time it takes to arrange the meet and a button to work out the contact's fee; the fee card has a Pay button. With contact upkeep on, a card asks for each contact's yearly upkeep.",
+            "i7": "<strong>Groups (GM):</strong> <em>Book rules (GM)</em> also rolls one Perception test for the selected tokens and gives a leaderless group's averaged ratings for social tests."
+          }
         }
       }
     },
@@ -19000,6 +19065,10 @@
       "loot": {
         "label": "Loot",
         "hint": "Take items and nuyen from the lootable tokens on the scene you are viewing (the GM marks them)."
+      },
+      "bookRules95": {
+        "label": "Book rules (GM)",
+        "hint": "For the selected tokens: roll an NPC's racism, make a group Perception test, or get a leaderless group's averaged ratings."
       }
     },
     "SceneBuilder": {
@@ -19991,6 +20060,164 @@
       "poolDice": "Combat Pool dice ({left} left)",
       "interceptSubdue": "Subdue (Stun weapons only)",
       "interceptNote": "interception"
+    },
+    "Core95": {
+      "cancel": "Cancel",
+      "gmOnly": "GM only",
+      "gmButton": "Only the GM can use this button.",
+      "notGmCard": "This card was not posted by the GM, so nothing is paid from it.",
+      "notYours": "That is not your character.",
+      "alreadyPaid": "This card has already been paid.",
+      "paid": "{name} pays ¥{n}: {reason}.",
+      "postedBy": "Posted by {who}, not a GM. The numbers below were read from the card: check them.",
+      "Team": {
+        "sourceTitle": "Karma Pool or Team Karma",
+        "sourceAsk": "{name} needs {points} Karma. Own Karma Pool: {own} left. Team Karma Pool: {team} left.",
+        "agree": "The team agrees before anyone draws on the Team Karma Pool (a majority; the GM breaks a tie).",
+        "fromOwn": "My own pool",
+        "fromTeam": "The team pool",
+        "diceTick": "Take these dice from the Team Karma Pool ({left} left)",
+        "spent": "{who} draws {n} Team Karma for {name}. {left} left until the pool refreshes.",
+        "spentForGood": "{who} spends {n} Team Karma for good for {name}. {left} left.",
+        "gave": "{name} gives {n} of their own Karma Pool to the team for good. The Team Karma Pool is now {pool}.",
+        "joined": "{name} joins the team and pays {n} of their own Karma Pool. The Team Karma Pool is now {pool}.",
+        "left": "{name} leaves the team. The Team Karma Pool loses {lost} and is now {pool}.",
+        "refreshed": "The Team Karma Pool refreshes: {pool} points.",
+        "set": "{who} sets the Team Karma Pool to {pool}.",
+        "count": "left of {pool} Team Karma",
+        "noMembers": "No team yet. The GM adds its members here.",
+        "as": "Character",
+        "add": "Add a member",
+        "give": "Give 1 point",
+        "giveHint": "Move a point of your own Karma Pool into the team pool. It never comes back.",
+        "giveAsk": "{name} gives 1 point of their own Karma Pool ({own} left) to the team, for good?",
+        "join": "Join",
+        "joinHint": "Joining costs {n} of the character's own Karma Pool. A new team starts with {start} points more.",
+        "refresh": "Refresh",
+        "leaves": "Leaves",
+        "leaveTitle": "A member leaves the team",
+        "leaveAsk": "How does {name} leave the team?",
+        "leaveHalf": "Leaves or is asked to go (the pool loses {lost})",
+        "leaveShare": "Leaves on good terms (the pool loses {lost})",
+        "leaveDied": "Died (nothing is lost)",
+        "Why": {
+          "noActor": "No such character.",
+          "already": "That character is already on the team.",
+          "full": "The team or its pool is full.",
+          "ownShort": "Not enough left in the character's own Karma Pool.",
+          "notMember": "That character is not on the team.",
+          "badNumber": "That number does not work.",
+          "teamShort": "Not enough Team Karma left.",
+          "notYours": "That is not your character.",
+          "gmOnly": "Only the GM can do that.",
+          "notCard": "Team Karma is spent for good only on a success bought on your own card."
+        },
+        "diceRow": "Karma Pool dice (own {own} left, team {team} left)"
+      },
+      "Racism": {
+        "none": "no racism",
+        "all": "everyone but their own metatype",
+        "line": "Racism ({whom}) +{points}",
+        "mod": "Racism ({name})",
+        "charisma": "{speaker} against {npc}'s racism: Charisma {dice} dice against {tn}: {rolled}. {n} points offset, {left} left on social tests."
+      },
+      "Training": {
+        "title": "Training",
+        "ask": "{label}: roll your own training test first (against {tn}). Its successes divide the training time; none makes it half as long again. An instructor then adds one success for every two of theirs.",
+        "rolled": "Your own test: {self} successes. Instructor: {help} more.",
+        "self": "Roll my own test",
+        "teacher": "An instructor's test",
+        "testLabel": "Training test: {label}{suffix}",
+        "selfDone": "The training now takes <strong>{days} days</strong>.",
+        "selfFailed": "No successes: the training now takes <strong>{days} days</strong>.",
+        "notYours": "Only the character's owner or the GM can change that training.",
+        "gone": "That training is no longer under way.",
+        "unqualified": "{who} can't teach this: rating {rating}, needs {need}.",
+        "helped": "{who} adds {help} to the student's successes: the training now takes <strong>{days} days</strong>.",
+        "noHelp": "{who} adds nothing ({help}): the training still takes <strong>{days} days</strong>.",
+        "fee": " Suggested fee: ¥{fee} a day."
+      },
+      "Athletics": {
+        "jumpLegend": "Jumping",
+        "clear": "Metres to clear",
+        "vertical": "A vertical jump (a quarter of the distance)",
+        "jumpHint": "Without a test: {standing} m standing, {running} m with a run-up. The test is against the metres to clear; each success adds a tenth.",
+        "waterLegend": "In the water",
+        "water": "What",
+        "swim": "Swim (target {tn})",
+        "tread": "Tread water (target {tn})",
+        "float": "Float (Body, target {tn})",
+        "waterHint": "The ticks below count for treading water and floating only.",
+        "jumpLabel": "{want} m to clear",
+        "swimLabel": "swimming",
+        "treadLabel": "treading water",
+        "floatLabel": "floating",
+        "jumped": "jumps <strong>{metres} m</strong> and clears {want} m.",
+        "short": "jumps <strong>{metres} m</strong> and falls short of {want} m.",
+        "treads": "keeps their head above water.",
+        "sinks": "<strong>goes under</strong> and starts to drown.",
+        "floats": "floats for <strong>{turns} Combat Turns</strong>."
+      },
+      "Lifestyle": {
+        "absorbed": "{name} missed a {label} lifestyle payment ({months} in a row). 1D6: {die}. Their credit covers it this time.",
+        "dropped": "{name} missed a {label} lifestyle payment ({months} in a row). 1D6: {die}. The lifestyle drops a level, and they owe ¥{debt}.",
+        "payDebt": "Pay the debt (¥{debt})",
+        "reason": "{months} payments missed",
+        "moveDown": "Move them down to {label}",
+        "debtLedger": "Lifestyle debt",
+        "sellTitle": "Sell the lifestyle",
+        "sellAsk": "{name} owns the {label} lifestyle outright (price ¥{price}). Selling it pays a share of that price.",
+        "sellHint": "With time for a proper deal and a SIN: 2D6 × 10 percent. Without a SIN, in a hurry or through an agent: 1D6 × 10 percent.",
+        "sellTwo": "Sell (2D6)",
+        "sellOne": "Sell fast (1D6)",
+        "soldLedger": "{label} lifestyle sold",
+        "sold": "{name} sells the {label} lifestyle: {total} on the dice, {percent} percent of the price, ¥{paid}. They now live at {to}.",
+        "moveTo": "Move to"
+      },
+      "Contact": {
+        "after": "{actor} asked {name}: {s} successes.",
+        "meetButton": "Set the meet",
+        "feeButton": "Work out the fee",
+        "meetTitle": "Arrange the meet",
+        "meetAsk": "{name}: {base} minutes to arrange the meet (rolled now, for you alone). The player has {s} successes and may trade some to divide the time.",
+        "traded": "Successes traded",
+        "meetOk": "Post",
+        "meetSet": "{actor} can meet {name} in {minutes} minutes. {kept} successes are left for the information.",
+        "feeTitle": "The contact's fee",
+        "feeAsk": "{name}: Etiquette × successes × (Charisma + Intelligence) × 10 nuyen.",
+        "etiquette": "Contact's Etiquette",
+        "successes": "Player's successes",
+        "charisma": "Contact's Charisma",
+        "intelligence": "Contact's Intelligence",
+        "feeOk": "Post",
+        "feeIs": "{name} asks {actor} for ¥{fee} for the information. Negotiation may change it.",
+        "payFee": "Pay ¥{fee}",
+        "feeLedger": "Contact's fee",
+        "upkeepDue": "{actor}: a year of upkeep for the contact {name} (level {level}) is due: ¥{cost}.",
+        "payUpkeep": "Pay ¥{cost}",
+        "lower": "Not paid: lower the level (GM)",
+        "upkeepLedger": "Contact upkeep",
+        "lowered": "{actor}'s contact {name} drops to level {level}.",
+        "lost": "{actor} loses the contact {name}."
+      },
+      "Group": {
+        "perception": "Group Perception test.",
+        "perceptionLine": "{names}: average Intelligence {average} + {members} members = {dice} dice against {tn}.",
+        "result": "Rolled {rolled}: <strong>{successes} successes</strong>.",
+        "average": "A group without a leader.",
+        "averageLine": "{names}: social tests against the group use Charisma {charisma}, Intelligence {intelligence}, Willpower {willpower}."
+      },
+      "Tool": {
+        "title": "Book rules",
+        "selected": "Selected: {names}",
+        "none": "Select tokens first.",
+        "modifier": "Target number modifier (group Perception)",
+        "racism": "Roll racism (NPCs)",
+        "clearRacism": "Clear racism (NPCs)",
+        "perception": "Group Perception test",
+        "average": "Averaged ratings"
+      },
+      "alreadyDone": "This card has already been used."
     }
   },
   "TYPES": {

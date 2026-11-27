@@ -18,8 +18,8 @@ import { isLeadGm, handlePeer, startPeers, registerWindowStamp, type PeerMessage
 export const SOCKET = `system.${SYSTEM_ID}`;
 
 // v0.93.3: 'teamKarma' (a player spends one Team Karma). v0.94.2: 'crewStation' (applications/crew942.ts) and
-// 'trade942' (a player takes from a "free for all" lootable actor: applications/trade942.ts).
-export type RelayOp = 'nextTurn' | 'roundTicks' | 'drawArea' | 'spendSpellDefense' | 'dismissSpirit' | 'vehicleShop' | 'teamKarma' | 'crewStation' | 'trade942' | 'melee95';
+// 'trade942' (a player takes from a "free for all" lootable actor: applications/trade942.ts). v0.95.0: 'core95' (applications/core95.ts).
+export type RelayOp = 'nextTurn' | 'roundTicks' | 'drawArea' | 'spendSpellDefense' | 'dismissSpirit' | 'vehicleShop' | 'teamKarma' | 'crewStation' | 'trade942' | 'melee95' | 'core95';
 
 export interface RelayRequest { type: 'request'; id: string; op: RelayOp; userId: string; data: Record<string, any> }
 export interface RelayReply { type: 'reply'; id: string; to: string; ok: boolean; note?: string }
