@@ -201,6 +201,8 @@ import { GEAR_V923_TABLES } from '../rules/config923/gear.ts';
 
 import { SYSTEM_ID } from '../config/system.ts';
 import { ruleAuto } from '../rules/automation941.ts';
+import * as M95 from '../rules/melee95.ts';
+import * as G95 from '../applications/melee95.ts';
 import { programMayLoad, programDeck, lookupOf } from '../rules/nesting942.ts';
 
 /**
@@ -642,6 +644,8 @@ export interface AttackState {
   toxinHit?: ToxinHit; unaware?: boolean; suppressive?: boolean;
   /** v0.95.0 (FIRE_V95.shotScreen, Core p. 95): shotgun shot: other targets in the spread in front of this one (extra resistance dice). */
   screen95?: number;
+  /** v0.95.0 (MELEE_V95): a subduing blow's attacker (its Stun is subduing damage, Core p. 103); an interception (Core p. 83). */
+  subdueBy95?: string; intercept95?: boolean;
   /** An IC's action (v0.27.0): what it does on a hit. */
   ic?: IcAction;
   /** v0.57.0: a called shot at part of a vehicle; an occupant shot through it (and the vehicle's armor that counts). */
@@ -742,6 +746,8 @@ export interface AttackOptions {
   targetReach?: number;
   /** Melee: subdue (Stun damage). */
   subdue?: boolean;
+  /** v0.95.0 (MELEE_V95.interception, Core p. 83): an interception (TN 4, reach, movement and condition only). */
+  intercept95?: boolean;
   /** v0.80.0 (URR_V80.cbtChargePower): a charging melee attack's extra Power. */
   chargePower80?: number;
   /** v0.55.0: the target doesn't know it is coming (no dodge, no Combat Pool); suppressive fire (base damage, cover saves). */
@@ -869,6 +875,7 @@ function armorExtras(a: Partial<AttackState>): Partial<DamageState> {
     ...(a.calledLocation ? { calledLocation: a.calledLocation } : {}),
     ...(a.infection ? { infection: a.infection } : {}),
     ...(a.toxinHit ? { toxinHit: a.toxinHit } : {}),
+    ...(typeof a.subdueBy95 === 'string' && a.subdueBy95 ? { subdueBy95: a.subdueBy95 } : {}),
     ...(a.flame || damageImmunity({ fire: true }, { element: String(a.elementEffect ?? '') }).immune ? { fire: true } : {}),
     // v0.57.0: a called shot at part of a vehicle; an occupant shot through it takes the damage instead.
     ...(a.vehiclePart && a.vehiclePart !== 'occupant' ? { vehiclePart: a.vehiclePart, ...(a.vehicleWeaponId ? { vehicleWeaponId: a.vehicleWeaponId } : {}) } : {}),
@@ -926,6 +933,8 @@ export interface DamageState {
   infection?: InfectionState;
   /** v0.55.0: a toxin delivered by the hit. */
   toxinHit?: ToxinHit;
+  /** v0.95.0 (MELEE_V95.subdueControl): the attacker of a subduing blow. */
+  subdueBy95?: string;
   /** Matrix damage from IC: blaster and sparky crashes damage the deck. */
   ic?: IcAction;
   /** v0.92.3: who did the Matrix damage (crashing IC raises their tally, VR2 p. 40). */
@@ -1047,6 +1056,8 @@ export interface SoakContext {
   infection?: InfectionState;
   /** v0.55.0: a weapon's toxin, offered when the hit lands (or does damage, `needsWound`). */
   toxinHit?: ToxinHit;
+  /** v0.95.0 (MELEE_V95.subdueControl): the attacker of a subduing blow (its Stun is recorded as subduing damage). */
+  subdueBy95?: string;
   /** v0.45.0: a reflecting initiate resisting a spell: what bounces back at the caster. */
   reflect?: { casterUuid: string; spellName: string; force: number; resistAttribute: AttributeKey; level: DamageLevel; damageType: DamageType; effectOnly?: boolean; defense: number;
     /** v0.48.0: a reflected critter power (resisted with its own pool). */
@@ -1672,6 +1683,9 @@ export class SR2Actor extends Actor {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.isOutsideItsDomain', { name: escHtml(this.name), domain: escHtml(this.sys.domain), part: mode === 'block' ? tx('SR2E.Notify.Actor.itCannotActHere') : '' }));
       if (mode === 'block') return false;
     }
+    // v0.95.0 (MELEE_V95.reactionOut, totalSurprise; Core pp. 86, 112): no actions in the fight (the GM is only told).
+    const no95 = G95.noActionsRefusal(this, what);
+    if (no95) { ui.notifications?.warn?.(escHtml(no95)); if (!isGmNow()) return false; }
     // v0.59.0: paralysed or asleep (token statuses) means no actions either.
     if (RULES.STATUSES.paralysis.blocksActions && (this.hasStatus('paralysis') || this.hasStatus('sleep'))) {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.isAndCannot', { name: escHtml(this.name), part: this.hasStatus('paralysis') ? tx('SR2E.Notify.Actor.paralysed') : tx('SR2E.Notify.Actor.asleep'), part2: what === 'act' ? tx('SR2E.Notify.Actor.act') : tx('SR2E.Notify.Actor.doThat', { what }) }));
@@ -3500,6 +3514,8 @@ export class SR2Actor extends Actor {
     if (sameMonitor(current, expected)) {
       await this.update({ 'system.monitor.physical': result.monitor.physical, 'system.monitor.stun': result.monitor.stun });
       fu.physicalBefore = current.physical;
+      // v0.95.0 (MELEE_V95.subdueControl, Core p. 103): the Stun a subduing blow did (a re-roll corrects it).
+      if (ctx.subdueBy95 && ctx.type === 'stun') await G95.recordSubdue(this, ctx.subdueBy95, result.monitor.stun - current.stun);
       // Boxes from a vulnerability can't be regenerated (v0.39.0); a re-roll corrects the count.
       if (ctx.noRegen) {
         const prev = ctx.after ? Math.max(0, ctx.after.physical - ctx.before.physical) : 0;
@@ -8783,10 +8799,16 @@ export class SR2Actor extends Actor {
       extras.armorMultiplier = f.armorMultiplier;
       notes.push(tx('SR2E.Card.Actor.flamethrower'));
     }
-    if (melee && opts.subdue) {
+    // v0.95.0 (MELEE_V95.subdue 'stunOnly', Core p. 103): only a weapon that does Stun damage can subdue.
+    if (melee && opts.subdue && !M95.subdueAllowed({ damageType, stunWeapon: w.stunWeapon })) notes.push(tx('SR2E.Melee95.subdueStunOnly'));
+    else if (melee && opts.subdue) {
       damageType = RULES.COMBAT.subdue.damageType;
       notes.push(tx('SR2E.Card.Actor.subduing'));
+      // v0.95.0 (MELEE_V95.subdueControl): its Stun is this attacker's subduing damage.
+      if (M95.subdueControlOn()) extras.subdueBy95 = this.uuid as string;
     }
+    // v0.95.0 (MELEE_V95.interception, Core p. 83): an interception (checked against the GM's offer in attackWith).
+    if (melee && opts.intercept95) { extras.intercept95 = true; notes.push(tx('SR2E.Melee95.interceptNote')); }
     // v0.80.0 (URR_V80.cbtChargePower, URR): a charging blow hits harder.
     if (melee && (opts.chargePower80 ?? 0) > 0) { power += opts.chargePower80 ?? 0; notes.push(tx('SR2E.Card.Actor.chargingPower', { power: opts.chargePower80 })); }
     // Stun weapons: Stun damage against part of the impact armor (RULES.STUN_WEAPONS).
@@ -9023,7 +9045,13 @@ export class SR2Actor extends Actor {
     // v0.92.1 (RULES.SHEET_V921.tweaks): Power from custom tweaks (this weapon's own, every melee or ranged attack's, any attack's).
     const tweakPower = attackPowerTweak(this.sys?.derived?.tweaks, { weaponId: String(weapon?.id ?? ''), melee });
     if (tweakPower) { power = Math.max(0, power + tweakPower); if (extras.barrierPower !== undefined) extras.barrierPower = Math.max(0, extras.barrierPower + tweakPower); notes.push(tx('SR2E.Card.Actor.tweakPower', { value: tweakPower > 0 ? `+${tweakPower}` : `${tweakPower}` })); }
-    return { w, melee, blast, base, power, level, damageType, modeLabel, rounds, earlier, wasted, extras, notes, situational, dice, suffix, modifiers, ammoShort, sd, pool, blastExtras, firstShotSingle };
+    // v0.95.0 (MELEE_V95.wall, Core p. 102): fighting with a wall at your back. (MELEE_V95.interception, Core p. 83): an
+    // interception has only reach, the attacker's movement and condition (wounds and the like come with the test).
+    const wall95 = melee ? G95.wallMods(this) : [];
+    const mods95 = melee && opts.intercept95
+      ? [...sd.modifiers, ...situationalModifiers(M95.interceptSituational(situational), 'normal'), ...attackerReachModifiers(((w.reach as number | undefined) ?? 0) + this.reachBonus + (style?.style.reach ?? 0), opts.targetReach ?? 0), ...wall95]
+      : [...modifiers, ...wall95];
+    return { w, melee, blast, base, power, level, damageType, modeLabel, rounds, earlier, wasted, extras, notes, situational, dice, suffix, modifiers: mods95, ammoShort, sd, pool, blastExtras, firstShotSingle };
   }
 
   /**
@@ -9147,6 +9175,8 @@ export class SR2Actor extends Actor {
 
   async #attackWith(weapon: any, opts: AttackOptions = {}): Promise<SuccessTestResult | null> {
     if (!this.canAct('attack')) return null;
+    // v0.95.0 (MELEE_V95.interception): only against a mover the GM's offer names, once.
+    if (opts.intercept95 && !G95.interceptVouched(this, opts.targetUuid)) { ui.notifications?.warn?.(tx('SR2E.Melee95.interceptUsed')); return null; }
     if (this.type === 'vehicle' && this.sys.derived?.destroyed) {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.isDestroyed', { name: escHtml(this.name) }));
       return null;
@@ -9179,9 +9209,9 @@ export class SR2Actor extends Actor {
     // v0.92.3 review fix: with 'action' (now the default, Core p. 82) a weapon that isn't ready is drawn as part of the
     // attack, spending the Simple Action (useAction refuses only when the action rules block it), instead of refusing:
     // weapons a v0.92.2 world saved holstered (which 'off' ignored) still fire.
-    const drawFirst = Boolean(weapon?.system && weapon.system.ready === false && typeof weapon.update === 'function' && RULES.COMBAT.ready.rule === 'action' && !weapon.system.quickDraw);
+    const drawFirst = Boolean(weapon?.system && weapon.system.ready === false && typeof weapon.update === 'function' && RULES.COMBAT.ready.rule === 'action' && !M95.freeDraw(weapon.system));
     if (weapon?.system && weapon.system.ready === false && typeof weapon.update === 'function' && RULES.COMBAT.ready.rule !== 'off') {
-      opts = { ...opts, note: [opts.note, weapon.system.quickDraw ? tx('SR2E.Card.Actor.quickDrawn') : tx('SR2E.Card.Actor.drawnASimpleAction')].filter(Boolean).join(', ') };
+      opts = { ...opts, note: [opts.note, M95.freeDraw(weapon.system) ? tx('SR2E.Card.Actor.quickDrawn') : tx('SR2E.Card.Actor.drawnASimpleAction')].filter(Boolean).join(', ') };
     }
     // v0.71.0 (R12): every attack (group, mounted, quick rolls) resists an invisibility spell on its targets first,
     // not only the Attack dialog's (a target already resisted isn't rolled again).
@@ -9197,10 +9227,14 @@ export class SR2Actor extends Actor {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.isManifestingSeenAndHeardIn', { name: escHtml(this.name) }));
       return null;
     }
-    if (drawFirst && !(await this.useAction('draw', tx('SR2E.Card.Sheet.drawing', { name: weapon.name })))) return null;
+    // v0.95.0 (MELEE_V95.quickDraw 'test', Core p. 82): a holstered pistol may be quick-drawn (a Reaction test) instead.
+    const qd95 = drawFirst ? await G95.quickDraw(this, weapon, opts) : 'draw';
+    if (qd95 === 'failed' || qd95 === 'cancel') return null;
+    if (qd95 === 'quick') opts = { ...opts, note: G95.quickDrawNote(opts.note) };
+    if (drawFirst && qd95 === 'draw' && !(await this.useAction('draw', tx('SR2E.Card.Sheet.drawing', { name: weapon.name })))) return null;
     const seen = [opts.targetUuid, ...(opts.hits ?? []).map((h: any) => h.targetUuid)].filter(Boolean).map((u) => fromUuidSync(u as string)).filter(Boolean);
     await this.spotInvisible(seen);
-    const plan = seen.length ? this.planAttack(weapon, opts) : pre;
+    const plan = seen.length || qd95 === 'quick' ? this.planAttack(weapon, opts) : pre;
     const { w, melee, blast, base, power, level, damageType, modeLabel, rounds, earlier, wasted, extras, notes, dice, suffix, modifiers } = plan;
     // v0.81.0 (D2-15): drawn only once the attack isn't refused.
     if (weapon?.system?.ready === false && typeof weapon.update === 'function' && RULES.COMBAT.ready.rule !== 'off') await weapon.update({ 'system.ready': true });
@@ -9445,12 +9479,16 @@ export class SR2Actor extends Actor {
       if (pool > 0 && (emptyBody || down || unaware || pinned)) await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p><strong>${escText(this.name)}</strong> ${tx('SR2E.Card.Actor.canTUsePoolDiceAgainst')}</p>` });
       return this.resistFromState(cm80, emptyBody || down || unaware || pinned ? 0 : pool);
     }
-    const full = (Boolean(opts.fullDefense) || this.fullDefenseUp()) && !emptyBody && !down && !unaware && !pinned && !attack.astral && !attack.matrix;
+    // v0.95.0 (MELEE_V95.interception, Core p. 83): the one intercepted defends as on full defense (no counterattack),
+    // with no cost of its own; only an interception the GM's offer names counts.
+    const icpt95 = Boolean(attack.intercept95) && attack.melee && G95.interceptVouchedFor(attack.attackerUuid, this.uuid);
+    const declared = Boolean(opts.fullDefense) || this.fullDefenseUp();
+    const full = (declared || icpt95) && !emptyBody && !down && !unaware && !pinned && !attack.astral && !attack.matrix;
     // v0.80.0 (URR_V80.cbtDefense 'cleanMiss', URR): full defense adds no dice and no pool to the melee test (the pool goes to the soak).
-    const fullDice = full ? U80C.cbtFullDefenseDice(await this.#takeFullDefense()) : 0;
+    const fullDice = full && declared ? U80C.cbtFullDefenseDice(await this.#takeFullDefense()) : 0;
     // v0.80.0 (review #4): the defender's full defense rides on the snapshot, so a clean miss is allowed only then.
     // v0.92.3 (COMBAT_V923.fullDefense 'book'): the book's full defense rides on the same flag.
-    if (opposedMelee(attack) && !emptyBody && !down && !unaware) return this.#defendMelee(full && (U80C.cbtCleanMissOn() || C923.fullDefenseBook()) ? { ...attack, fullDefense80: true } : attack, U80C.cbtMeleeDefensePool(full, pool), opts.weaponId ?? null, fullDice, Boolean(opts.subdue));
+    if (opposedMelee(attack) && !emptyBody && !down && !unaware) return this.#defendMelee(full && (U80C.cbtCleanMissOn() || C923.fullDefenseBook() || icpt95) ? { ...attack, fullDefense80: true, ...(icpt95 ? { intercept95: true } : {}) } : { ...attack, intercept95: false }, U80C.cbtMeleeDefensePool(full, pool), opts.weaponId ?? null, fullDice, Boolean(opts.subdue));
     const helpless = emptyBody || down || unaware || pinned;
     // Adept combat sense adds dice to dodging (v0.39.0).
     // v0.78.0 (RULES.BOOK_V78.combatSense 'pool'): Combat Sense is in the Combat Pool instead.
@@ -9529,7 +9567,7 @@ export class SR2Actor extends Actor {
     if (weaponId === 'parry' && RULES.SKILLS.parry) {
       const ps = this.#skillDice(this.findSkill(RULES.SKILLS.parrySkill));
       await this.#runTest((fullDice ? tx('SR2E.Card.Actor.parryWithFullDefense2', { psSuffix: ps.suffix, shNote, fullDice }) : tx('SR2E.Card.Actor.parryPlain', { psSuffix: ps.suffix, shNote })), ps.dice + fullDice + sh.dice,
-        { targetNumber: RULES.MELEE_BASE_TN, modifiers: [...ps.modifiers, ...shMods, ...this.#meleeDefenseSight(attack)], poolDice: offensivePoolDice(pool, (ps as any).base ?? ps.dice) },
+        { targetNumber: RULES.MELEE_BASE_TN, modifiers: [...ps.modifiers, ...shMods, ...this.#meleeDefenseSight(attack), ...G95.wallMods(this)], poolDice: offensivePoolDice(pool, (ps as any).base ?? ps.dice) },
         { kind: 'defend', defendAgainst: attack });
       return;
     }
@@ -9558,8 +9596,9 @@ export class SR2Actor extends Actor {
     const situation = this.#meleeDefenderSituation(attack, counter.reach);
     const sense = RULES.BOOK_V78.combatSense === 'pool' ? 0 : this.adeptSpecial('combatSense') * RULES.ADEPT.combatSense.dicePerLevel;
     await this.#runTest((fullDice ? tx('SR2E.Card.Actor.with2WithFullDefense2', { wpnName: wpn.name, sdSuffix: sd.suffix, note: bonusNote(focus, 0).note, part2: sense ? tx('SR2E.Card.Actor.combatSense', { sense }) : '', shNote, fullDice }) : tx('SR2E.Card.Actor.with2WithMeleeDefense', { wpnName: wpn.name, sdSuffix: sd.suffix, note: bonusNote(focus, 0).note, part2: sense ? tx('SR2E.Card.Actor.combatSense', { sense }) : '', shNote })), sd.dice + focus.dice + fullDice + sense + sh.dice,
-      { targetNumber: RULES.MELEE_BASE_TN, modifiers: [...reach, ...situation, ...sd.modifiers, ...shMods, ...this.#meleeDefenseSight(attack)], poolDice: offensivePoolDice(pool, (sd0 as any).base ?? sd0.dice) },
-      { kind: 'defend', defendAgainst: attack, counter });
+      { targetNumber: RULES.MELEE_BASE_TN, modifiers: [...reach, ...situation, ...sd.modifiers, ...shMods, ...this.#meleeDefenseSight(attack), ...G95.wallMods(this)], poolDice: offensivePoolDice(pool, (sd0 as any).base ?? sd0.dice) },
+      // v0.95.0 (MELEE_V95.interception, Core p. 83): intercepted, the mover only defends: no counterattack.
+      { kind: 'defend', defendAgainst: attack, ...(attack.intercept95 ? {} : { counter }) });
   }
 
   /**
@@ -9572,7 +9611,11 @@ export class SR2Actor extends Actor {
     const extras: Partial<AttackState> = {};
     const own = weaponArmorKind({ armorKind: ws.armorKind, melee: true, thrown: false, skill: ws.skill, name: wpn.name });
     if (own !== armorKindFor(true)) extras.armorKind = own;
-    if (o.subdue) counter.damageType = RULES.COMBAT.subdue.damageType as DamageType;
+    if (o.subdue && M95.subdueAllowed({ damageType: counter.damageType, stunWeapon: wpn?.system?.stunWeapon })) {
+      counter.damageType = RULES.COMBAT.subdue.damageType as DamageType;
+      // v0.95.0 (MELEE_V95.subdueControl): the counterattack's Stun is this defender's subduing damage.
+      if (M95.subdueControlOn()) extras.subdueBy95 = this.uuid as string;
+    }
     const charge = ws.stunWeapon ? stunCharge({ stunWeapon: true, ammo: Number(ws.ammo ?? 0), ammoMax: Number(ws.ammoMax ?? 0) }) : null;
     if (ws.stunWeapon && charge?.stun) {
       counter.damageType = 'stun';
@@ -9817,6 +9860,9 @@ export class SR2Actor extends Actor {
   async holdTarget(targetUuid: string): Promise<'held' | 'free' | null> {
     const t: any = targetUuid ? fromUuidSync(targetUuid) : null;
     if (!t?.system?.attributes) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.targetSomeoneToHold')); return null; }
+    // v0.95.0 (MELEE_V95.subdueControl 'book', Core p. 103): control of a subdued opponent, and the maintenance test.
+    const sub95 = await G95.subdueHold(this, t);
+    if (sub95 !== undefined) return sub95;
     if (!(await this.useAction('hold', tx('SR2E.Card.Actor.holding', { name: t.name })))) return null;
     const h = RULES.COMBAT.hold;
     const mine = Number(this.sys.attributes?.[h.attackerAttr]?.total ?? 0), theirs = Number(t.system.attributes?.[h.defenderAttr]?.total ?? 0);
@@ -9939,6 +9985,8 @@ export class SR2Actor extends Actor {
     // v0.80.0 (URR_V80.cbtKnockdown 'urr', URR): 2 / 3 / 4 successes needed for L / M / S (Deadly: down); short of it, a stagger.
     const kd80 = U80C.cbtKnockdownResult(result.successes, level80);
     if (!kd80.down && kd80.staggerMetres > 0) await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p><strong>${tx('SR2E.Card.Actor.staggersBackM', { name: escText(this.name), kd80StaggerMetres: kd80.staggerMetres })}</strong></p>` });
+    // v0.95.0 (MELEE_V95.wall, Core p. 102): knocked back into a wall.
+    if (!kd80.down && kd80.staggerMetres > 0) await G95.staggered(this, kd80.staggerMetres);
     if (kd80.down) {
       try { await (this as any).toggleStatusEffect?.('prone', { active: true }); } catch { /* no token or status */ }
       await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p><strong>${tx('SR2E.Card.Actor.isKnockedDown', { name: escText(this.name) })}</strong></p>` });
@@ -10056,7 +10104,7 @@ export class SR2Actor extends Actor {
     const { kind, armor, occ, occTn, opts } = ap;
     if (occ || damage.noPool) poolDice = 0;
     await this.resistDamage({ power: damage.power, level: damage.level, type: damage.damageType, armor, poolDice, ...(occTn ? { tnPlus: occTn } : {}), knockdown: !damage.black, ...(damage.spiritAttacker ? { spiritAttacker: true } : {}), knockdownMelee: damage.melee, ...(damage.gel ? { knockdownGel: true } : {}), ...(Number(damage.strength ?? 0) > 0 ? { knockdownStrength: Number(damage.strength) } : {}), ...(damage.cleanMiss80 ? { cleanMiss80: damage.cleanMiss80 } : {}), ...(damage.ignoreArmor || damage.elemental || noArmor ? {} : { armorKind: kind }), ...(noArmor ? { armorSkipped: true } : {}), ...(vuln ? { noRegen: true } : {}), ...F95.screenDice(damage),
-      ...(damage.black ? {} : { cyberCheck: { location: damage.calledLocation ?? '' } }), ...(damage.infection ? { infection: damage.infection } : {}), ...(damage.toxinHit ? { toxinHit: damage.toxinHit } : {}) });
+      ...(damage.black ? {} : { cyberCheck: { location: damage.calledLocation ?? '' } }), ...(damage.infection ? { infection: damage.infection } : {}), ...(damage.toxinHit ? { toxinHit: damage.toxinHit } : {}), ...(typeof damage.subdueBy95 === 'string' && damage.subdueBy95 ? { subdueBy95: damage.subdueBy95 } : {}) });
     // v0.92.3 (RULES.HEALTH_V923.shock 'disorient', Core p. 103): a stun weapon's hit disorients the target.
     if (damage.shock) await this.shockDisorient(Number(damage.power) || 0, this.armorRating('impact', opts));
   }
@@ -10146,6 +10194,8 @@ export class SR2Actor extends Actor {
     /** v0.92.3 (COMBAT_V923.knockdown 'book'): gel rounds, and a melee attacker's Strength. */
     knockdownGel?: boolean;
     knockdownStrength?: number;
+    /** v0.95.0 (MELEE_V95.subdueControl): the attacker of a subduing blow. */
+    subdueBy95?: string;
     cleanMiss80?: { hits: number; net: number; noClean?: boolean; apart?: boolean };
     /** Damage regeneration can't heal (a vulnerability, v0.39.0). */
     noRegen?: boolean;
@@ -10193,6 +10243,7 @@ export class SR2Actor extends Actor {
         ...(opts.cyberCheck && !opts.astral ? { cyberCheck: { location: opts.cyberCheck.location } } : {}),
         ...(opts.infection && !opts.astral ? { infection: opts.infection } : {}),
         ...(opts.toxinHit && !opts.astral ? { toxinHit: opts.toxinHit } : {}),
+        ...(opts.subdueBy95 && type === 'stun' && !opts.astral ? { subdueBy95: opts.subdueBy95 } : {}),
       },
     }), result, rolls);
   }
@@ -21056,9 +21107,11 @@ export class SR2Actor extends Actor {
    * Refresh pools at the start of a Combat Turn. v0.92.3 (COMBAT_V923.poolRefresh 'action', Core pp. 78, 84): `keepCombat`
    * leaves the Combat Pool's dice as they are (they last until the character's first action, see refreshCombatPool).
    */
-  async refreshPools(opts: { keepCombat?: boolean } = {}): Promise<void> {
+  async refreshPools(opts: { keepCombat?: boolean; acted?: boolean } = {}): Promise<void> {
     if (!this.sys.poolSpent) return;
-    await this.update({ ...(opts.keepCombat ? {} : { 'system.poolSpent.combat': 0 }), 'system.poolSpent.spell': 0, 'system.poolSpent.spellConc': 0, 'system.poolSpent.spellSpec': 0, 'system.poolSpent.hacking': 0, 'system.poolSpent.control': 0, 'system.poolSpent.task': 0, 'system.spellDefense': 0 });
+    // v0.95.0 (MELEE_V95.otherPools 'action', Core p. 84): with `keepCombat` the Spell, Hacking and Task Pools (and the
+    // spell defense dice) last until the first action too (M95.turnRefresh drops them from the update).
+    await this.update(M95.turnRefresh({ ...(opts.keepCombat ? {} : { 'system.poolSpent.combat': 0 }), 'system.poolSpent.spell': 0, 'system.poolSpent.spellConc': 0, 'system.poolSpent.spellSpec': 0, 'system.poolSpent.hacking': 0, 'system.poolSpent.control': 0, 'system.poolSpent.task': 0, 'system.spellDefense': 0 }, Boolean(opts.keepCombat), opts.acted !== false));
   }
 
   /** v0.92.3 (COMBAT_V923.poolRefresh 'action', Core p. 84): the Combat Pool refreshes at the start of the character's action. */
@@ -21248,6 +21301,8 @@ export class SR2Combat extends Combat {
   static canTakeTurns(c: any, all: any[]): boolean {
     return !(RULES.CONDITIONS.skipInCombat && incapacitated(c.actor?.system?.derived?.status))
       && !c.actor?.system?.derived?.destroyed
+      // v0.95.0 (MELEE_V95.reactionOut, Core p. 112): wounds have taken Reaction to 0 or less.
+      && !G95.takesNoTurn(c.actor)
       && !SR2Combat.matrixIdle(c.actor)
       && !SR2Combat.drivenByCombatant(c, all);
   }
@@ -21321,7 +21376,8 @@ export class SR2Combat extends Combat {
     });
     // (Token dispositions are too unreliable to tell sides apart (a world's default may be hostile for everyone), so
     // any target with more successes is blocked, allies included; attacking an ally in the surprise turn is rare.)
-    return targets.filter((t) => ids.includes(cid(t) ?? ''));
+    // v0.95.0 (MELEE_V95.totalSurprise 'book'): sides are told apart where the tokens' dispositions differ.
+    return G95.surpriseOpponents(this, attacker, targets.filter((t) => ids.includes(cid(t) ?? '')));
   }
 
   /** Combatants surprised in the current pass (they lose the first RULES.SURPRISE.losesPasses passes). */
@@ -21357,14 +21413,16 @@ export class SR2Combat extends Combat {
     // and nobody may act against an opponent who rolled more successes; nobody loses a pass. Initiative is rolled as normal next turn.
     if (surpriseByOrder()) {
       const successes = Object.fromEntries(entries.map((e) => [e.id, e.successes]));
-      await this.setFlag(SYSTEM_ID, 'surprise', { round: (this as any).round ?? 0, ids: [], successes, order: true });
+      // v0.95.0 (MELEE_V95.totalSurprise 'book', Core p. 86): out-rolled by an opponent and out-rolling none: no actions.
+      const out95 = G95.totallySurprisedIn(this, entries);
+      await this.setFlag(SYSTEM_ID, 'surprise', { round: (this as any).round ?? 0, ids: out95, successes, order: true });
       await this.updateEmbeddedDocuments('Combatant', entries.map((e) => ({ _id: e.id, initiative: surpriseInitiative(e.successes) })));
       await ChatMessage.create({
         speaker: { alias: tx('SR2E.Card.Actor.surprise') },
-        content: `<div class="sr2e-roll"><h3>${tx('SR2E.Card.Actor.surpriseTestVs', { spAttribute: sp.attribute, spTn: sp.tn })}</h3><ul>${rows.join('')}</ul></div><p><strong>${tx('SR2E.Card.Actor.surpriseTurn')}</strong> ${tx('SR2E.Card.Actor.everyoneActsOnceMostSuccessesFirst')}</p>`,
+        content: `<div class="sr2e-roll"><h3>${tx('SR2E.Card.Actor.surpriseTestVs', { spAttribute: sp.attribute, spTn: sp.tn })}</h3><ul>${rows.join('')}</ul></div><p><strong>${tx('SR2E.Card.Actor.surpriseTurn')}</strong> ${tx('SR2E.Card.Actor.everyoneActsOnceMostSuccessesFirst')}</p>${G95.surpriseNote(this, out95)}`,
       });
       this.setupTurns();
-      return [];
+      return out95;
     }
     const ids = surprised(entries);
     await this.setFlag(SYSTEM_ID, 'surprise', { round: (this as any).round ?? 0, ids });
@@ -21434,6 +21492,8 @@ export class SR2Combat extends Combat {
     if (done.includes(key)) return;
     await this.setFlag(SYSTEM_ID, 'poolRefreshed', { round, keys: [...done, key] });
     await c.actor.refreshCombatPool?.();
+    // v0.95.0 (MELEE_V95.otherPools 'action', Core p. 84): the Spell, Hacking and Task Pools too.
+    await queueSpellDefense(String(c.actor.uuid ?? ''), () => G95.refreshActionPools(c.actor));
   }
 
   /** v0.59.0: the initiative of the pass about to end, kept for Previous Round (set by nextTurn, read by nextRound). */
@@ -21507,7 +21567,9 @@ export class SR2Combat extends Combat {
       await this.alignParties();
       // v0.92.3 (COMBAT_V923.poolRefresh 'action', Core pp. 78, 84): Combat Pool dice left over last until each
       // character's first action, where they refresh (refreshActingPool).
-      for (const c of this.combatants) await (c.actor as any)?.refreshPools?.(perAction ? { keepCombat: true } : {});
+      // v0.95.0 (MELEE_V95.otherPools): someone who had no action last Combat Turn gets their other pools back now.
+      const acted95: any = this.getFlag(SYSTEM_ID, 'poolRefreshed');
+      for (const c of this.combatants) await (c.actor as any)?.refreshPools?.(perAction ? { keepCombat: true, acted: M95.actedIn(acted95, hist.round, String(c.id)) } : {});
       await this.update({ turn: 0, [`flags.${SYSTEM_ID}.pass`]: 0 });
     } finally {
       this.#roundTurning = false;
@@ -21609,6 +21671,16 @@ export function serialTicks(fn: () => Promise<void>): Promise<void> {
 
 /** v0.81.1 round 2 (A7): the spell-defense spend running per protector on this (the GM's) client. */
 const spellDefenseSpends = new Map<string, Promise<void>>();
+
+/** v0.95.0: run `fn` in a protector's spell defense queue (after any spend in flight), as the spends do. */
+export function queueSpellDefense<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  const prev = spellDefenseSpends.get(key) ?? Promise.resolve();
+  const run = prev.then(fn);
+  const settled = run.catch(() => undefined).then(() => undefined);
+  spellDefenseSpends.set(key, settled);
+  void settled.then(() => { if (spellDefenseSpends.get(key) === settled) spellDefenseSpends.delete(key); });
+  return run;
+}
 
 /** v0.59.0: what the active GM's client does for players and other GMs (applications/socket.ts). */
 export function registerCombatRelay(): void {

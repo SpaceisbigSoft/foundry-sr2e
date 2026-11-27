@@ -65,6 +65,7 @@ import { registerInterfaceSettings, registerInterface } from "./applications/int
 import { importCharacter, pasteCatalogueRows, sortCatalogueWithNotice } from "./applications/catalogue.ts";
 import { registerQuenchBatches } from "../quench/sr2e-quench.ts";
 import { registerFixes942 } from "./applications/fixes942.ts";
+import { registerMelee95 } from "./applications/melee95.ts";
 
 export class SR2System {
   constructor() {
@@ -151,6 +152,8 @@ export class SR2System {
     registerAreaHooks();
     // v0.94.2 (item 29): Add to combat without tokens; clear my targets at the end of my turn.
     registerFixes942();
+    // v0.95.0: melee, actions and pools (the wall status, interception, subduing).
+    registerMelee95();
     registerFloatingDamage();
     registerHiddenNumbers();
     // v0.94.2: nested items (accessories, programs on decks, containers).

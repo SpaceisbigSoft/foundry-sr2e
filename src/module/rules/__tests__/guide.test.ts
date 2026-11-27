@@ -100,7 +100,9 @@ describe('v0.66.0 player guide topics', () => {
       // v0.94.2: give, stash and loot, the Item Piles route, the catalogue compendium.
       'trade', 'item-piles', 'gm-catalogue',
       // v0.95.0: the gunfire rules added.
-      'rules-v095-fire']);
+      'rules-v095-fire',
+      // v0.95.0: melee, actions and pools.
+      'rules-v095-melee']);
     for (const t of GUIDE_TOPICS) {
       if (general.has(t.id)) assert.equal(t.headings.length, 0, t.id);
       else assert.ok(t.headings.length > 0, `${t.id} has no headings`);

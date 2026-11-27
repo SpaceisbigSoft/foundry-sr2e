@@ -79,6 +79,8 @@ import { sheetToolsContext, decorateSheet, decorateItemSheet } from "./sheettool
 import { fitWindowSize } from "../rules/fit0934.ts";
 // v0.93.5: the action bar, pins by dragging, the vehicle strip.
 import { actionBar, enabledActions, modeChips, matrixActionState, jumpState, WHY, type ActionFacts, type BarAction } from "../rules/actions935.ts";
+import { noActionsKey, noActionsText, subdueBoxAttr } from "./melee95.ts";
+import { freeDraw as freeDraw95 } from "../rules/melee95.ts";
 import { vehicleStrip } from "../rules/vstrip935.ts";
 import { effectPinKey } from "../rules/pins935.ts";
 import { decorateSheet935, pinDropOnSheet } from "./sheets935.ts";
@@ -1944,7 +1946,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const w = actor.items.get(target.dataset["itemId"]);
     if (!w) return;
     if (w.system.ready) return w.update({ "system.ready": false });
-    if (RULES.COMBAT.ready.rule === "action" && !w.system.quickDraw && !(await actor.useAction("draw", tx('SR2E.Card.Sheet.drawing', { name: w.name })))) return;
+    if (RULES.COMBAT.ready.rule === "action" && !freeDraw95(w.system) && !(await actor.useAction("draw", tx('SR2E.Card.Sheet.drawing', { name: w.name })))) return;
     await w.update({ "system.ready": true });
   }
 
@@ -3313,7 +3315,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const unawareRow = `<label class="sr2e-check" title="${tx('SR2E.Dialog.Sheet.theyCanTDodgeCounterOr')}"><input type="checkbox" name="unaware"> ${tx('SR2E.Dialog.Sheet.targetUnawareOfTheAttack')}</label>`;
     const meleeRows = melee ? `
         <label class="sr2e-check"><input type="checkbox" name="charging" ${movement === "running" ? "checked" : ""}> ${tx('SR2E.Dialog.Sheet.charging', { cbtChargeLabel: U80C.cbtChargeLabel() })}</label>
-        <label class="sr2e-check"><input type="checkbox" name="subdue"> ${tx('SR2E.Dialog.Sheet.subdueDamage', { subdueDamageType: RULES.COMBAT.subdue.damageType })}</label>
+        <label class="sr2e-check"><input type="checkbox" name="subdue"${subdueBoxAttr(w)}> ${tx('SR2E.Dialog.Sheet.subdueDamage', { subdueDamageType: RULES.COMBAT.subdue.damageType })}</label>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.friendsInMeleeWithTheTarget', { friendsInMeleeTnPerFriend: RULES.COMBAT.friendsInMelee.tnPerFriend })}</label><input name="friends" type="number" value="${here.friends}" min="0"></div>${C923.friendsNetBook() ? `
         <div class="form-group"><label>${tx('SR2E.Dialog.Combat923.foesInMelee')}</label><input name="foes" type="number" value="${here.foes}" min="0"></div>` : ""}${RULES.COMBAT_V61.superiorPosition.enabled ? `
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.superiorPositionHigherGroundABetter')}</label><select name="superior"><option value="">${tx('SR2E.Dialog.Sheet.neither')}</option><option value="attacker">${tx('SR2E.Dialog.Sheet.holdsIt', { actorName: escHtml(actor.name), superiorPositionHolder: RULES.COMBAT_V61.superiorPosition.holder })}</option><option value="defender">${tx('SR2E.Dialog.Sheet.theTargetHoldsIt', { part: RULES.COMBAT_V61.superiorPosition.against ? ` (+${escHtml(RULES.COMBAT_V61.superiorPosition.against)})` : "" })}</option></select></div>` : ""}` : "";
@@ -3416,7 +3418,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         spread: Array.from(form.querySelectorAll('input[name="spreadTarget"]:checked')).map((i: any) => i.value as string),
         barrier: Math.max(0, Math.floor(Number(el.barrier?.value) || 0)),
         targetProne: Boolean(el.targetProne?.checked), attackerProne: Boolean(el.attackerProne?.checked),
-        charging: Boolean(el.charging?.checked), subdue: Boolean(el.subdue?.checked), unaware: Boolean(el.unaware?.checked),
+        charging: Boolean(el.charging?.checked), subdue: Boolean(el.subdue?.checked && !el.subdue.disabled), unaware: Boolean(el.unaware?.checked),
         friends: Math.max(0, Math.floor(Number(el.friends?.value) || 0)),
         foes: Math.max(0, Math.floor(Number(el.foes?.value) || 0)),
         superior: ((el.superior?.value as string) || "") as "" | "attacker" | "defender",
@@ -6212,6 +6214,8 @@ export function actionFactsOf(actor: any, items: any[]): ActionFacts {
     bypass: allActors().some((a: any) => a.type === "site" && (a.system.devices ?? []).some((dv: any) => DEVICE_LOCKS.includes(dv.kind) && !dv.bypassed)),
     rallySkill: Boolean(actor.findSkill?.(RULES.STREET.rally.skill)),
     morale: (sys.grunts?.size ?? 1) > 1 || (sys.professionalRating ?? 0) > 0,
+    // v0.95.0 (MELEE_V95.reactionOut, totalSurprise): no actions in the fight, with the reason.
+    noActions: noActionsKey(actor),
   };
 }
 
@@ -6229,7 +6233,7 @@ function whyText(key: string): string {
     case WHY.noDeckInUse: return tx('SR2E.App.Sheets.whyNoDeckInUse');
     case WHY.notJackedIn: return tx('SR2E.App.Sheets.whyNotJackedIn');
     case WHY.noControlRig: return tx('SR2E.App.Sheets.whyNoControlRig');
-    default: return "";
+    default: return noActionsText(key);
   }
 }
 

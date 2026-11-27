@@ -2801,8 +2801,18 @@ describe("v0.21.0 combat fixes", () => {
     const atk = makeActor(A);
     atk.items = [{ type: "skill", name: "Clubs", system: { rating: 3, attribute: "strength" } }];
     faces.push(5, 5, 5);
-    const r = await atk.attackWith({ name: "Staff", system: { melee: true, skill: "Clubs", damagePower: 2, damageLevel: "M", damageType: "physical", reach: 2, strengthPower: true } }, { targetUuid: "Actor.t", subdue: true, targetReach: 0 });
+    // v0.95.0 (MELEE_V95.subdue 'stunOnly', Core p. 103): a Physical weapon can't subdue by the book; 'any' is v0.94.2.
+    const staff = { name: "Staff", system: { melee: true, skill: "Clubs", damagePower: 2, damageLevel: "M", damageType: "physical", reach: 2, strengthPower: true } };
+    RULES.MELEE_V95.subdue = "any";
+    let r: any;
+    try { r = await atk.attackWith(staff, { targetUuid: "Actor.t", subdue: true, targetReach: 0 }); } finally { RULES.MELEE_V95.subdue = "stunOnly"; }
     assert.equal(r.targetNumber, 2);                           // 4 − reach 2
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.attack.damageType, "stun");
+    faces.push(5, 5, 5);
+    await atk.attackWith(staff, { targetUuid: "Actor.t", subdue: true, targetReach: 0 });
+    assert.equal(chat.at(-1).flags.shadowrun2e_unified.attack.damageType, "physical");
+    faces.push(5, 5, 5);
+    await atk.attackWith({ ...staff, system: { ...staff.system, damageType: "stun" } }, { targetUuid: "Actor.t", subdue: true, targetReach: 0 });
     assert.equal(chat.at(-1).flags.shadowrun2e_unified.attack.damageType, "stun");
     chat.length = 0;
     const t = makeActor(A);

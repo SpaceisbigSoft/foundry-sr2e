@@ -9841,7 +9841,20 @@
         "FIRE_V95__shotScreen": "Shotgun shot: +1 resistance die for every other target in the spread in front (book), or none (off, v0.94.2)",
         "FIRE_V95__rebound": "Blast in a confined space: the wave bounced back by walls that hold adds its Power for each target (book), or a share of the Power at the nearest wall for everyone (nearest, v0.94.2)",
         "FIRE_V95__stray": "Stray shots (optional): full auto walked between targets gives the GM a card to test everyone in between (book), or not (off)",
-        "FIRE_V95__suppression": "Suppressive fire: rounds over an area for 10 Combat Phases, tested against whoever shows themselves (fof, Fields of Fire, optional), or one attack at the targeted people (house, v0.94.2)"
+        "FIRE_V95__suppression": "Suppressive fire: rounds over an area for 10 Combat Phases, tested against whoever shows themselves (fof, Fields of Fire, optional), or one attack at the targeted people (house, v0.94.2)",
+        "MELEE_V95__reactionOut": "Wounds taking Reaction to 0 or less: no actions in combat (book), or no check (off, v0.94.2)",
+        "MELEE_V95__quickDraw": "Quick draw: a Reaction test to draw a holstered pistol and fire in the same action (test, book), or a quick-draw holster draws for free (holster, v0.94.2)",
+        "MELEE_V95__quickDrawTn": "Quick draw: the test's TN (book 4)",
+        "MELEE_V95__quickDrawNoHolsterTn": "Quick draw without a quick-draw holster: + TN (book 2)",
+        "MELEE_V95__quickDrawSecondTn": "Quick draw with a second firearm: + TN (book 2)",
+        "MELEE_V95__totalSurprise": "Surprise: out-rolled by an opponent and out-rolling none means no actions in the surprise turn, and allies don't surprise each other (book), or only the target limit (off, v0.94.2)",
+        "MELEE_V95__subdue": "Subduing: only with a weapon that does Stun damage (stunOnly, book), or any melee weapon (any, v0.94.2)",
+        "MELEE_V95__subdueControl": "Subdued opponents: Hold by the one whose subduing blows filled the Stun track takes control, the Stun wears off 1 box a minute, Hold again is the maintenance test (book), or the Strength vs Body hold only (off, v0.94.2)",
+        "MELEE_V95__wall": "Knocked back into a wall: + TN on melee attack and defense tests until the token moves (book), or no check (off, v0.94.2)",
+        "MELEE_V95__wallTn": "Against a wall: + TN (book 2)",
+        "MELEE_V95__interception": "Interception: offer a free melee attack (TN 4, reach, movement and condition only; the one passing on full defense) on anyone passing within 1 m (offer, book), or nothing (off, v0.94.2)",
+        "MELEE_V95__otherPools": "Spell and Hacking Pools refresh at the start of each of the character's actions, with the Combat Pool (action, book), or at each new Combat Turn (turn, v0.94.2); the Control and Task Pools always refresh each Combat Turn",
+        "MELEE_V95__subdueReachMetres": "Taking control of a subdued opponent: at most this many metres away (2)"
       }
     },
     "Rules": {
@@ -18839,6 +18852,19 @@
             "i7": "<strong>Stray shots</strong> (optional, off): after full auto is walked between targets without a smartlinked smartgun, a card says rounds may have strayed. The GM clicks <strong>Who is in the way (GM)</strong> and gets a list of everyone in between, with a <strong>Roll (GM)</strong> button each. A hit posts the damage with a Resist button.",
             "i8": "<strong>Suppressive fire</strong> (optional, off): with the Fields of Fire choice, the <strong>Suppress</strong> button asks for the rounds and the width of the area during a combat. The rounds must divide evenly by the metres. When someone shows themselves there, the GM targets their token and clicks <strong>Test the targeted tokens (GM)</strong> on the card. After 10 Combat Phases, or once the combat ends, the card no longer works."
           }
+        },
+        "rulesV095Melee": {
+          "title": "Melee, actions and pools added in v0.95.0",
+          "b1": "v0.95.0 adds book rules for melee, actions and Dice Pools. The GM can switch each one off under the GM's house rules (the <em>v0.95.0</em> rows; the old way is the second choice).",
+          "b2": {
+            "i1": "<strong>Too hurt to act:</strong> when your wounds take your Reaction to 0 or less you take no actions in the fight. You get no turn, your action buttons are greyed and say why, and the tracker's banner names you.",
+            "i2": "<strong>Quick draw:</strong> attack with a holstered pistol (Concealability 4 or more, single shot, semi-automatic or burst) on your action and you are asked: quick draw, or draw first. Quick draw is a Reaction test against 4 (+2 without a quick-draw holster, +2 with a second firearm). One success draws and fires in the same action. A failure spends the action and you don't fire this phase. Drawing first costs a Simple Action and always works. A quick-draw holster no longer draws for free.",
+            "i3": "<strong>Surprise:</strong> if you beat no opponent on the surprise test and at least one beat you, you take no actions at all in the surprise turn. Allies never count as opponents: player characters stand with friendly tokens, everyone else by their token's disposition.",
+            "i4": "<strong>Subduing:</strong> only a weapon that does Stun damage can subdue (fists, a club, a stun baton). The Stun your subduing blows do is remembered. When they fill someone's Stun track, <strong>Hold</strong> takes control of them, if you are close. Only your subduing Stun counts. It then wears off one box a minute. <strong>Hold</strong> again on your action is the maintenance test: your best of Unarmed Combat, Strength and Quickness against their lowest, while they resist the same way at +2. Each net success puts a box back. <strong>Let go</strong> on the card takes the rest of the subduing Stun off.",
+            "i5": "<strong>Against a wall:</strong> a knockdown test that staggers you back into a wall leaves you against it: +2 to your melee attack and defense tests until your token moves. The GM can also set or clear the status on the token.",
+            "i6": "<strong>Interception:</strong> in a fight, when a token passes within 1 m of an opponent without stopping beside them, that opponent's player and the GM get a whispered card. <strong>Intercept</strong> makes a free melee attack on the one passing: target number 4, changed only by reach, your own movement and your condition, with Combat Pool dice if you like. The one passing defends as on full defense and can't counterattack. It costs no action.",
+            "i7": "<strong>Pools:</strong> the Spell and Hacking Pools now refill at the start of each of your actions, like the Combat Pool, and dice left at the end of a Combat Turn last until your first action of the next. If you get no action in a Combat Turn, they refill at the next one. Spell defense dice go back to the Spell Pool when your action starts, and you are told, so allot them again. The Control and Task Pools still refill each Combat Turn."
+          }
         }
       }
     },
@@ -19896,6 +19922,75 @@
       "fofUneven": "{rounds} rounds don't spread evenly over {metres} m. Choose rounds that divide evenly by the metres.",
       "fofNeedsCombat": "Suppressive fire needs a running combat: it lasts a number of Combat Phases.",
       "fofOver": "This suppressive fire is over: its Combat Phases have passed, or its combat has ended."
+    },
+    "Melee95": {
+      "alias": "SR2e",
+      "whyReaction": "Wounds have taken Reaction to 0 or less: no actions this Combat Turn",
+      "whySurprised": "Completely surprised: no actions in the surprise turn",
+      "cantAct": "{name} can't act. {why}.",
+      "trackerOut": "{name}: {why}",
+      "totalSurprise": "Completely surprised:",
+      "totalSurpriseNames": "{names} (no actions at all in the surprise turn).",
+      "reaction": "Reaction",
+      "quickness": "Quickness",
+      "strength": "Strength",
+      "unarmed": "Unarmed Combat",
+      "quickDrawTitle": "Quick draw",
+      "quickDrawAsk": "{name} is holstered. Quick draw rolls {attribute} against {tn}: one success draws and fires in the same action; a failure spends the action and nothing fires this phase. Drawing first costs a Simple Action and always works.",
+      "quickDrawYes": "Quick draw ({attribute} vs {tn})",
+      "quickDrawNo": "Draw first (Simple Action)",
+      "modNoHolster": "No quick-draw holster",
+      "modSecondWeapon": "Second firearm drawn too",
+      "quickDrawCard": "Quick draw: {name}",
+      "testLine": {
+        "one": "{attribute}, {dice} dice vs {tn}: {count} success",
+        "other": "{attribute}, {dice} dice vs {tn}: {count} successes"
+      },
+      "quickDrawOk": "Drawn. The shot goes ahead in the same action.",
+      "quickDrawFail": "Not drawn. The action is spent and nothing fires this phase.",
+      "subdueStunOnly": "Only a weapon that does Stun damage can subdue",
+      "modSubdued": "Subdued",
+      "letGo": "Let go",
+      "notAllowed": "You can't do that for this character.",
+      "alreadySubdued": "{name} is already under someone's control.",
+      "notSubduable": "{name} is not subdued (the Stun track is not full).",
+      "notYourCaptive": "{name} is not under this character's control.",
+      "subduedBy": "is subdued and under {name}'s control.",
+      "subduedHint": "The Stun wears off 1 box every {seconds} seconds of game time. Hold again to keep control (the maintenance test); Let go takes the rest of the subduing Stun off.",
+      "letsGo": "lets {name} go.",
+      "stunOff": {
+        "one": "{count} box of Stun comes off.",
+        "other": "{count} boxes of Stun come off."
+      },
+      "maintainCard": "Keeping control of {name}",
+      "maintainAction": "keeping control of {name}",
+      "maintainKept": {
+        "one": "Control kept: {count} box of Stun put back.",
+        "other": "Control kept: {count} boxes of Stun put back."
+      },
+      "maintainLost": "No net successes: nothing is put back and the Stun keeps wearing off.",
+      "notHeldNow": "Nobody is held by that any more.",
+      "onlyHolder": "Only {name}'s owner or the GM can do that.",
+      "subdueOver": "The subduing Stun on {name} has worn off: nobody controls them any more.",
+      "intoWall": "is knocked back against a wall: +{tn} to melee target numbers until they move away.",
+      "againstWall": "Against a wall",
+      "passes": "passes within {metres} m of {name}.",
+      "passesHint": "Interception: a free melee attack on the one passing. Only reach, movement and wounds change its target number, and the one passing counts as on full defense.",
+      "intercept": "Intercept",
+      "interceptGone": "That token is no longer on the scene you are viewing.",
+      "cantIntercept": "{name} can't attack now.",
+      "defenseBack": {
+        "one": "{name}'s action starts: {count} spell defense die went back to the Spell Pool. Allot it again to keep the defense up.",
+        "other": "{name}'s action starts: {count} spell defense dice went back to the Spell Pool. Allot them again to keep the defense up."
+      },
+      "notYourSubduing": "{name}'s Stun track was not filled by this character's subduing blows: Hold works only for the one who subdued them.",
+      "tooFar": "{name} is too far away to take control of.",
+      "noActionLeft": "{name} needs an action of their own with a Simple Action left to keep control in a fight.",
+      "interceptUsed": "There is no interception to make on that character now.",
+      "interceptAsk": "{name} intercepts {mover} with {weapon}: target number 4, with only reach, your own movement and your condition. {mover} defends as on full defense and can't counterattack.",
+      "poolDice": "Combat Pool dice ({left} left)",
+      "interceptSubdue": "Subdue (Stun weapons only)",
+      "interceptNote": "interception"
     }
   },
   "TYPES": {

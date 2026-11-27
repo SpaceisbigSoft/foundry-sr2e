@@ -13,6 +13,7 @@ How to use the unofficial Shadowrun 2nd Edition system for Foundry VTT: what the
 - [Rules updated in v0.79.0](#rules-updated-in-v0790)
 - [Combat rules updated in v0.92.3](#combat-rules-updated-in-v0923)
 - [Gunfire rules added in v0.95.0](#gunfire-rules-added-in-v0950)
+- [Melee, actions and pools added in v0.95.0](#melee-actions-and-pools-added-in-v0950)
 - [The Unified Rules Revamp (alternate rules)](#the-unified-rules-revamp-alternate-rules)
 - [Edit mode, Play mode and the toolbar](#edit-mode-play-mode-and-the-toolbar)
 - [The summary bar](#the-summary-bar)
@@ -180,6 +181,18 @@ v0.95.0 added more of the SR2 rulebooks' ranged combat. The GM can switch each r
 - **Blasts indoors:** walls strong enough to hold send the blast back. Each target's Power on the blast card includes the returning wave (*+N rebound*), worked out along the line from the blast through that target.
 - **Stray shots** (optional, off): after full auto is walked between targets without a smartlinked smartgun, a card says rounds may have strayed. The GM clicks **Who is in the way (GM)** and gets a list of everyone in between, with a **Roll (GM)** button each. A hit posts the damage with a Resist button.
 - **Suppressive fire** (optional, off): with the Fields of Fire choice, the **Suppress** button asks for the rounds and the width of the area during a combat. The rounds must divide evenly by the metres. When someone shows themselves there, the GM targets their token and clicks **Test the targeted tokens (GM)** on the card. After 10 Combat Phases, or once the combat ends, the card no longer works.
+
+## Melee, actions and pools added in v0.95.0
+
+v0.95.0 adds book rules for melee, actions and Dice Pools. The GM can switch each one off under the GM's house rules (the *v0.95.0* rows; the old way is the second choice).
+
+- **Too hurt to act:** when your wounds take your Reaction to 0 or less you take no actions in the fight. You get no turn, your action buttons are greyed and say why, and the tracker's banner names you.
+- **Quick draw:** attack with a holstered pistol (Concealability 4 or more, single shot, semi-automatic or burst) on your action and you are asked: quick draw, or draw first. Quick draw is a Reaction test against 4 (+2 without a quick-draw holster, +2 with a second firearm). One success draws and fires in the same action. A failure spends the action and you don't fire this phase. Drawing first costs a Simple Action and always works. A quick-draw holster no longer draws for free.
+- **Surprise:** if you beat no opponent on the surprise test and at least one beat you, you take no actions at all in the surprise turn. Allies never count as opponents: player characters stand with friendly tokens, everyone else by their token's disposition.
+- **Subduing:** only a weapon that does Stun damage can subdue (fists, a club, a stun baton). The Stun your subduing blows do is remembered. When they fill someone's Stun track, **Hold** takes control of them, if you are close. Only your subduing Stun counts. It then wears off one box a minute. **Hold** again on your action is the maintenance test: your best of Unarmed Combat, Strength and Quickness against their lowest, while they resist the same way at +2. Each net success puts a box back. **Let go** on the card takes the rest of the subduing Stun off.
+- **Against a wall:** a knockdown test that staggers you back into a wall leaves you against it: +2 to your melee attack and defense tests until your token moves. The GM can also set or clear the status on the token.
+- **Interception:** in a fight, when a token passes within 1 m of an opponent without stopping beside them, that opponent's player and the GM get a whispered card. **Intercept** makes a free melee attack on the one passing: target number 4, changed only by reach, your own movement and your condition, with Combat Pool dice if you like. The one passing defends as on full defense and can't counterattack. It costs no action.
+- **Pools:** the Spell and Hacking Pools now refill at the start of each of your actions, like the Combat Pool, and dice left at the end of a Combat Turn last until your first action of the next. If you get no action in a Combat Turn, they refill at the next one. Spell defense dice go back to the Spell Pool when your action starts, and you are told, so allot them again. The Control and Task Pools still refill each Combat Turn.
 
 ## The Unified Rules Revamp (alternate rules)
 

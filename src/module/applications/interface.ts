@@ -22,6 +22,8 @@ import {
   isCarried,
 } from '../rules/index.ts';
 import { calledFromSystem, isOurWindow } from './look.ts';
+import { greyNoActions } from './melee95.ts';
+import { freeDraw as freeDraw95 } from '../rules/melee95.ts';
 import { quickRollArmed } from './hotkeys.ts';
 import { t as tx, tCount } from '../helpers/i18n.ts';
 import { remember, store } from './sheettools.ts';
@@ -149,6 +151,7 @@ export function decorateInterface(sheet: any): void {
   try { markGmOnly(body); } catch { /* none */ }
   try { astralHelper(actor, body); } catch (err) { console.warn('sr2e | astral buttons', err); }
   try { turnHelper(actor, body); } catch (err) { console.warn('sr2e | your turn', err); }
+  try { greyNoActions(actor, body); } catch (err) { console.warn('sr2e | no actions', err); }
   try { monitorTrack(body); } catch (err) { console.warn('sr2e | monitor', err); }
   try { if (setting('numberSteppers', true)) addSteppers(body, SHEET_STEP_FIELDS); } catch (err) { console.warn('sr2e | steppers', err); }
   bindWheel(body);
@@ -277,7 +280,7 @@ function turnHelper(actor: any, body: HTMLElement): void {
     // Drawing costs an action only by that rule, and never for a quick-draw weapon.
     if (action === 'drawWeapon') {
       const w: any = actor.items.get(el.dataset['itemId'] ?? '');
-      if (RULES.COMBAT.ready.rule !== 'action' || w?.system?.quickDraw || w?.system?.ready) continue;
+      if (RULES.COMBAT.ready.rule !== 'action' || freeDraw95(w?.system) || w?.system?.ready) continue;
     }
     const cost = buttonCost(action, weapon);
     if (!cost || affordable(cost, used)) continue;
