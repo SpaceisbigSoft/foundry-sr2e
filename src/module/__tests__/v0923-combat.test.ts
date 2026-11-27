@@ -371,8 +371,12 @@ describe('v0.92.3 combat: pools and delays (Core pp. 78, 80, 84)', () => {
   test('book: a new Combat Turn keeps the Combat Pool\'s spent dice; the action refreshes it', async () => {
     const a = who();
     a.system.poolSpent.combat = 3; a.system.poolSpent.spell = 2;
+    // v0.95.0 (MELEE_V95.otherPools 'action'): the Spell Pool's dice last until the first action too; 'turn' is v0.94.2.
     await a.refreshPools({ keepCombat: true });
     assert.equal(a.system.poolSpent.combat, 3);
+    assert.equal(a.system.poolSpent.spell, 2);
+    RULES.MELEE_V95.otherPools = 'turn';
+    try { await a.refreshPools({ keepCombat: true }); } finally { RULES.MELEE_V95.otherPools = 'action'; }
     assert.equal(a.system.poolSpent.spell, 0);
     await a.refreshCombatPool();
     assert.equal(a.system.poolSpent.combat, 0);
