@@ -21,6 +21,7 @@ import { SR2Actor } from "../documents/index.ts";
 // v0.94.1 (report item 30): typed physical-dice results in the main roll windows.
 import { typedDiceRow, readTypedDice, withTypedDice, armTypedDice, typedScoped } from "./typed941.ts";
 import { formSystem942 } from "../helpers/nesting942.ts";
+import { laserAir95, screenHits95, strayCard95, suppressFof95, alongLine95 } from "./fire95.ts";
 import { tokenOf, tokenDistance, attackerToken, attackTargetOptions, measureTokens, lineOfSight, sightCover, movedThisTurn, tokensNear, targetLight, barriersBetween, tokensInCone, friendsInMelee, isProne, scatterPoint, wallsBetweenPoints, smokeBetweenTokens, placeArea } from "./canvas.ts";
 import { wardsBetween } from "./regions.ts";
 import {
@@ -1920,6 +1921,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
   /** Suppressive fire at every targeted token. */
   static async #onSuppressFire(this: SR2CharacterSheet, _event: Event, target: HTMLElement) {
     const uuids = [...(game.user?.targets ?? [])].map((t: any) => t.actor?.uuid).filter(Boolean) as string[];
+    // v0.95.0 (FIRE_V95.suppression 'fof', Fields of Fire p. 78, optional): rounds over an area instead of targets.
+    if (await suppressFof95(this.document, target.dataset["itemId"] ?? "")) return;
     if (!uuids.length) return ui.notifications?.warn?.(tx('SR2E.Notify.Sheet.targetThePeopleInTheArea'));
     const sf = RULES.COMBAT.suppressive;
     const ok = await foundry.applications.api.DialogV2.confirm({ window: { title: tx('SR2E.Dialog.Sheet.suppressiveFire') }, content: `<p>${tx('SR2E.Dialog.Sheet.useRoundsToSuppressTargetA', { sfRounds: sf.rounds, uuidsLength: tCount(uuids.length, 'SR2E.Count.target'), part: sf.coverIsSafe ? tx('SR2E.Dialog.Sheet.thenTheFirePassesOverThem') : "" })}</p>`, rejectClose: false } as any);
@@ -3292,7 +3295,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     // A laser sight is pre-ticked unless the smartlink is (they don't add together, v0.43.0).
     // v0.47.0: and only within the laser's range (RULES.GEAR.accessories.laserRangeMetres); re-checked on a target change.
     const laserFits = Boolean(w.laserSight) && !melee && !(smartReady && RULES.GEAR.accessories.laserNotWithSmartlink);
-    const laserReadyFor = (c: { metres: number | null }) => laserFits && laserInRange(c.metres);
+    // v0.95.0 (FIRE_V95.laser 'book', Core p. 90): not in mist, fog or rain, nor through smoke (`h`: that target's situation).
+    const laserReadyFor = (c: { metres: number | null }, h: { smoke?: { kind?: string } | null } = here) => laserFits && laserInRange(c.metres) && !laserAir95(actor, h.smoke?.kind);
     const laserReady = laserReadyFor(latest);
     // v0.50.0: walking/running are ticked by themselves for ranged attacks (and melee if RULES.TN_AUTO.attack.movementInMelee).
     const moveTicks = !melee || RULES.TN_AUTO.attack.movementInMelee;
@@ -3703,8 +3707,10 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       const inSpread = !to ? [] : RULES.COMBAT.shotgun.shape === "cone" && fromToken
         ? tokensInCone(fromToken, to, choke, RULES.URR_V80.cbtShotgun === "urr" || C923.shotgunBook() ? (m: number) => U80C.cbtShotgunSpread(shotgunSpread(m, choke, 0), m, choke, 0).width : undefined)
         : tokensNear(to.center, atTarget.width / 2).filter((c) => c.token !== fromToken).map((c) => ({ token: c.token, metres: latest.metres as number }));
-      const hits = [{ targetUuid: choice.targetUuid, powerDelta: -atTarget.loss },
-        ...inSpread.filter((c) => c.token.actor?.uuid !== choice.targetUuid).map((c) => ({ targetUuid: c.token.actor.uuid as string, powerDelta: -U80C.cbtShotgunSpread(shotgunSpread(c.metres, choke, 0), c.metres, choke, 0).loss }))];
+      // v0.95.0 (FIRE_V95.shotScreen 'book', Core p. 95): +1 resistance die per other target in the spread in front.
+      const hits = screenHits95([{ targetUuid: choice.targetUuid, powerDelta: -atTarget.loss },
+        ...inSpread.filter((c) => c.token.actor?.uuid !== choice.targetUuid).map((c) => ({ targetUuid: c.token.actor.uuid as string, powerDelta: -U80C.cbtShotgunSpread(shotgunSpread(c.metres, choke, 0), c.metres, choke, 0).loss }))],
+        [...inSpread.map((c) => ({ uuid: c.token.actor?.uuid as string | undefined, metres: c.metres })), ...(inSpread.some((c) => c.token.actor?.uuid === choice.targetUuid) ? [] : [{ uuid: choice.targetUuid, metres: alongLine95(fromToken, to, to) ?? latest.metres }])]);
       await actor.attackWith(weapon, {
         ...common, ...distance, earlierRoundsThisPhase: choice.earlier, barrierArmor: choice.barrier,
         note: atTarget.loss
@@ -3747,7 +3753,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         let sight = common.sight;
         if (i > 0) {
           situational = situational.filter((sid) => sid !== "partialCover" && sid !== "laserSight")
-            .concat(h.cover?.cover === "partial" ? ["partialCover"] : [], choice.situational.includes("laserSight") && laserReadyFor(c) ? ["laserSight"] : []);
+            .concat(h.cover?.cover === "partial" ? ["partialCover"] : [], choice.situational.includes("laserSight") && laserReadyFor(c, h) ? ["laserSight"] : []);
           sight = sightFor(visFor(h), h.smoke?.kind ?? "none", h);
         }
         await actor.attackWith(weapon, {
@@ -3761,6 +3767,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         });
         earlier += split[i]! + (i > 0 ? wasteBetween([gaps[i - 1] ?? 0]) : 0);
       }
+      // v0.95.0 (FIRE_V95.stray 'book', Core p. 93, optional): the rounds wasted on the way may hit someone else.
+      await strayCard95(actor, weapon, { from: fromToken, targets: all.map((u) => targetTokens.get(u)).filter(Boolean), wasted: wastedRounds(gaps), smartlinked: smart923, opts: common });
       return;
     }
 
