@@ -67,7 +67,9 @@ export function onAScene(a: any): boolean {
  */
 export async function elementalWaitTick(a: any, time: number): Promise<boolean> {
   if (!S.on('elementalWaiting') || a?.type !== 'spirit' || a.system?.spiritKind !== 'elemental' || !a.system?.summonerUuid) return false;
-  const since = Number(a.getFlag?.(SYSTEM_ID, WAIT_FLAG));
+  // v0.96.1: an unlinked token's cleared flag reads null (Number(null) is 0, which would count from the epoch).
+  const rawSince: unknown = a.getFlag?.(SYSTEM_ID, WAIT_FLAG);
+  const since = rawSince === null || rawSince === undefined || rawSince === '' ? NaN : Number(rawSince);
   const services = Math.max(0, Math.floor(Number(a.system?.services ?? 0)));
   if (!onAScene(a) || services <= 0) {
     if (Number.isFinite(since)) await clearFlag(a, WAIT_FLAG);

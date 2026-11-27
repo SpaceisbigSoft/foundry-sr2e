@@ -54,6 +54,17 @@ describe('v0.96.0 sorcery: defaulting a magical skill (Awakenings p. 93)', () =>
     assert.equal(S.magicDefault({ ratings: {}, willpower: 0 }), null);
     assert.equal(S.magicDefaultMod({ dice: 5, tn: 4, from: 'conjuring' }).value, 4);
   });
+  test('v0.96.1: the most expected successes win, not the most dice (the live run\'s Magical Theory 3 vs Willpower 4)', () => {
+    assert.deepEqual(S.magicDefault({ ratings: { magicalTheory: 3 }, willpower: 4 }), { dice: 3, tn: 2, from: 'magicalTheory' });
+    assert.deepEqual(S.magicDefault({ ratings: { magicalTheory: 3 }, willpower: 4, baseTn: 2 }), { dice: 3, tn: 2, from: 'magicalTheory' });
+    // Many more dice can still win at a higher TN.
+    assert.deepEqual(S.magicDefault({ ratings: { magicalTheory: 1 }, willpower: 9, steps: { willpower: 1 } }), { dice: 9, tn: 2, from: 'willpower' });
+    assert.equal(S.dieChance(4), 0.5);
+    assert.equal(S.dieChance(6), 1 / 6);
+    assert.equal(S.dieChance(7), 1 / 6);
+    assert.equal(S.dieChance(8), 5 / 36);
+    assert.equal(S.dieChance(1), 1);
+  });
   test('off: no default (v0.95.1)', (t) => {
     t.after(oldWay({ 'SORCERY_V96.magicDefault': 'off' }));
     assert.equal(S.magicDefault({ ratings: { conjuring: 5 }, willpower: 4 }), null);

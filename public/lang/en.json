@@ -6369,7 +6369,7 @@
         "summons": "summons",
         "summoningInsectSpirits": "summoning insect spirits",
         "materialsH": " [materials {costNuyen}¥, {costHours} h]",
-        "summonForceTn": "Summon {what} (Force {force}; TN {force}){extraNote}{bindNote}{part}",
+        "summonForceTn": "Summon {what} (Force {force}; TN {tn}){extraNote}{bindNote}{part}",
         "allyRitualForceTn": "Ally ritual: {spiritType} (Force {force}; TN {tn}){part}{part2} [{plural}{part3}]",
         "theAllyAlreadyExistsARe": "The ally already exists; a re-roll changes nothing.",
         "alreadyExistsAReRollChanges": "{madeAllyName} already exists; a re-roll changes nothing.",
@@ -20280,7 +20280,7 @@
       "Rest": {
         "hospitalized": "Hospitalized",
         "lifestyleShort": "Below the minimum lifestyle for this wound ({need}; resting at {own}): the GM may add modifiers (Core p. 113).",
-        "interrupted": "Interrupted rest: a re-test that counts at most {cap} successes, the first roll's (Core p. 112)."
+        "interrupted": "Interrupted rest: this re-test counts {counted} of the {rolled} rolled, never more than the first roll (it had {cap}; Core p. 112)."
       },
       "Fee": {
         "paramedic": "{healer} gave {patient} paramedic first aid: the fee is {fee}¥ (Medical Costs Table).",
@@ -20397,7 +20397,7 @@
       },
       "Wait": {
         "used": "{name} has hung around for a day or more: {used} more service(s) used up, {left} left.",
-        "departs": "{name} has hung around for a day or more: its last service is used up and it departs."
+        "departs": "{name} has hung around for a day or more: its last service is used up and it departs (take its token off the scene)."
       },
       "Disrupt": {
         "until": "{name} is disrupted for {days} day(s): it can't appear again before day {day} of the world clock.",

@@ -2,6 +2,14 @@
 
 This is the history of the unofficial Shadowrun 2nd Edition system for Foundry VTT (system id `shadowrun2e_unified`; `sr2e` until v0.93.0), newest version first. Every rules change since v0.70.0 has a house-rule switch that puts the old behaviour back. The system was built with AI (Anthropic's Claude) under human direction, and it has not yet been play-tested at a real table.
 
+## v0.96.1 — Live-check fixes (27 Nov 2026)
+- **Fixed:** an elemental on an unlinked token that was given services again after departing no longer loses them all at the next world-clock tick (its cleared waiting clock read as time 0).
+- **Fixed:** masking's second try (+2) and its limit of two now count: the try counter's key held a dot, which Foundry stores as nested data, so the count was never read back.
+- **Changed:** magical defaulting picks the skill with the most expected successes at the casting TN, not simply the most dice (Magical Theory 3 at +2 now beats Willpower 4 at +8).
+- **Fixed:** no "fully cured" card when an addiction's rest ends while the character is addicted again; the interrupted-rest note says how many successes this roll counts; the watcher summon card's title shows the hours TN it rolls against; the exclusive-spell stacking warning shows its apostrophe; the withdrawal and Neuro-stun TN rows carry ids, so re-rolls and GM TN changes keep them.
+- **Changed:** a departed elemental's card asks the GM to take its token off the scene (the system doesn't delete it: an unlinked token is the spirit itself).
+- API changes: none.
+
 ## v0.96.0 — Rules completeness: health, sorcery and spirits (27 Nov 2026)
 About 45 book rules the system didn't have yet. Each one has a switch in the GM's house rules whose other choice puts v0.95.1 back. *Rules completeness (v0.96.0)* in `docs/VERIFY.md` says what each does, its book page and what was left out.
 - **Resting and care.** A Stun rest that gets interrupted keeps its first roll as a cap; the rest card warns when the lifestyle is below the healing minimum; a doctor's fee per day is shown in the Rest dialog and charged when a doctor is involved; an NPC giving a player's character first aid posts a paramedic's fee with a Pay button (Core pp. 112–113).

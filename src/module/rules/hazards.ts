@@ -141,13 +141,13 @@ export function withdrawalModifiers(list: readonly Addiction[], now: number, who
     const all = list.map((a) => ({ a, w: bookWithdrawalTn(a as Addiction & BookAddiction, now, who, Boolean(who.concentration)) })).filter((x) => x.w);
     if (!all.length) return [];
     const worst = all.reduce((m, x) => (x.w!.tn > m.w!.tn ? x : m));
-    const out: Array<{ id?: string; label: string; value: number }> = [{ label: tx('SR2E.Card.Mod.withdrawal', { w: all.map((x) => x.a.drug).join(', ') }), value: worst.w!.tn }];
+    const out: Array<{ id?: string; label: string; value: number }> = [{ id: 'withdrawal', label: tx('SR2E.Card.Mod.withdrawal', { w: all.map((x) => x.a.drug).join(', ') }), value: worst.w!.tn }];
     const pain = all.some((x) => x.w!.kind === 'forced') ? Math.max(0, (RULES.WOUND_MODIFIERS.find(([min]) => min === RULES.BOXES_PER_LEVEL.M)?.[1] ?? 2) - Math.max(0, Number(who.stunWoundTn) || 0)) : 0;
     if (pain) out.push({ id: 'withdrawalPain', label: tx('SR2E.Card.Mod.withdrawalPain923'), value: pain });
     return out;
   }
   const w = list.filter((a) => withdrawalState(a, now).withdrawal);
-  return w.length ? [{ label: tx('SR2E.Card.Mod.withdrawal', { w: w.map((a) => a.drug).join(', ') }), value: RULES.HEALTH.addiction.withdrawalTn }] : [];
+  return w.length ? [{ id: 'withdrawal', label: tx('SR2E.Card.Mod.withdrawal', { w: w.map((a) => a.drug).join(', ') }), value: RULES.HEALTH.addiction.withdrawalTn }] : [];
 }
 
 /** Radiation: the Body test vs the rad rating, per hour exposed. */

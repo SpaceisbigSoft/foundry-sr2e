@@ -2113,7 +2113,7 @@ export class SR2Actor extends Actor {
     const timeFactor = Math.min(1, Math.max(0.1, Number(this.sys.derived?.bio?.vitals?.healingTimeFactor ?? 1) || 1));
     // v0.96.0 (RULES.HEALTH_V96.stunRestInterrupted, Core p. 112): a Stun rest in progress re-tests, never better than the first roll.
     const rest96 = track === 'stun' ? H96G.stunRestContext(this) : {};
-    await this.#post(this.#snapshot(tx('SR2E.Card.Actor.woundHRest', { part: stages ? tx('SR2E.Card.Actor.healingStage') : tx('SR2E.Card.Actor.naturalHealing'), track, woundLevel: woundLevel(before), hours: opts.hours, part2: cost ? tx('SR2E.Card.Actor.paid', { cost: cost.toLocaleString() }) : '', part3: rapid ? tx('SR2E.Card.Actor.rapidHealing', { rapid }) : '', part4: sym ? tx('SR2E.Card.Actor.symbiotes', { sym }) : '', part5: timeFactor < 1 ? tx('SR2E.Card.Actor.symbiotesTime', { timeFactor }) : '' }) + H96G.restNote(this, { care, track, before, cap: rest96.stunCap96 }), result, {
+    await this.#post(this.#snapshot(tx('SR2E.Card.Actor.woundHRest', { part: stages ? tx('SR2E.Card.Actor.healingStage') : tx('SR2E.Card.Actor.naturalHealing'), track, woundLevel: woundLevel(before), hours: opts.hours, part2: cost ? tx('SR2E.Card.Actor.paid', { cost: cost.toLocaleString() }) : '', part3: rapid ? tx('SR2E.Card.Actor.rapidHealing', { rapid }) : '', part4: sym ? tx('SR2E.Card.Actor.symbiotes', { sym }) : '', part5: timeFactor < 1 ? tx('SR2E.Card.Actor.symbiotesTime', { timeFactor }) : '' }) + H96G.restNote(this, { care, track, before, cap: rest96.stunCap96, rolled: result.successes }), result, {
       kind: 'heal', heal: { targetUuid: this.uuid as string, targetName: this.name as string, track, before, mode: 'natural', hours: opts.hours, ...(timeFactor < 1 ? { timeFactor } : {}), ...(stages ? { stages: true } : {}), ...rest96 },
     }), result, rolls);
     return result;
@@ -2606,7 +2606,8 @@ export class SR2Actor extends Actor {
     // Review: the result rides on the assense card's snapshot (a re-roll keeps it); two tries in all, the second at +2.
     let mask96: boolean | null = null;
     if (target && S96.s96('masking') && target.initiate?.techniques?.includes?.('masking')) {
-      const key = String(target.uuid ?? target.id);
+      // v0.96.1: no dots in a flag key (Foundry expands "Actor.xxx" into nested objects, so the count was never read back).
+      const key = String(target.uuid ?? target.id).replace(/\./g, '_');
       const tries: Record<string, number> = { ...((this.getFlag?.(SYSTEM_ID, 'maskTries96') as Record<string, number> | undefined) ?? {}) };
       const n = safeInt(tries[key], 0, 9, 0);
       mask96 = n >= 2 ? false : await G96.maskTest(this, target, undefined, n === 1);
@@ -2898,7 +2899,8 @@ export class SR2Actor extends Actor {
     // v0.56.0: powers and spells on this actor that make every test harder (Confusion, Fear...).
     if (!opts.noPenalties) for (const e of ((this.getFlag?.(SYSTEM_ID, 'powerEffects') as FxEntry[] | undefined) ?? [])) {
       const v = Number(e.testsTn ?? 0);
-      if (v) extra.push({ label: `${e.special ? powerModifierLabel(e.special) : e.name} (${e.fromName})`, value: v });
+      // v0.96.1: an id per effect (Neuro-stun's +2 had none), so a re-roll or a GM TN change keeps the row.
+      if (v) extra.push({ ...(e.id ? { id: `fx:${String(e.id).slice(0, 60)}` } : {}), label: `${e.special ? powerModifierLabel(e.special) : e.name} (${e.fromName})`, value: v });
     }
     // v0.70.0: drugs in effect that change the TN of the user's own tests (v0.61.0 drug extras; before, shown only).
     // v0.72.0 (O8): one entry per drug (old doubled-up doses count once).
@@ -10626,7 +10628,7 @@ export class SR2Actor extends Actor {
     const shape96 = sp.area && opts.area96 ? S96.areaShape({ force: drainForce, radius: areaRadius(drainForce, Number(this.sys.derived?.magic ?? 0)), metres: opts.area96 }) : null;
     if (shape96 && 'why' in shape96) { ui.notifications?.warn?.(escHtml(tKey(shape96.why, { force: drainForce }))); return null; }
     // v0.96.0 (RULES.SORCERY_V96.stacking, Core p. 128): an exclusive spell can't be stacked with others.
-    if (S96.s96('stacking') && (opts.stack96 ?? 0) > 0 && sp.exclusive) { ui.notifications?.warn?.(escHtml(tKey('SR2E.Sorcery96.Why.stackExclusive', { spellName: spell.name }))); return null; }
+    if (S96.s96('stacking') && (opts.stack96 ?? 0) > 0 && sp.exclusive) { ui.notifications?.warn?.(tx('SR2E.Sorcery96.Why.stackExclusive', { spellName: escHtml(spell.name) })); return null; }
     const withheld96 = shape96 ? shape96.withheld : 0;
     // v0.96.0 (RULES.SORCERY_V96.stacking, magicDefault): the stacking and defaulting rows (the stacking also on the Drain).
     const stack96 = S96.stackMods(opts.stack96 ?? 0);
@@ -12350,8 +12352,10 @@ export class SR2Actor extends Actor {
     const pool = RULES.CONJURING.spellPoolAllowed ? opts.poolDice ?? 0 : 0;
     // v0.71.0 (R20): an elemental that takes its hours of ritual is drained when it arrives (or now, if none answers).
     const drainLater = spiritKind === 'elemental' && RULES.FIXES_V71.conjureDrainAtEnd && this.waitsFor('magic') ? { force, pool: opts.drainPoolDice ?? 0, ...(extra.dice > 0 ? { extra: extra.dice } : {}) } : null;
-    const result = await this.#runTest(tx('SR2E.Card.Actor.summonForceTn', { what, force, extraNote: extra.note, bindNote, part: domain && spiritKind === 'nature' ? tx('SR2E.Card.Actor.domain', { domain }) : '' }), Math.max(0, skill.system.rating + extra.dice),
-      { targetNumber: watcher96 ? SP96.watcherTn(watcher96.hours) : force, poolDice: pool, pool: 'spell', magical: true, ...(opts.exclude?.length ? { exclude: opts.exclude } : {}) },
+    // v0.96.1: the title shows the TN the roll uses (a watcher's hours, not its Force).
+    const summonTn = watcher96 ? SP96.watcherTn(watcher96.hours) : force;
+    const result = await this.#runTest(tx('SR2E.Card.Actor.summonForceTn', { what, force, tn: summonTn, extraNote: extra.note, bindNote, part: domain && spiritKind === 'nature' ? tx('SR2E.Card.Actor.domain', { domain }) : '' }), Math.max(0, skill.system.rating + extra.dice),
+      { targetNumber: summonTn, poolDice: pool, pool: 'spell', magical: true, ...(opts.exclude?.length ? { exclude: opts.exclude } : {}) },
       { kind: 'conjure', conjure: { force, spiritKind, spiritType, templateUuid: opts.templateUuid ?? SR2Actor.spiritTemplateFor(spiritType)?.uuid ?? null, spiritUuid: null, element: elementIn, domain, ...(hostUuid ? { hostUuid } : {}), ...(drainLater ? { drainLater } : {}), ...(watcher96 ? { watcher96 } : {}) } });
     await this.leaveSignature('summoning', tx('SR2E.Text.Actor.summoning', { name: what }), force);
     // A watcher's Drain depends on its Force, known from the successes: it is resisted as the card resolves.

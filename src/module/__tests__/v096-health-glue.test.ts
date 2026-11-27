@@ -349,6 +349,25 @@ describe('v0.96.0 health glue: addiction (Shadowtech pp. 87–88)', () => {
   });
 });
 
+describe('v0.96.1 health glue: live-run fixes', () => {
+  test('a rest that runs out on a still-addicted entry posts no "fully cured" (the rest still ends)', async () => {
+    const a = pc({ addictions: [{ drug: 'Novacoke', rating: 4, type: 'physical', recent: [], lastDose: 0, addicted: true, dosesAddicted: 1, withdrawalNoted: true, restUntil96: 50 }] });
+    const ad = a.system.addictions;
+    await H96G.addictionTick(a, ad, 100);
+    assert.equal(ad[0].restUntil96, 0);
+    assert.equal(chat.some((m) => /cured/i.test(String(m.content ?? ''))), false);
+    ad[0].addicted = false; ad[0].restUntil96 = 50;
+    await H96G.addictionTick(a, ad, 100);
+    assert.equal(chat.some((m) => /cured/i.test(String(m.content ?? ''))), true, 'a clean entry is still cured');
+  });
+  test('the interrupted-rest note says what this roll counts, not "1 successes"', () => {
+    const a = pc({ monitor: { physical: 0, stun: 5 } });
+    const note = H96G.restNote(a, { care: 'none', track: 'stun', before: 5, cap: 1, rolled: 4 });
+    assert.match(note, /counts 1 of the 4 rolled/);
+    assert.doesNotMatch(note, /1 successes/);
+  });
+});
+
 describe('v0.96.0 health glue: review fixes', () => {
   test('the addictions schema declares every key the code writes (Foundry would drop the others)', () => {
     const src = readFileSync(fileURLToPath(new URL('../models/index.ts', import.meta.url)), 'utf8');

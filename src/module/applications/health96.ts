@@ -73,7 +73,7 @@ export function docwagonTierOf(actor: any): string | null {
 const lifestyleLabel = (id: string): string => id === 'hospital' ? tx('SR2E.Health96.Rest.hospitalized') : String(RULES.UPKEEP.lifestyles.find((l) => l.id === id)?.label ?? id);
 
 /** Plain text for the rest card's title: the lifestyle short of the minimum (Physical), or the re-test's cap (Stun). */
-export function restNote(actor: any, o: { care: string; track: string; before: number; cap?: number }): string {
+export function restNote(actor: any, o: { care: string; track: string; before: number; cap?: number; rolled?: number }): string {
   const parts: string[] = [];
   if (o.track === 'physical') {
     let days: number | null = null;
@@ -82,7 +82,12 @@ export function restNote(actor: any, o: { care: string; track: string; before: n
     const need = H.lifestyleShort(o.before, o.care, own);
     if (need) parts.push(tx('SR2E.Health96.Rest.lifestyleShort', { need: lifestyleLabel(need), own: lifestyleLabel(H.restLifestyle(o.care, own)) }));
   }
-  if (o.track === 'stun' && o.cap != null) parts.push(tx('SR2E.Health96.Rest.interrupted', { cap: int(o.cap, 0, 40) }));
+  if (o.track === 'stun' && o.cap != null) {
+    // v0.96.1: say what this roll counts (the card's header shows the dice rolled), with no "1 successes".
+    const cap = int(o.cap, 0, 40);
+    const rolled = o.rolled == null ? cap : int(o.rolled, 0, 99);
+    parts.push(tx('SR2E.Health96.Rest.interrupted', { cap, counted: Math.min(cap, rolled), rolled }));
+  }
   return parts.length ? ` ${parts.join(' ')}` : '';
 }
 
@@ -212,7 +217,8 @@ export async function addictionTick(a: any, ad: any[], time: number): Promise<bo
     // The rest after a recovery is over: cured.
     if (H.restOver(x, time)) {
       x.restUntil96 = 0; changed = true;
-      await post(`<p><strong>${escHtml(String(a.name ?? ''))}</strong> ${tx('SR2E.Health96.Addiction.restDone', { drug: escHtml(String(x.drug ?? '')) })}</p>`, { speaker: speaker(a) });
+      // v0.96.1: "fully cured" only when the entry isn't addicted any more (a relapse during the rest keeps it).
+      if (!x.addicted) await post(`<p><strong>${escHtml(String(a.name ?? ''))}</strong> ${tx('SR2E.Health96.Addiction.restDone', { drug: escHtml(String(x.drug ?? '')) })}</p>`, { speaker: speaker(a) });
     }
     // The weekly loss (Shadowtech p. 87).
     const step = H.attritionStep(x, time);

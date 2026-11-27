@@ -26,10 +26,11 @@ export interface MagicDefault { dice: number; tn: number; from: string }
 /**
  * The best way to default Sorcery (Awakenings p. 93): to Magical Theory, Conjuring or Enchanting, or to Willpower, at
  * +2 TN (RULES.SKILLS.web.perStep) a step. `steps` are the GM's Skill Web distances where it links them (null: not
- * linked: the switch's own steps). The most dice win; on a tie the lower TN. Null when the switch is off or nothing
- * has dice.
+ * linked: the switch's own steps). v0.96.1: the most expected successes win (dice × the chance a die beats the cast's
+ * TN, `baseTn` + the defaulting TN, sixes re-rolled), so 3 dice at +2 beat 4 dice at +8; on a tie the lower TN. Null
+ * when the switch is off or nothing has dice.
  */
-export function magicDefault(o: { ratings: Partial<Record<'magicalTheory' | 'conjuring' | 'enchanting', number>>; willpower: number; steps?: Partial<Record<string, number | null>> }): MagicDefault | null {
+export function magicDefault(o: { ratings: Partial<Record<'magicalTheory' | 'conjuring' | 'enchanting', number>>; willpower: number; steps?: Partial<Record<string, number | null>>; baseTn?: number }): MagicDefault | null {
   if (!on('magicDefault')) return null;
   const per = Math.max(0, num(RULES.SKILLS?.web?.perStep, 2));
   const own = V().magicDefaultSteps;
@@ -42,8 +43,18 @@ export function magicDefault(o: { ratings: Partial<Record<'magicalTheory' | 'con
   for (const k of ['magicalTheory', 'conjuring', 'enchanting'] as const) add(k, num(o.ratings[k]));
   add('willpower', o.willpower);
   if (!opts.length) return null;
-  opts.sort((a, b) => b.dice - a.dice || a.tn - b.tn);
+  const base = Math.max(2, whole(o.baseTn ?? 4));
+  const expect = (d: MagicDefault) => d.dice * dieChance(base + d.tn);
+  opts.sort((a, b) => expect(b) - expect(a) || a.tn - b.tn || b.dice - a.dice);
   return opts[0]!;
+}
+
+/** The chance one die reaches `tn` (SR2's Rule of Six: a six is rolled again and added). */
+export function dieChance(tn: number): number {
+  const t = Math.floor(Number(tn) || 0);
+  if (t <= 1) return 1;
+  if (t <= 6) return (7 - t) / 6;
+  return dieChance(t - 6) / 6;
 }
 
 /** The defaulting row for the casting test's modifiers. */

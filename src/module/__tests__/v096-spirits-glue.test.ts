@@ -213,6 +213,13 @@ describe('an elemental\'s day of waiting (Core p. 141)', () => {
     await G96.tokenPlaced({ actor: f });
     assert.ok(Number.isFinite(Number(f.getFlag(SYS, G96.WAIT_FLAG))));
   });
+  test('v0.96.1: a cleared flag on an unlinked token (null) starts the clock now, not from time 0', async () => {
+    const e = spirit(); sceneWith(e);
+    await e.setFlag(SYS, G96.WAIT_FLAG, null);
+    assert.equal(await G96.elementalWaitTick(e, 5 * DAY), false);
+    assert.equal(e.system.services, 3, 'no services lost');
+    assert.equal(e.getFlag(SYS, G96.WAIT_FLAG), 5 * DAY);
+  });
   test('off every scene: no cost, the clock stops', async () => {
     const e = spirit(); g.game.scenes = Object.assign([], { viewed: null });
     await e.setFlag(SYS, G96.WAIT_FLAG, 0);

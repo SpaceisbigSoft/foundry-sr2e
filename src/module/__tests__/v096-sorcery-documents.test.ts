@@ -307,11 +307,13 @@ describe('v0.96.0 sorcery documents: assensing a masked initiate (Grimoire p. 46
     await viewer.assense({ targetUuid: subject.uuid });
     const card = tests().find((s: any) => s.kind === 'assense');
     assert.equal(card.assense.masked96, true);
-    assert.equal(viewer.getFlag(SID, 'maskTries96')[subject.uuid], 1);
+    assert.equal(viewer.getFlag(SID, 'maskTries96')[subject.uuid.replace(/\./g, '_')], 1);
+    // v0.96.1: no dot in the key (Foundry would expand "Actor.xxx" into nested objects and never read the count back).
+    assert.ok(Object.keys(viewer.getFlag(SID, 'maskTries96')).every((k: string) => !k.includes('.')));
     chat.length = 0;
     faces.push(1, 1, 1, 1, 1, 1, 2); fives(10);
     await viewer.assense({ targetUuid: subject.uuid });
-    assert.ok(chat.some((m: any) => m.rolls !== undefined && /maskRetry|Second try/.test(JSON.stringify(m))) || viewer.getFlag(SID, 'maskTries96')[subject.uuid] === 2);
+    assert.ok(chat.some((m: any) => m.rolls !== undefined && /maskRetry|Second try/.test(JSON.stringify(m))) || viewer.getFlag(SID, 'maskTries96')[subject.uuid.replace(/\./g, '_')] === 2);
     tc.after(oldWay({ 'SORCERY_V96.masking': 'off' }));
     chat.length = 0;
     fives(10);
