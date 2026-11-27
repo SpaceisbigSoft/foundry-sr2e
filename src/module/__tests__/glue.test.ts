@@ -5,6 +5,7 @@
  */
 import { test, describe, before, after, afterEach } from "node:test";
 import { oldWay } from '../rules/__tests__/oldway.ts';
+import { SORCERY_V951 } from '../rules/__tests__/sorcery951.ts';
 import { SPIRITS_V922_WAY } from '../rules/__tests__/spirits922.ts';
 import { matrix922 } from "./helpers/matrix922.ts";
 import { SORCERY_V922 } from '../rules/__tests__/sorcery922.ts';
@@ -79,6 +80,8 @@ before(async () => {
   (RULES.RIGGING as any).needsAdaptation = false;
   // v0.92.3: these older tests pin the v0.92.2 sorcery rules (RULES.SORCERY_V923); the book's way is in v0923-sorcery.test.ts.
   oldWay(SORCERY_V922);
+  // v0.96.0: and the v0.95.1 sorcery (RULES.SORCERY_V96); the book's way is in v096-sorcery*.test.ts.
+  oldWay(SORCERY_V951);
   g.foundry = {
     abstract: { TypeDataModel: class {} },
     data: { fields: new Proxy({}, { get: () => class { constructor(..._a: any[]) {} } }) },

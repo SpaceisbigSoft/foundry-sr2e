@@ -26,6 +26,7 @@ import { MATRIX_V923 } from './config923/matrix.ts';
 import { VEHICLES_V923 } from './config923/vehicles.ts';
 import { GEAR_V923 } from './config923/gear.ts';
 import { CORE_V95 } from './config95/core.ts';
+import { SORCERY_V96 } from './config96/sorcery.ts';
 import { FIRE_V95 } from './config95/fire.ts';
 import { MELEE_V95 } from './config95/melee.ts';
 
@@ -3413,6 +3414,8 @@ export const RULES = {
   FIRE_V95,
   /** v0.95.0: rules completeness, Melee, actions and Dice Pools (rules/config95/melee.ts). */
   MELEE_V95,
+  /** v0.96.0: rules completeness, Sorcery (rules/config96/sorcery.ts). */
+  SORCERY_V96,
 } as const;
 
 export type RangeBand = keyof typeof RULES.RANGE_TN;

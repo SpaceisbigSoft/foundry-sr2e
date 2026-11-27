@@ -212,7 +212,10 @@ describe('statBlockItems: spells and powers data', () => {
     const f = byName(items, 'Fireball').system;
     assert.deepEqual([f.elemental, f.element, f.drainModifier, f.drainLevel, f.area], [true, 'fire', 1, 'S', true]);
     assert.equal(byName(items, 'Armor').system.exclusive, true);
-    assert.ok(warnings.some((w) => w.startsWith('Drain not given') && w.includes('Manabolt') && !w.includes('Fireball')));
+    // v0.96.0 (RULES.SORCERY_V96.drainTable 'book'): the book's code fills Manabolt's; the old warning with the table off.
+    assert.equal(byName(items, 'Manabolt').system.drainLevel, 'S');
+    const undo = oldWay({ 'SORCERY_V96.drainTable': 'off' });
+    try { assert.ok(statBlockItems(p).warnings.some((w) => w.startsWith('Drain not given') && w.includes('Manabolt') && !w.includes('Fireball'))); } finally { undo(); }
   });
   test('critter powers and weaknesses', () => {
     assert.equal(byName(items, 'Fear').system.active, true);

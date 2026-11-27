@@ -5,6 +5,7 @@
  */
 import { test, describe, before, beforeEach, after } from 'node:test';
 import { oldWay } from '../rules/__tests__/oldway.ts';
+import { SORCERY_V951 } from '../rules/__tests__/sorcery951.ts';
 import assert from 'node:assert/strict';
 import { RULES, addStun, applyDamageToMonitor, hostAlertFor, siteAlertForHost, ASTRAL_BLOCKED_ACTIONS } from '../rules/index.ts';
 import { combat922 } from '../rules/__tests__/combat922.ts';
@@ -584,7 +585,8 @@ describe('B18 Karma spends through the approval queue', () => {
   const mage = () => who({ name: 'Mage', magic: 6, tradition: 'hermetic', karma: { pool: 0, poolSpent: 0, good: 10, career: 10 }, metamagic: { quickening: true },
     sustaining: [{ spellName: 'Armor', force: 4, category: '', focusId: '', successes: 2, quickened: false }] }, [skill('sorc', 'Sorcery', 4, 'willpower')]);
 
-  test('quicken files a request (with its Karma) instead of spending', async () => {
+  test('quicken files a request (with its Karma) instead of spending', async (t) => {
+    t.after(oldWay(SORCERY_V951)); // v0.96.0: the old quickening (the book's: v096-sorcery tests)
     settings['approvalQueue'] = true;
     g.game.user = PLAYER();
     const a = mage();
@@ -597,7 +599,8 @@ describe('B18 Karma spends through the approval queue', () => {
     assert.deepEqual(reqs[0]!.data, { method: 'quicken', args: [0, 'Armor'] });
   });
 
-  test('quicken spends with a ledger line; an approved request finds the spell by name', async () => {
+  test('quicken spends with a ledger line; an approved request finds the spell by name', async (t) => {
+    t.after(oldWay(SORCERY_V951)); // v0.96.0: the old quickening
     const a = mage();
     a.system.sustaining.unshift({ spellName: 'Light', force: 1, category: '', focusId: '', successes: 1, quickened: false });
     assert.equal(await a.quicken(0, 'Armor'), true);

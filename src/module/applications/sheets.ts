@@ -66,6 +66,8 @@ import { urrCoreTnPresetRow, urrCoreInstructorRule } from "../rules/urr80-core.t
 import * as CO923 from "../rules/core923.ts";
 // v0.95.0 (RULES.CORE_V95): the core book rules' glue.
 import * as C95G from "./core95.ts";
+import * as G96 from "./sorcery96.ts";
+import * as S96 from "../rules/sorcery96.ts";
 import { sensorTableRows, sensorTableModifiers, segRows, segConditionModifiers } from "../rules/docs79-vehicles.ts";
 import { modKey, modIn, type TargetNumberModifier } from "../rules/dice.ts";
 import { quickRollArmed } from "./hotkeys.ts";
@@ -627,6 +629,9 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       canManifest: RULES.MAGIC_V56.manifest.enabled && actor.system.derived?.astralMode === "projecting",
       manifesting: Boolean(actor.isManifesting?.()),
       knowsCentering: Boolean(actor.system.metamagic?.centering),
+      // v0.96.0 (RULES.SORCERY_V96.gradeZero 'book', Grimoire pp. 37–38): the "Initiated (Grade 0)" tick.
+      gradeZero96: S96.showGradeZero(Number(actor.system.initiateGrade ?? 0)),
+      initiated96: Boolean(actor.getFlag?.(SYSTEM_ID, "initiated")),
       centeringTests: Boolean(actor.system.metamagic?.centering) && centeringMode(actor.system.centeringSkill) === "test",
       centeredNow: Number(actor.centeredSuccesses?.() ?? 0),
       traditions: TRADITIONS.filter((k) => optionalTraditionOn(k) || actor.system.tradition === k).map((k) => ({ key: k, label: TRADITION_LABELS[k] ? tKey(TRADITION_LABELS[k]!) : cap(k) })),
@@ -2852,7 +2857,16 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
   }
 
   static async #onQuicken(this: SR2CharacterSheet, _event: Event, target: HTMLElement) {
-    await (this.document as any).quicken(Number(target.dataset["index"]));
+    // v0.96.0 (RULES.SORCERY_V96.quickening 'book', Grimoire pp. 44–45): the dice, TN and Karma first.
+    const index = Number(target.dataset["index"]);
+    const entry = (this.document as any).sustained?.()[index];
+    if (S96.s96("quickening") && entry && (this.document as any).system?.metamagic?.quickening) {
+      const q = await G96.askQuicken(entry);
+      if (!q) return;
+      await (this.document as any).quicken(index, String(entry.spellName ?? ""), q);
+      return;
+    }
+    await (this.document as any).quicken(index);
   }
 
   static async #onDispel(this: SR2CharacterSheet) {
@@ -3998,9 +4012,11 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const targeted = combat || heals || Boolean(sp.elemental) || (sp.resist && sp.resist !== "none");
     // v0.92.0: the Spell Pool's narrow layers this spell falls inside count too (RULES.MAGIC_V920).
     const castUse = actor.sorceryUseFor?.("cast", { category: sp.category, spellName: spell.name });
-    const left = Number(actor.spellPoolFor?.(castUse) ?? actor.system.derived.spellPoolLeft);
+    const left0 = Number(actor.spellPoolFor?.(castUse) ?? actor.system.derived.spellPoolLeft);
+    // v0.96.0 (RULES.SORCERY_V96.totemPool 'book', Core p. 119): the totem's dice are pool dice for this cast only.
+    const left = S96.totemPoolMax(totemDice(actor.system.tradition ?? "none", actor.system.totem, sp.category), left0);
     // v0.92.0 review (R5): Drain may take the narrow dice only with RULES.MAGIC_V920.drainNarrow.
-    const drainLeft = Math.min(left, Number(actor.drainPoolFor?.(castUse) ?? left));
+    const drainLeft = Math.min(left, Number(actor.drainPoolFor?.(castUse) ?? left0));
 
     const targetToken: any = game.user.targets?.first?.() ?? null;
     // Vehicles too (v0.43.0), for physical spells (mana spells only affect the living).
@@ -4012,8 +4028,9 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     // Area spells: pre-tick everyone within the radius of the targeted token (or the caster); v0.50.0: by the Force picked.
     const casterToken = attackerToken(actor);
     const centre = targetToken ?? casterToken;
-    const nearFor = (force: number) => {
-      const r = areaRadius(force, actor.system.derived.magic);
+    const nearFor = (force: number, metres96 = 0) => {
+      // v0.96.0 (RULES.SORCERY_V96.areaShape): the radius after shaping.
+      const r = G96.shapedRadius(areaRadius(force, actor.system.derived.magic), metres96);
       return centre ? others.filter((o) => { const d = o.token ? tokenDistance(centre, o.token) : null; return d !== null && d <= r; }).map((o) => o.uuid) : [];
     };
     const radius = areaRadius(sp.learnedForce, actor.system.derived.magic);
@@ -4082,6 +4099,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         ${aidRow}
         ${barrierRow}
         ${anchorRow}
+        ${G96.castRows96(actor, spell)}
         ${ritualRows}
         ${areaHint}
         ${losHint}
@@ -4115,6 +4133,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
             anchor: el.anchor?.checked ? { trigger: String(el.trigger?.value ?? "").trim() } : null,
             exclude: excludedOf(button.form),
             typed: readTypedDice(button.form),
+            // v0.96.0 (RULES.SORCERY_V96): shaping, stacking, centering.
+            ...G96.readCast96(button.form),
           };
         },
       },
@@ -4125,11 +4145,13 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         if (sp.area && centre) {
           let touched = false;
           form.querySelectorAll('input[name="areaTarget"]').forEach((i: HTMLInputElement) => i.addEventListener("change", () => { touched = true; }));
-          form.elements.force?.addEventListener("input", () => {
+          const retick = () => {
             if (touched) return;
-            const near = new Set(nearFor(Number(form.elements.force.value) || sp.learnedForce));
+            const near = new Set(nearFor(Number(form.elements.force.value) || sp.learnedForce, Number(form.elements.area96?.value) || 0));
             form.querySelectorAll('input[name="areaTarget"]').forEach((i: HTMLInputElement) => { i.checked = near.has(i.value); });
-          });
+          };
+          form.elements.force?.addEventListener("input", retick);
+          form.elements.area96?.addEventListener("input", retick);
         }
         livePreview(dialog, (f, excluded) => {
           const el: any = f.elements;
@@ -4157,6 +4179,9 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       barrierUuid: choice.barrier,
       anchor: choice.anchor,
       ...(choice.exclude?.length ? { exclude: choice.exclude } : {}),
+      ...(choice.area96 ? { area96: choice.area96 } : {}),
+      ...(choice.stack96 ? { stack96: choice.stack96 } : {}),
+      ...(choice.center96 ? { center96: choice.center96 } : {}),
     }));
   }
 

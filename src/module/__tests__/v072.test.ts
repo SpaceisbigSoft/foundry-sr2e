@@ -8,6 +8,7 @@
 import { test, describe, before, beforeEach, after } from 'node:test';
 import { SORCERY_V922 } from '../rules/__tests__/sorcery922.ts';
 import { oldWay } from '../rules/__tests__/oldway.ts';
+import { SORCERY_V951 } from '../rules/__tests__/sorcery951.ts';
 import { SPIRITS_V922_WAY } from '../rules/__tests__/spirits922.ts';
 import assert from 'node:assert/strict';
 import { RULES, initiativeWoundPenalty } from '../rules/index.ts';
@@ -914,7 +915,8 @@ describe('O20 a projecting magician\'s wounds', () => {
 });
 
 describe('O21 anchoring and allies', () => {
-  test('anchoring charges Good Karma by Force with a ledger line; too little Karma refuses; switched off it is free', async () => {
+  test('anchoring charges Good Karma by Force with a ledger line; too little Karma refuses; switched off it is free', async (t) => {
+    t.after(oldWay(SORCERY_V951)); // v0.96.0: the old anchoring Karma (the book's: v096-sorcery tests)
     const a = who({ name: 'Mage', magic: 6, tradition: 'hermetic', metamagic: { anchoring: true }, initiateGrade: 1 }, [skill('sorc', 'Sorcery', 4, 'willpower'), spellItem('sb', 'Stunbolt')]);
     assert.equal(await a.castSpell(a.items.get('sb'), { force: 3, anchor: { trigger: 'the door opens' } }), null);
     assert.equal(a.system.anchored.length, 1);
@@ -998,7 +1000,8 @@ describe('v0.72.0 review fixes', () => {
     assert.match(chat.at(-1).content, /Resist 6M physical, armor 8/);
   });
 
-  test('anchorSpell (the approval entry point) returns true when it anchors', async () => {
+  test('anchorSpell (the approval entry point) returns true when it anchors', async (t) => {
+    t.after(oldWay(SORCERY_V951)); // v0.96.0: the old anchoring Karma
     const a = who({ name: 'Mage', magic: 6, tradition: 'hermetic', metamagic: { anchoring: true }, initiateGrade: 1 }, [skill('sorc', 'Sorcery', 4, 'willpower'), spellItem('sb', 'Stunbolt')]);
     assert.equal(await a.anchorSpell('sb', 3, ''), true);
   });

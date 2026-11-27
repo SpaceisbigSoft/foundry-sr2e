@@ -1,4 +1,5 @@
 import { RULES, type DamageLevel } from './config.ts';
+import { bookDrain } from './sorcery96.ts';
 import type { Attributes } from './stats.ts';
 import { SPELL_CATEGORIES, type SpellCategory } from './magic.ts';
 import { POWER_SPECIALS, ALLERGY_SEVERITIES, ADEPT_SPECIALS } from './critters.ts';
@@ -1056,7 +1057,10 @@ export function statBlockItems(p: ParsedStatBlock, ctx: { adept?: boolean } = {}
   for (const c of p.cyberware ?? []) items.push(cyberwareItem(c, p, notes));
 
   const undrained: string[] = [];
-  for (const s of p.spells ?? []) {
+  for (const s0 of p.spells ?? []) {
+    // v0.96.0 (RULES.SORCERY_V96.drainTable 'book', Core pp. 151–159): a core spell with no drain code takes the book's.
+    const book96 = s0.drain ? null : bookDrain(s0.name);
+    const s = book96 ? { ...s0, drain: book96 } : s0;
     items.push(spellItem(s));
     if (!s.drain) undrained.push(s.name);
   }

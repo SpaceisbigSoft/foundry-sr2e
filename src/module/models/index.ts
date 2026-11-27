@@ -1910,6 +1910,10 @@ export class BarrierDataModel extends foundry.abstract.TypeDataModel {
       rating: new fields.NumberField({ required: true, integer: true, min: 0, initial: 4 }),
       baseRating: new fields.NumberField({ required: true, integer: true, min: 0, initial: 4 }),
       notes: new fields.HTMLField({ required: true, initial: '' }),
+      /** v0.96.0 (RULES.SORCERY_V96.wardExpiry, Grimoire p. 92): the days a ward lasts (0 = not kept). */
+      wardDays96: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
+      /** v0.96.0: the system time it falls (0 = not set yet, −1 = it has fallen). */
+      wardEnds96: new fields.NumberField({ required: true, integer: false, initial: 0 }),
     };
   }
 
