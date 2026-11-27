@@ -9833,7 +9833,15 @@
         "CORE_V923__awards": "Individual Karma awards: the book's (roleplaying, guts, smarts, right place, surprise, humor, drama) (book) or the old five rows (old)",
         "CORE_V923__interrogation": "Interrogation: the interrogator's skill vs the subject's Willpower, the subject doesn't roll (book; with one-sided social tests) or an opposed test (old)",
         "COMBAT_V923__avRocket": "Anti-vehicle rocket blast: loses 8 Power per metre (book, Core p. 99) or the v0.92.3 −1 per 4 m (old)",
-        "COMBAT_V923__avRocketOldPerMetre": "Anti-vehicle rocket blast under the old rule: Power lost per metre"
+        "COMBAT_V923__avRocketOldPerMetre": "Anti-vehicle rocket blast under the old rule: Power lost per metre",
+        "FIRE_V95__laser": "Laser sight in mist, fog, rain or smoke: its bonus is dropped by itself (book), or only when you clear the tick (off, v0.94.2)",
+        "FIRE_V95__sharedRecoil": "Two firearms: each gun builds its own recoil and takes the other gun's uncompensated recoil too (book), or all rounds count as one gun's (off, v0.94.2)",
+        "FIRE_V95__aimPool": "An aim held over several Combat Phases is lost when any pool dice are used, the aimed shot's own too (book), or pool dice don't matter (off, v0.94.2)",
+        "FIRE_V95__misfire": "Explosive rounds: an attack of all ones sets the round off in the gun, and the shooter resists the weapon's normal damage (book), or no misfire (off, v0.94.2)",
+        "FIRE_V95__shotScreen": "Shotgun shot: +1 resistance die for every other target in the spread in front (book), or none (off, v0.94.2)",
+        "FIRE_V95__rebound": "Blast in a confined space: the wave bounced back by walls that hold adds its Power for each target (book), or a share of the Power at the nearest wall for everyone (nearest, v0.94.2)",
+        "FIRE_V95__stray": "Stray shots (optional): full auto walked between targets gives the GM a card to test everyone in between (book), or not (off)",
+        "FIRE_V95__suppression": "Suppressive fire: rounds over an area for 10 Combat Phases, tested against whoever shows themselves (fof, Fields of Fire, optional), or one attack at the targeted people (house, v0.94.2)"
       }
     },
     "Rules": {
@@ -18817,6 +18825,20 @@
             "i2": "<strong>Foundry's compendiums</strong>: a world compendium belongs to its world, so drag the items from <em>SR2e catalogue</em> into a compendium of a module you share between worlds (your own content module), then in the other world drag them from there into its <em>SR2e catalogue</em>. For a few entries, an item's <em>Export Data</em> and <em>Import Data</em> also work. Items keep their template id and <em>In the shop</em> mark."
           },
           "b5": "Keep what you typed from your books for your own group."
+        },
+        "rulesV095Fire": {
+          "title": "Gunfire rules added in v0.95.0",
+          "b1": "v0.95.0 added more of the SR2 rulebooks' ranged combat. The GM can switch each rule under the GM's house rules (the <em>FIRE_V95</em> rows in Ranged combat). They work the same under the Unified Rules Revamp.",
+          "b2": {
+            "i1": "<strong>Laser sight:</strong> in mist, fog, rain or snow, or with smoke between you and the target, the Attack window leaves the laser sight unticked, and the attack drops its bonus even if you tick it.",
+            "i2": "<strong>Two guns:</strong> tick <em>Using a second firearm</em> for both guns. Each gun then counts only its own rounds for recoil, and the recoil the other gun could not compensate is added (<em>Recoil from the other gun</em>).",
+            "i3": "<strong>Aiming:</strong> if you aim in one Combat Phase and shoot in a later one, using any pool dice in between loses the aim. Combat Pool dice on the aimed shot itself lose it too; the Attack window's preview shows the TN change as you type the dice.",
+            "i4": "<strong>Explosive rounds:</strong> if every die of the attack shows a 1, the round goes off in the gun. A card follows with a <strong>Resist</strong> button for the shooter: the weapon's normal damage, no Combat Pool. If a Karma re-roll or an avoided disaster changes the roll, ignore that card.",
+            "i5": "<strong>Shotgun shot:</strong> a target with others in the spread between it and the gun rolls one more resistance die for each of them. The resistance card says how many.",
+            "i6": "<strong>Blasts indoors:</strong> walls strong enough to hold send the blast back. Each target's Power on the blast card includes the returning wave (<em>+N rebound</em>), worked out along the line from the blast through that target.",
+            "i7": "<strong>Stray shots</strong> (optional, off): after full auto is walked between targets without a smartlinked smartgun, a card says rounds may have strayed. The GM clicks <strong>Who is in the way (GM)</strong> and gets a list of everyone in between, with a <strong>Roll (GM)</strong> button each. A hit posts the damage with a Resist button.",
+            "i8": "<strong>Suppressive fire</strong> (optional, off): with the Fields of Fire choice, the <strong>Suppress</strong> button asks for the rounds and the width of the area during a combat. The rounds must divide evenly by the metres. When someone shows themselves there, the GM targets their token and clicks <strong>Test the targeted tokens (GM)</strong> on the card. After 10 Combat Phases, or once the combat ends, the card no longer works."
+          }
         }
       }
     },
@@ -19811,6 +19833,69 @@
       "noPack": "The catalogue compendium couldn't be made or found.",
       "moveFailed": "Moving the catalogue into its compendium failed; the old setting is untouched (see the console).",
       "moved": "SR2e: your catalogue ({n}) now lives in the world compendium {pack}. The old setting keeps its copy until you remove it (GM panel, Setup tab)."
+    },
+    "Fire95": {
+      "laserSmoke": "laser sight: no use through smoke",
+      "laserWeather": "laser sight: no use in this weather",
+      "sharedRecoil": "Recoil from the other gun",
+      "aimLostShot": "aim lost: pool dice used after aiming over several phases",
+      "aimLost": "used pool dice after aiming over several Combat Phases: the aim is lost.",
+      "misfireTitle": "{weapon}: misfire",
+      "misfireText": "All ones with explosive rounds: the round goes off in the gun and the attack misses. {name} resists the weapon's normal damage against {successes} attack successes (1D6), with no Combat Pool.",
+      "screenNote": ", +{n} dice behind others in the spread",
+      "reboundRow": "(+{n} rebound)",
+      "gmOnly": "Only the GM can roll this.",
+      "strayTitle": "{weapon}: stray shots",
+      "strayText": {
+        "one": "{name} walked the fire between targets: {count} stray round. Each person below is in the way: roll {dice} dice against the TN shown, in this order. A hit does {code} and counts its successes + 1D6.",
+        "other": "{name} walked the fire between targets: {count} stray rounds. Each person below is in the way: roll {dice} dice against the TN shown, in this order. A hit does {code} and counts its successes + 1D6."
+      },
+      "strayRow": "{dice} dice vs TN {tn}",
+      "strayRoll": "Roll (GM)",
+      "strayDone": "That person has already been tested on this card.",
+      "strayNoneLeft": "No stray rounds are left on this card.",
+      "strayDialog": "Stray shot",
+      "strayLine": "{name}: {dice} dice vs TN {tn}; a hit does {code} {type}",
+      "strayResult": {
+        "one": "{name}: {dice} dice vs TN {tn}, {count} success.",
+        "other": "{name}: {dice} dice vs TN {tn}, {count} successes."
+      },
+      "strayHits": "Hit, with {successes} attack successes.",
+      "strayMisses": "The round misses.",
+      "fofTitle": "Suppressive fire",
+      "fofHint": "Each round covers 1 m for {phases} Combat Phases. More rounds on a metre mean more dice against whoever shows themselves there.",
+      "fofRounds": "Rounds to fire (at most {most})",
+      "fofMetres": "Width of the area in metres",
+      "fofNoRounds": "{weapon} has no rounds left.",
+      "fofCardTitle": "{weapon}: suppressive fire",
+      "fofCardText": "{name} fires {rounds} rounds over {metres} m ({perMetre} per metre) for {phases} Combat Phases. Anyone who shows themselves there is attacked with {perMetre} dice against TN {tn} + cover + the shooter's wounds. Every {perHit} successes is a round that hits for {code}.",
+      "fofButton": "Test the targeted tokens (GM)",
+      "fofTargetFirst": "Target the tokens that showed themselves in the area first.",
+      "fofLine": "{names}, under fire laid in Combat Turn {round}: {dice} dice each; every hit does {code} {type}",
+      "fofUnseen": "{name} is out of the shooter's sight: no test.",
+      "fofCover": "Cover modifier for {name} (TN +)",
+      "fofResult": {
+        "one": "{name}: {dice} dice vs TN {tn}, {count} success.",
+        "other": "{name}: {dice} dice vs TN {tn}, {count} successes."
+      },
+      "fofHits": {
+        "one": "{count} round hits.",
+        "other": "{count} rounds hit."
+      },
+      "misfireUndo": "A Karma re-roll or an avoided disaster on the attack doesn't remove this card: if one changed the roll, there is no misfire and the shooter doesn't resist it.",
+      "strayAsk": {
+        "one": "{name} walked the fire between targets: {count} round may have strayed. The GM checks who was in the way.",
+        "other": "{name} walked the fire between targets: {count} rounds may have strayed. The GM checks who was in the way."
+      },
+      "strayList": "Who is in the way (GM)",
+      "strayListed": "The GM has already listed the stray shots for this card.",
+      "strayListLine": "{name}'s {weapon}, walked between {targets}: list who is in the way",
+      "strayNone": "No rounds strayed: the targets are too close together, or the gun is a smartgun with a smartlink.",
+      "strayNobody": "Nobody is in the way.",
+      "strayNotGm": "Only a stray-shot list the GM posted can be rolled.",
+      "fofUneven": "{rounds} rounds don't spread evenly over {metres} m. Choose rounds that divide evenly by the metres.",
+      "fofNeedsCombat": "Suppressive fire needs a running combat: it lasts a number of Combat Phases.",
+      "fofOver": "This suppressive fire is over: its Combat Phases have passed, or its combat has ended."
     }
   },
   "TYPES": {

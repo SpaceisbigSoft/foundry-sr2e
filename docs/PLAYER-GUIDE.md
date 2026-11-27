@@ -12,6 +12,7 @@ How to use the unofficial Shadowrun 2nd Edition system for Foundry VTT: what the
 - [All the tools](#all-the-tools)
 - [Rules updated in v0.79.0](#rules-updated-in-v0790)
 - [Combat rules updated in v0.92.3](#combat-rules-updated-in-v0923)
+- [Gunfire rules added in v0.95.0](#gunfire-rules-added-in-v0950)
 - [The Unified Rules Revamp (alternate rules)](#the-unified-rules-revamp-alternate-rules)
 - [Edit mode, Play mode and the toolbar](#edit-mode-play-mode-and-the-toolbar)
 - [The summary bar](#the-summary-bar)
@@ -166,6 +167,19 @@ v0.92.3 brought combat closer to the SR2 core rulebook. The GM can put each chan
 - **Firearms:** shotguns fire slugs unless loaded with shot, which follows the flechette rules and widens every choke metres (−1 Power and −1 TN each time). Flechette against armor uses double Impact or plain Ballistic, whichever is higher. Tracers help only full auto beyond short range. Full auto at several targets is +2 per new target, and a smartlinked smartgun wastes no rounds between them. Two rounds left fire a short burst (+2 Power, no extra level). A barrier rated above the Power stops the shot, and counts double against flechette and explosive rounds. Cylinders and internal magazines reload Quickness rounds per Complex Action. A weapon must be readied (a Simple Action) before use.
 - **Attack dialog and armor:** target running (+2), target stationary (−1), attacker in melee (+2 per opponent), difficult ground and smart goggles (−1) are new rows. Heavy armor costs a Combat Pool die per point of Ballistic over your Quickness, instead of Quickness.
 - **Initiative and actions:** ties go to Reaction, then natural Reaction. A wound changes your initiative at the next roll, not mid-turn. A delayed action lasts through the Combat Turn and into the next, but using pool dice while you wait loses it. Ambushers waiting on a delayed action roll the surprise test at TN 2.
+
+## Gunfire rules added in v0.95.0
+
+v0.95.0 added more of the SR2 rulebooks' ranged combat. The GM can switch each rule under the GM's house rules (the *FIRE_V95* rows in Ranged combat). They work the same under the Unified Rules Revamp.
+
+- **Laser sight:** in mist, fog, rain or snow, or with smoke between you and the target, the Attack window leaves the laser sight unticked, and the attack drops its bonus even if you tick it.
+- **Two guns:** tick *Using a second firearm* for both guns. Each gun then counts only its own rounds for recoil, and the recoil the other gun could not compensate is added (*Recoil from the other gun*).
+- **Aiming:** if you aim in one Combat Phase and shoot in a later one, using any pool dice in between loses the aim. Combat Pool dice on the aimed shot itself lose it too; the Attack window's preview shows the TN change as you type the dice.
+- **Explosive rounds:** if every die of the attack shows a 1, the round goes off in the gun. A card follows with a **Resist** button for the shooter: the weapon's normal damage, no Combat Pool. If a Karma re-roll or an avoided disaster changes the roll, ignore that card.
+- **Shotgun shot:** a target with others in the spread between it and the gun rolls one more resistance die for each of them. The resistance card says how many.
+- **Blasts indoors:** walls strong enough to hold send the blast back. Each target's Power on the blast card includes the returning wave (*+N rebound*), worked out along the line from the blast through that target.
+- **Stray shots** (optional, off): after full auto is walked between targets without a smartlinked smartgun, a card says rounds may have strayed. The GM clicks **Who is in the way (GM)** and gets a list of everyone in between, with a **Roll (GM)** button each. A hit posts the damage with a Resist button.
+- **Suppressive fire** (optional, off): with the Fields of Fire choice, the **Suppress** button asks for the rounds and the width of the area during a combat. The rounds must divide evenly by the metres. When someone shows themselves there, the GM targets their token and clicks **Test the targeted tokens (GM)** on the card. After 10 Combat Phases, or once the combat ends, the card no longer works.
 
 ## The Unified Rules Revamp (alternate rules)
 
