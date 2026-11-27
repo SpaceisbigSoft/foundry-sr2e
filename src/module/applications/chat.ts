@@ -17,6 +17,7 @@ import { scatterDiceV79 } from '../rules/docs79-ranged.ts';
 import * as U80C from '../rules/urr80-combat.ts';
 import * as C923 from '../rules/combat923.ts';
 import { onCard as onCard95 } from './core95.ts';
+import { onCard as onCard96 } from './health96.ts';
 import { blastThroughWalls, crossingFraction, indirectScatterDice, indirectScatterMetres, barrierSpellRadius } from '../rules/index.ts';
 import { tokensNear, scatterPoint, blastBlocked, wallDistances, wallsBetweenPoints, sightBlockedBetweenPoints, wallsNear, scatterStop, tokenOf, drawArea, placeWardRegion } from './canvas.ts';
 import { escHtml } from '../rules/html.ts';
@@ -3621,6 +3622,8 @@ function dispatch(message: any, button: HTMLButtonElement, action: string): Prom
   else if (action === 'sellItem') return onSellItem(message, button);
   // v0.95.0 (RULES.CORE_V95): the core book rules' card buttons (applications/core95.ts).
   else if (action.startsWith('c95')) return onCard95(message, button, action);
+  // v0.96.0 (RULES.HEALTH_V96): the health book rules' card buttons (applications/health96.ts).
+  else if (action.startsWith('h96')) return onCard96(message, button, action);
   else if (action === 'evict') return onEvict(message, button);
   else if (action === 'drugCrash') return onDrugCrash(message, button);
   else if (action === 'karmaReroll' || action === 'avoidDisaster') return onKarma(message, button, action);

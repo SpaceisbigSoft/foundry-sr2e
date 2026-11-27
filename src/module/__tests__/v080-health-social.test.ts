@@ -21,6 +21,10 @@ before(() => {
     'HEALTH_V923.bodyIndexHealing': 'natural', 'HEALTH_V923.firstAidStun': 'both', 'HEALTH_V923.permanentDamage': 'none', STUN_OVERFLOW_PER_PHYSICAL_BOX: 2 });
 });
 after(() => restore923());
+// v0.96.0: the v0.95.1 health rules too (RULES.HEALTH_V96; the book's way is in v096-health*.test.ts).
+let restore96: () => void = () => {};
+before(() => { restore96 = oldWay({ 'HEALTH_V96.stunRestInterrupted': 'off', 'HEALTH_V96.healingLifestyle': 'off', 'HEALTH_V96.medicalCosts': 'off', 'HEALTH_V96.healingSpellTime': 'off', 'HEALTH_V96.antidoteAttention': 'off', 'HEALTH_V96.patchImplants': 'off', 'HEALTH_V96.stimMagic': 'off', 'HEALTH_V96.nephriticPower': 'off', 'HEALTH_V96.traumaDamper': 'off', 'HEALTH_V96.painEditor': 'off', 'HEALTH_V96.addictionBoth': 'off', 'HEALTH_V96.addictionTiming': 'dose', 'HEALTH_V96.addictionRest': 'off', 'HEALTH_V96.addictionFall': 'off', 'HEALTH_V96.addictionAttrition': 'off', 'HEALTH_V96.docwagonResponse': 'off', 'HEALTH_V96.docwagonHtr': 'off', 'HEALTH_V96.docwagonExtendedCare': 'off', 'HEALTH_V96.neuroStun': 'off', 'HEALTH_V96.medkitAdvice': 'off' }); });
+after(() => restore96());
 
 const g = globalThis as any;
 const faces: number[] = [];

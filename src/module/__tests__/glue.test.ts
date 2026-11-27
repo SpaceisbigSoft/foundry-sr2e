@@ -79,6 +79,8 @@ before(async () => {
   (RULES.RIGGING as any).needsAdaptation = false;
   // v0.92.3: these older tests pin the v0.92.2 sorcery rules (RULES.SORCERY_V923); the book's way is in v0923-sorcery.test.ts.
   oldWay(SORCERY_V922);
+  // v0.96.0: these older tests pin the v0.95.1 health rules (RULES.HEALTH_V96); the book's way is in v096-health*.test.ts.
+  oldWay({ 'HEALTH_V96.stunRestInterrupted': 'off', 'HEALTH_V96.healingLifestyle': 'off', 'HEALTH_V96.medicalCosts': 'off', 'HEALTH_V96.healingSpellTime': 'off', 'HEALTH_V96.antidoteAttention': 'off', 'HEALTH_V96.patchImplants': 'off', 'HEALTH_V96.stimMagic': 'off', 'HEALTH_V96.nephriticPower': 'off', 'HEALTH_V96.traumaDamper': 'off', 'HEALTH_V96.painEditor': 'off', 'HEALTH_V96.addictionBoth': 'off', 'HEALTH_V96.addictionTiming': 'dose', 'HEALTH_V96.addictionRest': 'off', 'HEALTH_V96.addictionFall': 'off', 'HEALTH_V96.addictionAttrition': 'off', 'HEALTH_V96.docwagonResponse': 'off', 'HEALTH_V96.docwagonHtr': 'off', 'HEALTH_V96.docwagonExtendedCare': 'off', 'HEALTH_V96.neuroStun': 'off', 'HEALTH_V96.medkitAdvice': 'off' });
   g.foundry = {
     abstract: { TypeDataModel: class {} },
     data: { fields: new Proxy({}, { get: () => class { constructor(..._a: any[]) {} } }) },

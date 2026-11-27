@@ -7,6 +7,10 @@ import {
   damageImmunity, drugImmunity, healApplyRoute,
 } from '../lifeline.ts';
 import { critterImmunities } from '../bestiary.ts';
+import { oldWay } from './oldway.ts';
+
+// v0.96.0: these tests pin the tiers' own HTR fees (RULES.HEALTH_V96.docwagonHtr 'off'; the book's way is in v096-health.test.ts).
+oldWay({ 'HEALTH_V96.docwagonHtr': 'off' });
 
 const R = RULES as any;
 const SAVED = structuredClone(RULES.HEALTH_V61);

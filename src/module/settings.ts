@@ -11,6 +11,7 @@ import { HOUSE_MATRIX_V923 } from "./rules/config923/matrix.ts";
 import { HOUSE_VEHICLES_V923 } from "./rules/config923/vehicles.ts";
 import { HOUSE_GEAR_V923 } from "./rules/config923/gear.ts";
 import { HOUSE_CORE_V95 } from "./rules/config95/core.ts";
+import { HOUSE_HEALTH_V96 } from "./rules/config96/health.ts";
 import { HOUSE_FIRE_V95 } from "./rules/config95/fire.ts";
 import { HOUSE_MELEE_V95 } from "./rules/config95/melee.ts";
 import { SYSTEM } from "./config/system.ts";
@@ -1078,6 +1079,7 @@ export const HOUSE_RULES: HouseRuleDef[] = [
   ...HOUSE_GEAR_V923,
   // v0.95.0: rules completeness (rules/config95/*.ts).
   ...HOUSE_CORE_V95,
+  ...HOUSE_HEALTH_V96,
   ...HOUSE_FIRE_V95,
   ...HOUSE_MELEE_V95,
 ];

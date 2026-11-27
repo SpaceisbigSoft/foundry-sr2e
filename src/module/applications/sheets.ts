@@ -5798,7 +5798,7 @@ export class SR2ItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
       toxinKinds: RULES.TOXINS.kinds.map((k) => ({ key: k, label: k ? cap(k) : tx('SR2E.App.Sheets.notAToxinOrDrug') })),
       toxinVectors: RULES.TOXINS.vectors.map((k) => ({ key: k, label: cap(k) })),
       toxinSpeeds: RULES.TOXINS.speeds.map((x) => ({ key: x.id, label: x.label })),
-      addictionTypes: [{ key: "mental", label: tx('SR2E.App.Sheets.mentalWillpower') }, { key: "physical", label: tx('SR2E.App.Sheets.physicalBody') }],
+      addictionTypes: [{ key: "mental", label: tx('SR2E.App.Sheets.mentalWillpower') }, { key: "physical", label: tx('SR2E.App.Sheets.physicalBody') }, ...(RULES.HEALTH_V96.addictionBoth === "book" ? [{ key: "both", label: tx('SR2E.Health96.Addiction.both') }] : [])],
       protectionKinds: RULES.HEALTH.protection.kinds.map((k) => ({ key: k, label: ({ "": () => tx('SR2E.App.Sheets.none'), gasMask: () => tx('SR2E.App.Sheets.gasMask'), respirator: () => tx('SR2E.App.Sheets.respirator'), chemsuit: () => tx('SR2E.App.Sheets.chemsuit') } as Record<string, () => string>)[k]?.() ?? k })),
       crashLevels: [{ key: "", label: tx('SR2E.App.Sheets.noCrash') }, ...["L", "M", "S", "D"].map((k) => ({ key: k, label: k }))],
       chipKinds: RULES.CYBERWARE.skillsofts.kinds.map((k) => ({ key: k, label: k ? cap(k) : tx('SR2E.App.Sheets.notAChip') })),
