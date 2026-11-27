@@ -356,7 +356,8 @@ export function setupWarnings(i: SetupInput): SetupWarning[] {
     if (it.type === 'focus' && s.bonded === false) out.push({ text: tx('SR2E.Text.Catalogue.notBonded', { name: it.name }), tab: 'magic', find: 'Foci', level: 'note' });
     // v0.94.2 (item 29, 4.5): a custom skill tweak whose skill name matches no skill (or concentration or specialization) does nothing.
     if (person && i.skills.length) for (const t of normalizeTweaks(s.tweaks, () => 'x')) {
-      if ((t.target !== 'skillDice' && t.target !== 'skillTn') || !t.key || t.key.trim() === '*') continue;
+      // v0.94.2 review (11): a tweak switched off is not checked.
+      if (!t.on || (t.target !== 'skillDice' && t.target !== 'skillTn') || !t.key || t.key.trim() === '*') continue;
       if (!i.skills.some((sk) => skillModMatches(t.key, sk))) out.push({ text: tx('SR2E.Text.Catalogue.tweakSkillUnknown', { name: it.name, skill: t.key }), tab: tabForType(it.type), find: findForType(it.type), level: 'warn' });
     }
     for (const w of itemWarnings(it.type, s)) out.push({ text: `${it.name}: ${w}`, tab: tabForType(it.type), find: findForType(it.type), level: 'warn' });

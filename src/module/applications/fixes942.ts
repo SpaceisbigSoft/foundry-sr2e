@@ -1,32 +1,43 @@
 /**
  * v0.94.2 (plan item 29, the small-fixes bundle): the Foundry glue.
- * - foldDiceOn(): the GM's world default for folded dice, unless this user chose their own (UI-11.5).
+ * - foldDiceOn(): the GM's world default for folded dice, unless this user chose on or off (UI-11.5).
  * - "Add to combat…" in the Actors sidebar (GM): put actors in the tracker without tokens, for play without a map (8.1).
  * - "Clear my targets at the end of my turn" (a client setting, off by default; UI-9.4).
  */
 import { SYSTEM } from '../config/system.ts';
 import { escHtml } from '../rules/html.ts';
 import { t as tx, tCount } from '../helpers/i18n.ts';
-import { foldDiceFolded, addToCombatRows, turnWasMine } from '../rules/fixes942.ts';
+import { foldDiceFolded, addToCombatRows, addedActorIds, turnWasMine } from '../rules/fixes942.ts';
 
-/** Whether test cards fold their dice for this user. */
+/** Whether test cards fold their dice for this user (their own choice, else the table's default). */
 export function foldDiceOn(): boolean {
   const g: any = game as any;
-  let stored: unknown = null;
-  try { stored = g.settings?.storage?.get?.('client')?.getItem?.(`${SYSTEM.id}.foldDice`) ?? null; } catch { stored = null; }
   let world = true;
   try { world = g.settings.get(SYSTEM.id, 'foldDiceDefault') !== false; } catch { /* not registered */ }
-  let mine = true;
-  try { mine = g.settings.get(SYSTEM.id, 'foldDice') !== false; } catch { /* not registered */ }
-  return foldDiceFolded(stored, world, mine);
+  let mine: unknown = 'default';
+  try { mine = g.settings.get(SYSTEM.id, 'foldDice'); } catch { /* not registered */ }
+  return foldDiceFolded(mine, world);
 }
+
+/** The actors already in a combat (tokenless or linked combatants). */
+function actorsIn(combat: any): Set<string> {
+  // v0.94.2 review (16): an unlinked token's combatant is not its base actor; only tokenless or linked ones count.
+  return new Set<string>(addedActorIds([...(combat?.combatants ?? [])].map((c: any) => ({ actorId: c.actorId, tokenId: c.tokenId, linked: c.token?.actorLink ?? c.token?.document?.actorLink }))));
+}
+
+/** Whether an "Add to combat" window is open (a double click opens only one). */
+let addToCombatOpen = false;
 
 /** The GM's "Add to combat" window: tick actors to put in the current combat (one is started if none) without tokens. */
 export async function openAddToCombat(): Promise<number> {
   const g: any = game as any;
-  if (!g.user?.isGM) return 0;
-  const combat: any = g.combat ?? null;
-  const inCombat = new Set<string>([...(combat?.combatants ?? [])].map((c: any) => String(c.actorId ?? '')).filter(Boolean));
+  if (!g.user?.isGM || addToCombatOpen) return 0;
+  addToCombatOpen = true;
+  try { return await addToCombatNow(g); } finally { addToCombatOpen = false; }
+}
+
+async function addToCombatNow(g: any): Promise<number> {
+  const inCombat = actorsIn(g.combat ?? null);
   const rows = addToCombatRows([...(g.actors ?? [])].map((a: any) => ({ id: a.id, name: a.name, type: a.type, hasPlayerOwner: Boolean(a.hasPlayerOwner) })), inCombat);
   if (!rows.length) { ui.notifications?.info?.(tx('SR2E.Notify.Fixes942.nobodyToAdd')); return 0; }
   const DialogV2: any = (foundry as any).applications.api.DialogV2;
@@ -36,9 +47,12 @@ export async function openAddToCombat(): Promise<number> {
     ok: { label: tx('SR2E.Dialog.Fixes942.addToCombat'), callback: (_e: Event, b: any) => [...b.form.querySelectorAll('input[name="who"]:checked')].map((i: any) => String(i.value)) },
     rejectClose: false,
   });
-  const ids = (picked ?? []).filter((id) => g.actors?.get?.(id) && !inCombat.has(id));
+  // The combat as it is now (the window may have been open a while): a combat started meanwhile is used, and actors
+  // added meanwhile are not added twice.
+  let target: any = g.combat ?? null;
+  const now = actorsIn(target);
+  const ids = [...new Set(picked ?? [])].filter((id) => g.actors?.get?.(id) && !now.has(id));
   if (!ids.length) return 0;
-  let target: any = combat;
   if (!target) {
     const Combat: any = (foundry as any).utils?.getDocumentClass?.('Combat') ?? (globalThis as any).getDocumentClass?.('Combat') ?? (CONFIG as any).Combat?.documentClass;
     target = await Combat.create({ scene: (canvas as any)?.scene?.id ?? null, active: true });

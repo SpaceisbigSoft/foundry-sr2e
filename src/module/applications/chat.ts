@@ -2944,6 +2944,8 @@ async function onApplyAdvRevert(message: any, button: HTMLButtonElement): Promis
   const v = f ? await confirmAdvRevertCard(f, message) : null;
   if (!v) return;
   await gmLocked(message, button, async () => {
+    // v0.94.2 review (17): applied meanwhile (another click queued behind this one).
+    if (message.getFlag(SYSTEM_ID, 'advRevertApplied')) return;
     button.disabled = true;
     if (await applyAdvRevertAsGm(v, message)) await message.setFlag(SYSTEM_ID, 'advRevertApplied', true);
     else button.disabled = false;

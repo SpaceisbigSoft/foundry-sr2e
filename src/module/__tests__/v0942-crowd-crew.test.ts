@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
-  stationsFor, crewOf, seatOf, stationsOfActor, seat, markReady, clearReady, allReady, stationGuns, stationOrder, crewMay, stationFirerRole, validStation, MAX_GUNNERS,
+  stationsFor, crewOf, seatOf, stationsOfActor, seat, markReady, clearReady, allReady, stationGuns, stationOrder, crewMay, pruneCrew, stationFirerRole, validStation, MAX_GUNNERS,
 } from '../rules/crew942.ts';
 
 const ROOT = join(import.meta.dirname, '..', '..', '..');
@@ -131,7 +131,9 @@ describe('v0.94.2 crew stations: the panel (glue with stubs)', () => {
     assert.match(html, /data-action="fireMounted" data-item-id="w1"/);
     assert.match(html, /data-action="crewReady" data-station="gunner1"/);
     assert.doesNotMatch(html, /Goon <b>/);
-    assert.match(html, /Goon &lt;b&gt;/);
+    // v0.94.2 review (7): the player can't view the NPC driver, so the seat only says it's taken.
+    assert.doesNotMatch(html, /Goon &lt;b&gt;/);
+    assert.match(html, /Driver <small>occupied<\/small>/);
     assert.doesNotMatch(html, /crewClearReady/, 'no GM control for a player');
     assert.doesNotMatch(html, /data-action="crewAssign"/, 'a player who doesn\'t own the vehicle assigns nobody');
   });
@@ -146,11 +148,51 @@ describe('v0.94.2 crew stations: the panel (glue with stubs)', () => {
     assert.equal(mod.crewOpAllowed(vehicle, player, { vehicleUuid: vehicle.uuid, op: 'seat', station: 'gunner9' as any, actorUuid: 'Actor.pc' }), false);
     assert.equal(mod.crewOpAllowed(vehicle, { isGM: true }, { vehicleUuid: vehicle.uuid, op: 'clear' }), true);
   });
+  test('review (7): the vehicle\'s owner sees the name (escaped)', () => {
+    const own = { ...vehicle, isOwner: true, testUserPermission: () => true };
+    const html = mod.crewPanelHtml(own, 'sheet2');
+    assert.match(html, /Goon &lt;b&gt;/);
+    assert.doesNotMatch(html, /Goon <b>/);
+  });
+  test('review (2): a vehicle owner seats anyone as gunner, but only their own actor as driver; the GM anyone', () => {
+    const own = { ...vehicle, isOwner: true, testUserPermission: () => true, system: { ...vehicle.system, controllerUuid: '' } };
+    const player = { isGM: false, name: 'Pat' };
+    assert.equal(mod.crewOpAllowed(own, player, { vehicleUuid: own.uuid, op: 'seat', station: 'driver', actorUuid: 'Actor.npc' }), false);
+    assert.equal(mod.crewOpAllowed(own, player, { vehicleUuid: own.uuid, op: 'seat', station: 'driver', actorUuid: 'Actor.pc' }), true);
+    assert.equal(mod.crewOpAllowed(own, player, { vehicleUuid: own.uuid, op: 'seat', station: 'sensors', actorUuid: 'Actor.npc' }), true);
+    assert.equal(mod.crewOpAllowed(own, { isGM: true }, { vehicleUuid: own.uuid, op: 'seat', station: 'driver', actorUuid: 'Actor.npc' }), true);
+  });
+  test('review (6): seats of a deleted actor, or at a station that is gone, are dropped; a gone driver frees the seat', () => {
+    const ghost = { ...vehicle, system: { ...vehicle.system, controllerUuid: 'Actor.deleted' }, flags: { shadowrun2e_unified: { crew942: { seats: { gunner1: 'Actor.deleted', gunner2: 'Actor.pc', sensors: 'Actor.npc' }, ready: { gunner1: true, gunner2: true } } } } };
+    assert.deepEqual(mod.crewStateOf(ghost), { seats: { sensors: 'Actor.npc' }, ready: {} });
+    const html = mod.crewPanelHtml(ghost, 'sheet3');
+    assert.match(html, /data-action="crewClaim" data-station="gunner1"/, 'the ghost\'s station can be claimed');
+    assert.doesNotMatch(html, /data-station="gunner2"/);
+  });
+  test('review (8): any seat change goes to the GM while the driver is someone else\'s', () => {
+    const src = read('src', 'module', 'applications', 'crew942.ts');
+    assert.match(src, /const driverDocs = req\.op === 'seat' \? \[req\.station === 'driver' \? fromUuidQuiet\(req\.actorUuid \?\? ''\) : null, fromUuidQuiet\(controllerOf\(vehicle\)\)\]/);
+  });
   test('wired: sheet actions and render, the relay op, the setting', () => {
     const sheets = read('src', 'module', 'applications', 'sheets.ts');
     assert.match(sheets, /\.\.\.CREW_ACTIONS,/);
     assert.match(sheets, /decorateCrewStations\(this\);/);
     assert.match(read('src', 'module', 'applications', 'socket.ts'), /\| 'crewStation'/);
     assert.match(read('src', 'module', 'settings.ts'), /"crewStations", \{[\s\S]{0,200}default: true/);
+  });
+});
+
+describe('v0.94.2 review: crew rules', () => {
+  test('(2) assign at the driver\'s station needs the actor too', () => {
+    const o = { isGM: false, ownsVehicle: true, ownsActor: false, aboard: false, free: true };
+    assert.equal(crewMay('assign', { ...o, driver: true }), false);
+    assert.equal(crewMay('assign', { ...o, driver: true, ownsActor: true }), true);
+    assert.equal(crewMay('assign', o), true);
+    assert.equal(crewMay('assign', { ...o, isGM: true, ownsVehicle: false, driver: true }), true);
+  });
+  test('(6) pruneCrew drops ghosts and their ready marks', () => {
+    const st = stationsFor(['turret']);
+    const out = pruneCrew({ seats: { gunner1: 'A', gunner2: 'B', sensors: 'X' }, ready: { gunner1: true, gunner2: true, sensors: true, driver: true } }, st, (u) => u !== 'X');
+    assert.deepEqual(out, { seats: { gunner1: 'A' }, ready: { gunner1: true, driver: true } });
   });
 });

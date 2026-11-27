@@ -1614,9 +1614,11 @@ export function registerSettings(): void {
     scope: "client", config: true, type: String, default: "dialog",
     choices: { dialog: "SR2E.Settings.defendPrompt.Choices.dialog", notify: "SR2E.Settings.defendPrompt.Choices.notify", off: "SR2E.Settings.defendPrompt.Choices.off" },
   });
+  // v0.94.2 review (5): follow the table's default, or always / never (an old stored true/false reads as on/off).
   game.settings.register(SYSTEM.id, "foldDice", {
     name: "SR2E.Settings.foldDice.Name", hint: "SR2E.Settings.foldDice.Hint",
-    scope: "client", config: true, type: Boolean, default: true,
+    scope: "client", config: true, type: String, default: "default",
+    choices: { default: "SR2E.Settings.foldDice.Choices.default", on: "SR2E.Settings.foldDice.Choices.on", off: "SR2E.Settings.foldDice.Choices.off" },
   });
   // v0.94.2 (item 29): the GM's default for Fold dice (each user's own choice above still wins once they set it),
   // whether a placed area leaves its attacker out of the targets, and clearing your targets when your turn ends.
@@ -1701,6 +1703,8 @@ export function registerSettings(): void {
   });
   // v0.94.1 (item 21): hidden-information basics (screen hiding, not security).
   game.settings.register(SYSTEM.id, "rollPrivacyWorld", { scope: "world", config: false, type: Object, default: {} });
+  // v0.94.2 review (1): the GM's record of reverted advancement-log lines (actor uuid → line ids); players can't write it.
+  game.settings.register(SYSTEM.id, "revertDone", { scope: "world", config: false, type: Object, default: {} });
   game.settings.register(SYSTEM.id, "hideNpcNumbers", {
     name: "SR2E.Settings.hideNpcNumbers.Name", hint: "SR2E.Settings.hideNpcNumbers.Hint",
     scope: "world", config: true, type: Boolean, default: true,

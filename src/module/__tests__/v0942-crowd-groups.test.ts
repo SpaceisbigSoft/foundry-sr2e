@@ -5,7 +5,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { groupKeyOf, planGroups, baseName, groupStanding, sharedInitiativeUpdates, sharedRollIds, type GroupMember } from '../rules/groups942.ts';
+import { groupKeyOf, planGroups, baseName, groupStanding, sharedInitiativeUpdates, sharedRollIds, heldGroups, keepTurn, type GroupMember } from '../rules/groups942.ts';
 
 const ROOT = join(import.meta.dirname, '..', '..', '..');
 const read = (...p: string[]) => readFileSync(join(ROOT, ...p), 'utf8');
@@ -109,5 +109,59 @@ describe('v0.94.2 grunt groups: glue with stubs', () => {
     assert.deepEqual(calls[1], ['update', 'Combatant', [{ _id: 'a', group: 'N0' }, { _id: 'b', group: 'N0' }]]);
     const r = mod.sharedRoll942(combat, ['a']);
     assert.deepEqual(r.ids, ['a'], 'each keeps their own roll by default (the stub answers "auto", not "shared")');
+  });
+});
+
+describe('v0.94.2 review (3): shared initiative mid-combat', () => {
+  const ours = new Set(['G']);
+  test('a new member takes the score the group already holds; the group is never pushed to the new roll', () => {
+    // Goons 1-3 hold 4 (pass 2); Goon 4 joins and rolls 17.
+    const now = [{ id: 'a', group: 'G', initiative: 4 }, { id: 'b', group: 'G', initiative: 4 }, { id: 'c', group: 'G', initiative: 4 }, { id: 'd', group: 'G', initiative: 17 }];
+    assert.deepEqual(sharedInitiativeUpdates(now, ['d'], ours), [{ _id: 'd', initiative: 4 }]);
+    // Asked but not rolled (the glue skips the roll): set straight to the held score.
+    const unrolled = [{ id: 'a', group: 'G', initiative: 4 }, { id: 'd', group: 'G', initiative: null }];
+    assert.deepEqual(sharedInitiativeUpdates(unrolled, [], ours, ['d']), [{ _id: 'd', initiative: 4 }]);
+  });
+  test('the whole group rolled again (nobody else holds a score): the first roll is shared as before', () => {
+    const now = [{ id: 'a', group: 'G', initiative: 12 }, { id: 'b', group: 'G', initiative: 3 }];
+    assert.deepEqual(sharedInitiativeUpdates(now, ['a'], ours, ['a', 'b']), [{ _id: 'b', initiative: 12 }]);
+  });
+  test('groups holding a score are not rolled at all', () => {
+    const now = [{ id: 'a', group: 'G', initiative: 4 }, { id: 'd', group: 'G', initiative: null }, { id: 'x', group: 'H', initiative: null }];
+    assert.deepEqual([...heldGroups(now, ['d'], ours)], ['G']);
+    assert.deepEqual([...heldGroups(now, ['a', 'd'], ours)], []);
+    assert.deepEqual([...heldGroups(now, ['x'], new Set(['G', 'H']))], []);
+  });
+  test('the acting combatant keeps acting after the re-sort', () => {
+    assert.equal(keepTurn([{ id: 'a' }, { id: 'b' }, { id: 'c' }], 'c', 1), 2);
+    assert.equal(keepTurn([{ id: 'a' }, { id: 'b' }], 'b', 1), null);
+    assert.equal(keepTurn([{ id: 'a' }], null, 0), null);
+    assert.equal(keepTurn([{ id: 'a' }], 'gone', 0), null);
+  });
+  test('glue: a reinforcement is not rolled, takes the held score, and the turn follows the acting combatant', async () => {
+    const g = globalThis as any;
+    g.game ??= {};
+    g.game.user = { id: 'gm', isGM: true };
+    g.game.settings = { get: (_s: string, k: string) => (k === 'gruntGroupInitiative' ? 'shared' : 'auto') };
+    g.CONFIG = { CombatantGroup: {} };
+    const mod = await import('../applications/groups942.ts');
+    const calls: any[] = [];
+    const grp = { id: 'G', flags: { shadowrun2e_unified: { groupKey: 'm:x' } } };
+    const cs = [{ id: 'a', group: 'G', initiative: 4 }, { id: 'b', group: 'G', initiative: 4 }, { id: 'boss', group: null, initiative: 9 }, { id: 'd', group: 'G', initiative: null }];
+    const combat: any = {
+      id: 'C', started: true, turn: 0, combatants: cs, groups: Object.assign([grp], { get: () => grp }),
+      get combatant() { return cs.find((c) => c.id === 'boss'); },
+      get turns() { return [...cs].sort((x, y) => Number(y.initiative ?? -1) - Number(x.initiative ?? -1)); },
+      createEmbeddedDocuments: async () => [],
+      updateEmbeddedDocuments: async (t: string, d: any[]) => { calls.push(['update', t, d]); for (const u of d) Object.assign(cs.find((c) => c.id === u._id)!, u); },
+      update: async (d: any) => { calls.push(['combat', d]); Object.assign(combat, d); },
+    };
+    const r = mod.sharedRoll942(combat, ['d']);
+    assert.deepEqual(r.ids, [], 'the held group rolls nobody');
+    // Pretend Foundry put the boss first meanwhile, then the shared score re-sorts.
+    combat.turn = 1;
+    await r.after();
+    assert.deepEqual(calls[0], ['update', 'Combatant', [{ _id: 'd', initiative: 4 }]]);
+    assert.deepEqual(calls[1], ['combat', { turn: 0 }]);
   });
 });

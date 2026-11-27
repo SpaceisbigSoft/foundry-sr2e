@@ -98,19 +98,48 @@ export function groupStanding(members: ReadonlyArray<Pick<GroupMember, 'down' | 
 }
 
 /**
- * Pure: the shared-initiative updates after a roll: in each of the system's groups, the first member rolled sets the
- * score for the others. `rolled` is the combatant ids rolled now.
+ * Pure: the shared-initiative updates after a roll, per system group touched by `asked` (the ids asked to roll;
+ * `rolled` the ones actually rolled, by default the same).
+ * - v0.94.2 review (3): when a member not asked now already holds a score (the group is mid-combat, its score lowered
+ *   pass by pass), the asked members take that score; the group's score is never replaced by a new roll.
+ * - Otherwise the first member rolled sets the score for the others.
  */
-export function sharedInitiativeUpdates(members: ReadonlyArray<{ id: string; group: string; initiative: number | null }>, rolled: ReadonlyArray<string>, ourGroups: ReadonlySet<string>): Array<{ _id: string; initiative: number }> {
+export function sharedInitiativeUpdates(members: ReadonlyArray<{ id: string; group: string; initiative: number | null }>, rolled: ReadonlyArray<string>, ourGroups: ReadonlySet<string>, asked: ReadonlyArray<string> = rolled): Array<{ _id: string; initiative: number }> {
   const out: Array<{ _id: string; initiative: number }> = [];
   const done = new Set<string>();
-  for (const id of rolled) {
-    const lead = members.find((m) => m.id === id);
-    if (!lead || !lead.group || !ourGroups.has(lead.group) || done.has(lead.group) || lead.initiative === null) continue;
-    done.add(lead.group);
-    for (const m of members) if (m.group === lead.group && m.id !== lead.id && m.initiative !== lead.initiative) out.push({ _id: m.id, initiative: lead.initiative });
+  const askedSet = new Set(asked), rolledSet = new Set(rolled);
+  for (const id of [...asked, ...rolled]) {
+    const g = members.find((m) => m.id === id)?.group ?? '';
+    if (!g || !ourGroups.has(g) || done.has(g)) continue;
+    done.add(g);
+    const group = members.filter((m) => m.group === g);
+    const holder = group.find((m) => !askedSet.has(m.id) && !rolledSet.has(m.id) && m.initiative !== null);
+    if (holder) {
+      for (const m of group) if ((askedSet.has(m.id) || rolledSet.has(m.id)) && m.initiative !== holder.initiative) out.push({ _id: m.id, initiative: holder.initiative! });
+      continue;
+    }
+    const lead = rolled.map((r) => group.find((m) => m.id === r)).find((m) => m && m.initiative !== null);
+    if (!lead) continue;
+    for (const m of group) if (m.id !== lead.id && m.initiative !== lead.initiative) out.push({ _id: m.id, initiative: lead.initiative! });
   }
   return out;
+}
+
+/** Pure: the system groups (touched by `ids`) where a member not in `ids` already holds a score: nobody there rolls. */
+export function heldGroups(members: ReadonlyArray<{ id: string; group: string; initiative: number | null }>, ids: ReadonlyArray<string>, ourGroups: ReadonlySet<string>): Set<string> {
+  const set = new Set(ids), out = new Set<string>();
+  for (const id of ids) {
+    const g = members.find((m) => m.id === id)?.group ?? '';
+    if (g && ourGroups.has(g) && members.some((m) => m.group === g && !set.has(m.id) && m.initiative !== null)) out.add(g);
+  }
+  return out;
+}
+
+/** Pure: the turn index that keeps `current` acting after a re-sort (null = no change needed). */
+export function keepTurn(turns: ReadonlyArray<{ id: string }>, current: string | null, turn: number): number | null {
+  if (!current) return null;
+  const i = turns.findIndex((t) => t.id === current);
+  return i >= 0 && i !== turn ? i : null;
 }
 
 /** Pure: which of the ids to roll when sharing: one per system group (the first), plus everyone not in one. */

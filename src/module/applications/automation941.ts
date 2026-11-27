@@ -13,6 +13,7 @@ import { escHtml } from '../rules/html.ts';
 import { RULES } from '../rules/config.ts';
 import { RULES_SOURCES } from '../rules/config80.ts';
 import { t as tx, tKey } from '../helpers/i18n.ts';
+import { foldDiceChoice, FOLD_DICE_KEY } from '../rules/fixes942.ts';
 import {
   AUTOMATION_GROUPS, AUTOMATION_SETTINGS, MANUAL_RULES, RULESET_PRESETS, effectiveRule, effectiveSetting, manualAffects,
   presetById, presetPlan, matchingPresets, type PresetChange, type PresetState,
@@ -26,7 +27,10 @@ function reg(key: string): any {
 }
 
 function stored(key: string, fallback: unknown = null): unknown {
-  try { return (game as any).settings.get(SYSTEM_ID, key) ?? fallback; } catch { return fallback; }
+  let v: unknown;
+  try { v = (game as any).settings.get(SYSTEM_ID, key) ?? fallback; } catch { return fallback; }
+  // v0.94.2 review (5): Fold dice was a Boolean; an old stored value reads as one of its choices.
+  return key === FOLD_DICE_KEY ? foldDiceChoice(v) : v;
 }
 
 function isGm(): boolean { return Boolean((game as any).user?.isGM); }
