@@ -641,6 +641,104 @@ Still not built:
 - Reaction 0 frozen for the whole Combat Turn at the initiative roll (it is checked live).
 - The adept power Quick Draw (Awakenings) for melee weapons.
 
+## Rules completeness (v0.96.0, 27 Nov 2026)
+
+v0.96.0 built book rules from the "Not built" lists above (health, sorcery, spirits and astral). Each has a house-rule switch whose first choice is the book's way (optional book rules ship off) and whose other choice puts v0.95.1 back: `RULES.HEALTH_V96`, `RULES.SORCERY_V96`, `RULES.SPIRITS_V96` (`rules/config96/*.ts`). Rows marked VERIFY below are readings the builders could not settle from the books. The owner's kept decisions (casting dice by the skill's rating, the layered Magic Pool, FORMULA_V918) are unchanged.
+
+#### Damage, health and hazards (v0.96.0, RULES.HEALTH_V96)
+
+Switches in `RULES.HEALTH_V96` (`rules/config96/health.ts`, helpers in `rules/health96.ts`, glue in `applications/health96.ts`); the first choice is the book's way (the default), the other puts the v0.95.1 behaviour back.
+
+| Rule | Was | Now (book) | Source | Switch |
+| --- | --- | --- | --- | --- |
+| Interrupted Stun rest | every rest a fresh test | a rest that stops before the Stun track is clear keeps its first roll (flag `stunRest96`); the next rest re-tests with the current condition but counts at most the first roll's successes; a clear track ends it | Core p. 112 | `HEALTH_V96.stunRestInterrupted` 'book' / 'off' |
+| Minimum lifestyle while healing | no check | the Physical rest card warns when the lifestyle (hospital or intensive care = hospitalized) is below the Healing Table's minimum; the modifiers are the GM's | Core p. 113 | `HEALTH_V96.healingLifestyle` 'book' / 'off' |
+| Medical costs | hospital 500¥, intensive 1,000¥ a day | also the doctor's fee per day by wound for care "With a medkit and care" (a doctor outside a hospital; VERIFY: the care rows don't name a doctor), and a paramedic's fee card (Pay button) when an NPC gives a player's character first aid | Core p. 113 (Medical Costs Table) | `HEALTH_V96.medicalCosts` 'book' / 'off' |
+| Healing spells' time | sustained Force ÷ successes Combat Turns | the spell's Healing Table: 5/10/15/20 turns by the wound ÷ the successes put to time; successes go to boxes first, the rest to time (VERIFY: the book lets the caster split as they like; there is no split choice in the cast dialog yet) | Core p. 155 | `HEALTH_V96.healingSpellTime` 'book' / 'off' |
+| Antidote as professional attention | none | an antidote patch on a dying, unstabilised patient whispers the GM a Stabilise button (the GM judges whether a toxin put them down) | Core p. 186 | `HEALTH_V96.antidoteAttention` 'book' / 'off' |
+| Implants and slap patches | no effect | dermal armor lowers a patch's rating by its armor; blood filtration makes any patch but the trauma patch useless | Core p. 250 | `HEALTH_V96.patchImplants` 'book' / 'off' |
+| Stim patch and magicians | none | a magician rolls Magic vs the patch rating; failing posts the Magic loss card; optional: vs the total of the last 24 hours | Core p. 250; Awakenings p. 99 | `HEALTH_V96.stimMagic` 'core' / 'awakenings' / 'off' |
+| Nephritic screen | +dice vs injected/ingested toxins | also −1 Power vs pathogens and blood-vectored (injected) toxins (VERIFY: "blood-vectored" read as injection) | Shadowtech p. 30 | `HEALTH_V96.nephriticPower` 'book' / 'off' |
+| Trauma damper | −1 box on Stun hits | also a Physical hit moves one box onto the Stun track (not with a pain editor, which the system keeps on) | Shadowtech p. 29 | `HEALTH_V96.traumaDamper` 'book' / 'off' |
+| Pain editor | Stun wounds ignored | also Stun can't knock the wearer out (derived status and the damage card); its −1 Intelligence was already `GEAR_V923.bioware` | Shadowtech p. 26 | `HEALTH_V96.painEditor` 'book' / 'off' |
+| Addiction: both kinds | one kind per drug | a drug can be "Both": a Body and a Willpower test after a dose, the shorter dose clock (drugs' addiction type has a new choice 'both') | Shadowtech p. 87 | `HEALTH_V96.addictionBoth` 'book' / 'off' |
+| Addiction: test timing | at the dose | the addiction and Tolerance tests are rolled when the dose wears off | Shadowtech p. 87 | `HEALTH_V96.addictionTiming` 'wearOff' / 'dose' |
+| Addiction: rest after recovery | cured at once | a rest of the drug's base rating in days at +1 (+2 concentration), then cured (VERIFY: the book gives no unit for the rest; days) | Shadowtech p. 88 | `HEALTH_V96.addictionRest` 'book' / 'off' |
+| Addiction: forced withdrawal's fall | none | each 24 hours of forced withdrawal without a dose the current rating drops 1 (never below the base) | Shadowtech p. 88 | `HEALTH_V96.addictionFall` 'book' / 'off' |
+| Addiction: weekly loss | none | each week addicted (not recovering) the GM gets a card: ½ Essence (Apply button, `essenceShift`) and a box off each track's maximum (noted only) | Shadowtech p. 87 | `HEALTH_V96.addictionAttrition` 'card' / 'off' |
+| DocWagon response time | the contract's fixed minutes | 1D6 unit (5–6 air), 3D6 minutes −2 by air, at least 4; the GM adds area and Enforcement Rating | Neo-Anarchist's Guide p. 95 | `HEALTH_V96.docwagonResponse` 'book' / 'off' |
+| DocWagon HTR | the tier's own fee | `htrFee` less 50 percent (Gold) or all (Platinum) (VERIFY: the book names no price; 5,000¥) | Core p. 250 | `HEALTH_V96.docwagonHtr` 'book' / 'off' |
+| DocWagon extended care | none | a paid-up Gold contract takes 10 percent off rest care fees and paramedic fees, Platinum 50 | Core p. 250 | `HEALTH_V96.docwagonExtendedCare` 'book' / 'off' |
+| Neuro-stun | Stun only | anyone exposed (not immune) is disoriented an hour: +2 to every TN (a toxin whose name says neuro-stun) | Core p. 186 | `HEALTH_V96.neuroStun` 'book' / 'off' |
+| Medkit's advice | none | first aid with a medkit rolls at least the kit's Biotech 3, without defaulting (VERIFY: "advise the user" read as lending its rating) | Core p. 250 | `HEALTH_V96.medkitAdvice` 'book' / 'off' |
+
+Cut / still not built:
+- Radiation by rads, replacement body parts and the stabilization unit, over-damage, sprint fatigue (cut by the lead).
+- The caster's own split of a healing spell's successes (a field in the cast dialog); boxes first is used.
+- The weekly addiction box loss as a shorter track (the system's tracks are fixed at 10 boxes); the card notes it. The recovered boxes during the post-recovery rest likewise.
+- The trauma damper with a damage compensator (works only once the compensator is exceeded), and the pain editor's off switch (the system keeps it on); its hidden damage and tactile +4 Perception.
+- DocWagon's area table and the loophole (2D6) roll for late arrivals: left to the GM.
+- The medkit's antidote making (Biotech vs the toxin's Virulence) and its supplies running out.
+
+#### Sorcery (v0.96.0, RULES.SORCERY_V96)
+
+Switches in `RULES.SORCERY_V96` (`src/module/rules/config96/sorcery.ts`; pure logic `rules/sorcery96.ts`, Foundry side
+`applications/sorcery96.ts`). The first choice is the book's way and the default; the other gives v0.95.1. The owner's
+decisions are kept: the casting test rolls the skill's rating (MAGIC_V920), the layered Magic Pool and FORMULA_V918;
+these rules add to them. Rows marked VERIFY are readings the books didn't settle.
+
+| Rule | Was | Now (book) | Source | Switch |
+|---|---|---|---|---|
+| Defaulting magical skills | no Sorcery skill, no casting | a magically active caster with no Sorcery defaults to Magical Theory, Conjuring, Enchanting or Willpower at +2 TN a web step (the GM's Skill Web where it links them, else 1 / 2 / 2 / 4 steps; the most dice win). VERIFY: the Awakenings p. 94 web diagram wasn't readable; the steps are a reading. Casting only (not dispelling, wards or castAtObject); the sustain cap still reads the Sorcery rating (0) | Awakenings p. 93; Core p. 68 | `SORCERY_V96.magicDefault` |
+| Shaping an area spell | radius = Magic metres | the Cast window's radius change: 2 dice withheld a metre smaller, 1 die a metre larger, at most Force dice; the targets inside the new radius are ticked; the dice come off the casting test | Core p. 130 | `SORCERY_V96.areaShape` |
+| Spell stacking | none | the Cast window's "other spells stacked": +2 TN each on the casting and Drain tests (each stacked spell is cast through its own window with the same count; the pool is split by hand). VERIFY: read as +2 per spell beyond the first (the book's two-spell example is +2) | Core p. 129 | `SORCERY_V96.stacking`, `stackTn` 2 |
+| Noticing spellcasting | none | the cast card's title names the onlookers' Perception TN: 2 × \|Magic − Force\|, at least 2 (VERIFY: the minimum), −2 for a magician, automatic for the astrally active (not rolled) | Core p. 132 | `SORCERY_V96.noticing`, `noticeMinTn` 2 |
+| Active foci | no limit | at most Intelligence active foci; switching one more on is refused (any path: `preUpdateItem`) | Core p. 137 | `SORCERY_V96.fociLimit` 'book' / 'warn' / 'off' |
+| The Armor spell | effect per success (MAGIC_V56 step) | one-half the successes count (step 2 for the names in `halfSuccessSpells`) | Core p. 158 | `SORCERY_V96.armorSpell` |
+| A ward's days | the card states them | the ward keeps its days (barrier field `wardDays96`); when it rises its end is set on the system clock (`wardEnds96`, lead GM); when the clock passes it the ward falls (rating 0) and the GMs get a card | Grimoire p. 92; Grimoire II errata | `SORCERY_V96.wardExpiry` 'book' / 'card' / 'off' |
+| Quickening | Karma = Force at once | the Quicken window asks for the casting test's dice and TN and the Karma (Force to 2 × Force); Sorcery + grade vs the TN; actions to sustain = dice ÷ successes (up, at least 1; none: twice the dice); the Karma is kept for dispelling's TN; a second Drain at the spell's own code. VERIFY: made permanent at once, the card states the actions (the GM holds it back); rounding up | Grimoire pp. 44–45 | `SORCERY_V96.quickening` |
+| Anchoring | MAGIC_V72 Karma by Force | Karma = Force + links (a trigger = 1 link); Enchanting vs half the Force (down, VERIFY) + links, at least 2; a minute per Force and link ÷ successes; prepared either way (on the anchoring card) | Grimoire p. 47 | `SORCERY_V96.anchoring` |
+| Masking | +TN per grade on assensing | no TN; an initiate assensing a masked initiate makes a secret Magic test vs the subject's Magic needing (subject grade − viewer grade, at least 1) successes (GM card); held or not an initiate: the aura reads as mundane (no Magic, tradition, sustained spells; foci hidden while their rating points ≤ the grade) | Grimoire p. 46 | `SORCERY_V96.masking` |
+| Centering for spellcasting and Drain | penalties only | the Cast window offers centering for the spell (astrally perceiving; the spell's TN and modifiers) or against the Drain (the Drain TN with the known modifiers); every 2 successes add a success to a test that has one (kept as bought successes through re-rolls) | Grimoire p. 43 | `SORCERY_V96.centeringUse` |
+| Totem dice | added to the casting test | Magic Pool dice for that cast: a bonus pays for the first pool dice asked (casting, then Drain) without spending the pool; a penalty leaves fewer pool dice for the cast; the window's pool limit follows | Core p. 119 | `SORCERY_V96.totemPool` |
+| Drain codes in the importer | warned, left at the default | the core spells' drain codes (Core pp. 151–158, Table of Spells p. 159), by name without case or spaces; spells whose level depends on the wound or attribute are left out | Core pp. 151–159 | `SORCERY_V96.drainTable` |
+| A dispelled spell's effect | only the Force changes | the effect on each subject is rebuilt capped at the new Force (the GM's Apply card too) | Grimoire p. 45 | `SORCERY_V96.dispelEffect` |
+| Grade 0 by hand | not settable | an "Initiated (Grade 0)" tick on the character sheet while the grade is 0 (the `initiated` flag) | Grimoire pp. 37–38 | `SORCERY_V96.gradeZero` |
+
+Cut / still not built
+- Splitting a spell's dice over several targets with a Drain test each (Core p. 129): needs the non-area Cast window to take several targets and the cast to run one test and one Drain per target; not done.
+- Circle/lodge TN inside another's circle (cut by the lead: needs circles on the map). Healing spells' time/success split (the health area's).
+- Quickening's sustaining time is not tracked (the card states the actions); a Centering-against-Drain carried into quickening's second Drain is not applied.
+- Deliberate masking (2 × grade dice to raise the threshold) and masking foci beyond the grade by a deliberate test.
+- The geas due for every 2 Magic lost; the ritual's link and sending times; elemental secondary effects in full (Grimoire pp. 113–114): not done.
+- Defaulting: magical-skill defaults for conjuring, enchanting and dispelling; the Awakenings web diagram itself.
+- Noticing: no roll for onlookers (the GM uses the TN shown).
+
+#### Spirits, astral space, adepts and critter powers (v0.96.0, RULES.SPIRITS_V96)
+
+Switches in `RULES.SPIRITS_V96` (`rules/config96/spirits.ts`, house-rules window: Magic and critters); the pure functions are `rules/spirits96.ts`, the Foundry glue `applications/spirits96.ts`. The first choice is the book's way (the default); `v951` puts v0.95.1 back.
+
+| Rule | Was | Now (book) | Source | Switch |
+|---|---|---|---|---|
+| An elemental's day of waiting | it may hang around for ever | a bound elemental with a token on a scene uses up a service for every 24 hours of world time; with none left it departs (taken off every scene, the count starts again when it is next called) | Core p. 141 | `SPIRITS_V96.elementalWaiting` |
+| Aid Sorcery in spell defense | the aid helps casting only | dice left in an aid already started by one of the magician's own elementals of the spell's category may join the resistance test (asked for, like Magic Pool dice); each die used is gone | Core p. 141 | `SPIRITS_V96.aidDefense` |
+| Tech melee enhancements vs spirits | count | against a manifest spirit the Power a melee weapon's own tweaks add (where a Dikote coat, a monofilament edge or a laser attachment is entered) doesn't count | Awakenings p. 101 | `SPIRITS_V96.techVsSpirits` |
+| Spirit against spirit | ordinary combat only | Force vs Force (each against the other's Force), the difference off the loser's Force, 0 = destroyed: the GM's "Spirits (book rules)" tool for two selected spirits | Core p. 143 | `SPIRITS_V96.spiritDuel` |
+| Disruption | disrupted, no date | away 28 − Force days (at least 1): the card gives the world-clock day; the GM's client says when it is back and clears its damage; a watcher is destroyed instead | Grimoire p. 64 | `SPIRITS_V96.disruption`, `disruptionDays` |
+| Banishing a free spirit | anyone | only with its true name: its binder knows it, anyone else is asked for it | Grimoire p. 77 | `SPIRITS_V96.freeSpiritBanish` |
+| Watchers | Force ≤ 1, TN Force, conjuring Drain | Conjuring vs the hours it serves (a row in the Summon dialog); Force = successes ÷ 2 (at most the dialog's Force); (Force × hours)L Stun Drain with Charisma; it dissolves when its hours are up | Grimoire p. 73 | `SPIRITS_V96.watchers`, `watcherHours` |
+| Astral attack skill | `ASTRAL.attackSkill` (Sorcery) | the better of Unarmed Combat (Armed Combat with an active weapon focus) and Sorcery | Core p. 147 | `SPIRITS_V96.astralSkill` |
+| Reading an aura again | no limit | +2 TN per earlier attempt on the same subject in the scene; none once that TN is above Magic (a first attempt always) | Grimoire p. 90 | `SPIRITS_V96.assenseRepeat` |
+| Reflecting | all resistance successes over the caster's bounce back as successes; never reflected twice | only the shielding (spell defense + shielding) dice's successes count; the spell rebounds at a Force of the net (at most its own), the defender rolling that Force against the caster's resisting attribute; it can be reflected again, at Force 1 it dissipates | Awakenings p. 99 | `SPIRITS_V96.reflecting` |
+| Cleansing a background count | any count, no Drain | only a count up to the initiate's grade; then (count)D Drain with Willpower (Physical when the count is above Magic: VERIFY, the book names no type) | Awakenings p. 100 | `SPIRITS_V96.cleansing` |
+| Adept power costs (importers) | flat .5 per level | Improved Physical Attributes by band of the racial maximum (.5 / 1 / 1.5 per point), Improved Ability by skill (.25 / .5 / 1 per die), Distance Strike double beside Killing Hands | Core pp. 125–126; Awakenings p. 116 | `SPIRITS_V96.adeptCosts` |
+| Confusion, Fear, Engulf | the power's own dice and TN; Confusion + Essence to TNs | Confusion and Fear: Essence vs Willpower, each against the other's rating; Confusion + half the net successes to TNs; Fear's severity line (1 / 2 / 4 / 6+); Engulf's entry and escape line (Strength vs Essence) | Predator and Prey pp. 89–92 | `SPIRITS_V96.critterOpposed` |
+| Astral Combat Pool while perceiving | the physical Combat Pool | a perceiving magician's astral actions use the Astral Combat Pool (its own spent count, refreshed with the Combat Pool); physical actions keep the Combat Pool. VERIFY: the book speaks of "magicians in astral space" | Core p. 147 | `SPIRITS_V96.astralPerceiving` |
+
+**VERIFY notes:** the importer's Improved Physical Attributes reads the block's natural rating as the base (a block with no augmented value is taken to show the rating with the power in it); Distance Strike is the one doubled (the book doubles whichever was bought second; an importer can't know); beyond 1.5 × the racial maximum the table ends (1.5 per point is used). Reading an aura again is counted per scene (the book gives no time limit). An elemental "hangs around" while it has a token on a scene.
+
+**Cut / still not built:** an elemental bound to a spell for Force days (Core p. 142: needs a sustaining-by-days subsystem); aid dice on Drain tests ("any test at any stage in sorcery", Core p. 141: only casting and spell defense are wired); the Force lost per aid die (Core p. 141: the aid's own count is tracked, the actor's Force is not lowered); Strength enhancements that are neither magical nor paid in Essence or Body Index not counting against spirits (Awakenings p. 101: the system doesn't record a Strength boost's origin); cleansing astral traces (Awakenings p. 100: signatures, not the background count); a Force vs Force fight's service cost (the GM takes it off); Engulf as the spirits' melee attack with Quickness (Predator and Prey p. 90: only the outcome lines); and, cut by the lead: the ally design test, invoking great forms, meditation/thesis/oath/geas-shedding details, critter stat lines, Essence drain as feeding.
+
 ## Verified fixes to the official SR2 rules (v0.79.0, 23 Oct 2026)
 
 v0.79.0 rechecked every rule here against the official SR2 rules: about 610 rows, 230 confirmed, 224 different. A rule changed in v0.79.0 only when **it differs from the system and an official source backs it** (a book table, or an SR2 core / Rigger 2 page). Everything else that differed (rules without an official source, rewrites from other editions, house rules) is kept for the GM-selected alternate ruleset (the Unified Rules Revamp, v0.80.0) and does **not** change the default rules. Where a row further down or in the book-check section below describes a rule changed here, this section is the current one; the older row is what the old way does.

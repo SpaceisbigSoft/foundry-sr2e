@@ -15,6 +15,7 @@ How to use the unofficial Shadowrun 2nd Edition system for Foundry VTT: what the
 - [Gunfire rules added in v0.95.0](#gunfire-rules-added-in-v0950)
 - [Melee, actions and pools added in v0.95.0](#melee-actions-and-pools-added-in-v0950)
 - [Book rules added in v0.95.0: Team Karma, training, contacts and more](#book-rules-added-in-v0950-team-karma-training-contacts-and-more)
+- [Book rules added in v0.96.0: healing, medical bills, patches and addiction](#book-rules-added-in-v0960-healing-medical-bills-patches-and-addiction)
 - [The Unified Rules Revamp (alternate rules)](#the-unified-rules-revamp-alternate-rules)
 - [Edit mode, Play mode and the toolbar](#edit-mode-play-mode-and-the-toolbar)
 - [The summary bar](#the-summary-bar)
@@ -206,6 +207,18 @@ These rules follow the SR2 books and are on by default; each has a switch in the
 - **Lifestyle:** a missed payment is rolled for by the GM's client each month: usually your credit covers it, otherwise the lifestyle drops a level and the card has a button to pay the debt. A lifestyle owned outright (Middle or better) can be sold from the *Pay* button.
 - **Contacts:** after legwork the GM gets a private card with the time it takes to arrange the meet and a button to work out the contact's fee; the fee card has a Pay button. With contact upkeep on, a card asks for each contact's yearly upkeep.
 - **Groups (GM):** *Book rules (GM)* also rolls one Perception test for the selected tokens and gives a leaderless group's averaged ratings for social tests.
+
+## Book rules added in v0.96.0: healing, medical bills, patches and addiction
+
+These rules follow the SR2 books and are on by default; each has a switch in the house rules window (search for "v0.95.1" to find the old behaviour).
+
+- **Resting off Stun:** if a rest stops before your Stun track is clear, the next rest rolls again but never counts more successes than the first roll. A clear track starts afresh.
+- **Healing and money:** the rest card warns when your lifestyle is below the wound's minimum (Light: Low, Moderate: Middle, Serious: High, Deadly: a hospital). A doctor's care, a hospital and intensive care are charged by the day; an NPC's first aid on your character comes with a paramedic's bill and a Pay button. A paid-up DocWagon Gold or Platinum contract takes 10 or 50 percent off care.
+- **Healing spells:** Treat and Heal must be sustained for 5, 10, 15 or 20 Combat Turns by the wound; successes left after healing every box shorten that time.
+- **Patches:** dermal armor lowers a patch's rating, blood filtration stops all but the trauma patch. A magician using a stim patch rolls Magic against its rating. An antidote patch on someone dying of a toxin lets the GM stabilise them.
+- **Bioware:** a nephritic screen takes 1 Power off diseases and injected toxins; a trauma damper turns one box of a Physical hit into Stun; a pain editor's wearer isn't knocked out by Stun.
+- **Addiction:** the addiction tests come when a dose wears off. A drug can be both physically and mentally addictive. In forced withdrawal the rating drops by 1 a day. Each week addicted the GM gets a card for the Essence lost. After a recovery comes a rest of the drug's rating in days at +1.
+- **DocWagon and neuro-stun:** a DocWagon call rolls the unit and 3D6 minutes (the GM adds the area). Neuro-stun disorients for an hour (+2 to every target number) even when resisted.
 
 ## The Unified Rules Revamp (alternate rules)
 

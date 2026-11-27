@@ -9872,7 +9872,63 @@
         "CORE_V95__contactMeet": "Arranging a meet: legwork rolls the secret time to arrange it for the GM (book) or nothing (off, v0.94.2)",
         "CORE_V95__contactUpkeep": "Contact upkeep (optional, Companion): none (off) or a yearly cost by contact level, else the level drops (book)",
         "CORE_V95__groupPerception": "Group Perception test in the GM's Book rules tool: average Intelligence plus a die per member (book) or not offered (off, v0.94.2)",
-        "CORE_V95__groupAverage": "A leaderless group's averaged ratings in the GM's Book rules tool (book) or not offered (off, v0.94.2)"
+        "CORE_V95__groupAverage": "A leaderless group's averaged ratings in the GM's Book rules tool (book) or not offered (off, v0.94.2)",
+        "HEALTH_V96__stunRestInterrupted": "Interrupted Stun rest: a re-test never counts more successes than the first roll (book) or every rest is a fresh test (off, v0.95.1)",
+        "HEALTH_V96__healingLifestyle": "Healing lifestyle: a warning on the rest card when the lifestyle is below the wound's minimum (book) or no check (off, v0.95.1)",
+        "HEALTH_V96__medicalCosts": "Medical costs: doctor's and paramedic's fees by the Medical Costs Table (book) or hospital and intensive care only (off, v0.95.1)",
+        "HEALTH_V96__medicalCostsTable__hospitalPerDay": "Medical costs (book): hospital per day (¥, doctor included)",
+        "HEALTH_V96__medicalCostsTable__intensivePerDay": "Medical costs (book): intensive care per day (¥)",
+        "HEALTH_V96__healingSpellTime": "Healing spells' time: the Healing Table's turns ÷ the successes put to time (book) or Force ÷ successes (off, v0.95.1)",
+        "HEALTH_V96__antidoteAttention": "Antidote patch on a dying toxin victim: a GM button for professional attention (book) or nothing (off, v0.95.1)",
+        "HEALTH_V96__patchImplants": "Slap patches and implants: dermal armor lowers the rating, blood filtration stops them (book) or no effect (off, v0.95.1)",
+        "HEALTH_V96__stimMagic": "Stim patch and magicians: Magic test against the rating (core), against the 24-hour total (awakenings, optional) or none (off, v0.95.1)",
+        "HEALTH_V96__nephriticPower": "Nephritic screen: −1 Power against pathogens and blood-borne toxins (book) or dice only (off, v0.95.1)",
+        "HEALTH_V96__traumaDamper": "Trauma damper: a Physical hit moves a box onto the Stun track (book) or Stun hits only (off, v0.95.1)",
+        "HEALTH_V96__painEditor": "Pain editor: Stun can't knock the wearer out (book) or it can (off, v0.95.1)",
+        "HEALTH_V96__addictionBoth": "Addiction: drugs both physically and mentally addictive (book) or one kind only (off, v0.95.1)",
+        "HEALTH_V96__addictionTiming": "Addiction tests: when the dose wears off (wearOff, book) or at the dose (dose, v0.95.1)",
+        "HEALTH_V96__addictionRest": "Addiction: a rest after recovery at +1 TN (book) or cured at once (off, v0.95.1)",
+        "HEALTH_V96__addictionFall": "Addiction: the rating drops 1 per 24 hours of forced withdrawal (book) or not (off, v0.95.1)",
+        "HEALTH_V96__addictionAttrition": "Addiction: a weekly GM card for ½ Essence and a box of each track (card) or nothing (off, v0.95.1)",
+        "HEALTH_V96__docwagonResponse": "DocWagon response time: rolled, 3D6 minutes (book) or the contract's fixed minutes (off, v0.95.1)",
+        "HEALTH_V96__docwagonHtr": "DocWagon HTR charge: discounted by contract (book) or the tier's own fee (off, v0.95.1)",
+        "HEALTH_V96__htrFee": "DocWagon (book): the undiscounted HTR charge (¥)",
+        "HEALTH_V96__docwagonExtendedCare": "DocWagon extended care discount: Gold 10%, Platinum 50% (book) or none (off, v0.95.1)",
+        "HEALTH_V96__neuroStun": "Neuro-stun: an hour of disorientation, +2 TN (book) or none (off, v0.95.1)",
+        "HEALTH_V96__medkitAdvice": "Medkit advice: first aid with a medkit rolls at least its Biotech 3 (book) or the healer's own (off, v0.95.1)",
+        "SORCERY_V96__magicDefault": "Defaulting magical skills: cast without Sorcery by defaulting to Magical Theory, Conjuring, Enchanting or Willpower at +2 TN a web step (book) or not at all (off, v0.95.1)",
+        "SORCERY_V96__areaShape": "Area spells: withhold dice to shrink (2 a metre) or grow (1 a metre) the radius (book) or the Magic in metres only (off, v0.95.1)",
+        "SORCERY_V96__stacking": "Spell stacking: the Cast window asks for stacked spells, each adding to the casting and Drain TNs (book) or no stacking (off, v0.95.1)",
+        "SORCERY_V96__stackTn": "Spell stacking (book): TN per stacked spell",
+        "SORCERY_V96__noticing": "Noticing spellcasting: the cast card names the onlookers' Perception TN (book) or no line (off, v0.95.1)",
+        "SORCERY_V96__noticeMinTn": "Noticing spellcasting (book): the lowest Perception TN",
+        "SORCERY_V96__fociLimit": "Active foci: at most Intelligence, more refused (book), a warning (warn) or no limit (off, v0.95.1)",
+        "SORCERY_V96__armorSpell": "The Armor spell: half its successes count (book) or the usual effect step (off, v0.95.1)",
+        "SORCERY_V96__wardExpiry": "Ward days: when they run out the ward falls and the GM gets a card (book), a GM card only (card) or nothing (off, v0.95.1)",
+        "SORCERY_V96__quickening": "Quickening: a sustaining test, Karma from Force to twice Force and a second Drain (book) or Karma = Force at once (off, v0.95.1)",
+        "SORCERY_V96__anchoring": "Anchoring: Karma = Force + links and an Enchanting test to prepare the object (book) or the old Karma only (off, v0.95.1)",
+        "SORCERY_V96__masking": "Masking: a masked aura reads as mundane unless an initiate's secret test sees through it (book) or a TN penalty to assensing (off, v0.95.1)",
+        "SORCERY_V96__centeringUse": "Centering for spellcasting and Drain: offered in the Cast window (book) or penalties only (off, v0.95.1)",
+        "SORCERY_V96__totemPool": "Totem dice: Magic Pool dice for that cast (book) or added to the casting test (off, v0.95.1)",
+        "SORCERY_V96__drainTable": "Stat-block import: core spells with no drain code take the book's (book) or a warning only (off, v0.95.1)",
+        "SORCERY_V96__dispelEffect": "Dispelling: a spell's effect shrinks with its lowered Force (book) or only the Force changes (off, v0.95.1)",
+        "SORCERY_V96__gradeZero": "Grade 0 by hand: the sheet shows an \"Initiated\" tick at grade 0 (book) or no tick (off, v0.95.1)",
+        "SPIRITS_V96__elementalWaiting": "Elemental's day of waiting: a called elemental (a token on a scene) uses a service every 24 hours, Core p. 141 (book) or may wait for ever (v951)",
+        "SPIRITS_V96__aidDefense": "Aid Sorcery in spell defense: dice left in an elemental's aid may join spell defense, Core p. 141 (book) or help casting only (v951)",
+        "SPIRITS_V96__techVsSpirits": "Tech melee enhancements vs spirits: a weapon's own Power tweaks don't count against a manifest spirit, Awakenings p. 101 (book) or count (v951)",
+        "SPIRITS_V96__spiritDuel": "Spirit against spirit: Force against Force in the GM's Spirits tool, Core p. 143 (book) or no tool (v951)",
+        "SPIRITS_V96__disruption": "Disruption: a disrupted spirit is away 28 − Force days with a return date, Grimoire p. 64 (book) or no date (v951)",
+        "SPIRITS_V96__disruptionDays": "Disruption (book): days of the cycle the Force is taken from (28)",
+        "SPIRITS_V96__freeSpiritBanish": "Free spirits: only someone who knows the true name can banish one, Grimoire p. 77 (book) or anyone (v951)",
+        "SPIRITS_V96__watchers": "Watchers: TN = hours, Force from successes, (Force × hours)L Stun Drain, dissolve after their hours, Grimoire p. 73 (book) or a Force 1 spirit (v951)",
+        "SPIRITS_V96__watcherHours": "Watchers (book): hours a watcher serves when not given",
+        "SPIRITS_V96__astralSkill": "Astral attack skill: Unarmed (Armed with a weapon focus) Combat or Sorcery, the better, Core p. 147 (book) or the astral attack skill only (v951)",
+        "SPIRITS_V96__assenseRepeat": "Reading an aura again: +2 TN per earlier attempt, none above Magic, Grimoire p. 90 (book) or no limit (v951)",
+        "SPIRITS_V96__reflecting": "Reflecting: shielding dice's successes only, the spell rebounds at the net Force, Awakenings p. 99 (book) or all resistance successes bounce (v951)",
+        "SPIRITS_V96__cleansing": "Cleansing: a count up to the grade only, then (count)D Willpower Drain, Awakenings p. 100 (book) or any count, no Drain (v951)",
+        "SPIRITS_V96__adeptCosts": "Imported adept power costs: by band (attributes, Improved Ability) and Distance Strike double beside Killing Hands, Core pp. 125–126, Awakenings p. 116 (book) or flat guesses (v951)",
+        "SPIRITS_V96__critterOpposed": "Confusion, Fear, Engulf: Essence against Willpower, Confusion half the net successes, Fear's severity, Engulf's escape, Predator and Prey pp. 89–92 (book) or the power's own dice (v951)",
+        "SPIRITS_V96__astralPerceiving": "Astral Combat Pool while perceiving: astral actions of a perceiving magician use the Astral Combat Pool, Core p. 147 (book) or the Combat Pool (v951)"
       }
     },
     "Rules": {
@@ -18896,6 +18952,19 @@
             "i6": "<strong>Contacts:</strong> after legwork the GM gets a private card with the time it takes to arrange the meet and a button to work out the contact's fee; the fee card has a Pay button. With contact upkeep on, a card asks for each contact's yearly upkeep.",
             "i7": "<strong>Groups (GM):</strong> <em>Book rules (GM)</em> also rolls one Perception test for the selected tokens and gives a leaderless group's averaged ratings for social tests."
           }
+        },
+        "rulesV096Health": {
+          "title": "Book rules added in v0.96.0: healing, medical bills, patches and addiction",
+          "b1": "These rules follow the SR2 books and are on by default; each has a switch in the house rules window (search for \"v0.95.1\" to find the old behaviour).",
+          "b2": {
+            "i1": "<strong>Resting off Stun:</strong> if a rest stops before your Stun track is clear, the next rest rolls again but never counts more successes than the first roll. A clear track starts afresh.",
+            "i2": "<strong>Healing and money:</strong> the rest card warns when your lifestyle is below the wound's minimum (Light: Low, Moderate: Middle, Serious: High, Deadly: a hospital). A doctor's care, a hospital and intensive care are charged by the day; an NPC's first aid on your character comes with a paramedic's bill and a Pay button. A paid-up DocWagon Gold or Platinum contract takes 10 or 50 percent off care.",
+            "i3": "<strong>Healing spells:</strong> Treat and Heal must be sustained for 5, 10, 15 or 20 Combat Turns by the wound; successes left after healing every box shorten that time.",
+            "i4": "<strong>Patches:</strong> dermal armor lowers a patch's rating, blood filtration stops all but the trauma patch. A magician using a stim patch rolls Magic against its rating. An antidote patch on someone dying of a toxin lets the GM stabilise them.",
+            "i5": "<strong>Bioware:</strong> a nephritic screen takes 1 Power off diseases and injected toxins; a trauma damper turns one box of a Physical hit into Stun; a pain editor's wearer isn't knocked out by Stun.",
+            "i6": "<strong>Addiction:</strong> the addiction tests come when a dose wears off. A drug can be both physically and mentally addictive. In forced withdrawal the rating drops by 1 a day. Each week addicted the GM gets a card for the Essence lost. After a recovery comes a rest of the drug's rating in days at +1.",
+            "i7": "<strong>DocWagon and neuro-stun:</strong> a DocWagon call rolls the unit and 3D6 minutes (the GM adds the area). Neuro-stun disorients for an hour (+2 to every target number) even when resisted."
+          }
         }
       }
     },
@@ -19035,6 +19104,10 @@
       "bookRules95": {
         "label": "Book rules (GM)",
         "hint": "For the selected tokens: roll an NPC's racism, make a group Perception test, or get a leaderless group's averaged ratings."
+      },
+      "spirits96": {
+        "label": "Spirits (book rules, GM)",
+        "hint": "For two selected spirit tokens: a Force against Force contest."
       }
     },
     "SceneBuilder": {
@@ -20195,6 +20268,195 @@
         "plank": "Mildly buoyant support (a plank)",
         "lifeJacket": "Very buoyant support (a life jacket)",
         "roughSeas": "Rough seas"
+      }
+    },
+    "Health96": {
+      "gmOnly": "(GM only)",
+      "gmButton": "Only the GM can use this button.",
+      "notGmCard": "This card wasn't posted by a GM, so it can't charge anyone.",
+      "notYours": "That character isn't yours.",
+      "alreadyPaid": "This bill has already been paid.",
+      "alreadyDone": "This card has already been applied.",
+      "Rest": {
+        "hospitalized": "Hospitalized",
+        "lifestyleShort": "Below the minimum lifestyle for this wound ({need}; resting at {own}): the GM may add modifiers (Core p. 113).",
+        "interrupted": "Interrupted rest: a re-test that counts at most {cap} successes, the first roll's (Core p. 112)."
+      },
+      "Fee": {
+        "paramedic": "{healer} gave {patient} paramedic first aid: the fee is {fee}¥ (Medical Costs Table).",
+        "pay": "Pay {fee}¥",
+        "ledger": "Medical fee",
+        "paid": "{name} pays {n}¥ in medical fees.",
+        "doctorDays": "Doctor's care ({days} day(s))"
+      },
+      "Medkit": {
+        "advice": " (the medkit's Biotech {dice})"
+      },
+      "Patch": {
+        "blocked": "{targetName}'s blood filtration makes the patch useless.",
+        "armor": "(Dermal armor {armor}: the patch works at rating {rating}.)",
+        "antidoteAsk": "An antidote patch is on {name}, who is dying. If a toxin put them down, the antidote counts as professional attention (Core p. 186).",
+        "antidoteNote": "The GM decides whether it counts as professional attention.",
+        "stabilise": "Stabilise (GM)",
+        "stabilised": "is stabilised by the antidote.",
+        "stimMagicOk": "passes the stim patch's Magic test (Magic {magic} vs {tn}: {successes} successes).",
+        "stimMagicFail": "fails the stim patch's Magic test (Magic {magic} vs {tn}): a Magic loss test as for a Deadly wound.",
+        "magicLoss": "Magic loss test"
+      },
+      "Nephritic": {
+        "cut": ", nephritic screen −{cut} Power",
+        "stops": "has a nephritic screen that takes the last of the Power off {name}: no effect."
+      },
+      "Neuro": {
+        "name": "Disoriented (neuro-stun)",
+        "note": "is disoriented by the neuro-stun: +{tn} to every target number for {span}."
+      },
+      "DocWagon": {
+        "air": "Unit {unit}: by air. Response {roll} −2 = {minutes} minutes; the GM adds the area's and Enforcement Rating's modifiers.",
+        "ground": "Unit {unit}: by ground. Response {roll} = {minutes} minutes; the GM adds the area's and Enforcement Rating's modifiers."
+      },
+      "Addiction": {
+        "both": "Both (Body and Willpower)",
+        "rest": "Now a rest of {days} day(s) at +1 to every target number (+2 for concentration) before the cure is complete.",
+        "restDone": "has rested off {drug}: fully cured.",
+        "attrition": "{name} has been addicted to {drug} for another week: {essence} Essence is lost for good, and the Physical and Stun tracks each lose a box from the top (mark that by hand).",
+        "apply": "Take {essence} Essence (GM)",
+        "applied": "loses {essence} Essence to addiction."
+      }
+    },
+    "Sorcery96": {
+      "alias": "Sorcery",
+      "Card": {
+        "result": "{dice} dice vs TN {tn}: {successes} successes",
+        "notice": "onlookers notice it on Perception vs TN {tn}; a magician watching −2; astrally active onlookers see it",
+        "totemPool": "totem {dice} as Magic Pool dice",
+        "areaShaped": "{withheld} dice withheld: radius {radius} m",
+        "centerCast": "Centering for {spellName}",
+        "centerDrain": "Centering against the Drain of {spellName}",
+        "centerBonus": "Up to {bonus} extra success(es), if the test itself gets at least one.",
+        "maskTest": "{viewer} tries to see through {subject}'s masking (secret)",
+        "maskSeen": "Seen through ({need} needed): the true aura shows within the mask.",
+        "maskHolds": "The mask holds ({need} needed): the aura reads as a mundane's.",
+        "wardFell": "has lasted its days and falls (rating 0).",
+        "wardDaysOver": "has lasted its days: by the book it falls now.",
+        "quickenTest": "Quickening {spellName}: Sorcery + grade",
+        "quickenDone": "<strong>{name}</strong> sustains {spellName} for {actions} action(s), then pays {karma} Good Karma: it is quickened (the GM holds it back until the actions have passed).",
+        "secondDrain": "Quickening's second Drain",
+        "anchorPrep": "Preparing the object (Enchanting, {dice} dice vs TN {tn}): {successes} successes, {minutes} minute(s); it is prepared either way."
+      },
+      "Dialog": {
+        "areaShape": "Radius change in metres (−{shrink} to +{grow}; 2 dice a metre smaller, 1 die a metre larger)",
+        "stack": "Other spells stacked into this action (+{tn} TN each, casting and Drain)",
+        "center": "Centering first",
+        "centerNone": "No (penalties only)",
+        "centerCast": "For the spell (astral perception)",
+        "centerDrain": "Against the Drain",
+        "quickenTitle": "Quicken {spellName}",
+        "quickenDice": "Dice used in the Spell Success Test (all sources)",
+        "quickenTn": "The casting test's target number",
+        "quickenKarma": "Good Karma to pay ({min} to {max})",
+        "quickenHint": "Sorcery + grade against the casting TN; the dice ÷ successes give the actions to sustain. Karma above the Force makes it harder to dispel. A second Drain test follows.",
+        "quickenOk": "Quicken"
+      },
+      "Mod": {
+        "defaulting": "Defaulting to {from}",
+        "stacked": "Stacked spells ({count})"
+      },
+      "From": {
+        "magicalTheory": "Magical Theory",
+        "conjuring": "Conjuring",
+        "enchanting": "Enchanting",
+        "willpower": "Willpower"
+      },
+      "Why": {
+        "areaTooMuch": "At most {force} dice may be withheld to shape the area.",
+        "areaBelowZero": "The radius can't go below 0 m.",
+        "fociLimit": "{name} already has as many active foci as Intelligence ({intelligence}).",
+        "quickenKarma": "Quickening costs from {min} to {max} Good Karma.",
+        "centerPerceive": "{name} must be perceiving astrally to center for a spell; cast without it."
+      },
+      "UI": {
+        "gradeZero": "Initiated (Grade 0)",
+        "gradeZeroHint": "A Grade 0 initiate: initiated once, no Magic gained yet (Grimoire pp. 37–38)."
+      }
+    },
+    "Spirits96": {
+      "astralPool": "Astral Combat Pool",
+      "Why": {
+        "trueName": "{name} is a free spirit: only someone who knows its true name can banish it.",
+        "assenseAgain": "{name} can't read {target}'s aura again: the target number ({tn}) is above their Magic.",
+        "cleanseGrade": "{name} can't cleanse a background count of {count}: an initiate cleanses only a count up to their grade ({grade})."
+      },
+      "Wait": {
+        "used": "{name} has hung around for a day or more: {used} more service(s) used up, {left} left.",
+        "departs": "{name} has hung around for a day or more: its last service is used up and it departs."
+      },
+      "Disrupt": {
+        "until": "{name} is disrupted for {days} day(s): it can't appear again before day {day} of the world clock.",
+        "watcher": "{name} is a watcher: knocked out, it is destroyed for good.",
+        "back": "{name}'s disruption is over: it can appear again."
+      },
+      "Watcher": {
+        "hours": "Hours a watcher serves (its target number)",
+        "drain": "Watcher Drain (Force {force} × {hours} h, Stun)",
+        "dissolves": "{name}'s time is up: the watcher dissolves into astral space."
+      },
+      "TrueName": {
+        "title": "Banish {name}",
+        "label": "This is a free spirit. Its true name:",
+        "ok": "Banish"
+      },
+      "Aid": {
+        "title": "{name}'s aid",
+        "label": "Dice from {name}'s aid to add to spell defense ({left} left)",
+        "ok": "Resist",
+        "note": "{name}'s aid +{dice}, {left} left"
+      },
+      "Assense": {
+        "again": "Reading the aura again ({tries} earlier)"
+      },
+      "Cleanse": {
+        "drain": "Cleansing Drain"
+      },
+      "Tech": {
+        "note": "its own enhancements don't count against a spirit (−{power} Power)"
+      },
+      "Reflect": {
+        "dissipates": "{spell} is reflected at Force 1 and dissipates.",
+        "name": "{spell} (reflected)",
+        "rebounds": "{name} reflects {spell} back at Force {force}.",
+        "test": "Spell test: {dice} dice vs {tn}: {rolled} = {successes} success(es).",
+        "resist": "{caster}: resist the reflected spell"
+      },
+      "Confusion": {
+        "tn": "Confused: +{tn} to every target number while in the being's terrain; a Willpower test against its Essence for every decision."
+      },
+      "Fear": {
+        "runs": "Fear ({net} net): the victim runs like crazy.",
+        "stays": "Fear ({net} net): the victim runs and does not come back.",
+        "sweats": "Fear ({net} net): the victim flees, does not come back, and sweats blood at any mention of the being or the place.",
+        "phobia": "Fear ({net} net): the victim flees and is left with a disabling phobia."
+      },
+      "Engulf": {
+        "walk": "Engulfed: the victim is drawn in at walking pace.",
+        "run": "Engulfed: the victim is drawn in at running speed.",
+        "escape": "On each of their actions the victim may break free with a net success of Strength against the being's Essence."
+      },
+      "Duel": {
+        "title": "Spirit against spirit (Force against Force)",
+        "roll": "{name}: Force {force} vs {tn}: {rolled} = {successes} success(es)",
+        "tie": "A tie: neither loses Force.",
+        "loses": "{name} loses {loss} Force (now {force}).",
+        "destroyed": "{name} loses {loss} Force and is destroyed: it can't be called again."
+      },
+      "Tool": {
+        "title": "Spirits (book rules)",
+        "selected": "Selected: {names}",
+        "none": "No spirit tokens selected.",
+        "hint": "Select two spirit tokens for a Force against Force contest (Core p. 143): each roll is one round. The fight costs a controlled spirit one service (take it off its sheet); it may go on until one spirit is destroyed.",
+        "duel": "Force against Force",
+        "cancel": "Cancel",
+        "needTwo": "Select exactly two spirit tokens."
       }
     }
   },
