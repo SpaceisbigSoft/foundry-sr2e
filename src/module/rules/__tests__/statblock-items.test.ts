@@ -203,7 +203,7 @@ describe('statBlockItems: cyberware and bioware data', () => {
 
 describe('statBlockItems: spells and powers data', () => {
   const p = parseStatBlock(FULL);
-  const { items, warnings } = statBlockItems(p);
+  const { items } = statBlockItems(p);
   test('spell fields', () => {
     const m = byName(items, 'Manabolt').system;
     assert.deepEqual([m.category, m.spellType, m.learnedForce, m.damageType, m.duration, m.area], ['combat', 'mana', 5, 'physical', 'instant', false]);
