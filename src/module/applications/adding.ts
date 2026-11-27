@@ -62,9 +62,11 @@ function windowTypesFor(actorType: string): string[] {
 const tabLabel = (t: string, plural = true) => (t === 'kit' ? (plural ? 'Kits' : 'kit') : typeLabel(t, plural));
 
 /**
- * v0.91.1: whose shop the Shop button opens: a player's assigned character, else a selected token's character they
- * own, else the character they own by name (not only through everyone's default ownership); the GM's selected token.
- * `pick` lists the characters to choose from when that leaves several.
+ * v0.91.1: whose shop the Shop button opens. For a player: one selected token of a character or NPC they own (v0.94.2:
+ * it wins over the assigned character, so a shared login shops for the selected runner, or for a selected hireling or
+ * ally NPC they own), else their assigned character, else the character they own by name (not only through everyone's
+ * default ownership). For the GM: the selected token. `pick` lists the characters to choose from when that leaves
+ * several.
  */
 export function shopActor(): { actor: any | null; pick: any[] } {
   const user: any = (game as any).user;

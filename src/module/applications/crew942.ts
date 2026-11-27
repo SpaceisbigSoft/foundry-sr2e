@@ -19,7 +19,7 @@ import { escHtml } from '../rules/html.ts';
 import { replaceFlag } from '../helpers/flags.ts';
 import { onRelay, requestGm } from './socket.ts';
 import {
-  CREW_FLAG, stationsFor, crewOf, seatOf, stationsOfActor, seat, markReady, clearReady, allReady, stationGuns, stationOrder, crewMay, validStation,
+  CREW_FLAG, stationsFor, crewOf, pruneCrew, seatOf, stationsOfActor, seat, markReady, clearReady, allReady, stationGuns, stationOrder, crewMay, validStation,
   type CrewState, type Station,
 } from '../rules/crew942.ts';
 
@@ -41,11 +41,18 @@ export function vehicleStations(vehicle: any): Station[] {
   return stationsFor(mountedWeapons(vehicle).map((w) => w.mount));
 }
 
+/** The vehicle's crew, without ghost seats (v0.94.2 review 6: a deleted actor, a station that is gone). */
 export function crewStateOf(vehicle: any): CrewState {
-  return crewOf(vehicle?.flags?.[SYSTEM_ID]?.[CREW_FLAG] ?? null);
+  return pruneCrew(crewOf(vehicle?.flags?.[SYSTEM_ID]?.[CREW_FLAG] ?? null), vehicleStations(vehicle), (u) => Boolean(fromUuidQuiet(u)));
 }
 
-const controllerOf = (vehicle: any): string => String(vehicle?.system?.controllerUuid ?? '');
+/** The driver's uuid ('' when nobody drives, or the driver no longer resolves: the seat counts as free). */
+const controllerOf = (vehicle: any): string => { const u = String(vehicle?.system?.controllerUuid ?? ''); return u && fromUuidQuiet(u) ? u : ''; };
+
+/** v0.94.2 review (7): whether this user may see who sits at a station (else "occupied"). */
+function maySeeSeat(vehicle: any, who: any, user: any): boolean {
+  return Boolean(user?.isGM) || owns(vehicle, user) || Boolean(who?.testUserPermission?.(user, 'LIMITED'));
+}
 
 /** The station's label ("Gunner 2"). */
 export function stationLabel(s: Station, count: number): string {
@@ -82,7 +89,8 @@ export function crewOpAllowed(vehicle: any, user: any, req: CrewOp): boolean {
   if (!actor || !['character', 'npc'].includes(actor.type)) return false;
   const ownsActor = owns(actor, user);
   const aboard = Boolean(vehicle.isAboard?.(actor)) || controllerOf(vehicle) === actor.uuid;
-  return crewMay('claim', { isGM, ownsVehicle, ownsActor, aboard, free: !sitting }) || crewMay('assign', { isGM, ownsVehicle, ownsActor, aboard, free: !sitting });
+  const driver = req.station === 'driver';
+  return crewMay('claim', { isGM, ownsVehicle, ownsActor, aboard, free: !sitting, driver }) || crewMay('assign', { isGM, ownsVehicle, ownsActor, aboard, free: !sitting, driver });
 }
 
 /** Make the change on this client (it can write the vehicle). True when done. */
@@ -121,7 +129,8 @@ async function applyCrewOp(vehicle: any, req: CrewOp, userName: string): Promise
 async function crewRequest(vehicle: any, req: CrewOp): Promise<void> {
   if (!crewOpAllowed(vehicle, game.user, req)) { ui.notifications?.warn?.(tx('SR2E.Crew.notAllowed')); return; }
   // The driver's seat also writes the old and new drivers (setController): here only when this user owns them too.
-  const driverDocs = req.op === 'seat' && req.station === 'driver' ? [fromUuidQuiet(req.actorUuid ?? ''), fromUuidQuiet(controllerOf(vehicle))].filter(Boolean) : [];
+  // v0.94.2 review (8): any seat change may release the current driver, so a driver this user doesn't own sends it to the GM.
+  const driverDocs = req.op === 'seat' ? [req.station === 'driver' ? fromUuidQuiet(req.actorUuid ?? '') : null, fromUuidQuiet(controllerOf(vehicle))].filter(Boolean) : [];
   if (vehicle.isOwner && driverDocs.every((a: any) => a.isOwner)) {
     await applyCrewOp(vehicle, req, String(game.user?.name ?? ''));
     return;
@@ -181,7 +190,8 @@ export function crewPanelHtml(vehicle: any, sheetId = ''): string {
   const tabs = ordered.map((s) => {
     const who = fromUuidQuiet(seatOf(state, s.id, ctl));
     const ready = state.ready[s.id] === true;
-    return `<a class="sr2e-crew-tab${s.id === active ? ' active' : ''}${mine.includes(s.id) ? ' mine' : ''}" data-action="crewTab" data-station="${escHtml(s.id)}" role="tab" aria-selected="${s.id === active}">${escHtml(stationLabel(s, gunnerCount))}${who ? ` <small>${escHtml(who.name)}</small>` : ''}${ready ? ` <i class="fa-solid fa-circle-check sr2e-crew-ready" title="${tx('SR2E.Crew.ready')}"></i>` : ''}</a>`;
+    const name = who ? (maySeeSeat(vehicle, who, game.user) ? String(who.name ?? '') : tx('SR2E.Crew.occupied')) : '';
+    return `<a class="sr2e-crew-tab${s.id === active ? ' active' : ''}${mine.includes(s.id) ? ' mine' : ''}" data-action="crewTab" data-station="${escHtml(s.id)}" role="tab" aria-selected="${s.id === active}">${escHtml(stationLabel(s, gunnerCount))}${who ? ` <small>${escHtml(name)}</small>` : ''}${ready ? ` <i class="fa-solid fa-circle-check sr2e-crew-ready" title="${tx('SR2E.Crew.ready')}"></i>` : ''}</a>`;
   }).join('');
   const panels = ordered.map((s) => {
     const uuid = seatOf(state, s.id, ctl);
@@ -198,8 +208,12 @@ export function crewPanelHtml(vehicle: any, sheetId = ''): string {
       mayLeave ? btn('crewLeave', 'fa-person-walking-arrow-right', tx('SR2E.Crew.leave'), attr('data-station', s.id)) : '',
       mayReady ? `<a class="sr2e-crew-readybox${ready ? ' on' : ''}" data-action="crewReady" data-station="${escHtml(s.id)}" data-on="${ready ? '' : '1'}" role="button" aria-pressed="${ready}"><i class="fa-regular ${ready ? 'fa-square-check' : 'fa-square'}" aria-hidden="true"></i> ${tx('SR2E.Crew.readyMark')}</a>` : (who ? `<span class="hint">${ready ? tx('SR2E.Crew.ready') : tx('SR2E.Crew.notReady')}</span>` : ''),
     ].filter(Boolean).join(' ');
+    // v0.94.2 review (7): the name only for those who may view the actor (or own the vehicle).
+    const occupied = `<em>${tx('SR2E.Crew.occupied')}</em>`;
+    const named = who ? `<a data-action="openActor" data-uuid="${escHtml(who.uuid)}"><strong>${escHtml(who.name)}</strong></a>` : '';
+    const seatHtml = who ? (maySeeSeat(vehicle, who, user) ? named : occupied) : `<em>${tx('SR2E.Crew.free')}</em>`;
     return `<div class="sr2e-crew-panel${s.id === active ? ' active' : ''}" data-station="${escHtml(s.id)}" role="tabpanel">
-      <p class="sr2e-crew-seat">${who ? `<a data-action="openActor" data-uuid="${escHtml(who.uuid)}"><strong>${escHtml(who.name)}</strong></a>` : `<em>${tx('SR2E.Crew.free')}</em>`} ${controls}</p>
+      <p class="sr2e-crew-seat">${seatHtml} ${controls}</p>
       <div class="sr2e-row sr2e-crew-actions">${stationActions(vehicle, s, gunnerCount)}</div></div>`;
   }).join('');
   const head = `<h3 data-help="vehicles" data-heading="Crew stations">${tx('SR2E.Crew.title')}${everyone ? ` <span class="sr2e-chip sr2e-crew-allready">${tx('SR2E.Crew.allReadyChip')}</span>` : ''}${isGM ? ` <a data-action="crewClearReady" title="${tx('SR2E.Crew.clearReady')}"><i class="fa-solid fa-eraser"></i></a>` : ''}</h3>`;

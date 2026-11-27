@@ -14,7 +14,7 @@ import { t as tx } from '../helpers/i18n.ts';
 import { escHtml } from '../rules/html.ts';
 import { withGmLock } from './gmlock.ts';
 import { isLeadGm } from './leader.ts';
-import { groupKeyOf, planGroups, baseName, groupStanding, sharedInitiativeUpdates, sharedRollIds, type GroupMember, type KnownGroup } from '../rules/groups942.ts';
+import { groupKeyOf, planGroups, baseName, groupStanding, sharedInitiativeUpdates, sharedRollIds, heldGroups, keepTurn, type GroupMember, type KnownGroup } from '../rules/groups942.ts';
 
 const KEY_FLAG = 'groupKey';
 const DOWN = ['unconscious', 'dying', 'dead'];
@@ -122,13 +122,21 @@ export function sharedRoll942(combat: any, ids: unknown): { ids: unknown; after:
     const list = (Array.isArray(ids) ? ids : [ids]).map(String);
     const ours = new Set(groupsOf(combat).filter((g) => g.ours).map((g) => g.id));
     const members = membersOf(combat);
-    const roll = sharedRollIds(members, list, ours);
+    // v0.94.2 review (3): a group already holding a score mid-combat isn't rolled again; its new member takes the score.
+    const scores = [...(combat.combatants ?? [])].map((c: any) => ({ id: String(c.id), group: groupIdOf(c), initiative: c.initiative ?? null }));
+    const held = heldGroups(scores, list, ours);
+    const roll = sharedRollIds(members, list.filter((id) => !held.has(members.find((m) => m.id === id)?.group ?? '')), ours);
+    const current: string | null = combat.started ? (combat.combatant?.id ?? null) : null;
     return {
       ids: roll,
       after: async () => {
         const now = [...(combat.combatants ?? [])].map((c: any) => ({ id: String(c.id), group: groupIdOf(c), initiative: c.initiative ?? null }));
-        const ups = sharedInitiativeUpdates(now, roll, ours);
-        if (ups.length) await combat.updateEmbeddedDocuments('Combatant', ups);
+        const ups = sharedInitiativeUpdates(now, roll, ours, list);
+        if (!ups.length) return;
+        await combat.updateEmbeddedDocuments('Combatant', ups);
+        // Keep the acting combatant acting after the re-sort (as SR2Combat.alignParties does).
+        const turn = keepTurn([...(combat.turns ?? [])].map((t: any) => ({ id: String(t.id) })), current, Number(combat.turn ?? 0));
+        if (turn !== null) await combat.update({ turn });
       },
     };
   } catch { return none; }

@@ -2200,8 +2200,13 @@
         }
       },
       "foldDice": {
-        "Name": "Fold dice on chat cards",
-        "Hint": "Show each test's dice folded away under its summary line (click to open). Applies to new cards, or all after a reload."
+        "Name": "Fold dice on chat cards (your choice)",
+        "Hint": "Show each test's dice folded away under their summary line (click to open). Follow the table's default (set by the GM), or always or never fold for you. Applies to new cards, or to all after a reload.",
+        "Choices": {
+          "default": "Follow the table's default",
+          "on": "Always fold",
+          "off": "Never fold"
+        }
       },
       "floatingDamage": {
         "Name": "Floating damage numbers",
@@ -2446,7 +2451,7 @@
       },
       "foldDiceDefault": {
         "Name": "Fold dice on chat cards (table default)",
-        "Hint": "The GM's default for everyone at the table. A player who changes their own \"Fold dice on chat cards\" setting keeps their choice."
+        "Hint": "The GM's default for everyone at the table. A player whose own \"Fold dice on chat cards\" is set to always or never keeps their choice."
       },
       "areaSkipsAttacker": {
         "Name": "Leave the attacker out of their own area",
@@ -16762,7 +16767,7 @@
         "use": "Use",
         "vehicleLine": "Handling {handling} · Speed {speed} · Body {body} · Armor {armor}",
         "dronePilot": "Pilot {pilot}",
-        "tweakSkillUnknown": "{name}: a custom tweak names the skill \"{skill}\", but no skill, concentration or specialization on this sheet has that name, so it does nothing."
+        "tweakSkillUnknown": "{name}: a custom tweak names the skill \"{skill}\", but there's no skill by that name on this sheet (nor a concentration or specialization). It still counts for a defaulted test or a skillsoft of that name."
       },
       "Hudactions": {
         "perception": "Perception",
@@ -18104,7 +18109,7 @@
             "i6": "The card's right edge repeats the outcome; its left edge and the strip at the top show the kind of test."
           },
           "b9": "Karma buttons are explained in <a href=\"#karma-pool\">Karma Pool on chat cards</a>.",
-          "b10": "When an attack or damage comes at a character you own, the system can ask you at once (Configure Settings: <em>When you are attacked or hit</em>: Open the dialog, Notify me, Do nothing). <strong>Later (use the card)</strong> leaves it on the card. One card asks about at most 12 targets; beyond that you get one notice to use the card's buttons. <em>Fold dice on chat cards</em> folds the dice under the summary line: click to open them.",
+          "b10": "When an attack or damage comes at a character you own, the system can ask you at once (Configure Settings: <em>When you are attacked or hit</em>: Open the dialog, Notify me, Do nothing). <strong>Later (use the card)</strong> leaves it on the card. One card asks about at most 12 targets; beyond that you get one notice to use the card's buttons. <em>Fold dice on chat cards</em> folds the dice under the summary line: click to open them. It follows the table's default (the GM's <em>Fold dice on chat cards (table default)</em>) unless you set it to <em>Always fold</em> or <em>Never fold</em>.",
           "b11": "The strip at the top of a card is coloured by the kind of test: red for combat, violet for magic, green for the Matrix, orange for rigging, gold (a sandy brown in the Corp theme) for the street, teal for health and healing. The big number is the successes; dice that hit are lit, 1s are marked. With <em>Dice colours on chat cards</em> set to colourblind-safe, blue and orange (with the symbols) take the place of green and red everywhere on the card."
         },
         "look": {
@@ -18464,7 +18469,7 @@
           "b2": "The <strong>Advancement log</strong> lists every gain since: Karma in, raises, purchases and approvals, with who and when. A line above it adds them up.",
           "b3": "Once a character has a record (or, with the approval queue on, once they are out of the wizard), a player raises ratings through <a href=\"#spend-karma\">Spend Karma</a>. Typing a higher rating, Force or level is refused; lowering is allowed. Essence can't be typed at all. With the queue on, typing more nuyen or Karma is refused too: the GM awards them. The GM can type anything.",
           "b4": "The GM also has <strong>Log note…</strong> (write a line), a trash icon on each line (only the log changes) and <strong>Reopen creation</strong> (throws the record away and opens the wizard again; the log stays).",
-          "b5": "<strong>Revert</strong> (the arrow on a raise's line, from 0.94.2) puts the rating back where it was and refunds the Good Karma and nuyen the line spent. The line stays in the log, crossed out and marked <em>reverted</em>, and a refund line follows it. Only the latest raise of a rating can be reverted: if a later line raised the same rating, revert that one first. A greyed arrow's tooltip says why it can't be used (a later raise, the rating changed by hand since, the item gone). Lines logged before 0.94.2 can't be reverted. The GM reverts at once; a player does too while ratings stay editable for them, otherwise their Revert posts an <strong>Apply (GM)</strong> card, and the GM's client works the revert out again from the character before applying it."
+          "b5": "<strong>Revert</strong> (the arrow on a raise's line, from 0.94.2) puts the rating back where it was and refunds the Good Karma and nuyen the line spent. The line stays in the log, crossed out and marked <em>reverted</em>, and a refund line follows it. Only the latest raise of a rating can be reverted: if a later line raised the same rating, revert that one first. A greyed arrow's tooltip says why it can't be used (a later raise, the rating changed by hand since, the item gone). Lines logged before 0.94.2 can't be reverted. The GM reverts at once; a player does too while ratings stay editable for them, otherwise their Revert posts an <strong>Apply (GM)</strong> card, and the GM's client works the revert out again from the character before applying it. When the GM's client applies a revert (from the sheet or a card), it doesn't take the log's word: each change must lower a rating the log can raise back to the value it held; the Karma refund is at most what the rules charge for that raise (none when the rules give it no Karma price, such as Magic or an adept power's level); nuyen isn't refunded (the GM pays it back by hand if that's right); and the GM's own hidden record of reverted lines refuses a second revert. If the character changed after the GM confirmed, nothing is done. An initiation can't be reverted (its metamagic, geasa and any sacrifice would stay): its arrow is greyed."
         },
         "approval": {
           "title": "The approval queue",
@@ -18530,7 +18535,7 @@
             "i5": "<strong>Cargo</strong>: the + loads gear. With <em>Load (kg)</em> or <em>Cargo Factor</em> set, the sheet counts what it carries and warns when overloaded.",
             "i6": "<strong>Chase</strong>: <strong>Give chase…</strong>, then the gap in metres, <strong>Chase turn</strong> and <strong>End chase</strong>. A won maneuver shows its TN bonus for the Combat Turn.",
             "i7": "<strong>Aboard</strong>: <strong>Put someone aboard</strong>; the × takes them off.",
-            "i8": "<strong>Crew stations</strong> (under the status strip; world setting <em>Crew stations on vehicle sheets</em>): a tab per station: <strong>Driver</strong> (driving test, Push, crash test, Ram and the guns a driver fires), a <strong>Gunner</strong> for each turret, pintle or ring mount (the guns that station works), <strong>Sensors</strong> (sensor test, Jam, the locks) and <strong>Commander</strong>. Your own station's tab comes first. <strong>Take it</strong> seats one of your characters at a free station when you own the vehicle or your character is aboard (a gunner who isn't aboard is put aboard); the GM and the vehicle's owner <strong>Assign…</strong> anyone; <strong>Leave</strong> frees it. Each crew member ticks <strong>Ready</strong>; the heading says <em>All ready</em> when every occupied station is, and the GMs get a whispered line. The GM's eraser clears the marks. The buttons are the sheet's own, so the same rules decide who may fire what."
+            "i8": "<strong>Crew stations</strong> (under the status strip; world setting <em>Crew stations on vehicle sheets</em>): a tab per station: <strong>Driver</strong> (driving test, Push, crash test, Ram and the guns a driver fires), a <strong>Gunner</strong> for each turret, pintle or ring mount (the guns that station works), <strong>Sensors</strong> (sensor test, Jam, the locks) and <strong>Commander</strong>. Your own station's tab comes first. <strong>Take it</strong> seats one of your characters at a free station when you own the vehicle or your character is aboard (a gunner who isn't aboard is put aboard); the GM and the vehicle's owner <strong>Assign…</strong> anyone (the vehicle's owner seats only their own characters as driver); a seat whose character was deleted, or whose gun was removed, is free again; you see who sits at a station only if you can view that character or own the vehicle (otherwise <em>occupied</em>); <strong>Leave</strong> frees it. Each crew member ticks <strong>Ready</strong>; the heading says <em>All ready</em> when every occupied station is, and the GMs get a whispered line. The GM's eraser clears the marks. The buttons are the sheet's own, so the same rules decide who may fire what."
           },
           "b3": "A drone's <strong>Link encryption</strong> guards its remote link against <a href=\"#rigging\">Drone link</a>. Guided missiles fired at a vehicle lock on to its Signature, and sensor locks run out after a few Combat Turns without a new sensor test."
         },
@@ -19508,7 +19513,7 @@
         "rollAtOnce": "A click on a roll button rolls straight away with the window's defaults (Shift-click opens the window).",
         "oneRollWindow": "Opening a roll window closes the other open ones.",
         "rememberRolls": "Roll windows bring back your last choices (Force, pool dice) for the same roll.",
-        "foldDice": "Chat cards show their dice folded away.",
+        "foldDice": "Chat cards show their dice folded away: follow the table's default, or always or never.",
         "typedDice": "Type in the results of physical dice instead of rolling them.",
         "rerollInPlace": "A re-roll updates its card instead of posting a new one.",
         "soundCues": "Sounds on your turn, when your characters are attacked or hit, on disasters and alerts.",
@@ -19651,7 +19656,9 @@
         "notRevertable": "This line can't be reverted automatically (nothing it raised was recorded, or it was logged before 0.94.2).",
         "later": "A later raise of the same rating builds on this one: revert \"{what}\" first.",
         "changed": "{label} is {now} now, not {expected} as this raise left it: it was changed since.",
-        "itemGone": "{label} is no longer on the character."
+        "itemGone": "{label} is no longer on the character.",
+        "initiation": "An initiation can't be reverted: its metamagic technique, geasa and any sacrifice would stay. The GM adjusts it by hand.",
+        "forged": "This line's record doesn't describe a raise the rules know (a field that can't be raised, or values that don't lower it), so it can't be reverted here."
       },
       "stepLine": "{label}: {from} → {to}",
       "refundKarma": "Refund {karma} Good Karma",
@@ -19664,7 +19671,12 @@
       "cardAsk": "{name} asks to revert \"{what}\":",
       "applyGm": "Apply (GM)",
       "sentToGm": "Sent to the GM to apply.",
-      "describe": "Revert an advancement-log line on {name} (worked out again from the character when applied)"
+      "describe": "Revert an advancement-log line on {name} (worked out again from the character when applied)",
+      "noCost": "No Karma refund: the rules give no Karma cost for this raise (the line says {karma} Karma). Refund it by hand if that's right.",
+      "capped": "The line says {claimed} Karma, but the rules charge {karma} for this raise: {karma} is refunded.",
+      "noNuyen": "No nuyen refund (the line says ¥{nuyen}): a revert can't price a purchase. Refund it by hand if that's right.",
+      "planChanged": "The revert changed after you confirmed it (the character or its log was edited meanwhile). Nothing was done; try again.",
+      "failed": "The revert failed part way, and what it had changed was put back. Nothing was refunded."
     },
     "Crew": {
       "title": "Crew stations",
@@ -19699,7 +19711,8 @@
       "nobodyToSeat": "Nobody you may seat at that station.",
       "pickTitle": "Crew station: {name}",
       "who": "Who",
-      "seatIt": "Seat"
+      "seatIt": "Seat",
+      "occupied": "occupied"
     },
     "Groups": {
       "grunts": "Grunts",

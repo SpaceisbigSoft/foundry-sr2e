@@ -48,6 +48,18 @@ export function crewOf(raw: unknown): CrewState {
   return { seats, ready };
 }
 
+/**
+ * Pure: v0.94.2 review (6): the crew without ghost seats: a seat whose actor no longer resolves, or whose station the
+ * vehicle no longer has (a gun removed), is dropped with its ready mark.
+ */
+export function pruneCrew(state: CrewState, stations: ReadonlyArray<Station>, resolves: (uuid: string) => boolean): CrewState {
+  const have = new Set(stations.map((s) => s.id));
+  const seats: Record<string, string> = {}, ready: Record<string, boolean> = {};
+  for (const [k, v] of Object.entries(state.seats)) if (have.has(k) && resolves(v)) seats[k] = v;
+  for (const k of Object.keys(state.ready)) if (have.has(k) && (k === 'driver' || seats[k])) ready[k] = true;
+  return { seats, ready };
+}
+
 /** Pure: who sits at a station (the driver from the vehicle's controller). */
 export function seatOf(state: CrewState, station: string, controllerUuid: string): string {
   return station === 'driver' ? String(controllerUuid ?? '') : String(state.seats[station] ?? '');
@@ -118,15 +130,16 @@ export function stationOrder(stations: ReadonlyArray<Station>, mine: ReadonlyArr
  * Pure: who may do what at a station.
  * - claim: a free station, for an actor the user owns, when the user owns the vehicle or the actor is aboard (or
  *   drives it already); the GM always.
- * - assign: the GM or the vehicle's owner seat anyone.
+ * - assign: the GM or the vehicle's owner seat anyone; v0.94.2 review (2): at the driver's station only an actor the
+ *   user owns too (seating a driver writes that actor's rigging and releases any other vehicle they drive).
  * - leave: the seated actor's owner, the vehicle's owner, the GM.
  * - ready: the seated actor's owner, the GM.
  */
-export function crewMay(what: 'claim' | 'assign' | 'leave' | 'ready', o: { isGM: boolean; ownsVehicle: boolean; ownsActor: boolean; aboard: boolean; free: boolean }): boolean {
+export function crewMay(what: 'claim' | 'assign' | 'leave' | 'ready', o: { isGM: boolean; ownsVehicle: boolean; ownsActor: boolean; aboard: boolean; free: boolean; driver?: boolean }): boolean {
   if (o.isGM) return true;
   switch (what) {
     case 'claim': return o.free && o.ownsActor && (o.ownsVehicle || o.aboard);
-    case 'assign': return o.ownsVehicle;
+    case 'assign': return o.ownsVehicle && (!o.driver || o.ownsActor);
     case 'leave': return o.ownsActor || o.ownsVehicle;
     case 'ready': return o.ownsActor;
   }

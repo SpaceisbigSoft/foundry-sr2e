@@ -7,7 +7,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { foldDiceFolded, addToCombatRows, turnWasMine, ADD_TO_COMBAT_TYPES } from '../rules/fixes942.ts';
+import { foldDiceFolded, foldDiceChoice, addToCombatRows, addedActorIds, turnWasMine, ADD_TO_COMBAT_TYPES } from '../rules/fixes942.ts';
 import { setupWarnings, type SetupInput } from '../rules/catalogue.ts';
 
 const ROOT = join(import.meta.dirname, '..', '..', '..');
@@ -16,14 +16,32 @@ const lang = JSON.parse(readFileSync(join(ROOT, 'public', 'lang', 'en.json'), 'u
 const has = (key: string) => key.split('.').reduce((a: any, k) => (a == null ? undefined : a[k]), lang) !== undefined;
 
 describe('v0.94.2 fold dice: a world default with a per-user override', () => {
-  test('a user who never chose follows the table default', () => {
-    assert.equal(foldDiceFolded(null, true, false), true);
-    assert.equal(foldDiceFolded(undefined, false, true), false);
-    assert.equal(foldDiceFolded('', false, true), false);
+  test('a user who follows the table gets the table default', () => {
+    assert.equal(foldDiceFolded('default', true), true);
+    assert.equal(foldDiceFolded('default', false), false);
+    assert.equal(foldDiceFolded(null, false), false);
+    assert.equal(foldDiceFolded(undefined, true), true);
+    assert.equal(foldDiceFolded('', false), false);
   });
-  test('a user who chose keeps their choice', () => {
-    assert.equal(foldDiceFolded('false', true, false), false);
-    assert.equal(foldDiceFolded('true', false, true), true);
+  test('review (5): "on" folds even when the table unfolds, "off" the other way', () => {
+    assert.equal(foldDiceFolded('on', false), true);
+    assert.equal(foldDiceFolded('off', true), false);
+  });
+  test('review (5): an old stored Boolean (or its string) reads as on or off', () => {
+    assert.equal(foldDiceChoice(true), 'on');
+    assert.equal(foldDiceChoice('true'), 'on');
+    assert.equal(foldDiceChoice(false), 'off');
+    assert.equal(foldDiceChoice('false'), 'off');
+    assert.equal(foldDiceChoice('nonsense'), 'default');
+    assert.equal(foldDiceFolded(true, false), true);
+    assert.equal(foldDiceFolded('false', true), false);
+  });
+  test('review (5): a three-way String setting, no raw client-storage read; the Automation window reads old values', () => {
+    const set = mod('settings.ts');
+    assert.match(set, /"foldDice", \{[\s\S]{0,200}type: String, default: "default",[\s\S]{0,100}choices: \{ default: "SR2E\.Settings\.foldDice\.Choices\.default", on: "SR2E\.Settings\.foldDice\.Choices\.on", off: "SR2E\.Settings\.foldDice\.Choices\.off" \}/);
+    assert.doesNotMatch(mod('applications', 'fixes942.ts'), /storage/);
+    assert.match(mod('applications', 'automation941.ts'), /key === FOLD_DICE_KEY \? foldDiceChoice\(v\) : v/);
+    for (const k of ['Name', 'Hint', 'Choices.default', 'Choices.on', 'Choices.off']) assert.ok(has(`SR2E.Settings.foldDice.${k}`), k);
   });
   test('chat cards ask foldDiceOn(), not the client setting alone', () => {
     const chat = mod('applications', 'chat.ts');
@@ -49,6 +67,10 @@ describe('v0.94.2 add to combat without tokens', () => {
   test('only fighting kinds', () => {
     assert.ok(!ADD_TO_COMBAT_TYPES.includes('host'));
     assert.deepEqual(addToCombatRows([{ id: 'x', name: 'x', type: 'ic' }], new Set()), []);
+  });
+  test('review (16): only tokenless or linked combatants count as their actor being in', () => {
+    assert.deepEqual(addedActorIds([{ actorId: 'a' }, { actorId: 'b', tokenId: 't1', linked: false }, { actorId: 'c', tokenId: 't2', linked: true }, { actorId: '' }]), ['a', 'c']);
+    assert.match(mod('applications', 'fixes942.ts'), /addedActorIds\(/);
   });
   test('combatants are made with the actor only (no token)', () => {
     const src = mod('applications', 'fixes942.ts');
@@ -87,6 +109,12 @@ describe('v0.94.2 a tweak naming no skill is warned about', () => {
     assert.deepEqual(setupWarnings({ ...base, items: [gear([{ id: 't1', target: 'attribute', key: 'body', value: 1 }])] }), []);
     assert.deepEqual(setupWarnings({ ...base, items: [gear([{ id: 't1', target: 'skillDice', key: '', value: 1 }])] }), []);
   });
+  test('review (11): a tweak switched off is not warned about; the wording says what is missing', () => {
+    assert.deepEqual(setupWarnings({ ...base, items: [gear([{ id: 't1', target: 'skillDice', key: 'Stelth', value: 1, on: false }])] }), []);
+    const w = setupWarnings({ ...base, items: [gear([{ id: 't1', target: 'skillDice', key: 'Stelth', value: 1 }])] });
+    assert.match(w[0]!.text, /no skill by that name on this sheet/);
+    assert.doesNotMatch(w[0]!.text, /does nothing/);
+  });
   test('no warning before the sheet has any skills', () => {
     assert.deepEqual(setupWarnings({ ...base, skills: [], items: [gear([{ id: 't1', target: 'skillDice', key: 'Stelth', value: 1 }])] }).filter((x) => /Stelth/.test(x.text)), []);
   });
@@ -102,6 +130,8 @@ describe('v0.94.2 areas, the shop and strings', () => {
   test('a single selected owned token wins over the assigned character in the shop', () => {
     const src = mod('applications', 'adding.ts');
     assert.ok(src.indexOf('if (token) return { actor: token, pick: [] };') < src.indexOf('if (owned(user?.character)) return { actor: user.character, pick: [] };'));
+    // review (15): the doc comment says so.
+    assert.match(src, /one selected token of a character or NPC they own \(v0\.94\.2:\s*\n?\s*\*?\s*it wins over the assigned character/);
   });
   test('the canvas optgroups read the language file', () => {
     const canvas = mod('applications', 'canvas.ts');
@@ -113,5 +143,33 @@ describe('v0.94.2 areas, the shop and strings', () => {
       assert.ok(has(`SR2E.Settings.${k}.Name`) && has(`SR2E.Settings.${k}.Hint`), k);
       assert.match(mod('settings.ts'), new RegExp(`"${k}"`));
     }
+  });
+});
+
+describe('v0.94.2 add to combat: one window at a time (glue with stubs)', () => {
+  test('a double click opens one window; actors added meanwhile are not added twice', async () => {
+    const g = globalThis as any;
+    let resolve: (v: string[]) => void = () => {};
+    let prompts = 0;
+    const made: any[] = [];
+    const combat: any = { combatants: [] as any[], createEmbeddedDocuments: async (_t: string, d: any[]) => { made.push(...d); } };
+    const actors = [{ id: 'c1', name: 'Alpha', type: 'character', hasPlayerOwner: true }, { id: 'c2', name: 'Bravo', type: 'character', hasPlayerOwner: true }];
+    g.game = { user: { isGM: true }, combat, actors: Object.assign([...actors], { get: (id: string) => actors.find((a) => a.id === id) }) };
+    g.ui = { notifications: { info: () => {}, warn: () => {} } };
+    g.foundry = { applications: { api: { DialogV2: { prompt: () => { prompts++; return new Promise((r) => { resolve = r; }); } } } } };
+    const { openAddToCombat } = await import('../applications/fixes942.ts');
+    const first = openAddToCombat();
+    assert.equal(await openAddToCombat(), 0, 'the second click does nothing');
+    assert.equal(prompts, 1);
+    // Meanwhile Alpha went in (tokenless).
+    combat.combatants.push({ actorId: 'c1' });
+    resolve(['c1', 'c2', 'c2']);
+    assert.equal(await first, 1);
+    assert.deepEqual(made, [{ actorId: 'c2' }]);
+    // Closed: a new click opens again.
+    const again = openAddToCombat();
+    assert.equal(prompts, 2);
+    resolve([]);
+    assert.equal(await again, 0);
   });
 });
