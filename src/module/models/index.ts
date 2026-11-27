@@ -631,6 +631,12 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
         quickened: new fields.BooleanField({ required: true, initial: false }),
         /** v0.92.3 review fix: the Good Karma quickening took (0 = not recorded: Force × the per-Force cost). */
         quickenKarma: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
+        /** v0.96.0 (RULES.SORCERY_V96.quickening, Grimoire p. 44): the casting test's dice and TN (0 = not recorded). */
+        castDice96: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
+        castTn96: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
+        /** v0.96.0: the cast's own Drain TN modifiers (stacking, exclusive...) and centering's Drain successes, for quickening's second Drain. */
+        drainMod96: new fields.NumberField({ required: true, integer: true, initial: 0 }),
+        drainCenter96: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
         /** An elemental sustaining it for the magician. */
         spiritUuid: new fields.StringField({ required: true, initial: '' }),
         /** World time when the elemental lets it drop (v0.39.0; -1 = no limit). */

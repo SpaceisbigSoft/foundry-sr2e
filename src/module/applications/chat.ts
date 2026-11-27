@@ -6,6 +6,7 @@ import { opposedMelee, SR2Actor, serialTicks, postingTyped } from '../documents/
 import { settleClock } from './clock.ts';
 import { nextInitiationGrade } from '../rules/sorcery923.ts';
 import { sysNow, toSysTime } from '../helpers/clock.ts';
+import * as G96 from './sorcery96.ts';
 import { allActors } from '../helpers/actors.ts';
 import { playCue, decorateItemDrags } from './qol.ts';
 import { SYSTEM_ID } from '../config/system.ts';
@@ -1411,6 +1412,8 @@ export function spiritCreateData(raw: any): { data: any; summonerUuid: string; c
   if (raw.type === 'barrier') {
     data.items = [];
     for (const k of ['rating', 'baseRating']) if (data.system[k] !== undefined) data.system[k] = safeInt(data.system[k], 0, 30, 1);
+    // v0.96.0 (RULES.SORCERY_V96.wardExpiry): a ward's days clamped, its end set here from them (a card's own end is dropped).
+    Object.assign(data.system, G96.wardCreateSystem96(data.system, sysNow()));
   } else {
     if (data.system.force !== undefined) data.system.force = safeInt(data.system.force, 1, 30, 1);
     if (data.system.services !== undefined) data.system.services = safeInt(data.system.services, 0, 30, 0);
@@ -1443,7 +1446,9 @@ async function onCreateSpirit(message: any, button: HTMLButtonElement): Promise<
   const owner = summoner ? tx('SR2E.App.Chat.ownedLike', { name: summoner.name }) : from ? tx('SR2E.App.Chat.ownedLike', { name: nameOfUuid(from) || from }) : tx('SR2E.App.Chat.ownedByTheGmOnly');
   const lines = [data.type === 'barrier' ? tx('SR2E.Dialog.Chat.aRatingIsCreated', { barrierKind: String(sys.barrierKind ?? tx('SR2E.Dialog.Chat.barrier')), name: data.name, rating: safeInt(sys.rating, 0, 30, 1), owner })
     : tx('SR2E.Dialog.Chat.aSpiritForceIsCreated', { name: data.name, force: safeInt(sys.force, 1, 30, 1), part: sys.services !== undefined ? tx('SR2E.Dialog.Chat.services', { services: safeInt(sys.services, 0, 30, 0) }) : '', owner }),
-    tx('SR2E.Dialog.Chat.itemSEffectS', { itemsLength: data.items.length, effectsLength: data.effects.length, part: data.flags?.[SYSTEM_ID]?.allyRitual ? tx('SR2E.Dialog.Chat.anAllyCountsForItsCreator') : '' })];
+    tx('SR2E.Dialog.Chat.itemSEffectS', { itemsLength: data.items.length, effectsLength: data.effects.length, part: data.flags?.[SYSTEM_ID]?.allyRitual ? tx('SR2E.Dialog.Chat.anAllyCountsForItsCreator') : '' }),
+    // v0.96.0: the ward's days, so the GM sees what the card asks for.
+    ...(data.type === 'barrier' && Number(sys.wardDays96) > 0 ? [tx('SR2E.Sorcery96.Dialog.wardDays', { days: Number(sys.wardDays96) })] : [])];
   if (!(await gmMay(message, { title: tx('SR2E.Dialog.Chat.createFromACard'), lines, sources: from ? [from] : [], always: true }))) return;
   // v0.81.1 (A2): the change is made under the GM lock, after any dialog.
   await gmLocked(message, button, async () => {

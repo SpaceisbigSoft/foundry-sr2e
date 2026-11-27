@@ -38,6 +38,19 @@ describe('v0.96.0 sorcery glue: the active foci limit (Core p. 137)', () => {
     const pre = hooks.get('preUpdateItem')!.at(-1)!;
     assert.equal(pre(f3, { system: { active: true } }), false);
     assert.equal(warnings.length, 1);
+    // Review: only `active` is dropped; the rest of the update goes through.
+    const change: any = { name: 'Renamed', system: { active: true, rating: 3 } };
+    assert.equal(G.preUpdateFocus(f3, change), undefined);
+    assert.deepEqual(change, { name: 'Renamed', system: { rating: 3 } });
+    // A GM's own change is only warned about; an actor with no Intelligence isn't checked.
+    g.game = { users: { get: (id: string) => (id === 'gm1' ? { isGM: true } : { isGM: false }) } };
+    const gmChange: any = { system: { active: true } };
+    assert.equal(G.preUpdateFocus(f3, gmChange, 'gm1'), undefined);
+    assert.equal(gmChange.system.active, true);
+    delete g.game;
+    const noInt = actorWith([{ id: 'f1', active: true }, { id: 'f2', active: false }], 1);
+    delete noInt.system.attributes.intelligence;
+    assert.equal(G.fociLimitBlocks(noInt.items[1], { system: { active: true } }), null);
   });
   test('warn: the update goes ahead with a warning; off: nothing (v0.95.1)', (t) => {
     const a = actorWith([{ id: 'f1', active: true }, { id: 'f3', active: false }], 1);
@@ -53,8 +66,38 @@ describe('v0.96.0 sorcery glue: the active foci limit (Core p. 137)', () => {
   });
 });
 
+describe('v0.96.0 sorcery glue: a focus created active; one quickening at a time', () => {
+  test('a player\'s new active focus past the limit is created off; a GM\'s only warned; no Intelligence: unchecked', () => {
+    const a = actorWith([{ id: 'f1', active: true }], 1);
+    const made: any = { type: 'focus', id: 'new', system: { active: true }, parent: a, updateSource(u: any) { if ('system.active' in u) this.system.active = u['system.active']; } };
+    g.game = { users: { get: (id: string) => ({ isGM: id === 'gm1' }) } };
+    G.preCreateFocus(made, { system: { active: true } }, 'p1');
+    assert.equal(made.system.active, false);
+    assert.equal(warnings.length, 1);
+    made.system.active = true;
+    G.preCreateFocus(made, { system: { active: true } }, 'gm1');
+    assert.equal(made.system.active, true);
+    delete a.system.attributes.intelligence;
+    made.system.active = true;
+    G.preCreateFocus(made, { system: { active: true } }, 'p1');
+    assert.equal(made.system.active, true);
+    delete g.game;
+  });
+  test('oneQuicken runs one at a time per key', async () => {
+    let runs = 0;
+    let release: () => void = () => {};
+    const slow = () => new Promise<number>((r) => { runs++; release = () => r(1); });
+    const p1 = G.oneQuicken('k', slow);
+    assert.equal(await G.oneQuicken('k', slow), null);
+    release();
+    assert.equal(await p1, 1);
+    assert.equal(runs, 1);
+    assert.equal(await G.oneQuicken('k', async () => 2), 2);
+  });
+});
+
 describe('v0.96.0 sorcery glue: a ward\'s days (Grimoire p. 92)', () => {
-  const ward = (o: any) => { const w: any = { type: 'barrier', name: 'Ward', system: { rating: 4, wardDays96: 0, wardEnds96: 0, ...o }, updates: [] as any[] }; w.update = async (u: any) => { w.updates.push(u); }; return w; };
+  const ward = (o: any) => { const w: any = { type: 'barrier', name: 'Ward', system: { rating: 4, wardDays96: 1, wardEnds96: 0, ...o }, updates: [] as any[] }; w.update = async (u: any) => { w.updates.push(u); }; return w; };
   test('a new ward gets its end; when the clock passes it falls (rating 0) with a GM card', async () => {
     assert.deepEqual(G.wardStamp(ward({ wardDays96: 2 }), 100), { 'system.wardEnds96': 100 + 2 * 86400 });
     assert.equal(G.wardStamp(ward({ wardDays96: 0 }), 100), null);
@@ -64,6 +107,19 @@ describe('v0.96.0 sorcery glue: a ward\'s days (Grimoire p. 92)', () => {
     assert.equal(await G.wardSweep([w], 500), 1);
     assert.deepEqual(w.updates[0], { 'system.wardEnds96': -1, 'system.rating': 0 });
     assert.deepEqual(chat[0].whisper, ['gm1']);
+    // Review: the creation data's end is made from the days alone (a card's own end dropped), days at most 30.
+    assert.deepEqual(G.wardCreateSystem96({ wardDays96: 3, wardEnds96: 1e12 }, 100), { wardDays96: 3, wardEnds96: 100 + 3 * 86400 });
+    assert.deepEqual(G.wardCreateSystem96({ wardDays96: 999 }, 0), { wardDays96: 30, wardEnds96: 30 * 86400 });
+    assert.deepEqual(G.wardCreateSystem96({ wardEnds96: 5 }, 0), { wardDays96: 0, wardEnds96: 0 });
+    // One sweep at a time: two at once post one card.
+    chat.length = 0;
+    const w2 = ward({ wardEnds96: 500 });
+    await Promise.all([G.wardSweep([w2], 600), G.wardSweep([w2], 600)]);
+    assert.equal(chat.length, 1);
+    // Only barriers with days are touched.
+    const plain = ward({ wardDays96: 0, wardEnds96: 500 });
+    assert.equal(await G.wardSweep([plain], 900), 0);
+    assert.equal(G.wardStamp(ward({ wardDays96: 0 }), 100), null);
   });
   test('card: the GMs are told, the rating stays; off: no end kept (v0.95.1)', async (t) => {
     const back = oldWay({ 'SORCERY_V96.wardExpiry': 'card' });
@@ -84,6 +140,8 @@ describe('v0.96.0 sorcery glue: masking (Grimoire p. 46)', () => {
     assert.deepEqual(chat[0].whisper, ['gm1']);
     assert.equal(await G.maskTest(who(2, false, 7), who(4, true, 6), scripted([6, 1, 1, 1, 1, 1, 1, 2])), false);
     assert.equal(await G.maskTest(who(0, false, 7), who(4, true, 6)), false);
+    // Review: the second try is at +2 (TN 8 here).
+    assert.equal(await G.maskTest(who(2, false, 7), who(4, true, 6), scripted([6, 6, 1, 1, 1, 1, 1, 1, 1]), true), false);
     assert.equal(await G.maskTest(who(2, false, 7), who(4, false, 6)), null);
   });
   test('a mask that holds shows a mundane aura; foci beyond the grade still show', () => {
@@ -101,10 +159,10 @@ describe('v0.96.0 sorcery glue: defaulting, noticing, centering, the Cast window
   const mage = (skills: Record<string, number>, willpower = 3) => ({ system: { derived: { magic: 5 }, attributes: { willpower: { total: willpower } } }, findSkill: (n: string) => (skills[n] ? { system: { rating: skills[n] } } : null) });
   test('defaulting reads the skills by their names and the GM\'s web', (t) => {
     setSkillWeb([]);
-    assert.deepEqual(G.magicDefaultFor(mage({ Conjuring: 4 })), { dice: 4, tn: 4, from: 'conjuring' });
-    assert.deepEqual(G.magicDefaultFor(mage({ 'Magical Theory': 4 })), { dice: 4, tn: 2, from: 'magicalTheory' });
-    setSkillWeb([{ a: 'Sorcery', b: 'Conjuring', steps: 1 }]);
     assert.deepEqual(G.magicDefaultFor(mage({ Conjuring: 4 })), { dice: 4, tn: 2, from: 'conjuring' });
+    assert.deepEqual(G.magicDefaultFor(mage({ 'Magical Theory': 4 })), { dice: 4, tn: 2, from: 'magicalTheory' });
+    setSkillWeb([{ a: 'Sorcery', b: 'Conjuring', steps: 3 }]);
+    assert.deepEqual(G.magicDefaultFor(mage({ Conjuring: 4 })), { dice: 4, tn: 6, from: 'conjuring' });
     setSkillWeb([]);
     assert.equal(G.magicDefaultFor({ ...mage({ Conjuring: 4 }), system: { derived: { magic: 0 }, attributes: { willpower: { total: 3 } } } }), null);
     t.after(oldWay({ 'SORCERY_V96.magicDefault': 'off' }));

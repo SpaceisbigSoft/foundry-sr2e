@@ -4,7 +4,7 @@
  */
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { RULES } from '../rules/config.ts';
 import { oldWay } from '../rules/__tests__/oldway.ts';
@@ -26,8 +26,13 @@ describe('v0.96.0 sorcery: the switches', () => {
     }
   });
   test('every key the new files use is drafted, and every house-rule row has its label', () => {
-    const draft = JSON.parse(read('i18n-drafts', 'sorcery96.json'));
-    const src = ['src/module/rules/sorcery96.ts', 'src/module/applications/sorcery96.ts', 'src/module/documents/index.ts', 'public/templates/actor-character-sheet.hbs']
+    // The language file, and the drafts while they exist (the lead merges them into public/lang/en.json).
+    const flat: Record<string, string> = {};
+    const walk = (o: unknown, pre: string): void => { if (typeof o === 'string') { flat[pre] = o; return; } if (o && typeof o === 'object') for (const [k, v] of Object.entries(o)) walk(v, pre ? `${pre}.${k}` : k); };
+    walk(JSON.parse(read('public', 'lang', 'en.json')), '');
+    for (const f of ['sorcery96.json', 'sorcery96-fix.json']) if (existsSync(join(ROOT, 'i18n-drafts', f))) Object.assign(flat, JSON.parse(read('i18n-drafts', f)));
+    const draft = flat;
+    const src = ['src/module/rules/sorcery96.ts', 'src/module/applications/sorcery96.ts', 'src/module/documents/index.ts', 'src/module/applications/chat.ts', 'src/module/rules/trust.ts', 'public/templates/actor-character-sheet.hbs']
       .map((f) => read(...f.split('/'))).join('\n');
     for (const k of new Set(src.match(/SR2E\.Sorcery96\.[A-Za-z0-9.]+[A-Za-z0-9]/g) ?? [])) {
       if (/\.(From|Why)$/.test(k)) continue;
@@ -41,10 +46,11 @@ describe('v0.96.0 sorcery: the switches', () => {
 
 describe('v0.96.0 sorcery: defaulting a magical skill (Awakenings p. 93)', () => {
   test('the most dice win; +2 a step; the GM web wins over the switch steps', () => {
-    assert.deepEqual(S.magicDefault({ ratings: { conjuring: 5, magicalTheory: 3 }, willpower: 4 }), { dice: 5, tn: 4, from: 'conjuring' });
+    assert.deepEqual(S.magicDefault({ ratings: { conjuring: 5, magicalTheory: 3 }, willpower: 4 }), { dice: 5, tn: 2, from: 'conjuring' });
     assert.deepEqual(S.magicDefault({ ratings: { magicalTheory: 4 }, willpower: 4 }), { dice: 4, tn: 2, from: 'magicalTheory' });
     assert.deepEqual(S.magicDefault({ ratings: {}, willpower: 5 }), { dice: 5, tn: 8, from: 'willpower' });
-    assert.deepEqual(S.magicDefault({ ratings: { conjuring: 5 }, willpower: 0, steps: { conjuring: 1 } }), { dice: 5, tn: 2, from: 'conjuring' });
+    assert.deepEqual(S.magicDefault({ ratings: { conjuring: 5 }, willpower: 0, steps: { conjuring: 3 } }), { dice: 5, tn: 6, from: 'conjuring' });
+    assert.deepEqual(S.magicDefault({ ratings: { enchanting: 4, magicalTheory: 4 }, willpower: 0 }), { dice: 4, tn: 2, from: 'magicalTheory' });
     assert.equal(S.magicDefault({ ratings: {}, willpower: 0 }), null);
     assert.equal(S.magicDefaultMod({ dice: 5, tn: 4, from: 'conjuring' }).value, 4);
   });
@@ -122,6 +128,10 @@ describe('v0.96.0 sorcery: metamagic (Grimoire pp. 43–47)', () => {
     assert.equal(S.quickenActions(2, 5), 1);
     assert.equal(S.quickenActions(6, 0), 12);
     assert.equal(S.quickenDice(7, 3), 10);
+    // Review: the cast's recorded dice and TN win; an older entry's asked values are clamped.
+    assert.deepEqual(S.quickenBase({ storedDice: 9, storedTn: 5, askedDice: 1, askedTn: 2, sorcery: 6 }), { dice: 9, tn: 5 });
+    assert.deepEqual(S.quickenBase({ askedDice: 1, askedTn: 2, sorcery: 6, spellTn: 4 }), { dice: 6, tn: 4 });
+    assert.deepEqual(S.quickenBase({ askedDice: 10, askedTn: 7, sorcery: 6 }), { dice: 10, tn: 7 });
   });
   test('anchoring: Karma F + links, TN half F + links (at least 2), minutes ÷ successes; off null', (t) => {
     assert.deepEqual(S.anchorPrep(6, 1), { karma: 7, tn: 4, minutes: 7 });
@@ -144,6 +154,10 @@ describe('v0.96.0 sorcery: metamagic (Grimoire pp. 43–47)', () => {
     assert.equal(S.centeringBonus(5, 1), 2);
     assert.equal(S.centeringBonus(5, 0), 0);
     assert.equal(S.centerUse('cast'), 'cast');
+    // Review: kept on the card as center96, counted only while the dice score one, never on a botch.
+    assert.equal(S.withCenter(2, 2), 4);
+    assert.equal(S.withCenter(0, 2), 0);
+    assert.equal(S.withCenter(3, 2, true), 3);
     assert.equal(S.centerUse('other'), null);
     t.after(oldWay({ 'SORCERY_V96.centeringUse': 'off' }));
     assert.equal(S.centerUse('drain'), null);
@@ -156,6 +170,8 @@ describe('v0.96.0 sorcery: totem dice as Magic Pool dice (Core p. 119)', () => {
     assert.deepEqual(S.totemPool({ totem: 2, cast: 1, drain: 2, left: 0 }), { castFree: 1, drainFree: 1, castSpend: 0, drainSpend: 0 });
     assert.deepEqual(S.totemPool({ totem: -1, cast: 3, drain: 2, left: 4 }), { castFree: 0, drainFree: 0, castSpend: 3, drainSpend: 0 });
     assert.equal(S.totemPool({ totem: 0, cast: 3, drain: 2, left: 4 }), null);
+    // Review: nothing asked (a macro): the totem's dice go to the casting test.
+    assert.deepEqual(S.totemPool({ totem: 2, cast: 0, drain: 0, left: 4 }), { castFree: 2, drainFree: 0, castSpend: 0, drainSpend: 0 });
     assert.equal(S.totemPoolMax(2, 3), 5);
     assert.equal(S.totemPoolMax(-2, 1), 0);
   });
@@ -210,10 +226,14 @@ describe('v0.96.0 sorcery: the hooks in shared files are guarded by the switches
   test('documents, sheets, statblock and the template call into the new files', () => {
     const doc = read('src', 'module', 'documents', 'index.ts');
     for (const s of ['G96.magicDefaultFor(this)', 'S96.areaShape(', 'S96.stackMods(', 'G96.noticeNote(', 'S96.totemPool(', 'G96.centeringRoll(', 'S96.effectStep(', 'wardDays96', 'this.#quicken96(', 'S96.anchorPrep(', 'G96.maskTest(', 'refitSpellEffect96(']) assert.ok(doc.includes(s), s);
+    // Review: both dispel sites (the owner's resolve and the GM's Apply) refit the effect.
+    assert.equal(doc.split('SR2Actor.refitSpellEffect96(').length - 1, 2);
+    assert.ok(read('src', 'module', 'applications', 'chat.ts').includes('G96.wardCreateSystem96('));
     const sheets = read('src', 'module', 'applications', 'sheets.ts');
     for (const s of ['G96.castRows96(', 'G96.readCast96(', 'G96.askQuicken(', 'S96.showGradeZero(', 'S96.totemPoolMax(']) assert.ok(sheets.includes(s), s);
     assert.ok(read('src', 'module', 'rules', 'statblock.ts').includes('bookDrain(s0.name)'));
-    assert.ok(read('public', 'templates', 'actor-character-sheet.hbs').includes('gradeZero96'));
+    // Review: the Grade 0 tick exactly once (a duplicate name would make the flag an array).
+    assert.equal(read('public', 'templates', 'actor-character-sheet.hbs').split('name="flags.shadowrun2e_unified.initiated"').length - 1, 1);
     assert.ok(read('src', 'module', 'sr2e-system.ts').includes('registerSorcery96()'));
   });
 });

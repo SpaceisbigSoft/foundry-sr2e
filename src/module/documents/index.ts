@@ -34,7 +34,7 @@ import {
   compensatedMonitor, plateletBoxes, bodyIndexHealingTn, monitorStatus, adrenalCrash, surgeryTarget, recoveryDays,
   smartlinkModifier, magnifiedRange, pheromoneDice, datajackCheck, guessSkillAttribute,
   gridReachable, simsenseOverload, dumpShockType, blackIcDamageType, frameDice, connectionModifiers, type GridNode, type DataFile, type DeckDamage, type IcBehavior,
-  shieldingDice, centeringModifiers, resolveDispel, areaTargetNumber, resolveBarrier,
+  shieldingDice, centeringModifiers, resolveDispel, areaTargetNumber, resolveBarrier, areaRadius,
   type FiringMode,
   weaponPower, unarmedWeapon, ammoDamage, ammoType, armorAfterAmmo, calledShotDamage, spreadFireModifiers,
   reachModifiers, resolveMelee, knockdownTriggered, type CalledShotEffect,
@@ -551,8 +551,10 @@ export interface TestOptions {
   /** v0.80.0 (RULES.URR_V80.coreKarmaDice): extra dice bought from the Karma Pool (ignored in the book). */
   karmaDice?: number;
   modifiers?: TargetNumberModifier[];
-  /** v0.96.0 (RULES.SORCERY_V96.centeringUse, Grimoire p. 43): successes added to a test that got at least one (kept as bought). */
+  /** v0.96.0 (RULES.SORCERY_V96.centeringUse, Grimoire p. 43): successes added to a test that got at least one (card field center96). */
   bonusSuccesses96?: number;
+  /** v0.96.0: centering was used for the spell or Drain this phase: no centering against penalties (Grimoire p. 43). */
+  noCentering96?: boolean;
   /** A magical test (Sorcery, Conjuring): centering can cancel wound and sustaining penalties. */
   magical?: boolean;
   /** Affected by the scene's background count (magical tests always are). */
@@ -1218,6 +1220,8 @@ export interface TestSnapshot {
   disasterAvoided?: boolean;
   /** Successes bought with Karma Pool (v0.35.0). */
   bought?: number;
+  /** v0.96.0 (RULES.SORCERY_V96.centeringUse, Grimoire p. 43): centering's successes, counted only while the dice score one. */
+  center96?: number;
   /** v0.50.0: times the GM changed this test's TN afterwards. */
   retargets?: number;
   /** v0.50.0: the test's id, the same on every card it gets (Karma re-rolls, TN changes). */
@@ -1262,7 +1266,9 @@ export interface TestSnapshot {
     /** v0.61.0: an exclusive spell. */
     exclusive?: boolean;
     /** v0.72.0 (O17): a Mana or Physical Barrier spell raises a barrier actor while sustained. */
-    barrier?: 'mana' | 'physical' };
+    barrier?: 'mana' | 'physical';
+    /** v0.96.0 (RULES.SORCERY_V96.quickening): the cast's Drain TN modifiers and centering's Drain successes. */
+    drainMod96?: number; drainCenter96?: number };
   dispel?: DispelContext;
   barrier?: BarrierContext;
   /** heal: the patient and the track being healed, before (and after) this test. */
@@ -2564,15 +2570,20 @@ export class SR2Actor extends Actor {
     // A masked initiate is harder to read.
     // v0.96.0 (RULES.SORCERY_V96.masking 'book', Grimoire p. 46): no TN; a secret test decides whether the mask holds.
     const masking = target?.initiate && !S96.s96('masking') ? maskingModifiers(target.initiate.grade, target.initiate.techniques) : [];
-    if (target && S96.s96('masking')) {
-      const seen = await G96.maskTest(this, target);
-      if (seen !== null) { try { await this.setFlag(SYSTEM_ID, 'maskSeen96', { ...((this.getFlag?.(SYSTEM_ID, 'maskSeen96') as Record<string, boolean> | undefined) ?? {}), [String(target.id ?? target.uuid)]: seen }); } catch { /* not saved */ } }
+    // Review: the result rides on the assense card's snapshot (a re-roll keeps it); two tries in all, the second at +2.
+    let mask96: boolean | null = null;
+    if (target && S96.s96('masking') && target.initiate?.techniques?.includes?.('masking')) {
+      const key = String(target.uuid ?? target.id);
+      const tries: Record<string, number> = { ...((this.getFlag?.(SYSTEM_ID, 'maskTries96') as Record<string, number> | undefined) ?? {}) };
+      const n = safeInt(tries[key], 0, 9, 0);
+      mask96 = n >= 2 ? false : await G96.maskTest(this, target, undefined, n === 1);
+      if (mask96 === false && n < 2) { tries[key] = n + 1; try { await this.setFlag(SYSTEM_ID, 'maskTries96', tries); } catch { /* not saved */ } }
     }
     const attr = RULES.MAGIC.assensingAttribute as AttributeKey;
     // v0.56.0: what the successes reveal about a subject (RULES.MAGIC_V56.assensing), whispered to the assenser and the GM.
     const result = await this.#runTest(opts.label ?? tx('SR2E.Card.Actor.assensing', { part: target ? ` ${target.name}` : '' }), this.sys.attributes[attr].total as number, {
       targetNumber: opts.targetNumber ?? RULES.MAGIC.assensingTn, background: true, modifiers: masking, ...(opts.exclude?.length ? { exclude: opts.exclude } : {}),
-    }, target ? { kind: 'assense', assense: { targetUuid: target.uuid as string, targetName: target.name as string }, privateTo: this.#ownersAndGms() } : { kind: 'plain' });
+    }, target ? { kind: 'assense', assense: { targetUuid: target.uuid as string, targetName: target.name as string, ...(mask96 === false ? { masked96: true } : {}) }, privateTo: this.#ownersAndGms() } : { kind: 'plain' });
     return result;
   }
 
@@ -2592,8 +2603,7 @@ export class SR2Actor extends Actor {
       signatures: sceneId ? SR2Actor.signaturesAt(sceneId).filter((x) => x.actorUuid === t.uuid).map((x) => x.label) : [],
     };
     // v0.96.0 (RULES.SORCERY_V96.masking 'book', Grimoire p. 46): a mask not seen through reads as a mundane's aura.
-    const seen96 = (this.getFlag?.(SYSTEM_ID, 'maskSeen96') as Record<string, boolean> | undefined)?.[String(t.id ?? t.uuid)];
-    if (S96.s96('masking') && seen96 === false && t.initiate?.techniques?.includes?.('masking')) {
+    if (S96.s96('masking') && (a as any).masked96 === true && t.initiate?.techniques?.includes?.('masking')) {
       Object.assign(subject, G96.maskedSubject(subject, [...(t.items ?? [])].filter((i: any) => i.type === 'focus' && i.system?.active).reduce((n: number, i: any) => n + Number(i.system?.rating ?? 0), 0), Number(t.initiate.grade ?? 0)));
     }
     const lines = assensingReveals(snap.successes, subject, { essence: Number(this.sys.derived?.essence ?? 6), magic: Number(this.sys.derived?.magic ?? 0) });
@@ -2821,7 +2831,7 @@ export class SR2Actor extends Actor {
     // v0.50.0: IC, frames and agents roll free of their token's statuses (RULES.TN_AUTO.matrix.icNoPenalties).
     if (this.type === 'ic' && RULES.TN_AUTO.matrix.icNoPenalties) return [...(opts.modifiers ?? [])];
     const penalties = opts.noPenalties ? [] : [...this.woundModifiers(), ...sustainingModifiers(this.sustained())];
-    const centering = opts.magical ? this.#centering(penalties) : [];
+    const centering = opts.magical && !opts.noCentering96 ? this.#centering(penalties) : [];
     // Background count, aspected and toxic sources (v0.39.0).
     const bg = opts.magical || opts.background ? backgroundCountModifiers(this.backgroundInfo().penalty) : [];
     const extra: TargetNumberModifier[] = [];
@@ -2921,7 +2931,7 @@ export class SR2Actor extends Actor {
     tagDice(result.dice, groups);
     // v0.96.0 (RULES.SORCERY_V96.centeringUse 'book', Grimoire p. 43): centering's successes join a test with one.
     const bonus96 = result.successes > 0 ? Math.max(0, Math.floor(Number(opts.bonusSuccesses96) || 0)) : 0;
-    if (bonus96 > 0 && !result.botch) { result.successes += bonus96; context = { ...context, bought: Number(context.bought ?? 0) + bonus96 }; }
+    if (bonus96 > 0 && !result.botch) { result.successes += bonus96; context = { ...context, center96: bonus96 }; }
     // v0.56.0: a centering test is used up by the next magical test.
     if (opts.magical && context.kind !== 'centering' && this.centeredSuccesses() > 0) {
       try { await clearFlag(this, 'centered'); } catch { /* not saved */ }
@@ -3000,7 +3010,9 @@ export class SR2Actor extends Actor {
     if (!ctx.applied) {
       if (s <= 0) return snap;
       await this.update({ 'system.sustaining': [...list, { spellName: ctx.spellName, force: ctx.force, category: ctx.category, focusId: ctx.focusId, successes: s, quickened: false, targetUuids: [...(ctx.targetUuids ?? [])],
-        effectId: ctx.effectId ?? '', permanentAt, exclusive: Boolean(ctx.exclusive) }] });
+        effectId: ctx.effectId ?? '', permanentAt, exclusive: Boolean(ctx.exclusive),
+        // v0.96.0 (RULES.SORCERY_V96.quickening, Grimoire p. 44): the dice and TN this roll used, for quickening's base time.
+        ...(S96.s96('quickening') ? { castDice96: safeInt(snap.totalDice, 0, 99, 0), castTn96: safeInt(snap.targetNumber, 0, 99, 0), drainMod96: safeInt(ctx.drainMod96, -10, 20, 0), drainCenter96: safeInt(ctx.drainCenter96, 0, 20, 0) } : {}) }] });
       // v0.72.0 (O17): a Mana or Physical Barrier spell raises a barrier at its Force (MAGIC_V72.barrierSpells).
       if (ctx.barrier && ctx.effectId) await this.#raiseBarrierSpell(ctx, s);
       return { ...snap, sustain: { ...ctx, applied: true } };
@@ -3118,7 +3130,8 @@ export class SR2Actor extends Actor {
         // their own TN; (shielding 'book', Grimoire p. 45) the dice go with the spell so shielding can raise the TN.
         const rolled = (snap.dice ?? []).map((d) => Number(d.total ?? 0));
         const spells: SpellState[] = list.map((x) => ({ ...x, casterSuccesses: typeof x.areaBase === 'number'
-          ? S923.areaTargetSuccesses({ dice: snap.dice ?? [], cardTn: snap.targetNumber, cardBase: snap.baseTargetNumber, ownBase: x.areaBase, bought: snap.bought, botch: snap.botch, modifiers: snap.modifiers ?? [] }) : s,
+          ? (snap.center96 ? (snap.botch ? 0 : S96.withCenter(S923.areaTargetSuccesses({ dice: snap.dice ?? [], cardTn: snap.targetNumber, cardBase: snap.baseTargetNumber, ownBase: x.areaBase, botch: snap.botch, modifiers: snap.modifiers ?? [] }), snap.center96) + Math.max(0, Number(snap.bought ?? 0)))
+            : S923.areaTargetSuccesses({ dice: snap.dice ?? [], cardTn: snap.targetNumber, cardBase: snap.baseTargetNumber, ownBase: x.areaBase, bought: snap.bought, botch: snap.botch, modifiers: snap.modifiers ?? [] })) : s,
           ...(S923.s923('shielding') && !snap.botch ? { casterDice: rolled, casterTn: typeof x.areaBase === 'number' ? Math.max(RULES.MIN_TARGET_NUMBER, x.areaBase + (snap.modifiers ?? []).reduce((n, m) => n + (Number(m.value) || 0), 0)) : snap.targetNumber, casterBought: Number(snap.bought ?? 0) } : {}) }));
         const buttons = spells.map((sp, i) =>
           `<button type="button" data-sr2e-action="resistSpell" data-index="${i}">${tx('SR2E.Card.Actor.resist3', { noun, name: escText(fromUuidSync(sp.targetUuid)?.name ?? tx('SR2E.Card.Actor.target')) })}</button>`).join(' ');
@@ -3660,7 +3673,7 @@ export class SR2Actor extends Actor {
 
   /** v0.81.1 (SEC2b-2, design 4): snapshot keys that hold a number wherever they appear (cards print them raw). */
   static readonly #SNAP_NUMBER_KEYS = new Set(['successes', 'casterSuccesses', 'attackSuccesses', 'defenseSuccesses', 'netSuccesses', 'spiritSuccesses', 'power', 'tn', 'hours', 'body', 'force',
-    'rating', 'targetNumber', 'baseTargetNumber', 'rerolls', 'bought', 'retargets', 'cleanMiss80', 'boxes', 'physical', 'stun', 'metres', 'speed', 'services', 'servicesBefore', 'forceBefore', 'forceAfter',
+    'rating', 'targetNumber', 'baseTargetNumber', 'rerolls', 'bought', 'center96', 'retargets', 'cleanMiss80', 'boxes', 'physical', 'stun', 'metres', 'speed', 'services', 'servicesBefore', 'forceBefore', 'forceAfter',
     'successesBefore', 'successesAfter', 'points', 'days', 'count', 'applied', 'timeFactor', 'net', 'hits', 'before', 'after', 'total', 'totalDice',
     // v0.81.1 (scanner flag rows): more numbers resolvers print. Not `size`: an enchanting focus's size is a word.
     'cost', 'paid', 'push', 'ratingBefore', 'ioSpeed', 'incubationHours', 'intervalHours', 'baseHours', 'baseDays']);
@@ -3880,7 +3893,8 @@ export class SR2Actor extends Actor {
     const rolls: any[] = [];
     const rr = await rerollFailures(asResult(snap), foundryRoller(rolls));
     // v0.71.0 review (F7): successes bought earlier stay bought (and a later GM TN change counts them once).
-    const result = { ...rr, successes: rr.successes + Math.max(0, snap.bought ?? 0) };
+    // v0.96.0 (RULES.SORCERY_V96.centeringUse): centering's successes only while the dice score one.
+    const result = { ...rr, successes: S96.withCenter(rr.successes, snap.center96, rr.botch) + Math.max(0, snap.bought ?? 0) };
     const next = withResult({ ...snap, rerolls: snap.rerolls + 1 }, result);
     // v0.94.1 (report item 24): on its own card, the replaced dice stay shown (greyed).
     const inPlace = this.#inPlaceCard(message, snap);
@@ -3979,7 +3993,9 @@ export class SR2Actor extends Actor {
         return null;
       }
       const clean: TestSnapshot = { ...snap, rerolls: safeInt(snap.rerolls, 0, 1000, 0), bought: safeInt(snap.bought, 0, MAX_TEST_DICE, 0), retargets: safeInt(snap.retargets, 0, 1000, 0) };
-      const result = rescoreResult(asResult(clean), { baseTargetNumber: o.baseTargetNumber, modifiers: o.modifiers, bought: clean.bought ?? 0 });
+      const result0 = rescoreResult(asResult(clean), { baseTargetNumber: o.baseTargetNumber, modifiers: o.modifiers, bought: 0 });
+      // v0.96.0 (RULES.SORCERY_V96.centeringUse): centering's successes only while the dice score one; then the bought ones.
+      const result = { ...result0, successes: result0.botch ? 0 : S96.withCenter(result0.successes, clean.center96) + Math.max(0, clean.bought ?? 0) };
       const next = withResult({ ...clean, retargets: (clean.retargets ?? 0) + 1 }, result);
       posted = await SR2Actor.#retargetAs(author, () => actor.#post(next, result, [], tx('SR2E.Card.Actor.tnChangedByTheGm', { from: safeInt(snap.targetNumber, 0, 99, 0), to: result.targetNumber }), message));
     } else if (contest) {
@@ -10518,8 +10534,11 @@ export class SR2Actor extends Actor {
     // v0.92.3 (RULES.SORCERY_V923.restrictedSpells 'book', Core p. 133): the book's rule (an expendable fetish +2).
     const force = drainForce + S923.spellForceBonus({ exclusive: Boolean(sp.exclusive), fetish: Boolean(sp.fetish), expendable: Boolean(sp.fetishExpendable) });
     // v0.96.0 (RULES.SORCERY_V96.areaShape 'book', Core p. 130): dice withheld to shape an area spell's radius.
-    const shape96 = sp.area && opts.area96 ? S96.areaShape({ force, radius: Number(this.sys.derived?.magic ?? 0), metres: opts.area96 }) : null;
-    if (shape96 && 'why' in shape96) { ui.notifications?.warn?.(escHtml(tKey(shape96.why, { force }))); return null; }
+    // Review: against the spell's own Force (not the exclusive/fetish bonus), and the radius by the sheet's own rule.
+    const shape96 = sp.area && opts.area96 ? S96.areaShape({ force: drainForce, radius: areaRadius(drainForce, Number(this.sys.derived?.magic ?? 0)), metres: opts.area96 }) : null;
+    if (shape96 && 'why' in shape96) { ui.notifications?.warn?.(escHtml(tKey(shape96.why, { force: drainForce }))); return null; }
+    // v0.96.0 (RULES.SORCERY_V96.stacking, Core p. 128): an exclusive spell can't be stacked with others.
+    if (S96.s96('stacking') && (opts.stack96 ?? 0) > 0 && sp.exclusive) { ui.notifications?.warn?.(escHtml(tKey('SR2E.Sorcery96.Why.stackExclusive', { spellName: spell.name }))); return null; }
     const withheld96 = shape96 ? shape96.withheld : 0;
     // v0.96.0 (RULES.SORCERY_V96.stacking, magicDefault): the stacking and defaulting rows (the stacking also on the Drain).
     const stack96 = S96.stackMods(opts.stack96 ?? 0);
@@ -10835,7 +10854,7 @@ export class SR2Actor extends Actor {
     if (cu96 && this.initiate.techniques.includes('centering') && cName96) {
       const cd = this.#skillDice(this.findSkill(cName96), false, null, 'charisma', { skillName: cName96 });
       const cMods = cu96 === 'cast'
-        ? this.#testModifiers({ magical: true, pool: 'spell', sightHandled: true, modifiers: [...cd.modifiers, ...(touch ? [] : this.#spellEnvironment(elemental, targets[0] ?? vehicles[0]?.actor ?? null)), ...mods96] })
+        ? this.#testModifiers({ magical: true, noCentering96: true, pool: 'spell', sightHandled: true, modifiers: [...cd.modifiers, ...(touch ? [] : this.#spellEnvironment(elemental, targets[0] ?? vehicles[0]?.actor ?? null)), ...mods96] })
         : [...cd.modifiers, ...spellOptionDrainMods({ exclusive: sp.exclusive, fetish: sp.fetish }), ...stack96];
       const cs = await G96.centeringRoll(this, { use: cu96, dice: cd.dice, targetNumber: cu96 === 'cast' ? targetNumber : drainTargetNumber(drainForce, sp.drainModifier), modifiers: cMods, spellName: spell.name });
       if (cu96 === 'cast') castBonus96 = Math.floor(cs / 2); else drainBonus96 = Math.floor(cs / 2);
@@ -10847,6 +10866,8 @@ export class SR2Actor extends Actor {
       // v0.79.0 (RULES.DOCS_V79.magicPool.castingCap 'magic', SR2 p85): at most Magic-rating Spell Pool dice on the success test.
       { targetNumber, poolDice: tp96 ? tp96.castSpend : castingPoolDice(opts.poolDice ?? 0, Number(this.sys.derived?.magic ?? 0)), pool: 'spell', spellUse: castUse, magical: true, sightHandled: true, ...(opts.karmaDice ? { karmaDice: opts.karmaDice } : {}),
         ...(castBonus96 ? { bonusSuccesses96: castBonus96 } : {}),
+        // Review (Grimoire p. 43): one centering effect a phase: with centering for the spell or Drain, none on penalties.
+        ...(cu96 ? { noCentering96: true } : {}),
         modifiers: [...mods96, ...(touch ? [] : this.#spellEnvironment(elemental, targets[0] ?? vehicles[0]?.actor ?? null)), ...(combat || elemental || resistAttribute ? SR2Actor.attackedMods(targets) : []),
           ...(barrierTn ? [{ label: tx('SR2E.Card.Mod.across', { barrierName: barrier.name }), value: barrierTn }] : []),
           // v0.92.3 (RULES.HEALTH_V923.bodyIndexHealing 'magical', Shadowtech p. 6): bioware hinders magical healing.
@@ -10867,7 +10888,9 @@ export class SR2Actor extends Actor {
         // v0.56.0: a permanent one too, until it takes; and the effect it puts on its targets.
         ...(lasting ? { sustain: { spellName: spell.name, force, category: sp.category, focusId: holder?.id ?? '', targetUuids: uuids.filter((u) => targets.some((t) => t.uuid === u) || vehicles.some((v) => v.actor.uuid === u)),
           ...(effectId ? { effectId } : {}), ...(sp.duration === 'permanent' ? { permanent: true } : {}), ...(sp.exclusive ? { exclusive: true } : {}),
-          ...(barrierSpellKind(spell) ? { barrier: barrierSpellKind(spell)! } : {}) } } : {}),
+          ...(barrierSpellKind(spell) ? { barrier: barrierSpellKind(spell)! } : {}),
+          // v0.96.0 (RULES.SORCERY_V96.quickening): the cast's Drain TN modifiers and centering's Drain successes.
+          ...(S96.s96('quickening') ? { drainMod96: [...spellOptionDrainMods({ exclusive: sp.exclusive, fetish: sp.fetish }), ...stack96].reduce((n, m) => n + (Number(m.value) || 0), 0), drainCenter96: drainBonus96 } : {}) } } : {}),
         ...ownFx,
       });
 
@@ -11407,6 +11430,8 @@ export class SR2Actor extends Actor {
     const canCreate = canCreateActorNow();
     if (!canCreate) return { html: `<p><strong>${escText(w.name)}</strong> ${tx('SR2E.Card.Actor.rises', { time })} <button type="button" data-sr2e-action="createSpirit">${tx('SR2E.Card.Actor.createWardGm')}</button></p>`, flags: { pendingSpirit: data }, snap: { ...snap, ward: { ...w, pending: true } } };
     const cls: any = (Actor as any).implementation ?? Actor;
+    // v0.96.0 (RULES.SORCERY_V96.wardExpiry): its end on the clock in the creation data.
+    if (data.system.wardDays96) Object.assign(data.system, G96.wardCreateSystem96(data.system, sysNow()));
     const made: any = await cls.create(data);
     // v0.61.0: a button to draw it on the map (a region carrying the ward).
     return { html: `<p><strong>${escText(w.name)}</strong> ${tx('SR2E.Card.Actor.aForceWardRisesItIs', { force: w.force, time, part: made?.uuid ? ` <button type="button" data-sr2e-action="placeWard">${tx('SR2E.Card.Actor.drawItOnTheMap')}</button>` : '' })}</p>`, flags: made?.uuid ? { wardPlace: { barrierUuid: made.uuid, name: w.name } } : {}, snap: { ...snap, ward: { ...w, barrierUuid: made?.uuid ?? 'made' } } };
@@ -11908,8 +11933,12 @@ export class SR2Actor extends Actor {
     const wall = sp.category === 'combat' ? opts.wall ?? null : null;
     this.#warnGeasa(tx('SR2E.Card.Actor.casts'));
     const focus = sorceryFocusDice(this.foci(), { name: spell.name, category: sp.category });
-    const totem = totemDice(this.tradition, this.sys.totem, sp.category);
+    const totem0 = totemDice(this.tradition, this.sys.totem, sp.category);
+    // v0.96.0 (RULES.SORCERY_V96.totemPool 'book', Core p. 119): as castSpell: the totem's dice are pool dice for this cast.
+    const tp96 = S96.totemPool({ totem: totem0, cast: castingPoolDice(opts.poolDice ?? 0, Number(this.sys.derived?.magic ?? 0)), drain: opts.drainPoolDice ?? 0, left: Number(this.spellPoolFor(objUse) ?? this.sys.derived?.spellPoolLeft ?? 0) });
+    const totem = tp96 ? 0 : totem0;
     const extra = bonusNote(focus, totem);
+    if (tp96) extra.note += ` [${tx('SR2E.Sorcery96.Card.totemPool', { dice: totem0 > 0 ? `+${totem0}` : totem0 })}]`;
     // v0.92.0: say which narrow rating the test rolls.
     if (narrowRating(sorcery.system, objUse) > Number(sorcery.system?.rating ?? 0)) extra.note += ` [${tx('SR2E.Card.MagicPool.narrow', { name: objUse.spec ? sorcery.system.specialization : sorcery.system.concentration, rating: narrowRating(sorcery.system, objUse) })}]`;
     const env = totemEnvironmentDice(this.tradition, this.sys.totem, this.environmentHere());
@@ -11918,8 +11947,8 @@ export class SR2Actor extends Actor {
     const result = await this.#runTest(tx('SR2E.Card.Actor.forceAtTn', { spellName: spell.name, force, part: wall ? tx('SR2E.Card.Actor.aWall') : tx('SR2E.Card.Actor.aObject', { kindLabel }), tn, extraNote: extra.note }),
       // v0.80.0 (RULES.URR_V80.magCastDice 'force', URR).
       // v0.92.0 (RULES.MAGIC_V920): inside Sorcery's concentration or specialization, its rating.
-      Math.max(0, urrMagCastingDice({ dice: narrowRating(sorcery.system, objUse), force }) + extra.dice),
-      { targetNumber: tn, poolDice: castingPoolDice(opts.poolDice ?? 0, Number(this.sys.derived?.magic ?? 0)), pool: 'spell', spellUse: objUse, magical: true, modifiers: [...this.blindMods('spell'), ...(opts.modifiers ?? [])] },
+      Math.max(0, urrMagCastingDice({ dice: narrowRating(sorcery.system, objUse), force }) + extra.dice + (tp96?.castFree ?? 0)),
+      { targetNumber: tn, poolDice: tp96 ? tp96.castSpend : castingPoolDice(opts.poolDice ?? 0, Number(this.sys.derived?.magic ?? 0)), pool: 'spell', spellUse: objUse, magical: true, modifiers: [...this.blindMods('spell'), ...(opts.modifiers ?? [])] },
       { kind: 'spell', ...(sp.duration === 'sustained' ? { sustain: { spellName: spell.name, force, category: sp.category, focusId: '' } } : {}) });
     await this.leaveSignature('spell', spell.name, force);
     if (wall && result.successes > 0) {
@@ -11931,7 +11960,7 @@ export class SR2Actor extends Actor {
         flags: { [SYSTEM_ID]: { spellWall: { wallUuid: wall.uuid, power, label: `${spell.name} on a wall` } } } });
     }
     // v0.80.0 (RULES.URR_V80.magRuleOfOneDrain, URR): drain at the normal Force, +2 on a disaster.
-    await this.#resistDrain(spell, drainForce, opts.drainPoolDice ?? 0, [...spellOptionDrainMods({ exclusive: sp.exclusive, fetish: sp.fetish }), ...S923.ruleOfOneDrainMods(Boolean((result as any)?.botch))], tx('SR2E.Card.Actor.drain'), undefined, objUse);
+    await this.#resistDrain(spell, drainForce, tp96 ? tp96.drainSpend : opts.drainPoolDice ?? 0, [...spellOptionDrainMods({ exclusive: sp.exclusive, fetish: sp.fetish }), ...S923.ruleOfOneDrainMods(Boolean((result as any)?.botch))], tx('SR2E.Card.Actor.drain'), undefined, objUse, { dice: tp96?.drainFree ?? 0 });
     return result;
   }
 
@@ -12003,7 +12032,7 @@ export class SR2Actor extends Actor {
     const bonus96 = result.successes > 0 && !result.botch ? Math.max(0, Math.floor(Number(o.bonusSuccesses96) || 0)) : 0;
     if (bonus96) result.successes += bonus96;
     await this.#post(this.#snapshot(tx('SR2E.Card.Actor.tn5', { label: o.label, level: o.level, targetNumber: o.targetNumber, part: o.extraDice ? ` [${o.extraNote ?? tx('SR2E.Card.Actor.dice5', { extraDice: o.extraDice })}]` : '', part2: o.type === 'physical' ? (o.physicalNote ?? tx('SR2E.Card.Actor.forceOverMagicPhysical')) : '' }), result, {
-      kind: 'soak', ...(bonus96 ? { bought: bonus96 } : {}),
+      kind: 'soak', ...(bonus96 ? { center96: bonus96 } : {}),
       soak: { mode: 'stage', noun: o.noun ?? 'drain', level: o.level, type: o.type, body: this.sys.attributes.body.total, before: this.#monitor() },
     }), result, rolls);
   }
@@ -12369,6 +12398,8 @@ export class SR2Actor extends Actor {
   /** v0.65.0: a ward's ritual time has passed: the ward rises (a barrier actor; a card offers to draw it). */
   async finishWard(data: any, name: string): Promise<boolean> {
     const cls: any = (Actor as any).implementation ?? Actor;
+    // v0.96.0 (RULES.SORCERY_V96.wardExpiry): its days clamped and its end set now (never the project's own end).
+    if (data?.system && typeof data.system === 'object') Object.assign(data.system, G96.wardCreateSystem96(data.system, sysNow()));
     const made: any = await cls.create(data);
     if (!made) return false;
     await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p><strong>${escText(name)}</strong> ${tx('SR2E.Card.Actor.aForceWardHasRisenIt', { rating: escText(data.system?.rating ?? '') })} <button type="button" data-sr2e-action="placeWard">${tx('SR2E.Card.Actor.drawItOnTheMap')}</button></p>`, flags: { [SYSTEM_ID]: { wardPlace: { barrierUuid: made.uuid, name } } } });
@@ -13481,7 +13512,7 @@ export class SR2Actor extends Actor {
       return false;
     }
     // v0.96.0 (RULES.SORCERY_V96.quickening 'book', Grimoire pp. 44–45): the sustaining test, chosen Karma, second Drain.
-    if (S96.s96('quickening')) return this.#quicken96(index, spellName, q96 ?? {});
+    if (S96.s96('quickening')) return (await G96.oneQuicken(`${this.uuid}|${spellName || this.sustained()[index]?.spellName || ''}|run`, () => this.#quicken96(index, spellName, q96 ?? {}))) ?? false;
     const list = this.sustained();
     // v0.70.0: an approved request finds the spell again by name (the list may have changed since).
     if (spellName && list[index]?.spellName !== spellName) index = list.findIndex((e: any) => e.spellName === spellName && !e.quickened);
@@ -13523,20 +13554,26 @@ export class SR2Actor extends Actor {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.quickeningCostsGoodKarmaHas', { entrySpellName: escHtml(entry.spellName), cost, name: escHtml(this.name), good }));
       return false;
     }
-    const dice0 = Math.max(1, Math.floor(Number(q.dice) || entry.force));
-    const tn = Math.max(RULES.MIN_TARGET_NUMBER, Math.floor(Number(q.tn) || 4));
+    // Review: the dice and TN the cast recorded win; an older entry takes the window's, clamped (no fewer dice than
+    // Sorcery, no TN below the spell's own).
+    const sorcery = Number(this.findSkill('Sorcery')?.system?.rating ?? 0);
+    const own: any = [...(this.items ?? [])].find((i: any) => i.type === 'spell' && i.name === entry.spellName);
+    const e96: any = entry;
+    const base = S96.quickenBase({ storedDice: e96.castDice96, storedTn: e96.castTn96, askedDice: q.dice, askedTn: q.tn, sorcery, spellTn: Number(own?.system?.targetNumber ?? 0) });
+    const dice0 = base.dice;
+    const tn = base.tn;
     if (approvalNeeded(this)) { await fileRequest(this, { kind: 'improve', label: tx('SR2E.Text.Actor.quickenForce', { name: entry.spellName, force: entry.force }), karma: cost, data: { method: 'quicken', args: [index, entry.spellName, { dice: dice0, tn, karma: cost }] } }); return false; }
     const rolls: any[] = [];
-    const sorcery = Number(this.findSkill('Sorcery')?.system?.rating ?? 0);
     const r = await successTest({ dice: S96.quickenDice(sorcery, this.initiate.grade), targetNumber: tn, roll: foundryRoller(rolls) });
     const actions = S96.quickenActions(dice0, r.successes);
     list[index] = { ...entry, quickened: true, quickenKarma: cost };
     await this.update({ 'system.sustaining': list, 'system.karma.good': good - cost, 'system.ledger': this.#ledgerWith({ kind: 'karma', amount: -cost, reason: tx('SR2E.Text.Actor.quickenedForce', { name: entry.spellName, force: entry.force }) }) });
     await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), rolls,
       content: `${describeResult(tx('SR2E.Sorcery96.Card.quickenTest', { spellName: entry.spellName }), r)}<p>${tx('SR2E.Sorcery96.Card.quickenDone', { name: escText(this.name), spellName: escText(entry.spellName), actions, karma: cost })}</p>` });
-    // The second Drain test, at the spell's own drain code (its spell item), when the caster still knows it.
-    const own: any = [...(this.items ?? [])].find((i: any) => i.type === 'spell' && i.name === entry.spellName);
-    if (own) await this.#resistDrain(own, entry.force, 0, [], tx('SR2E.Sorcery96.Card.secondDrain'));
+    // The second Drain test, at the spell's own drain code (its spell item), when the caster still knows it, with the
+    // first cast's own Drain modifiers and its centering against Drain (Grimoire p. 45: no new centering test).
+    const dm = safeInt(e96.drainMod96, -10, 20, 0);
+    if (own) await this.#resistDrain(own, entry.force, 0, dm ? [{ id: 'castDrain96', label: tx('SR2E.Sorcery96.Mod.castDrain'), value: dm }] : [], tx('SR2E.Sorcery96.Card.secondDrain'), undefined, undefined, { bonus: safeInt(e96.drainCenter96, 0, 20, 0) });
     return true;
   }
 

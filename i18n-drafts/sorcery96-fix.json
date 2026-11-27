@@ -1,0 +1,7 @@
+{
+  "SR2E.Sorcery96.Why.stackExclusive": "{spellName} is exclusive: it can't be stacked with other spells.",
+  "SR2E.Sorcery96.Why.quickenFiled": "Quickening's Karma ({karma}) isn't the Karma filed ({filed}).",
+  "SR2E.Sorcery96.Mod.castDrain": "The cast's own Drain modifiers",
+  "SR2E.Sorcery96.Mod.maskRetry": "Second try",
+  "SR2E.Sorcery96.Dialog.wardDays": "It lasts {days} day(s)."
+}

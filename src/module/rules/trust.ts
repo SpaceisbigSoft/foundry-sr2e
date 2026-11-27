@@ -684,6 +684,11 @@ export function methodRequestProblems(data: Record<string, unknown>, filed: { ka
     else if (cost !== Number(filed.nuyen)) out.push(tx('SR2E.Text.Trust.priceMismatch', { price: cost, filed: Number(filed.nuyen) }));
     if (filed.karma) out.push(tx('SR2E.Text.Trust.permitNoKarma'));
   }
+  // v0.96.0 (RULES.SORCERY_V96.quickening): quickening's Karma is the filed Karma, a whole number.
+  if (data['method'] === 'quicken' && args[2] !== undefined) {
+    const k = args[2] && typeof args[2] === 'object' && !Array.isArray(args[2]) ? Number((args[2] as any).karma) : NaN;
+    if (!(Number.isSafeInteger(k) && k >= 1) || k !== Number(filed.karma)) out.push(tx('SR2E.Sorcery96.Why.quickenFiled', { karma: Number.isFinite(k) ? k : 0, filed: Number(filed.karma) }));
+  }
   if (data['method'] === 'buyItem' || data['method'] === 'buyFromShop') {
     const price = Number(args[1]);
     if (!(Number.isFinite(price) && price >= 0)) out.push(tx('SR2E.Text.Trust.noPrice'));

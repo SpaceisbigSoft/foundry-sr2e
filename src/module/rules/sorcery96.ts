@@ -140,6 +140,17 @@ export function quickenActions(baseDice: number, successes: number): number {
   return s > 0 ? Math.max(1, Math.ceil(b / s)) : 2 * b;
 }
 
+/**
+ * The quickening's base: the casting test's dice and TN. Stored on the sustaining entry at the cast (`castDice96`,
+ * `castTn96`) they win; an older entry takes what was asked, no fewer dice than the Sorcery rating and no lower TN than
+ * the spell's own (4 when unknown).
+ */
+export function quickenBase(o: { storedDice?: number; storedTn?: number; askedDice?: number; askedTn?: number; sorcery: number; spellTn?: number }): { dice: number; tn: number } {
+  if (whole(o.storedDice) > 0 && whole(o.storedTn) > 0) return { dice: Math.min(99, whole(o.storedDice)), tn: Math.max(2, Math.min(99, whole(o.storedTn))) };
+  const minTn = Math.max(2, whole(o.spellTn) || 4);
+  return { dice: Math.min(99, Math.max(1, whole(o.sorcery), whole(o.askedDice))), tn: Math.min(99, Math.max(minTn, whole(o.askedTn))) };
+}
+
 /** The quickening test's dice: Sorcery + the initiate grade (Grimoire p. 44). */
 export function quickenDice(sorcery: number, grade: number): number { return whole(sorcery) + whole(grade); }
 
@@ -185,6 +196,15 @@ export function centeringBonus(centerSuccesses: number, testSuccesses: number): 
   return whole(testSuccesses) > 0 ? Math.floor(whole(centerSuccesses) / 2) : 0;
 }
 
+/**
+ * A test's successes with centering's kept on the card (`center96`, already halved): added only while the dice
+ * themselves (`natural`, not counting bought successes) score at least one (Grimoire p. 43), never on a botch.
+ */
+export function withCenter(natural: number, center96: unknown, botch = false): number {
+  const n = whole(natural);
+  return n > 0 && !botch ? n + Math.min(30, whole(center96)) : n;
+}
+
 // ---------------------------------------------------------------- Totem dice as Magic Pool dice (Core p. 119)
 
 export interface TotemSplit { castFree: number; drainFree: number; castSpend: number; drainSpend: number }
@@ -200,6 +220,8 @@ export function totemPool(o: { totem: number; cast: number; drain: number; left:
   let cast = whole(o.cast), drain = whole(o.drain);
   const left = whole(o.left);
   if (t > 0) {
+    // Nothing asked (a macro, a quick cast): the totem's dice go to the casting test.
+    if (cast + drain === 0) return { castFree: t, drainFree: 0, castSpend: 0, drainSpend: 0 };
     const castFree = Math.min(t, cast);
     const drainFree = Math.min(t - castFree, drain);
     const castSpend = Math.min(left, cast - castFree);
