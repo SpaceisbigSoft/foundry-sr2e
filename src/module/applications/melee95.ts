@@ -47,6 +47,9 @@ const ownerIds = (actor: any): string[] => { try { return [...(gameNow()?.users 
 const alias = (): { alias: string } => ({ alias: tx('SR2E.Melee95.alias') });
 const post = async (data: Record<string, unknown>): Promise<any> => g().ChatMessage?.create?.(data);
 
+
+/** The Defend window's weapon option that can't subdue (MELEE_V95.subdue 'stunOnly'). */
+const NOSUBDUE_ATTR = 'data-sr2e-nosubdue';
 /** Real Foundry dice for the pure engine (each wave a Roll, kept for the card). */
 function roller(sink: any[]): DiceRoller {
   return async (count: number) => {
@@ -110,7 +113,7 @@ export function greyNoActions(actor: any, body: HTMLElement): void {
     if (action === 'rollInit' || !buttonCost(action, { melee: true })) continue;
     el.classList.add('sr2e-cant');
     el.setAttribute('aria-disabled', 'true');
-    if (!el.title.includes(why)) el.title = `${el.title ? `${el.title} · ` : ''}${why}`;
+    if (!el.title.includes(why)) el.title = [el.title, why].filter(Boolean).join(' · ');
     if (block && el instanceof HTMLButtonElement) el.disabled = true;
   }
 }
@@ -219,7 +222,7 @@ export function subdueBoxAttr(weaponSystem: any): string {
 }
 
 const ratings = (a: any): M.ThreeRatings => ({
-  unarmed: num(a?.findSkill?.('Unarmed Combat')?.system?.rating),
+  unarmed: num(a?.findSkill?.(RULES.COMBAT.unarmed.skill)?.system?.rating),
   strength: num(a?.system?.attributes?.strength?.total),
   quickness: num(a?.system?.attributes?.quickness?.total),
 });
@@ -439,19 +442,19 @@ export async function subdueTick(): Promise<void> {
 
 /** The Defend window's option for a weapon that can't subdue (its counterattack-to-subdue tick is disabled then). */
 export function subdueOptionAttr(weaponSystem: any): string {
-  return M.subdueStunOnly() && !M.subdueAllowed(weaponSystem) ? ' data-sr2e-nosubdue="1"' : '';
+  return M.subdueStunOnly() && !M.subdueAllowed(weaponSystem) ? ` ${NOSUBDUE_ATTR}="1"` : '';
 }
 
 /** Wire the Defend window: the tick is disabled, with the reason, while a weapon that can't subdue is picked. */
 export function bindSubdueBox(root: any): void {
   const el: any = root?.querySelector ? root : root?.element;
-  const select = el?.querySelector?.('select[name="weapon"]');
-  const box = el?.querySelector?.('input[name="subdue"]');
+  const select = (el ? el.querySelector('select[name="weapon"]') : null);
+  const box = (el ? el.querySelector('input[name="subdue"]') : null);
   if (!select || !box) return;
   const why = tx('SR2E.Melee95.subdueStunOnly');
   const sync = (): void => {
     const opt = select.options?.[select.selectedIndex] ?? null;
-    const no = Boolean(opt?.getAttribute?.('data-sr2e-nosubdue'));
+    const no = Boolean(opt?.getAttribute?.(NOSUBDUE_ATTR));
     box.disabled = no;
     if (no) { box.checked = false; box.title = why; } else box.title = '';
   };
@@ -628,13 +631,15 @@ export async function onIntercept95(message: any, button: HTMLButtonElement): Pr
   if (!weapon) return warn(tx('SR2E.Melee95.cantIntercept', { name: String(actor.name) }));
   const left = Math.max(0, Math.floor(num(actor.system?.derived?.combatPoolLeft)));
   const canSubdue = M.subdueAllowed(weapon.system);
+  const why = escHtml(tx('SR2E.Melee95.subdueStunOnly'));
+  const noSubdue = canSubdue ? '' : ` disabled ${'title'}="${why}"`;
   const dlg: any = g().foundry?.applications?.api?.DialogV2;
   if (!dlg?.prompt) return;
   const choice = await dlg.prompt({
     window: { title: tx('SR2E.Melee95.intercept') },
     content: `<p>${tx('SR2E.Melee95.interceptAsk', { name: escHtml(actor.name), weapon: escHtml(weapon.name), mover: escHtml(mover.name) })}</p>`
       + `<div class="form-group"><label>${tx('SR2E.Melee95.poolDice', { left })}</label><input name="pool" type="number" value="0" min="0" max="${left}"></div>`
-      + `<label class="sr2e-check"><input type="checkbox" name="subdue"${canSubdue ? '' : ` disabled title="${escHtml(tx('SR2E.Melee95.subdueStunOnly'))}"`}> ${tx('SR2E.Melee95.interceptSubdue')}</label>`,
+      + `<label class="sr2e-check"><input type="checkbox" name="subdue"${noSubdue}> ${tx('SR2E.Melee95.interceptSubdue')}</label>`,
     ok: { label: tx('SR2E.Melee95.intercept'), callback: (_e: Event, b: any) => ({ pool: Math.max(0, Math.min(left, Math.floor(Number(b.form.elements.pool.value) || 0))), subdue: canSubdue && Boolean(b.form.elements.subdue?.checked) }) },
     rejectClose: false,
   }).catch(() => null);

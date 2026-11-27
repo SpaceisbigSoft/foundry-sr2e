@@ -223,7 +223,7 @@ export async function onStrayList95(message: any, button: HTMLButtonElement): Pr
     speaker: ChatMessage.getSpeaker({ actor: attacker }), whisper: gmIds(),
     content: `<div class="sr2e-roll"><h3>${tx('SR2E.Fire95.strayTitle', { weapon: escHtml(weapon.name) })}</h3><p>${tCount(rounds, 'SR2E.Fire95.strayText', { name: escHtml(attacker.name), dice, code: `${escHtml(dmg.power)}${escHtml(dmg.level)}` })}</p></div>`
       + (rows.length
-        ? `<ul class="sr2e-blast">${rows.map((r, i) => `<li>${escHtml(r.name)} (${escHtml(r.metres)} m): ${tx('SR2E.Fire95.strayRow', { dice, tn: escHtml(r.tn) })} <button type="button" data-sr2e-action="stray95" data-index="${i}">${tx('SR2E.Fire95.strayRoll')}</button></li>`).join('')}</ul>`
+        ? `<ul class="sr2e-blast">${strayItems(rows, dice)}</ul>`
         : `<p><em>${tx('SR2E.Fire95.strayNobody')}</em></p>`),
     flags: { [SYSTEM_ID]: { stray95: { source: String(message.id ?? ''), attackerUuid: attacker.uuid, weaponName: String(weapon.name ?? '').slice(0, 120), rounds, power: dmg.power, level: dmg.level, damageType: dmg.damageType, extra: dmg.extra, rows: rows.map((r) => ({ uuid: r.uuid, name: r.name.slice(0, 120), tn: r.tn })) } } },
   });
@@ -360,10 +360,20 @@ export async function onSuppress95(message: any, button: HTMLButtonElement): Pro
       await ChatMessage.create({
         speaker: { alias: weaponName }, rolls,
         content: `<div class="sr2e-roll"><h3>${tx('SR2E.Fire95.fofCardTitle', { weapon: escHtml(weaponName) })}</h3><p>${tCount(res.successes, 'SR2E.Fire95.fofResult', { name: escHtml(t.name), dice: test.dice, tn: test.tn })} <strong>${tCount(hits, 'SR2E.Fire95.fofHits')}</strong></p></div>`
-          + (hits ? `<ul class="sr2e-blast">${damages.map((d, i) => `<li>${escHtml(t.name)}: <strong>${escHtml(d.power)}${escHtml(d.level)}</strong> <button type="button" data-sr2e-action="resist" data-index="${i}">${tx('SR2E.Card.Actor.resist')}</button></li>`).join('')}</ul>` : ''),
+          + (hits ? `<ul class="sr2e-blast">${hitItems(t, damages)}</ul>` : ''),
         ...(hits ? { flags: { [SYSTEM_ID]: { damages, damage: damages[0] } } } : {}),
       });
     });
   }
   void button;
+}
+
+/** The stray list's rows (one per bystander, with its Roll button). */
+function strayItems(rows: Array<{ name: string; metres: number; tn: number }>, dice: number): string {
+  return rows.map((r, i) => `<li>${escHtml(r.name)} (${escHtml(r.metres)} m): ${tx('SR2E.Fire95.strayRow', { dice, tn: escHtml(r.tn) })} <button type="button" data-sr2e-action="stray95" data-index="${i}">${tx('SR2E.Fire95.strayRoll')}</button></li>`).join('');
+}
+
+/** The suppression card's hit rows (one per hit, with its Resist button). */
+function hitItems(t: any, damages: Array<{ power: number; level: string }>): string {
+  return damages.map((d, i) => `<li>${escHtml(t.name)}: <strong>${escHtml(d.power)}${escHtml(d.level)}</strong> <button type="button" data-sr2e-action="resist" data-index="${i}">${tx('SR2E.Card.Actor.resist')}</button></li>`).join('');
 }
