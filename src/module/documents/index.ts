@@ -174,6 +174,9 @@ import {
   urrMagWardDrain, urrMagWardForceProblem, urrMagAstralModeFor,
 } from '../rules/urr80-magic.ts';
 import * as SP923 from '../rules/spirits923.ts';
+// v0.96.0 (RULES.SPIRITS_V96): spirits and astral rules completeness.
+import * as SP96 from '../rules/spirits96.ts';
+import * as SP96G from '../applications/spirits96.ts';
 import * as S923 from '../rules/sorcery923.ts';
 import { riggerDumpShock, rcdFlux, castingPoolDice } from '../rules/docs79-drones-magic.ts';
 import * as M923 from '../rules/matrix923.ts';
@@ -535,7 +538,7 @@ export function withRollMode(data: any): any {
   return CM.applyRollMode({ ...data }, mode) ?? data;
 }
 
-export type PoolKind = 'combat' | 'spell' | 'hacking' | 'control' | 'task';
+export type PoolKind = 'combat' | 'spell' | 'hacking' | 'control' | 'task' | 'astral';
 
 export interface TestOptions {
   label?: string;
@@ -831,6 +834,8 @@ export interface ConjureOptions {
   exclude?: string[];
   /** v0.61.0: an insect spirit's host body (the user's target if not given). */
   hostUuid?: string | null;
+  /** v0.96.0 (RULES.SPIRITS_V96.watchers 'book'): the hours a watcher is to serve (its TN). */
+  watcherHours?: number;
 }
 
 /** A charge armed with a timer on a scene (v0.43.0). */
@@ -1065,7 +1070,9 @@ export interface SoakContext {
   /** v0.45.0: a reflecting initiate resisting a spell: what bounces back at the caster. */
   reflect?: { casterUuid: string; spellName: string; force: number; resistAttribute: AttributeKey; level: DamageLevel; damageType: DamageType; effectOnly?: boolean; defense: number;
     /** v0.48.0: a reflected critter power (resisted with its own pool). */
-    noun?: 'power'; resistPool?: string };
+    noun?: 'power'; resistPool?: string;
+    /** v0.96.0 (RULES.SPIRITS_V96.reflecting 'book', Awakenings p. 99): the shielding dice's own successes; whether the spell had been reflected already. */
+    shield96?: number; reflected96?: boolean };
   /** v0.45.0: a sustained power changing this target's attributes on a hit (the effect id once applied). */
   powerEffect?: FxSpec & { casterUuid: string; casterName: string; effectId?: string };
 }
@@ -1112,6 +1119,8 @@ export interface ConjureContext {
   /** v0.65.0: the timed project this summoning started (re-rolls retime or drop it). */
   projectId?: string;
   force: number;
+  /** v0.96.0 (RULES.SPIRITS_V96.watchers 'book', Grimoire p. 73): a watcher's hours and the most Force wanted. */
+  watcher96?: { hours: number; wanted: number };
   /** v0.61.0: an insect spirit's host body (flesh form; '' = true form). */
   hostUuid?: string;
   spiritKind: SpiritKind;
@@ -2185,6 +2194,8 @@ export class SR2Actor extends Actor {
     if (nowDown && !wasDown && RULES.CONDITIONS.dumpWhenDown) await this.#downedOut(String(status));
     if (status !== 'ok') {
       await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p><strong>${tx('SR2E.Card.Actor.is', { name: escText(this.name), status: escText(status) })}</strong>${status === 'dying' && bleedRateText() ? ` ${escText(bleedRateText())}` : status === 'dying' ? tx('SR2E.Card.Actor.loses1MorePhysicalBoxEvery', { bodyTotal: escText(this.sys.attributes.body.total), part: RULES.FIXES_V70.dyingOutOfCombat ? tx('SR2E.Card.Actor.secondsOfGameTimeInOr', { value: this.sys.attributes.body.total * RULES.COMBAT_TURN_SECONDS }) : '' }) : status === 'disrupted' ? tx('SR2E.Card.Actor.itIsDrivenBackToIts') : ''}</p>` });
+      // v0.96.0 (RULES.SPIRITS_V96.disruption 'book', Grimoire p. 64): away for 28 − Force days (at least one).
+      if (status === 'disrupted' && prevStatus !== 'disrupted') { const back96 = await SP96G.disrupted(this); if (back96) await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p>${back96}</p>` }); }
     }
   }
 
@@ -2560,9 +2571,13 @@ export class SR2Actor extends Actor {
     // A masked initiate is harder to read.
     const masking = target?.initiate ? maskingModifiers(target.initiate.grade, target.initiate.techniques) : [];
     const attr = RULES.MAGIC.assensingAttribute as AttributeKey;
+    // v0.96.0 (RULES.SPIRITS_V96.assenseRepeat 'book', Grimoire p. 90): each further reading of this aura +2 TN; none
+    // once that is above the reader's Magic.
+    const again96 = target ? await SP96G.assenseAgain(this, target, opts.targetNumber ?? RULES.MAGIC.assensingTn) : null;
+    if (again96 === false) return null;
     // v0.56.0: what the successes reveal about a subject (RULES.MAGIC_V56.assensing), whispered to the assenser and the GM.
     const result = await this.#runTest(opts.label ?? tx('SR2E.Card.Actor.assensing', { part: target ? ` ${target.name}` : '' }), this.sys.attributes[attr].total as number, {
-      targetNumber: opts.targetNumber ?? RULES.MAGIC.assensingTn, background: true, modifiers: masking, ...(opts.exclude?.length ? { exclude: opts.exclude } : {}),
+      targetNumber: opts.targetNumber ?? RULES.MAGIC.assensingTn, background: true, modifiers: [...masking, ...(again96 ?? [])], ...(opts.exclude?.length ? { exclude: opts.exclude } : {}),
     }, target ? { kind: 'assense', assense: { targetUuid: target.uuid as string, targetName: target.name as string }, privateTo: this.#ownersAndGms() } : { kind: 'plain' });
     return result;
   }
@@ -3454,6 +3469,8 @@ export class SR2Actor extends Actor {
       let html = e.hit
         ? `<p><strong>${tx('SR2E.Card.Actor.takesEffect', { spellName: escText(ctx.spellName) })}</strong> ${tx('SR2E.Card.Actor.with')} <strong>${e.netSuccesses}</strong> ${tCount(e.netSuccesses, 'SR2E.Card.Actor.netSuccessesVs', { casterSuccesses: ctx.casterSuccesses, s })}</p>`
         : `<p>${outcomeWord('resisted')} ${tx('SR2E.Card.Actor.vsResistance', { casterSuccesses: ctx.casterSuccesses, s })}</p>`;
+      // v0.96.0 (RULES.SPIRITS_V96.critterOpposed 'book', Predator and Prey pp. 89–92): Fear's severity, Engulf's entry.
+      html += SP96G.powerOutcomeLine(String(ctx.powerEffect?.special ?? ''), String(ctx.spellName ?? ''), e.netSuccesses, e.hit);
       // Essence drain (v0.39.0): moves Essence from the victim to the drainer.
       // v0.81.0 (D1-4): a re-roll moves the difference (all of it back when the victim now resists).
       const ed = ctx.essenceDrain;
@@ -3487,7 +3504,7 @@ export class SR2Actor extends Actor {
         if (fx.effectId) await SR2Actor.setPowerEffect(this.uuid as string, null, fx.effectId);
         return { html, flags: {}, snap: { ...snap, soak: { ...ctx, powerEffect: { ...fx, effectId: fx.kind === 'spell' ? fx.effectId : undefined as any } } } };
       }
-      const rf = this.#reflection(ctx, s);
+      const rf = await this.#reflection96(ctx, s);
       return { html: html + rf.html, flags: rf.flags, snap };
     }
     let reflected: { html: string; flags: Record<string, unknown> } = { html: '', flags: {} };
@@ -3497,7 +3514,7 @@ export class SR2Actor extends Actor {
       lead = outcome.hit
         ? `<strong>${tx('SR2E.Card.Actor.takesEffect2', { spellName: escText(ctx.spellName) })}</strong> ${tx('SR2E.Card.Actor.casterVsResistanceNet', { casterSuccesses: ctx.casterSuccesses, s, outcomeNetSuccesses: outcome.netSuccesses })} `
         : `${outcomeWord('resisted')} ${tx('SR2E.Card.Actor.casterVsResistance', { casterSuccesses: ctx.casterSuccesses, s })}`;
-      reflected = this.#reflection(ctx, s);
+      reflected = await this.#reflection96(ctx, s);
     } else {
       // v0.80.0 (URR_V80.cbtDefense 'cleanMiss', URR): pool successes above the attack's are a clean miss; else net staging.
       if (ctx.cleanMiss80?.apart) {
@@ -9117,7 +9134,12 @@ export class SR2Actor extends Actor {
     else if (arming && (!arming.armed || opts.measuredMetres == null)) notes.push(arming.note);
     const blastExtras = blast ? { ...(arming && !arming.armed ? { dud: true } : {}), ...(w.fuse ? { fuse: String(w.fuse) } : {}), ...(smartGrenade ? { smart: true } : {}), ...(opts.bounce ? { bounce: true } : {}), ...(blastToxin ? { toxin: blastToxin } : {}), ...(indirect ? { indirect: { spotterSuccesses: Math.min(Math.max(0, Number(RULES.COMBAT_V72.indirect.maxSpotterSuccesses) || 0), Math.max(0, Math.floor(Number(indirect.spotterSuccesses) || 0))) } } : {}) } : {};
     // v0.92.1 (RULES.SHEET_V921.tweaks): Power from custom tweaks (this weapon's own, every melee or ranged attack's, any attack's).
-    const tweakPower = attackPowerTweak(this.sys?.derived?.tweaks, { weaponId: String(weapon?.id ?? ''), melee });
+    const tweakPower0 = attackPowerTweak(this.sys?.derived?.tweaks, { weaponId: String(weapon?.id ?? ''), melee });
+    // v0.96.0 (RULES.SPIRITS_V96.techVsSpirits 'book', Awakenings p. 101): against a manifest spirit a melee weapon's
+    // own technological enhancements (its own Power tweaks) add nothing.
+    const tech96 = melee && tweakPower0 ? SP96G.techPowerLost(weapon, this.sys?.derived?.tweaks, opts.targetUuid ?? opts.hits?.[0]?.targetUuid ?? null) : 0;
+    if (tech96) notes.push(tx('SR2E.Spirits96.Tech.note', { power: tech96 }));
+    const tweakPower = tweakPower0 - tech96;
     if (tweakPower) { power = Math.max(0, power + tweakPower); if (extras.barrierPower !== undefined) extras.barrierPower = Math.max(0, extras.barrierPower + tweakPower); notes.push(tx('SR2E.Card.Actor.tweakPower', { value: tweakPower > 0 ? `+${tweakPower}` : `${tweakPower}` })); }
     // v0.95.0 (MELEE_V95.wall, Core p. 102): fighting with a wall at your back. (MELEE_V95.interception, Core p. 83): an
     // interception has only reach, the attacker's movement and condition (wounds and the like come with the test).
@@ -10077,6 +10099,8 @@ export class SR2Actor extends Actor {
     if (!attack?.astral || this.type === 'spirit') return 'combat';
     // v0.92.3 (RULES.SPIRITS_V923.astralPool 'book', Core p. 147): a magician fights astrally with the Astral Combat Pool
     // (the Combat Pool's dice while projecting; models/index.ts).
+    // v0.96.0 (RULES.SPIRITS_V96.astralPerceiving 'book', Core p. 147): while only perceiving, its own count.
+    if (RULES.SPIRITS_V923.astralPool === 'book' && SP96.astralPoolWhilePerceiving({ astral: String(this.sys.astral ?? 'physical'), type: this.type, tradition: String(this.tradition ?? ''), magic: Number(this.sys.derived?.magic ?? 0) })) return 'astral';
     if (RULES.SPIRITS_V923.astralPool === 'book' && String(this.tradition ?? '') !== 'adept') return 'combat';
     // v0.72.0 (O14): adepts use the Combat Pool on the astral plane (MAGIC_V72.adeptAstral.pool); none = their 0 Spell Pool.
     return astralPoolKind({ type: this.type, tradition: String(this.tradition ?? ''), base: RULES.ASTRAL.attackPool }) ?? 'spell';
@@ -11987,7 +12011,10 @@ export class SR2Actor extends Actor {
     if (spirit) {
       dice = this.sys.force as number;
     } else {
-      const skill = prof.mode === 'adept' && ms && ms.skill.name === prof.skill ? ms.skill : this.findSkill(prof.skill);
+      // v0.96.0 (RULES.SPIRITS_V96.astralSkill 'book', Core p. 147): a magician's Unarmed (Armed, with a weapon focus)
+      // Combat or Sorcery, the better.
+      const sk96 = prof.mode === 'magician' ? SP96G.astralSkillFor(this, urrMagWeaponFocusRating(this.foci() as any[]) > 0) : null;
+      const skill = sk96 ?? (prof.mode === 'adept' && ms && ms.skill.name === prof.skill ? ms.skill : this.findSkill(prof.skill));
       ({ dice, modifiers, suffix } = this.#skillDice(skill, false, null, prof.fallback as AttributeKey));
       const extra = bonusNote(weaponFocusDice(this.foci(), null), 0);
       dice += extra.dice;
@@ -12077,7 +12104,10 @@ export class SR2Actor extends Actor {
     if (!skill) return null;
     const spiritKind: SpiritKind = opts.spiritKind ?? 'nature';
     let force = clampSpiritForce(opts.force);
-    if (spiritKind === 'watcher' && force > RULES.SPIRITS_EXTRA.watcherMaxForce) {
+    // v0.96.0 (RULES.SPIRITS_V96.watchers 'book', Grimoire p. 73): the Force comes from the successes (the dialog's
+    // Force is the most the summoner wants), the TN is the hours it serves.
+    const watcher96 = spiritKind === 'watcher' && SP96.on('watchers') ? { hours: SP96.watcherHours(opts.watcherHours), wanted: force } : null;
+    if (spiritKind === 'watcher' && !watcher96 && force > RULES.SPIRITS_EXTRA.watcherMaxForce) {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.watchersAreAtMostForce', { sPIRITS_EXTRAWatcherMaxForce: RULES.SPIRITS_EXTRA.watcherMaxForce }));
       force = RULES.SPIRITS_EXTRA.watcherMaxForce;
     }
@@ -12145,10 +12175,15 @@ export class SR2Actor extends Actor {
     // v0.71.0 (R20): an elemental that takes its hours of ritual is drained when it arrives (or now, if none answers).
     const drainLater = spiritKind === 'elemental' && RULES.FIXES_V71.conjureDrainAtEnd && this.waitsFor('magic') ? { force, pool: opts.drainPoolDice ?? 0, ...(extra.dice > 0 ? { extra: extra.dice } : {}) } : null;
     const result = await this.#runTest(tx('SR2E.Card.Actor.summonForceTn', { what, force, extraNote: extra.note, bindNote, part: domain && spiritKind === 'nature' ? tx('SR2E.Card.Actor.domain', { domain }) : '' }), Math.max(0, skill.system.rating + extra.dice),
-      { targetNumber: force, poolDice: pool, pool: 'spell', magical: true, ...(opts.exclude?.length ? { exclude: opts.exclude } : {}) },
-      { kind: 'conjure', conjure: { force, spiritKind, spiritType, templateUuid: opts.templateUuid ?? SR2Actor.spiritTemplateFor(spiritType)?.uuid ?? null, spiritUuid: null, element: elementIn, domain, ...(hostUuid ? { hostUuid } : {}), ...(drainLater ? { drainLater } : {}) } });
+      { targetNumber: watcher96 ? SP96.watcherTn(watcher96.hours) : force, poolDice: pool, pool: 'spell', magical: true, ...(opts.exclude?.length ? { exclude: opts.exclude } : {}) },
+      { kind: 'conjure', conjure: { force, spiritKind, spiritType, templateUuid: opts.templateUuid ?? SR2Actor.spiritTemplateFor(spiritType)?.uuid ?? null, spiritUuid: null, element: elementIn, domain, ...(hostUuid ? { hostUuid } : {}), ...(drainLater ? { drainLater } : {}), ...(watcher96 ? { watcher96 } : {}) } });
     await this.leaveSignature('summoning', tx('SR2E.Text.Actor.summoning', { name: what }), force);
-    if (!drainLater) await this.#conjuringDrain(force, opts.drainPoolDice ?? 0, extra.dice);
+    if (watcher96) {
+      // Grimoire p. 73: (Force × hours)L Stun, Charisma; no Force, no watcher and nothing to resist.
+      const wf = SP96.watcherForce(Number(result?.successes ?? 0), watcher96.wanted);
+      const wd = SP96.watcherDrain(wf, watcher96.hours);
+      if (wf > 0) await this.#drainTest({ label: tx('SR2E.Spirits96.Watcher.drain', { force: wf, hours: watcher96.hours }), attribute: RULES.CONJURING.drainAttribute as AttributeKey, targetNumber: wd.tn, level: wd.level, type: wd.type, poolDice: RULES.CONJURING.spellPoolAllowed ? opts.drainPoolDice ?? 0 : 0 });
+    } else if (!drainLater) await this.#conjuringDrain(force, opts.drainPoolDice ?? 0, extra.dice);
     return result;
   }
 
@@ -12339,9 +12374,12 @@ export class SR2Actor extends Actor {
   }
 
   async #resolveConjure(snap: TestSnapshot): Promise<Resolved> {
-    const c = snap.conjure as ConjureContext;
-    if (c.ally) return this.#resolveAlly(snap);
-    const services = servicesForSuccesses(snap.successes);
+    const c0 = snap.conjure as ConjureContext;
+    if (c0.ally) return this.#resolveAlly(snap);
+    // v0.96.0 (RULES.SPIRITS_V96.watchers 'book', Grimoire p. 73): a watcher's Force from the successes; it does one task.
+    const w96 = c0.watcher96 ? SP96.watcherForce(snap.successes, c0.watcher96.wanted) : 0;
+    const c: ConjureContext = c0.watcher96 ? { ...c0, force: Math.max(1, w96) } : c0;
+    const services = c0.watcher96 ? (w96 > 0 ? 1 : 0) : servicesForSuccesses(snap.successes);
     const next = (patch: Partial<ConjureContext>) => ({ ...snap, conjure: { ...(snap.conjure as ConjureContext), ...patch } });
 
     // v0.71.0 (R20): the drain a deferred summoning still owes, rolled now (it failed) and marked done.
@@ -12412,6 +12450,7 @@ export class SR2Actor extends Actor {
     }
 
     const data = await this.#spiritData(c, services);
+    if (c.watcher96) data.system.departsAt = SP96.watcherDissolvesAt(sysNow(), c.watcher96.hours);
     const owes = `${tx('SR2E.Card.Actor.owing')} <strong>${services}</strong> ${tCount(services, 'SR2E.Card.Actor.services3')}`;
     // v0.65.0: an elemental takes its hours of ritual (Force × hours per Force) to arrive.
     if (c.spiritKind === 'elemental' && this.waitsFor('magic')) {
@@ -12469,6 +12508,8 @@ export class SR2Actor extends Actor {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.isAlreadyBanished', { spiritName: escHtml(spirit.name) }));
       return null;
     }
+    // v0.96.0 (RULES.SPIRITS_V96.freeSpiritBanish 'book', Grimoire p. 77): a free spirit only with its true name.
+    if (!opts.control && !(await SP96G.mayBanish(this, spirit))) return null;
     await this.spotInvisible([spirit]);
     if (ruleAuto('TN_AUTO.magic.lineOfSight', RULES.TN_AUTO.magic.lineOfSight) === 'block' && this.#unseenTargets([spirit]).length) {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.hasNoLineOfSightTo2', { name: escHtml(this.name), spiritName: escHtml(spirit.name) }));
@@ -13611,9 +13652,12 @@ export class SR2Actor extends Actor {
     const shieldTn = S923.s923('shielding') && isSpell && Array.isArray(state.casterDice) && typeof state.casterTn === 'number'
       ? (defender.initiate?.techniques?.includes?.('shielding') ? defense : 0) + shield : 0;
     const casterSuccesses = shieldTn > 0 ? S923.successesAt(state.casterDice!, state.casterTn! + shieldTn, { bought: state.casterBought }) : state.casterSuccesses;
+    // v0.96.0 (RULES.SPIRITS_V96.aidDefense 'book', Core p. 141): dice left in an elemental's aid join spell defense.
+    const aid96 = isSpell ? await SP96G.aidDefense(this, { category: state.category ?? '' }, canWriteNow) : { dice: 0, note: '' };
+    const ownDice96 = this.sys.attributes[state.resistAttribute].total + adeptSr + catFocus + aid96.dice;
     const rolls: any[] = [];
     const result = await successTest({
-      dice: this.sys.attributes[state.resistAttribute].total + adeptSr + catFocus,
+      dice: ownDice96,
       poolDice: pool + defense + shield + (state.barrierDice ?? 0),
       // v0.80.0 (RULES.URR_V80.magRitualResistTn 'leader', URR): set only on a ritual led by a higher Sorcery.
       targetNumber: state.resistTn ?? state.force,
@@ -13626,7 +13670,7 @@ export class SR2Actor extends Actor {
     const label = tx('SR2E.Card.Actor.resistVs2', { stateSpellName: state.spellName, attr, part: state.noun === 'power' ? tx('SR2E.Card.Actor.rating10') : tx('SR2E.Card.Actor.force3'), stateForce: state.force })
       + `${defense ? (protector ? tx('SR2E.Card.Actor.spellDefenseWithFrom2', { defense, protectorName: protector.name }) : tx('SR2E.Card.Actor.spellDefensePlain', { defense })) : ''}${shield ? tx('SR2E.Card.Actor.shielding', { shield }) : ''}${adeptSr ? tx('SR2E.Card.Actor.spellResistance', { adeptSr }) : ''}`
       + `${state.barrierDice ? ` + ${state.barrierDice} ${state.barrierName ?? tx('SR2E.Card.Actor.barrier2')}` : ''}`
-      + `${catFocus ? tx('SR2E.Card.Actor.categoryFocusResist', { dice: catFocus }) : ''}${shieldTn > 0 ? tx('SR2E.Card.Actor.shieldingTn', { tn: shieldTn, before: state.casterSuccesses, after: casterSuccesses }) : ''}`;
+      + `${aid96.note}${catFocus ? tx('SR2E.Card.Actor.categoryFocusResist', { dice: catFocus }) : ''}${shieldTn > 0 ? tx('SR2E.Card.Actor.shieldingTn', { tn: shieldTn, before: state.casterSuccesses, after: casterSuccesses }) : ''}`;
     await this.#post(this.#snapshot(label, result, {
       kind: 'soak',
       soak: { mode: 'spell', noun: 'damage', level: state.level, type: state.damageType, body: this.sys.attributes.body.total,
@@ -13635,7 +13679,9 @@ export class SR2Actor extends Actor {
         ...(state.essenceDrain ? { essenceDrain: { casterUuid: state.casterUuid } } : {}),
         // v0.45.0: a reflecting initiate bounces a spell back; a sustained power changes attributes.
         // v0.48.0: powers bounce too (RULES.OCCULT.metamagic.reflecting.powers).
-        ...((isSpell || RULES.OCCULT.metamagic.reflecting.powers) && !state.reflected && this.initiate.techniques.includes('reflecting') ? { reflect: {
+        // v0.96.0 (RULES.SPIRITS_V96.reflecting 'book', Awakenings p. 99): a reflected spell can be reflected again.
+        ...((isSpell || RULES.OCCULT.metamagic.reflecting.powers) && (!state.reflected || SP96.on('reflecting')) && this.initiate.techniques.includes('reflecting') ? { reflect: {
+          ...(SP96.on('reflecting') ? { shield96: SP96.shieldSuccesses(result.dice, { from: ownDice96 + pool, count: isSpell ? defense + shield : 0, tn: Number(result.targetNumber) }), reflected96: Boolean(state.reflected) } : {}),
           casterUuid: state.casterUuid, spellName: state.spellName, force: state.force, resistAttribute: state.resistAttribute,
           level: state.level, damageType: state.damageType, ...(state.effectOnly ? { effectOnly: true } : {}),
           defense: isSpell ? defense : Number(this.system?.spellDefense ?? 0),
@@ -13657,12 +13703,17 @@ export class SR2Actor extends Actor {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.isAPassivePowerThereIs', { powerName: escHtml(power.name) }));
       return null;
     }
-    const potency = powerPotency(p.dice, p.rating, {
+    const potency0 = powerPotency(p.dice, p.rating, {
       attributes: Object.fromEntries(ATTRIBUTE_KEYS.map((k) => [k, this.sys.attributes[k].total])) as any,
       // A great form spirit's powers are stronger (v0.45.0).
       ...(this.type === 'spirit' ? { force: (this.sys.force as number) + (this.sys.greatForm ? RULES.OCCULT.metamagic.invoking.powerBonus : 0) } : {}),
       magic: this.sys.derived.magic as number,
     });
+    // v0.96.0 (RULES.SPIRITS_V96.critterOpposed 'book', Predator and Prey pp. 89, 92): Confusion and Fear are the
+    // being's Essence against the victim's Willpower, each against the other's rating.
+    const op96 = SP96.opposedPower(String(p.special ?? ''), String(power.name ?? ''));
+    const opEss96 = op96 === 'confusion' || op96 === 'fear';
+    const potency = opEss96 ? Math.max(0, Math.floor(Number(this.type === 'spirit' ? this.sys.force : (this.sys.derived?.essence ?? this.sys.essence ?? 0)) || 0)) : potency0;
     const uuids = [...new Set([...(opts.targetUuids ?? []), ...(opts.targetUuid ? [opts.targetUuid] : [])])];
     const targets: any[] = [];
     for (const u of uuids) {
@@ -13687,10 +13738,10 @@ export class SR2Actor extends Actor {
     }
     const attrsOf = (t: any) => Object.fromEntries(ATTRIBUTE_KEYS.map((k) => [k, t.system.attributes[k]?.total ?? 0])) as any;
     const tnName = p.tnSource.charAt(0).toUpperCase() + p.tnSource.slice(1);
-    let tn = powerTargetNumber(p.tnSource, p.targetNumber, targets.length ? attrsOf(targets[0]) : null);
+    let tn = opEss96 && targets.length ? { value: Math.max(RULES.MIN_TARGET_NUMBER, Number(attrsOf(targets[0]).willpower) || 0), fromTarget: true } : powerTargetNumber(p.tnSource, p.targetNumber, targets.length ? attrsOf(targets[0]) : null);
     let tnLabel = tn.fromTarget ? tx('SR2E.Card.Actor.tnS', { name: targets[0].name, tnName }) : tx('SR2E.Card.Actor.tn6', { tnValue: tn.value });
-    if (targets.length > 1 && p.tnSource !== 'fixed') {
-      tn = { value: areaTargetNumber(targets.map((t) => attrsOf(t)[p.tnSource])), fromTarget: true };
+    if (targets.length > 1 && (p.tnSource !== 'fixed' || opEss96)) {
+      tn = { value: areaTargetNumber(targets.map((t) => attrsOf(t)[opEss96 ? 'willpower' : p.tnSource])), fromTarget: true };
       tnLabel = tx('SR2E.Card.Actor.tnOfTargets', { magicAreaTn: RULES.MAGIC.areaTn, tnName, targetsLength: targets.length });
     }
 
@@ -13708,9 +13759,9 @@ export class SR2Actor extends Actor {
       // Review fix: the drain is the being's Essence, not the power's dice.
       fx.essence = Math.max(0, Math.floor(Number(this.sys.derived?.essence ?? this.sys.essence ?? 0)));
     }
-    const spellTargets = p.resist === 'none' ? [] : targets.map((t) => ({
+    const spellTargets = p.resist === 'none' && !opEss96 ? [] : targets.map((t) => ({
       casterUuid: this.uuid as string, targetUuid: t.uuid as string, spellName: power.name, force: potency,
-      resistAttribute: p.resist as AttributeKey, level: p.damageLevel as DamageLevel, damageType: p.damageType as DamageType,
+      resistAttribute: (opEss96 ? 'willpower' : p.resist) as AttributeKey, level: p.damageLevel as DamageLevel, damageType: p.damageType as DamageType,
       noun: 'power' as const, resistPool: RULES.POWERS.resistPool,
       ...(p.effect === 'effect' || p.special === 'essenceDrain' ? { effectOnly: true } : {}),
       ...(p.special === 'essenceDrain' ? { essenceDrain: true } : {}),
@@ -19195,6 +19246,8 @@ export class SR2Actor extends Actor {
       await SR2Actor.#departureTick(a, time);
       // v0.92.3: Force and Magic lost in banishing come back (RULES.SPIRITS_V923.banishRecovery).
       await SR2Actor.#banishRecoveryTick(a, time);
+      // v0.96.0 (RULES.SPIRITS_V96): an elemental's day of waiting, a disrupted spirit's return, a watcher dissolving.
+      await SP96G.magicTick96(a, time);
       // Elemental sustaining runs out.
       const list: any[] = [...((a as any).system?.sustaining ?? [])];
       const due = list.filter((e) => e.spiritUuid && typeof e.until === 'number' && e.until >= 0 && e.until <= time);
@@ -19406,11 +19459,17 @@ export class SR2Actor extends Actor {
     if (!scene) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.openASceneFirstBackgroundCount2')); return null; }
     const info = this.backgroundInfo();
     if (info.penalty <= 0) { ui.notifications?.info?.(tx('SR2E.Notify.Actor.thereIsNoBackgroundCountHere')); return null; }
+    // v0.96.0 (RULES.SPIRITS_V96.cleansing 'book', Awakenings p. 100): a count up to the grade only; (count)D Drain after.
+    const why96 = SP96.cleanseRefusal(info.penalty, this.initiate.grade);
+    if (why96) { ui.notifications?.warn?.(tx('SR2E.Spirits96.Why.cleanseGrade', { name: escHtml(this.name), count: info.penalty, grade: this.initiate.grade })); return null; }
     const d = this.#techniqueDice(c.skill);
-    return this.#runTest(tx('SR2E.Card.Actor.cleansingBackgroundCount', { infoPenalty: info.penalty, part: info.toxic ? tx('SR2E.Card.Actor.toxic') : '', note: d.note }), d.dice,
+    const cleansed96 = await this.#runTest(tx('SR2E.Card.Actor.cleansingBackgroundCount', { infoPenalty: info.penalty, part: info.toxic ? tx('SR2E.Card.Actor.toxic') : '', note: d.note }), d.dice,
       // The count is already the TN; it doesn't also add its own penalty (live run, v0.45.0).
       { targetNumber: cleansingTn(info.penalty, info.toxic), modifiers: opts.modifiers ?? [], astralAct: true },
       { kind: 'cleanse', cleanse: { sceneId: scene.id, count: info.penalty, applied: 0, align: this.alignTags() } });
+    const dr96 = cleansed96 ? SP96.cleanseDrain(info.penalty) : null;
+    if (dr96) await this.#drainTest({ label: tx('SR2E.Spirits96.Cleanse.drain'), attribute: 'willpower', targetNumber: dr96.tn, level: dr96.level, type: drainDamageType(info.penalty, Number(this.sys.derived?.drainMagic ?? this.sys.derived?.magic ?? 0)), poolDice: 0 });
+    return cleansed96;
   }
 
   async #resolveCleanse(snap: TestSnapshot): Promise<Resolved> {
@@ -19601,6 +19660,15 @@ export class SR2Actor extends Actor {
       try { if (p?.getFlag?.(SYSTEM_ID, 'possessing')) await clearFlag(p, 'possessing'); } catch { /* not ours */ }
       await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p><strong>${escText(this.name)}</strong> ${tx('SR2E.Card.Actor.isFreeOf', { byName: escText(by.name) })}</p>` });
     }
+  }
+
+  /**
+   * v0.96.0 (RULES.SPIRITS_V96.reflecting 'book', Awakenings p. 99): only the shielding dice's successes count, and the
+   * spell rebounds at a Force of the difference (applications/spirits96.ts reflectRebound); else the v0.95.1 reflection.
+   */
+  async #reflection96(ctx: SoakContext, successes: number): Promise<{ html: string; flags: Record<string, unknown> }> {
+    if (ctx.reflect && SP96.on('reflecting') && typeof ctx.reflect.shield96 === 'number') return SP96G.reflectRebound(this, ctx.reflect, ctx.casterSuccesses ?? 0);
+    return this.#reflection(ctx, successes);
   }
 
   /** Reflecting: the button that bounces a resisted spell back at its caster, if any successes are left over. */
@@ -21185,13 +21253,14 @@ export class SR2Actor extends Actor {
     if (!this.sys.poolSpent) return;
     // v0.95.0 (MELEE_V95.otherPools 'action', Core p. 84): with `keepCombat` the Spell, Hacking and Task Pools (and the
     // spell defense dice) last until the first action too (M95.turnRefresh drops them from the update).
-    await this.update(M95.turnRefresh({ ...(opts.keepCombat ? {} : { 'system.poolSpent.combat': 0 }), 'system.poolSpent.spell': 0, 'system.poolSpent.spellConc': 0, 'system.poolSpent.spellSpec': 0, 'system.poolSpent.hacking': 0, 'system.poolSpent.control': 0, 'system.poolSpent.task': 0, 'system.spellDefense': 0 }, Boolean(opts.keepCombat), opts.acted !== false));
+    await this.update(M95.turnRefresh({ ...(opts.keepCombat ? {} : { 'system.poolSpent.combat': 0, 'system.poolSpent.astral': 0 }), 'system.poolSpent.spell': 0, 'system.poolSpent.spellConc': 0, 'system.poolSpent.spellSpec': 0, 'system.poolSpent.hacking': 0, 'system.poolSpent.control': 0, 'system.poolSpent.task': 0, 'system.spellDefense': 0 }, Boolean(opts.keepCombat), opts.acted !== false));
   }
 
   /** v0.92.3 (COMBAT_V923.poolRefresh 'action', Core p. 84): the Combat Pool refreshes at the start of the character's action. */
   async refreshCombatPool(): Promise<void> {
-    if (!this.sys.poolSpent || !(Number(this.sys.poolSpent.combat ?? 0) > 0)) return;
-    await this.update({ 'system.poolSpent.combat': 0 });
+    // v0.96.0 (RULES.SPIRITS_V96.astralPerceiving): the Astral Combat Pool's own count refreshes with it.
+    if (!this.sys.poolSpent || !(Number(this.sys.poolSpent.combat ?? 0) > 0 || Number(this.sys.poolSpent.astral ?? 0) > 0)) return;
+    await this.update({ 'system.poolSpent.combat': 0, ...(Number(this.sys.poolSpent.astral ?? 0) > 0 ? { 'system.poolSpent.astral': 0 } : {}) });
   }
 }
 

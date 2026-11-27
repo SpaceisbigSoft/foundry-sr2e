@@ -424,6 +424,8 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
         control: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
         // v0.78.0: an encephalon's Task Pool (RULES.BOOK_V78.encephalon).
         task: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
+        // v0.96.0 (RULES.SPIRITS_V96.astralPerceiving 'book', Core p. 147): the Astral Combat Pool used while perceiving.
+        astral: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
         // v0.92.0: the Spell Pool's narrow layers spent (RULES.MAGIC_V920.poolLayers; rules/magicpool.ts).
         spellConc: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
         spellSpec: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
@@ -1004,6 +1006,8 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
       painIgnore,
       astral: astralForm(totals, magic > 0 && sys.tradition !== 'adept' ? Number(sys.initiateGrade ?? 0) : 0),
       astralPool: astralPool923,
+      // v0.96.0 (RULES.SPIRITS_V96.astralPerceiving 'book', Core p. 147): what is left of it for astral actions while perceiving.
+      astralPoolLeft: Math.max(0, astralPool923 - Number(sys.poolSpent?.astral ?? 0)),
       adeptPoints: adeptPowerPoints(adept, magic),
       geasaPenalty: geasaPenalty(sys.geasa ?? []),
       focusAddiction: focusAddiction(foci, magic),

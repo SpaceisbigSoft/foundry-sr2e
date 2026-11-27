@@ -7,6 +7,7 @@
  * cyberware, spells and powers go through the stat-block importer's tables (`statBlockItems`).
  */
 import { RULES } from './config.ts';
+import { pairedStrikeCost } from './spirits96.ts';
 import { parseStatBlock, statBlockItems, statBlockWarningCode, type StatBlockWarningCode } from './statblock.ts';
 import * as D from './npcdata.ts';
 import { generateSheaf } from './sheafgen.ts';
@@ -387,7 +388,12 @@ export function generateNpc(opts: NpcOptions, r: Rng): NpcPlan {
       // The importer's own power point costs, so the sheet agrees with the plan.
       let rating = rated ? clamp(Math.floor(points / Math.max(0.25, adeptPowerCost(name, 1)) / 2), 1, name === 'Improved Reflexes' ? 3 : 4) : 0;
       while (rating > 1 && adeptPowerCost(name, rating) > points) rating--;
-      const spend = adeptPowerCost(name, rating);
+      // v0.96.0 (RULES.SPIRITS_V96.adeptCosts 'book', Awakenings p. 116): beside Killing Hands, Distance Strike costs
+      // double (the importer doubles Distance Strike whichever came first).
+      const ds96 = /^distance strike$/i, kh96 = /^killing hands$/i;
+      const pairDs96 = ds96.test(name) && adeptPowers.some((a) => kh96.test(a.name)) ? adeptPowerCost(name, rating)
+        : kh96.test(name) ? adeptPowers.filter((a) => ds96.test(a.name)).reduce((t, a) => t + adeptPowerCost(a.name, a.rating), 0) : 0;
+      const spend = adeptPowerCost(name, rating) + (pairedStrikeCost(1, true) > 1 ? pairDs96 : 0);
       if (spend > points + 1e-9) continue;
       adeptPowers.push({ name, rating });
       points -= spend;

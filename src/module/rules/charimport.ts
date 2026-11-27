@@ -1170,7 +1170,7 @@ export function characterImportPlan(p: ParsedCharacter, current: CharacterImport
   }
 
   // ---- Items first: the attribute mods depend on them.
-  const extra = statBlockItems(p, { adept: true });
+  const extra = statBlockItems(p, { adept: true, ...(metatypeId ? { metatype: metatypeId } : {}) });
   warnings.push(...extra.warnings);
   for (const it of extra.items) items.push({ type: it.type, name: it.name, system: it.system });
 

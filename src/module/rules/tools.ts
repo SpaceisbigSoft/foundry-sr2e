@@ -60,6 +60,8 @@ export const TOOLS: readonly ToolDef[] = [
   { id: 'accessoryItems', icon: 'fa-solid fa-puzzle-piece', who: 'gm', toolbar: false },
   // v0.95.0 (RULES.CORE_V95): an NPC's racism, a group Perception test, a group's averaged ratings.
   { id: 'bookRules95', icon: 'fa-solid fa-book-skull', who: 'gm', toolbar: false },
+  // v0.96.0 (RULES.SPIRITS_V96.spiritDuel): spirit against spirit, Force against Force.
+  { id: 'spirits96', icon: 'fa-solid fa-ghost', who: 'gm', toolbar: false },
   { id: 'tourGm', icon: 'fa-solid fa-person-chalkboard', who: 'gm', toolbar: false },
 ];
 

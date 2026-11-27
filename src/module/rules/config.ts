@@ -28,6 +28,7 @@ import { GEAR_V923 } from './config923/gear.ts';
 import { CORE_V95 } from './config95/core.ts';
 import { FIRE_V95 } from './config95/fire.ts';
 import { MELEE_V95 } from './config95/melee.ts';
+import { SPIRITS_V96 } from './config96/spirits.ts';
 
 /**
  * SR2e rules constants.
@@ -3413,6 +3414,8 @@ export const RULES = {
   FIRE_V95,
   /** v0.95.0: rules completeness, Melee, actions and Dice Pools (rules/config95/melee.ts). */
   MELEE_V95,
+  /** v0.96.0: rules completeness, conjuring, spirits, astral, adepts and critter powers (rules/config96/spirits.ts). */
+  SPIRITS_V96,
 } as const;
 
 export type RangeBand = keyof typeof RULES.RANGE_TN;

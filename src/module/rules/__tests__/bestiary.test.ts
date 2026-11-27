@@ -156,7 +156,8 @@ describe('v0.56.0 TN-changing powers', () => {
   test('specials list', () => {
     assert.deepEqual([...TN_POWER_SPECIALS], ['concealment', 'confusion', 'movement', 'fear', 'guard']);
   });
-  test('bundles by special', () => {
+  test('bundles by special', (t) => {
+    t.after(oldWay({ 'SPIRITS_V96.critterOpposed': 'v951' })); // v0.96.0: the book's Confusion is in v096-spirits.test.ts
     assert.deepEqual(powerModifierBundle('concealment', { force: 4.7, successes: 2 }), { perceivedTn: 4 });
     assert.deepEqual(powerModifierBundle('confusion', { force: 4, successes: 3 }), { testsTn: 4 }); // v0.77.0: the being's Essence (rating)
     assert.deepEqual(powerModifierBundle('fear', { force: 4, successes: -2 }), { testsTn: 0 });

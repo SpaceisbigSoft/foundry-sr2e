@@ -179,7 +179,7 @@ export function boundAttack<T extends Record<string, any>>(a: T): T {
 /** A flag that should be a list: the list, else []. */
 function listFlag<T = any>(v: unknown): T[] { return Array.isArray(v) ? v as T[] : []; }
 
-const POOL_LABELS = (): Record<PoolKind, string> => ({ combat: tx('SR2E.App.Chat.combatPool'), spell: tx('SR2E.App.Chat.spellPool'), hacking: tx('SR2E.App.Chat.hackingPool'), control: tx('SR2E.App.Chat.controlPool'), task: tx('SR2E.App.Chat.taskPool') });
+const POOL_LABELS = (): Record<PoolKind, string> => ({ combat: tx('SR2E.App.Chat.combatPool'), spell: tx('SR2E.App.Chat.spellPool'), hacking: tx('SR2E.App.Chat.hackingPool'), control: tx('SR2E.App.Chat.controlPool'), task: tx('SR2E.App.Chat.taskPool'), astral: tx('SR2E.Spirits96.astralPool') });
 
 /** Ask how many pool dice to spend. Returns null if the dialog was cancelled. */
 export async function promptPoolDice(actor: any, title: string, pool: PoolKind = 'combat', cap?: number): Promise<number | null> {
