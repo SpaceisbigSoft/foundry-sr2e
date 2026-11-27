@@ -10,7 +10,6 @@ import { t as tx } from '../helpers/i18n.ts';
 const V = () => RULES.CORE_V95;
 const num = (v: unknown, d = 0) => (Number.isFinite(Number(v)) ? Number(v) : d);
 const whole = (v: unknown) => Math.max(0, Math.floor(num(v)));
-const K = 'SR2E.Core95.';
 
 // ---------------------------------------------------------------- The Team Karma Pool (Core p. 191, p. 47)
 
@@ -32,7 +31,8 @@ export function teamPoolOf(raw: unknown): TeamPool {
 export const teamLeft = (t: TeamPool): number => Math.max(0, whole(t.pool) - whole(t.spent));
 
 export interface TeamChange { ok: boolean; team: TeamPool; why?: string; own?: number; lost?: number }
-const no = (team: TeamPool, why: string): TeamChange => ({ ok: false, team, why: `${K}Team.Why.${why}` });
+const WHY_KEY = 'SR2E.Core95.Team.Why.';
+const no = (team: TeamPool, why: string): TeamChange => ({ ok: false, team, why: WHY_KEY + why });
 
 /**
  * A character joins: `teamKarmaJoin` of their own unspent Karma Pool goes into the team pool for good (`own`: what
@@ -220,6 +220,8 @@ export function jumpTn(metres: number, strength: number, body: number): number {
 /** The distance with the test's successes: +10 percent each, rounded down to a tenth of a metre. */
 export const jumpDistance = (base: number, successes: number): number => Math.floor(Math.max(0, num(base)) * (10 + whole(successes)) + 1e-9) / 10;
 
+const TREAD_ROW = 'tread95:';
+const META_ROW = 'metatype';
 export type SwimMode = 'swim' | 'tread' | 'float';
 
 /** A water test's target number and the table's modifiers: swimming, treading water or floating. */
@@ -228,7 +230,7 @@ export function waterTest(mode: SwimMode, metatype: unknown, checked: readonly s
   const rows = V().treadModifiers.filter((r) => checked.includes(r.id)).map((r) => ({ id: `tread95:${r.id}`, label: r.label, value: r.value }));
   const m = String(metatype ?? '').toLowerCase();
   const meta = num(V().treadMetatype[m]);
-  return { tn: whole(mode === 'tread' ? V().treadTn : V().floatTn), modifiers: [...rows, ...(meta ? [{ id: 'tread95:metatype', label: tx('SR2E.Card.Mod.athleticsMetatype'), value: meta }] : [])] };
+  return { tn: whole(mode === 'tread' ? V().treadTn : V().floatTn), modifiers: [...rows, ...(meta ? [{ id: TREAD_ROW + META_ROW, label: tx('SR2E.Card.Mod.athleticsMetatype'), value: meta }] : [])] };
 }
 
 /** Combat Turns a floating character stays afloat: Body × successes. */
@@ -248,10 +250,16 @@ export function monthsMissed(daysLate: number, monthDays: number): number {
 /** The missed-payment roll: a die above the months missed is absorbed; otherwise the lifestyle drops. */
 export const missedAbsorbed = (die: number, months: number): boolean => whole(die) > whole(months);
 
-/** The state kept between ticks (flag `lifestyle95`): the unpaid date, months rolled for it, months carried from before a drop. */
-export function missedMarkOf(raw: unknown, key: number): { rolled: number; carried: number } {
+/**
+ * The state kept between ticks (flag `lifestyle95`): the unpaid date (`key`) and level it was rolled for, the months
+ * rolled for that date, and the months missed in a row before it. A new date at a lower level (moved down, by itself or
+ * by the GM's card) carries the months on; a new date at the same level (the rent was paid) starts again.
+ */
+export function missedMarkOf(raw: unknown, key: number, level = ''): { rolled: number; carried: number } {
   const r: any = raw && typeof raw === 'object' ? raw : {};
-  return num(r.key, NaN) === key ? { rolled: whole(r.rolled), carried: whole(r.carried) } : { rolled: 0, carried: 0 };
+  if (num(r.key, NaN) === key) return { rolled: whole(r.rolled), carried: whole(r.carried) };
+  if (level && typeof r.level === 'string' && r.level && r.level !== level) return { rolled: 0, carried: whole(r.carried) + whole(r.rolled) };
+  return { rolled: 0, carried: 0 };
 }
 
 /** Whether a lifestyle owned outright can be sold (Middle or better, by the lifestyles' order). */
@@ -322,3 +330,8 @@ export function average(values: readonly number[]): number {
 
 /** A group Perception test's dice: the average Intelligence plus one per member. */
 export const groupPerceptionDice = (intelligences: readonly number[]): number => (intelligences.length ? average(intelligences) + intelligences.length : 0);
+
+/** A map of id → time keeping only the `n` newest (bounded flags). */
+export function keepNewest(map: Record<string, unknown>, n: number): Record<string, number> {
+  return Object.fromEntries(Object.entries(map ?? {}).map(([k, v]) => [k, num(v)] as [string, number]).sort((a, b) => b[1] - a[1]).slice(0, Math.max(0, whole(n))));
+}

@@ -1282,13 +1282,13 @@ async function onKarma(message: any, button: HTMLButtonElement, action: 'karmaRe
   if (!actor.isOwner) { button.disabled = false; return ui.notifications.warn(tx('SR2E.Notify.Chat.onlySOwnerOrTheGm11', { actorName: escHtml(actor.name) })); }
   // v0.81.0 (SEC1-6): only on the roller's own card (or a GM's): a forged card can't spend someone's Karma Pool.
   if (!(await playerMay(message, actor))) { button.disabled = false; return; }
-  const before = actor.system.karma?.poolSpent ?? 0;
   // v0.81.1 (SEC1-1, design 1): a GM's click on a player's card re-resolves it as that player.
   // v0.94.1 (report item 24): the card itself goes along, so the re-roll can update it in place.
-  if (action === 'karmaReroll') await asCardAuthor(message, tx('SR2E.Card.Chat.karmaReRoll'), () => actor.karmaReroll(snap, message));
-  else await asCardAuthor(message, tx('SR2E.Card.Chat.avoidDisaster'), () => actor.avoidDisaster(snap, message));
-  // If nothing was spent (not enough Karma, nothing to re-roll), let them try again later.
-  if ((actor.system.karma?.poolSpent ?? 0) === before) button.disabled = false;
+  const spent = action === 'karmaReroll' ? await asCardAuthor(message, tx('SR2E.Card.Chat.karmaReRoll'), () => actor.karmaReroll(snap, message))
+    : await asCardAuthor(message, tx('SR2E.Card.Chat.avoidDisaster'), () => actor.avoidDisaster(snap, message));
+  // If nothing was spent (not enough Karma, nothing to re-roll), let them try again later. v0.95.0: the method says
+  // so itself (the Team Karma Pool may have paid, leaving the own pool's count as it was).
+  if (!spent) button.disabled = false;
 }
 
 /** Roll the Magic loss test for a deadly-wounded magician. */

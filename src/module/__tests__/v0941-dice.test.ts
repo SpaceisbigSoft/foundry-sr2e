@@ -201,7 +201,7 @@ describe('v0.94.1 wiring', () => {
   });
 
   test('typed results: refused for Karma re-rolls and GM TN changes; never auto-applied or auto-resisted', () => {
-    assert.match(docs, /if \(snapIn\.typed\) \{ ui\.notifications\?\.warn\?\.\(tx\('SR2E\.Notify\.Dice941\.typedNoReroll'\)\); return; \}/);
+    assert.match(docs, /if \(snapIn\.typed\) \{ ui\.notifications\?\.warn\?\.\(tx\('SR2E\.Notify\.Dice941\.typedNoReroll'\)\); return(?: false)?; \}/);
     assert.match(docs, /if \(snap\.typed\) \{ ui\.notifications\?\.warn\?\.\(tx\('SR2E\.Notify\.Dice941\.typedNoRetarget'\)\); return null; \}/);
     assert.match(chat, /if \(typedCard\(message\)\) return;\n/);
     assert.match(chat, /if \(typedCard\(message\)\) return false;/);

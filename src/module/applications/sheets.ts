@@ -3576,7 +3576,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         ${fireRows}
         ${groupRow}
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.combatPoolDiceLeft', { left })}</label><input name="pool" type="number" value="0" min="0" max="${left}"></div>
-        ${CO923.karmaDiceRow(Number(derived.karmaPoolLeft ?? 0), true, Number(actor.findSkill(w.skill)?.system?.rating ?? 0) || Number(actor.system?.attributes?.[String(actor.findSkill(w.skill)?.system?.attribute ?? (melee ? "strength" : "quickness"))]?.total ?? 0))}
+        ${C95G.karmaDiceRow(actor, Number(derived.karmaPoolLeft ?? 0), true, Number(actor.findSkill(w.skill)?.system?.rating ?? 0) || Number(actor.system?.attributes?.[String(actor.findSkill(w.skill)?.system?.attribute ?? (melee ? "strength" : "quickness"))]?.total ?? 0))}
         ${typedDiceRow(actor)}
         <div class="sr2e-preview" aria-live="polite"></div>
         <details class="sr2e-more"><summary>${tx('SR2E.Dialog.Sheet.moreOptions')}</summary>
@@ -4066,7 +4066,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         ${targetRow}
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.spellPoolDiceToCastLeft', { left, part: castingPoolMax(left, actor.system.derived.magic) < left ? tx('SR2E.Dialog.Sheet.atMostMagic', { castingPoolMax: castingPoolMax(left, actor.system.derived.magic) }) : "" })}</label><input name="pool" type="number" value="0" min="0" max="${castingPoolMax(left, actor.system.derived.magic)}"></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.spellPoolDiceForDrain')}</label><input name="drainPool" type="number" value="0" min="0" max="${drainLeft}"></div>
-        ${CO923.karmaDiceRow(Number(actor.system?.derived?.karmaPoolLeft ?? 0), true, Number(actor.findSkill?.("Sorcery")?.system?.rating ?? 0) || Number(actor.system?.derived?.magic ?? 0))}
+        ${C95G.karmaDiceRow(actor, Number(actor.system?.derived?.karmaPoolLeft ?? 0), true, Number(actor.findSkill?.("Sorcery")?.system?.rating ?? 0) || Number(actor.system?.derived?.magic ?? 0))}
         ${sustainRow}
         ${fetishRow}
         ${aidRow}
@@ -7724,7 +7724,7 @@ export async function rollAttributeWindow(actor: any, key: AttributeKey, preset:
     const c2 = await foundry.applications.api.DialogV2.prompt({
       window: { title: tx('SR2E.Dialog.Sheet.roll2', { key: cap(key) }) },
       content: `${tnField(preset)}
-        ${preset.opts ? "" : urrCoreTnPresetRow()}${CO923.karmaDiceRow(Number(actor.system?.derived?.karmaPoolLeft ?? 0), true, Number(actor.system?.attributes?.[key]?.total ?? 0))}
+        ${preset.opts ? "" : urrCoreTnPresetRow()}${C95G.karmaDiceRow(actor, Number(actor.system?.derived?.karmaPoolLeft ?? 0), true, Number(actor.system?.attributes?.[key]?.total ?? 0))}
         ${preset.opts ? "" : `<label class="sr2e-check"><input type="checkbox" name="open"> ${tx('SR2E.Dialog.Sheet.openTestNoTnTheHighest')}</label>`}
         ${typedDiceRow(actor)}
         ${preset.hideTn ? "" : `<div class="sr2e-preview" aria-live="polite"></div>`}`,
@@ -7771,7 +7771,7 @@ export async function rollSkillWindow(actor: any, item: any, preset: RollWindowP
     const choice = await foundry.applications.api.DialogV2.prompt({
       window: { title: tx('SR2E.Dialog.Sheet.roll3', { itemName: item.name }) },
       content: `${preset.tn !== undefined || preset.hideTn ? tnField(preset) : `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.targetNumber')}</label><input name="tn" type="number" value="${isLang ? (langTable.find((x) => x.id === langDefault)?.tn ?? 4) : 4}" min="2" autofocus></div>`}
-        ${preset.opts ? "" : urrCoreTnPresetRow(String(item.system?.kind ?? ""))}${extra58}${taskRow}${CO923.karmaDiceRow(Number(actor.system?.derived?.karmaPoolLeft ?? 0), Number(item.system?.rating ?? 0) > 0 || !RULES.URR_V80.coreKarmaDice, Number(item.system?.rating ?? 0) > 0 ? Number(item.system?.rating ?? 0) : Number(actor.system?.attributes?.[String(item.system?.attribute ?? '')]?.total ?? 0))}
+        ${preset.opts ? "" : urrCoreTnPresetRow(String(item.system?.kind ?? ""))}${extra58}${taskRow}${C95G.karmaDiceRow(actor, Number(actor.system?.derived?.karmaPoolLeft ?? 0), Number(item.system?.rating ?? 0) > 0 || !RULES.URR_V80.coreKarmaDice, Number(item.system?.rating ?? 0) > 0 ? Number(item.system?.rating ?? 0) : Number(actor.system?.attributes?.[String(item.system?.attribute ?? '')]?.total ?? 0))}
         ${skillChoiceRows(actor, item, false)}
         ${preset.opts ? "" : `<label class="sr2e-check"><input type="checkbox" name="open"> ${tx('SR2E.Dialog.Sheet.openTestNoTnTheHighest')}</label>`}
         ${others.length ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.complementarySkill1DiePerSuccesses', { complementarySuccessesPerDie: RULES.STREET.tests.complementary.successesPerDie })}</label><select name="comp"><option value="">${tx('SR2E.Dialog.Sheet.none')}</option>${others.map((o: any) => `<option value="${escHtml(o.id)}">${escHtml(o.name)} ${escHtml(o.system.rating)}</option>`).join("")}</select></div>` : ""}

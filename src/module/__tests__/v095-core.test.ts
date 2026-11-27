@@ -224,8 +224,8 @@ describe('v0.95.0 core: the hooks in the shared files', () => {
   const doc = read('src', 'module', 'documents', 'index.ts');
   const sheets = read('src', 'module', 'applications', 'sheets.ts');
   test('Karma spends, social tests, athletics, legwork, training and the lifestyle tick call the glue', () => {
-    for (const s of ['C95G.karmaFromTeam(this, points)', 'C95G.takeTeamDice(this)', 'C95G.teamKarmaFor(this)', 'C95G.teamRefreshAll()', 'C95G.racismFor(this, target)',
-      'C95G.racismCharisma(this, target', 'C95G.athleticsPlan(this, kind', 'C95G.afterLegwork(this, contact', 'C95G.instruction(student95', 'C95G.lifestyleTick(a)', 'C95G.contactUpkeepTick(a)', 'C95G.testExtras(this, snap.c95'])
+    for (const s of ['C95G.karmaFromTeam(this, points)', 'C95G.takeTeamDice(this)', 'C95G.teamKarmaFor(this)', 'C95G.teamRefreshAll()',
+      'C95G.racismCharisma(this, target, skillName)', 'C95G.racismFor(this, target, preview)', 'C95G.athleticsPlan(this, kind', 'C95G.afterLegwork(this, contact', 'C95G.instruction(student95', 'C95G.lifestyleTick(a)', 'C95G.contactUpkeepTick(a)', 'C95G.testExtras(this, snap.c95'])
       assert.ok(doc.includes(s), s);
     for (const s of ['C95G.trainingChoice(actor, id)', 'C95G.athleticsRows(actor)', 'C95G.sellLifestyle(actor)']) assert.ok(sheets.includes(s), s);
     assert.ok(read('src', 'module', 'applications', 'chat.ts').includes("action.startsWith('c95')"));

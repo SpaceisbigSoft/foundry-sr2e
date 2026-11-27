@@ -15,7 +15,9 @@ import { t as tx, tKey } from '../helpers/i18n.ts';
 import { replaceFlag } from '../helpers/flags.ts';
 import { sysNow } from '../helpers/clock.ts';
 import { successTest, type TargetNumberModifier, type SuccessTestResult } from '../rules/dice.ts';
-import { requestGm } from './socket.ts';
+import { requestGm, activeGm, onRelay } from './socket.ts';
+import { withGmLock } from './gmlock.ts';
+import * as CO923 from '../rules/core923.ts';
 import { authorIsGm, cardAuthor } from './trust.ts';
 import * as C from '../rules/core95.ts';
 
@@ -64,9 +66,26 @@ export function teamKarmaLeft(actor: any): number {
 /** Whether the Karma buttons show for an actor with no Karma Pool of their own (a member, the pool not empty). */
 export const teamKarmaFor = (actor: any): boolean => teamKarmaLeft(actor) > 0;
 
-/** Draw `n` points for `actor` through the GM's client. */
-export async function spendTeam(actor: any, n: number, permanent = false): Promise<boolean> {
-  const res = await requestGm('teamKarma', { op: 'spend', actorId: memberId(actor), n: int(n, 1, 99), permanent: Boolean(permanent) });
+/**
+ * Run a GM-side operation: on the GM's own client under the GM lock (inline when a re-run already holds it, judged as
+ * that re-run's author), otherwise through the relay (judged by the socket's sender there).
+ */
+export async function gmRun(op: 'teamKarma' | 'core95', data: Record<string, any>): Promise<{ ok: boolean; note?: string }> {
+  const gm: any = activeGm();
+  if (gm?.isSelf) {
+    const fn = op === 'teamKarma' ? teamRelay : core95Relay;
+    const acting: any = (globalThis as any).CONFIG?.Actor?.documentClass?.actingAuthor ?? null;
+    try { return acting ? await fn(data, acting) : await withGmLock(() => fn(data, G().user)); } catch (err) { console.warn('sr2e | core95', err); return { ok: false }; }
+  }
+  return requestGm(op, data);
+}
+
+/**
+ * Draw `n` points for `actor` through the GM's client. `cardId`: the chat card a success is bought on (for good):
+ * the GM's client checks it is the player's own card for this character before taking points for good.
+ */
+export async function spendTeam(actor: any, n: number, permanent = false, cardId = ''): Promise<boolean> {
+  const res = await gmRun('teamKarma', { op: 'spend', actorId: memberId(actor), n: int(n, 1, 99), ...(permanent ? { permanent: true, cardId: String(cardId ?? '').slice(0, 64) } : {}) });
   if (!res.ok) warn(res.note ? escHtml(res.note) : tx('SR2E.Core95.Team.Why.teamShort'));
   return Boolean(res.ok);
 }
@@ -74,9 +93,9 @@ export async function spendTeam(actor: any, n: number, permanent = false): Promi
 /**
  * A Karma spend of `points` for `actor`: from the team pool (true: paid there; false: refused or cancelled) or from
  * the character's own pool (null: the caller spends it as before). With both possible the user picks; a GM acting for
- * a card's author is not asked (own pool first).
+ * a card's author is not asked (own pool first). `cardId`: the card a success is bought on (`permanent`).
  */
-export async function karmaFromTeam(actor: any, points: number, permanent = false): Promise<boolean | null> {
+export async function karmaFromTeam(actor: any, points: number, permanent = false, cardId = ''): Promise<boolean | null> {
   if (!C.teamBook()) return null;
   const ownLeft = Number(actor?.system?.derived?.karmaPoolLeft ?? 0);
   const team = teamNow();
@@ -100,35 +119,57 @@ export async function karmaFromTeam(actor: any, points: number, permanent = fals
     if (pick === 'own') return null;
     if (pick !== 'team') return false;
   }
-  return spendTeam(actor, p, permanent);
+  return spendTeam(actor, p, permanent, cardId);
 }
 
-// Karma dice in a roll dialog: the "from the team pool" tick is remembered for the roll that follows it.
-let teamDiceAt = 0;
-const TEAM_DICE_MS = 5 * 60_000;
-
-/** The tick under a roll dialog's Karma dice row (added when the dialog renders). */
-export function addTeamDiceTick(root: any): void {
-  teamDiceAt = 0;
-  const input = root?.querySelector?.('input[name="karmaDice"]');
-  if (!input || !C.teamBook()) return;
-  const left = C.teamLeft(teamNow());
-  if (left <= 0 || root.querySelector('input[name="teamKarma95"]')) return;
-  const label = document.createElement('label');
-  label.className = 'sr2e-check';
-  const box = document.createElement('input');
-  box.type = 'checkbox';
-  box.name = 'teamKarma95';
-  box.addEventListener('change', () => { teamDiceAt = box.checked ? Date.now() : 0; });
-  label.append(box, ` ${tx('SR2E.Core95.Team.diceTick', { left })}`);
-  (input.closest('.form-group') ?? input).after(label);
+/**
+ * A roll dialog's Karma dice row: the book's own row, or for a team member while the team pool has points, a row
+ * capped at their own and the team's points together (and the test's own dice in the book), with the "from the Team
+ * Karma Pool" tick (ticked when their own pool is empty).
+ */
+export function karmaDiceRow(actor: any, left: number, rated = true, baseDice = 0): string {
+  const team = teamKarmaLeft(actor);
+  if (team <= 0 || !rated) return CO923.karmaDiceRow(left, rated, baseDice);
+  const own = Math.max(0, Math.floor(Number(left) || 0));
+  const room = own + team;
+  const max = RULES.URR_V80.coreKarmaDice ? room : Math.min(room, CO923.karmaDiceCap(baseDice));
+  if (max <= 0) return '';
+  return `<div class="form-group"><label>${tx('SR2E.Core95.Team.diceRow', { own, team })}</label><input name="karmaDice" type="number" min="0" max="${max}" value="0"></div>
+    <label class="sr2e-check"><input type="checkbox" name="teamKarma95" ${own <= 0 ? 'checked' : ''}> ${tx('SR2E.Core95.Team.diceTick', { left: team })}</label>`;
 }
 
-/** Whether the roll now starting takes its Karma dice from the team pool (the tick, used once; members only). */
+// The tick is read when its own dialog's button is pressed: the roll that button starts takes it (once, soon after).
+let teamDice: { at: number } | null = null;
+const TEAM_DICE_MS = 60_000;
+
+/** A dialog was shown: its buttons record whether its own tick was on when one of them is pressed. */
+export function watchDialog(root: any): void {
+  const buttons = root?.querySelectorAll?.('button') ?? [];
+  for (const b of buttons) {
+    b.addEventListener?.('click', () => {
+      const box = (root && typeof root.querySelector === 'function' ? root.querySelector('input[name="teamKarma95"]') : null) as HTMLInputElement | null;
+      teamDice = box?.checked ? { at: Date.now() } : null;
+    }, { capture: true });
+  }
+}
+
+/** Whether the roll now starting takes Karma dice from the team pool (the tick of the dialog just pressed; once). */
 export function takeTeamDice(actor: any): boolean {
-  const at = teamDiceAt;
-  teamDiceAt = 0;
-  return at > 0 && Date.now() - at < TEAM_DICE_MS && teamKarmaLeft(actor) > 0;
+  const t = teamDice;
+  teamDice = null;
+  return Boolean(t) && Date.now() - t!.at < TEAM_DICE_MS && teamKarmaLeft(actor) > 0;
+}
+
+/** Test aid: what the next roll's dialog said. */
+export function setTeamDiceForTest(on: boolean): void { teamDice = on ? { at: Date.now() } : null; }
+
+/** Whether `cardId` is `user`'s own card of a test by `actor` (a success bought there may take team points for good). */
+function ownCardFor(cardId: unknown, user: any, actorId: string): boolean {
+  const msg: any = typeof cardId === 'string' && cardId ? G().messages?.get?.(cardId) : null;
+  if (!msg || cardAuthor(msg)?.id !== user?.id) return false;
+  const f: any = msg.flags?.[SYSTEM_ID] ?? {};
+  const uuids: string[] = [f.test?.actorUuid, ...((f.contest?.sides ?? []) as any[]).map((x: any) => x?.uuid)].filter((u: unknown): u is string => typeof u === 'string' && u.length > 0 && u.length < 400);
+  return uuids.some((u) => memberId((globalThis as any).fromUuidSync?.(u)) === actorId);
 }
 
 async function store(next: C.TeamPool, line: string): Promise<void> {
@@ -155,10 +196,13 @@ export async function teamRelay(data: Record<string, any>, user: any): Promise<{
   const ownLeft = Math.max(0, Math.floor(Number(actor?.system?.karma?.pool ?? 0) - Number(actor?.system?.karma?.poolSpent ?? 0)));
   if (op === 'spend') {
     if (!owns) return why('SR2E.Core95.Team.Why.notYours');
-    const n = int(data?.n, 1, 99);
-    const r = C.teamSpend(team, actorId, n, Boolean(data?.permanent));
+    // For good only on a bought success: the player's own card of this character's test (checked here, not trusted).
+    const permanent = Boolean(data?.permanent) && (gm || ownCardFor(data?.cardId, user, actorId));
+    if (Boolean(data?.permanent) && !permanent) return why('SR2E.Core95.Team.Why.notCard');
+    const n = int(data?.n, 1, permanent ? 3 : 99);
+    const r = C.teamSpend(team, actorId, n, permanent);
     if (!r.ok) return why(r.why);
-    await store(r.team, (data?.permanent ? tx('SR2E.Core95.Team.spentForGood', { who, name, n, left: C.teamLeft(r.team) }) : tx('SR2E.Core95.Team.spent', { who, name, n, left: C.teamLeft(r.team) })));
+    await store(r.team, (permanent ? tx('SR2E.Core95.Team.spentForGood', { who, name, n, left: C.teamLeft(r.team) }) : tx('SR2E.Core95.Team.spent', { who, name, n, left: C.teamLeft(r.team) })));
     return { ok: true };
   }
   if (op === 'give') {
@@ -203,7 +247,7 @@ export async function teamRelay(data: Record<string, any>, user: any): Promise<{
 /** The Karma Pools were refreshed for everyone (the GM): the team pool too. */
 export async function teamRefreshAll(): Promise<void> {
   if (!C.teamBook() || !isGm() || teamNow().spent <= 0) return;
-  await requestGm('teamKarma', { op: 'refresh' });
+  await gmRun('teamKarma', { op: 'refresh' });
 }
 
 /** The characters a user may act for in the Team Karma window: the members they own (a GM: all). */
@@ -216,28 +260,31 @@ export function teamWindowHtml(): string {
   const team = teamNow();
   const gm = isGm();
   const left = C.teamLeft(team);
-  const rows = team.members.map((id) => {
-    const a: any = G().actors?.get?.(id);
-    return `<li>${escHtml(String(a?.name ?? id))}${gm ? ` <button type="button" data-action="tk95" data-op="leave" data-actor-id="${escHtml(id)}">${tx('SR2E.Core95.Team.leaves')}</button>` : ''}</li>`;
-  }).join('');
+  const leaveButton = (id: string): string => (gm ? ` <button type="button" data-action="tk95" data-op="leave" data-actor-id="${escHtml(id)}">${tx('SR2E.Core95.Team.leaves')}</button>` : '');
+  const row = (id: string): string => `<li>${escHtml(String(G().actors?.get?.(id)?.name ?? id))}${leaveButton(id)}</li>`;
+  const rows = team.members.map(row).join('');
   const mine = myMembers(team);
   const outsiders = gm ? [...(G().actors ?? [])].filter((a: any) => a.type === 'character' && a.hasPlayerOwner && !team.members.includes(String(a.id))) : [];
-  const options = (list: any[]): string => list.map((a: any) => `<option value="${escHtml(String(a.id))}">${escHtml(String(a.name))}</option>`).join('');
-  return `<div class="sr2e-team-karma-body">
-    <div class="sr2e-team-karma-count" aria-live="polite"><b>${left}</b><span>${tx('SR2E.Core95.Team.count', { pool: team.pool })}</span></div>
-    ${rows ? `<ul class="sr2e-team-karma-members">${rows}</ul>` : `<p class="hint">${tx('SR2E.Core95.Team.noMembers')}</p>`}
-    ${mine.length ? `<div class="form-group"><label>${tx('SR2E.Core95.Team.as')}</label><select name="tk95-actor">${options(mine)}</select></div>
+  const option = (a: any): string => `<option value="${escHtml(String(a.id))}">${escHtml(String(a.name))}</option>`;
+  const options = (list: any[]): string => list.map(option).join('');
+  const list = rows ? `<ul class="sr2e-team-karma-members">${rows}</ul>` : `<p class="hint">${tx('SR2E.Core95.Team.noMembers')}</p>`;
+  const giving = `<div class="form-group"><label>${tx('SR2E.Core95.Team.as')}</label><select name="tk95-actor">${options(mine)}</select></div>
     <div class="sr2e-team-karma-buttons">
       <button type="button" data-action="tk95" data-op="give" title="${escHtml(tx('SR2E.Core95.Team.giveHint'))}">${tx('SR2E.Core95.Team.give')}</button>
-      <button type="button" data-action="tk95" data-op="spend" ${left > 0 ? '' : 'disabled'}>${tx('SR2E.Core95.Team.draw')}</button>
-    </div>` : ''}
-    ${gm ? `<hr><div class="form-group"><label>${tx('SR2E.Core95.Team.add')}</label><select name="tk95-join">${options(outsiders)}</select></div>
+    </div>`;
+  const joinOff = outsiders.length ? '' : 'disabled';
+  const refreshOff = team.spent > 0 ? '' : 'disabled';
+  const minusOff = team.pool > 0 ? '' : 'disabled';
+  const gmPart = `<hr><div class="form-group"><label>${tx('SR2E.Core95.Team.add')}</label><select name="tk95-join">${options(outsiders)}</select></div>
     <div class="sr2e-team-karma-buttons">
-      <button type="button" data-action="tk95" data-op="join" ${outsiders.length ? '' : 'disabled'} title="${escHtml(tx('SR2E.Core95.Team.joinHint', { n: Number(RULES.CORE_V95.teamKarmaJoin) || 0, start: Number(RULES.CORE_V95.teamKarmaStart) || 0 }))}">${tx('SR2E.Core95.Team.join')}</button>
-      <button type="button" data-action="tk95" data-op="refresh" ${team.spent > 0 ? '' : 'disabled'}>${tx('SR2E.Core95.Team.refresh')}</button>
-      <button type="button" data-action="tk95" data-op="minus" aria-label="${escHtml(tx('SR2E.App.TeamKarma.minus'))}" ${team.pool > 0 ? '' : 'disabled'}>−</button>
+      <button type="button" data-action="tk95" data-op="join" ${joinOff} title="${escHtml(tx('SR2E.Core95.Team.joinHint', { n: Number(RULES.CORE_V95.teamKarmaJoin) || 0, start: Number(RULES.CORE_V95.teamKarmaStart) || 0 }))}">${tx('SR2E.Core95.Team.join')}</button>
+      <button type="button" data-action="tk95" data-op="refresh" ${refreshOff}>${tx('SR2E.Core95.Team.refresh')}</button>
+      <button type="button" data-action="tk95" data-op="minus" aria-label="${escHtml(tx('SR2E.App.TeamKarma.minus'))}" ${minusOff}>−</button>
       <button type="button" data-action="tk95" data-op="plus" aria-label="${escHtml(tx('SR2E.App.TeamKarma.plus'))}">+</button>
-    </div>` : ''}
+    </div>`;
+  return `<div class="sr2e-team-karma-body">
+    <div class="sr2e-team-karma-count" aria-live="polite"><b>${left}</b><span>${tx('SR2E.Core95.Team.count', { pool: team.pool })}</span></div>
+    ${list}${mine.length ? giving : ''}${gm ? gmPart : ''}
     <p class="hint">${tx('SR2E.Core95.Team.agree')}</p>
   </div>`;
 }
@@ -250,10 +297,9 @@ export async function teamWindowAction(target: HTMLElement, root: HTMLElement | 
   teamBusy = true;
   try {
     const op = String(target?.dataset?.['op'] ?? '');
-    const picked = (name: string): string => String((root?.querySelector?.(`select[name="${name}"]`) as HTMLSelectElement | null)?.value ?? '');
+    const picked = (name: string): string => String(((root ? root.querySelector(`select[name="${name}"]`) : null) as HTMLSelectElement | null)?.value ?? '');
     let data: Record<string, unknown> | null = null;
-    if (op === 'spend') data = { op, actorId: picked('tk95-actor'), n: 1 };
-    else if (op === 'give') {
+    if (op === 'give') {
       const a: any = G().actors?.get?.(picked('tk95-actor'));
       const ok = a && await dialogs()?.confirm?.({ window: { title: tx('SR2E.Core95.Team.give') }, content: `<p>${tx('SR2E.Core95.Team.giveAsk', { name: escHtml(String(a.name)), own: Math.max(0, Math.floor(Number(a.system?.derived?.karmaPoolLeft ?? 0))) })}</p>`, rejectClose: false });
       if (ok) data = { op, actorId: String(a.id), n: 1 };
@@ -279,7 +325,7 @@ export async function teamWindowAction(target: HTMLElement, root: HTMLElement | 
       if (mode === 'half' || mode === 'share' || mode === 'died') data = { op, actorId: id, mode };
     }
     if (!data) return;
-    const res = await requestGm('teamKarma', data);
+    const res = await gmRun('teamKarma', data);
     if (!res.ok && res.note) warn(escHtml(res.note));
   } finally { teamBusy = false; }
 }
@@ -287,7 +333,6 @@ export async function teamWindowAction(target: HTMLElement, root: HTMLElement | 
 // ================================================================ Racism and Charisma
 
 export const RACISM_FLAG = 'racism95';
-const OFFSET_FLAG = 'racismOffset95';
 
 export const racismOfActor = (npc: any): C.Racism | null => C.racismOf(npc?.getFlag?.(SYSTEM_ID, RACISM_FLAG) ?? npc?.flags?.[SYSTEM_ID]?.[RACISM_FLAG]);
 
@@ -320,19 +365,24 @@ export async function clearRacism(npc: any): Promise<void> {
   await replaceFlag(npc, RACISM_FLAG, { points: 0, all: false, against: [], own: String(npc.system?.metatype ?? 'human').toLowerCase(), at: 0 });
 }
 
+/** Where the GM keeps the Charisma tests' results: on the NPC (players can't write it), by the speaker's id. */
+const OFFSETS_FLAG = 'racismOffsets95';
+const speakerKey = (speaker: any): string => String(memberId(speaker) || speaker?.id || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64);
 const offsetOf = (speaker: any, npc: any, r: C.Racism): number | null => {
-  const o: any = speaker?.getFlag?.(SYSTEM_ID, OFFSET_FLAG)?.[String(npc?.id ?? '')];
+  const o: any = (npc?.getFlag?.(SYSTEM_ID, OFFSETS_FLAG) ?? npc?.flags?.[SYSTEM_ID]?.[OFFSETS_FLAG])?.[speakerKey(speaker)];
   return o && Number(o.at) === r.at ? Math.max(0, Math.floor(Number(o.n) || 0)) : null;
 };
 
 /**
  * The social test's racism row for `speaker` talking to `npc`: null when the book's rule does not apply here (the
- * metatype table stands in), else the modifier (or none: `{ mod: null }`).
+ * metatype table stands in), else the modifier (or none: `{ mod: null }`). `preview`: a player's dialog preview,
+ * which never shows it (the points are known only to the GM, Core p. 182); the GM's preview does.
  */
-export function racismFor(speaker: any, npc: any): { mod: TargetNumberModifier | null } | null {
+export function racismFor(speaker: any, npc: any, preview = false): { mod: TargetNumberModifier | null } | null {
   if (!C.racismBook()) return null;
   const r = racismOfActor(npc);
   if (!r || !r.at) return null;
+  if (preview && !isGm()) return { mod: null };
   const points = C.racismVs(r, speaker?.system?.metatype);
   const left = C.racismAfter(points, offsetOf(speaker, npc, r) ?? 0);
   return { mod: left > 0 ? { id: 'prejudice', label: tx('SR2E.Core95.Racism.mod', { name: String(npc?.name ?? '') }), value: left } : null };
@@ -340,23 +390,45 @@ export function racismFor(speaker: any, npc: any): { mod: TargetNumberModifier |
 
 /**
  * Before a social test: the speaker's secret Charisma test against twice the NPC's racism, once per NPC (each success
- * takes a point off). Not rolled when the speaker has no such skill (they default to Charisma). The card goes to the
- * GM only; the speaker keeps the result (flag `racismOffset95`).
+ * takes a point off). Rolled on the GM's client (the relay), the result kept on the NPC, the card to the GM only. Not
+ * rolled when the speaker has no rating in the social skill (they default to Charisma).
  */
-export async function racismCharisma(speaker: any, npc: any, hasSkill: boolean): Promise<void> {
-  if (!C.racismBook() || !speaker || !npc || !hasSkill) return;
+export async function racismCharisma(speaker: any, npc: any, skillName: string): Promise<void> {
+  if (!C.racismBook() || !speaker || !npc) return;
   const r = racismOfActor(npc);
-  if (!r || !r.at) return;
+  if (!r || !r.at || C.racismVs(r, speaker.system?.metatype) <= 0 || offsetOf(speaker, npc, r) !== null) return;
+  await gmRun('core95', { op: 'racism', speakerUuid: String(speaker.uuid ?? ''), npcUuid: String(npc.uuid ?? ''), skillName: String(skillName ?? '').slice(0, 80) });
+}
+
+/** The GM's side of the Charisma test (as `user`, the socket's sender). */
+async function racismCharismaGm(data: Record<string, any>, user: any): Promise<{ ok: boolean; note?: string }> {
+  const find = (u: unknown): any => (typeof u === 'string' && u.length < 400 ? (globalThis as any).fromUuidSync?.(u) : null);
+  const speaker = find(data?.speakerUuid), npc = find(data?.npcUuid);
+  if (!speaker || !npc || !C.racismBook()) return { ok: false };
+  if (!user?.isGM && !speaker.testUserPermission?.(user, 'OWNER')) return why('SR2E.Core95.Team.Why.notYours');
+  const r = racismOfActor(npc);
+  if (!r || !r.at) return { ok: true };
   const points = C.racismVs(r, speaker.system?.metatype);
-  if (points <= 0 || offsetOf(speaker, npc, r) !== null || !speaker.isOwner) return;
+  if (points <= 0 || offsetOf(speaker, npc, r) !== null) return { ok: true };
+  const skill: any = typeof speaker.findSkill === 'function' ? speaker.findSkill(String(data?.skillName ?? '')) : null;
+  if (!(Number(skill?.system?.rating ?? 0) > 0)) return { ok: true };
   const rolls: any[] = [];
   const dice = Math.max(0, Math.floor(Number(speaker.system?.attributes?.charisma?.total ?? 0)));
   const tn = C.racismCharismaTn(points);
   const res = await successTest({ dice, targetNumber: tn, modifiers: [], roll: roller(rolls) });
   const n = Math.min(points, Math.max(0, Number(res.successes) || 0));
-  await speaker.update({ [`flags.${SYSTEM_ID}.${OFFSET_FLAG}.${String(npc.id)}`]: { n, at: r.at } });
+  await npc.update({ [`flags.${SYSTEM_ID}.${OFFSETS_FLAG}.${speakerKey(speaker)}`]: { n, at: r.at } });
   await post(`<p><em>${tx('SR2E.Core95.gmOnly')}</em> · ${tx('SR2E.Core95.Racism.charisma', { speaker: escHtml(String(speaker.name)), npc: escHtml(String(npc.name)), dice, tn, rolled: escHtml(diceText(res)), n, left: C.racismAfter(points, n) })}</p>`,
-    { whisper: gmIds(), blind: true, rolls });
+    { whisper: gmIds(), rolls });
+  return { ok: true };
+}
+
+/** The 'core95' relay: the Charisma test against racism, and the GM's card after legwork. */
+export async function core95Relay(data: Record<string, any>, user: any): Promise<{ ok: boolean; note?: string }> {
+  const op = String(data?.op ?? '');
+  if (op === 'racism') return racismCharismaGm(data, user);
+  if (op === 'legwork') return afterLegworkGm(data, user);
+  return { ok: false };
 }
 
 // ================================================================ Training
@@ -427,7 +499,7 @@ export async function testExtras(actor: any, c95: any, successes: number, canWri
  * An instructor's test with the book's rule: one success more for the student per two of the instructor's. Null when
  * the rule is off (the caller's own result stands), else the card's line; the student's training is re-timed here.
  */
-export async function instruction(student: any, ins: { trainingId: string; instructorName: string; instructorRating: number; newRating: number; attribute?: boolean }, successes: number, canWrite: boolean, instruction?: number): Promise<{ html: string; days: number } | null> {
+export async function instruction(student: any, ins: { trainingId: string; instructorName: string; instructorRating: number; newRating: number; attribute?: boolean; readyAt?: number }, successes: number, canWrite: boolean, instruction?: number): Promise<{ html: string; days: number; readyAt?: number } | null> {
   if (!C.trainingBook()) return null;
   const id = String(ins.trainingId ?? '').slice(0, 64);
   const usable = Boolean(ins.attribute) || Number(ins.instructorRating) >= Number(ins.newRating);
@@ -437,9 +509,15 @@ export async function instruction(student: any, ins: { trainingId: string; instr
   if (!usable) return { html: `<p><em>${tx('SR2E.Core95.Training.unqualified', { who, rating: int(ins.instructorRating, 0, 99), need: int(ins.newRating, 0, 99) })}</em></p>`, days: Number(e.days) || 0 };
   if (!canWrite) return { html: `<p><em>${tx('SR2E.Core95.Training.notYours')}</em></p>`, days: Number(e.days) || 0 };
   const help = C.instructorHelp(int(successes, 0, 99));
-  const days = (await retime(student, id, { self: trainingMark(student, id).self, help })) ?? 0;
+  // As v0.94.2: this card's earlier result (readyAt) must still be the training's, or something newer changed it.
+  const mark = trainingMark(student, id);
+  const want = Number(e.startedAt ?? 0) + C.trainingDays95({ baseDays: Number(e.baseDays || e.days || 0), self: mark.self, help }) * 86400;
+  if (ins.readyAt !== undefined && Number(e.readyAt) !== Number(ins.readyAt) && Number(e.readyAt) !== want) {
+    return { html: `<p><em>${tx('SR2E.Card.Actor.theTrainingChangedSinceThisWas')}</em></p>`, days: Number(e.days) || 0, readyAt: Number(ins.readyAt) };
+  }
+  const days = (await retime(student, id, { self: mark.self, help })) ?? 0;
   const fee = instruction ? tx('SR2E.Core95.Training.fee', { fee: C.instructorFee(int(instruction, 0, 99)) }) : '';
-  return { html: `<p>${(help > 0 ? tx('SR2E.Core95.Training.helped', { who, help, days }) : tx('SR2E.Core95.Training.noHelp', { who, help, days }))}${fee}</p>`, days };
+  return { html: `<p>${(help > 0 ? tx('SR2E.Core95.Training.helped', { who, help, days }) : tx('SR2E.Core95.Training.noHelp', { who, help, days }))}${fee}</p>`, days, readyAt: want };
 }
 
 // ================================================================ Jumping and the water tests
@@ -469,7 +547,7 @@ export function readAthletics(form: any): Athletics95 {
   return {
     metres: Math.max(0, Math.min(1000, Number(e.jump95?.value) || 0)), vertical: Boolean(e.vertical95?.checked),
     water: water === 'tread' || water === 'float' ? water : 'swim',
-    tread: [...(form?.querySelectorAll?.('input[name="tread95"]:checked') ?? [])].map((x: any) => String(x.value)),
+    tread: [...(form && typeof form.querySelectorAll === 'function' ? form.querySelectorAll('input[name="tread95"]:checked') : [])].map((x: any) => String(x.value)),
   };
 }
 
@@ -534,89 +612,120 @@ export async function lifestyleTick(a: any): Promise<boolean> {
   const order = RULES.UPKEEP.lifestyles.map((l) => l.id);
   if (!st || st.permanent || st.days == null || st.days >= 0 || level === order[0]) return true;
   const key = Number(a.system?.lifestyle?.paidUntil ?? -1);
-  const mark = C.missedMarkOf(a.getFlag?.(SYSTEM_ID, MISSED_FLAG), key);
+  const mark = C.missedMarkOf(a.getFlag?.(SYSTEM_ID, MISSED_FLAG), key, level);
   const here = C.monthsMissed(-Number(st.days), Number(RULES.UPKEEP.monthDays));
   if (here <= mark.rolled) return true;
-  const months = mark.carried + here;
-  try { await a.setFlag(SYSTEM_ID, MISSED_FLAG, { key, rolled: here, carried: mark.carried }); } catch { return true; }
-  const rolls: any[] = [];
-  const die = (await d6(1, rolls))[0] ?? 1;
+  // Claimed first (one roll per month, however many GM windows tick), then one 1D6 for each month not rolled yet.
+  try { await a.setFlag(SYSTEM_ID, MISSED_FLAG, { key, level, rolled: here, carried: mark.carried }); } catch { return true; }
   const name = escHtml(String(a.name));
   const speaker = (globalThis as any).ChatMessage.getSpeaker({ actor: a });
-  if (C.missedAbsorbed(die, months)) {
-    await post(`<p>${tx('SR2E.Core95.Lifestyle.absorbed', { name, label: escHtml(String(st.label)), months, die })}</p>`, { speaker, rolls });
-    return true;
-  }
-  const debt = Math.max(0, Math.floor(Number(st.cost) || 0));
-  const auto = RULES.UPKEEP.effects.overdue === 'auto';
-  const owed = Math.max(0, Math.floor(Number(a.getFlag?.(SYSTEM_ID, DEBT_FLAG) ?? 0))) + debt;
-  await a.setFlag(SYSTEM_ID, DEBT_FLAG, owed);
-  const text = `<p>${tx('SR2E.Core95.Lifestyle.dropped', { name, label: escHtml(String(st.label)), months, die, debt })}</p><p><button type="button" data-sr2e-action="c95PayDebt">${tx('SR2E.Core95.Lifestyle.payDebt', { debt })}</button></p>`;
-  if (auto) {
-    await post(text, { speaker, rolls, flags: { [SYSTEM_ID]: { c95Debt: { actorUuid: a.uuid, amount: debt } } } });
-    await a.moveLifestyleDown(tx('SR2E.Core95.Lifestyle.reason', { months }));
-    await a.setFlag(SYSTEM_ID, MISSED_FLAG, { key: Number(a.system?.lifestyle?.paidUntil ?? -1), rolled: 1, carried: Math.max(0, months - 1) });
-  } else {
-    const down = order[Math.max(0, order.indexOf(level) - 1)] ?? level;
-    const label = escHtml(String(RULES.UPKEEP.lifestyles.find((l) => l.id === down)?.label ?? down));
-    await post(`${text}<p><em>${tx('SR2E.Core95.gmOnly')}</em> <button type="button" data-sr2e-action="evict">${tx('SR2E.Core95.Lifestyle.moveDown', { label })}</button></p>`,
-      { speaker, rolls, whisper: [...new Set([...gmIds(), ...[...(G().users ?? [])].filter((u: any) => !u.isGM && a.testUserPermission?.(u, 'OWNER')).map((u: any) => String(u.id))])], flags: { [SYSTEM_ID]: { evict: { actorUuid: a.uuid, from: level }, c95Debt: { actorUuid: a.uuid, amount: debt } } } });
+  for (let m = mark.rolled + 1; m <= here; m++) {
+    const months = mark.carried + m;
+    const rolls: any[] = [];
+    const die = (await d6(1, rolls))[0] ?? 1;
+    if (C.missedAbsorbed(die, months)) {
+      await post(`<p>${tx('SR2E.Core95.Lifestyle.absorbed', { name, label: escHtml(String(st.label)), months, die })}</p>`, { speaker, rolls });
+      continue;
+    }
+    // Dropped: the months so far are kept for the lower level (missedMarkOf carries them on there).
+    await a.setFlag(SYSTEM_ID, MISSED_FLAG, { key, level, rolled: m, carried: mark.carried });
+    const debt = Math.max(0, Math.floor(Number(st.cost) || 0));
+    const owed = Math.max(0, Math.floor(Number(a.getFlag?.(SYSTEM_ID, DEBT_FLAG) ?? 0))) + debt;
+    await a.setFlag(SYSTEM_ID, DEBT_FLAG, owed);
+    const text = `<p>${tx('SR2E.Core95.Lifestyle.dropped', { name, label: escHtml(String(st.label)), months, die, debt })}</p><p><button type="button" data-sr2e-action="c95PayDebt">${tx('SR2E.Core95.Lifestyle.payDebt', { debt })}</button></p>`;
+    if (RULES.UPKEEP.effects.overdue === 'auto') {
+      await post(text, { speaker, rolls, flags: { [SYSTEM_ID]: { c95Debt: { actorUuid: a.uuid, amount: debt } } } });
+      await a.moveLifestyleDown(tx('SR2E.Core95.Lifestyle.reason', { months }));
+    } else {
+      const down = order[Math.max(0, order.indexOf(level) - 1)] ?? level;
+      const label = escHtml(String(RULES.UPKEEP.lifestyles.find((l) => l.id === down)?.label ?? down));
+      await post(`${text}<p><em>${tx('SR2E.Core95.gmOnly')}</em> <button type="button" data-sr2e-action="evict">${tx('SR2E.Core95.Lifestyle.moveDown', { label })}</button></p>`,
+        { speaker, rolls, whisper: [...new Set([...gmIds(), ...[...(G().users ?? [])].filter((u: any) => !u.isGM && a.testUserPermission?.(u, 'OWNER')).map((u: any) => String(u.id))])], flags: { [SYSTEM_ID]: { evict: { actorUuid: a.uuid, from: level }, c95Debt: { actorUuid: a.uuid, amount: debt } } } });
+    }
+    break;
   }
   return true;
 }
 
+let selling = false;
+
 /**
  * Selling a lifestyle owned outright (Core p. 190). True when this handled the Pay button (sold, or the dialog was
- * closed); false when it can't be sold here (the caller says "owned outright" as before).
+ * closed); false when it can't be sold here (the caller says "owned outright" as before). The character moves to a
+ * lower lifestyle the player picks (Street by default), from now. One sale at a time, checked again after the dialog.
  */
 export async function sellLifestyle(actor: any): Promise<boolean> {
   const level = String(actor?.system?.lifestyle?.level ?? '');
   const order = RULES.UPKEEP.lifestyles.map((l) => l.id);
   if (!actor?.system?.lifestyle?.outright || !C.canSellLifestyle(level, order)) return false;
-  const life: any = RULES.UPKEEP.lifestyles.find((l) => l.id === level);
-  const price = Math.max(0, Number(life?.cost) || 0) * Math.max(0, Number(RULES.STREET_V61.creation.lifestyleOutright.months) || 0);
-  const label = escHtml(String(life?.label ?? level));
-  const pick = await dialogs()?.wait?.({
-    window: { title: tx('SR2E.Core95.Lifestyle.sellTitle') },
-    content: `<p>${tx('SR2E.Core95.Lifestyle.sellAsk', { name: escHtml(String(actor.name)), label, price: escHtml(price.toLocaleString()) })}</p><p class="hint">${tx('SR2E.Core95.Lifestyle.sellHint')}</p>`,
-    buttons: [
-      { action: 'two', label: tx('SR2E.Core95.Lifestyle.sellTwo') },
-      { action: 'one', label: tx('SR2E.Core95.Lifestyle.sellOne') },
-      { action: 'cancel', label: tx('SR2E.Core95.cancel'), default: true },
-    ],
-    rejectClose: false,
-  });
-  if (pick !== 'two' && pick !== 'one') return true;
-  const rolls: any[] = [];
-  const dice = await d6(pick === 'two' ? 2 : 1, rolls);
-  const total = dice.reduce((x, y) => x + y, 0);
-  const paid = C.lifestyleSale(price, total);
-  await actor.update({ 'system.lifestyle.outright': false, 'system.lifestyle.paidUntil': now() });
-  if (paid > 0) await actor.adjustNuyen(paid, tx('SR2E.Core95.Lifestyle.soldLedger', { label: String(life?.label ?? level) }));
-  await post(`<p>${tx('SR2E.Core95.Lifestyle.sold', { name: escHtml(String(actor.name)), label, total, percent: total * 10, paid: escHtml(paid.toLocaleString()) })}</p>`, { speaker: (globalThis as any).ChatMessage.getSpeaker({ actor }), rolls });
-  return true;
+  if (selling) return true;
+  selling = true;
+  try {
+    const life: any = RULES.UPKEEP.lifestyles.find((l) => l.id === level);
+    const price = Math.max(0, Number(life?.cost) || 0) * Math.max(0, Number(RULES.STREET_V61.creation.lifestyleOutright.months) || 0);
+    const label = escHtml(String(life?.label ?? level));
+    const lower = RULES.UPKEEP.lifestyles.slice(0, Math.max(0, order.indexOf(level)));
+    const options = lower.map((l, i) => `<option value="${escHtml(l.id)}" ${i === 0 ? 'selected' : ''}>${escHtml(l.label)}</option>`).join('');
+    const pick = await dialogs()?.wait?.({
+      window: { title: tx('SR2E.Core95.Lifestyle.sellTitle') },
+      content: `<p>${tx('SR2E.Core95.Lifestyle.sellAsk', { name: escHtml(String(actor.name)), label, price: escHtml(price.toLocaleString()) })}</p><p class="hint">${tx('SR2E.Core95.Lifestyle.sellHint')}</p>
+        <div class="form-group"><label>${tx('SR2E.Core95.Lifestyle.moveTo')}</label><select name="to">${options}</select></div>`,
+      buttons: [
+        { action: 'two', label: tx('SR2E.Core95.Lifestyle.sellTwo'), callback: (_e: Event, b: any) => ({ dice: 2, to: String(b.form?.elements?.to?.value ?? '') }) },
+        { action: 'one', label: tx('SR2E.Core95.Lifestyle.sellOne'), callback: (_e: Event, b: any) => ({ dice: 1, to: String(b.form?.elements?.to?.value ?? '') }) },
+        { action: 'cancel', label: tx('SR2E.Core95.cancel'), default: true, callback: () => null },
+      ],
+      rejectClose: false,
+    }) as { dice: number; to: string } | null;
+    if (!pick || (pick.dice !== 1 && pick.dice !== 2)) return true;
+    // Checked again: still owned outright at the same level (another window may have sold it meanwhile).
+    if (!actor.system?.lifestyle?.outright || String(actor.system?.lifestyle?.level ?? '') !== level) return true;
+    const to = lower.some((l) => l.id === pick.to) ? pick.to : (lower[0]?.id ?? level);
+    const rolls: any[] = [];
+    const dice = await d6(pick.dice, rolls);
+    const total = dice.reduce((x, y) => x + y, 0);
+    const paid = C.lifestyleSale(price, total);
+    await actor.update({ 'system.lifestyle.outright': false, 'system.lifestyle.level': to, 'system.lifestyle.paidUntil': now() });
+    if (paid > 0) await actor.adjustNuyen(paid, tx('SR2E.Core95.Lifestyle.soldLedger', { label: String(life?.label ?? level) }));
+    const toLabel = escHtml(String(RULES.UPKEEP.lifestyles.find((l) => l.id === to)?.label ?? to));
+    await post(`<p>${tx('SR2E.Core95.Lifestyle.sold', { name: escHtml(String(actor.name)), label, total, percent: total * 10, paid: escHtml(paid.toLocaleString()), to: toLabel })}</p>`, { speaker: (globalThis as any).ChatMessage.getSpeaker({ actor }), rolls });
+    return true;
+  } finally { selling = false; }
 }
 
 // ================================================================ Contacts
 
 const UPKEEP_FLAG = 'contactUpkeep95';
 const PAID_FLAG = 'paid95';
+const PAID_KEEP = 50;
+const DONE_FLAG = 'c95Done';
 
 /**
- * After legwork (Core p. 200): a card for the GM alone with the secret base time to arrange the meet and buttons to
- * set the meet and work out the contact's fee. Posted by the asking player's client, hidden from them (`blind`).
+ * After legwork (Core p. 200): a card for the GM alone, with buttons to set the meet (its secret base time is rolled
+ * then) and to work out the contact's fee. Posted by the GM's client (the relay), so the asking player never sees it.
  */
 export async function afterLegwork(actor: any, contact: any, successes: number): Promise<void> {
+  if ((!C.meetBook() && !C.feeBook()) || !actor || !contact) return;
+  await gmRun('core95', { op: 'legwork', actorUuid: String(actor.uuid ?? ''), contactId: String(contact.id ?? '').slice(0, 64), successes: int(successes, 0, 99) });
+}
+
+/** The GM's side of the legwork card (as `user`, the socket's sender: they must own the character). */
+async function afterLegworkGm(data: Record<string, any>, user: any): Promise<{ ok: boolean; note?: string }> {
   const meet = C.meetBook(), fee = C.feeBook();
-  if ((!meet && !fee) || !actor || !contact) return;
-  const s = int(successes, 0, 99);
+  const actor: any = typeof data?.actorUuid === 'string' && data.actorUuid.length < 400 ? (globalThis as any).fromUuidSync?.(data.actorUuid) : null;
+  if ((!meet && !fee) || !actor) return { ok: false };
+  if (!user?.isGM && !actor.testUserPermission?.(user, 'OWNER')) return why('SR2E.Core95.Team.Why.notYours');
+  const contact: any = [...(actor.system?.contacts ?? [])].find((c: any) => c.id === String(data?.contactId ?? ''));
+  if (!contact) return { ok: false };
+  const s = int(data?.successes, 0, 99);
   const name = escHtml(String(contact.name ?? ''));
   const buttons = [
     meet ? `<button type="button" data-sr2e-action="c95Meet">${tx('SR2E.Core95.Contact.meetButton')}</button>` : '',
     fee && s > 0 ? `<button type="button" data-sr2e-action="c95Fee">${tx('SR2E.Core95.Contact.feeButton')}</button>` : '',
   ].join(' ');
   await post(`<p><em>${tx('SR2E.Core95.gmOnly')}</em> · ${tx('SR2E.Core95.Contact.after', { actor: escHtml(String(actor.name)), name, s })}</p><p>${buttons}</p>`,
-    { whisper: gmIds(), blind: true, flags: { [SYSTEM_ID]: { c95Contact: { actorUuid: String(actor.uuid), contactId: String(contact.id ?? ''), name: String(contact.name ?? '').slice(0, 120), successes: s } } } });
+    { whisper: gmIds(), flags: { [SYSTEM_ID]: { c95Contact: { actorUuid: String(actor.uuid), contactId: String(contact.id ?? ''), name: String(contact.name ?? '').slice(0, 120), successes: s } } } });
+  return { ok: true };
 }
 
 /** The GM's tick with contact upkeep on (Companion p. 62): a card for each contact whose year is up. */
@@ -646,7 +755,9 @@ async function payOnce(message: any, actor: any, amount: number, reason: string)
   if (!id || actor.getFlag?.(SYSTEM_ID, PAID_FLAG)?.[id]) { warn(tx('SR2E.Core95.alreadyPaid')); return false; }
   const n = int(amount, 0, 100_000_000);
   if (n > 0 && !(await actor.adjustNuyen(-n, reason))) return false;
-  await actor.update({ [`flags.${SYSTEM_ID}.${PAID_FLAG}.${id}`]: now() || 1 });
+  // Kept per card, the newest PAID_KEEP only (an older card paid again only costs its payer).
+  const paid: Record<string, unknown> = { ...(actor.getFlag?.(SYSTEM_ID, PAID_FLAG) ?? {}), [id]: Date.now() };
+  await replaceFlag(actor, PAID_FLAG, C.keepNewest(paid, PAID_KEEP));
   await post(`<p>${tx('SR2E.Core95.paid', { name: escHtml(String(actor.name)), n, reason: escHtml(reason) })}</p>`, { speaker: (globalThis as any).ChatMessage.getSpeaker({ actor }) });
   return true;
 }
@@ -681,11 +792,13 @@ export async function onCard(message: any, button: HTMLButtonElement, action: st
   if (action === 'c95LowerContact') {
     const d = flags.c95Upkeep;
     if (!authorIsGm(message)) return;
+    if (message.getFlag?.(SYSTEM_ID, DONE_FLAG)) { warn(tx('SR2E.Core95.alreadyDone')); return; }
     const actor = await actorOf(d?.actorUuid);
     const list: any[] = [...(actor?.system?.contacts ?? [])].map((x: any) => ({ ...x }));
     const c = list.find((x: any) => x.id === String(d?.contactId ?? ''));
     if (!actor || !c) return;
     button.disabled = true;
+    await message.setFlag?.(SYSTEM_ID, DONE_FLAG, true);
     const lowered = Number(c.level) > 1;
     if (lowered) c.level = Number(c.level) - 1;
     await actor.update({ 'system.contacts': lowered ? list : list.filter((x: any) => x !== c) });
@@ -787,5 +900,6 @@ export function registerCore95(): void {
   const s: any = G().settings;
   const rerender = (): void => { const open = (globalThis as any).foundry?.applications?.instances?.get?.('sr2e-team-karma'); if (open?.rendered) void open.render(); };
   s.register(SYSTEM_ID, TEAM_POOL, { scope: 'world', config: false, type: Object, default: { members: [], pool: 0, spent: 0 }, onChange: rerender });
-  (globalThis as any).Hooks?.on?.('renderDialogV2', (app: any, el: any) => { try { addTeamDiceTick(el ?? app?.element); } catch { /* a dialog without the row */ } });
+  (globalThis as any).Hooks?.on?.('renderDialogV2', (app: any, el: any) => { try { watchDialog(el ?? app?.element); } catch { /* not a dialog we know */ } });
+  onRelay('core95', core95Relay);
 }
