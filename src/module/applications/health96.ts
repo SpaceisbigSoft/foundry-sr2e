@@ -11,13 +11,14 @@ import { SYSTEM_ID } from '../config/system.ts';
 import { RULES } from '../rules/config.ts';
 import { escHtml } from '../rules/html.ts';
 import { t as tx } from '../helpers/i18n.ts';
-import { clearFlag, replaceFlag } from '../helpers/flags.ts';
+import { clearFlag, replaceFlag, dropFlagKeys } from '../helpers/flags.ts';
 import { sysNow } from '../helpers/clock.ts';
 import { successTest } from '../rules/dice.ts';
 import { careCost } from '../rules/hazards.ts';
 import { homeCareLifestyle } from '../rules/remnants.ts';
 import { describeSpan } from '../rules/gmtools.ts';
-import { doseIntervalHours } from '../rules/health923.ts';
+import { doseIntervalHours, magicLossUntreatedTests } from '../rules/health923.ts';
+import { recoveringItemIds } from '../rules/implants.ts';
 import { authorIsGm, gmMay } from './trust.ts';
 import * as H from '../rules/health96.ts';
 
@@ -95,6 +96,19 @@ export function restCost(actor: any, o: { care: string; hours: number; track: st
   return H.extendedCareDiscount(tier) > 0 ? H.discounted(careCost(o.care, o.hours), tier) : null;
 }
 
+/** A day of this care for the actor's Physical wound, as the Rest dialog shows it (the discount taken off); null = off. */
+export function careDay(actor: any, care: string): number | null {
+  const d = H.careDayCost(care, Number(actor?.system?.monitor?.physical ?? 0));
+  return d == null ? null : H.discounted(d, docwagonTierOf(actor));
+}
+
+/** Whether a working implant of this bioware kind is in (as the derived data reads bioware: not still healing in). */
+export function bioOn(actor: any, kind: string): boolean {
+  let healing: string[] = [];
+  try { healing = recoveringItemIds(actor?.system?.recovering ?? [], sysNow()); } catch { healing = []; }
+  return H.hasBio(actor?.items ?? [], kind, healing);
+}
+
 /** First aid by an NPC (a paramedic) on a player's character: the fee card with a Pay button (Medical Costs Table). */
 export async function paramedicFee(healer: any, patient: any, before: number): Promise<void> {
   if (!H.medicalCostsOn() || healer?.type !== 'npc' || !patient?.hasPlayerOwner || healer === patient) return;
@@ -109,9 +123,9 @@ export async function paramedicFee(healer: any, patient: any, before: number): P
 /** After a patch's effect: the antidote's GM button on a dying patient, the stim patch's Magic test. Returns card text. */
 export async function patchAfter(target: any, kind: string, rating: number, sourceUuid = ''): Promise<string> {
   if (kind === 'antidote' && H.antidoteAttentionDue(String(target?.system?.derived?.status ?? ''), Boolean(target?.system?.care?.stabilised))) {
-    await post(`<p><em>${tx('SR2E.Health96.gmOnly')}</em> ${tx('SR2E.Health96.Patch.antidoteAsk', { name: escHtml(String(target.name ?? '')) })}</p><p><button type="button" data-sr2e-action="h96Stabilise">${tx('SR2E.Health96.Patch.stabilise')}</button></p>`,
+    await post(`<p><em>${tx('SR2E.Health96.gmOnly')}</em> ${tx('SR2E.Health96.Patch.antidoteProfessional', { name: escHtml(String(target.name ?? '')) })}</p><p><button type="button" data-sr2e-action="h96Professional">${tx('SR2E.Health96.Patch.professional')}</button></p>`,
       { whisper: gmIds(), flags: { [SYSTEM_ID]: { h96Antidote: { targetUuid: String(target.uuid), sourceUuid: String(sourceUuid ?? '') } } } });
-    return ` ${tx('SR2E.Health96.Patch.antidoteNote')}`;
+    return ` ${tx('SR2E.Health96.Patch.antidoteProfessionalNote')}`;
   }
   if (kind !== 'stim' || !(Number(target?.system?.magic ?? 0) > 0) || target?.type === 'spirit') return '';
   const test = H.stimMagicTest(rating, stimHistory(target), sysNow());
@@ -122,13 +136,15 @@ export async function patchAfter(target: any, kind: string, rating: number, sour
   const r = await successTest({ dice: magic, targetNumber: test.tn, modifiers: [], roll: roller(rolls) });
   const ok = r.successes > 0;
   const lossDue = !ok && Boolean(RULES.MAGIC_LOSS.enabled);
-  const lossButton = lossDue ? magicLossButton() : '';
+  // As a Deadly wound: twice under RULES.HEALTH_V923.magicLossUntreated 'test' (Core p. 115).
+  const lossButton = lossDue ? magicLossButtons() : '';
   await post(`<p><strong>${escHtml(String(target.name ?? ''))}</strong> ${ok ? tx('SR2E.Health96.Patch.stimMagicOk', { magic, tn: Number(r.targetNumber) || test.tn, successes: r.successes }) : tx('SR2E.Health96.Patch.stimMagicFail', { magic, tn: Number(r.targetNumber) || test.tn })}</p>${lossButton}`,
     { speaker: speaker(target), rolls, ...(lossDue ? { flags: { [SYSTEM_ID]: { magicLossFor: String(target.uuid) } } } : {}) });
   return '';
 }
 
-const magicLossButton = (): string => `<p><button type="button" data-sr2e-action="magicLoss">${tx('SR2E.Health96.Patch.magicLoss')}</button></p>`;
+/** The Magic loss buttons for a Deadly wound: twice under RULES.HEALTH_V923.magicLossUntreated 'test' (Core p. 115). */
+const magicLossButtons = (): string => [...Array(Math.max(1, Math.min(4, magicLossUntreatedTests(true))))].map(() => `<p><button type="button" data-sr2e-action="magicLoss">${tx('SR2E.Health96.Patch.magicLoss')}</button></p>`).join('');
 
 /** The stored stim history (the flag holds `{ list }`). */
 export const stimHistory = (actor: any): unknown => (actor?.getFlag?.(SYSTEM_ID, STIM_FLAG) as any)?.list;
@@ -150,25 +166,34 @@ export async function neuroStun(actor: any, name: string): Promise<boolean> {
 // ================================================================ DocWagon (Neo-Anarchist's Guide p. 95)
 
 /** The response: 1D6 for the unit, 3D6 minutes (−2 by air), at least 4. Null when off (the contract's minutes). */
-export async function docwagonResponse(): Promise<{ seconds: number; note: string; rolls: any[] } | null> {
+export async function docwagonResponse(htr = false): Promise<{ seconds: number; note: string; rolls: any[] } | null> {
   if (!H.docwagonResponseOn()) return null;
   const rolls: any[] = [];
   const unit = await roller(rolls)(1);
-  const air = H.docwagonAir(unit[0] ?? 1);
+  const air = H.docwagonAir(unit[0] ?? 1, htr);
   const three = sum(await roller(rolls)(3));
-  const minutes = H.docwagonMinutes(three, air);
+  const minutes = H.docwagonMinutes(three, air, 0, htr);
   return { seconds: minutes * 60, rolls, note: air ? tx('SR2E.Health96.DocWagon.air', { unit: unit[0] ?? 1, roll: three, minutes }) : tx('SR2E.Health96.DocWagon.ground', { unit: unit[0] ?? 1, roll: three, minutes }) };
 }
 
 // ================================================================ Addiction (Shadowtech pp. 87–88)
 
-/** The addiction tests when a dose wears off (rolled at the dose by the v0.95.1 way). */
-export async function afterWearOff(actor: any, drug: string): Promise<void> {
-  if (!H.testsAtWearOff() || !RULES.HEALTH.addiction.auto) return;
-  const a: any = (actor?.system?.addictions ?? []).find((x: any) => x.drug === drug);
-  if (!a || typeof actor.drugAddictionTest !== 'function') return;
-  if (!a.addicted) await actor.drugAddictionTest(drug, 'dose');
-  if (RULES.HEALTH_V923.addiction === 'book' && Number(a.tolerance) > 0 && !a.immune) await actor.drugAddictionTest(drug, 'tolerance');
+/**
+ * The addiction tests when a dose wears off (rolled at the dose by the v0.95.1 way): one round per dose the entry
+ * merged (RULES.HEALTH_V72.drugs 'refresh' / 'extend' count them), until the character is addicted or immune.
+ */
+export async function afterWearOff(actor: any, drug: string, doses = 1): Promise<void> {
+  if (!H.testsAtWearOff() || !RULES.HEALTH.addiction.auto || typeof actor?.drugAddictionTest !== 'function') return;
+  const n = int(doses, 1, 10, 1);
+  for (let i = 0; i < n; i++) {
+    const a: any = (actor.system?.addictions ?? []).find((x: any) => x.drug === drug);
+    if (!a) return;
+    if (!a.addicted) await actor.drugAddictionTest(drug, 'dose');
+    const b: any = (actor.system?.addictions ?? []).find((x: any) => x.drug === drug) ?? a;
+    if (RULES.HEALTH_V923.addiction === 'book' && Number(b.tolerance) > 0 && !b.immune) await actor.drugAddictionTest(drug, 'tolerance');
+    const c: any = (actor.system?.addictions ?? []).find((x: any) => x.drug === drug) ?? b;
+    if (c.addicted && (c.immune || !(Number(c.tolerance) > 0))) return;
+  }
 }
 
 /**
@@ -210,19 +235,27 @@ export function startRest(x: any, time: number): string {
 
 // ================================================================ Card buttons
 
+/** Cards being paid on this client (a double click, or the chat log and pop-up copies, must not pay twice). */
+const paying = new Set<string>();
+/** Paid cards kept per actor (the player can't mark the GM's card; an older card paid again only costs its payer). */
+const PAID_KEEP = 200;
+
 async function payOnce(message: any, actor: any, amount: number): Promise<boolean> {
   if (!authorIsGm(message)) { warn(tx('SR2E.Health96.notGmCard')); return false; }
   if (!actor?.isOwner) { warn(tx('SR2E.Health96.notYours')); return false; }
   const id = String(message?.id ?? '');
   const paid: Record<string, unknown> = { ...((actor.getFlag?.(SYSTEM_ID, PAID_FLAG) as Record<string, unknown> | undefined) ?? {}) };
-  if (!id || paid[id]) { warn(tx('SR2E.Health96.alreadyPaid')); return false; }
-  const n = int(amount, 0, 100_000_000);
-  if (n > 0 && !(await actor.adjustNuyen(-n, tx('SR2E.Health96.Fee.ledger')))) return false;
-  paid[id] = Date.now();
-  const keep = Object.entries(paid).sort((x, y) => Number(y[1]) - Number(x[1])).slice(0, 20);
-  await replaceFlag(actor, PAID_FLAG, Object.fromEntries(keep));
-  await post(`<p>${tx('SR2E.Health96.Fee.paid', { name: escHtml(String(actor.name ?? '')), n })}</p>`, { speaker: speaker(actor) });
-  return true;
+  if (!id || paid[id] || paying.has(id)) { warn(tx('SR2E.Health96.alreadyPaid')); return false; }
+  paying.add(id);
+  try {
+    const n = int(amount, 0, 100_000_000);
+    if (n > 0 && !(await actor.adjustNuyen(-n, tx('SR2E.Health96.Fee.ledger')))) return false;
+    paid[id] = Date.now();
+    const keep = Object.entries(paid).sort((x, y) => Number(y[1]) - Number(x[1])).slice(0, PAID_KEEP);
+    await replaceFlag(actor, PAID_FLAG, Object.fromEntries(keep));
+    await post(`<p>${tx('SR2E.Health96.Fee.paid', { name: escHtml(String(actor.name ?? '')), n })}</p>`, { speaker: speaker(actor) });
+    return true;
+  } finally { paying.delete(id); }
 }
 
 /** A button on a HEALTH_V96 card. */
@@ -239,17 +272,17 @@ export async function onCard(message: any, button: HTMLButtonElement, action: st
   }
   if (!isGm()) { warn(tx('SR2E.Health96.gmButton')); return; }
   if (message?.getFlag?.(SYSTEM_ID, DONE_FLAG)) { warn(tx('SR2E.Health96.alreadyDone')); return; }
-  if (action === 'h96Stabilise') {
+  if (action === 'h96Professional') {
+    // Core pp. 186, 115: the antidote is professional help: another Biotech test (first aid is open again for the
+    // wound), and when it fails the patient's own Body test follows as after any first aid.
     const d = flags.h96Antidote;
     const target = await actorOf(d?.targetUuid);
     if (!target) return;
-    if (!(await gmMay(message, { title: tx('SR2E.Health96.Patch.stabilise'), lines: [tx('SR2E.Health96.Patch.antidoteAsk', { name: String(target.name ?? '') })], target: String(target.uuid), sources: uuidOk(d?.sourceUuid) ? [d.sourceUuid] : [] }))) return;
+    if (!(await gmMay(message, { title: tx('SR2E.Health96.Patch.professional'), lines: [tx('SR2E.Health96.Patch.antidoteProfessional', { name: String(target.name ?? '') })], target: String(target.uuid), sources: uuidOk(d?.sourceUuid) ? [d.sourceUuid] : [] }))) return;
     button.disabled = true;
     await message.setFlag?.(SYSTEM_ID, DONE_FLAG, true);
-    if (target.system?.derived?.status === 'dying' && !target.system?.care?.stabilised) {
-      await target.update({ 'system.care.stabilised': true });
-      await post(`<p><strong>${escHtml(String(target.name ?? ''))}</strong> ${tx('SR2E.Health96.Patch.stabilised')}</p>`, { speaker: speaker(target) });
-    }
+    for (const f of ['firstAidAt', 'firstAidBy']) if ((target.getFlag?.(SYSTEM_ID, f) as any)?.physical != null) await dropFlagKeys(target, f, ['physical']);
+    await post(`<p><strong>${escHtml(String(target.name ?? ''))}</strong> ${tx('SR2E.Health96.Patch.professionalOpen')}</p>`, { speaker: speaker(target) });
     return;
   }
   if (action === 'h96Attrition') {

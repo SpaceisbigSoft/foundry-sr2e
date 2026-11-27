@@ -20295,13 +20295,13 @@
       "Patch": {
         "blocked": "{targetName}'s blood filtration makes the patch useless.",
         "armor": "(Dermal armor {armor}: the patch works at rating {rating}.)",
-        "antidoteAsk": "An antidote patch is on {name}, who is dying. If a toxin put them down, the antidote counts as professional attention (Core p. 186).",
-        "antidoteNote": "The GM decides whether it counts as professional attention.",
-        "stabilise": "Stabilise (GM)",
-        "stabilised": "is stabilised by the antidote.",
         "stimMagicOk": "passes the stim patch's Magic test (Magic {magic} vs {tn}: {successes} successes).",
         "stimMagicFail": "fails the stim patch's Magic test (Magic {magic} vs {tn}): a Magic loss test as for a Deadly wound.",
-        "magicLoss": "Magic loss test"
+        "magicLoss": "Magic loss test",
+        "antidoteProfessional": "An antidote patch is on {name}, who is dying. If a toxin put them down, the antidote counts as professional help (Core pp. 115, 186): another Biotech test, and the patient's Body test if it fails.",
+        "antidoteProfessionalNote": "The GM decides whether it counts as professional help.",
+        "professional": "Professional help (GM)",
+        "professionalOpen": "gets professional help: first aid may be tried again on the wound."
       },
       "Nephritic": {
         "cut": ", nephritic screen −{cut} Power",
@@ -20322,6 +20322,9 @@
         "attrition": "{name} has been addicted to {drug} for another week: {essence} Essence is lost for good, and the Physical and Stun tracks each lose a box from the top (mark that by hand).",
         "apply": "Take {essence} Essence (GM)",
         "applied": "loses {essence} Essence to addiction."
+      },
+      "Damper": {
+        "moved": "(The trauma damper moved a box onto the Stun track.)"
       }
     },
     "Sorcery96": {
