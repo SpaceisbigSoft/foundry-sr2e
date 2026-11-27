@@ -601,3 +601,4 @@ See `docs/TRANSLATING.md` for the rest.
 | `SR2E.Text.Shop.buyRequest`: Buy {name}{qty}{wait} | `{wait}` | `SR2E.Text.Shop.arrivesIn` ( (arrives in {time})) |
 | `SR2E.Text.Sorcery.physicalAdeptsCanLearnOnly`: Physical adepts can learn only {list}. | `{list}` | `SR2E.Text.Sorcery.noTechniques` (no techniques) |
 | `SR2E.Text.Trust.patchOn`: {name} ({kind} {rating}) on {target} | `{name}` | `SR2E.Text.Trust.aPatch` (A patch) |
+| `SR2E.Trade.liveEffect`: {item} carries an Active Effect “{name}”: {changes} | `{changes}` | `SR2E.Trade.liveEffectNone` (no changes) |

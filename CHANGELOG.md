@@ -11,7 +11,7 @@ This is the history of the unofficial Shadowrun 2nd Edition system for Foundry V
 - **Crew stations on the vehicle sheet:** a tab for the driver, each gunner and sensors, each crew member seeing their own station's actions first, with a ready mark the GM can see and clear.
 - **Undo an advancement:** **Revert** on a line of the advancement log (from this version on) puts the raise back and refunds what it cost; a player whose ratings are locked asks the GM with an Apply (GM) card. Only the newest raise of a value can be reverted, and initiation can't.
 - **Small fixes:** *Add to combat…* in the Actors sidebar puts actors in the tracker without tokens; the GM sets a table default for folded dice, and each player can still choose; *Clear my targets at the end of my turn*; the Setup line warns about a custom bonus naming a skill the sheet doesn't have; an area spell or blast leaves its caster out of the targets (with a reminder); one selected token of yours decides who shops, on a shared login too; two target-picker labels are now translatable.
-- API changes: `game.sr2e.api.nesting` and `game.sr2e.api.trade` are new; nothing was removed.
+- API changes: added `nesting` (accessories, programs on decks, containers), `trade`, `catalogueCompendium()` and `removeOldCatalogue()`; `exportTemplates()` now moves the catalogue into its world compendium and opens it. Nothing was removed.
 
 ## v0.94.1 — Hidden information, re-rolls on the card, typed dice, automation (26 Nov 2026)
 - **A table default for roll privacy:** in *Set roll privacy* the GM can set *GM only* or *Blind* for each kind of test; players can then only make those cards more private (the less private choices are greyed for them).
