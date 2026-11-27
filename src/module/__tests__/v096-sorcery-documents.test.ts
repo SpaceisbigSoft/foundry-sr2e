@@ -300,6 +300,7 @@ describe('v0.96.0 sorcery documents: a dispelled spell\'s effect (Grimoire p. 45
 
 describe('v0.96.0 sorcery documents: assensing a masked initiate (Grimoire p. 46)', () => {
   test('a held mask: the card keeps masked96 and the aura reads as mundane; the second try is at +2; off: the old TN', async (tc) => {
+    tc.after(oldWay({ 'SPIRITS_V96.assenseRepeat': 'v951' })); // v0.96.0 merge: the spirits area's repeated-assensing limit is tested in v096-spirits*
     const subject = who({ name: 'Masked', magic: 6, tradition: 'hermetic', metamagic: { masking: true }, initiateGrade: 4 });
     const viewer = who({ name: 'Viewer', magic: 7, tradition: 'hermetic', initiateGrade: 2, astral: 'perceiving' });
     faces.push(1, 1, 1, 1, 1, 1, 2); fives(10); // the mask test fails, the assensing succeeds
