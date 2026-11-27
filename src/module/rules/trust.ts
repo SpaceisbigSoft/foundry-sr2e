@@ -85,7 +85,11 @@ export function userOwns(user: TrustUser | null | undefined, doc: any): boolean 
 }
 
 /** What a card's author may vouch for: whether the author is a GM, and which documents they own. */
-export interface CardTrust { authorIsGm: boolean; owns: (uuid: string) => boolean }
+export interface CardTrust {
+  authorIsGm: boolean; owns: (uuid: string) => boolean;
+  /** v0.94.2 review (finding 2): whether a transfer card moves only plain items, read from the documents (applications/trade942.ts). */
+  transferPlain?: (f: any) => boolean;
+}
 
 /** The uuid strings in a list (anything else dropped, repeats once). */
 export function uuidsOf(list: readonly unknown[]): string[] {
@@ -387,7 +391,9 @@ export function safeAutoApply(action: string, flags: Record<string, any>, trust:
     case 'applyCleanse': return false;
     // v0.94.2 (item 28): a give or stash of the author's own item applies by itself (the GM's client checks the author
     // owns the giver again, and the item and count, as it moves it); a loot always waits for the GM's click.
-    case 'applyTransfer': return (f.kind === 'give' || f.kind === 'stash') && owns(f.fromUuid);
+    // v0.94.2 review (finding 2): and never an item (or a child going along) with tweaks or Active Effects: the GM
+    // looks at what arrives (the confirmation lists them).
+    case 'applyTransfer': return (f.kind === 'give' || f.kind === 'stash') && owns(f.fromUuid) && (() => { try { return trust.transferPlain?.(f) === true; } catch { return false; } })();
     case 'applyActorUpdate': {
       if (f.nuyen !== undefined || f.remove !== undefined || f.masterDied !== undefined || f.handSpirit !== undefined || f.lower !== undefined || f.dispel !== undefined || !f.monitor) return false;
       // Round 2 (R2-SEC-9): healing too only on an actor the author owns. A "source" the card names is the author's

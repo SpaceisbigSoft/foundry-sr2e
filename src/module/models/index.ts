@@ -824,7 +824,8 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
     // Items still recovering from surgery (computed once; v0.81.0 RB-11).
     const healing = new Set(recoveringItemIds(sys.recovering ?? [], worldNow()));
     // v0.92.1 (RULES.SHEET_V921.tweaks): the custom tweaks on the items that count now (rules/tweaks.ts).
-    const tw = sumTweaks([...((this as any).parent?.items ?? [])].map((i: any) => ({ id: i.id, name: i.name, type: i.type, system: i.system })), { recovering: healing, adeptOver: overIds });
+    // v0.94.2 review (finding 3): the item documents themselves, so the nesting rules (packed, carried with its parent) apply.
+    const tw = sumTweaks([...((this as any).parent?.items ?? [])], { recovering: healing, adeptOver: overIds });
     const installed = ware.filter((i: any) => i.system.installed && !i.system.damaged && !healing.has(i.id));
     const cyber = cyberDerived((this as any).parent, ware);
     // v0.92.1: skill tweaks count as the gear skill bonuses do (one source per tweak).

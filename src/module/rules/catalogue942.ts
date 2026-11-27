@@ -86,7 +86,7 @@ export interface CatalogueSyncPlan {
  * (a hand-placed item by its `p-` id); changed ones are updated, new ones created, the rest removed (unless
  * `keepOthers`: the move from the old setting never removes anything).
  */
-export function catalogueSyncPlan(stored: readonly Stored[], next: readonly ItemTemplate[], o: { keepOthers?: boolean } = {}): CatalogueSyncPlan {
+export function catalogueSyncPlan(stored: readonly Stored[], next: readonly ItemTemplate[], o: { keepOthers?: boolean; removable?: ReadonlySet<string> } = {}): CatalogueSyncPlan {
   const plan: CatalogueSyncPlan = { create: [], update: [], remove: [] };
   const byId = new Map(stored.map((s) => [s.template.id, s]));
   const seen = new Set<string>();
@@ -98,7 +98,9 @@ export function catalogueSyncPlan(stored: readonly Stored[], next: readonly Item
     if (!s) plan.create.push(t);
     else if (templateSignature(s.template) !== templateSignature(t)) plan.update.push({ docId: s.docId, template: t });
   }
-  if (!o.keepOthers) for (const s of stored) if (!seen.has(s.template.id)) plan.remove.push(s.docId);
+  // v0.94.2 review (finding 14): with `removable` (the compendium items the saving list was built from), an item the
+  // list never knew about (dropped in by hand since, or added while the list was read from the old setting) stays.
+  if (!o.keepOthers) for (const s of stored) if (!seen.has(s.template.id) && (!o.removable || o.removable.has(s.docId))) plan.remove.push(s.docId);
   return plan;
 }
 

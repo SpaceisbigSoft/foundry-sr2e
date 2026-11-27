@@ -15,7 +15,8 @@ import { mergeAccessories, accessoryOf, childrenOf, lookupFromItem, isStowed, pr
 
 /**
  * The fields the item sheet's form shows as stored, by item type. A program's `loaded` isn't here: its sheet compares the
- * box with the effective value and loads through Swap Memory (an off-deck program shows unloaded and saves as such).
+ * box with the effective value and loads through Swap Memory; an off-deck program shows unloaded and its form drops the
+ * box, so the stored value stays (v0.94.2 review finding 4, applications/sheets.ts `_processFormData`).
  */
 export const SHADOWED_FIELDS: Readonly<Record<string, readonly string[]>> = {
   weapon: [...Object.keys(ACCESSORY_FIELD_DEFAULTS), 'ready'],

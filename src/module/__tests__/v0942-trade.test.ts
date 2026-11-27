@@ -207,7 +207,7 @@ describe('v0.94.2 trade: the GM-apply card spec (item 28)', () => {
     assert.deepEqual(cardSourceUuids('applyTransfer', flags(give)), ['Actor.a', 'Actor.b']);
   });
   test('auto-apply: a give of the author\'s own item may; a loot or someone else\'s item never', () => {
-    const owns = (set: string[]) => ({ authorIsGm: false, owns: (u: string) => set.includes(u) });
+    const owns = (set: string[]) => ({ authorIsGm: false, owns: (u: string) => set.includes(u), transferPlain: () => true });
     assert.equal(safeAutoApply('applyTransfer', flags(give), owns(['Actor.a'])), true);
     assert.equal(safeAutoApply('applyTransfer', flags(give), owns(['Actor.b'])), false);
     assert.equal(safeAutoApply('applyTransfer', flags({ ...give, kind: 'loot' }), owns(['Actor.a', 'Actor.b'])), false);
@@ -225,7 +225,7 @@ describe('v0.94.2 trade: wiring (item 28)', () => {
     assert.ok(chat.includes("applyTransfer: 'transferApplied',"));
     assert.ok(chat.includes('applyTransfer: onApplyTransfer,'));
     assert.ok(chat.includes("else if (action === 'applyTransfer') return onApplyTransfer(message, button);"));
-    assert.ok(chat.includes("const r = await applyTransferAsGm(v, message.author ?? null, 'card');"));
+    assert.ok(chat.includes("const r = await applyTransferAsGm(v, message.author ?? null, 'card', { plainOnly: autoButtons.has(button) });"));
     const body = chat.slice(chat.indexOf('async function onApplyTransfer('), chat.indexOf('/** Patch cards being applied'));
     assert.ok(body.indexOf('gmApplyFlag(') < body.indexOf('gmLocked('), 'the dialog before the lock');
   });
@@ -233,8 +233,8 @@ describe('v0.94.2 trade: wiring (item 28)', () => {
     const body = glue.slice(glue.indexOf('export async function applyTransferAsGm('), glue.indexOf('/** Post the GM-apply card'));
     assert.ok(body.includes('userOwns(user, from)') && body.includes('userOwns(user, to)'));
     assert.ok(body.includes('gmMayTransfer(r.kind, who, fa?.loot ?? null, via)'));
-    assert.ok(body.includes('transferProblems(r, fa, ta, ITEM_TYPES_FOR)'));
-    assert.ok(!glue.includes('withGmLock'), 'the card step and the relay already hold the lock');
+    assert.ok(body.includes('transferProblems(r, fa, ta, ITEM_TYPES_FOR, nesting)'));
+    assert.ok(!body.includes('withGmLock'), 'the card step and the relay already hold the lock');
     assert.ok(glue.includes("onRelay('trade942', async (data, user) => applyTransferAsGm(data?.['req'], user, 'relay'));"));
   });
   test('the relay op, the drop hook, the safehouse stash, the tool and the How many? prompt', () => {
@@ -302,5 +302,293 @@ describe('v0.94.2 catalogue compendium (item 32)', () => {
     assert.ok(store.includes("await (game as any).settings.set(SYSTEM_ID, 'itemTemplates', []);"), 'the old copy is removed only by removeOldCatalogueCopy');
     assert.equal(store.split("settings.set(SYSTEM_ID, 'itemTemplates', []").length - 1, 1);
     assert.ok(store.indexOf('oldCopyCovered(') < store.indexOf("settings.set(SYSTEM_ID, 'itemTemplates', [])"), 'checked before');
+  });
+});
+
+// ---------------------------------------------------------------------------------------------------------------------
+// v0.94.2 review fixes (review-0942-gear-trade.md): findings 1, 2, 5-12, 14, 15
+// ---------------------------------------------------------------------------------------------------------------------
+import {
+  transferFamily, refusedChildren, itemExtras, transferIsPlain, lootSourceVisible, missingCreates,
+} from '../rules/trade942.ts';
+import { TRADE_NEST_HOOKS, NEST_FLAG as NEST, readLink as linkOf } from '../rules/nesting942.ts';
+import { SYSTEM_ID as SID } from '../config/system.ts';
+import { executePlan, applyTransferAsGm, requestTransfer, transferLiveLines, transferPlainNow } from '../applications/trade942.ts';
+import { dropItemOnActor, ITEM_TYPES_FOR } from '../applications/drops.ts';
+import { gmLockHeld } from '../applications/gmlock.ts';
+
+class Coll extends Map<string, any> { override [Symbol.iterator](): any { return this.values(); } }
+const lnk = (parent: string, kind: 'mounted' | 'inside') => ({ [SID]: { [NEST]: { parent, kind } } });
+/** A fake item document on a fake actor (toObject follows later changes). */
+function mkItem(parent: any, d: any): any {
+  const data = JSON.parse(JSON.stringify(d));
+  const it: any = { id: data._id, name: data.name, type: data.type, system: data.system ?? {}, flags: data.flags ?? {}, parent, documentName: 'Item' };
+  it.toObject = () => JSON.parse(JSON.stringify({ ...data, system: it.system, flags: it.flags }));
+  it.update = async (u: any) => { if ('system.quantity' in u) it.system.quantity = u['system.quantity']; return it; };
+  it.delete = async () => { parent.items.delete(it.id); return it; };
+  it.uuid = `${parent.uuid}.Item.${it.id}`;
+  return it;
+}
+/** A fake actor: `refuse` item types its create skips (as the type guard does), `failDelete` makes its deletes throw. */
+function fakeActor(uuid: string, type: string, items: any[], o: { name?: string; nuyen?: number; refuse?: string[]; failDelete?: boolean; loot?: any; token?: any; owners?: string[] } = {}): any {
+  const a: any = { documentName: 'Actor', uuid, id: uuid.split('.').pop(), type, name: o.name ?? uuid, isOwner: true, system: { nuyen: o.nuyen ?? 0 }, items: new Coll(), log: [] as string[] };
+  a.flags = { [SID]: o.loot ? { loot: o.loot } : {} };
+  a.getFlag = (s: string, k: string) => a.flags?.[s]?.[k];
+  a.isToken = Boolean(o.token); a.token = o.token ?? null;
+  a.testUserPermission = (u: any) => Boolean(u?.isGM) || (o.owners ?? []).includes(u?.id);
+  a.createEmbeddedDocuments = async (_t: string, list: any[]) => {
+    a.log.push(`create:${gmLockHeld()}`);
+    const out: any[] = [];
+    for (const d of list) { if (o.refuse?.includes(d.type)) continue; const it = mkItem(a, d); a.items.set(it.id, it); out.push(it); }
+    return out;
+  };
+  a.deleteEmbeddedDocuments = async (_t: string, ids: string[]) => { if (o.failDelete) throw new Error('x'); for (const id of ids) a.items.delete(id); return ids; };
+  a.updateEmbeddedDocuments = async (_t: string, ups: any[]) => { for (const u of ups) { const it = a.items.get(u._id); if (it && 'system.quantity' in u) it.system.quantity = u['system.quantity']; } return ups; };
+  a.update = async (u: any) => { if ('system.nuyen' in u) a.system.nuyen = u['system.nuyen']; return a; };
+  for (const d of items) { const it = mkItem(a, d); a.items.set(it.id, it); }
+  return a;
+}
+/** Foundry stand-ins for the glue: uuids resolve through `docs`; `tradeOn` and the user can be changed per test. */
+function stage(docs: Record<string, any>, o: { tradeOn?: boolean; gm?: boolean; scenes?: any[] } = {}): { notes: string[]; chats: any[] } {
+  const notes: string[] = []; const chats: any[] = [];
+  const g: any = globalThis;
+  g.game = { user: { id: 'gm1', isGM: o.gm !== false, name: 'GM' }, users: [], scenes: o.scenes ?? [], i18n: { localize: (k: string) => k, format: (k: string) => k }, settings: { get: (_s: string, k: string) => (k === 'tradeOn' ? o.tradeOn !== false : undefined) }, actors: [] };
+  g.ui = { notifications: { info: (t: string) => notes.push(t), warn: (t: string) => notes.push(t), error: (t: string) => notes.push(t) } };
+  g.fromUuid = async (u: string) => docs[u] ?? null;
+  g.fromUuidSync = (u: string) => docs[u] ?? null;
+  g.ChatMessage = { create: async (m: any) => { chats.push(m); return m; }, getSpeaker: () => ({}) };
+  g.foundry = { ...(g.foundry ?? {}), utils: { ...(g.foundry?.utils ?? {}), randomID: () => Math.random().toString(36).slice(2, 12) } };
+  g.Hooks = g.Hooks ?? { on: () => 0, once: () => 0, callAll: () => true };
+  return { notes, chats };
+}
+const deckFamily = () => [
+  { _id: 'deck', name: 'Fuchi', type: 'cyberdeck', system: { active: false }, flags: {} },
+  { _id: 'prog1', name: 'Sleaze', type: 'program', system: { loaded: true }, flags: lnk('deck', 'mounted') },
+  { _id: 'prog2', name: 'Attack', type: 'program', system: { loaded: false }, flags: lnk('deck', 'mounted') },
+];
+const nest = { childrenOf: TRADE_NEST_HOOKS.childrenOf };
+
+describe('v0.94.2 review 1 (HIGH): a give never deletes children the receiver refused', () => {
+  const ti = (d: any): TradeItem => ({ id: d._id, type: d.type, name: d.name, system: d.system, data: d });
+  const from = actor('Actor.a', deckFamily().map(ti));
+  const house = actor('Actor.h', [], { type: 'safehouse', nuyen: null });
+  test('the plan check refuses a deck whose programs a safehouse can\'t hold, and names them', () => {
+    const r = { kind: 'stash', fromUuid: 'Actor.a', toUuid: 'Actor.h', itemId: 'deck', qty: 1 } as TransferRequest;
+    assert.deepEqual(transferProblems(r, from, house, ITEM_TYPES_FOR, nest), ['childRefused']);
+    assert.deepEqual(refusedChildren(r, from, house, ITEM_TYPES_FOR, nest).sort(), ['Attack', 'Sleaze']);
+    assert.deepEqual(transferProblems(r, from, { ...house, type: 'character' }, ITEM_TYPES_FOR, nest), [], 'a character holds programs');
+    assert.deepEqual(transferProblems(r, from, house, ITEM_TYPES_FOR), [], 'without the nesting hook, nothing goes along');
+    assert.deepEqual(transferFamily(r, from, nest).map((i) => i.id), ['deck', 'prog1', 'prog2']);
+  });
+  test('missingCreates names what the receiver didn\'t make', () => {
+    assert.deepEqual(missingCreates({ target: { create: [{ _id: 'a' }, { _id: 'b' }], updates: [], keepIds: true } }, ['a']), ['b']);
+    assert.deepEqual(missingCreates({ target: { create: [{ _id: 'a' }], updates: [], keepIds: true } }, ['a']), []);
+  });
+  test('executePlan: a create the receiver refuses undoes the receiver and leaves the giver whole', async () => {
+    stage({});
+    const a = fakeActor('Actor.a', 'character', deckFamily());
+    const h = fakeActor('Actor.h', 'safehouse', [], { refuse: ['program'] });
+    const r = { kind: 'stash', fromUuid: 'Actor.a', toUuid: 'Actor.h', itemId: 'deck', qty: 1 } as TransferRequest;
+    const { tradeActorOf } = await import('../applications/trade942.ts');
+    const plan = planTransfer(r, tradeActorOf(a)!, tradeActorOf(h)!, { ...TRADE_NEST_HOOKS, scope: SID });
+    await assert.rejects(executePlan(a, h, plan, r));
+    assert.deepEqual([...a.items.keys()].sort(), ['deck', 'prog1', 'prog2'], 'the giver keeps the deck and both programs');
+    assert.equal(h.items.size, 0, 'the deck made on the receiver is taken back');
+  });
+  test('the GM card and relay path refuse it with the names, and nothing moves', async () => {
+    const a = fakeActor('Actor.a', 'character', deckFamily(), { owners: ['p1'] });
+    const h = fakeActor('Actor.h', 'safehouse', [], { refuse: ['program'] });
+    stage({ 'Actor.a': a, 'Actor.h': h });
+    const res = await applyTransferAsGm({ kind: 'stash', fromUuid: 'Actor.a', toUuid: 'Actor.h', itemId: 'deck', qty: 1 }, { id: 'p1', isGM: false, name: 'P' }, 'card');
+    assert.equal(res.ok, false);
+    assert.ok(res.note!.includes('Sleaze') && res.note!.includes('Attack'), String(res.note));
+    assert.equal(a.items.size, 3);
+    assert.equal(h.items.size, 0);
+  });
+});
+
+describe('v0.94.2 review 2 (HIGH): what a give carries is shown, and never applies by itself', () => {
+  const tweak = { id: 't1', label: 'Weak', target: 'attribute', key: 'body', value: -6, on: true };
+  const fx = { _id: 'e1', name: 'Curse', changes: [{ key: 'system.attributes.body.value', mode: 2, value: '-6' }], disabled: false, transfer: true };
+  const stick = (o: any = {}) => ({ _id: 'cs', name: 'Credstick', type: 'gear', system: { quantity: 1, tweaks: o.tweaks ?? [] }, flags: o.flags ?? {}, effects: o.effects ?? [] });
+  test('itemExtras and transferIsPlain: tweaks and effects make an item not plain; a child counts too', () => {
+    const ti = (d: any): TradeItem => ({ id: d._id, type: d.type, name: d.name, system: d.system, data: d });
+    assert.equal(itemExtras(ti(stick())), null);
+    const x = itemExtras(ti(stick({ tweaks: [tweak], effects: [fx] })))!;
+    assert.equal(x.tweaks.length, 1);
+    assert.ok(x.effects[0]!.changes[0]!.includes('system.attributes.body.value') && x.effects[0]!.changes[0]!.includes('-6'));
+    const r = { kind: 'give', fromUuid: 'A', toUuid: 'B', itemId: 'cs', qty: 1 } as TransferRequest;
+    assert.equal(transferIsPlain(r, actor('A', [ti(stick())]), nest), true);
+    assert.equal(transferIsPlain(r, actor('A', [ti(stick({ effects: [fx] }))]), nest), false);
+    const bag = { _id: 'bag', name: 'Bag', type: 'gear', system: { quantity: 1, nest942: { container: true } }, flags: {} };
+    const inBag = { ...stick({ tweaks: [tweak] }), flags: lnk('bag', 'inside') };
+    assert.equal(transferIsPlain({ ...r, itemId: 'bag' }, actor('A', [ti(bag), ti(inBag)]), nest), false, 'a child with a tweak');
+    assert.equal(transferIsPlain({ ...r, itemId: 'nope' }, actor('A', [ti(bag)]), nest), false);
+    assert.equal(transferIsPlain({ kind: 'give', fromUuid: 'A', toUuid: 'B', nuyen: 5 } as TransferRequest, null, nest), true);
+  });
+  test('safeAutoApply: a give of the author\'s own item applies by itself only when it is plain', () => {
+    const f = { transfer: { kind: 'give', fromUuid: 'Actor.a', toUuid: 'Actor.b', itemId: 'cs', qty: 1 } };
+    const trust = (plain: boolean | undefined) => ({ authorIsGm: false, owns: (u: string) => u === 'Actor.a', ...(plain === undefined ? {} : { transferPlain: () => plain }) });
+    assert.equal(safeAutoApply('applyTransfer', f, trust(true)), true, 'normal items still auto-apply');
+    assert.equal(safeAutoApply('applyTransfer', f, trust(false)), false);
+    assert.equal(safeAutoApply('applyTransfer', f, trust(undefined)), false, 'no reading of the documents: the GM looks');
+  });
+  test('on the GM client: the confirmation lists the tweak, the effect and the flags; transferPlainNow reads the documents', () => {
+    const a = fakeActor('Actor.a', 'character', [stick({ tweaks: [tweak], effects: [fx], flags: { [SID]: { focusMagicLost: true } } }), { ...stick(), _id: 'plain' }]);
+    stage({ 'Actor.a': a, 'Actor.b': fakeActor('Actor.b', 'character', []) });
+    const lines = transferLiveLines({ kind: 'give', fromUuid: 'Actor.a', toUuid: 'Actor.b', itemId: 'cs', qty: 1 }).join('\n');
+    assert.ok(lines.includes('-6') && lines.includes('Curse') && lines.includes('system.attributes.body.value') && lines.includes('focusMagicLost'), lines);
+    assert.equal(transferPlainNow({ kind: 'give', fromUuid: 'Actor.a', toUuid: 'Actor.b', itemId: 'cs', qty: 1 }), false);
+    assert.equal(transferPlainNow({ kind: 'give', fromUuid: 'Actor.a', toUuid: 'Actor.b', itemId: 'plain', qty: 1 }), true);
+  });
+  test('applying by itself (plainOnly), such an item is refused; the GM\'s click moves it', async () => {
+    const a = fakeActor('Actor.a', 'character', [stick({ effects: [fx] })], { owners: ['p1'] });
+    const b = fakeActor('Actor.b', 'character', []);
+    stage({ 'Actor.a': a, 'Actor.b': b });
+    const req = { kind: 'give', fromUuid: 'Actor.a', toUuid: 'Actor.b', itemId: 'cs', qty: 1 };
+    const p1 = { id: 'p1', isGM: false, name: 'P' };
+    assert.equal((await applyTransferAsGm(req, p1, 'card', { plainOnly: true })).ok, false);
+    assert.equal(a.items.size, 1);
+    assert.equal((await applyTransferAsGm(req, p1, 'card')).ok, true);
+    assert.equal(b.items.size, 1);
+  });
+  test('wiring: cardTrust passes the document read; the card applies with plainOnly when it is the auto-apply\'s', () => {
+    assert.match(read('src', 'module', 'applications', 'trust.ts'), /transferPlain: transferPlainNow/);
+    assert.match(read('src', 'module', 'rules', 'trust.ts'), /trust\.transferPlain\?\.\(f\) === true/);
+  });
+});
+
+describe('v0.94.2 review 6, 9-12, 15: the GM lock, two GMs, trading off, hidden loot, one actor, escaping', () => {
+  const gun = { _id: 'g1', name: 'Ares', type: 'weapon', system: { quantity: 1 }, flags: {} };
+  test('6: a GM\'s own direct transfer writes under the GM lock (and a player\'s own doesn\'t queue)', async () => {
+    const a = fakeActor('Actor.a', 'npc', [gun]);
+    const b = fakeActor('Actor.b', 'character', []);
+    stage({ 'Actor.a': a, 'Actor.b': b });
+    assert.equal(await requestTransfer({ kind: 'give', fromUuid: 'Actor.a', toUuid: 'Actor.b', itemId: 'g1', qty: 1 }), true);
+    assert.deepEqual(b.log, ['create:true']);
+    assert.equal(a.items.size, 0);
+    const c = fakeActor('Actor.c', 'character', []);
+    stage({ 'Actor.b': b, 'Actor.c': c }, { gm: false });
+    assert.equal(await requestTransfer({ kind: 'stash', fromUuid: 'Actor.b', toUuid: 'Actor.c', itemId: 'g1', qty: 1 }), true);
+    assert.deepEqual(c.log, ['create:false']);
+  });
+  test('9: the card is claimed (applied flag set) before it moves and released on failure, inside the lock', () => {
+    const chat = read('src', 'module', 'applications', 'chat.ts');
+    const body = chat.slice(chat.indexOf('async function onApplyTransfer('), chat.indexOf('/** Patch cards being applied'));
+    const locked = body.slice(body.indexOf('gmLocked('));
+    assert.ok(locked.indexOf("if (message.getFlag(SYSTEM_ID, 'transferApplied')) return;") < locked.indexOf("setFlag(SYSTEM_ID, 'transferApplied', true)"));
+    assert.ok(locked.indexOf("setFlag(SYSTEM_ID, 'transferApplied', true)") < locked.indexOf('applyTransferAsGm('));
+    assert.match(locked, /if \(!r\.ok\) \{ await message\.setFlag\(SYSTEM_ID, 'transferApplied', false\)/);
+  });
+  test('10: with trading off the card and the relay are refused', async () => {
+    const a = fakeActor('Actor.a', 'npc', [gun], { loot: { on: true, free: true } });
+    const b = fakeActor('Actor.b', 'character', [], { owners: ['p1'] });
+    stage({ 'Actor.a': a, 'Actor.b': b }, { tradeOn: false });
+    const res = await applyTransferAsGm({ kind: 'loot', fromUuid: 'Actor.a', toUuid: 'Actor.b', itemId: 'g1', qty: 1 }, { id: 'p1', isGM: false }, 'relay');
+    assert.equal(res.ok, false);
+    assert.equal(a.items.size, 1);
+  });
+  test('11: a player can\'t loot an actor whose tokens are all hidden; a shown one is fine', async () => {
+    assert.equal(lootSourceVisible([{ hidden: true }]), false);
+    assert.equal(lootSourceVisible([{ hidden: true }, { hidden: false }]), true);
+    assert.equal(lootSourceVisible([]), false);
+    const p1 = { id: 'p1', isGM: false };
+    const req = { kind: 'loot', fromUuid: 'Actor.a', toUuid: 'Actor.b', itemId: 'g1', qty: 1 };
+    const tok = { hidden: true };
+    const a = fakeActor('Actor.a', 'npc', [gun], { loot: { on: true, free: true }, token: tok });
+    const b = fakeActor('Actor.b', 'character', [], { owners: ['p1'] });
+    stage({ 'Actor.a': a, 'Actor.b': b });
+    assert.equal((await applyTransferAsGm(req, p1, 'relay')).ok, false);
+    tok.hidden = false;
+    assert.equal((await applyTransferAsGm(req, p1, 'relay')).ok, true);
+    // A world actor: its linked tokens on the scenes.
+    const w = fakeActor('Actor.w', 'npc', [{ ...gun, _id: 'g2' }], { loot: { on: true, free: true } });
+    const scene = { tokens: [{ actorLink: true, actorId: 'w', hidden: true }] };
+    stage({ 'Actor.w': w, 'Actor.b': b }, { scenes: [scene] });
+    assert.equal((await applyTransferAsGm({ ...req, fromUuid: 'Actor.w', itemId: 'g2' }, p1, 'relay')).ok, false);
+  });
+  test('12: two uuids for one actor are the same actor (nothing is written)', async () => {
+    const a = fakeActor('Actor.a', 'character', [gun], { nuyen: 100 });
+    stage({ 'Actor.a': a, 'Scene.s.Token.t.Actor.a': a });
+    const res = await applyTransferAsGm({ kind: 'give', fromUuid: 'Actor.a', toUuid: 'Scene.s.Token.t.Actor.a', nuyen: 40 }, { id: 'gm', isGM: true }, 'card');
+    assert.equal(res.ok, false);
+    assert.equal(a.system.nuyen, 100);
+    assert.equal(await requestTransfer({ kind: 'give', fromUuid: 'Actor.a', toUuid: 'Scene.s.Token.t.Actor.a', nuyen: 40 }), false);
+    assert.equal(a.system.nuyen, 100);
+  });
+  test('15: notes are plain text (escaped once, where they are shown)', async () => {
+    const a = fakeActor('Actor.a', 'character', [gun]);
+    stage({ 'Actor.a': a, 'Actor.b': fakeActor('Actor.b', 'character', []) });
+    const res = await applyTransferAsGm({ kind: 'give', fromUuid: 'Actor.a', toUuid: 'Actor.b', itemId: 'g1', qty: 1 }, { id: 'x', isGM: false, name: 'A&B' }, 'card');
+    assert.ok(res.note!.includes('A&B') && !res.note!.includes('&amp;'), String(res.note));
+  });
+});
+
+describe('v0.94.2 review 1, 5, 7, 8: a drag between sheets', () => {
+  const sheetOf = (actor: any) => ({ actor });
+  const setup = () => {
+    (globalThis as any).Item = { implementation: { create: async (d: any, o: any) => (await o.parent.createEmbeddedDocuments('Item', [d]))[0] ?? null } };
+  };
+  const pistol = (id: string, flags: any = {}) => ({ _id: id, name: 'Ares Predator', type: 'weapon', system: { quantity: 1, damage: '9M' }, flags });
+  const scope = { _id: 'sc', name: 'Scope', type: 'gear', system: { quantity: 1, nest942: { accessory: 'scope', rating: 2 } }, flags: lnk('gunA', 'mounted') };
+  test('5: a gun with an accessory never merges into the receiver\'s identical gun; the scope goes on the new one', async () => {
+    const a = fakeActor('Actor.a', 'character', [pistol('gunA'), scope]);
+    const b = fakeActor('Actor.b', 'character', [pistol('gunB')]);
+    stage({}); setup();
+    const made = await dropItemOnActor(sheetOf(b), {}, a.items.get('gunA'), async () => null);
+    assert.ok(made && made.id !== 'gunB');
+    assert.equal(b.items.get('gunB').system.quantity, 1, 'the plain gun is not a stack of two');
+    assert.equal(linkOf(b.items.get('sc'))?.parent, made.id);
+    assert.equal(a.items.size, 0);
+  });
+  test('5: a plain gun doesn\'t join a receiver\'s gun that has an accessory', async () => {
+    const a = fakeActor('Actor.a', 'character', [pistol('gunA')]);
+    const b = fakeActor('Actor.b', 'character', [pistol('gunB'), { ...scope, flags: lnk('gunB', 'mounted') }]);
+    stage({}); setup();
+    const made = await dropItemOnActor(sheetOf(b), {}, a.items.get('gunA'), async () => null);
+    assert.ok(made && made.id === 'gunA');
+    assert.equal(b.items.get('gunB').system.quantity, 1);
+  });
+  test('1: a deck dragged to a safehouse with its programs is refused whole; the giver keeps everything', async () => {
+    const a = fakeActor('Actor.a', 'character', deckFamily());
+    const h = fakeActor('Actor.h', 'safehouse', [], { refuse: ['program'] });
+    const { notes } = stage({}); setup();
+    assert.equal(await dropItemOnActor(sheetOf(h), {}, a.items.get('deck'), async () => null), null);
+    assert.equal(a.items.size, 3);
+    assert.equal(h.items.size, 0);
+    assert.ok(notes.some((n) => n.includes('Sleaze')), notes.join('|'));
+  });
+  test('7: when the giver can\'t be changed, the parent and its carried children are both undone', async () => {
+    const a = fakeActor('Actor.a', 'character', [pistol('gunA'), scope], { failDelete: true });
+    const b = fakeActor('Actor.b', 'character', []);
+    stage({}); setup();
+    assert.equal(await dropItemOnActor(sheetOf(b), {}, a.items.get('gunA'), async () => null), null);
+    assert.equal(b.items.size, 0, 'no orphaned scope on the receiver');
+    assert.equal(a.items.size, 2);
+  });
+  test('8: an item dragged out of a bag arrives without its old parent link', async () => {
+    const bag = { _id: 'bag', name: 'Bag', type: 'gear', system: { quantity: 1, nest942: { container: true } }, flags: {} };
+    const knife = { _id: 'kn', name: 'Knife', type: 'weapon', system: { quantity: 1 }, flags: lnk('bag', 'inside') };
+    const a = fakeActor('Actor.a', 'character', [bag, knife]);
+    const b = fakeActor('Actor.b', 'character', []);
+    stage({}); setup();
+    const made = await dropItemOnActor(sheetOf(b), {}, a.items.get('kn'), async () => null);
+    assert.equal(linkOf(made), null);
+  });
+});
+
+describe('v0.94.2 review 14: the catalogue save', () => {
+  const st = (docId: string, id: string): Stored => ({ docId, template: { id, type: 'gear', name: id, system: {} } as any });
+  test('a save removes only compendium items the saving list could have known', () => {
+    const stored = [st('d1', 't1'), st('d2', 'p-d2'), st('d3', 't3')];
+    const plan = catalogueSyncPlan(stored, [stored[0]!.template], { removable: new Set(['d3']) });
+    assert.deepEqual(plan.remove, ['d3'], 'the hand-placed item the list never saw stays');
+    assert.deepEqual(catalogueSyncPlan(stored, [stored[0]!.template]).remove.sort(), ['d2', 'd3'], 'without the set, as before');
+  });
+  test('the move runs on the write queue, and a save passes what the store knew when it was called', () => {
+    const src = read('src', 'module', 'applications', 'catalogue942.ts');
+    assert.match(src, /export function migrateCatalogue942\(\): Promise<number> \{\n[^\n]*\n\s*return onWriting\(migrateNow\);/);
+    assert.match(src, /const known = new Set\(catalogueInPack\(\) \? \(stored \?\? \[\]\)\.map\(\(s\) => s\.docId\) : \[\]\);/);
+    assert.match(src, /catalogueSyncPlan\(stored \?\? \[\], clean, \{ removable: known \}\)/);
   });
 });

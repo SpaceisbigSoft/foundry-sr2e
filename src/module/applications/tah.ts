@@ -12,6 +12,7 @@ import { runSheetAction, latestAttackOn, useItem } from './tokens.ts';
 import { escHtml } from '../rules/html.ts';
 import { t as tx } from '../helpers/i18n.ts';
 import { SYSTEM_ID } from '../config/system.ts';
+import { isCarried } from '../rules/tweaks.ts';
 
 export const TAH_SYSTEM_ID = SYSTEM_ID;
 const TAH_CORE_ID = 'token-action-hud-core';
@@ -41,6 +42,8 @@ function itemSummary(i: any): HudItem {
   const fields = ITEM_FIELDS[i.type] ?? [];
   const system: Record<string, any> = {};
   for (const k of fields) system[k] = i.system?.[k];
+  // v0.94.2 review (finding 3): carried as the nesting reads it on the document (a gun in a bag left behind isn't).
+  if (i.type === 'weapon') system['carried'] = isCarried(i);
   return { id: i.id, type: i.type, name: i.name, img: i.img, system };
 }
 

@@ -13,8 +13,9 @@ import { approvalNeeded, fileRequest } from "./approvals.ts";
 import { rowAmount } from "../rules/catalogue.ts";
 import { escHtml } from "../rules/html.ts";
 import { t as tx } from '../helpers/i18n.ts';
-import { nestDropOnRow, nestAfterForeignDrop, carryChildren } from "./nesting942.ts";
-import { giveByDrop } from './trade942.ts';
+import { nestDropOnRow, nestAfterForeignDrop, copyChildren } from "./nesting942.ts";
+import { descendantsOf, withoutLink } from "../rules/nesting942.ts";
+import { giveByDrop, tradeOn } from './trade942.ts';
 
 export const ALL_ITEM_TYPES = ['skill', 'weapon', 'armor', 'gear', 'cyberware', 'spell', 'power', 'focus', 'adeptpower', 'cyberdeck', 'program'] as const;
 
@@ -148,8 +149,14 @@ export async function dropItemOnActor(sheet: any, event: DragEvent | any, item: 
     take = Math.min(n, have);
     if (take < 1) return null;
   }
+  // v0.94.2 review (findings 1, 5): a parent moved whole takes its family; every child must fit the receiver, or
+  // nothing moves (the type guard would refuse the child and the giver would lose it).
+  const kids: any[] = moves && take === have ? descendantsOf(item.id, [...(source.items ?? [])]) : [];
+  const refused = kids.filter((k: any) => itemTypeProblem(actor.type, k.type));
+  if (refused.length) { ui.notifications?.warn?.(escHtml(tx('SR2E.Notify.Drops.childRefused', { actor: actor.name, itemName: item.name, names: refused.slice(0, 8).map((k: any) => k.name).join(', ') }))); return null; }
   const keepId = !actor.items.has(item.id);
-  const data: any = item.inCompendium ? (game as any).items.fromCompendium(item, { clearFolder: true, keepId }) : item.toObject();
+  // Review finding 8: the moved item leaves the container it sat in on the giver's side (as a give does).
+  const data: any = withoutLink(item.inCompendium ? (game as any).items.fromCompendium(item, { clearFolder: true, keepId }) : item.toObject());
   const asIs = gm && Boolean(event?.shiftKey);
   const reset = asIs ? {} : arrivalReset(item.type, data.system);
   if (Object.keys(reset).length) data.system = { ...(data.system ?? {}), ...reset };
@@ -164,21 +171,30 @@ export async function dropItemOnActor(sheet: any, event: DragEvent | any, item: 
   // v0.93.0: moved items join a matching stack the receiver has (same data apart from the count).
   // Review 5: compared on the stored data (_source), as the moved copy is plain data; any item with a count merges.
   const counted = data.system && Object.hasOwn(data.system, 'quantity');
-  const stack: any = moves && counted ? [...actor.items].find((i: any) => sameStack({ type: i.type, name: i.name, system: i._source?.system ?? i.system }, { type: item.type, name: item.name, system: data.system })) : null;
+  // Review finding 5: a parent with children never merges, nor joins a stack that has children (as the trade core).
+  const hasKids = (i: any): boolean => descendantsOf(i.id, [...actor.items]).length > 0;
+  const stack: any = moves && counted && !kids.length ? [...actor.items].find((i: any) => sameStack({ type: i.type, name: i.name, system: i._source?.system ?? i.system }, { type: item.type, name: item.name, system: data.system }) && !hasKids(i)) : null;
   const before = stack ? stackSize(stack.system) : 0;
   const made = stack
     ? (await stack.update({ 'system.quantity': before + take }), stack)
     : await (Item as any).implementation.create(data, { parent: actor, keepId, sr2eComplexFormFrom: item.uuid });
   if (!made) return null;
-  // v0.94.2: a parent moved whole takes its children along; a new copy dropped on a row goes on or in that item.
-  if (moves && take === have) await carryChildren(source, item.id, actor, made.id, asIs ? undefined : arrivalReset);
+  // v0.94.2: a parent moved whole takes its children along (copied now, removed from the giver with the parent below).
+  // Review finding 7: a child copy that wasn't made, or a giver that can't be changed, undoes the receiver's side whole.
+  const carried = kids.length ? await copyChildren(source, item.id, actor, made.id, asIs ? undefined : arrivalReset, kids).catch((err: unknown) => { console.warn('sr2e | move item', err); return null; }) : null;
+  const undoCopies = async () => { const ids = (carried?.made ?? []).map((d: any) => String(d?.id ?? d?._id)).filter((id: string) => actor.items.has(id)); if (ids.length) await actor.deleteEmbeddedDocuments('Item', ids); };
+  if (kids.length && (!carried || carried.sourceIds.length !== kids.length)) {
+    try { await undoCopies(); if (!stack) await made.delete(); } catch (err2) { console.warn('sr2e | move item undo', err2); }
+    ui.notifications?.error?.(tx('SR2E.Notify.Drops.moveFailed', { itemName: escHtml(item.name) }));
+    return null;
+  }
   if (!stack) await nestAfterForeignDrop(sheet, event, made);
   if (moves) {
     // Part of a stack: the giver keeps the rest. Review 4: if the giver can't be changed, the receiver's side is undone.
-    try { if (take < have) await item.update({ 'system.quantity': have - take }); else await source.deleteEmbeddedDocuments('Item', [item.id]); }
+    try { if (take < have) await item.update({ 'system.quantity': have - take }); else await source.deleteEmbeddedDocuments('Item', [item.id, ...(carried?.sourceIds ?? [])]); }
     catch (err) {
       console.warn('sr2e | move item', err);
-      try { if (stack) await stack.update({ 'system.quantity': before }); else await made.delete(); } catch (err2) { console.warn('sr2e | move item undo', err2); }
+      try { await undoCopies(); if (stack) await stack.update({ 'system.quantity': before }); else await made.delete(); } catch (err2) { console.warn('sr2e | move item undo', err2); }
       ui.notifications?.error?.(tx('SR2E.Notify.Drops.moveFailed', { itemName: escHtml(item.name) }));
       return null;
     }
@@ -187,6 +203,15 @@ export async function dropItemOnActor(sheet: any, event: DragEvent | any, item: 
   const what = moves ? tx('SR2E.Notify.Drops.handsTo', { source: source.name, made: take > 1 ? `${made.name} ×${take}` : made.name, actor: actor.name }) : tx('SR2E.Notify.Drops.addedTo', { made: made.name, actor: actor.name });
   ui.notifications?.info?.(`${escHtml(what)}${note ? `: ${note}` : ''}.`);
   return made;
+}
+
+/**
+ * v0.94.2 (test plan 49): whether an actor sheet takes drops. Its own rule (Foundry's: editable, so its owner), or, with
+ * trading on, any actor sheet: a user's own item dropped on a sheet they don't own is then a gift (`dropItemOnActor`
+ * hands it to applications/trade942.ts giveByDrop; nothing else is made on a sheet the user doesn't own).
+ */
+export function sheetTakesDrops(sheet: any, editable: boolean): boolean {
+  return Boolean(editable) || (tradeOn() && sheet?.document?.documentName === 'Actor');
 }
 
 /** Item creation on an actor that can't hold that type is refused, however it is made. */
