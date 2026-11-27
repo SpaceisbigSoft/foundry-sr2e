@@ -9927,7 +9927,7 @@
         "SPIRITS_V96__reflecting": "Reflecting: shielding dice's successes only, the spell rebounds at the net Force, Awakenings p. 99 (book) or all resistance successes bounce (v951)",
         "SPIRITS_V96__cleansing": "Cleansing: a count up to the grade only, then (count)D Willpower Drain, Awakenings p. 100 (book) or any count, no Drain (v951)",
         "SPIRITS_V96__adeptCosts": "Imported adept power costs: by band (attributes, Improved Ability) and Distance Strike double beside Killing Hands, Core pp. 125–126, Awakenings p. 116 (book) or flat guesses (v951)",
-        "SPIRITS_V96__critterOpposed": "Confusion, Fear, Engulf: Essence against Willpower, Confusion half the net successes, Fear's severity, Engulf's escape, Predator and Prey pp. 89–92 (book) or the power's own dice (v951)",
+        "SPIRITS_V96__critterOpposed": "Confusion, Fear, Engulf: Confusion and Fear Essence against Willpower, Confusion half the net successes, Fear's severity, Engulf's entry and escape lines, Predator and Prey pp. 89–92 (book) or the power's own dice (v951)",
         "SPIRITS_V96__astralPerceiving": "Astral Combat Pool while perceiving: astral actions of a perceiving magician use the Astral Combat Pool, Core p. 147 (book) or the Combat Pool (v951)"
       }
     },
@@ -20399,7 +20399,8 @@
       "Watcher": {
         "hours": "Hours a watcher serves (its target number)",
         "drain": "Watcher Drain (Force {force} × {hours} h, Stun)",
-        "dissolves": "{name}'s time is up: the watcher dissolves into astral space."
+        "dissolves": "{name}'s time is up: the watcher dissolves into astral space.",
+        "redrain": "The Force changed (now {force}, was {was}): the Drain above is for the new Force; the earlier Watcher Drain no longer counts (undo its damage)."
       },
       "TrueName": {
         "title": "Banish {name}",
