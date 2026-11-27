@@ -25,6 +25,9 @@ import { SPIRITS_V923 } from './config923/spirits.ts';
 import { MATRIX_V923 } from './config923/matrix.ts';
 import { VEHICLES_V923 } from './config923/vehicles.ts';
 import { GEAR_V923 } from './config923/gear.ts';
+import { CORE_V95 } from './config95/core.ts';
+import { FIRE_V95 } from './config95/fire.ts';
+import { MELEE_V95 } from './config95/melee.ts';
 
 /**
  * SR2e rules constants.
@@ -3404,6 +3407,12 @@ export const RULES = {
   VEHICLES_V923,
   /** v0.92.3: book alignment, Gear, cyberware and bioware (rules/config923/gear.ts). */
   GEAR_V923,
+  /** v0.95.0: rules completeness, Core mechanics and characters (rules/config95/core.ts). */
+  CORE_V95,
+  /** v0.95.0: rules completeness, Ranged combat (rules/config95/fire.ts). */
+  FIRE_V95,
+  /** v0.95.0: rules completeness, Melee, actions and Dice Pools (rules/config95/melee.ts). */
+  MELEE_V95,
 } as const;
 
 export type RangeBand = keyof typeof RULES.RANGE_TN;
