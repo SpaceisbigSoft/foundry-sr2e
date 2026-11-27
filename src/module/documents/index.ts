@@ -152,6 +152,9 @@ import { gearStackKey } from '../rules/catalogue.ts';
 import * as CO923 from '../rules/core923.ts';
 // v0.95.0 (RULES.CORE_V95): the core book rules' glue (applications/core95.ts).
 import * as C95G from '../applications/core95.ts';
+// v0.96.0 (RULES.HEALTH_V96): damage, health and hazards completeness (rules/health96.ts, applications/health96.ts).
+import * as H96 from '../rules/health96.ts';
+import * as H96G from '../applications/health96.ts';
 import {
   urrCoreCriticalNote, urrCoreKnowledgeCard, urrCoreKnowledgeText, urrCoreOpposed, urrCoreSkillTestDice, urrCoreAttributeTn,
   urrCoreTrainingDays, urrCoreInstruction, urrCoreInstructExtra, urrCoreFindMods, urrCoreHaggleSellerTn,
@@ -1283,6 +1286,8 @@ export interface TestSnapshot {
     timeFactor?: number;
     /** v0.79.0: rolled as a healing stage (RULES.DOCS_V79.healing 'stages'): one wound level when the rest is long enough. */
     stages?: boolean;
+    /** v0.96.0 (RULES.HEALTH_V96.stunRestInterrupted, Core p. 112): a Stun re-test's cap (the first roll), or the first roll's mark. */
+    stunCap96?: number; stunFirst96?: boolean;
   };
   /** enchant: the task, base days, and a focus to create on success. */
   enchant?: { label: string; task?: string; baseDays: number; focus?: { name: string; focusType: string; rating: number; category: string; target: string; size?: string }; created?: boolean; fetishFor?: string; materialsApplied?: boolean; projectId?: string };
@@ -1959,12 +1964,17 @@ export class SR2Actor extends Actor {
     // terrible +3 conditions, patient is a magician +2, the patient's natural Body 0 / −1 / −2 / −3. 'medkitDice': old.
     const kitDice = firstAidKitDice(medkit?.system?.medkitRating ?? 0);
     const tableMods = firstAidModifiers({ medkit: Boolean(medkit), conditions: opts.conditions ?? 'normal', magician: Number(patient?.system?.magic ?? 0) > 0 && patient?.type !== 'spirit', applyMagician: opts.applyMagician, naturalBody: Number(patient?.system?.attributes?.body?.natural ?? patient?.system?.attributes?.body?.total ?? 0) });
-    const sd = this.#skillDice(this.findSkill(f.skill), false, null, f.fallbackAttribute as AttributeKey);
+    const sd0 = this.#skillDice(this.findSkill(f.skill), false, null, f.fallbackAttribute as AttributeKey);
+    // v0.96.0 (RULES.HEALTH_V96.medkitAdvice, Core p. 250): the kit's expert system lends its Biotech 3.
+    const adv96 = H96.medkitAdviceDice(Number(this.findSkill(f.skill)?.system?.rating ?? 0), Boolean(medkit));
+    const sd = adv96 != null ? { ...sd0, dice: adv96, modifiers: [], suffix: tx('SR2E.Health96.Medkit.advice', { dice: adv96 }) } : sd0;
     const faResult = await this.#runTest(tx('SR2E.Card.Actor.firstAidOnWoundHealsUp', { patientName: patient.name, track, level: t.level, maxBoxes: t.maxBoxes, sdSuffix: sd.suffix, part: kitDice ? ` [${medkit.name} +${kitDice}]` : '' }),
       sd.dice + kitDice, { targetNumber: t.tn, modifiers: [...sd.modifiers, ...tableMods, ...(H923.bodyIndexOn('firstAid') ? SR2Actor.bodyIndexHealingMods(patient) : [])], poolDice: opts.poolDice ?? 0 },
       { kind: 'heal', heal: { targetUuid: patient.uuid, targetName: patient.name, track, before, mode: 'firstAid' } });
     // v0.80.0 (RULES.URR_V80.hsMagicLossUntreated): a magician treated without the +2 may lose Magic.
     // v0.92.3 (RULES.HEALTH_V923.magicLossUntreated 'test', Core p. 115): by the book, twice for a Deadly wound.
+    // v0.96.0 (RULES.HEALTH_V96.medicalCosts, Core p. 113): a paramedic's fee.
+    if (faResult) await H96G.paramedicFee(this, patient, before);
     if (faResult && magicLossOnTreatment({ magician: Number(patient?.system?.magic ?? 0) > 0 && patient?.type !== 'spirit', applyMagician: opts.applyMagician })) {
       for (let i = H923.magicLossUntreatedTests(t.level === 'D'); i > 0; i--) await SR2Actor.urrMagicLossCard(patient, this);
     }
@@ -2035,8 +2045,10 @@ export class SR2Actor extends Actor {
     // A stay in hospital or intensive care costs nuyen per day (v0.42.0); the GM can waive it.
     // v0.80.0 (review #10): the Revamp's Stun recovery ignores care, so it costs nothing.
     // v0.92.3 (RULES.HEALTH_V923.stunRecovery 'book', Core p. 112): no medical treatment helps Stun, so it costs nothing either.
-    const cost = opts.pay === false || (track === 'stun' && H923.stunRecoveryBaseTn() !== null) ? 0 : careCost(care, opts.hours);
-    if (cost > 0 && !(await this.adjustNuyen(-cost, care === 'intensive' ? tx('SR2E.Text.Actor.intensiveCareDayS', { days: Math.max(1, Math.ceil(opts.hours / 24)) }) : tx('SR2E.Text.Actor.hospitalDayS', { days: Math.max(1, Math.ceil(opts.hours / 24)) })))) {
+    // v0.96.0 (RULES.HEALTH_V96.medicalCosts, docwagonExtendedCare; Core pp. 113, 250): the Medical Costs Table, less DocWagon's discount.
+    const cost96 = H96G.restCost(this, { care, hours: opts.hours, track, before });
+    const cost = opts.pay === false || (track === 'stun' && H923.stunRecoveryBaseTn() !== null) ? 0 : (cost96 ?? careCost(care, opts.hours));
+    if (cost > 0 && !(await this.adjustNuyen(-cost, cost96 != null && care === 'medkit' ? tx('SR2E.Health96.Fee.doctorDays', { days: Math.max(1, Math.ceil(opts.hours / 24)) }) : care === 'intensive' ? tx('SR2E.Text.Actor.intensiveCareDayS', { days: Math.max(1, Math.ceil(opts.hours / 24)) }) : tx('SR2E.Text.Actor.hospitalDayS', { days: Math.max(1, Math.ceil(opts.hours / 24)) })))) {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.canTPayForThatCare', { name: escHtml(this.name), cost: cost.toLocaleString() }));
       return null;
     }
@@ -2088,8 +2100,10 @@ export class SR2Actor extends Actor {
     const result = await successTest({ dice: healDice + rapid + sym, targetNumber: tn, modifiers: [...(stunUrr ? stunUrr.modifiers : careMods), ...(H923.bodyIndexOn('natural') ? SR2Actor.bodyIndexHealingMods(this) : [])], roll: foundryRoller(rolls) });
     // v0.78.0 (RULES.BOOK_V78.symbiotes 'time'): symbiotes shorten the healing time instead.
     const timeFactor = Math.min(1, Math.max(0.1, Number(this.sys.derived?.bio?.vitals?.healingTimeFactor ?? 1) || 1));
-    await this.#post(this.#snapshot(tx('SR2E.Card.Actor.woundHRest', { part: stages ? tx('SR2E.Card.Actor.healingStage') : tx('SR2E.Card.Actor.naturalHealing'), track, woundLevel: woundLevel(before), hours: opts.hours, part2: cost ? tx('SR2E.Card.Actor.paid', { cost: cost.toLocaleString() }) : '', part3: rapid ? tx('SR2E.Card.Actor.rapidHealing', { rapid }) : '', part4: sym ? tx('SR2E.Card.Actor.symbiotes', { sym }) : '', part5: timeFactor < 1 ? tx('SR2E.Card.Actor.symbiotesTime', { timeFactor }) : '' }), result, {
-      kind: 'heal', heal: { targetUuid: this.uuid as string, targetName: this.name as string, track, before, mode: 'natural', hours: opts.hours, ...(timeFactor < 1 ? { timeFactor } : {}), ...(stages ? { stages: true } : {}) },
+    // v0.96.0 (RULES.HEALTH_V96.stunRestInterrupted, Core p. 112): a Stun rest in progress re-tests, never better than the first roll.
+    const rest96 = track === 'stun' ? H96G.stunRestContext(this) : {};
+    await this.#post(this.#snapshot(tx('SR2E.Card.Actor.woundHRest', { part: stages ? tx('SR2E.Card.Actor.healingStage') : tx('SR2E.Card.Actor.naturalHealing'), track, woundLevel: woundLevel(before), hours: opts.hours, part2: cost ? tx('SR2E.Card.Actor.paid', { cost: cost.toLocaleString() }) : '', part3: rapid ? tx('SR2E.Card.Actor.rapidHealing', { rapid }) : '', part4: sym ? tx('SR2E.Card.Actor.symbiotes', { sym }) : '', part5: timeFactor < 1 ? tx('SR2E.Card.Actor.symbiotesTime', { timeFactor }) : '' }) + H96G.restNote(this, { care, track, before, cap: rest96.stunCap96 }), result, {
+      kind: 'heal', heal: { targetUuid: this.uuid as string, targetName: this.name as string, track, before, mode: 'natural', hours: opts.hours, ...(timeFactor < 1 ? { timeFactor } : {}), ...(stages ? { stages: true } : {}), ...rest96 },
     }), result, rolls);
     return result;
   }
@@ -2106,6 +2120,8 @@ export class SR2Actor extends Actor {
     }
     // v0.92.3 review fix: a trauma patch's +2 belongs to the wound it was used on: healed fully, it goes.
     if (Number(this.sys.monitor?.physical ?? 0) === 0 && this.getFlag?.(SYSTEM_ID, 'traumaPatched923')) await clearFlag(this, 'traumaPatched923');
+    // v0.96.0 (RULES.HEALTH_V96.stunRestInterrupted): a clear Stun track ends the rest in progress.
+    if (Number(this.sys.monitor?.stun ?? 0) === 0 && this.getFlag?.(SYSTEM_ID, H96G.STUN_REST_FLAG) != null) await clearFlag(this, H96G.STUN_REST_FLAG);
     const status = this.sys.derived?.status as string | undefined;
     // v0.61.0: hurt in a fight, a shaman of a berserk totem may go berserk (MAGIC_V61.totems).
     if ((grew.physical || grew.stun) && !incapacitated(status) && berserkTriggered(this.totemDrawbacks(), { damaged: true, inCombat: Boolean((game.combat as any)?.started) })) await this.berserkCheck(tx('SR2E.Card.Actor.wounded'));
@@ -3011,7 +3027,9 @@ export class SR2Actor extends Actor {
     const s = snap.successes;
     const list = this.sustained();
     const now = sysNow();
-    const permanentAt = ctx.permanent ? permanentUntil(now, ctx.force, s, SR2Actor.secondsPerTurn()) ?? -1 : -1;
+    // v0.96.0 (RULES.HEALTH_V96.healingSpellTime, Core p. 155): a healing spell's Healing Table time ÷ the successes put to time.
+    const heal96 = ctx.permanent && snap.heal && (snap.heal.mode ?? 'magic') === 'magic' ? H96.healSpellUntil(now, snap.heal.before, s, SR2Actor.secondsPerTurn()) : null;
+    const permanentAt = ctx.permanent ? heal96 ?? permanentUntil(now, ctx.force, s, SR2Actor.secondsPerTurn()) ?? -1 : -1;
     if (!ctx.applied) {
       if (s <= 0) return snap;
       await this.update({ 'system.sustaining': [...list, { spellName: ctx.spellName, force: ctx.force, category: ctx.category, focusId: ctx.focusId, successes: s, quickened: false, targetUuids: [...(ctx.targetUuids ?? [])],
@@ -3569,6 +3587,11 @@ export class SR2Actor extends Actor {
       result.boxes = kept;
       result.status = monitorStatus(result.monitor, ctxBody);
     }
+    // v0.96.0 (RULES.HEALTH_V96.traumaDamper, painEditor; Shadowtech pp. 26, 29): a damper moves a Physical box onto
+    // the Stun track; a pain editor's wearer isn't knocked out by Stun.
+    const sh96 = ctx.type === 'physical' && ctx.noun === 'damage' ? H96.damperShift(ctx.before, result.monitor, { damper: H96.hasBio(this.items, 'traumaDamper'), painEditor: H96.hasBio(this.items, 'painEditor') }) : null;
+    if (sh96) { result.monitor.physical = sh96.physical; result.monitor.stun = sh96.stun; result.status = monitorStatus(result.monitor, ctxBody); }
+    result.status = H96.painEditorStatus(result.status, Boolean(this.sys.derived?.bio?.ignoreStunWounds)) as typeof result.status;
     const current: Monitor = { physical: this.sys.monitor.physical, stun: this.sys.monitor.stun };
     let note = '';
     // A first roll always applies. A re-roll only corrects the monitor if nothing else has
@@ -6826,13 +6849,17 @@ export class SR2Actor extends Actor {
       return;
     }
     const now = sysNow();
-    const arriveAt = docwagonArrivalAt(now, call.responseSeconds);
+    // v0.96.0 (RULES.HEALTH_V96.docwagonResponse, Neo-Anarchist's Guide p. 95): the unit and 3D6 minutes, rolled.
+    const resp96 = await H96G.docwagonResponse();
+    const responseSeconds = resp96 ? resp96.seconds : call.responseSeconds;
+    const arriveAt = docwagonArrivalAt(now, responseSeconds);
     const fees = call.fees.length ? call.fees.map((f) => `${escText(f.label)} ¥${f.amount.toLocaleString()}`).join(', ') : tx('SR2E.Card.Actor.none');
     await ChatMessage.create({
       speaker: { alias: tx('SR2E.Card.Actor.docwagon') },
-      content: `<div class="sr2e-roll"><h3>${tx('SR2E.Card.Actor.docwagon2', { stLabel: escText(st.label), part: o.auto ? tx('SR2E.Card.Actor.biomonitorAlert2') : tx('SR2E.Card.Actor.called') })}</h3><p>${tx('SR2E.Card.Actor.isATeamIsOnIts', { who, status: escText(status), span: escText(describeSpan(call.responseSeconds)) })}</p><p>${tx('SR2E.Card.Actor.feesOnArrival', { fees, part: call.notes.length ? ` <em>${escText(call.notes.join(' '))}</em>` : '' })}</p></div>
+      content: `<div class="sr2e-roll"><h3>${tx('SR2E.Card.Actor.docwagon2', { stLabel: escText(st.label), part: o.auto ? tx('SR2E.Card.Actor.biomonitorAlert2') : tx('SR2E.Card.Actor.called') })}</h3><p>${tx('SR2E.Card.Actor.isATeamIsOnIts', { who, status: escText(status), span: escText(describeSpan(responseSeconds)) })}${resp96 ? ` <em>${escText(resp96.note)}</em>` : ''}</p><p>${tx('SR2E.Card.Actor.feesOnArrival', { fees, part: call.notes.length ? ` <em>${escText(call.notes.join(' '))}</em>` : '' })}</p></div>
         <p><button type="button" data-sr2e-action="docwagonArrive" data-hostile="0">${tx('SR2E.Card.Actor.teamArrivesGm')}</button> <button type="button" data-sr2e-action="docwagonArrive" data-hostile="1" title="${tx('SR2E.Card.Actor.aFirefightHighThreatResponseIf')}">${tx('SR2E.Card.Actor.arrivesUnderFireGm')}</button></p>`,
       flags: { [SYSTEM_ID]: { docwagon: { actorUuid: this.uuid, calledAt: now, arriveAt } } },
+      ...(resp96 ? { rolls: resp96.rolls } : {}),
     });
   }
 
@@ -7821,8 +7848,17 @@ export class SR2Actor extends Actor {
     // v0.92.3 (RULES.HEALTH_V923.dwarfResistance 'disease'): a dwarf's racial dice count against disease only.
     let dice = toxinResistDice({ attribute: this.sys.attributes[attr].total, toxinDice: (d.toxinDice ?? 0) + (t.kind === 'disease' ? Number(d.raceDiseaseDice ?? 0) : 0), inhalantDice: d.bio?.inhalantDice ?? 0, vector: t.vector }) + prot.dice + antiDice + filt.dice + neph + toughT + immDice;
     // v0.78.0 (RULES.BOOK_V78.toxinBioware 'power'): a toxin extractor or tracheal filter lowers the Power (not for disease).
-    const power = t.kind === 'disease' ? t.power : toxinPower(t.power, d.bio?.toxinPowerOff, t.vector);
-    const powerCut = t.power - power;
+    const power0 = t.kind === 'disease' ? t.power : toxinPower(t.power, d.bio?.toxinPowerOff, t.vector);
+    // v0.96.0 (RULES.HEALTH_V96.nephriticPower, Shadowtech p. 30): a nephritic screen lowers a pathogen's or a blood-vectored toxin's Power.
+    const neph96 = Math.min(power0, H96.nephriticCut({ kind: t.kind, vector: t.vector, screen: H96.hasBio(this.items, 'nephriticScreen') }));
+    const power = power0 - neph96;
+    const powerCut = t.power - power0;
+    if (neph96 > 0 && power <= 0) {
+      await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p><strong>${escText(this.name)}</strong> ${tx('SR2E.Health96.Nephritic.stops', { name: escText(t.name) })}</p>` });
+      return;
+    }
+    // v0.96.0 (RULES.HEALTH_V96.neuroStun, Core p. 186): disoriented for an hour, resisted or not.
+    await H96G.neuroStun(this, t.name);
     const cutBy = t.vector === RULES.TOXINS.inhalantVector ? tx('SR2E.Card.Actor.trachealFilter') : tx('SR2E.Card.Actor.toxinExtractor');
     if (powerCut > 0 && power <= 0) {
       await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p><strong>${escText(this.name)}</strong>${tx('SR2E.Card.Actor.sTakesThePowerOfTo', { cutBy, name: escText(t.name) })}</p>` });
@@ -7850,7 +7886,7 @@ export class SR2Actor extends Actor {
     const head = t.label != null ? t.label
       : t.from ? (t.kind === 'disease' ? tx('SR2E.Card.Actor.resistInfectionFrom', { name: t.name, from: t.from }) : tx('SR2E.Card.Actor.resistFrom', { name: t.name, from: t.from }))
       : (t.kind === 'disease' ? tx('SR2E.Card.Actor.resistInfection2', { name: t.name }) : tx('SR2E.Card.Actor.resist6', { name: t.name }));
-    const label = `${head} ${power}${t.level} ${t.damageType} (${extra ? tx('SR2E.Card.Actor.toxinDice', { attr: cap(attr), mark: extra > 0 ? '+' : '', extra }) : cap(attr)}${prot.dice ? `, ${prot.label} +${prot.dice}` : ''}${antiDice ? `, ${anti!.name} +${antiDice}` : ''}${filt.dice ? `, ${filt.label} +${filt.dice}` : ''}${neph ? tx('SR2E.Card.Actor.nephriticScreen', { neph }) : ''}${toughT ? tx('SR2E.Card.Actor.toughness', { toughT }) : ''}${immDice ? tx('SR2E.Card.Actor.immunityTo', { part: t.kind === 'disease' ? tx('SR2E.Card.Actor.pathogens') : tx('SR2E.Card.Actor.poisons'), immDice }) : ''}${powerCut > 0 ? tx('SR2E.Card.Actor.power2', { cutBy, powerCut }) : ''})${filtNote}`;
+    const label = `${head} ${power}${t.level} ${t.damageType} (${extra ? tx('SR2E.Card.Actor.toxinDice', { attr: cap(attr), mark: extra > 0 ? '+' : '', extra }) : cap(attr)}${prot.dice ? `, ${prot.label} +${prot.dice}` : ''}${antiDice ? `, ${anti!.name} +${antiDice}` : ''}${filt.dice ? `, ${filt.label} +${filt.dice}` : ''}${neph ? tx('SR2E.Card.Actor.nephriticScreen', { neph }) : ''}${toughT ? tx('SR2E.Card.Actor.toughness', { toughT }) : ''}${immDice ? tx('SR2E.Card.Actor.immunityTo', { part: t.kind === 'disease' ? tx('SR2E.Card.Actor.pathogens') : tx('SR2E.Card.Actor.poisons'), immDice }) : ''}${powerCut > 0 ? tx('SR2E.Card.Actor.power2', { cutBy, powerCut }) : ''}${neph96 > 0 ? tx('SR2E.Health96.Nephritic.cut', { cut: neph96 }) : ''})${filtNote}`;
     // A disease (v0.42.0): any damage left means infected; the disease does its harm later.
     if (t.kind === 'disease') {
       await this.#post(this.#snapshot(label, result, {
@@ -7998,6 +8034,9 @@ export class SR2Actor extends Actor {
         return this.#runTest(tx('SR2E.Card.Actor.toleranceTest923', { drug, tn }), this.sys.attributes.body.total, { targetNumber: tn },
           { kind: 'addiction', addiction: { drug, mode: 'tolerance' } });
       }
+      // v0.96.0 (RULES.HEALTH_V96.addictionBoth, Shadowtech p. 87): both physically and mentally addictive: a Body test first.
+      if (H96.doseTestAttributes(String(a.type)).length > 1) await this.#runTest(tx('SR2E.Card.Actor.addictionTestBook923', { drug, attribute: cap(H96.doseTestAttributes(String(a.type))[0]!), rating, type: a.type }), this.sys.attributes.body.total, { targetNumber: Math.max(RULES.MIN_TARGET_NUMBER, rating) },
+        { kind: 'addiction', addiction: { drug, mode: 'dose' } });
       const attribute: AttributeKey = a.type === 'physical' ? 'body' : 'willpower';
       return this.#runTest(tx('SR2E.Card.Actor.addictionTestBook923', { drug, attribute: cap(attribute), rating, type: a.type }), this.sys.attributes[attribute].total, { targetNumber: Math.max(RULES.MIN_TARGET_NUMBER, rating) },
         { kind: 'addiction', addiction: { drug, mode: 'dose' } });
@@ -8132,9 +8171,10 @@ export class SR2Actor extends Actor {
       await this.exposeToxinState(hit, [this.uuid as string], tx('SR2E.Card.Actor.overdoseDoseWhileActive', { name: it.name, value: od.dosesBefore + 1 }));
     }
     if (add && relapse) await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p><strong>${escText(this.name)}</strong> ${tx('SR2E.Card.Actor.relapse923', { name: escText(it.name) })}</p>` });
-    if (add && RULES.HEALTH.addiction.auto && !add.addicted) await this.drugAddictionTest(it.name, 'dose');
+    // v0.96.0 (RULES.HEALTH_V96.addictionTiming 'wearOff', Shadowtech p. 87): the tests come when the dose wears off (endDrug).
+    if (add && RULES.HEALTH.addiction.auto && !add.addicted && !H96.testsAtWearOff()) await this.drugAddictionTest(it.name, 'dose');
     // v0.92.3 (Shadowtech p. 88): a drug with a Tolerance rating: Body vs it after a dose; no successes = immune.
-    if (add && RULES.HEALTH.addiction.auto && H923.addictionBook() && Number(add.tolerance) > 0 && !add.immune) await this.drugAddictionTest(it.name, 'tolerance');
+    if (add && RULES.HEALTH.addiction.auto && H923.addictionBook() && Number(add.tolerance) > 0 && !add.immune && !H96.testsAtWearOff()) await this.drugAddictionTest(it.name, 'tolerance');
     return true;
   }
 
@@ -8151,6 +8191,8 @@ export class SR2Actor extends Actor {
       content: `<p>${tx('SR2E.Card.Actor.sWearsOff', { name: escText(this.name), name2: escText(d.name) })}</p>${crash ? `<p><button type="button" data-sr2e-action="drugCrash">${tx('SR2E.Card.Actor.resistTheCrashStun', { crashPower: escText(d.crashPower), crashLevel: escText(d.crashLevel) })}</button></p>` : ''}`,
       ...(crash ? { flags: { [SYSTEM_ID]: { drugCrash: { actorUuid: this.uuid, name: d.name, power: d.crashPower, level: d.crashLevel } } } } : {}),
     });
+    // v0.96.0 (RULES.HEALTH_V96.addictionTiming 'wearOff', Shadowtech p. 87): the addiction and Tolerance tests now.
+    await H96G.afterWearOff(this, String(d.name ?? ''));
   }
 
   /** Falling, fire, drowning, cold or fatigue (RULES.HAZARDS). `amount`: metres, intensity, turns, severity or hours. */
@@ -8462,12 +8504,17 @@ export class SR2Actor extends Actor {
     const newly = ad.filter((x) => withdrawalState(x, time, who).withdrawal && !x.withdrawalNoted);
     // v0.92.3 (Shadowtech p. 88): a recovery whose rating is back at the base: no longer addicted.
     const cured = H923.addictionBook() ? ad.filter((x) => H923.recoveryDone(x, time)) : [];
+    // v0.96.0 (RULES.HEALTH_V96, Shadowtech pp. 87–88): the rest after a recovery, withdrawal's 24-hour fall, the weekly loss.
+    let rest96 = '';
+    for (const x of cured) rest96 += H96G.startRest(x, time);
+    const changed96 = await H96G.addictionTick(a, ad, time);
+    if (changed96 && !newly.length && !cured.length) await a.update({ 'system.addictions': ad });
     if (newly.length || cured.length) {
       for (const x of newly) x.withdrawalNoted = true;
       for (const x of cured) { x.addicted = false; x.recovering = -1; x.rise = 0; x.riseAtKick = 0; x.withdrawalNoted = false; }
       await a.update({ 'system.addictions': ad });
       if (newly.length) await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: a }), content: `<p><strong>${tx('SR2E.Card.Actor.isInWithdrawal', { name: escText(a.name) })}</strong> ${tx('SR2E.Card.Actor.fromTnOnEveryTestUntil', { newly: escText(newly.map((x) => x.drug).join(', ')), addictionWithdrawalTn: H923.addictionBook() ? RULES.HEALTH_V923.addictionBook.forcedWithdrawalTn : RULES.HEALTH.addiction.withdrawalTn })}</p>` });
-      if (cured.length) await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: a }), content: `<p><strong>${escText(a.name)}</strong> ${tx('SR2E.Card.Actor.recovered923', { drugs: escText(cured.map((x) => x.drug).join(', ')) })}</p>` });
+      if (cured.length) await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: a }), content: `<p><strong>${escText(a.name)}</strong> ${tx('SR2E.Card.Actor.recovered923', { drugs: escText(cured.map((x) => x.drug).join(', ')) })}${escText(rest96)}</p>` });
     }
   }
 
@@ -9861,10 +9908,14 @@ export class SR2Actor extends Actor {
 
   /** v0.70.0: what a slap patch does to its target (the owner's client, or the GM's from an Apply (GM) card). */
   static async patchEffect(target: any, p: { kind: string; rating: number; name: string }): Promise<string> {
-    const rating = Math.max(0, Math.floor(Number(p.rating) || 0));
+    let rating = Math.max(0, Math.floor(Number(p.rating) || 0));
     const now = sysNow();
     let text = '';
     if (p.kind === 'trauma' && target.system.derived?.status !== 'dying') return tx('SR2E.Card.Actor.isnTDyingNothingHappens', { targetName: escText(target.name) });
+    // v0.96.0 (RULES.HEALTH_V96.patchImplants, Core p. 250): dermal armor lowers the rating; blood filtration stops it.
+    const imp96 = H96.patchAfterImplants(p.kind, rating, target.items ?? []);
+    if (imp96?.blocked) return tx('SR2E.Health96.Patch.blocked', { targetName: escText(target.name) });
+    if (imp96) rating = imp96.rating;
     if (p.kind === 'stim') {
       // v0.78.0 (RULES.BOOK_V78.patches.stim 'book'): it wears off in 2D6 minutes.
       const stun = Number(target.system.monitor.stun ?? 0);
@@ -9908,6 +9959,9 @@ export class SR2Actor extends Actor {
       await target.setFlag(SYSTEM_ID, 'antidote', { dice: e.dice, until: now + e.hours * 3600, name: p.name });
       text = tx('SR2E.Card.Actor.diceAgainstTheNextToxinWithin', { dice: e.dice, hours: e.hours });
     }
+    // v0.96.0 (RULES.HEALTH_V96): the armor's cut; the antidote as professional attention; the stim patch's Magic test.
+    if (imp96 && imp96.armor > 0) text += ` ${tx('SR2E.Health96.Patch.armor', { armor: imp96.armor, rating })}`;
+    text += await H96G.patchAfter(target, p.kind, rating);
     return text;
   }
 
@@ -13012,7 +13066,7 @@ export class SR2Actor extends Actor {
     const patient: any = await fromUuid(h.targetUuid);
     // v0.79.0: a healing stage (h.stages, RULES.DOCS_V79.healing 'stages') drops one wound level when the rest covers the stage's time.
     const stage = h.mode === 'natural' && h.stages ? stageRest({ boxes: h.before, successes: snap.successes, hours: h.hours ?? 0, timeFactor: h.timeFactor ?? 1 }) : null;
-    const nat = h.mode === 'natural' && !stage ? naturalHealing({ track: h.track, boxes: h.before, successes: snap.successes, hours: h.hours ?? 0, timeFactor: h.timeFactor ?? 1 }) : null;
+    const nat = h.mode === 'natural' && !stage ? naturalHealing({ track: h.track, boxes: h.before, successes: H96.restSuccesses(snap.successes, h.stunCap96), hours: h.hours ?? 0, timeFactor: h.timeFactor ?? 1 }) : null;
     const healed = h.mode === 'firstAid' ? firstAidBoxes(snap.successes, h.before, h.track) : stage ? stage.boxes : nat ? nat.boxes : boxesHealed(snap.successes, h.before);
     const target = h.before - healed;
     const expected = h.after ?? h.before;
@@ -13061,6 +13115,8 @@ export class SR2Actor extends Actor {
     // v0.80.0 (RULES.URR_V80, health-social): after first aid, the healer's Biotech (for a retry), the treatment time,
     // and a dying patient's own stabilisation test when the first aid failed.
     if (h.mode === 'firstAid' && applies && patient) note += await SR2Actor.urrAfterFirstAid(this, patient, snap, wasDying);
+    // v0.96.0 (RULES.HEALTH_V96.stunRestInterrupted): keep the first roll while the Stun track isn't clear.
+    if (h.mode === 'natural' && h.track === 'stun' && applies && canWriteNow(patient)) await H96G.afterStunRest(patient, h, snap.successes, target);
     if (nat && snap.successes > 0) note += ` <em>${tx('SR2E.Card.Actor.hPerBoxOverHOf', { natHoursPerBox: nat.hoursPerBox, hours: h.hours })}</em>`;
     if (stage && snap.successes > 0) note += stage.done
       ? ` <em>${tx('SR2E.Card.Actor.theStageTakesDoneInH', { span: escText(describeSpan(Math.round(stage.stageHours! * 3600))), hours: h.hours })}</em>`

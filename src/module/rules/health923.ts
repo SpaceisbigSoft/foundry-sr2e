@@ -6,6 +6,7 @@
  * the Revamp's helpers import it).
  */
 import { RULES, type DamageLevel } from './config.ts';
+import { fallenRise, restTn, bothIntervalHours } from './health96.ts';
 
 const U = () => RULES.URR_V80;
 const H = () => RULES.HEALTH_V923;
@@ -275,7 +276,9 @@ export function currentRise(a: BookAddiction, now: number): number {
     return Math.max(0, Math.floor(Number(a.riseAtKick) || 0) - Math.floor(Math.max(0, now - Number(a.recovering)) / (per * DAY)));
   }
   const strength = Math.floor(Number(a.strength) || 0);
-  if (a.addicted || !(strength > 0 && strength < 30)) return rise;
+  // v0.96.0 (RULES.HEALTH_V96.addictionFall, Shadowtech p. 88): forced withdrawal's 24-hour fall.
+  if (a.addicted) return fallenRise(a as any, rise, now);
+  if (!(strength > 0 && strength < 30)) return rise;
   return Math.max(0, rise - Math.floor(Math.max(0, now - Number(a.lastDose || 0)) / ((30 - strength) * DAY)));
 }
 
@@ -287,6 +290,9 @@ export function addictionRatingNow(a: BookAddiction, now: number): number {
 /** Hours an addict can go between doses: Body × 4 (physical) or Willpower × 4 (mental) (Shadowtech p. 87). */
 export function doseIntervalHours(type: string, who: { body: number; willpower: number }): number {
   const per = Math.max(0, Number(H().addictionBook.hoursPerPoint) || 4);
+  // v0.96.0 (RULES.HEALTH_V96.addictionBoth, Shadowtech p. 87): both kinds: the shorter clock.
+  const both = bothIntervalHours(type, who, per);
+  if (both != null) return both;
   return Math.max(0, Math.floor(Number(type === 'physical' ? who.body : who.willpower) || 0)) * per;
 }
 
@@ -306,6 +312,9 @@ export function kickTn(a: BookAddiction, now: number): number {
 export function bookWithdrawalTn(a: BookAddiction, now: number, who: { body: number; willpower: number }, concentration = false): { kind: 'forced' | 'recovery'; tn: number } | null {
   const b = H().addictionBook;
   const mult = concentration ? 2 : 1;
+  // v0.96.0 (RULES.HEALTH_V96.addictionRest, Shadowtech p. 88): the rest after a recovery, +1 (+2 concentration).
+  const rest = restTn(a as any, now, concentration);
+  if (rest != null && !a.addicted) return { kind: 'recovery', tn: rest };
   if (isRecovering(a)) return recoveryDone(a, now) ? null : { kind: 'recovery', tn: Math.floor(Number(b.recoveryTn) || 0) * mult };
   if (!a.addicted) return null;
   const clean = Math.max(0, now - Number(a.lastDose || 0));

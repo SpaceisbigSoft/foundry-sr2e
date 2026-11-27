@@ -3,7 +3,7 @@
  * each with the book's way (the default) and the old way (oldWay), and the Revamp unchanged (urrMode). The stubs are a
  * copy of v080-health-social.test.ts's. These check OUR wiring, not that Foundry behaves as the stubs do.
  */
-import { test, describe, before, beforeEach } from 'node:test';
+import { test, describe, before, beforeEach, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { RULES } from '../rules/index.ts';
 import { urrMode } from '../rules/__tests__/urrmode.ts';
@@ -531,6 +531,10 @@ describe('v0.92.3 toxins and gear (HEALTH_V923.respirator, dwarfResistance; Core
 });
 
 describe('v0.92.3 addiction by Shadowtech (HEALTH_V923.addiction; Shadowtech pp. 87–89)', () => {
+  // v0.96.0: these tests roll the addiction tests at the dose (RULES.HEALTH_V96.addictionTiming 'dose', v0.95.1).
+  let restore96: () => void = () => {};
+  before(() => { restore96 = oldWay({ 'HEALTH_V96.addictionTiming': 'dose', 'HEALTH_V96.addictionAttrition': 'off', 'HEALTH_V96.addictionFall': 'off', 'HEALTH_V96.addictionRest': 'off' }); });
+  after(() => restore96());
   const H = 3600;
   const drug = (extra: any = {}) => ({ id: 'j', type: 'gear', name: 'Jazz', system: { quantity: 5, carried: true, toxin: { kind: 'drug', vector: 'inhalation', power: 0, level: 'L', damageType: 'stun', speed: 'immediate', effect: '', attributes: {}, reaction: 2, initiativeDice: 1, extra: {}, durationMinutes: 10, crashPower: 0, crashLevel: '', addiction: 4, addictionType: 'mental', tolerance: 0, strength: 0, ...extra } } });
   test('a mental addict needs a dose every Willpower × 4 hours; then forced withdrawal, +3 and the pain of Moderate Stun', async (t) => {

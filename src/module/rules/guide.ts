@@ -80,6 +80,8 @@ export const GUIDE_TOPICS: GuideTopic[] = [
   topic('rules-v095-melee', 'both', [], ['p', 7]),
   // v0.95.0: the core book rules added (RULES.CORE_V95).
   topic('rules-v095-core', 'both', [], ['p', 7]),
+  // v0.96.0: the health book rules added (RULES.HEALTH_V96).
+  topic('rules-v096-health', 'both', [], ['p', 7]),
   topic('rules-urr', 'both', [], ['p', 'p', 7, 'p']),
   topic('sheet-tools', 'both', [], ['p', 2, 'p', 'p', 'p', 'p', 'p', 'p', 'p']),
   topic('summary-bar', 'both', [], ['p', 3, 'p', 5, 'p']),
@@ -176,7 +178,7 @@ const category = (id: string, audience: GuideCategory['audience'], topics: strin
   ({ id, audience, topics, get label() { return tKey(`SR2E.Guide.Category.${guideKeyPart(id)}`); } });
 
 export const GUIDE_CATEGORIES: GuideCategory[] = [
-  category('start', 'players', ['getting-started', 'tools', 'rules-v079', 'rules-v0923-combat', 'rules-v095-fire', 'rules-v095-melee', 'rules-v095-core', 'rules-urr', 'sheet-tools', 'summary-bar', 'layouts', 'look', 'shortcuts', 'printing', 'troubleshooting', 'interpretations', 'credits']),
+  category('start', 'players', ['getting-started', 'tools', 'rules-v079', 'rules-v0923-combat', 'rules-v095-fire', 'rules-v095-melee', 'rules-v095-core', 'rules-v096-health', 'rules-urr', 'sheet-tools', 'summary-bar', 'layouts', 'look', 'shortcuts', 'printing', 'troubleshooting', 'interpretations', 'credits']),
   category('rolls', 'players', ['rolling', 'targeting', 'chat-cards', 'karma-pool', 'pools', 'inline-tests', 'physical-dice']),
   category('character', 'players', ['attributes', 'condition-monitor', 'skills', 'skill-picker', 'current-tab', 'effects', 'health', 'contacts', 'bio', 'token-art']),
   category('gear', 'players', ['weapons', 'cyberware', 'gear', 'item-sheet', 'money', 'trade', 'item-piles', 'adding', 'catalogue', 'new-entry']),

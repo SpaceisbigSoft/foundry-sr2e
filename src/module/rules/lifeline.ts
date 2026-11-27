@@ -1,5 +1,6 @@
 import { RULES } from './config.ts';
 import { toxinSpeed } from './hazards.ts';
+import { htrCharge } from './health96.ts';
 import { EFFECT_NUMBER_KEYS, emptyBundle, type EffectBundle } from './effects.ts';
 import { t as tx, tCount, tNoun, tKey } from '../helpers/i18n.ts';
 
@@ -70,7 +71,9 @@ export function docwagonCall(o: { tier: string; active: boolean; status: 'wounde
   if (o.hostile) {
     if (t.htrAvailable) {
       htr = true;
-      if (!t.htrIncluded && num(t.htrFee) > 0) fees.push({ label: tx('SR2E.Text.Lifeline.highThreatResponse'), amount: num(t.htrFee) });
+      // v0.96.0 (RULES.HEALTH_V96.docwagonHtr, Core p. 250): the HTR charge less the contract's discount.
+      const htr96 = htrCharge(t.id);
+      if (htr96 != null ? htr96 > 0 : !t.htrIncluded && num(t.htrFee) > 0) fees.push({ label: tx('SR2E.Text.Lifeline.highThreatResponse'), amount: htr96 ?? num(t.htrFee) });
       notes.push(tx('SR2E.Text.Lifeline.htrTeamSent'));
     } else notes.push(tx('SR2E.Text.Lifeline.noHtr', { tier: t.label }));
   }

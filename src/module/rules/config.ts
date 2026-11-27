@@ -27,6 +27,7 @@ import { VEHICLES_V923 } from './config923/vehicles.ts';
 import { GEAR_V923 } from './config923/gear.ts';
 import { CORE_V95 } from './config95/core.ts';
 import { SORCERY_V96 } from './config96/sorcery.ts';
+import { HEALTH_V96 } from './config96/health.ts';
 import { FIRE_V95 } from './config95/fire.ts';
 import { MELEE_V95 } from './config95/melee.ts';
 import { SPIRITS_V96 } from './config96/spirits.ts';
@@ -3419,6 +3420,8 @@ export const RULES = {
   SORCERY_V96,
   /** v0.96.0: rules completeness, conjuring, spirits, astral, adepts and critter powers (rules/config96/spirits.ts). */
   SPIRITS_V96,
+  /** v0.96.0: rules completeness, Damage, health and hazards (rules/config96/health.ts). */
+  HEALTH_V96,
 } as const;
 
 export type RangeBand = keyof typeof RULES.RANGE_TN;
