@@ -2,6 +2,12 @@
 
 This is the history of the unofficial Shadowrun 2nd Edition system for Foundry VTT (system id `shadowrun2e_unified`; `sr2e` until v0.93.0), newest version first. Every rules change since v0.70.0 has a house-rule switch that puts the old behaviour back. The system was built with AI (Anthropic's Claude) under human direction, and it has not yet been play-tested at a real table.
 
+## v0.96.2 — Card wording fixes (27 Nov 2026)
+- **Fixed:** the ward ritual card's title no longer says "÷ successes" under the book's ward rule (the ritual takes its Force in hours).
+- **Fixed:** a Confusion or Fear card names the victim's Willpower as its TN (it read "TN = …'s Fixed" when the power's own TN source was fixed).
+- **Fixed:** the resist prompt for a critter power says "uses … (rating N)" and "Resist the power", not "casts" and "Resist the spell".
+- API changes: none.
+
 ## v0.96.1 — Live-check fixes (27 Nov 2026)
 - **Fixed:** an elemental on an unlinked token that was given services again after departing no longer loses them all at the next world-clock tick (its cleared waiting clock read as time 0).
 - **Fixed:** masking's second try (+2) and its limit of two now count: the try counter's key held a dot, which Foundry stores as nested data, so the count was never read back.

@@ -1606,6 +1606,17 @@ describe("critter and spirit powers", () => {
     assert.deepEqual({ ...v.system.monitor }, { physical: 0, stun: 0 });
   });
 
+  test("v0.96.2: Confusion with a fixed TN source names the Willpower it rolls against", async (t) => {
+    t.after(oldWay({ "SPIRITS_V96.critterOpposed": "book" }));
+    chat.length = 0;
+    const s = spiritUser(4); const v = victim();
+    faces.push(5, 5, 5, 2);
+    const r = await s.usePower(power({ name: "Confusion", special: "confusion", tnSource: "fixed", resist: "willpower", effect: "effect" }), { targetUuid: v.uuid });
+    assert.equal(r.targetNumber, 3);
+    assert.match(chat.at(-1).content, /TN = Victim's Willpower/);
+    assert.doesNotMatch(chat.at(-1).content, /Fixed/);
+  });
+
   test("without a target the fixed TN is used and there is no Resist button", async () => {
     chat.length = 0;
     const s = spiritUser(3);
@@ -8404,6 +8415,21 @@ describe("v0.56.0 magic and critters", () => {
     assert.deepEqual(made[0], { name: "Front door ward", type: "barrier", system: { barrierKind: "ward", rating: 4, baseRating: 4 } });
     assert.ok(chat.some((c: any) => /Front door ward<\/strong> \(a Force 4 ward\) rises after <strong>2 hours/.test(c.content)));
     assert.ok(chat.some((c: any) => /Ward drain/.test(c.content)));
+  });
+
+  test("v0.96.2: under the book ward rule the ritual card's title has no \"÷ successes\"", async () => {
+    const was = (RULES as any).SORCERY_V923.ward;
+    (RULES as any).SORCERY_V923.ward = "book";
+    try {
+      chat.length = 0;
+      g.Actor.create = async () => ({ uuid: "Actor.ward2" });
+      const a = mage();
+      faces.push(5, 5, 1, 1); faces.push(...Array(12).fill(5));
+      await a.raiseWardRitual({ force: 3, name: "Back door ward", payMaterials: false });
+      const text = chat.map((c: any) => String(c.content)).join("\n");
+      assert.match(text, /Raise Back door ward \(Sorcery; TN 3\) \[3 hours\]/);
+      assert.doesNotMatch(text, /÷ successes/);
+    } finally { (RULES as any).SORCERY_V923.ward = was; }
   });
 
   test("centering by a skill test: its successes come off the next magical test's wounds", async () => {

@@ -2707,7 +2707,7 @@ export function promptRecipients(target: any, users: any[], activeGmId: string |
 const prompted = new Set<string>();
 
 /** A Defend / Resist entry a card may prompt for. */
-type PromptEntry = { kind: 'defend' | 'resist' | 'resistSpell'; index: number; uuid: string; what: string };
+type PromptEntry = { kind: 'defend' | 'resist' | 'resistSpell'; index: number; uuid: string; what: string; power?: boolean };
 
 /**
  * v0.81.1 (SEC1-4, design 2): the Defend / Resist entries a card prompts for: one per target (the first entry naming
@@ -2717,7 +2717,7 @@ type PromptEntry = { kind: 'defend' | 'resist' | 'resistSpell'; index: number; u
  */
 export function promptPlan(message: any): { entries: PromptEntry[]; more: PromptEntry[] } {
   const content = String(message?.content ?? '');
-  const raw: Array<{ kind: 'defend' | 'resist' | 'resistSpell'; index: number; uuid: string; what: string; sources: unknown[] }> = [];
+  const raw: Array<{ kind: 'defend' | 'resist' | 'resistSpell'; index: number; uuid: string; what: string; sources: unknown[]; power?: boolean }> = [];
   const listOf = (many: string, one: string) => { const v = message.getFlag?.(SYSTEM_ID, many); return (Array.isArray(v) ? v : [message.getFlag?.(SYSTEM_ID, one)]).filter((x: any) => x && typeof x === 'object'); };
   if (content.includes('data-sr2e-action="defend"')) {
     listOf('attacks', 'attack').slice(0, 100).forEach((a: any, index: number) => raw.push({ kind: 'defend', index, uuid: String(a?.targetUuid ?? ''), sources: realSources(message, a?.attackerUuid), what: tx('SR2E.Dialog.Chat.attacksWith', { attacker: nameOfUuid(String(a?.attackerUuid ?? '')) || tx('SR2E.Dialog.Chat.someone'), weaponName: String(a?.weaponName ?? tx('SR2E.Dialog.Chat.aWeapon')).slice(0, 120) }) }));
@@ -2726,7 +2726,15 @@ export function promptPlan(message: any): { entries: PromptEntry[]; more: Prompt
     listOf('damages', 'damage').slice(0, 100).forEach((d: any, index: number) => raw.push({ kind: 'resist', index, uuid: String(d?.targetUuid ?? ''), sources: damageSources(message, d), what: tx('SR2E.Dialog.Chat.toResist', { power: safeInt(d?.power, 0, damageCap(message), 0), level: boundLevel(d?.level), damageType: boundType(d?.damageType) }) }));
   }
   if (content.includes('data-sr2e-action="resistSpell"')) {
-    listOf('spells', 'spell').slice(0, 100).forEach((sp: any, index: number) => raw.push({ kind: 'resistSpell', index, uuid: String(sp?.targetUuid ?? ''), sources: realSources(message, sp?.casterUuid), what: tx('SR2E.Dialog.Chat.castsForce', { caster: nameOfUuid(String(sp?.casterUuid ?? '')) || tx('SR2E.Dialog.Chat.someone'), spellName: String(sp?.spellName ?? tx('SR2E.Dialog.Chat.aSpell')).slice(0, 120), force: safeInt(sp?.force, 0, 30, 0) }) }));
+    listOf('spells', 'spell').slice(0, 100).forEach((sp: any, index: number) => {
+      // v0.96.2: a critter power is "used" and resisted as a power, not "cast" as a spell.
+      const power = sp?.noun === 'power';
+      const caster = nameOfUuid(String(sp?.casterUuid ?? '')) || tx('SR2E.Dialog.Chat.someone');
+      const spellName = String(sp?.spellName ?? tx('SR2E.Dialog.Chat.aSpell')).slice(0, 120);
+      const force = safeInt(sp?.force, 0, 30, 0);
+      const what = power ? tx('SR2E.Dialog.Chat.usesPower96', { caster, spellName, force }) : tx('SR2E.Dialog.Chat.castsForce', { caster, spellName, force });
+      raw.push({ kind: 'resistSpell', index, uuid: String(sp?.targetUuid ?? ''), sources: realSources(message, sp?.casterUuid), what, ...(power ? { power: true } : {}) });
+    });
   }
   const gm = authorIsGm(message);
   const seen = new Set<string>();
@@ -2735,7 +2743,7 @@ export function promptPlan(message: any): { entries: PromptEntry[]; more: Prompt
     if (!safeStr(e.uuid, 400) || seen.has(e.uuid)) continue;
     seen.add(e.uuid);
     if (!gm && !(authorOwns(message, e.uuid) || trustedSource(cardTrust(message), e.sources))) continue;
-    out.push({ kind: e.kind, index: e.index, uuid: e.uuid, what: e.what });
+    out.push({ kind: e.kind, index: e.index, uuid: e.uuid, what: e.what, ...(e.power ? { power: true } : {}) });
   }
   return { entries: out.slice(0, MAX_CARD_PROMPTS), more: out.slice(MAX_CARD_PROMPTS) };
 }
@@ -2775,7 +2783,7 @@ async function promptForCard(message: any): Promise<void> {
       && mayResistUnseen(message, target, e.kind === 'resist' ? damageSources(message, listFlag(message.getFlag(SYSTEM_ID, 'damages'))[e.index] ?? message.getFlag(SYSTEM_ID, 'damage'))
         : realSources(message, (listFlag(message.getFlag(SYSTEM_ID, 'spells'))[e.index] ?? message.getFlag(SYSTEM_ID, 'spell'))?.casterUuid))) continue;
     if (!cued && message.author?.id !== game.user?.id) { cued = true; playCue('attacked'); }
-    const verb = e.kind === 'defend' ? tx('SR2E.Dialog.Chat.defend') : e.kind === 'resistSpell' ? tx('SR2E.Dialog.Chat.resistTheSpell') : tx('SR2E.Dialog.Chat.resistDamage2');
+    const verb = e.kind === 'defend' ? tx('SR2E.Dialog.Chat.defend') : e.kind === 'resistSpell' ? (e.power ? tx('SR2E.Dialog.Chat.resistThePower96') : tx('SR2E.Dialog.Chat.resistTheSpell')) : tx('SR2E.Dialog.Chat.resistDamage2');
     if (mode === 'off') continue;
     if (mode === 'notify') {
       ui.notifications?.info?.(tx('SR2E.Notify.Chat.useOnTheChatCard', { targetName: escHtml(target.name), what: escHtml(e.what), verb }));

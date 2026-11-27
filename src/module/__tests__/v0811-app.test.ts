@@ -303,6 +303,17 @@ describe('prompts: one per target, capped, and through the click guard', () => {
     assert.equal(confirms.length, 0);
   });
 
+  test('v0.96.2: a critter power on a card is "used" (not "cast"), and its prompt is marked as a power', async () => {
+    const c = await setup();
+    actor('npcPw', [], { type: 'npc' });
+    const [e] = c.promptEntries(message(GM, { spells: [{ targetUuid: 'Actor.npcPw', casterUuid: 'x', spellName: 'Confusion', force: 4, noun: 'power' }] }, { content: 'data-sr2e-action="resistSpell"' }));
+    assert.match(e.what, /uses Confusion \(rating 4\)/);
+    assert.equal(e.power, true);
+    const [f] = c.promptEntries(message(GM, { spells: [{ targetUuid: 'Actor.npcPw', casterUuid: 'x', spellName: 'Manabolt', force: 4 }] }, { content: 'data-sr2e-action="resistSpell"' }));
+    assert.match(f.what, /casts Manabolt \(Force 4\)/);
+    assert.equal(f.power, undefined);
+  });
+
   test('one prompt per target; a GM card is capped at MAX_CARD_PROMPTS; a player card past it prompts none', async () => {
     const c = await setup();
     actor('atkP', ['p1']);

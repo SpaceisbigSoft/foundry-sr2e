@@ -11481,7 +11481,12 @@ export class SR2Actor extends Actor {
     // Review fix: the members' Magic Pool dice that join the test are spent.
     if (bookTeam) await SR2Actor.#spendTeamPools(team);
     const name = (o.name ?? '').trim() || `Ward (Force ${force})`;
-    const result = await this.#runTest(tx('SR2E.Card.Actor.raiseTnSuccesses', { name, skillName: skill.name, planTn: plan.tn, part: teamDice ? tx('SR2E.Card.Actor.teamOf', { value: team.length + 1, teamDice }) : '', plural: plural(plan.baseHours, 'hour'), part2: plan.nuyen && o.payMaterials !== false ? tx('SR2E.Card.Actor.materials', { planNuyen: plan.nuyen }) : '' }),
+    // v0.96.2: under the book's ward rule the ritual takes its Force hours, not ÷ successes (the title said so anyway).
+    const wPart = teamDice ? tx('SR2E.Card.Actor.teamOf', { value: team.length + 1, teamDice }) : '';
+    const wHours = plural(plan.baseHours, 'hour');
+    const wMat = plan.nuyen && o.payMaterials !== false ? tx('SR2E.Card.Actor.materials', { planNuyen: plan.nuyen }) : '';
+    const result = await this.#runTest(plan.days !== undefined ? tx('SR2E.Card.Actor.raiseTnHours96', { name, skillName: skill.name, planTn: plan.tn, part: wPart, plural: wHours, part2: wMat })
+      : tx('SR2E.Card.Actor.raiseTnSuccesses', { name, skillName: skill.name, planTn: plan.tn, part: wPart, plural: wHours, part2: wMat }),
       Math.max(0, Number(skill.system.rating) + teamDice),
       { targetNumber: plan.tn, poolDice: o.poolDice ?? 0, pool: 'spell', magical: true },
       { kind: 'ward', ward: { force, name, team: team.length, nuyen: o.payMaterials === false ? 0 : plan.nuyen } });
@@ -14016,7 +14021,9 @@ export class SR2Actor extends Actor {
       if (unseen.length) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.hasNoLineOfSightTo', { name: escHtml(this.name), unseen: escHtml(unseen.join(', ')) })); return null; }
     }
     const attrsOf = (t: any) => Object.fromEntries(ATTRIBUTE_KEYS.map((k) => [k, t.system.attributes[k]?.total ?? 0])) as any;
-    const tnName = p.tnSource.charAt(0).toUpperCase() + p.tnSource.slice(1);
+    // v0.96.2: Confusion and Fear are rolled against the victim's Willpower whatever the power's own TN source says.
+    const tnSrc96 = opEss96 ? 'willpower' : String(p.tnSource);
+    const tnName = tnSrc96.charAt(0).toUpperCase() + tnSrc96.slice(1);
     let tn = opEss96 && targets.length ? { value: Math.max(RULES.MIN_TARGET_NUMBER, Number(attrsOf(targets[0]).willpower) || 0), fromTarget: true } : powerTargetNumber(p.tnSource, p.targetNumber, targets.length ? attrsOf(targets[0]) : null);
     let tnLabel = tn.fromTarget ? tx('SR2E.Card.Actor.tnS', { name: targets[0].name, tnName }) : tx('SR2E.Card.Actor.tn6', { tnValue: tn.value });
     if (targets.length > 1 && (p.tnSource !== 'fixed' || opEss96)) {

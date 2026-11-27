@@ -3791,7 +3791,9 @@
         "resistNoArmor": "Count no armor this time (armor {armor})",
         "resistPreviewBarrier": "Stopped: the barrier is rated above the Power.",
         "defendPreview": "Resistance test: Power {power} − armor {armor} = TN {tn}, {dice} dice + the pool dice you add ({left} left); the attacker's net successes then stage the damage.",
-        "promptTitle": "{name}: {verb}?"
+        "promptTitle": "{name}: {verb}?",
+        "usesPower96": "{caster} uses {spellName} (rating {force})",
+        "resistThePower96": "Resist the power"
       },
       "Creation": {
         "buildCheckNotMet": "{failedLength} not met:",
@@ -7999,7 +8001,8 @@
         "poolDieHacking": "Hacking Pool die",
         "poolDieControl": "Control Pool die",
         "poolDieTask": "Task Pool die",
-        "poolDieThreat": "Threat die (counts as a Combat Pool die)"
+        "poolDieThreat": "Threat die (counts as a Combat Pool die)",
+        "raiseTnHours96": "Raise {name} ({skillName}; TN {planTn}){part} [{plural}{part2}]"
       },
       "Adding": {
         "buysFor": "buys {list} for ¥{planNuyen}.",

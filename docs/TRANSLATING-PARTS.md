@@ -183,8 +183,6 @@ See `docs/TRANSLATING.md` for the rest.
 | `SR2E.Card.Actor.progressesVs`: {dzName} progresses ({attr}{part}{part2} vs {dzPower}, {dzLevel} {dzDamageType}) | `{part}` | `SR2E.Card.Actor.treated` (, treated +{care}) |
 | `SR2E.Card.Actor.progressesVs`: {dzName} progresses ({attr}{part}{part2} vs {dzPower}, {dzLevel} {dzDamageType}) | `{part2}` | `SR2E.Card.Actor.immunityToPathogens` (, immunity to pathogens +{immDice}) |
 | `SR2E.Card.Actor.radiation`: Radiation {amount}{part} | `{part}` | `SR2E.Card.Actor.hourOf` ( (hour {h} of {tests})) |
-| `SR2E.Card.Actor.raiseTnSuccesses`: Raise {name} ({skillName}; TN {planTn}){part} [{plural} ÷ successes{part2}] | `{part}` | `SR2E.Card.Actor.teamOf` ( [team of {value}: +{teamDice}]) |
-| `SR2E.Card.Actor.raiseTnSuccesses`: Raise {name} ({skillName}; TN {planTn}){part} [{plural} ÷ successes{part2}] | `{part2}` | `SR2E.Card.Actor.materials` (, materials {planNuyen}¥) |
 | `SR2E.Card.Actor.rally`: Rally {name}: {skill}{sdSuffix}{part} | `{part}` | `SR2E.Card.Actor.down` ( ({down} down)) |
 | `SR2E.Card.Actor.rammerSDamage`: Rammer's damage ({name}: {ramPower}{ramLevel}) | `{name}` | `SR2E.Card.Actor.vehicle` (vehicle) |
 | `SR2E.Card.Actor.rammerSDamage2`: Rammer's damage ({name}: {ramSelfDPower}{ramSelfDLevel}) | `{name}` | `SR2E.Card.Actor.vehicle` (vehicle) |
@@ -320,8 +318,6 @@ See `docs/TRANSLATING.md` for the rest.
 | `SR2E.Dialog.Chat.aSpiritForceIsCreated`: A spirit "{name}" (Force {force}{part}) is created, {owner} | `{part}` | `SR2E.Dialog.Chat.services` (, {services} services) |
 | `SR2E.Dialog.Chat.attacksWith`: {attacker} attacks with {weaponName} | `{attacker}` | `SR2E.Dialog.Chat.someone` (Someone) |
 | `SR2E.Dialog.Chat.attacksWith`: {attacker} attacks with {weaponName} | `{weaponName}` | `SR2E.Dialog.Chat.aWeapon` (a weapon) |
-| `SR2E.Dialog.Chat.castsForce`: {caster} casts {spellName} (Force {force}) | `{caster}` | `SR2E.Dialog.Chat.someone` (Someone) |
-| `SR2E.Dialog.Chat.castsForce`: {caster} casts {spellName} (Force {force}) | `{spellName}` | `SR2E.Dialog.Chat.aSpell` (a spell) |
 | `SR2E.Dialog.Chat.fullDefense`: Full defense: {cbtFullDefenseText} ({part}) | `{part}` | `SR2E.Card.Combat923.noInitiativeCost` (no initiative cost)<br>`SR2E.Dialog.Chat.initiative` (initiative −{initiativeCost})<br>`SR2E.Dialog.Chat.usesYourAction` (uses your action) |
 | `SR2E.Dialog.Chat.goesOffAtPowerPerMetre`: {slice} goes off at Power {confirmedPower} (−{confirmedPerMetre} per metre){part} | `{part}` | `SR2E.Dialog.Chat.shaped` (, shaped) |
 | `SR2E.Dialog.Chat.hasnTTakenEffectYetResist`: {name} hasn't taken effect yet ({left}). Resist it now anyway? | `{name}` | `SR2E.Dialog.Chat.it` (It) |
