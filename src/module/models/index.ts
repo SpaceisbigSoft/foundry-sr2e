@@ -935,7 +935,8 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
     // v0.78.0 (RULES.BOOK_V78.combatSense 'pool', Core Rules): an adept's Combat Sense adds its level to the Combat Pool.
     // v0.92.3 (RULES.SPIRITS_V923.astralPool 'book', Core p. 147; Grimoire p. 91): a projecting magician's only pool is the
     // Astral Combat Pool, (Intelligence + Willpower + Charisma) ÷ 2 + grade; it takes the Combat Pool's place while projecting.
-    const astralPool923 = magic > 0 && sys.tradition !== 'adept' ? astralCombatPool({ intelligence: totals.intelligence, willpower: totals.willpower, charisma: totals.charisma, grade: Number(sys.initiateGrade ?? 0) }) : 0;
+    // v0.96.0 review (RULES.SPIRITS_V96.astralPerceiving 'book'): a Threat-rated NPC has no dice pools (Core p. 187), the astral one included.
+    const astralPool923 = magic > 0 && sys.tradition !== 'adept' && !(noPools && RULES.SPIRITS_V96.astralPerceiving === 'book') ? astralCombatPool({ intelligence: totals.intelligence, willpower: totals.willpower, charisma: totals.charisma, grade: Number(sys.initiateGrade ?? 0) }) : 0;
     const projecting923 = RULES.SPIRITS_V923.astralPool === 'book' && astralPool923 > 0 && (sys.astral ?? 'physical') === 'projecting';
     const combatPool = projecting923 ? astralPool923 : noPools ? 0 : Math.max(0, Math.max(0, d.combatPool - armorPool80 - heavyPool) + threat + (RULES.BOOK_V78.combatSense === 'pool' ? adeptSpecialLevel(adept as any, 'combatSense') * RULES.ADEPT.combatSense.dicePerLevel : 0) + (tw.pools.combat ?? 0));
     // v0.92.1 review (N10): a Spell Pool tweak only for someone with a Spell Pool.

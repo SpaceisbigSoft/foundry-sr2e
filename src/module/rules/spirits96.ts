@@ -194,13 +194,16 @@ export function reflectBook(o: { shieldSuccesses: number; casterSuccesses: numbe
   return { force: Math.max(1, Math.min(net, whole(o.force))) };
 }
 
-/**
- * Which of a resistance test's dice were the shielding dice: the roll lists the attribute (and other own) dice first,
- * then the pool dice, then the spell defense dice, then the shielding dice. Their successes at `tn`.
- */
-export function shieldSuccesses(dice: ReadonlyArray<{ total: number } | number>, o: { from: number; count: number; tn: number }): number {
-  const t = Math.max(RULES.MIN_TARGET_NUMBER, whole(o.tn));
-  return dice.slice(whole(o.from), whole(o.from) + whole(o.count)).filter((d) => (typeof d === 'number' ? d : Number(d?.total ?? 0)) >= t).length;
+/** Tag the shielding dice as they are rolled (their place in the roll: after the own and pool dice). */
+export function tagShieldDice(dice: Array<{ shield?: boolean }>, o: { from: number; count: number }): void {
+  const from = whole(o.from);
+  for (let i = from; i < Math.min(dice.length, from + whole(o.count)); i++) dice[i]!.shield = true;
+}
+
+/** The successes of the tagged shielding dice at the test's current TN (after re-rolls or a GM's TN change). */
+export function shieldSuccesses96(dice: ReadonlyArray<{ total?: number; shield?: boolean }>, tn: number): number {
+  const t = Math.max(RULES.MIN_TARGET_NUMBER, whole(tn));
+  return dice.filter((d) => d?.shield && Number(d.total ?? 0) >= t).length;
 }
 
 // ---------------------------------------------------------------- Cleansing (Awakenings p. 100)
@@ -269,7 +272,7 @@ export function adeptItemCost(system: Record<string, any>, o: { natural: (key: s
 /** The opposed powers (Predator and Prey pp. 89–92): their Special ids. */
 export const OPPOSED_SPECIALS = ['confusion', 'fear'] as const;
 
-/** Whether a power is one of the opposed ones (by Special, or an Engulf power by name). */
+/** Which of these powers this is (by Special, or an Engulf power by name). Only Confusion and Fear switch to Essence vs Willpower; Engulf gets its card lines only. */
 export function opposedPower(special: string, name: string): 'confusion' | 'fear' | 'engulf' | null {
   if (!on('critterOpposed')) return null;
   if ((OPPOSED_SPECIALS as readonly string[]).includes(String(special ?? ''))) return special as 'confusion' | 'fear';

@@ -68,6 +68,8 @@ export interface DieResult {
   poolKind?: string;
   /** v0.93.3: a die bought from the Karma Pool (Core p. 191), for its colour. */
   karma?: boolean;
+  /** v0.96.0 (RULES.SPIRITS_V96.reflecting 'book', Awakenings p. 99): a reflecting initiate's shielding die. */
+  shield?: boolean;
 }
 
 /**
@@ -214,6 +216,8 @@ export async function rerollFailures(
     // v0.93.3: and keeps its colour (its pool, or the Karma Pool).
     if (d.poolKind) rerolled[i]!.poolKind = d.poolKind;
     if (d.karma) rerolled[i]!.karma = true;
+    // v0.96.0: and a shielding die stays one (reflecting counts only those).
+    if (d.shield) rerolled[i]!.shield = true;
   });
   const kept = result.dice.filter((d) => d.success);
   const dice = [...kept, ...rerolled];

@@ -292,7 +292,7 @@ describe('v0.85.0 the GM-only buttons and the GM\'s own rolls take the GM queue'
     assert.equal((fn('onDefend').match(/await gmRoll\(message, button, \(\) => defender\.defend\(/g) ?? []).length, 4);
     assert.doesNotMatch(fn('onDefend'), /await defender\.defend\(/);
     // Review: inside the lock, a resistance that happened meanwhile (the NPC resisting by itself) stops the GM's.
-    for (const [name, call, check] of [['onResist', 'target.resistFromState(damage, pool, chosen.noArmor)', 'resistedOn(message, target)'], ['onResistSpell', 'target.resistSpell(spell, pool, { protectorUuid })', 'spellResistedOn(message, target)']] as const) {
+    for (const [name, call, check] of [['onResist', 'target.resistFromState(damage, pool, chosen.noArmor)', 'resistedOn(message, target)'], ['onResistSpell', 'target.resistSpell(spell, pool, { protectorUuid, ...(aid96 > 0 ? { aidDice: aid96 } : {}) })', 'spellResistedOn(message, target)']] as const) {
       const body = fn(name);
       const lock = body.indexOf('await gmRoll(message, button, async () => {');
       assert.ok(lock > 0, name);

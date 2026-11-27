@@ -159,12 +159,13 @@ const skill = (id: string, name: string, rating: number, attribute = 'quickness'
 const SYS = 'shadowrun2e_unified';
 const DAY = 86400;
 let G96: any;
-const DRAFT = join(import.meta.dirname, '..', '..', '..', 'i18n-drafts', 'spirits96.json');
+// The new strings come from public/lang/en.json (english-lang.ts); until the lead merges the drafts, from the drafts.
+const DRAFTS = ['spirits96.json', 'spirits96-fix.json'].map((f) => join(import.meta.dirname, '..', '..', '..', 'i18n-drafts', f));
 before(async () => {
   G96 = await import('../applications/spirits96.ts');
   // The new strings, until the lead merges them into lang/en.json (then that file has them and this adds nothing).
   const en = (globalThis as any).__SR2E_EN__ ?? ((globalThis as any).__SR2E_EN__ = {});
-  if (existsSync(DRAFT)) for (const [k, v] of Object.entries(JSON.parse(readFileSync(DRAFT, 'utf8')))) if (!(k in en)) en[k] = v;
+  for (const d of DRAFTS) if (existsSync(d)) for (const [k, v] of Object.entries(JSON.parse(readFileSync(d, 'utf8')))) if (!(k in en)) en[k] = v;
 });
 
 const dialogs = (o: any) => { g.foundry.applications.api.DialogV2 = { confirm: async () => true, prompt: async () => null, wait: async () => null, ...o }; };
@@ -203,6 +204,15 @@ describe('an elemental\'s day of waiting (Core p. 141)', () => {
     assert.equal(e.system.services, 0);
     assert.match(String(last().content), /departs/);
   });
+  test('a time in the future starts the clock now; placing its token starts it', async () => {
+    const e = spirit(); sceneWith(e);
+    await e.setFlag(SYS, G96.WAIT_FLAG, 10 * DAY);
+    await G96.elementalWaitTick(e, DAY);
+    assert.equal(e.getFlag(SYS, G96.WAIT_FLAG), DAY);
+    const f = spirit(); g.game.time = { worldTime: 500 };
+    await G96.tokenPlaced({ actor: f });
+    assert.ok(Number.isFinite(Number(f.getFlag(SYS, G96.WAIT_FLAG))));
+  });
   test('off every scene: no cost, the clock stops', async () => {
     const e = spirit(); g.game.scenes = Object.assign([], { viewed: null });
     await e.setFlag(SYS, G96.WAIT_FLAG, 0);
@@ -226,12 +236,26 @@ describe('disruption (Grimoire p. 64)', () => {
     g.game.time = { worldTime: 0 };
     const line = await G96.disrupted(e);
     assert.match(line, /24 day/);
-    assert.equal(e.getFlag(SYS, G96.DISRUPTED_FLAG), 24 * DAY);
+    assert.deepEqual(e.getFlag(SYS, G96.DISRUPTED_FLAG), { at: 0, until: 24 * DAY });
     e.system.monitor = { physical: 10, stun: 3 };
+    e.system.derived.status = 'disrupted';
     assert.equal(await G96.disruptionTick(e, 23 * DAY), false);
     assert.equal(await G96.disruptionTick(e, 24 * DAY), true);
     assert.deepEqual([e.system.monitor.physical, e.system.monitor.stun], [0, 0]);
     assert.equal(e.getFlag(SYS, G96.DISRUPTED_FLAG), undefined);
+  });
+  test('a forged flag heals nothing: not disrupted, or a shorter wait, just drops the flag', async () => {
+    const e = spirit({ force: 4 });
+    e.system.monitor = { physical: 5, stun: 0 };
+    await e.setFlag(SYS, G96.DISRUPTED_FLAG, { at: 0, until: 0 });
+    e.system.derived.status = 'disrupted';
+    assert.equal(await G96.disruptionTick(e, DAY), false);
+    assert.equal(e.system.monitor.physical, 5);
+    assert.equal(e.getFlag(SYS, G96.DISRUPTED_FLAG), undefined);
+    await e.setFlag(SYS, G96.DISRUPTED_FLAG, { at: 0, until: 24 * DAY });
+    e.system.derived.status = 'ok';
+    assert.equal(await G96.disruptionTick(e, 30 * DAY), false, 'not disrupted');
+    assert.equal(e.system.monitor.physical, 5);
   });
   test('a watcher is destroyed instead; v951: no date', async (t) => {
     assert.match(await G96.disrupted(spirit({ spiritKind: 'watcher' })), /destroyed/);
@@ -279,6 +303,21 @@ describe('watchers (Grimoire p. 73)', () => {
     assert.equal(await G96.watcherTick(w, 3 * 3600), false);
     assert.equal(await G96.watcherTick(w, 4 * 3600), true);
     assert.equal(w.system.services, 0);
+  });
+  test('a Karma re-roll that gives it Force: the Drain comes then, for the new Force', async () => {
+    const m = mage();
+    m.system.karma = { pool: 2, poolSpent: 0, good: 0, career: 0 }; m.system.prepareDerivedData();
+    faces.push(5, 1, 1, 1, 1, 1, 1);             // 1 success: no Force, no watcher, no Drain
+    await m.conjure({ force: 6, spiritKind: 'watcher', spiritType: 'Watcher', watcherHours: 4 });
+    assert.ok(!chat.some((c) => /Watcher Drain/.test(String(c.content))));
+    const msg = chat[chat.length - 1];
+    faces.push(5, 5, 5, 1, 1, 1);                // the six failures again: 4 successes, Force 2
+    faces.push(1, 1, 1, 1);                      // Drain: Charisma 4 vs 8
+    dialogs({ wait: async () => 'own' });
+    await m.karmaReroll(msg.getFlag(SYS, 'test'), msg);
+    assert.ok(chat.some((c) => /Watcher Drain \(Force 2 × 4 h/.test(String(c.content))), chat.map((c) => c.content).join('\n'));
+    assert.equal(created.find((d) => d.system?.spiritKind === 'watcher')?.system.force, 2);
+    assert.equal(faces.length, 0);
   });
   test('v951: the TN is its Force (capped at 1), conjuring Drain', async (t) => {
     t.after(oldWay({ 'SPIRITS_V96.watchers': 'v951' }));
@@ -336,17 +375,25 @@ describe('reflecting (Awakenings p. 99)', () => {
   test('back at the net Force: the defender rolls it against the caster\'s Willpower; the card carries the Resist button', async () => {
     const caster = who({ name: 'Wage mage', magic: 4, tradition: 'hermetic' }, [], { ...A, willpower: 6 });
     const talon = who({ name: 'Talon', magic: 6, tradition: 'hermetic' });
-    faces.push(6, 3, 5);                         // 2 dice vs 6: the 6 re-rolls a 3 (9): 1 success
-    const r = await G96.reflectRebound(talon, { casterUuid: caster.uuid, spellName: 'Manabolt', force: 4, resistAttribute: 'willpower', level: 'M', damageType: 'physical', defense: 6, shield96: 4 }, 2);
+    faces.push(6, 3, 5);                         // 2 dice vs 6: 6 and 3, the 6 re-rolls a 5 (11): 1 success
+    const r = await G96.reflectRebound(talon, { casterUuid: caster.uuid, spellName: 'Manabolt', force: 4, resistAttribute: 'willpower', level: 'M', damageType: 'physical', defense: 6, reflected96: false }, 2, 4);
     assert.equal(r.flags.spell.force, 2);
     assert.equal(r.flags.spell.casterSuccesses, 1);
     assert.equal(r.flags.spell.reflected, true);
     assert.match(r.html, /data-sr2e-action="resistSpell"/);
+    assert.match(r.html, /11, 3/, 'the dice are shown');
+    assert.deepEqual(r.reflect.rebound96, { dice: [11, 3], tn: 6 });
+    // Resolved again (a re-roll): the same dice, nothing rolled; a lower Force uses the first ones.
+    const again = await G96.reflectRebound(talon, r.reflect, 2, 4);
+    assert.equal(again.flags.spell.casterSuccesses, 1);
+    const lower = await G96.reflectRebound(talon, r.reflect, 2, 3);
+    assert.equal(lower.flags.spell.force, 1);
+    assert.equal(faces.length, 0);
   });
   test('not enough shielding successes: nothing; a Force 1 spell reflected again dissipates', async () => {
     const talon = who({ name: 'Talon' });
-    assert.deepEqual(await G96.reflectRebound(talon, { casterUuid: '', spellName: 'X', force: 4, shield96: 2 }, 2), { html: '', flags: {} });
-    assert.match((await G96.reflectRebound(talon, { casterUuid: '', spellName: 'X', force: 1, shield96: 3, reflected96: true }, 0)).html, /dissipates/);
+    assert.equal((await G96.reflectRebound(talon, { casterUuid: '', spellName: 'X', force: 4 }, 2, 2)).html, '');
+    assert.match((await G96.reflectRebound(talon, { casterUuid: '', spellName: 'X', force: 1, reflected96: true }, 0, 3)).html, /dissipates/);
   });
 });
 
@@ -366,6 +413,26 @@ describe('reflecting through resistSpell', () => {
     await talon.resistSpell(state, 0);
     const card = chat.find((c) => /reflects Manabolt back at Force 2/.test(String(c.content)));
     assert.ok(card, chat.map((c) => c.content).join('\n'));
+  });
+  test('too few shielding successes: nothing; a Karma re-roll keeps the tags (the re-rolled dice are reordered) and rebounds', async () => {
+    const { talon, state } = setup();
+    faces.push(1, 1, 1, 1, 1);
+    faces.push(5, 1, 1);                         // shielding dice: 1 success, not more than the caster's 1
+    await talon.resistSpell(state, 0);
+    assert.ok(!chat.some((c) => /reflects Manabolt back/.test(String(c.content))));
+    const msg = chat[chat.length - 1];
+    const snap = msg.getFlag(SYS, 'test');
+    assert.equal(snap.dice.filter((d: any) => d.shield).length, 3);
+    talon.system.karma = { pool: 2, poolSpent: 0, good: 0, career: 0 }; talon.system.prepareDerivedData();
+    faces.push(1, 1, 1, 1, 1, 5, 5);             // the 7 failed dice again: the last two (shielding) succeed
+    faces.push(6, 2, 1);                         // the rebound at Force 2 (3 − 1): 1 success
+    dialogs({ wait: async () => 'own' });
+    await talon.karmaReroll(snap, msg);
+    const after = chat.filter((c) => /reflects Manabolt back at Force 2/.test(String(c.content)));
+    assert.ok(after.length >= 1, JSON.stringify([faces.length, warnings, chat.map((c) => c.content)]));
+    const snap2 = (after[after.length - 1] as any).getFlag(SYS, 'test');
+    assert.equal(snap2.dice.filter((d: any) => d.shield).length, 3, 'the tags went with the re-rolled dice');
+    assert.deepEqual(snap2.soak.reflect.rebound96.dice.length, 2);
   });
   test('v951: all the resistance successes over the caster\'s bounce back', async (t) => {
     t.after(oldWay({ 'SPIRITS_V96.reflecting': 'v951' }));
@@ -450,11 +517,42 @@ describe('aid in spell defense (Core p. 141)', () => {
     const e = spirit({ summonerUuid: m.uuid, element: 'fire' });
     await e.setFlag(SYS, 'aidLeft', 3);
     g.game.actors = [m, e];
+    e.isOwner = true;
     dialogs({ prompt: async () => 2 });
-    const r = await G96.aidDefense(m, { category: 'combat' }, () => true);
+    assert.equal(await G96.askAidDefense(m, { category: 'combat' }), 2);
+    const r = await G96.aidDefense(m, { category: 'combat' }, () => true, 2);
     assert.equal(r.dice, 2);
     assert.equal(e.getFlag(SYS, 'aidLeft'), 1);
-    assert.deepEqual(await G96.aidDefense(m, { category: 'illusion' }, () => true), { dice: 0, note: '' }, 'a fire elemental aids combat spells only');
+    assert.deepEqual(await G96.aidDefense(m, { category: 'illusion' }, () => true, 1), { dice: 0, note: '' }, 'a fire elemental aids combat spells only');
+    assert.equal(await G96.askAidDefense(m, { category: 'illusion' }), 0);
+  });
+  test('never more than its Force; the GM isn\'t asked for a player\'s elemental; off with SORCERY_V923.elementalAid', async (t) => {
+    const m = who({ name: 'Mage', magic: 6, tradition: 'hermetic' });
+    const e = spirit({ summonerUuid: m.uuid, element: 'fire', force: 3 });
+    await e.setFlag(SYS, 'aidLeft', 50);
+    g.game.actors = [m, e];
+    assert.equal(G96.aidLeftOf(e), 3);
+    e.isOwner = true; e.hasPlayerOwner = true;
+    let asked = false;
+    dialogs({ prompt: async () => { asked = true; return 1; } });
+    assert.equal(await G96.askAidDefense(m, { category: 'combat' }), 0);
+    assert.equal(asked, false);
+    t.after(oldWay({ 'SORCERY_V923.elementalAid': 'v922' }));
+    assert.deepEqual(await G96.aidDefense(m, { category: 'combat' }, () => true, 2), { dice: 0, note: '' });
+  });
+  test('resistSpell under the GM lock asks nothing (it would deadlock): no aid dice without a count', async () => {
+    const { withGmLock } = await import('../applications/gmlock.ts');
+    const m = who({ name: 'Mage', magic: 6, tradition: 'hermetic' });
+    const e = spirit({ summonerUuid: m.uuid, element: 'fire' });
+    await e.setFlag(SYS, 'aidLeft', 3); e.isOwner = true;
+    g.game.actors = [m, e];
+    dialogs({ prompt: () => new Promise(() => {}) });   // a dialog nobody answers
+    faces.push(1, 1, 1, 1, 1);
+    const state = { casterUuid: who().uuid, targetUuid: m.uuid, spellName: 'Manabolt', force: 4, resistAttribute: 'willpower', level: 'M', damageType: 'stun', casterSuccesses: 1, noun: 'spell', aid96: { category: 'combat', element: '' } };
+    const done = withGmLock(() => m.resistSpell(state, 0)).then(() => 'done');
+    const out = await Promise.race([done, new Promise((r) => setTimeout(() => r('timeout'), 2000))]);
+    assert.equal(out, 'done');
+    assert.equal(e.getFlag(SYS, 'aidLeft'), 3, 'nothing taken');
   });
   test('v951: none', async (t) => {
     t.after(oldWay({ 'SPIRITS_V96.aidDefense': 'v951' }));
