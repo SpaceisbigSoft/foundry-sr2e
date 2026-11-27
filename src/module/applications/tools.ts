@@ -26,6 +26,7 @@ import { SR2TeamKarma } from './teamkarma.ts';
 import { openConversionTool } from './nesting942.ts';
 import { openLoot942 } from './trade942.ts';
 import { openBookTool } from './core95.ts';
+import { openSpiritsTool } from './spirits96.ts';
 
 const { HandlebarsApplicationMixin, ApplicationV2 } = foundry.applications.api;
 
@@ -99,6 +100,7 @@ export const TOOL_ACTIONS: Record<string, () => void> = {
   tourGm: () => { if (isGm()) void startTour('gm-panel'); },
   accessoryItems: () => { if (isGm()) void openConversionTool(); },
   bookRules95: () => { if (isGm()) void openBookTool(); },
+  spirits96: () => { if (isGm()) void openSpiritsTool(); },
 };
 
 /** Run a tool by id (false when the id is unknown or the tool is the GM's and the user isn't). */

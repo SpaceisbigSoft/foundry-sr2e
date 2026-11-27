@@ -9,6 +9,8 @@ import { bioIndexV72 } from './vitals.ts';
 import { sensoryEssence } from './cyberware.ts';
 import { gearBook, gradeEssenceFactor, isDermalPlating, dermalRating, boneLacingBook, cyberReplacements, limbPairsBody } from './gear923.ts';
 import { own } from './util.ts';
+import { attributeMaximums } from './core.ts';
+import { adeptItemCost } from './spirits96.ts';
 import { t as tx } from '../helpers/i18n.ts';
 
 /**
@@ -1050,7 +1052,7 @@ function critterItem(pw: ParsedPower, warnings: string[]): StatBlockItem {
  * (true = adept powers, false = critter powers); "Adept Powers", "Critter Powers" and
  * "Weaknesses" lists keep their kind.
  */
-export function statBlockItems(p: ParsedStatBlock, ctx: { adept?: boolean } = {}): { items: StatBlockItem[]; warnings: string[] } {
+export function statBlockItems(p: ParsedStatBlock, ctx: { adept?: boolean; metatype?: string } = {}): { items: StatBlockItem[]; warnings: string[] } {
   const warnings: string[] = [];
   const notes = { essence: [] as string[], unknownEssence: [] as string[], bodyIndex: [] as string[], warnings };
   const items: StatBlockItem[] = [];
@@ -1070,6 +1072,15 @@ export function statBlockItems(p: ParsedStatBlock, ctx: { adept?: boolean } = {}
     const adept = pw.section === 'powers' && ctx.adept !== undefined ? ctx.adept : pw.adept;
     items.push(adept && !pw.weakness ? adeptItem(pw, warnings, guessedCost) : critterItem(pw, warnings));
   }
+  // v0.96.0 (RULES.SPIRITS_V96.adeptCosts 'book', Core pp. 125–126; Awakenings p. 116): the book's costs by band.
+  const adeptSys96 = items.filter((i) => i.type === 'adeptpower').map((i) => i.system as Record<string, any>);
+  for (const sys96 of adeptSys96) {
+    const c96 = adeptItemCost(sys96, { others: adeptSys96,
+      natural: (k) => { const a = (p.attributes as any)?.[k]; const lv = Number(sys96.attributes?.[k] ?? 0); return a ? (a.augmented !== undefined ? Number(a.base) : Math.max(0, Number(a.base) - lv)) : 0; },
+      racialMax: (k) => attributeMaximums(ctx.metatype ?? 'human', k as any).natural });
+    if (c96 !== null) sys96.cost = c96;
+  }
+  if (adeptSys96.length) for (const [i, g] of guessedCost.entries()) { const it = items.find((x) => x.type === 'adeptpower' && g.startsWith(`${x.name} (`)); if (it) guessedCost[i] = `${it.name} (${round2(Number((it.system as any).cost ?? 0))})`; }
 
   if (notes.essence.length) warnCoded(warnings, 'essenceGuessed', tx('SR2E.Text.Statblock.essenceGuessedFromStandardSr2', { list: notes.essence.join(', ') }));
   if (notes.unknownEssence.length) warnCoded(warnings, 'essenceUnknown', tx('SR2E.Text.Statblock.essenceUnknownSetTo0', { list: notes.unknownEssence.join(', ') }));

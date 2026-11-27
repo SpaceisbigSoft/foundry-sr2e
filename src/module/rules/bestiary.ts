@@ -5,6 +5,7 @@
  * strike, improved senses), critter immunities and the TN-changing critter powers.
  */
 import { RULES } from './config.ts';
+import { on as on96, confusionTn as confusionTn96 } from './spirits96.ts';
 import type { EffectBundle } from './effects.ts';
 import { totemDice, type Totem, type Tradition } from './arcana.ts';
 import { tags } from './thaumaturgy.ts';
@@ -150,6 +151,8 @@ type ModKey = 'testsTn' | 'perceivedTn' | 'attackedTn' | 'movementFactor';
 
 /** What a TN-changing power puts on its target (only the keys the power sets). */
 export function powerModifierBundle(special: string, o: { force: number; successes: number }): Partial<EffectBundle> {
+  // v0.96.0 (RULES.SPIRITS_V96.critterOpposed 'book', Predator and Prey p. 89): Confusion adds half the net successes.
+  if (special === 'confusion' && on96('critterOpposed')) return { testsTn: confusionTn96(o.successes) };
   const mods = (K().powerMods as Record<string, Partial<Record<ModKey, number | 'force' | 'successes'>>>)[special];
   if (!mods) return {};
   const out: Partial<EffectBundle> = {};

@@ -7,6 +7,7 @@ import { test, describe, before, after, afterEach } from "node:test";
 import { oldWay } from '../rules/__tests__/oldway.ts';
 import { SORCERY_V951 } from '../rules/__tests__/sorcery951.ts';
 import { SPIRITS_V922_WAY } from '../rules/__tests__/spirits922.ts';
+import { SPIRITS_V951_WAY } from '../rules/__tests__/spirits951.ts';
 import { matrix922 } from "./helpers/matrix922.ts";
 import { SORCERY_V922 } from '../rules/__tests__/sorcery922.ts';
 import assert from "node:assert/strict";
@@ -62,6 +63,8 @@ let CharacterDataModel: any, SR2Actor: any, SR2Combatant: any, SR2Combat: any;
 before(async () => {
   // v0.92.3: these tests pin the v0.92.2 conjuring, astral and initiation rules; the book way is v0923-spirits.test.ts's.
   oldWay(SPIRITS_V922_WAY);
+  // v0.96.0: and the v0.95.1 spirits and astral rules (the book way is v096-spirits*.test.ts's).
+  oldWay(SPIRITS_V951_WAY);
   // The disaster GM card (v0.35.0) would be the last message after every all-ones roll; its own test turns it on.
   (RULES.DISASTERS as any).prompt = false;
   // v0.39.0 rules that add steps or warnings are switched on only in their own tests.

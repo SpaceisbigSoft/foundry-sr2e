@@ -14,6 +14,7 @@ import { HOUSE_CORE_V95 } from "./rules/config95/core.ts";
 import { HOUSE_SORCERY_V96 } from "./rules/config96/sorcery.ts";
 import { HOUSE_FIRE_V95 } from "./rules/config95/fire.ts";
 import { HOUSE_MELEE_V95 } from "./rules/config95/melee.ts";
+import { HOUSE_SPIRITS_V96 } from "./rules/config96/spirits.ts";
 import { SYSTEM } from "./config/system.ts";
 import { worldFloor, flooredMode } from "./rules/hidden941.ts";
 import { RULES, parseSkillWeb, setSkillWeb, PRIVACY_GROUPS, PRIVACY_MODES, SOUND_EVENTS, settingMatches, URR_V80_PATCH, RULES_SOURCES, SHOP_LIST_MODES } from "./rules/index.ts";
@@ -1083,6 +1084,8 @@ export const HOUSE_RULES: HouseRuleDef[] = [
   ...HOUSE_MELEE_V95,
   // v0.96.0: rules completeness (rules/config96/*.ts).
   ...HOUSE_SORCERY_V96,
+  // v0.96.0: rules completeness, spirits and astral (rules/config96/spirits.ts).
+  ...HOUSE_SPIRITS_V96,
 ];
 
 /**

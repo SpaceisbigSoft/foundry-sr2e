@@ -114,6 +114,7 @@ import { ruleAuto } from '../rules/automation941.ts';
 // v0.93.5: firing-mode-only rows and the Perception boxes by sense (agent A's dialog helpers).
 import { wireFireModeRows, senseChecksHtml } from './dialogs935.ts';
 import { catalogueTemplates, saveCatalogueTemplates } from './catalogue942.ts';
+import * as SP96G from "./spirits96.ts";
 
 /** v0.73.0 (O24): the known-hosts context for this decker and the viewing user. */
 function knowledgeCtx(actor: any): any {
@@ -2984,6 +2985,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.copyFrom')}</label><select name="template"><option value="">${tx('SR2E.Dialog.Sheet.blankSpirit')}</option>
           ${templates.map((t: any) => `<option value="${escHtml(t.uuid)}">${escHtml(t.name)}</option>`).join("")}</select></div>
         ${poolRows}
+        ${SP96G.watcherHoursRow()}
         ${rememberMarker(`summon|${actor.uuid}`, ["kind", "type", "element", "force", "pool", "drainPool", "materials"])}
         <div class="sr2e-preview" aria-live="polite"></div>
         <p class="hint">${tx('SR2E.Dialog.Sheet.conjuringVsTnForceEachSuccess', { conjuringDrainAttribute: RULES.CONJURING.drainAttribute, cha, levels: escHtml(levels) })}</p>`,
@@ -3002,6 +3004,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
             poolDice: Math.max(0, Math.floor(Number(el.pool?.value) || 0)),
             drainPoolDice: Math.max(0, Math.floor(Number(el.drainPool?.value) || 0)),
             exclude: excludedOf(button.form),
+            // v0.96.0 (RULES.SPIRITS_V96.watchers 'book', Grimoire p. 73): a watcher's hours.
+            ...(SP96G.readWatcherHours(el) !== undefined ? { watcherHours: SP96G.readWatcherHours(el) } : {}),
           };
         },
       },
