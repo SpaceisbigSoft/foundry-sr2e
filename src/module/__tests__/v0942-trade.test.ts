@@ -592,3 +592,12 @@ describe('v0.94.2 review 14: the catalogue save', () => {
     assert.match(src, /catalogueSyncPlan\(stored \?\? \[\], clean, \{ removable: known \}\)/);
   });
 });
+
+describe('v0.94.2 fix: the Loot window\'s first open', () => {
+  test('it is brought to the front only after it has rendered (bringToFront reads the element)', () => {
+    const src = read('src', 'module', 'applications', 'trade942.ts');
+    const open = src.slice(src.indexOf('static open(sourceUuid'), src.indexOf('/** The picked lootable actor'));
+    assert.match(open, /app\.render\(\{ force: true \}\)\)\.then\(\(\) => \{ if \(app\.rendered\) app\.bringToFront\?\.\(\); \}\)/);
+    assert.doesNotMatch(open, /^\s*app\.bringToFront\?\.\(\);/m, 'never straight after render() is called');
+  });
+});

@@ -445,8 +445,8 @@ export class SR2Loot942 extends AppV2Base {
     const open: any = (foundry as any).applications?.instances?.get?.('sr2e-loot942');
     const app: SR2Loot942 = open ?? new SR2Loot942();
     if (sourceUuid) app.sourceUuid = sourceUuid;
-    void app.render({ force: true });
-    app.bringToFront?.();
+    // bringToFront reads the window's element, which only exists after the first render.
+    void Promise.resolve(app.render({ force: true })).then(() => { if (app.rendered) app.bringToFront?.(); });
     return app;
   }
 
