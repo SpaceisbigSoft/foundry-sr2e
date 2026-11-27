@@ -9,6 +9,9 @@ import { escHtml } from '../rules/html.ts';
 import { t as tx } from '../helpers/i18n.ts';
 import { onRelay, requestGm } from './socket.ts';
 import { teamKarmaNext, oneAtATime } from '../rules/teamkarma.ts';
+// v0.95.0 (RULES.CORE_V95.teamKarma 'book'): the book's Team Karma Pool takes the window and the relay over.
+import { teamBook } from '../rules/core95.ts';
+import { teamWindowHtml, teamWindowAction, teamRelay, registerCore95 } from './core95.ts';
 
 const { ApplicationV2 } = foundry.applications.api;
 
@@ -67,18 +70,20 @@ export class SR2TeamKarma extends ApplicationV2 {
       tkMinus: () => { void adjustTeamKarma(-1); },
       tkPlus: () => { void adjustTeamKarma(1); },
       tkSpend: () => { void spendTeamKarma(); },
+      tk95: function (this: any, _e: Event, target: HTMLElement) { void teamWindowAction(target, this?.element ?? null); },
     },
   };
 
   static open(): SR2TeamKarma {
     const open = (foundry as any).applications?.instances?.get?.('sr2e-team-karma');
     if (open) { open.bringToFront?.(); return open; }
-    const app = new SR2TeamKarma();
+    const app: SR2TeamKarma = new (SR2TeamKarma as any)(teamBook() ? { position: { width: 320 } } : {});
     void app.render({ force: true });
     return app;
   }
 
   async _renderHTML(): Promise<string> {
+    if (teamBook()) return teamWindowHtml();
     if (!teamKarmaOn()) return `<p class="hint">${tx('SR2E.App.TeamKarma.off')}</p>`;
     const gm = Boolean((game as any).user?.isGM);
     const n = teamKarmaNow();
@@ -110,7 +115,9 @@ export function registerTeamKarma(): void {
   });
   s.register(SYSTEM.id, TEAM_KARMA, { scope: 'world', config: false, type: Number, default: 0, onChange: () => rerender() });
   // A player's "Spend one": run on the active GM's client, as that player (the server-set sender).
+  registerCore95();
   onRelay('teamKarma', async (data, user) => {
+    if (teamBook()) return teamRelay(data, user);
     if (!teamKarmaOn()) return { ok: false, note: tx('SR2E.App.TeamKarma.off') };
     if (Number(data?.delta) !== -1) return { ok: false };
     const r = teamKarmaNext(teamKarmaNow(), -1, Boolean(user?.isGM));

@@ -304,6 +304,8 @@ describe('v0.80.0 core: Karma and training', () => {
   });
 
   test('an instructor for an attribute: must reach the new rating (book); any rating, ÷ (1 + successes) (Revamp)', async (t) => {
+    // v0.95.0: the v0.94.2 rule this test pins (RULES.CORE_V95).
+    t.after(oldWay({ 'CORE_V95.trainingTest': 'off' }));
     const run = async () => {
       const student = who({ name: 'Student', karma: { pool: 0, poolSpent: 0, good: 30, career: 30 } });
       const teacher = who({ name: 'Teacher' }, [skill('ins', 'Instruction', 3, 'charisma')]);

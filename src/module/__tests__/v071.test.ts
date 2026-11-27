@@ -310,6 +310,8 @@ describe('R1 Karma Pool on contest and street cards', () => {
   });
 
   test('legwork: a contest card with Karma buttons', async (t) => {
+    // v0.95.0: the v0.94.2 rule this test pins (RULES.CORE_V95).
+    t.after(oldWay({ 'CORE_V95.contactMeet': 'off', 'CORE_V95.contactFee': 'flat' }));
     t.after(oldWay({"BOOK_V78.legwork.mode": "tn"})); // v0.78.0: the old rule (a house rule)
     const a = dealer();
     a.system.contacts = [{ id: 'c1', name: 'Fixer', level: 2, fee: 0, loyalty: 2, dice: 0, favours: 0 }];

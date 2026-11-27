@@ -63,6 +63,8 @@ import * as C923 from "../rules/combat923.ts";
 import { urrCoreTnPresetRow, urrCoreInstructorRule } from "../rules/urr80-core.ts";
 // v0.92.3 book alignment, core mechanics and characters (RULES.CORE_V923).
 import * as CO923 from "../rules/core923.ts";
+// v0.95.0 (RULES.CORE_V95): the core book rules' glue.
+import * as C95G from "./core95.ts";
 import { sensorTableRows, sensorTableModifiers, segRows, segConditionModifiers } from "../rules/docs79-vehicles.ts";
 import { modKey, modIn, type TargetNumberModifier } from "../rules/dice.ts";
 import { quickRollArmed } from "./hotkeys.ts";
@@ -1282,6 +1284,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
   static async #onTrainWith(this: SR2CharacterSheet, _e: Event, target: HTMLElement) {
     const actor: any = this.document;
     const id = target.dataset["trainingId"] ?? "";
+    // v0.95.0 (RULES.CORE_V95.trainingTest 'book', Companion p. 50): the student's own test first.
+    if (await C95G.trainingChoice(actor, id)) return;
     const r = await SR2CharacterSheet.#pickPerson(actor, tx('SR2E.Dialog.Sheet.instructorFor', { actorName: actor.name }), `<p class="hint">${tx('SR2E.Dialog.Sheet.theInstructorSVs', { trainingInstructionSkill: RULES.CHARACTERS_V58.training.instructionSkill, trainingInstructionTn: RULES.CHARACTERS_V58.training.instructionTn, urrCoreInstructorRule: urrCoreInstructorRule() })}</p>`);
     if (!r) return;
     await actor.trainWith(id, r.uuid, { modifiers: Number(r.form.mod) ? [{ id: 'other', label: tx('SR2E.Card.Mod.other'), value: Number(r.form.mod) }] : [] });
@@ -1403,14 +1407,15 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.swimming')}</label><select name="swim">${a.swim.map((c) => `<option value="${escHtml(c.id)}" ${c.id === "choppy" ? "selected" : ""}>${tx('SR2E.Dialog.Sheet.tn2', { label: escHtml(c.label), tn: c.tn })}</option>`).join("")}</select></div>
         ${CO923.climbModifierRows().length ? tableChecks(CO923.climbModifierRows(), "clm") : ""}
         <label class="sr2e-check"><input type="checkbox" name="running"> ${tx('SR2E.Dialog.Sheet.aRunningJump', { jumpRunningMultiplier: a.jump.runningMultiplier })}</label>
+        ${C95G.athleticsRows(actor)}
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.otherTnModifier')}</label><input name="mod" type="number" value="0"></div>
         ${RULES.CORE_V923.athletics === 'book' && RULES.URR_V80.hsAthletics !== 'urr' ? `<p class="hint">${tx('SR2E.Dialog.Core923.athleticsHint', { skill: a.skill, attribute: escHtml(cap(a.attribute)), attributeDefaultTnMod: RULES.ATTRIBUTE_DEFAULT_TN_MOD, jumpMetresPerSuccess: a.jump.metresPerSuccess })}</p>` : `<p class="hint">${tx('SR2E.Dialog.Sheet.orMPerSuccessClimbingOr', { skill: a.skill, attribute: escHtml(cap(a.attribute)), attributeDefaultTnMod: RULES.ATTRIBUTE_DEFAULT_TN_MOD, metresPerSuccess: a.metresPerSuccess, jumpMetresPerSuccess: a.jump.metresPerSuccess, walk: escHtml(actor.movementNow?.()?.walk ?? actor.system.derived?.movement?.walk ?? "?"), run: escHtml(actor.movementNow?.()?.run ?? actor.system.derived?.movement?.run ?? "?"), part: (actor.movementNow?.()?.factor ?? 1) !== 1 ? tx('SR2E.Dialog.Sheet.weatherDistancesToo', { factor: escHtml(actor.movementNow().factor) }) : "" })}</p>`}`,
-      ok: { label: tx('SR2E.Dialog.Sheet.roll'), callback: (_e: Event, b: any) => { const e = b.form.elements; const kind = String(e.kind.value); return { kind, condition: kind === "climb" ? String(e.climb.value) : kind === "swim" ? String(e.swim.value) : "", running: Boolean(e.running.checked), mod: Number(e.mod.value) || 0, clm: kind === "climb" ? checkedIds(b.form, "clm") : [] }; } },
+      ok: { label: tx('SR2E.Dialog.Sheet.roll'), callback: (_e: Event, b: any) => { const e = b.form.elements; const kind = String(e.kind.value); return { kind, condition: kind === "climb" ? String(e.climb.value) : kind === "swim" ? String(e.swim.value) : "", running: Boolean(e.running.checked), mod: Number(e.mod.value) || 0, clm: kind === "climb" ? checkedIds(b.form, "clm") : [], c95: C95G.readAthletics(b.form) }; } },
       rejectClose: false,
-    }) as { kind: string; condition: string; running: boolean; mod: number; clm: string[] } | null;
+    }) as { kind: string; condition: string; running: boolean; mod: number; clm: string[]; c95: C95G.Athletics95 } | null;
     if (!r) return;
     // v0.92.3 (RULES.CORE_V923.athletics 'book', Fields of Fire p. 75): the Climbing Table's height and surface modifiers.
-    await actor.athleticsTest(r.kind, { condition: r.condition, running: r.running, modifiers: [...tableModifiers(CO923.climbModifierRows(), r.clm ?? []), ...(r.mod ? [{ id: 'other', label: tx('SR2E.Card.Mod.other'), value: r.mod }] : [])] });
+    await actor.athleticsTest(r.kind, { condition: r.condition, running: r.running, c95: r.c95, modifiers: [...tableModifiers(CO923.climbModifierRows(), r.clm ?? []), ...(r.mod ? [{ id: 'other', label: tx('SR2E.Card.Mod.other'), value: r.mod }] : [])] });
   }
 
   static async #onMoraleTest(this: SR2CharacterSheet) {
@@ -1715,6 +1720,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const actor: any = this.document;
     const st = actor.lifestyleStatus();
     // v0.73.0 (O31): owned outright, or buy it outright (RULES.CHARACTERS_V73.lifestyle).
+    // v0.95.0 (RULES.CORE_V95.sellLifestyle 'book', Core p. 190): a lifestyle owned outright can be sold.
+    if (st.permanent && await C95G.sellLifestyle(actor)) return;
     if (st.permanent) return void ui.notifications?.info?.(tx('SR2E.Notify.Sheet.sLifestyleIsOwnedOutright', { actorName: escHtml(actor.name), stLabel: escHtml(st.label) }));
     const buy: any = RULES.CHARACTERS_V73.lifestyle.buyLater && RULES.CHARACTERS_V73.lifestyle.outrightPermanent
       ? outrightPurchase({ lifestyle: actor.system.lifestyle?.level ?? "low", outright: false, paidUntil: Number(actor.system.lifestyle?.paidUntil ?? -1), now: sysNow(), nuyen: Number(actor.system.nuyen ?? 0) } as any) : null;

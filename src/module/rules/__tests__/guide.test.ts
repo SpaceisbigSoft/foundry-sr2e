@@ -98,7 +98,9 @@ describe('v0.66.0 player guide topics', () => {
     // v0.87.0: 'printing' (no sheet heading of its own). v0.89.8: 'tools' (the tools window's headings name it with data-help). v0.91.7: 'scene-builder' (likewise). v0.92.3: 'rules-v0923-combat'.
     const general = new Set(['getting-started', 'sheet-tools', 'summary-bar', 'rolling', 'targeting', 'chat-cards', 'karma-pool', 'shortcuts', 'inline-tests', 'skill-picker', 'adding', 'gm-cards', 'house-rules', 'look', 'credits', 'rules-v079', 'rules-v0923-combat', 'rules-urr', 'printing', 'tools', 'scene-builder', 'spell-formulas', 'interpretations', 'physical-dice', 'troubleshooting',
       // v0.94.2: give, stash and loot, the Item Piles route, the catalogue compendium.
-      'trade', 'item-piles', 'gm-catalogue']);
+      'trade', 'item-piles', 'gm-catalogue',
+      // v0.95.0: the core book rules added.
+      'rules-v095-core']);
     for (const t of GUIDE_TOPICS) {
       if (general.has(t.id)) assert.equal(t.headings.length, 0, t.id);
       else assert.ok(t.headings.length > 0, `${t.id} has no headings`);

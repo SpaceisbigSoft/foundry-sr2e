@@ -25,6 +25,7 @@ import { SR2Interpretations } from './interpretations.ts';
 import { SR2TeamKarma } from './teamkarma.ts';
 import { openConversionTool } from './nesting942.ts';
 import { openLoot942 } from './trade942.ts';
+import { openBookTool } from './core95.ts';
 
 const { HandlebarsApplicationMixin, ApplicationV2 } = foundry.applications.api;
 
@@ -97,6 +98,7 @@ export const TOOL_ACTIONS: Record<string, () => void> = {
   macros: () => { if (isGm()) (game as any).packs?.get?.(`${SYSTEM.id}.sr2e-macros`)?.render?.(true); },
   tourGm: () => { if (isGm()) void startTour('gm-panel'); },
   accessoryItems: () => { if (isGm()) void openConversionTool(); },
+  bookRules95: () => { if (isGm()) void openBookTool(); },
 };
 
 /** Run a tool by id (false when the id is unknown or the tool is the GM's and the user isn't). */

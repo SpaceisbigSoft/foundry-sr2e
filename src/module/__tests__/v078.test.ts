@@ -159,7 +159,9 @@ const withStatuses = (a: any) => { a.toggleStatusEffect = async (id: string, o: 
 const derivingFlags = (a: any) => { const set = a.setFlag.bind(a); a.setFlag = async (s2: string, k: string, v: any) => { await set(s2, k, v); a.system.prepareDerivedData(); }; return a; };
 
 describe('v0.78.0 legwork (BOOK_V78.legwork)', () => {
-  test('a closer contact adds dice; a fixer takes 3 off the TN', async () => {
+  test('a closer contact adds dice; a fixer takes 3 off the TN', async (t) => {
+    // v0.95.0: the v0.94.2 rule this test pins (RULES.CORE_V95).
+    t.after(oldWay({ 'CORE_V95.contactMeet': 'off', 'CORE_V95.contactFee': 'flat' }));
     const a = who({ name: 'Face', contacts: [{ id: 'c1', name: 'Smiley', level: 3, loyalty: 1, fee: 0, dice: 0, favours: 0, role: 'Fixer' }] }, [skill('et', 'Etiquette', 3, 'charisma')]);
     faces.push(3, 3, 2, 2, 1);                                         // Etiquette 3 + friend for life 2 vs 6 − 3
     const r = await a.legwork('c1', { difficultyTn: 6, fixer: true });

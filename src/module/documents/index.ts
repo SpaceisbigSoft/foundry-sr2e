@@ -150,6 +150,8 @@ import { logProjectDone } from '../applications/advancement.ts';
 import { gearStackKey } from '../rules/catalogue.ts';
 // v0.92.3 book alignment, core mechanics and characters (RULES.CORE_V923).
 import * as CO923 from '../rules/core923.ts';
+// v0.95.0 (RULES.CORE_V95): the core book rules' glue (applications/core95.ts).
+import * as C95G from '../applications/core95.ts';
 import {
   urrCoreCriticalNote, urrCoreKnowledgeCard, urrCoreKnowledgeText, urrCoreOpposed, urrCoreSkillTestDice, urrCoreAttributeTn,
   urrCoreTrainingDays, urrCoreInstruction, urrCoreInstructExtra, urrCoreFindMods, urrCoreHaggleSellerTn,
@@ -1206,6 +1208,8 @@ export interface TestSnapshot {
   timed?: { base: number; unit: string };
   reveal?: { kind: 'notice' | 'language' | 'listen' | 'knowledge'; what?: string };
   gearRepair?: { itemUuid: string; name: string; fixed?: boolean; projectId?: string };
+  /** v0.95.0 (RULES.CORE_V95): a core book test's follow-up data (applications/core95.ts testExtras). */
+  c95?: { kind: string; trainingId?: string; baseDays?: number; startedAt?: number };
   instruct?: { studentUuid: string; trainingId: string; days: number; instructorName: string; instructorRating: number; newRating: number; startedAt: number; readyAt?: number; attribute?: boolean };
   /** attack: the weapon's item id (a disaster can jam it). */
   weaponId?: string;
@@ -2835,10 +2839,13 @@ export class SR2Actor extends Actor {
     const poolDice = Math.max(0, Math.min(opts.poolDice ?? 0, poolMax));
     // v0.80.0 (RULES.URR_V80.coreKarmaDice): extra dice bought from the Karma Pool, one point a die (0 in the book).
     // v0.92.3 (RULES.CORE_V923.karmaDice 'book', Core p. 191): in the book too, at most the test's own dice.
-    const karmaDice = CO923.karmaDiceFor(opts.karmaDice, Number(this.sys.derived?.karmaPoolLeft ?? 0), dice);
+    // v0.95.0 (RULES.CORE_V95.teamKarma): the dialog's "from the team pool" tick takes them from the Team Karma Pool.
+    const team95 = (opts.karmaDice ?? 0) > 0 && C95G.takeTeamDice(this);
+    let karmaDice = CO923.karmaDiceFor(opts.karmaDice, team95 ? C95G.teamKarmaLeft(this) : Number(this.sys.derived?.karmaPoolLeft ?? 0), dice);
+    if (karmaDice > 0 && team95 && !(await C95G.spendTeam(this, karmaDice))) karmaDice = 0;
     if (karmaDice > 0) {
       label = tx('SR2E.Card.Actor.karma', { label, karmaDice });
-      await this.update({ 'system.karma.poolSpent': Number(this.sys.karma?.poolSpent ?? 0) + karmaDice });
+      if (!team95) await this.update({ 'system.karma.poolSpent': Number(this.sys.karma?.poolSpent ?? 0) + karmaDice });
     }
     const rolls: any[] = [];
     // An aspected background count aligned with this magician adds dice to magic (v0.39.0).
@@ -3292,13 +3299,17 @@ export class SR2Actor extends Actor {
       const waitingRepair = Boolean((snap.gearRepair as any)?.projectId);
       parts.push(`<p>${s > 0 ? `<strong>${escText(g.name)} ${waitingRepair ? tx('SR2E.Card.Actor.isBeingRepaired2') : tx('SR2E.Card.Actor.isRepaired2')}.</strong>` : `<em>${tx('SR2E.Card.Actor.isStillBroken', { name: escText(g.name) })}</em>`}${note}</p>`);
     }
-    if (snap.instruct) {
+    // v0.95.0 (RULES.CORE_V95.trainingTest 'book', Companion p. 52): one success more for the student per two.
+    const student95: any = snap.instruct ? await fromUuid(snap.instruct.studentUuid) : null;
+    const r95 = snap.instruct ? await C95G.instruction(student95, snap.instruct, s, Boolean(student95) && canWriteNow(student95), Number((this.findSkill(RULES.CHARACTERS_V58.training.instructionSkill) as any)?.system?.rating ?? 0)) : null;
+    if (snap.instruct && r95) { snap = { ...snap, instruct: { ...snap.instruct, readyAt: trainingReadyAt(snap.instruct.startedAt, r95.days) } }; parts.push(r95.html); }
+    else if (snap.instruct) {
       const ins = snap.instruct;
       // v0.80.0 (RULES.URR_V80.coreTraining 'urr'): rating + 2, ÷ (1 + successes); null in the book.
       const r = urrCoreInstruction({ days: ins.days, successes: s, instructorRating: ins.instructorRating, newRating: ins.newRating, attribute: ins.attribute })
         ?? instructionResult({ days: ins.days, successes: s, instructorRating: ins.instructorRating, newRating: ins.newRating });
       const readyAt = trainingReadyAt(ins.startedAt, r.days);
-      const student: any = await fromUuid(ins.studentUuid);
+      const student: any = student95;
       const list: any[] = [...(student?.system?.training ?? [])].map((x: any) => ({ ...x }));
       const e = list.find((x: any) => x.id === ins.trainingId);
       let note = '';
@@ -3311,6 +3322,8 @@ export class SR2Actor extends Actor {
       snap = { ...snap, instruct: { ...ins, readyAt } };
       parts.push(`<p>${r.usable && s > 0 ? `${tx('SR2E.Card.Actor.cutsTheTrainingTo', { insInstructorName: escText(ins.instructorName) })} <strong>${escText(plural(r.days, 'day'))}</strong>.` : `<em>${escText(String(r.note || tx('SR2E.Card.Actor.noHelpFromTheInstructor')).replace(/\.+$/, ''))}.</em> ${tx('SR2E.Card.Actor.ofTraining', { plural: escText(plural(r.days, 'day')) })}`}${note}</p>`);
     }
+    // v0.95.0 (RULES.CORE_V95): a core book test's follow-up (the training self-test), run again after a re-roll.
+    if (snap.c95) { const more95 = await C95G.testExtras(this, snap.c95, s, canWriteNow(this)); if (more95) parts.push(more95); }
     // v0.91.8 (RULES.FORMULA_V918.teacher): a teacher's test: the student's learning test with its successes as dice.
     if (snap.teach) {
       const t = snap.teach;
@@ -3573,7 +3586,8 @@ export class SR2Actor extends Actor {
 
   /** Karma buttons for a card: only for actors who have a Karma Pool at all. */
   #karmaButtons(snap: TestSnapshot): string {
-    if (!((this.sys.karma?.pool as number) > 0)) return '';
+    // v0.95.0 (RULES.CORE_V95.teamKarma): a team member with no Karma Pool of their own may still draw on the team's.
+    if (!((this.sys.karma?.pool as number) > 0) && !C95G.teamKarmaFor(this)) return '';
     // v0.92.3 (RULES.CORE_V923.afterOops 'book', Core p. 191): no more Karma on a test whose disaster Karma avoided.
     if (!CO923.karmaAfterOops(snap.disasterAvoided)) return '';
     const parts: string[] = [];
@@ -3584,7 +3598,7 @@ export class SR2Actor extends Actor {
     if (failures > 0) {
       parts.push(`<button type="button" data-sr2e-action="karmaReroll">${tCount(failures, 'SR2E.Card.Actor.reRollFailuresKarma', { karmaRerollCost: karmaRerollCost(snap.rerolls) })}</button>`);
     }
-    const buy = canBuySuccess({ successes: snap.successes, poolLeft: (this.sys.derived?.karmaPoolLeft as number | undefined) ?? 0, botch: snap.botch });
+    const buy = canBuySuccess({ successes: snap.successes, poolLeft: ((this.sys.derived?.karmaPoolLeft as number | undefined) ?? 0) + C95G.teamKarmaLeft(this), botch: snap.botch });
     if (buy.ok) parts.push(`<button type="button" data-sr2e-action="buySuccess" title="${RULES.KARMA.buyPermanent ? tx('SR2E.Card.Actor.theKarmaPoolPointIsGone') : tx('SR2E.Card.Actor.spentUntilTheKarmaPoolRefreshes')}">${tx('SR2E.Card.Actor.buyASuccessKarma', { buyCost: buy.cost, part: RULES.KARMA.buyPermanent ? tx('SR2E.Card.Actor.permanent') : '' })}</button>`);
     return parts.length ? `<p class="sr2e-karma">${parts.join(' ')}</p>` : '';
   }
@@ -3743,6 +3757,9 @@ export class SR2Actor extends Actor {
   }
 
   async #spendKarma(points: number): Promise<boolean> {
+    // v0.95.0 (RULES.CORE_V95.teamKarma, Core p. 191): a team member may draw on the Team Karma Pool instead.
+    const team95 = await C95G.karmaFromTeam(this, points);
+    if (team95 !== null) return team95;
     const left = this.sys.derived.karmaPoolLeft as number;
     if (left < points) {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.hasKarmaPoolLeftThisNeeds', { name: escHtml(this.name), left, points }));
@@ -3961,9 +3978,15 @@ export class SR2Actor extends Actor {
     if (!CO923.karmaAfterOops(snap.disasterAvoided)) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.noKarmaAfterOops')); return false; }
     const k = this.sys.karma ?? {};
     const left = Math.max(0, (k.pool ?? 0) - (k.poolSpent ?? 0));
-    const c = canBuySuccess({ successes: snap.successes, poolLeft: left, botch: snap.botch });
+    // v0.95.0 (RULES.CORE_V95.teamKarma): the Team Karma Pool may pay (for good, as the character's own would).
+    const c = canBuySuccess({ successes: snap.successes, poolLeft: left + C95G.teamKarmaLeft(this), botch: snap.botch });
     if (!c.ok) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.canTBuyASuccess', { reason: escHtml(c.reason) })); return false; }
-    await this.update(RULES.KARMA.buyPermanent ? { 'system.karma.pool': (k.pool ?? 0) - c.cost } : { 'system.karma.poolSpent': (k.poolSpent ?? 0) + c.cost });
+    const team95 = await C95G.karmaFromTeam(this, c.cost, Boolean(RULES.KARMA.buyPermanent));
+    if (team95 === false) return false;
+    if (team95 === null) {
+      if (left < c.cost) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.hasKarmaPoolLeftThisNeeds', { name: escHtml(this.name), left, points: c.cost })); return false; }
+      await this.update(RULES.KARMA.buyPermanent ? { 'system.karma.pool': (k.pool ?? 0) - c.cost } : { 'system.karma.poolSpent': (k.poolSpent ?? 0) + c.cost });
+    }
     const r = asResult(snap);
     const result = { ...r, successes: r.successes + 1 };
     const next = withResult({ ...snap, bought: (snap.bought ?? 0) + 1 }, result);
@@ -4454,6 +4477,7 @@ export class SR2Actor extends Actor {
   static async refreshAllKarma(reason: string): Promise<number> {
     const chars = allActors().filter((a: any) => a.type === 'character' && (a.system.karma?.poolSpent ?? 0) > 0);
     for (const a of chars) await a.refreshKarmaPool();
+    await C95G.teamRefreshAll();
     if (chars.length) await ChatMessage.create({ speaker: { alias: tx('SR2E.Card.Actor.karma2') }, content: `<p>${tx('SR2E.Card.Actor.karmaPoolsRefreshed', { reason: escText(reason), chars: escText(chars.map((a: any) => a.name).join(', ')) })}</p>` });
     return chars.length;
   }
@@ -4875,6 +4899,8 @@ export class SR2Actor extends Actor {
     // v0.73.0 (O30): a caller may name the opposed attribute (negotiating pay: RULES.CHARACTERS_V73.negotiation).
     const attr = opts.attribute ?? socialAttribute(skillName) ?? 'charisma';
     if (!target) return null;
+    // v0.95.0 (RULES.CORE_V95.racism, Core p. 182): the secret Charisma test against a racist NPC, once per NPC.
+    await C95G.racismCharisma(this, target, Number(this.findSkill(skillName)?.system?.rating ?? 0) > 0);
     const mine = this.#skillDice(this.findSkill(skillName), false, null, 'charisma');
     const theirs = target.#skillDice(target.findSkill(skillName), false, null, attr === 'charisma' ? 'charisma' : attr);
     const rolls: any[] = [];
@@ -4911,7 +4937,9 @@ export class SR2Actor extends Actor {
    */
   #socialSides(target: any, mineSkill: TargetNumberModifier[], theirSkill: TargetNumberModifier[], given: TargetNumberModifier[]): { mine: TargetNumberModifier[]; theirs: TargetNumberModifier[] } {
     const picked = given.some((m) => modifierIs(m, 'attitude:prejudiced', /^Attitude: Prejudiced/i));
-    const prej = picked ? null : metatypePrejudice(this.sys.metatype, target?.system?.metatype);
+    // v0.95.0 (RULES.CORE_V95.racism): an NPC whose racism the GM rolled uses it; the metatype table stands in otherwise.
+    const racism95 = C95G.racismFor(this, target);
+    const prej = picked ? null : racism95 ? racism95.mod : metatypePrejudice(this.sys.metatype, target?.system?.metatype);
     const mine = this.#testModifiers({ modifiers: [...given, ...mineSkill, ...reputationModifiers(this.sys.derived?.streetCred ?? 0), ...(prej ? [prej] : [])] });
     const theirs = RULES.TN_AUTO.social.defenderFullPenalties && target instanceof SR2Actor
       ? target.#testModifiers({ modifiers: theirSkill })
@@ -5015,6 +5043,17 @@ export class SR2Actor extends Actor {
     return this.#runTest(tx('SR2E.Card.Actor.repair', { itemName: item.name, planSkill: plan.skill, sdSuffix: sd.suffix }), sd.dice, {
       targetNumber: plan.tn, exclude: o.exclude ?? [], modifiers: [...(o.modifiers ?? []), ...sd.modifiers, ...(t.modifier ? [t.modifier] : [])],
     }, { kind: 'plain', gearRepair: { itemUuid: item.uuid, name: item.name }, timed: { base: hours, unit: 'hours' } });
+  }
+
+  /** v0.95.0 (RULES.CORE_V95): a plain test whose card carries a core book follow-up (applications/core95.ts). */
+  async core95Test(label: string, dice: number, opts: TestOptions, c95: NonNullable<TestSnapshot['c95']>): Promise<SuccessTestResult> {
+    return this.#runTest(label, dice, opts, { kind: 'plain', c95 });
+  }
+
+  /** v0.95.0: a skill's dice as a test rolls them (defaulting and its modifiers included), for applications/core95.ts. */
+  core95Dice(skillName: string, fallback: AttributeKey): { dice: number; modifiers: TargetNumberModifier[]; suffix: string } {
+    const sd = this.#skillDice(this.findSkill(skillName), false, null, fallback, { skillName });
+    return { dice: sd.dice, modifiers: sd.modifiers, suffix: sd.suffix };
   }
 
   // ---- Training (house rule trainingTime 'timed')
@@ -6168,14 +6207,19 @@ export class SR2Actor extends Actor {
    * Climb, swim or jump (RULES.STREET.athletics): Athletics (else the attribute at +4) vs the condition's
    * TN. Successes are distance; no successes climbing is a fall, swimming means going under.
    */
-  async athleticsTest(kind: AthleticsKind, opts: { condition?: string; running?: boolean; modifiers?: TargetNumberModifier[]; weather?: boolean } = {}): Promise<{ successes: number; metres: number } | null> {
+  async athleticsTest(kind: AthleticsKind, opts: { condition?: string; running?: boolean; modifiers?: TargetNumberModifier[]; weather?: boolean; c95?: C95G.Athletics95 | null } = {}): Promise<{ successes: number; metres: number } | null> {
     if (!this.canAct('athletics')) return null;
     if (!(await this.useAction('athletics', kind))) return null;
     const a = RULES.STREET.athletics;
-    const t = athleticsTn(kind, opts.condition ?? '');
+    // v0.95.0 (RULES.CORE_V95.jumping / swimming): the book's jump (the metres to clear) and water tests.
+    const plan95 = C95G.athleticsPlan(this, kind, Boolean(opts.running), opts.c95);
+    if (plan95?.mode === 'float') { await C95G.floatTest(this, opts.c95!, opts.modifiers ?? []); return null; }
+    const t = plan95 ?? athleticsTn(kind, opts.condition ?? '');
     const sd = this.#skillDice(this.findSkill(a.skill), false, null, a.attribute as AttributeKey);
     const verb = kind === 'climb' ? tx('SR2E.Card.Actor.climbing') : kind === 'swim' ? tx('SR2E.Card.Actor.swimming') : opts.running ? tx('SR2E.Card.Actor.runningJump') : tx('SR2E.Card.Actor.standingJump');
-    const r = await this.#runTest(`${verb} (${t.label}): ${a.skill}${sd.suffix}`, sd.dice, { targetNumber: t.tn, modifiers: [...(opts.modifiers ?? []), ...sd.modifiers] });
+    const r = await this.#runTest(`${verb} (${t.label}): ${a.skill}${sd.suffix}`, sd.dice, { targetNumber: t.tn, modifiers: [...(plan95?.modifiers ?? []), ...(opts.modifiers ?? []), ...sd.modifiers] });
+    const out95 = plan95 ? C95G.athleticsOutcome(this, plan95, r.successes) : null;
+    if (out95) { await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: out95 }); return { successes: r.successes, metres: 0 }; }
     // v0.48.0: bad weather shortens the distance (RULES.HEALTH.weather movement).
     const wf = opts.weather === false ? 1 : movementInWeather({ walk: 1, run: 1 }, this.weatherHere()).factor;
     // v0.80.0 (RULES.URR_V80.hsAthletics 'urr'): distances by Fitness ((Strength + Quickness) ÷ 2) and Quickness.
@@ -6577,6 +6621,9 @@ export class SR2Actor extends Actor {
   /** v0.49.0 (GM tick): an overdue lifestyle past the grace days, once per unpaid date. */
   static async #lifestyleTick(a: any): Promise<void> {
     if (a.type !== 'character' || !a.hasPlayerOwner) return;
+    // v0.95.0 (RULES.CORE_V95.missedPayments 'book', Core p. 190): 1D6 against the months missed; contact upkeep.
+    await C95G.contactUpkeepTick(a);
+    if (await C95G.lifestyleTick(a)) return;
     const st = a.lifestyleStatus?.();
     const level = String(a.system?.lifestyle?.level ?? 'low');
     const o = lifestyleOverdue(st?.days ?? null, level);
@@ -6846,6 +6893,8 @@ export class SR2Actor extends Actor {
       content: SR2Actor.contestContent(contest), flags: { [SYSTEM_ID]: { contest } },
       rolls,
     });
+    // v0.95.0 (RULES.CORE_V95.contactMeet / contactFee, Core p. 200): the GM's card for the meet and the fee.
+    await C95G.afterLegwork(this, contact, total.successes);
     return { successes: total.successes, tier };
   }
 
