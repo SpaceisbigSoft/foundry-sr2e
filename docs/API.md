@@ -128,6 +128,7 @@ Nested items (`rules/nesting942.ts`): the link is the item flag `flags.shadowrun
 
 The interface's history from v0.93.2, newest first. Each version's `CHANGELOG.md` entry repeats its line.
 
+- **v0.96.3:** nothing added or removed.
 - **v0.96.2:** nothing added or removed.
 - **v0.96.1:** nothing added or removed.
 - **v0.96.0:** nothing added to or removed from `game.sr2e.api`. New rule groups `RULES.HEALTH_V96`, `RULES.SORCERY_V96` and `RULES.SPIRITS_V96`; new data fields on existing types (addiction entries, barriers, the character's astral pool count); no new document types.

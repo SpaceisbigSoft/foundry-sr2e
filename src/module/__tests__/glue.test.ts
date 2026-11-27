@@ -1606,6 +1606,19 @@ describe("critter and spirit powers", () => {
     assert.deepEqual({ ...v.system.monitor }, { physical: 0, stun: 0 });
   });
 
+  test("v0.96.2: a damaging Engulf's resist card carries its entry and escape lines", async (t) => {
+    t.after(oldWay({ "SPIRITS_V96.critterOpposed": "book" }));
+    chat.length = 0;
+    const s = spiritUser(5); const v = victim();
+    faces.push(4, 4, 4, 1, 1);                                // 3 successes
+    await s.usePower(power(), { targetUuid: v.uuid });
+    const st = chat.at(-1).flags.shadowrun2e_unified.spell;
+    faces.push(5, 1, 1, 1, 1);                                // 1 success -> net 2
+    await v.resistSpell(st, 0);
+    assert.match(chat.at(-1).content, /Engulf/);
+    assert.match(chat.at(-1).content, /Strength/);
+  });
+
   test("v0.96.2: Confusion with a fixed TN source names the Willpower it rolls against", async (t) => {
     t.after(oldWay({ "SPIRITS_V96.critterOpposed": "book" }));
     chat.length = 0;

@@ -2,6 +2,10 @@
 
 This is the history of the unofficial Shadowrun 2nd Edition system for Foundry VTT (system id `shadowrun2e_unified`; `sr2e` until v0.93.0), newest version first. Every rules change since v0.70.0 has a house-rule switch that puts the old behaviour back. The system was built with AI (Anthropic's Claude) under human direction, and it has not yet been play-tested at a real table.
 
+## v0.96.3 — Engulf's lines on a damage card (27 Nov 2026)
+- **Fixed:** an Engulf that does damage now shows its entry line (drawn in at walking or running pace) and the escape line on the resist card; before, only an Engulf set up as effect-only had them (Predator and Prey p. 89).
+- API changes: none.
+
 ## v0.96.2 — Card wording fixes (27 Nov 2026)
 - **Fixed:** the ward ritual card's title no longer says "÷ successes" under the book's ward rule (the ritual takes its Force in hours).
 - **Fixed:** a Confusion or Fear card names the victim's Willpower as its TN (it read "TN = …'s Fixed" when the power's own TN source was fixed).

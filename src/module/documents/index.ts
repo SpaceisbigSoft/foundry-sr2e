@@ -1031,6 +1031,8 @@ export interface SoakContext {
   spellName?: string;
   /** spell mode: a power with no damage, so nothing is marked on the monitor. */
   effectOnly?: boolean;
+  /** v0.96.2: the resisted thing is a critter power (its outcome line, e.g. Engulf's entry, on a damage card too). */
+  power96?: boolean;
   /** Monitor before this test applied anything, and after (so a re-roll can correct it safely). */
   before: Monitor;
   after?: Monitor;
@@ -3566,12 +3568,16 @@ export class SR2Actor extends Actor {
       return { html: html + rf.html, flags: rf.flags, snap: rf.reflect ? { ...snap, soak: { ...ctx, reflect: rf.reflect } } : snap };
     }
     let reflected: { html: string; flags: Record<string, unknown>; reflect?: SoakContext['reflect'] } = { html: '', flags: {} };
+    let outcome96 = '';
     if (ctx.mode === 'spell') {
       const outcome = resolveCombatSpell({ casterSuccesses: ctx.casterSuccesses ?? 0, resistSuccesses: s, level: ctx.level });
       level = outcome.level;
       lead = outcome.hit
         ? `<strong>${tx('SR2E.Card.Actor.takesEffect2', { spellName: escText(ctx.spellName) })}</strong> ${tx('SR2E.Card.Actor.casterVsResistanceNet', { casterSuccesses: ctx.casterSuccesses, s, outcomeNetSuccesses: outcome.netSuccesses })} `
         : `${outcomeWord('resisted')} ${tx('SR2E.Card.Actor.casterVsResistance', { casterSuccesses: ctx.casterSuccesses, s })}`;
+      // v0.96.2 (RULES.SPIRITS_V96.critterOpposed 'book', Predator and Prey p. 89): a damaging Engulf's entry and escape
+      // lines (before, only an effect-only power had them).
+      if (ctx.power96) outcome96 = SP96G.powerOutcomeLine(String(ctx.powerEffect?.special ?? ''), String(ctx.spellName ?? ''), outcome.netSuccesses, outcome.hit);
       reflected = await this.#reflection96(ctx, s, snap);
     } else {
       // v0.80.0 (URR_V80.cbtDefense 'cleanMiss', URR): pool successes above the attack's are a clean miss; else net staging.
@@ -3698,7 +3704,7 @@ export class SR2Actor extends Actor {
       ...reflected.flags,
     };
     return {
-      html: `<p>${body}${note}${degradeNote}</p>${kd}${cyber}${inf}${tox}${perm}${reflected.html}`,
+      html: `<p>${body}${note}${degradeNote}</p>${outcome96}${kd}${cyber}${inf}${tox}${perm}${reflected.html}`,
       flags,
       snap: { ...snap, soak: { ...ctx, after: result.monitor, ...(degradedNow ? { degraded: true } : {}), ...(cyberCheck ? { cyberCheck } : {}), ...(reflected.reflect ? { reflect: reflected.reflect } : {}) } },
     };
@@ -13960,6 +13966,8 @@ export class SR2Actor extends Actor {
       soak: { mode: 'spell', noun: 'damage', level: state.level, type: state.damageType, body: this.sys.attributes.body.total,
         casterSuccesses, spellName: state.spellName, before: this.#monitor(),
         ...(state.effectOnly ? { effectOnly: true } : {}),
+        // v0.96.2: a damaging critter power (Engulf) still gets its outcome line.
+        ...(state.noun === 'power' ? { power96: true } : {}),
         ...(state.essenceDrain ? { essenceDrain: { casterUuid: state.casterUuid } } : {}),
         // v0.45.0: a reflecting initiate bounces a spell back; a sustained power changes attributes.
         // v0.48.0: powers bounce too (RULES.OCCULT.metamagic.reflecting.powers).
