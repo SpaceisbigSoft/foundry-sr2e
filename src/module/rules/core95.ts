@@ -5,7 +5,7 @@
  */
 import { RULES } from './config.ts';
 import type { TargetNumberModifier } from './dice.ts';
-import { t as tx } from '../helpers/i18n.ts';
+import { t as tx, tKey } from '../helpers/i18n.ts';
 
 const V = () => RULES.CORE_V95;
 const num = (v: unknown, d = 0) => (Number.isFinite(Number(v)) ? Number(v) : d);
@@ -224,10 +224,17 @@ const TREAD_ROW = 'tread95:';
 const META_ROW = 'metatype';
 export type SwimMode = 'swim' | 'tread' | 'float';
 
+/** A Treading Water table row's label (SR2E.Core95.Tread.<id>; the id when a house list adds a row without one). */
+export function treadLabel(id: string): string {
+  const key = `SR2E.Core95.Tread.${id}`;
+  const t = tKey(key);
+  return t && t !== key ? t : id;
+}
+
 /** A water test's target number and the table's modifiers: swimming, treading water or floating. */
 export function waterTest(mode: SwimMode, metatype: unknown, checked: readonly string[] = []): { tn: number; modifiers: TargetNumberModifier[] } {
   if (mode === 'swim') return { tn: whole(V().swimTn), modifiers: [] };
-  const rows = V().treadModifiers.filter((r) => checked.includes(r.id)).map((r) => ({ id: `tread95:${r.id}`, label: r.label, value: r.value }));
+  const rows = V().treadModifiers.filter((r) => checked.includes(r.id)).map((r) => ({ id: `tread95:${r.id}`, label: treadLabel(r.id), value: r.value }));
   const m = String(metatype ?? '').toLowerCase();
   const meta = num(V().treadMetatype[m]);
   return { tn: whole(mode === 'tread' ? V().treadTn : V().floatTn), modifiers: [...rows, ...(meta ? [{ id: TREAD_ROW + META_ROW, label: tx('SR2E.Card.Mod.athleticsMetatype'), value: meta }] : [])] };

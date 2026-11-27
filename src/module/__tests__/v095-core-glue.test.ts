@@ -251,11 +251,17 @@ describe('v0.95.0 core glue: racism in the social sides', () => {
     world(sp, npc);
     return { sp, npc };
   };
+  test('a posted card with the racism row hides its numbers from every player, the speaker too', async () => {
+    const { carriesRacism } = await import('../applications/hidden941.ts');
+    assert.equal(carriesRacism({ flags: { [SYS]: { test: { modifiers: [{ id: 'racism95', label: 'x', value: 2 }] } } } }), true);
+    assert.equal(carriesRacism({ flags: { [SYS]: { test: { modifiers: [{ id: 'prejudice', label: 'x', value: 2 }] } } } }), false, 'the metatype table row is public as before');
+    assert.equal(carriesRacism({ flags: {} }), false);
+  });
   test('the GM\'s preview shows it; a player\'s preview never does', () => {
     const { sp, npc } = setup();
-    assert.ok(sp.socialPreview(npc, 'Negotiation').mine.some((m: any) => m.id === 'prejudice' && m.value === 3));
+    assert.ok(sp.socialPreview(npc, 'Negotiation').mine.some((m: any) => m.id === 'racism95' && m.value === 3));
     g.game.user = PLAYER();
-    assert.ok(!sp.socialPreview(npc, 'Negotiation').mine.some((m: any) => m.id === 'prejudice'), 'no racism row, and no metatype table row either');
+    assert.ok(!sp.socialPreview(npc, 'Negotiation').mine.some((m: any) => m.id === 'racism95' || m.id === 'prejudice'), 'no racism row, and no metatype table row either');
   });
   test('the secret Charisma test is rolled on the GM\'s client and kept on the NPC; the test then uses what is left', async () => {
     const { sp, npc } = setup();
@@ -493,6 +499,20 @@ describe('v0.95.0 core glue: the review fixes', () => {
     assert.equal(C95.takeTeamDice(a), false, 'once');
     d1.click(); d2.click();
     assert.equal(C95.takeTeamDice(a), false, 'the dialog pressed last had no tick');
+  });
+  test('Cancel on a ticked dialog leaves nothing for a later roll to take from the team pool', () => {
+    const a = pc(0); world(a); team([a.id], 3);
+    const handlers: Record<string, Array<() => void>> = { ok: [], cancel: [] };
+    const btn = (action: string) => ({ dataset: { action }, addEventListener: (_e: string, fn: () => void) => { handlers[action]!.push(fn); } });
+    const root = { querySelectorAll: () => [btn('ok'), btn('cancel')], querySelector: () => ({ checked: true }) };
+    C95.watchDialog(root);
+    handlers.cancel!.forEach((f) => f());
+    assert.equal(C95.takeTeamDice(a), false, 'cancelled');
+    handlers.ok!.forEach((f) => f());
+    handlers.cancel!.forEach((f) => f());
+    assert.equal(C95.takeTeamDice(a), false, 'a Cancel after the roll button clears it too');
+    handlers.ok!.forEach((f) => f());
+    assert.equal(C95.takeTeamDice(a), true, 'the roll button arms it');
   });
   test('the window has no Draw button: points are drawn only where a test spends Karma', () => {
     const a = pc(0); world(a); team([a.id], 3);

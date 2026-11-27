@@ -141,12 +141,17 @@ export function karmaDiceRow(actor: any, left: number, rated = true, baseDice = 
 // The tick is read when its own dialog's button is pressed: the roll that button starts takes it (once, soon after).
 let teamDice: { at: number } | null = null;
 const TEAM_DICE_MS = 60_000;
+/** A dialog's buttons that close it without rolling. */
+const NOT_A_ROLL = new Set(['cancel', 'close', 'no']);
 
 /** A dialog was shown: its buttons record whether its own tick was on when one of them is pressed. */
 export function watchDialog(root: any): void {
   const buttons = root?.querySelectorAll?.('button') ?? [];
   for (const b of buttons) {
     b.addEventListener?.('click', () => {
+      // Only the button that rolls arms it: Cancel, close and "no" leave nothing for a later roll to take.
+      const action = String(b.dataset?.action ?? b.getAttribute?.('data-action') ?? '');
+      if (NOT_A_ROLL.has(action)) { teamDice = null; return; }
       const box = (root && typeof root.querySelector === 'function' ? root.querySelector('input[name="teamKarma95"]') : null) as HTMLInputElement | null;
       teamDice = box?.checked ? { at: Date.now() } : null;
     }, { capture: true });
@@ -378,6 +383,9 @@ const offsetOf = (speaker: any, npc: any, r: C.Racism): number | null => {
  * metatype table stands in), else the modifier (or none: `{ mod: null }`). `preview`: a player's dialog preview,
  * which never shows it (the points are known only to the GM, Core p. 182); the GM's preview does.
  */
+/** The racism row's modifier id (Core p. 182: the target number is known only to the GM). */
+export const RACISM_MOD_ID = 'racism95';
+
 export function racismFor(speaker: any, npc: any, preview = false): { mod: TargetNumberModifier | null } | null {
   if (!C.racismBook()) return null;
   const r = racismOfActor(npc);
@@ -385,7 +393,8 @@ export function racismFor(speaker: any, npc: any, preview = false): { mod: Targe
   if (preview && !isGm()) return { mod: null };
   const points = C.racismVs(r, speaker?.system?.metatype);
   const left = C.racismAfter(points, offsetOf(speaker, npc, r) ?? 0);
-  return { mod: left > 0 ? { id: 'prejudice', label: tx('SR2E.Core95.Racism.mod', { name: String(npc?.name ?? '') }), value: left } : null };
+  // Its own id (RACISM_MOD_ID): a player's card that carries it hides its numbers (applications/hidden941.ts).
+  return { mod: left > 0 ? { id: RACISM_MOD_ID, label: tx('SR2E.Core95.Racism.mod', { name: String(npc?.name ?? '') }), value: left } : null };
 }
 
 /**
@@ -528,7 +537,7 @@ export function athleticsRows(actor: any): string {
   if (!jump && !swim) return '';
   const a = actor?.system?.attributes ?? {};
   const base = (running: boolean): number => C.jumpBase({ strength: Number(a.strength?.total ?? 0), bodyNatural: Number(a.body?.natural ?? a.body?.base ?? a.body?.total ?? 0), quickness: Number(a.quickness?.total ?? 0), running });
-  const rows = RULES.CORE_V95.treadModifiers.map((r) => `<label class="sr2e-check"><input type="checkbox" name="tread95" value="${escHtml(r.id)}"> ${escHtml(r.label)} (${r.value > 0 ? '+' : ''}${r.value})</label>`).join('');
+  const rows = RULES.CORE_V95.treadModifiers.map((r) => `<label class="sr2e-check"><input type="checkbox" name="tread95" value="${escHtml(r.id)}"> ${escHtml(C.treadLabel(r.id))} (${r.value > 0 ? '+' : ''}${r.value})</label>`).join('');
   return `${jump ? `<fieldset><legend>${tx('SR2E.Core95.Athletics.jumpLegend')}</legend>
       <div class="form-group"><label>${tx('SR2E.Core95.Athletics.clear')}</label><input name="jump95" type="number" min="0" step="0.5" value="0"></div>
       <label class="sr2e-check"><input type="checkbox" name="vertical95"> ${tx('SR2E.Core95.Athletics.vertical')}</label>

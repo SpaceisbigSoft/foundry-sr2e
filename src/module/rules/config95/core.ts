@@ -64,17 +64,17 @@ export const CORE_V95 = {
   floatTn: 4,
   /** swimming 'book': the Treading Water Modifications Table (Cyberpirates p. 156); the metatype rows are added by themselves. */
   treadModifiers: [
-    { id: 'cyberlimb', label: 'Cyberlimb or torso (each)', value: 1 },
-    { id: 'boneLacing', label: 'Aluminum or titanium bone lacing', value: 2 },
-    { id: 'waterlogged', label: 'Waterlogged clothing', value: 1 },
-    { id: 'deadWeight', label: 'Dead weight (per 2 kg)', value: 1 },
-    { id: 'obese', label: 'Obese', value: -2 },
-    { id: 'outOfShape', label: 'Out of shape', value: 1 },
-    { id: 'muscular', label: 'Highly developed muscles or very low body fat', value: 1 },
-    { id: 'plank', label: 'Mildly buoyant support (a plank)', value: -1 },
-    { id: 'lifeJacket', label: 'Very buoyant support (a life jacket)', value: -2 },
-    { id: 'roughSeas', label: 'Rough seas', value: 2 },
-  ] as ReadonlyArray<{ id: string; label: string; value: number }>,
+    { id: 'cyberlimb', value: 1 },
+    { id: 'boneLacing', value: 2 },
+    { id: 'waterlogged', value: 1 },
+    { id: 'deadWeight', value: 1 },
+    { id: 'obese', value: -2 },
+    { id: 'outOfShape', value: 1 },
+    { id: 'muscular', value: 1 },
+    { id: 'plank', value: -1 },
+    { id: 'lifeJacket', value: -2 },
+    { id: 'roughSeas', value: 2 },
+  ] as ReadonlyArray<{ id: string; value: number }>, // labels: SR2E.Core95.Tread.<id> (rules/core95.ts treadLabel)
   /** swimming 'book': treading water by metatype (Cyberpirates p. 156). */
   treadMetatype: { elf: -1, ork: 1, troll: 1 } as Record<string, number>,
   /**

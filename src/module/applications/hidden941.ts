@@ -15,6 +15,12 @@ function testActor(message: any): any {
   try { return (globalThis as any).fromUuidSync?.(uuid) ?? null; } catch { return null; }
 }
 
+/** Whether a test card's modifiers include an NPC's racism (RACISM_MOD_ID in applications/core95.ts). */
+export function carriesRacism(message: any): boolean {
+  const mods = message?.flags?.[SYSTEM_ID]?.test?.modifiers;
+  return Array.isArray(mods) && mods.some((m: any) => m?.id === 'racism95');
+}
+
 /** Hide the numbers in one rendered card (exported for the glue tests). */
 export function hideNumbersIn(html: HTMLElement): void {
   for (const roll of Array.from(html.querySelectorAll('.sr2e-roll'))) {
@@ -35,7 +41,11 @@ export function registerHiddenNumbers(): void {
     try {
       let enabled = true;
       try { enabled = game.settings.get(SYSTEM_ID, 'hideNpcNumbers') !== false; } catch { /* not registered */ }
-      if (!enabled || (game as any).user?.isGM) return;
+      if ((game as any).user?.isGM) return;
+      // v0.95.0 (RULES.CORE_V95.racism, Core p. 182): a social test against an NPC's racism hides its numbers from
+      // every player, the speaker too (the target number is known only to the GM), whatever hideNpcNumbers says.
+      if (carriesRacism(message)) { hideNumbersIn(html); return; }
+      if (!enabled) return;
       const actor = testActor(message);
       if (!actor) return;
       if (!hidesNumbers({ enabled, viewerIsGM: false, playerOwned: Boolean(actor.hasPlayerOwner), viewerOwns: Boolean(actor.isOwner) })) return;

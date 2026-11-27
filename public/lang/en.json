@@ -11628,40 +11628,6 @@
             "label": "Poor visibility"
           }
         }
-      },
-      "CORE_V95": {
-        "treadModifiers": {
-          "cyberlimb": {
-            "label": "Cyberlimb or torso (each)"
-          },
-          "boneLacing": {
-            "label": "Aluminum or titanium bone lacing"
-          },
-          "waterlogged": {
-            "label": "Waterlogged clothing"
-          },
-          "deadWeight": {
-            "label": "Dead weight (per 2 kg)"
-          },
-          "obese": {
-            "label": "Obese"
-          },
-          "outOfShape": {
-            "label": "Out of shape"
-          },
-          "muscular": {
-            "label": "Highly developed muscles or very low body fat"
-          },
-          "plank": {
-            "label": "Mildly buoyant support (a plank)"
-          },
-          "lifeJacket": {
-            "label": "Very buoyant support (a life jacket)"
-          },
-          "roughSeas": {
-            "label": "Rough seas"
-          }
-        }
       }
     },
     "RulesUrr": {
@@ -20217,7 +20183,19 @@
         "perception": "Group Perception test",
         "average": "Averaged ratings"
       },
-      "alreadyDone": "This card has already been used."
+      "alreadyDone": "This card has already been used.",
+      "Tread": {
+        "cyberlimb": "Cyberlimb or torso (each)",
+        "boneLacing": "Aluminum or titanium bone lacing",
+        "waterlogged": "Waterlogged clothing",
+        "deadWeight": "Dead weight (per 2 kg)",
+        "obese": "Obese",
+        "outOfShape": "Out of shape",
+        "muscular": "Highly developed muscles or very low body fat",
+        "plank": "Mildly buoyant support (a plank)",
+        "lifeJacket": "Very buoyant support (a life jacket)",
+        "roughSeas": "Rough seas"
+      }
     }
   },
   "TYPES": {
