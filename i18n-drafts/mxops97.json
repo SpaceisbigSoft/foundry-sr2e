@@ -10,7 +10,6 @@
   "SR2E.HouseRules.Rule.MXOPS_V97__restore": "Restore utility: rating vs the damaging program's rating, a point per 2 successes, no deck damage, no wear, VR2 p. 100 (book) or the old TN and a point per success (v965)",
   "SR2E.HouseRules.Rule.MXOPS_V97__interrogation": "Interrogations: the question's TN modifier (+2 … −2) and \"not here\" once 3 successes are counted, VR2 p. 110 (book) or neither (v965)",
   "SR2E.HouseRules.Rule.MXOPS_V97__notThereAt": "Interrogations (book): successes after which the host says it does not hold what is sought (3)",
-
   "SR2E.MxOps97.Op.analyzeSubsystem": "Analyze subsystem (pick the subsystem)",
   "SR2E.MxOps97.Op.crashApplication": "Crash application (pick the subsystem)",
   "SR2E.MxOps97.Op.decoy": "Decoy",
@@ -21,7 +20,6 @@
   "SR2E.MxOps97.Op.locateIcOp": "Locate IC",
   "SR2E.MxOps97.Op.retrain": "Retrain (I/O bandwidth)",
   "SR2E.MxOps97.Op.scanIcon": "Scan icon (pick the icon)",
-
   "SR2E.MxOps97.Item.security": "Security Rating",
   "SR2E.MxOps97.Item.access": "Access",
   "SR2E.MxOps97.Item.control": "Control",
@@ -34,7 +32,6 @@
   "SR2E.MxOps97.Item.masking": "Masking",
   "SR2E.MxOps97.Item.sensors": "Sensors",
   "SR2E.MxOps97.Item.responseIncrease": "Response Increase",
-
   "SR2E.MxOps97.Level.user": "User",
   "SR2E.MxOps97.Level.superuser": "Superuser (+{tn} TN)",
   "SR2E.MxOps97.Level.supervisor": "Supervisor (+{tn} TN)",
@@ -43,21 +40,17 @@
   "SR2E.MxOps97.Query.plain": "Plain question",
   "SR2E.MxOps97.Query.sharp": "Well-phrased question ({tn} TN)",
   "SR2E.MxOps97.Query.insightful": "Insightful question ({tn} TN)",
-
   "SR2E.MxOps97.Dialog.first": "Learn first (Analyze Host, Scan Icon)",
   "SR2E.MxOps97.Dialog.firstAny": "In the book's order",
   "SR2E.MxOps97.Dialog.level": "Validate Passcode: passcode",
   "SR2E.MxOps97.Dialog.query": "Interrogation: the question",
-  "SR2E.MxOps97.Dialog.icons": "Icons in this host (Scan Icon)",
-
+  "SR2E.MxOps97.Dialog.icons": "Icons you have located (Scan Icon)",
   "SR2E.MxOps97.Mod.level": "Passcode: {level}",
   "SR2E.MxOps97.Mod.query": "The question",
   "SR2E.MxOps97.Mod.sleaze": "Target's sleaze {rating}",
-
-  "SR2E.MxOps97.Why.scanTarget": "Pick a decker, frame or agent in this host to scan.",
+  "SR2E.MxOps97.Why.scanTarget": "Pick a decker, frame or agent in this host that you have located (Locate Decker, Locate Frame) to scan.",
   "SR2E.MxOps97.Why.slowReactive": "{name} is reactive IC: the slow utility does not work on it (VR2 p. 99).",
   "SR2E.MxOps97.Why.slowTrace": "{name} has locked on: trace IC is open to the slow utility only while it hunts (VR2 p. 99).",
-
   "SR2E.MxOps97.AnalyzeHost.nothing": "No successes to spend: nothing learned.",
   "SR2E.MxOps97.AnalyzeHost.more": "(one item per success; 7 tell all)",
   "SR2E.MxOps97.Scan.tn": "{name}'s Masking {masking}",
@@ -95,5 +88,14 @@
   "SR2E.MxOps97.Slow.hangs": "It has no action left: it hangs until the next turn.",
   "SR2E.MxOps97.Slow.hint": "Slow rating (+ Hacking Pool) vs the cybercombat TN, opposed by the IC's Resistance Test (Security Value vs the Slow rating); every 2 net successes take an action ({per} Initiative) this turn. Not on reactive IC; on trace IC only while it hunts.",
   "SR2E.MxOps97.Restore.hint": "Restore rating vs the rating of the program that crippled the icon; a point per 2 successes. It cannot mend the deck's permanent damage.",
-  "SR2E.MxOps97.Restore.label": "{name} {rating}: Restore Test vs {tn} (the damaging program's rating)"
+  "SR2E.MxOps97.Restore.label": "{name} {rating}: Restore Test vs {tn} (the damaging program's rating)",
+  "SR2E.MxOps97.Decoy.label": "{by} puts up a decoy",
+  "SR2E.MxOps97.Decoy.note": "a decoy ({n} successes)",
+  "SR2E.MxOps97.Passcode.note": "the passcode lasts {days} days",
+  "SR2E.MxOps97.Locate.label": "{by} locates icons",
+  "SR2E.MxOps97.Locate.note": "{n} icon(s) located",
+  "SR2E.MxOps97.Scan.gone": "The icon is no longer here (or no longer located): nothing learned.",
+  "SR2E.MxOps97.Trust.decoy": "a decoy for {name} ({n} successes)",
+  "SR2E.MxOps97.Trust.passcode": "{name}'s passcode lasts {days} days",
+  "SR2E.MxOps97.Trust.located": "{name} locates {list}"
 }

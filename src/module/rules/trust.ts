@@ -112,8 +112,10 @@ export const GM_APPLY_SPECS: Record<string, { flag: string; keys: readonly strin
   applySite: { flag: 'siteChange', keys: ['siteUuid', 'add', 'minAlert', 'deviceId', 'bypassed', 'casingOpen', 'sourceUuid'], target: 'siteUuid', sources: ['sourceUuid'] },
   applyHost: {
     flag: 'hostChange',
-    keys: ['hostUuid', 'found', 'decrypt', 'removeFile', 'minAlert', 'smoke', 'spot', 'setAlert', 'resetTally', 'addFile', 'editFile', 'validate', 'invalidate', 'bombFound', 'defuse', 'bombOff', 'call', 'sourceUuid'],
-    target: 'hostUuid', sources: ['sourceUuid', 'found.deckerUuid', 'bombFound.deckerUuid'],
+    keys: ['hostUuid', 'found', 'decrypt', 'removeFile', 'minAlert', 'smoke', 'spot', 'setAlert', 'resetTally', 'addFile', 'editFile', 'validate', 'invalidate', 'bombFound', 'defuse', 'bombOff', 'call',
+      // v0.97.0 (RULES.MXOPS_V97): a decoy, a passcode's days, located icons; each names the decker it is for.
+      'decoy97', 'passcode97', 'located97', 'sourceUuid'],
+    target: 'hostUuid', sources: ['sourceUuid', 'found.deckerUuid', 'bombFound.deckerUuid', 'decoy97.deckerUuid', 'passcode97.deckerUuid', 'located97.deckerUuid'],
   },
   applyLocks: { flag: 'sensorLocks', keys: ['vehicleUuid', 'targetUuid', 'targetName', 'successes', 'sourceUuid'], target: 'vehicleUuid', sources: ['sourceUuid'] },
   applyJam: { flag: 'jam', keys: ['droneUuid', 'by', 'rating', 'jammerUuid', 'sourceUuid'], target: 'droneUuid', sources: ['jammerUuid', 'sourceUuid'] },
@@ -246,6 +248,11 @@ export function hostChangeShapeOk(f: any): boolean {
   if (f.bombOff !== undefined && !(onlyKeys(f.bombOff, ['fileId', 'subsystem', 'erase']) && optStr(f.bombOff.fileId) && optStr(f.bombOff.subsystem) && (f.bombOff.erase === undefined || typeof f.bombOff.erase === 'boolean'))) return false;
   if (f.call !== undefined && !(onlyKeys(f.call, ['op', 'id', 'from', 'to', 'by', 'who']) && ['place', 'tap', 'reroute', 'end'].includes(f.call.op)
     && safeStr(f.call.id, 200) && ['from', 'to', 'by', 'who'].every((k) => optStr(f.call[k])))) return false;
+  // v0.97.0: a decoy's successes, a passcode's days (and only beside the passcode it is for), located icons.
+  if (f.decoy97 !== undefined && !(onlyKeys(f.decoy97, ['deckerUuid', 'successes']) && safeStr(f.decoy97.deckerUuid, 400) && intIn(f.decoy97.successes, 0, 30))) return false;
+  if (f.passcode97 !== undefined && !(onlyKeys(f.passcode97, ['deckerUuid', 'days', 'level']) && safeStr(f.passcode97.deckerUuid, 400) && f.validate === f.passcode97.deckerUuid
+    && intIn(f.passcode97.days, 0, 180) && ['user', 'superuser', 'supervisor'].includes(f.passcode97.level))) return false;
+  if (f.located97 !== undefined && !(onlyKeys(f.located97, ['deckerUuid', 'uuids']) && safeStr(f.located97.deckerUuid, 400) && strList(f.located97.uuids, 50))) return false;
   return true;
 }
 
@@ -477,6 +484,9 @@ export function describeGmChange(action: string, flags: Record<string, any>, nam
         else if (k === 'bombFound') out.push(tx('SR2E.Text.Trust.findsDataBomb', { name: nm(v?.deckerUuid) }));
         else if (k === 'defuse') out.push(tx('SR2E.Text.Trust.dataBombDefused', { what: plainOf(v) }));
         else if (k === 'bombOff') out.push(tx('SR2E.Text.Trust.dataBombGoesOff', { what: plainOf(v) }));
+        else if (k === 'decoy97') out.push(tx('SR2E.MxOps97.Trust.decoy', { name: nm(v?.deckerUuid), n: Number(v?.successes) || 0 }));
+        else if (k === 'passcode97') out.push(tx('SR2E.MxOps97.Trust.passcode', { name: nm(v?.deckerUuid), days: Number(v?.days) || 0 }));
+        else if (k === 'located97') out.push(tx('SR2E.MxOps97.Trust.located', { name: nm(v?.deckerUuid), list: (Array.isArray(v?.uuids) ? v.uuids : []).map((u: unknown) => nm(String(u))).join(', ') }));
         else out.push(`${k}: ${plainOf(v)}`);
       }
       break;

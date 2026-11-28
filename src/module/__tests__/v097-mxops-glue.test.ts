@@ -262,25 +262,55 @@ describe('v0.97.0 the new system operations (VR2 pp. 111–117)', () => {
     assert.deepEqual(h.system.bombs[0].foundBy, [d.uuid]);
   });
 
-  test('Decoy: the successes on the decker; an IC whose 1D6 is no higher hits the decoy', async () => {
+  test('Decoy: kept on the host (the GM\'s); an IC whose 1D6 is no higher hits it; it ends when the decker leaves', async () => {
     const h = host();
     const ic = icIn(h);
     const d = inside(h);
-    g.game.actors = [d, ic];
+    g.game.actors = [d, ic, h];
     noDetect(); deckerRoll(3);
     await d.systemTest('', { operationId: 'decoy' });
-    assert.deepEqual(d.flags[SID].decoy97, { hostUuid: h.uuid, successes: 3, boxes: 0 });
+    assert.deepEqual(h.flags[SID].decoys97, [{ deckerUuid: d.uuid, successes: 3, boxes: 0 }]);
+    assert.equal(d.flags?.[SID]?.decoy97, undefined, 'nothing on the decker\'s own actor');
     chat.length = 0;
     faces.push(2);
     const r = await ic.icAttack({ targetUuid: d.uuid });
     assert.equal(r, null);
     assert.match(text(), /attacks Decker's decoy instead/);
-    assert.equal(d.flags[SID].decoy97.boxes, 6, 'an Orange host: S, 6 boxes');
+    assert.equal(h.flags[SID].decoys97[0].boxes, 6, 'an Orange host: S, 6 boxes');
     chat.length = 0;
     faces.push(5, 1, 1, 1, 1);
     const r2 = await ic.icAttack({ targetUuid: d.uuid });
     assert.ok(r2, 'a 5 misses the decoy: the decker is attacked');
     assert.match(text(), /ignores Decker's decoy/);
+    // Jacking out (any change of host or jack-in) ends it, so a later log-on finds none.
+    const G97 = await import('../applications/mxops97.ts');
+    await d.update({ 'system.matrix.jackedIn': false, 'system.matrix.hostUuid': '' });
+    await G97.onActorUpdate97(d, { system: { matrix: { jackedIn: false, hostUuid: '' } } }, true);
+    assert.deepEqual(h.flags[SID].decoys97, []);
+  });
+
+  test('forged: a decoy written on the decker\'s own actor does nothing', async () => {
+    const h = host();
+    const ic = icIn(h);
+    const d = inside(h);
+    d.flags = { [SID]: { decoy97: { hostUuid: h.uuid, deckerUuid: d.uuid, successes: 6, boxes: 0 }, decoys97: [{ deckerUuid: d.uuid, successes: 6, boxes: 0 }] } };
+    g.game.actors = [d, ic, h];
+    faces.push(1, 1, 1, 1);
+    const r = await ic.icAttack({ targetUuid: d.uuid });
+    assert.ok(r, 'the IC attacks the decker');
+    assert.doesNotMatch(text(), /decoy/);
+  });
+
+  test('forged: a host change for a decoy is shaped and bounded, names its decker, and waits for the GM', async () => {
+    const T = await import('../rules/trust.ts');
+    const ok = { hostUuid: 'Actor.h', decoy97: { deckerUuid: 'Actor.d', successes: 3 } };
+    assert.equal(T.gmApplyShapeOk('applyHost', { hostChange: ok }), true);
+    assert.equal(T.gmApplyShapeOk('applyHost', { hostChange: { ...ok, decoy97: { deckerUuid: 'Actor.d', successes: 99 } } }), false);
+    assert.equal(T.gmApplyShapeOk('applyHost', { hostChange: { ...ok, decoy97: { deckerUuid: 'Actor.d', successes: 3, boxes: -5 } } }), false);
+    assert.equal(T.gmApplyShapeOk('applyHost', { hostChange: { hostUuid: 'Actor.h', passcode97: { deckerUuid: 'Actor.d', days: 5, level: 'user' } } }), false, 'a passcode\'s days only beside its validate');
+    assert.equal(T.gmApplyShapeOk('applyHost', { hostChange: { hostUuid: 'Actor.h', validate: 'Actor.d', passcode97: { deckerUuid: 'Actor.d', days: 5, level: 'user' } } }), true);
+    assert.ok(T.cardSourceUuids('applyHost', { hostChange: ok }).includes('Actor.d'));
+    assert.ok(T.describeGmChange('applyHost', { hostChange: ok }).some((l: string) => /decoy/.test(l)));
   });
 
   test('switch: none of the new operations', async (t) => {
@@ -320,40 +350,74 @@ describe('v0.97.0 the new system operations (VR2 pp. 111–117)', () => {
     assert.doesNotMatch(text(), /High/);
   });
 
-  test('Scan Icon: Computer vs the icon\'s Masking, + its sleaze; an item per success', async () => {
+  test('Scan Icon: only an icon the decker has located; Computer vs its Masking, + its sleaze; re-checked on resolution', async () => {
     const h = host();
     const d = inside(h);
     give(d, 'sc', 'scanner', 2);
     const o = inside(h); o.name = 'Other';
     give(o, 'sl', 'sleaze', 3);
-    g.game.actors = [d, o];
+    g.game.actors = [d, o, h];
+    const G97 = await import('../applications/mxops97.ts');
+    assert.equal(G97.iconOptionsHtml(h, d, []), '', 'not located: not offered');
+    assert.equal(await d.systemTest('', { operationId: 'scanIcon', targetUuid: o.uuid }), null, 'not located: refused');
+    // Located (the GM-owned record a Locate Decker leaves on the host).
+    h.flags = { [SID]: { located97: [{ deckerUuid: d.uuid, uuids: [o.uuid] }] } };
+    assert.match(G97.iconOptionsHtml(h, d, []), /Other/);
     noDetect(); sixes(2);
     const r = await d.systemTest('', { operationId: 'scanIcon', targetUuid: o.uuid });
     assert.equal(r.targetNumber, 6, 'Masking 5 − scanner 2 + sleaze 3');
     assert.match(text(), /Other: MPCP <strong>6<\/strong>, Bod <strong>4<\/strong>/);
-    const none = await d.systemTest('', { operationId: 'scanIcon', targetUuid: '' });
-    assert.equal(none, null);
+    // Gone by the time it resolves (a re-roll after it jacked out): nothing.
+    const out = await G97.resolveOp97(d, { effect: 'scanIcon97', host: h, net: 2, by: 'Decker', sy: { targetUuid: o.uuid }, fu: {}, hostIc: [] });
+    assert.match(out, /Other/);
+    o.system.matrix.jackedIn = false;
+    const gone = await G97.resolveOp97(d, { effect: 'scanIcon97', host: h, net: 2, by: 'Decker', sy: { targetUuid: o.uuid }, fu: {}, hostIc: [] });
+    assert.match(gone, /no longer here/);
+  });
+
+  test('Locate Decker leaves its finds on the host for the decker', async () => {
+    const h = host();
+    const d = inside(h);
+    const low = inside(h); low.name = 'Low';
+    const deck = low.items.find((i: any) => i.type === 'cyberdeck'); deck.system.masking = 2; low.system.prepareDerivedData();
+    g.game.actors = [d, low, h];
+    noDetect(); deckerRoll(1); faces.push(6, 6, 5, 1, 1, 1);
+    await d.systemTest('', { operationId: 'locateDeckerOp' });
+    assert.deepEqual(h.flags[SID].located97, [{ deckerUuid: d.uuid, uuids: [low.uuid] }]);
   });
 });
 
 describe('v0.97.0 Validate Passcode (VR2 p. 118)', () => {
-  test('supervisor +6 TN; 1D6 × net days; past them no longer Legitimate; an active alert deletes it', async () => {
+  test('supervisor +6 TN; 1D6 × net days on the host with the passcode; past them not live; an active alert by any path deletes it', async () => {
     const h = host();
     const d = inside(h);
-    g.game.actors = [d];
+    g.game.actors = [d, h];
     // TN Control 5 + 6: two sixes that re-roll to fives (11).
     noDetect(); faces.push(6, 6, 1, 1, 1, 5, 5, /* 1D6 */ 3);
     const r = await d.systemTest('', { operationId: 'validatePasscode', mx97: { level: 'supervisor' } });
     assert.ok(r.modifiers.some((m: any) => m.id === 'passcodeLevel97' && m.value === 6));
     assert.deepEqual(h.system.validated, [d.uuid]);
+    assert.deepEqual(h.flags[SID].passcodes97, [{ deckerUuid: d.uuid, from: 0, days: 6, level: 'supervisor' }]);
     assert.match(text(), /lasts 6 days/);
     const G97 = await import('../applications/mxops97.ts');
-    assert.equal(G97.passcodeLiveFor(d, h.uuid), true);
+    assert.equal(G97.passcodeLiveFor(d, h), true);
     g.game.time = { worldTime: 6 * 86400 };
-    assert.equal(G97.passcodeLiveFor(d, h.uuid), false);
+    assert.equal(G97.passcodeLiveFor(d, h), false);
     g.game.time = { worldTime: 0 };
-    await G97.alertPasscodes(h, 'active');
+    // The GM setting the alert by hand (or a site carrying it up): the upkeep sees the host's change.
+    await h.update({ 'system.alert': 'active' });
+    await G97.onActorUpdate97(h, { system: { alert: 'active' } }, true);
     assert.deepEqual(h.system.validated, []);
+    assert.deepEqual(h.flags[SID].passcodes97, []);
+  });
+  test('forged: a passcode record on the decker\'s own actor does not count; no record on the host: not live', async () => {
+    const h = host({ validated: [] });
+    const d = inside(h);
+    g.game.actors = [d, h];
+    h.system.validated = [d.uuid];
+    d.flags = { [SID]: { passcodes97: [{ hostUuid: h.uuid, until: 1e12, level: 'supervisor' }] } };
+    const G97 = await import('../applications/mxops97.ts');
+    assert.equal(G97.passcodeLiveFor(d, h), false);
   });
   test('switch: no level modifier, no days', async (t) => {
     t.after(oldWay({ 'MXOPS_V97.validatePasscode': 'v965' }));
@@ -364,7 +428,9 @@ describe('v0.97.0 Validate Passcode (VR2 p. 118)', () => {
     const r = await d.systemTest('', { operationId: 'validatePasscode', mx97: { level: 'supervisor' } });
     assert.ok(!r.modifiers.some((m: any) => m.id === 'passcodeLevel97'));
     assert.doesNotMatch(text(), /days/);
-    assert.equal(d.flags?.[SID]?.passcodes97, undefined);
+    assert.equal(h.flags?.[SID]?.passcodes97, undefined);
+    const G97 = await import('../applications/mxops97.ts');
+    assert.equal(G97.passcodeLiveFor(d, h), true);
   });
 });
 

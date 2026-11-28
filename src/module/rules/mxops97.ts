@@ -99,9 +99,24 @@ export function deckerLocated(sensorSuccesses: number, masking: number, sleaze: 
   return whole(masking) + whole(sleaze) <= whole(sensorSuccesses);
 }
 
+// ---------------------------------------------------------------- Records on the host (GM-owned)
+
+/**
+ * The decoys, passcodes and located icons live in flags on the host (the GM's document), written only through a
+ * system test's host change (applied by the GM, judged by rules/trust.ts) and cleared when the decker leaves the host
+ * (applications/mxops97.ts onActorUpdate97). Never read from the decker's own actor, which its player can write.
+ */
+export const HOST_DECOYS = 'decoys97';
+export const HOST_PASSCODES = 'passcodes97';
+export const HOST_LOCATED = 'located97';
+
+const uuidOk = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.length < 400;
+
 // ---------------------------------------------------------------- Decoy (VR2 p. 112)
 
-export interface Decoy97 { hostUuid: string; successes: number; boxes: number }
+export interface Decoy97 { deckerUuid: string; successes: number; boxes: number }
+/** A decoy's successes are bounded (a forged card cannot make one that never misses for long: 1D6 is at most 6). */
+export const DECOY_MAX = 30;
 
 /** Whether a proactive IC's attack goes to the decoy (VR2 p. 112): 1D6 no higher than the decoy's successes (a tie fools it). */
 export function decoyDraws(d6: number, successes: number): boolean {
@@ -119,12 +134,45 @@ export function decoyHit(d: Decoy97, level: DamageLevel | string): { decoy: Deco
   return { decoy: { ...d, boxes }, gone: boxes >= Math.max(1, whole(V().decoyBoxes)) };
 }
 
-/** A decoy read from a flag (null when unset or for another host). */
-export function decoyOf(raw: unknown, hostUuid: string): Decoy97 | null {
-  const d: any = raw;
-  if (!d || typeof d !== 'object' || typeof d.hostUuid !== 'string' || d.hostUuid !== hostUuid || !hostUuid) return null;
-  const successes = whole(d.successes);
-  return successes > 0 ? { hostUuid, successes, boxes: whole(d.boxes) } : null;
+/** A host's decoys, cleaned (from its flag). */
+export function decoysOf(raw: unknown): Decoy97[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((d: any) => d && uuidOk(d.deckerUuid) && whole(d.successes) > 0)
+    .map((d: any) => ({ deckerUuid: d.deckerUuid, successes: Math.min(DECOY_MAX, whole(d.successes)), boxes: whole(d.boxes) }));
+}
+/** The decoys with this decker's new one (an empty monitor), replacing an older one; 0 successes: none. */
+export function withDecoy(list: readonly Decoy97[], deckerUuid: string, successes: number): Decoy97[] {
+  const rest = list.filter((d) => d.deckerUuid !== deckerUuid);
+  const n = Math.min(DECOY_MAX, whole(successes));
+  return n > 0 ? [...rest, { deckerUuid, successes: n, boxes: 0 }] : rest;
+}
+/** This decker's decoy on the host (null when none). */
+export function decoyFor(list: readonly Decoy97[], deckerUuid: string): Decoy97 | null {
+  return list.find((d) => d.deckerUuid === deckerUuid) ?? null;
+}
+
+// ---------------------------------------------------------------- Located icons (VR2 pp. 114–115, 117)
+
+export interface Located97 { deckerUuid: string; uuids: string[] }
+/** A host's located icons per decker, cleaned. */
+export function locatedOf(raw: unknown): Located97[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((l: any) => l && uuidOk(l.deckerUuid) && Array.isArray(l.uuids))
+    .map((l: any) => ({ deckerUuid: l.deckerUuid, uuids: [...new Set((l.uuids as unknown[]).filter(uuidOk))].slice(0, 100) }));
+}
+/** The records with these icons added to what the decker has located. */
+export function withLocated(list: readonly Located97[], deckerUuid: string, uuids: readonly string[]): Located97[] {
+  const had = list.find((l) => l.deckerUuid === deckerUuid)?.uuids ?? [];
+  const next = [...new Set([...had, ...uuids.filter(uuidOk)])].slice(0, 100);
+  return [...list.filter((l) => l.deckerUuid !== deckerUuid), { deckerUuid, uuids: next }];
+}
+/** What a decker has located on the host. */
+export function locatedBy(list: readonly Located97[], deckerUuid: string): string[] {
+  return list.find((l) => l.deckerUuid === deckerUuid)?.uuids ?? [];
+}
+/** The records once a decker has left the host: their own list gone, and nobody keeps them located. */
+export function locatedWithout(list: readonly Located97[], uuid: string): Located97[] {
+  return list.filter((l) => l.deckerUuid !== uuid).map((l) => ({ ...l, uuids: l.uuids.filter((u) => u !== uuid) }));
 }
 
 // ---------------------------------------------------------------- Dump Log (VR2 p. 113)
@@ -143,8 +191,11 @@ export function logSize(securityValue: number, twoD6: number): number {
 
 // ---------------------------------------------------------------- Validate Passcode (VR2 p. 118)
 
-export interface Passcode97 { hostUuid: string; until: number; level: string }
+export interface Passcode97 { deckerUuid: string; from: number; days: number; level: string }
 export const PASSCODE_LEVELS: readonly string[] = ['user', 'superuser', 'supervisor'];
+/** The longest a passcode can last (VR2 p. 118: 1D6 × net successes; 6 × 30), whatever a card says. */
+export const PASSCODE_MAX_DAYS = 180;
+const DAY = 86400;
 
 /** The TN modifier for the passcode's level (VR2 p. 118: superuser +2, supervisor +6); 0 under 'v965'. */
 export function passcodeLevelTn(level: string): number {
@@ -152,32 +203,36 @@ export function passcodeLevelTn(level: string): number {
   return num((V().passcodeTn as Record<string, number>)[level], 0);
 }
 
-/** How many days a validated passcode lasts (VR2 p. 118): 1D6 × the net successes; null under 'v965'. */
+/** How many days a validated passcode lasts (VR2 p. 118): 1D6 × the net successes (at most 180); null under 'v965'. */
 export function passcodeDays(d6: number, net: number): number | null {
   if (!on('validatePasscode')) return null;
-  return Math.max(1, whole(d6)) * whole(net);
+  return Math.min(PASSCODE_MAX_DAYS, Math.max(1, whole(d6)) * whole(net));
 }
 
-/** A decker's passcode records, cleaned (from a flag). */
+/** A host's passcode records, cleaned (from its flag): days clamped. */
 export function passcodesOf(raw: unknown): Passcode97[] {
   if (!Array.isArray(raw)) return [];
-  return raw.filter((p: any) => p && typeof p.hostUuid === 'string' && p.hostUuid && Number.isFinite(Number(p.until)))
-    .map((p: any) => ({ hostUuid: String(p.hostUuid), until: Number(p.until), level: PASSCODE_LEVELS.includes(p.level) ? p.level : 'user' }));
+  return raw.filter((p: any) => p && uuidOk(p.deckerUuid) && Number.isFinite(Number(p.from)))
+    .map((p: any) => ({ deckerUuid: p.deckerUuid, from: Number(p.from), days: Math.min(PASSCODE_MAX_DAYS, whole(p.days)), level: PASSCODE_LEVELS.includes(p.level) ? p.level : 'user' }));
 }
 
-/** The records with this host's passcode set (replacing an older one). */
-export function withPasscode(list: readonly Passcode97[], p: Passcode97): Passcode97[] {
-  return [...list.filter((x) => x.hostUuid !== p.hostUuid), p];
+/** The records with this decker's passcode set (replacing an older one), from `now`. */
+export function withPasscode(list: readonly Passcode97[], deckerUuid: string, days: number, level: string, now: number): Passcode97[] {
+  const lv = PASSCODE_LEVELS.includes(level) ? level : 'user';
+  return [...list.filter((x) => x.deckerUuid !== deckerUuid), { deckerUuid, from: num(now), days: Math.min(PASSCODE_MAX_DAYS, whole(days)), level: lv }];
 }
 
 /**
- * Whether a validated passcode still works at `now` (VR2 p. 118). Always under 'v965', and for one with no record (a
- * GM's, or one validated before v0.97.0).
+ * Whether a decker's validated passcode on the host still works at `now` (VR2 p. 118). Fails closed under the book:
+ * no record (or one set in the future) is not a live passcode; the record and the host's validated list are written by
+ * the same host change. Always live under 'v965'.
  */
-export function passcodeLive(list: readonly Passcode97[], hostUuid: string, now: number): boolean {
+export function passcodeLive(list: readonly Passcode97[], deckerUuid: string, now: number): boolean {
   if (!on('validatePasscode')) return true;
-  const p = list.find((x) => x.hostUuid === hostUuid);
-  return !p || num(now) < p.until;
+  const p = list.find((x) => x.deckerUuid === deckerUuid);
+  if (!p) return false;
+  const t = num(now);
+  return p.from <= t + DAY && t < p.from + Math.min(PASSCODE_MAX_DAYS, p.days) * DAY;
 }
 
 /** Whether an alert deletes the passcodes of the deckers on the host (VR2 p. 118: an active alert does). */

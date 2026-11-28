@@ -14,7 +14,6 @@ import { SYSTEM_ID } from '../config/system.ts';
 import { RULES } from '../rules/config.ts';
 import { escHtml } from '../rules/html.ts';
 import { t as tx, tKey } from '../helpers/i18n.ts';
-import { clearFlag } from '../helpers/flags.ts';
 import { allActors } from '../helpers/actors.ts';
 import { sysNow } from '../helpers/clock.ts';
 import { successTest, type SuccessTestResult, type TargetNumberModifier } from '../rules/dice.ts';
@@ -29,9 +28,11 @@ const cap = (s: string): string => (s ? s[0]!.toUpperCase() + s.slice(1) : s);
 const now = (): number => sysNow();
 const P = (html: string): string => `<p>${html}</p>`;
 
-/** The flags this file keeps on a decker: a decoy, passcode records, logs opened, the program that crippled them. */
-export const DECOY_FLAG = 'decoy97';
-export const PASS_FLAG = 'passcodes97';
+/**
+ * The flags this file keeps on a decker: the logs opened and the program that crippled them (conveniences only: a
+ * player who edits them gains nothing but a second log file or a lower Restore TN than the IC's, which the card
+ * shows). The decoys, passcodes and located icons are kept on the host (rules/mxops97.ts HOST_*).
+ */
 export const LOG_FLAG = 'logs97';
 export const CRIPPLE_FLAG = 'crippledBy97';
 
@@ -47,6 +48,10 @@ function roller(sink: any[]): (count: number) => Promise<number[]> {
 async function rollD6(n: number): Promise<number> {
   return (await roller([])(n)).reduce((a, b) => a + b, 0);
 }
+/** A host's records (its flags; the GM's document). */
+const hostDecoys = (h: any) => M.decoysOf(flagOf(h, M.HOST_DECOYS));
+const hostPasscodes = (h: any) => M.passcodesOf(flagOf(h, M.HOST_PASSCODES));
+const hostLocated = (h: any) => M.locatedOf(flagOf(h, M.HOST_LOCATED));
 const flagOf = (a: any, key: string): unknown => (typeof a?.getFlag === 'function' ? a.getFlag(SYSTEM_ID, key) : a?.flags?.[SYSTEM_ID]?.[key]);
 
 // ================================================================ The operation dialog (applications/sheets.ts)
@@ -119,11 +124,20 @@ export function hostIcons(host: any, self: any, hostIc: readonly any[]): { decke
   return { deckers, frames };
 }
 
-/** The dialog's target rows for Scan Icon: the icons in the host (as targets, `ic:` like the IC rows). */
+/**
+ * The icons in the host the decker has located (VR2 p. 117: Scan Icon works on a decker, frame or SK "he has
+ * located"; Locate Decker and Locate Frame, pp. 114–115, locate them), still there: from the host's record.
+ */
+export function locatedIcons(host: any, self: any, hostIc: readonly any[]): any[] {
+  const { deckers, frames } = hostIcons(host, self, hostIc);
+  const mine = M.locatedBy(hostLocated(host), String(self?.uuid ?? ''));
+  return [...deckers, ...frames].filter((a: any) => mine.includes(a.uuid));
+}
+
+/** The dialog's target rows for Scan Icon: the icons the decker has located in the host (as targets, `ic:` like the IC rows). */
 export function iconOptionsHtml(host: any, self: any, hostIc: readonly any[]): string {
   if (!M.on('operations') || !host) return '';
-  const { deckers, frames } = hostIcons(host, self, hostIc);
-  const list = [...deckers, ...frames];
+  const list = locatedIcons(host, self, hostIc);
   if (!list.length) return '';
   return `<optgroup label="${escHtml(tx('SR2E.MxOps97.Dialog.icons'))}">${list.map((a: any) => `<option value="ic:${escHtml(a.uuid)}">${name(a)}</option>`).join('')}</optgroup>`;
 }
@@ -131,13 +145,12 @@ export function iconOptionsHtml(host: any, self: any, hostIc: readonly any[]): s
 // ================================================================ The system test (documents/index.ts systemTest)
 
 /**
- * Scan Icon's target and TN (VR2 p. 117): a decker, frame or agent in the host; TN = its Masking (a frame's or
+ * Scan Icon's target and TN (VR2 p. 117): a decker, frame or agent in the host that the decker has located; TN = its Masking (a frame's or
  * agent's: its rating), + its loaded sleaze (the decker's scanner comes off as the operation's utility). Null (and a
  * warning) when the target is not one.
  */
 export function scanTarget(host: any, self: any, hostIc: readonly any[], uuid: string | null | undefined): { uuid: string; tn: number; note: string; mods: TargetNumberModifier[] } | null {
-  const { deckers, frames } = hostIcons(host, self, hostIc);
-  const t: any = [...deckers, ...frames].find((a: any) => a.uuid === uuid);
+  const t: any = locatedIcons(host, self, hostIc).find((a: any) => a.uuid === uuid);
   if (!t) { warn(tx('SR2E.MxOps97.Why.scanTarget')); return null; }
   const frame = t.type === 'ic';
   const masking = frame ? Number(t.system?.rating ?? 0) : Number(t.system?.derived?.matrix?.masking ?? 0);
@@ -163,22 +176,22 @@ export async function analyzeHostBody(actor: any, host: any, items: readonly str
 }
 
 /**
- * Validate Passcode (VR2 p. 118): the passcode lasts 1D6 × net successes days; the record goes on the decker (who
- * owns it). Returns the card's line ('' under 'v965').
+ * Validate Passcode (VR2 p. 118): the passcode lasts 1D6 × net successes days. The record rides in the same host
+ * change as the validated passcode (`fu.hostChange`, applied by the GM), so the two cannot part. Returns the card's
+ * line ('' under 'v965').
  */
-export async function passcodeDuration(actor: any, host: any, net: number, level: string | undefined): Promise<string> {
+export async function passcodeDuration(actor: any, host: any, net: number, level: string | undefined, fu: any): Promise<string> {
   if (!M.on('validatePasscode') || !host) return '';
   const d6 = await rollD6(1);
   const days = M.passcodeDays(d6, net) ?? 0;
   const lv = level && M.PASSCODE_LEVELS.includes(level) ? level : 'user';
-  const list = M.withPasscode(M.passcodesOf(flagOf(actor, PASS_FLAG)), { hostUuid: host.uuid, until: now() + days * 86400, level: lv });
-  try { await actor.setFlag(SYSTEM_ID, PASS_FLAG, list); } catch (err) { console.warn('sr2e | passcode record', err); }
+  if (fu?.hostChange?.change) fu.hostChange.change.passcode97 = { deckerUuid: String(actor.uuid), days, level: lv };
   return P(tx('SR2E.MxOps97.Passcode.days', { d6, net, days, level: levelLabel(lv) }));
 }
 
-/** Whether a decker's validated passcode on a host still works (VR2 p. 118). */
-export function passcodeLiveFor(actor: any, hostUuid: string): boolean {
-  return M.passcodeLive(M.passcodesOf(flagOf(actor, PASS_FLAG)), hostUuid, now());
+/** Whether a decker's validated passcode on a host still works (VR2 p. 118), from the host's record. */
+export function passcodeLiveFor(actor: any, host: any): boolean {
+  return M.passcodeLive(hostPasscodes(host), String(actor?.uuid ?? ''), now());
 }
 
 /**
@@ -191,7 +204,7 @@ export async function alertPasscodes(host: any, alert: string): Promise<string[]
   const onIt = (u: string) => { const a: any = (globalThis as any).fromUuidSync?.(u); return a && a.system?.matrix?.jackedIn && a.system?.matrix?.hostUuid === host.uuid ? a : null; };
   const gone = v.filter((u) => onIt(u));
   if (!gone.length) return [];
-  await host.update({ 'system.validated': v.filter((u) => !gone.includes(u)) });
+  await host.update({ 'system.validated': v.filter((u) => !gone.includes(u)), [`flags.${SYSTEM_ID}.${M.HOST_PASSCODES}`]: hostPasscodes(host).filter((p) => !gone.includes(p.deckerUuid)) });
   const names = gone.map((u) => String(onIt(u)?.name ?? ''));
   await (globalThis as any).ChatMessage?.create?.({ content: P(tx('SR2E.MxOps97.Passcode.alert', { host: name(host), names: escHtml(names.join(', ')) })), whisper: [...(G()?.users ?? [])].filter((u: any) => u.isGM).map((u: any) => u.id) });
   return names;
@@ -229,8 +242,9 @@ export async function resolveOp97(actor: any, o: Resolve97): Promise<string> {
       return P(tx('SR2E.MxOps97.Retrain.done', { by: escHtml(by) }));
     case 'decoy97': {
       // The decoy (VR2 p. 112): its successes, an empty monitor; on the decker (a frame's decoy is the GM's to run).
+      // On the host (the GM's): through the host change, judged and applied by the GM.
       if (sy?.frameUuid) return P(tx('SR2E.MxOps97.Decoy.frame'));
-      await actor.setFlag?.(SYSTEM_ID, DECOY_FLAG, { hostUuid: host.uuid, successes: Math.max(0, Math.floor(net)), boxes: 0 });
+      fu.hostChange = { host, change: { decoy97: { deckerUuid: String(actor.uuid), successes: Math.min(M.DECOY_MAX, Math.max(0, Math.floor(net))) } }, label: tx('SR2E.MxOps97.Decoy.label', { by }) };
       return P(tx('SR2E.MxOps97.Decoy.made', { name: name(actor), n: Math.max(0, Math.floor(net)) }));
     }
     case 'dumpLog97': {
@@ -247,6 +261,7 @@ export async function resolveOp97(actor: any, o: Resolve97): Promise<string> {
     }
     case 'locateFrame97': {
       const frames = o.hostIc.filter((i: any) => ((i.system?.kind === 'frame' && i.system?.smart) || i.system?.kind === 'agent') && !i.system?.derived?.crashed);
+      if (frames.length) fu.hostChange = { host, change: { located97: { deckerUuid: String(actor.uuid), uuids: frames.map((f: any) => String(f.uuid)) } }, label: tx('SR2E.MxOps97.Locate.label', { by }) };
       return P(frames.length ? tx('SR2E.MxOps97.Locate.frames', { list: frames.map((f: any) => `<strong>${name(f)}</strong>`).join(', ') }) : tx('SR2E.MxOps97.Locate.noFrames'));
     }
     case 'locateIc97': {
@@ -259,12 +274,14 @@ export async function resolveOp97(actor: any, o: Resolve97): Promise<string> {
       const r: SuccessTestResult = await successTest({ dice: sensors, targetNumber: Math.max(RULES.MIN_TARGET_NUMBER, Number(RULES.MXOPS_V97.locateDeckerTn) || 4), modifiers: [], roll: roller([]) });
       const { deckers } = hostIcons(host, actor, o.hostIc);
       const found = deckers.filter((d: any) => M.deckerLocated(r.successes, Number(d.system?.derived?.matrix?.masking ?? 0), Number(d.utilityRating?.(d.bestUtility?.('sleaze')) ?? 0)));
+      if (found.length) fu.hostChange = { host, change: { located97: { deckerUuid: String(actor.uuid), uuids: found.map((x: any) => String(x.uuid)) } }, label: tx('SR2E.MxOps97.Locate.label', { by }) };
       const head = tx('SR2E.MxOps97.Locate.sensor', { dice: sensors, tn: r.targetNumber, successes: r.successes });
       return P(`${head} ${found.length ? tx('SR2E.MxOps97.Locate.deckers', { list: found.map((d: any) => `<strong>${name(d)}</strong>`).join(', ') }) : tx('SR2E.MxOps97.Locate.noDeckers')}`);
     }
     case 'scanIcon97': {
-      const t: any = sy?.targetUuid ? (globalThis as any).fromUuidSync?.(sy.targetUuid) : null;
-      if (!t) return '';
+      // Re-checked now (VR2 p. 117): still in the host and located by the decker, not only when it was rolled.
+      const t: any = locatedIcons(host, actor, o.hostIc).find((a: any) => a.uuid === sy?.targetUuid) ?? null;
+      if (!t) return P(tx('SR2E.MxOps97.Scan.gone'));
       const items = M.scanIconReveal(net, sy?.mx97?.first);
       const frame = t.type === 'ic';
       const m = t.system?.derived?.matrix ?? {};
@@ -285,8 +302,11 @@ export async function resolveOp97(actor: any, o: Resolve97): Promise<string> {
  * true when the decoy took it (the attack on the decker does not happen).
  */
 export async function decoyIntercept(ic: any, target: any, host: any, level: string): Promise<boolean> {
-  if (!M.on('operations') || !host?.uuid || !target) return false;
-  const d = M.decoyOf(flagOf(target, DECOY_FLAG), host.uuid);
+  if (!M.on('operations') || !host?.uuid || !target?.uuid) return false;
+  // From the host's record only (never the decker's own actor), and only while the decker is on that host.
+  if (!target.system?.matrix?.jackedIn || target.system?.matrix?.hostUuid !== host.uuid) return false;
+  const list = hostDecoys(host);
+  const d = M.decoyFor(list, String(target.uuid));
   if (!d) return false;
   const d6 = await rollD6(1);
   if (!M.decoyDraws(d6, d.successes)) {
@@ -294,12 +314,77 @@ export async function decoyIntercept(ic: any, target: any, host: any, level: str
     return false;
   }
   const hit = M.decoyHit(d, level);
-  try {
-    if (hit.gone) await clearFlag(target, DECOY_FLAG);
-    else await target.setFlag(SYSTEM_ID, DECOY_FLAG, { ...hit.decoy });
-  } catch (err) { console.warn('sr2e | decoy', err); }
+  const next = list.filter((x) => x.deckerUuid !== d.deckerUuid).concat(hit.gone ? [] : [hit.decoy]);
+  try { await host.update({ [`flags.${SYSTEM_ID}.${M.HOST_DECOYS}`]: next }); } catch (err) { console.warn('sr2e | decoy', err); }
   await (globalThis as any).ChatMessage?.create?.({ content: P(`${tx('SR2E.MxOps97.Decoy.drawn', { ic: name(ic), name: name(target), d6, n: d.successes, level: escHtml(level), boxes: hit.decoy.boxes, max: Number(RULES.MXOPS_V97.decoyBoxes) || 10 })}${hit.gone ? ` <strong>${tx('SR2E.MxOps97.Decoy.gone')}</strong>` : ''}`) });
   return true;
+}
+
+// ================================================================ The host change (documents/index.ts #cleanHostChange, applyHostChange)
+
+const str400 = (v: unknown): string => (typeof v === 'string' ? v.slice(0, 400) : '');
+const int = (v: unknown, lo: number, hi: number): number => { const n = Math.floor(Number(v)); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : lo; };
+
+/** The book's keys of a host change, cleaned (the rest of the change is cleaned by documents/index.ts). */
+export function cleanHostChange97(c: any): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (c?.decoy97 && typeof c.decoy97 === 'object' && str400(c.decoy97.deckerUuid)) out['decoy97'] = { deckerUuid: str400(c.decoy97.deckerUuid), successes: int(c.decoy97.successes, 0, M.DECOY_MAX) };
+  if (c?.passcode97 && typeof c.passcode97 === 'object' && str400(c.passcode97.deckerUuid)) {
+    out['passcode97'] = { deckerUuid: str400(c.passcode97.deckerUuid), days: int(c.passcode97.days, 0, M.PASSCODE_MAX_DAYS), level: M.PASSCODE_LEVELS.includes(c.passcode97.level) ? c.passcode97.level : 'user' };
+  }
+  if (c?.located97 && typeof c.located97 === 'object' && str400(c.located97.deckerUuid) && Array.isArray(c.located97.uuids)) {
+    out['located97'] = { deckerUuid: str400(c.located97.deckerUuid), uuids: c.located97.uuids.map(str400).filter(Boolean).slice(0, 50) };
+  }
+  return out;
+}
+
+/**
+ * Apply the book's keys of a host change into the host's one update (`extra`), on the GM's client: a decoy, a passcode
+ * record (only with a validated passcode in the same change, from the GM's clock), located icons. Notes for the card.
+ */
+export function applyHostChange97(host: any, c: any, extra: Record<string, unknown>, notes: string[]): void {
+  if (c.decoy97) {
+    extra[`flags.${SYSTEM_ID}.${M.HOST_DECOYS}`] = M.withDecoy(hostDecoys(host), c.decoy97.deckerUuid, c.decoy97.successes);
+    notes.push(tx('SR2E.MxOps97.Decoy.note', { n: c.decoy97.successes }));
+  }
+  if (c.passcode97 && c.validate === c.passcode97.deckerUuid) {
+    extra[`flags.${SYSTEM_ID}.${M.HOST_PASSCODES}`] = M.withPasscode(hostPasscodes(host), c.passcode97.deckerUuid, c.passcode97.days, c.passcode97.level, now());
+    notes.push(tx('SR2E.MxOps97.Passcode.note', { days: c.passcode97.days }));
+  }
+  if (c.located97) {
+    extra[`flags.${SYSTEM_ID}.${M.HOST_LOCATED}`] = M.withLocated(hostLocated(host), c.located97.deckerUuid, c.located97.uuids);
+    notes.push(tx('SR2E.MxOps97.Locate.note', { n: c.located97.uuids.length }));
+  }
+}
+
+// ================================================================ Every client's actor updates (registerMxOps97; the lead GM acts)
+
+/**
+ * The lead GM's upkeep after any actor change: a host that has gone to an active alert (by any path: a test, a site,
+ * the GM's hand) deletes the passcodes of the deckers on it (VR2 p. 118); a decker who jacks out or leaves a host
+ * loses their decoy there and their located icons, and nobody keeps them located (VR2 pp. 112, 114).
+ */
+export async function onActorUpdate97(actor: any, change: any, leadGm: boolean): Promise<void> {
+  if (!leadGm || !actor || !change) return;
+  const alert = change.system?.alert;
+  if (actor.type === 'host' && typeof alert === 'string') await alertPasscodes(actor, alert);
+  const mx = change.system?.matrix;
+  if (!mx || typeof mx !== 'object' || !('hostUuid' in mx || 'jackedIn' in mx)) return;
+  const here = actor.system?.matrix?.jackedIn ? String(actor.system?.matrix?.hostUuid ?? '') : '';
+  const uuid = String(actor.uuid ?? '');
+  for (const h of allActors().filter((a: any) => a?.type === 'host' && a.uuid !== here)) {
+    const decoys = hostDecoys(h);
+    const located = hostLocated(h);
+    const up: Record<string, unknown> = {};
+    if (decoys.some((d) => d.deckerUuid === uuid)) up[`flags.${SYSTEM_ID}.${M.HOST_DECOYS}`] = decoys.filter((d) => d.deckerUuid !== uuid);
+    if (located.some((l) => l.deckerUuid === uuid || l.uuids.includes(uuid))) up[`flags.${SYSTEM_ID}.${M.HOST_LOCATED}`] = M.locatedWithout(located, uuid);
+    if (Object.keys(up).length) { try { await h.update(up); } catch (err) { console.warn('sr2e | leaving a host', err); } }
+  }
+}
+
+/** Registers the upkeep (sr2e-system.ts). */
+export function registerMxOps97(isLead: () => boolean): void {
+  (globalThis as any).Hooks?.on?.('updateActor', (actor: any, change: any) => { void onActorUpdate97(actor, change, isLead()).catch((err) => console.warn('sr2e | system operations upkeep', err)); });
 }
 
 // ================================================================ Slow and restore (documents/index.ts useUtility)

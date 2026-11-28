@@ -104,16 +104,31 @@ describe('Decoy (VR2 p. 112)', () => {
     assert.equal(M.decoyDraws(1, 0), false);
   });
   test('full damage by level; gone at 10 boxes', () => {
-    const d = { hostUuid: 'h', successes: 3, boxes: 6 };
+    const d = { deckerUuid: 'd', successes: 3, boxes: 6 };
     assert.deepEqual(M.decoyHit(d, 'M'), { decoy: { ...d, boxes: 9 }, gone: false });
     assert.equal(M.decoyHit(d, 'S').gone, true);
     assert.equal(M.levelBoxes('D'), 10);
   });
-  test('a decoy is for one host', () => {
-    assert.equal(M.decoyOf({ hostUuid: 'h', successes: 2, boxes: 0 }, 'h')?.successes, 2);
-    assert.equal(M.decoyOf({ hostUuid: 'h', successes: 2, boxes: 0 }, 'x'), null);
-    assert.equal(M.decoyOf(null, 'h'), null);
-    assert.equal(M.decoyOf({ hostUuid: 'h', successes: 0 }, 'h'), null);
+  test('the host\'s decoys: one per decker, bounded, cleaned', () => {
+    const l = M.withDecoy([], 'd', 3);
+    assert.deepEqual(M.decoyFor(l, 'd'), { deckerUuid: 'd', successes: 3, boxes: 0 });
+    assert.equal(M.withDecoy(l, 'd', 0).length, 0, 'no successes: no decoy');
+    assert.equal(M.withDecoy(l, 'd', 99)[0]!.successes, M.DECOY_MAX);
+    assert.deepEqual(M.decoysOf([{ deckerUuid: 'd', successes: 99, boxes: 2 }, { successes: 3 }, 'x']), [{ deckerUuid: 'd', successes: M.DECOY_MAX, boxes: 2 }]);
+    assert.equal(M.decoyFor(l, 'other'), null);
+  });
+});
+
+describe('located icons (VR2 pp. 114–115, 117)', () => {
+  test('added per decker; leaving the host drops them everywhere', () => {
+    let l = M.withLocated([], 'a', ['x', 'y']);
+    l = M.withLocated(l, 'a', ['y', 'z']);
+    l = M.withLocated(l, 'x', ['a']);
+    assert.deepEqual(M.locatedBy(l, 'a'), ['x', 'y', 'z']);
+    const out = M.locatedWithout(l, 'x');
+    assert.deepEqual(M.locatedBy(out, 'a'), ['y', 'z']);
+    assert.deepEqual(M.locatedBy(out, 'x'), []);
+    assert.deepEqual(M.locatedOf([{ deckerUuid: 'a', uuids: ['q', 5, 'q'] }, { deckerUuid: 3 }]), [{ deckerUuid: 'a', uuids: ['q'] }]);
   });
 });
 
@@ -126,25 +141,28 @@ describe('Dump Log (VR2 p. 113)', () => {
 });
 
 describe('Validate Passcode (VR2 p. 118)', () => {
-  test('superuser +2, supervisor +6; 1D6 × net days; expired passcodes stop working', () => {
+  test('superuser +2, supervisor +6; 1D6 × net days; expired passcodes stop working; no record fails closed', () => {
+    const DAY = 86400;
     assert.equal(M.passcodeLevelTn('superuser'), 2);
     assert.equal(M.passcodeLevelTn('supervisor'), 6);
     assert.equal(M.passcodeLevelTn('user'), 0);
     assert.equal(M.passcodeDays(4, 3), 12);
-    const list = M.withPasscode([], { hostUuid: 'h', until: 100, level: 'user' });
-    assert.equal(M.passcodeLive(list, 'h', 99), true);
-    assert.equal(M.passcodeLive(list, 'h', 100), false);
-    assert.equal(M.passcodeLive(list, 'other', 1e9), true, 'no record: as before');
-    assert.equal(M.withPasscode(list, { hostUuid: 'h', until: 500, level: 'supervisor' }).length, 1);
+    assert.equal(M.passcodeDays(6, 99), M.PASSCODE_MAX_DAYS);
+    const list = M.withPasscode([], 'd', 2, 'user', 0);
+    assert.equal(M.passcodeLive(list, 'd', 2 * DAY - 1), true);
+    assert.equal(M.passcodeLive(list, 'd', 2 * DAY), false);
+    assert.equal(M.passcodeLive(list, 'other', 0), false, 'no record: not live (fails closed)');
+    assert.equal(M.passcodeLive(M.passcodesOf([{ deckerUuid: 'd', from: 0, days: 99999 }]), 'd', 200 * DAY), false, 'days clamped on read');
+    assert.equal(M.passcodeLive([{ deckerUuid: 'd', from: 50 * DAY, days: 5, level: 'user' }], 'd', 0), false, 'set in the future');
+    assert.equal(M.withPasscode(list, 'd', 9, 'supervisor', 0).length, 1);
     assert.equal(M.alertKillsPasscodes('active'), true);
     assert.equal(M.alertKillsPasscodes('passive'), false);
-    assert.deepEqual(M.passcodesOf([{ hostUuid: 'h', until: 5, level: 'x' }, { until: 5 }, 'junk']), [{ hostUuid: 'h', until: 5, level: 'user' }]);
   });
   test('v965: no level modifier, no days, never expires, no alert deletion', (t) => {
     t.after(oldWay({ 'MXOPS_V97.validatePasscode': 'v965' }));
     assert.equal(M.passcodeLevelTn('supervisor'), 0);
     assert.equal(M.passcodeDays(4, 3), null);
-    assert.equal(M.passcodeLive([{ hostUuid: 'h', until: 0, level: 'user' }], 'h', 1e9), true);
+    assert.equal(M.passcodeLive([], 'd', 1e9), true);
     assert.equal(M.alertKillsPasscodes('active'), false);
   });
 });

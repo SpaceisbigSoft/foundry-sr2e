@@ -1465,6 +1465,10 @@ export interface HostChange {
   defuse?: { fileId?: string; subsystem?: string };
   bombOff?: { fileId?: string; subsystem?: string; erase: boolean };
   call?: { op: 'place' | 'tap' | 'reroute' | 'end'; id: string; from?: string; to?: string; by?: string; who?: string };
+  /** v0.97.0 (RULES.MXOPS_V97): a decoy, a validated passcode's days (with `validate`), icons located; kept on the host. */
+  decoy97?: { deckerUuid: string; successes: number };
+  passcode97?: { deckerUuid: string; days: number; level: string };
+  located97?: { deckerUuid: string; uuids: string[] };
 }
 
 /** Dispelling one of another actor's sustained spells. */
@@ -14885,7 +14889,7 @@ export class SR2Actor extends Actor {
       const ownDf = agent && RULES.MATRIX.agents.ownDetection;
       // v0.57.0: a validated passcode makes the decker harder to spot.
       // v0.97.0: a passcode past its days no longer counts (VR2 p. 118; RULES.MXOPS_V97.validatePasscode).
-      const validated = !ownDf && (host.system.validated ?? []).includes(this.uuid) && MO97G.passcodeLiveFor(this, host.uuid);
+      const validated = !ownDf && (host.system.validated ?? []).includes(this.uuid) && MO97G.passcodeLiveFor(this, host);
       const df = ownDf ? agentDetectionFactor(frame.system.rating, frame.bestUtility('sleaze')?.system?.rating ?? 0) : validatedDf(this.liveDetectionFactor(), validated);
       const hostRolls: any[] = [];
       // v0.50.0: smoke in the host hampers its own detection too (RULES.TN_AUTO.matrix.smokeOnDetection).
@@ -14991,7 +14995,7 @@ export class SR2Actor extends Actor {
           fu.hostChange = { host, change: { validate: this.uuid as string }, label: tx('SR2E.Card.Actor.validatesAPasscodeIn', { by, hostName: host.name }) };
           body = `<p>${tx('SR2E.Card.Actor.nowHoldsA', { name: escText(this.name) })} <strong>${tx('SR2E.Card.Actor.validPasscode')}</strong> ${tx('SR2E.Card.Actor.inItsDetectionRollsAgainstThem', { hostName: escText(host.name), validateDfBonus: RULES.MATRIX_V57.utilities.validate.dfBonus })}</p>`;
           // v0.97.0: it lasts 1D6 × net successes days (VR2 p. 118; RULES.MXOPS_V97.validatePasscode).
-          if (!sy.frameUuid) body += await MO97G.passcodeDuration(this, host, outcome.net, sy.mx97?.level);
+          if (!sy.frameUuid) body += await MO97G.passcodeDuration(this, host, outcome.net, sy.mx97?.level, fu);
         }
         break;
       case 'invalidate':
@@ -15338,8 +15342,6 @@ export class SR2Actor extends Actor {
   static async #raiseHostAlert(host: any, alert: AlertLevel): Promise<void> {
     const was = String(host.system.alert ?? 'none');
     await host.update({ 'system.alert': alert });
-    // v0.97.0: an active alert deletes the passcodes of the deckers on the host (VR2 p. 118; RULES.MXOPS_V97.validatePasscode).
-    if (was !== alert) await MO97G.alertPasscodes(host, alert);
     for (const site of allActors().filter((a: any) => a.type === 'site' && a.system.hostUuid === host.uuid)) {
       const want = siteAlertForHost(alert);
       if (!alertAtLeast(site.system.alert, want)) await SR2Actor.applySiteChange(site.uuid, { minAlert: want });
@@ -15506,6 +15508,8 @@ export class SR2Actor extends Actor {
     if (c?.call && typeof c.call === 'object' && ['place', 'tap', 'reroute', 'end'].includes(String(c.call.op))) {
       out.call = { op: String(c.call.op), id: str(c.call.id), ...(c.call.from != null ? { from: str(c.call.from) } : {}), ...(c.call.to != null ? { to: str(c.call.to) } : {}), ...(c.call.by != null ? { by: str(c.call.by) } : {}), ...(c.call.who != null ? { who: str(c.call.who) } : {}) };
     }
+    // v0.97.0: a decoy, a passcode's days, located icons (applications/mxops97.ts).
+    Object.assign(out, MO97G.cleanHostChange97(c));
     return out as HostChange;
   }
 
@@ -15595,6 +15599,8 @@ export class SR2Actor extends Actor {
     }
     // v0.81.1 (D3-11): one update, the alert with the rest (a refused alert used to leave half a change behind, and a
     // second click then uploaded a second copy of the file).
+    // v0.97.0 (RULES.MXOPS_V97): the decoy, passcode and located records go in the same update.
+    MO97G.applyHostChange97(host, c, extra, notes);
     const was = String(host.system.alert ?? 'none');
     if (c.setAlert) { extra['system.alert'] = c.setAlert; notes.push(tx('SR2E.Card.Actor.alert2', { setAlert: c.setAlert })); }
     await host.update(extra);
@@ -15782,7 +15788,7 @@ export class SR2Actor extends Actor {
     if (target.type === 'ic' && !['frame', 'agent'].includes(target.system?.kind)) return true;
     const who: any = target.type === 'ic' ? (target.system?.ownerUuid ? fromUuidSync(target.system.ownerUuid) : null) : target;
     if (!who) return false;
-    return ((host.system?.validated ?? []).includes(who.uuid) && MO97G.passcodeLiveFor(who, host.uuid)) || SR2Actor.isSecurityDecker(host, who);
+    return ((host.system?.validated ?? []).includes(who.uuid) && MO97G.passcodeLiveFor(who, host)) || SR2Actor.isSecurityDecker(host, who);
   }
 
   /** A frame or agent attacks (v0.40.0): rating + pool dice, Power from its carried attack utility. */
