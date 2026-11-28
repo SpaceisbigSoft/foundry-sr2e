@@ -2,6 +2,10 @@
 
 This is the history of the unofficial Shadowrun 2nd Edition system for Foundry VTT (system id `shadowrun2e_unified`; `sr2e` until v0.93.0), newest version first. Every rules change since v0.70.0 has a house-rule switch that puts the old behaviour back. The system was built with AI (Anthropic's Claude) under human direction, and it has not yet been play-tested at a real table.
 
+## v0.99.1 — Ware damage proof timing (28 Nov 2026)
+- **Fixed:** a repair card had to be newer than the damage it clears, but the damage's time was read from Foundry v14's server clock, which isn't a calendar time, so every card passed; it now uses the same clock as the cards (found in the live run).
+- API changes: none.
+
 ## v0.99.0 — Rules completeness: gear, cyberware and bioware (28 Nov 2026)
 Book rules from the Core Rulebook, Shadowtech, the Street Samurai Catalog, Cybertechnology and Fields of Fire that the system didn't have yet. Each has a house-rule switch whose other choice puts v0.98.0 back: `RULES.WARE_V99`, `RULES.CLINIC_V99`, `RULES.KIT_V99`.
 - **Cyberware and bioware:** boosted reflexes refused beside wired reflexes or a control rig; cyberlimbs' own Strength and Quickness (base 3, troll 8), enhancement Essence, the average caps and leading with a cyberarm in melee; bioware recovery × 3 (cultured × 2); the trauma damper's Stun cut; orthoskin and dermal plating refused together (the better counts).

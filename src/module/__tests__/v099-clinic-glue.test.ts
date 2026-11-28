@@ -692,3 +692,20 @@ describe('v0.99.0 fix2: the lock, the proof\'s writer and time, the record\'s ro
     assert.equal(chat.length, 0);
   });
 });
+
+describe('v0.99.1 live run: the rise time is on the same clock as a card\'s createdTime', () => {
+  test('nowMs is the wall clock, not Foundry v14\'s game.time.serverTime', () => {
+    const g = globalThis as any;
+    const prev = g.game?.time;
+    if (g.game) g.game.time = { ...(prev ?? {}), serverTime: 521934 };
+    try {
+      const t = G.nowMs();
+      assert.ok(t > 1e12, `got ${t}`);
+      assert.ok(Math.abs(t - Date.now()) < 5000);
+      // A card made a minute before the rise is not newer than it; one made after is.
+      const meta = { ...X.damageMeta({}), info: { k_Item_i: { at: t, name: 'Arm', kind: 'cyberlimb' } } };
+      assert.equal(X.newerThanRise(meta, 'k_Item_i', t - 60000), false);
+      assert.equal(X.newerThanRise(meta, 'k_Item_i', t + 1000), true);
+    } finally { if (g.game) g.game.time = prev; }
+  });
+});

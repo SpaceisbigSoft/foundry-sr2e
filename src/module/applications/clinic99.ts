@@ -112,7 +112,9 @@ async function writeMeta(m: X.DamageMeta): Promise<void> {
 }
 
 /** The server's clock (ms): a rise is compared with a card's creation time and an item's modified time (the server's). */
-const nowMs = (): number => { const t = Number(G()?.time?.serverTime); return Number.isFinite(t) && t > 0 ? t : Date.now(); };
+// v0.99.1 (live run): Foundry v14's game.time.serverTime isn't an epoch time (it read 521934 beside Date.now()'s
+// 1.79e12), so the rise time is the wall clock, the same scale as a card's _stats.createdTime.
+export const nowMs = (): number => Date.now();
 /** When a chat card was made (the server's stamp; its author can't change it), ms. */
 const cardTime = (card: any): number => Number(card?._stats?.createdTime ?? card?.timestamp ?? 0) || 0;
 const timeText = (ms: number): string => (ms > 0 ? new Date(ms).toLocaleString() : tx('SR2E.Clinic99.timeUnknown'));

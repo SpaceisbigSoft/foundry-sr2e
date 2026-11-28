@@ -1202,6 +1202,8 @@ Switches in `RULES.CLINIC_V99` (`rules/config99/clinic.ts`, house-rules window: 
 - A damage level on ware not installed is the owner's own: a player can lower it before the ware goes in.
 - The lead GM's whisper for cyberware a player takes out past the refusal comes after the fact; nothing is put back.
 
+**Live run (v0.99.1, 28 Nov 2026):** Foundry v14's `game.time.serverTime` isn't an epoch time (521934 beside `Date.now()`'s 1.79e12), so the rise time had made every repair card "newer" than the damage; the rise time is now `Date.now()` on the lead GM's client (the same scale as a card's `_stats.createdTime`; a clock skew between the PC and the server only refuses a repair made within it).
+
 **Lead's last fixes and the line drawn (v0.99.0, 28 Nov 2026):**
 
 - A character's full share of the damage record evicts ware not installed first, then the lowest level (oldest first); an entry as bad as the new one or worse is never evicted for it: the new write is refused and the GM told (a flood of Light junk can't push out Deadly damage).
