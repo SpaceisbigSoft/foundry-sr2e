@@ -21586,7 +21586,13 @@
       "clearUsed": "That clear card (or the repair test it names) has already cleared a damage record.",
       "noRepairProof": "No repair test backs this card: its repair card is missing, by someone else, of other ware, without successes at the damage level's target number, or already used.",
       "clearProof": "Repair test by {roller}: successes {successes} at TN {tn}",
-      "alreadyIn": "{name} is already installed: remove it first (the GM's Clinics and ware damage tool) for another operation."
+      "alreadyIn": "{name} is already installed: remove it first (the GM's Clinics and ware damage tool) for another operation.",
+      "timeUnknown": "unknown",
+      "clearTimes": "Repair card made {card}; the damage last rose {rose}",
+      "recordEvicted": "The damage record had no room: {owner}'s {item} left it to make room for {byOwner}'s {by}. Check that ware's damage with the Clinics and ware damage tool.",
+      "goneEvicted": "A note of deleted ware ({item}, {level}) was dropped to make room for a newer one: if that ware is made again it has no damage.",
+      "copyGotLevel": "Recorded damaged ware was deleted by a player: {owner}'s {item} of the same name and kind now has its {level} damage (clear it with the tool if it is really sound).",
+      "untickedAfter": "{user} took {owner}'s {name} out without the removal test (under the book's removal rule only the GM's Clinics and ware damage tool removes cyberware). Nothing was changed back."
     },
     "Kit99": {
       "Mod": {
