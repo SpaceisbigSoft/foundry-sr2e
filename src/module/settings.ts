@@ -17,6 +17,7 @@ import { HOUSE_FIRE_V95 } from "./rules/config95/fire.ts";
 import { HOUSE_MELEE_V95 } from "./rules/config95/melee.ts";
 import { HOUSE_SPIRITS_V96 } from "./rules/config96/spirits.ts";
 import { HOUSE_MXLIFE_V97 } from "./rules/config97/mxlife.ts";
+import { HOUSE_MXOPS_V97 } from "./rules/config97/mxops.ts";
 import { SYSTEM } from "./config/system.ts";
 import { worldFloor, flooredMode } from "./rules/hidden941.ts";
 import { RULES, parseSkillWeb, setSkillWeb, PRIVACY_GROUPS, PRIVACY_MODES, SOUND_EVENTS, settingMatches, URR_V80_PATCH, RULES_SOURCES, SHOP_LIST_MODES } from "./rules/index.ts";
@@ -1091,6 +1092,8 @@ export const HOUSE_RULES: HouseRuleDef[] = [
   ...HOUSE_SPIRITS_V96,
   // v0.97.0: rules completeness, the decker's life outside a fight (rules/config97/mxlife.ts).
   ...HOUSE_MXLIFE_V97,
+  // v0.97.0: rules completeness, the Matrix's system operations (rules/config97/mxops.ts).
+  ...HOUSE_MXOPS_V97,
 ];
 
 /**

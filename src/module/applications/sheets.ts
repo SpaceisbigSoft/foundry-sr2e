@@ -118,6 +118,7 @@ import { catalogueTemplates, saveCatalogueTemplates } from './catalogue942.ts';
 import * as SP96G from "./spirits96.ts";
 // v0.97.0 (RULES.MXLIFE_V97): the otaku dialogs follow the book (applications/mxlife97.ts).
 import * as MXL97G from "./mxlife97.ts";
+import * as MO97G from "./mxops97.ts";
 
 /** v0.73.0 (O24): the known-hosts context for this decker and the viewing user. */
 function knowledgeCtx(actor: any): any {
@@ -2246,7 +2247,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       window: { title: `${p.name}: ${actor.name}` },
       content: `${slow ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.ic')}</label><select name="target">${ics.map((t: any) => `<option value="${escHtml(t.uuid)}">${tx('SR2E.Dialog.Sheet.rating4', { name: escHtml(t.name), rating: escHtml(t.system.rating) })}</option>`).join("")}</select></div>` : ""}
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.hackingPoolDiceLeft', { left })}</label><input name="pool" type="number" value="0" min="0" max="${left}"></div>
-        <p class="hint">${slow ? tx('SR2E.Dialog.Sheet.vsTheIcSRatingEach', { matrixSkill: RULES.MATRIX.skill, slowInitiativePerNet: RULES.MATRIX_V57.utilities.slow.initiativePerNet }) : tx('SR2E.Dialog.Sheet.restoreRatingVsEachSuccessRestores', { restoreTn: RULES.MATRIX_V57.utilities.restore.tn, part: RULES.MATRIX_V57.utilities.restore.deckDamage ? tx('SR2E.Dialog.Sheet.thenDeckDamage') : "" })}</p>`,
+        <p class="hint">${MO97G.utilityHint(p.system.kind) ?? (slow ? tx('SR2E.Dialog.Sheet.vsTheIcSRatingEach', { matrixSkill: RULES.MATRIX.skill, slowInitiativePerNet: RULES.MATRIX_V57.utilities.slow.initiativePerNet }) : tx('SR2E.Dialog.Sheet.restoreRatingVsEachSuccessRestores', { restoreTn: RULES.MATRIX_V57.utilities.restore.tn, part: RULES.MATRIX_V57.utilities.restore.deckDamage ? tx('SR2E.Dialog.Sheet.thenDeckDamage') : "" }))}</p>`,
       ok: { label: tx('SR2E.Dialog.Sheet.run'), callback: (_e: Event, b: any) => ({ target: b.form.elements.target?.value ?? null, pool: Math.max(0, Math.min(left, Math.floor(Number(b.form.elements.pool?.value) || 0))) }) },
       rejectClose: false,
     } as any) as any;
@@ -2318,6 +2319,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       host ? (() => { const bs = (host.system.bombs ?? []).filter((b: any) => b.rating > 0 && (b.foundBy ?? []).includes(actor.uuid)); return bs.length ? `<optgroup label="${tx('SR2E.App.Sheets.dataBombsYouKnowOf')}">${bs.map((b: any) => `<option value="bomb:${escHtml(b.subsystem)}">${tx('SR2E.Dialog.Sheet.bomb', { subsystem: escHtml(cap(b.subsystem)), rating: escHtml(b.rating) })}</option>`).join("")}</optgroup>` : ""; })() : "",
       host && (host.system.calls ?? []).length ? `<optgroup label="${tx('SR2E.App.Sheets.comcalls')}">${host.system.calls.map((c: any) => `<option value="call:${escHtml(c.id)}">${escHtml(c.from)} → ${escHtml(c.rerouted || c.to)}</option>`).join("")}</optgroup>` : "",
       host && (host.system.validated ?? []).length ? `<optgroup label="${tx('SR2E.App.Sheets.validPasscodes')}">${host.system.validated.map((u: string) => `<option value="pc:${escHtml(u)}">${escHtml(fromUuidSync(u)?.name ?? "?")}</option>`).join("")}</optgroup>` : "",
+      // v0.97.0: the icons Scan Icon may target (RULES.MXOPS_V97.operations).
+      MO97G.iconOptionsHtml(host, actor, host ? cls.hostIc(host) : []),
       nodeOptions,
     ].join("");
     const choice = await foundry.applications.api.DialogV2.prompt({
@@ -2334,6 +2337,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.otherSubsystem')}</label><select name="sub">${RULES.MATRIX.subsystems.map((k) => `<option value="${k}">${escHtml(cap(k))} ${escHtml(subRating(k))}</option>`).join("")}</select></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.utility')}</label><select name="prog"><option value="auto">${tx('SR2E.Dialog.Sheet.theBestLoadedOneForThe')}</option><option value="">${tx('SR2E.Dialog.Sheet.none')}</option>
           ${utilities.map((p: any) => `<option value="${escHtml(p.id)}">${escHtml(p.name)} (${escHtml(p.system.kind)} ${escHtml(p.system.rating)})</option>`).join("")}</select></div>
+        ${MO97G.dialogRowsHtml()}
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.otherTnModifier')}</label><input name="mod" type="number" value="0"></div>
         ${frame ? "" : `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.hackingPoolDiceLeft', { left })}</label><input name="pool" type="number" value="0" min="0" max="${left}"></div>`}
         <div class="sr2e-preview" aria-live="polite"></div>
@@ -2347,7 +2351,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
           return { opId: String(el.opId.value), target: String(el.target.value ?? ""), sub: String(el.sub.value), op: String(el.op.value ?? "").trim(),
             number: String(el.number?.value ?? "").trim(), editMode: String(el.editMode?.value ?? "alter") as "alter" | "erase", editNote: String(el.editNote?.value ?? "").trim(),
             prog: prog === "auto" ? undefined : prog || null, mod: Number(el.mod.value) || 0, force: Boolean(el.force?.checked),
-            pool: Math.max(0, Math.min(left, Math.floor(Number(el.pool?.value) || 0))), exclude: excludedOf(b.form) };
+            pool: Math.max(0, Math.min(left, Math.floor(Number(el.pool?.value) || 0))), exclude: excludedOf(b.form), mx97: MO97G.readDialog(el) };
         },
       },
       // v0.50.0: what the operation finds by itself (link, signal, smoke, psyche, the decker's penalties); the utility comes off the TN too.
@@ -2374,6 +2378,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       ...(op?.effect === "editFile" ? { editMode: choice.editMode, editNote: choice.editNote } : {}),
       modifiers: choice.mod ? [{ id: 'other', label: tx('SR2E.Card.Mod.other'), value: choice.mod }] : [],
       ...(choice.exclude?.length ? { exclude: choice.exclude } : {}),
+      ...(choice.mx97 ? { mx97: choice.mx97 } : {}),
     });
   }
 
