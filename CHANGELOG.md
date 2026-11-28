@@ -2,6 +2,13 @@
 
 This is the history of the unofficial Shadowrun 2nd Edition system for Foundry VTT (system id `shadowrun2e_unified`; `sr2e` until v0.93.0), newest version first. Every rules change since v0.70.0 has a house-rule switch that puts the old behaviour back. The system was built with AI (Anthropic's Claude) under human direction, and it has not yet been play-tested at a real table.
 
+## v0.99.0 — Rules completeness: gear, cyberware and bioware (28 Nov 2026)
+Book rules from the Core Rulebook, Shadowtech, the Street Samurai Catalog, Cybertechnology and Fields of Fire that the system didn't have yet. Each has a house-rule switch whose other choice puts v0.98.0 back: `RULES.WARE_V99`, `RULES.CLINIC_V99`, `RULES.KIT_V99`.
+- **Cyberware and bioware:** boosted reflexes refused beside wired reflexes or a control rig; cyberlimbs' own Strength and Quickness (base 3, troll 8), enhancement Essence, the average caps and leading with a cyberarm in melee; bioware recovery × 3 (cultured × 2); the trauma damper's Stun cut; orthoskin and dermal plating refused together (the better counts).
+- **Clinics and ware damage:** finding a shadow clinic for alpha, beta and delta grades (a GM tool; a contact's test); the surgeon's fee and graded fees and care; the removal test; ware damage levels (Light halves, Moderate and worse stop it, Serious and Deadly add TN) and repair by level.
+- **Gear:** Smartlink II extras and smart goggles; skillwires sharing their rating among active softs, a chip replacing the skill, the Skill Memory Table; the lined coat's +2 Concealability; NAGRL's frisk table and the chemical sniffer; the police check against legality (a GM tool).
+- API changes: none (new house-rule switches and GM tools only).
+
 ## v0.98.0 — Rules completeness: vehicles and security (28 Nov 2026)
 About 35 rules from Rigger 2 and the Corporate Security Handbook that the system didn't have yet. Each has a house-rule switch whose other choice puts v0.97.1 back (Vehicles and rigging section): `RULES.VDRIVE_V98`, `RULES.VRIG_V98`, `RULES.VSEC_V98`.
 - **Driving, vehicle combat and chases:** off-road halves a ground vehicle's Speed unless it has off-road suspension; a rigger's defaulting at half the usual steps; an active autonav in combat maneuvers; the ram's range check; hitting a wall or barrier; Speed capped at 1.5 × and vehicle Stress; the book's Maneuver Score chase (a GM tool: scores each turn, Hiding and Relocating) and the passengers' phase limit; gunnery's relative-motion and Maneuver Score rows; seat belts, APPS and crash cages, the Crash Test's Control Pool for passengers, and a Deadly passenger hit's Light to the vehicle; called-shot thresholds on vehicle parts; driving by datajack.

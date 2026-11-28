@@ -10006,7 +10006,42 @@
         "VSEC_V98__repairParts": "Repair parts: 5% of the vehicle's cost per box, Rigger 2 p. 26 (book) or not shown (v971)",
         "VSEC_V98__repairPartsPercent": "Repair parts: percent of the vehicle's cost per box (Rigger 2 p. 26: 5)",
         "VSEC_V98__riggerCombat": "Rigger combat and decking a rigged system: opposed Willpower, (Willpower)L Stun, Rigger 2 pp. 79–80 (book) or not built (v971)",
-        "VSEC_V98__riggerDecking": "Riggers decking: +1 TN on Matrix tests and Hacking Pool − VCR level, Rigger 2 p. 16 (book) or no penalty (v971)"
+        "VSEC_V98__riggerDecking": "Riggers decking: +1 TN on Matrix tests and Hacking Pool − VCR level, Rigger 2 p. 16 (book) or no penalty (v971)",
+        "CLINIC_V99__clinicSearch": "Finding a shadow clinic: a contact's Etiquette (Street) vs 12/15 (corps 11/17) or a search, SSC p. 99 (book) or no clinic step (v980)",
+        "CLINIC_V99__surgeonFee": "Surgeon's fee: 1,000 / 5,000 / 25,000 / 250,000¥ by the operation's size, Cybertechnology p. 54 (book) or no fee (v980)",
+        "CLINIC_V99__gradedFees": "Graded clinic fees: the surgeon's fee and the care × 50 for alpha and beta, × 200 for delta, Cybertechnology p. 44 (book) or standard rates (v980)",
+        "CLINIC_V99__feeAlphaBeta": "Graded clinic fees: the multiplier for alpha and beta ware (Cybertechnology p. 44: 50)",
+        "CLINIC_V99__feeDelta": "Graded clinic fees: the multiplier for delta ware (Cybertechnology p. 44: 200)",
+        "CLINIC_V99__removal": "Removing cyberware: the lower of Biotech and Cybernetics vs 10 − Essence; no successes loses 10% more, Shadowtech (book) or no test (v980)",
+        "CLINIC_V99__damageLevels": "Ware damage levels: Light half bonuses, Moderate stops, Serious +1 and Deadly +2 TN on every test, Shadowtech (book) or damaged / not damaged (v980)",
+        "CLINIC_V99__repair": "Cyberware repair by damage level: TN 2/3/4/8 (× 2 alpha, × 3 beta), 2 × Essence hours × level, Shadowtech (book) or the repair table (v980)",
+        "KIT_V99__smartlink2": "Smartlink Level II: called shot +2 (not +4), a rangefinder −1 long / −2 extreme, a linked launcher −1, with a Level II receptor and smartgun, FoF pp. 84–85 and errata (book) or none (v980)",
+        "KIT_V99__smartGoggles": "Smart goggles: worn goggles tick their −1 row for a smartgun, and only one receptor counts beside a smartlink, Core p. 90 (book) or by hand, both adding (v980)",
+        "KIT_V99__skillwires": "Skillwires limit the total rating of all activesofts running at once, Core p. 249 (book) or each soft capped alone (v980)",
+        "KIT_V99__softReplaces": "A running skillsoft replaces the character's own skill (its rating only); no magic skills on softs, Core p. 248 (book) or the better of the two (v980)",
+        "KIT_V99__skillMemory": "Skill Memory Table: headware memory a knowsoft or linguasoft takes by skill type and rating, Core p. 248 (book) or rating × Mp per rating (v980)",
+        "KIT_V99__linedCoat": "Lined coat: +2 Concealability for every weapon under a worn lined coat (looking and frisking), Core p. 242 (book) or no change (v980)",
+        "KIT_V99__manualSearch": "Frisks: the Manual Detection Modifiers Table (professionalism, time, the searcher's state; a GM's strip search finds every weapon), NAGRL p. 93 (book) or none (v980)",
+        "KIT_V99__sniffer": "Chemical sniffer: one test, base TN 10 lowered by the ammunition and explosives carried, NAGRL p. 93 (book) or a test per explosive item (v980)",
+        "KIT_V99__policeCheck": "Police check: the officer's Security or Police Procedures vs the Legality Rating (the GM's tool), Shadowtech p. 103 (book) or none (v980)",
+        "KIT_V99__policeTn__permit": "Police check: restriction number of an item needing a permit with no Legality code (VERIFY: 6)",
+        "KIT_V99__policeTn__restricted": "Police check: restriction number of a restricted item with no Legality code (VERIFY: 4)",
+        "KIT_V99__policeTn__forbidden": "Police check: restriction number of a forbidden item with no Legality code (VERIFY: 2)",
+        "WARE_V99__boosted": "Boosted reflexes: never with wired reflexes or a control rig, installing the pair refused for players and a sheet warning, SSC p. 87 (book) or allowed (v980)",
+        "WARE_V99__limbs": "Cyberlimbs: built-in Strength 3 (troll 8), enhancement past 3 points costs Essence, average caps warned, Cybertechnology pp. 49–51 (book) or the limb's fields as entered (v980)",
+        "WARE_V99__limbLead": "Leading with a cyberlimb in melee: + (limb Strength − four limbs' average) TN, Cybertechnology p. 50 (book) or no TN (v980)",
+        "WARE_V99__bioRecovery": "Recovery after bioware surgery: × 3, cultured × 2, Shadowtech p. 6 (book) or as cyberware (v980)",
+        "WARE_V99__damper": "Trauma damper on Stun: one box off, not with a pain editor or an unexceeded damage compensator, Shadowtech p. 29 (book) or its rating in boxes (v980)",
+        "WARE_V99__orthoskin": "Orthoskin and dermal plating: installing the pair refused for players, only the better counts, Shadowtech p. 17 (book) or both count (v980)",
+        "WARE_V99__limbStrength": "Cyberlimbs: built-in Strength (Cybertechnology p. 49: 3)",
+        "WARE_V99__limbStrengthTroll": "Cyberlimbs: built-in Strength for a troll (Cybertechnology p. 51: 8)",
+        "WARE_V99__limbQuickness": "Cyberlimbs: built-in Quickness (not in the book; 3 like Strength)",
+        "WARE_V99__limbFreePoints": "Cyberlimbs: enhancement points per limb with no Essence cost (Cybertechnology pp. 50–51: 3)",
+        "WARE_V99__limbFreePointsTroll": "Cyberlimbs: a troll's Strength points over the built-in 8 with no Essence cost (Cybertechnology p. 51: 0)",
+        "WARE_V99__limbStrengthEssence": "Cyberlimbs: Essence per Strength point past the free ones (Cybertechnology p. 50: .4)",
+        "WARE_V99__limbQuicknessEssence": "Cyberlimbs: Essence per Quickness point past the free ones (Cybertechnology p. 51: .3)",
+        "WARE_V99__bioRecoveryFactor": "Bioware surgery: times the normal recovery (Shadowtech p. 6: 3)",
+        "WARE_V99__bioRecoveryCultured": "Cultured bioware surgery: times the normal recovery (Shadowtech p. 6: 2)"
       }
     },
     "Rules": {
@@ -19198,6 +19233,14 @@
       "vsec98": {
         "hint": "A site's CCSS values and security levels, the security rigger's Perception Test, access to a rigged system, rigger combat, vehicle design.",
         "label": "Security and vehicle upkeep (book rules, GM)"
+      },
+      "clinic99": {
+        "label": "Clinics and ware damage (book)",
+        "hint": "Find a shadow clinic through a contact, remove cyberware with the removal test, set or clear a ware's damage level."
+      },
+      "kit99": {
+        "label": "Police check (book rules, GM)",
+        "hint": "The officer's Security or Police Procedures test against the Legality Rating of what a character carries (Shadowtech p. 103), rolled on your client and whispered to the GMs."
       }
     },
     "SceneBuilder": {
@@ -21435,6 +21478,206 @@
       "roll2": "Roll",
       "senseVibration": "Vibration (CSH)",
       "site": "Site"
+    },
+    "Clinic99": {
+      "Tool": {
+        "title": "Clinics and ware damage (book)",
+        "intro": "Rolled on your client: the contact's test, the removal test. The records are yours (world settings).",
+        "search": "Find a shadow clinic",
+        "remove": "Remove cyberware",
+        "damage": "Set a ware's damage level"
+      },
+      "allOff": "The clinic and ware damage rules are all switched off (house rules).",
+      "cancel": "Cancel",
+      "ok": "OK",
+      "next": "Next",
+      "rollIt": "Roll",
+      "gmOnly": "(GM only)",
+      "gmOnlyButton": "Only a GM can use this button.",
+      "gmCardOnly": "This card names no cyberware the GM can find.",
+      "notTheirs": "The card's author doesn't own that ware's character.",
+      "nothingRecorded": "The damage record has nothing for that ware (already cleared).",
+      "noPeople": "There are no characters or NPCs in the world.",
+      "noWare": "Nobody has cyberware for this.",
+      "roll": "{dice} vs {tn}: {successes} successes",
+      "patient": "Character",
+      "contact": "Contact",
+      "typed": "Type the contact's ratings",
+      "grade": "Clinic grade",
+      "route": "Through",
+      "mode": "The contact",
+      "etiquette": "Etiquette (Street)",
+      "intelligence": "Intelligence",
+      "charisma": "Charisma",
+      "ware": "Cyberware",
+      "wareWithLevel": "{name} ({level})",
+      "surgeon": "Surgeon",
+      "level": "Damage level",
+      "Grade": {
+        "alpha": "alpha",
+        "beta": "beta",
+        "delta": "delta"
+      },
+      "Route": {
+        "street": "the streets",
+        "corp": "the corps"
+      },
+      "Mode": {
+        "knows": "Knows one? (Etiquette (Street))",
+        "search": "Searches (Intelligence + Charisma or Etiquette)"
+      },
+      "Level": {
+        "none": "not damaged",
+        "L": "Light",
+        "M": "Moderate",
+        "S": "Serious",
+        "D": "Deadly",
+        "X": "destroyed"
+      },
+      "Why": {
+        "off": "That rule is switched off (house rules).",
+        "delta": "A delta clinic has no test: the corp has to want the character there.",
+        "noDice": "The contact has no dice for this test.",
+        "destroyed": "Destroyed ware can't be repaired, only replaced."
+      },
+      "Search": {
+        "title": "Find a shadow clinic",
+        "ratings": "The contact's ratings (from the actor where there is one; change them as you like).",
+        "head": "{contact} looks for a {grade}-grade shadow clinic for {patient} through {route}.",
+        "headTyped": "A contact looks for a {grade}-grade shadow clinic for {patient} through {route}.",
+        "knows": "They know a {grade}-grade clinic.",
+        "foundIn": "They find a {grade}-grade clinic in {days} days.",
+        "notFound": "No {grade}-grade clinic (needs {need} successes).",
+        "delta": "{patient} has the way into a {grade}-grade clinic (the GM's decision)."
+      },
+      "noClinic": "No {grade}-grade clinic has been found for this character (the GM's tool).",
+      "atClinic": "At the {grade}-grade clinic found.",
+      "feeReason": "Surgeon's fee: {item}",
+      "feePaid": "Surgeon's fee ¥{fee} paid (× {factor}).",
+      "feeShort": "{patient} can't pay the surgeon's fee of ¥{fee}.",
+      "feeConfirm": "and the surgeon's fee of ¥{fee}",
+      "Remove": {
+        "title": "Remove cyberware",
+        "head": "{surgeon} removes {item} from {patient}.",
+        "default": "No Biotech or Cybertechnology skill (Intelligence)",
+        "clean": "It comes out cleanly: its Essence stays lost (an open slot).",
+        "loss": "No successes: {patient} also loses {loss} Essence for good."
+      },
+      "Damage": {
+        "title": "Set a ware's damage level"
+      },
+      "levelSet": "{item} ({owner}) is now {level}.",
+      "nowAt": "(now {level})",
+      "rowLevel": "damage: {level}",
+      "feedback": "Damaged ware feedback ({names})",
+      "cantRepair": "{name} is destroyed: it can't be repaired, only replaced.",
+      "repairNote": "({level} damage: TN {tn}; parts ¥{parts})",
+      "clearAsk": "{owner}'s {item} has been repaired ({level} in the damage record).",
+      "clearButton": "Clear the damage record (GM)",
+      "clearAsked": "The GM clears the damage record (until then it still counts).",
+      "clearTitle": "Clear a ware's damage record",
+      "clearLine": "{owner}'s {item}: {level} in the record becomes not damaged",
+      "cleared": "{owner}'s {item}: the damage record is cleared."
+    },
+    "Kit99": {
+      "Mod": {
+        "called": "Smartlink II called shot (+2, not +4)",
+        "range": "Smartlink II with a rangefinder",
+        "launcher": "Smartlink II linked launcher"
+      },
+      "sl2Note": "Smartlink Level II (receptor and smartgun both Level II).",
+      "oneReceptor": "Smart goggles not counted beside the smartlink (one receptor).",
+      "Soft": {
+        "magic": "magic skills can't be skillsofts",
+        "wiresUsed": "the activesofts running share skillwires {skillwires}"
+      },
+      "Scope": {
+        "none": "General (default)",
+        "general": "General",
+        "concentration": "Concentration",
+        "specialization": "Specialization"
+      },
+      "UI": {
+        "smartgun2": "Level II",
+        "smartgun2Hint": "A Level II smartgun system (Fields of Fire p. 57): with a Level II smartlink or smart goggles it gives the Smartlink II benefits.",
+        "scope": "Skill type",
+        "scopeHint": "The Skill Memory Table's skill type (Core p. 248): how much headware memory the soft takes.",
+        "legalCode": "Legality code",
+        "legalCodeHint": "The book's Legality code, e.g. 6P-CC (Shadowtech p. 103): its number is the police check's target number."
+      },
+      "Search": {
+        "pr1": "Average or amateur (Professional Rating 1) +2",
+        "pr2": "Semi-trained (Professional Rating 2) +1",
+        "pr3": "Trained or better (Professional Rating 3+) +0",
+        "cursory": "Cursory pat-down (1–2 seconds) +2",
+        "brisk": "Brisk pat-down (3–5 seconds) +1",
+        "standard": "Standard (6–20 seconds) +0",
+        "detailed": "Detailed (21–60 seconds) −1",
+        "deliberate": "Deliberate (1–2 minutes) −2",
+        "nearStrip": "Practically a strip search (3–5 minutes) −3",
+        "strip": "Strip search (6–10 minutes): every weapon found",
+        "intimidated": "Intimidated or fearful +2",
+        "normal": "Normal conditions +0",
+        "control": "In complete control −2",
+        "proLabel": "Frisk: the searcher",
+        "timeLabel": "Frisk: time spent",
+        "stateLabel": "Frisk: the searcher is",
+        "hint": "The frisk rows are the Manual Detection Modifiers Table (Neo-Anarchist's Guide p. 93); only a GM can order a strip search.",
+        "stripRow": "{name}: strip search"
+      },
+      "Sniff": {
+        "standardRounds": "{n} standard rounds",
+        "explosiveRounds": "{n} explosive rounds",
+        "fragGrenades": "{n} fragmentation or concussion grenades",
+        "smokeGrenades": "{n} smoke or flash grenades",
+        "miniGrenades": "{n} mini-grenades",
+        "standardGrams": "{n} g of explosive",
+        "plastiqueGrams": "{n} g of plastique",
+        "row": "{name} (chemical sniffer, TN {tn}): {successes} successes"
+      },
+      "gmOnly": "GM only:",
+      "Police": {
+        "title": "Police check (Shadowtech p. 103)",
+        "intro": "The officer's Security or Police Procedures skill against each restricted item's Legality Rating (its number), ±3 for the area's enforcement (never below 2). No success: nothing noticed; one: a warning; more: the officer presses the issue (a permit or an arrest).",
+        "subject": "Character checked",
+        "officerLabel": "Officer",
+        "byDice": "(the dice below)",
+        "dice": "Officer's dice (no officer picked)",
+        "enforcement": "Enforcement (low +3 … high −3)",
+        "all": "Everything they carry (the officer suspects it or found it), not only what is in plain sight",
+        "roll": "Roll",
+        "off": "The police check is off (house rules: KIT_V99.policeCheck).",
+        "noOne": "No one to check: put tokens on the scene or make player characters.",
+        "head": "Police check of {subject} by {officer} ({dice} dice, enforcement {enforcement}).",
+        "anOfficer": "an officer",
+        "row": "{name} (legality {code}, TN {tn}): {dice} → {successes} successes:",
+        "none": "not noticed",
+        "warn": "noticed: a warning",
+        "press": "presses the issue: a permit, or an arrest",
+        "nothing": "They carry nothing restricted.",
+        "nothingShown": "Nothing restricted in plain sight (tick \"Everything they carry\" if the officer suspects more).",
+        "hint": "What the character carries is read from their own items. A concealed item needs the officer's Perception Test (a search) first."
+      }
+    },
+    "Ware99": {
+      "Refuse": {
+        "boostedWired": "{name} can't go in beside {other}: boosted reflexes can never be used with wired reflexes (Street Samurai Catalog p. 87)",
+        "boostedVcr": "{name} can't go in beside {other}: boosted reflexes can never be used with a vehicle control rig (Street Samurai Catalog p. 87)",
+        "orthoPlating": "{name} can't go in beside {other}: orthoskin is not compatible with dermal plating (Shadowtech p. 17)"
+      },
+      "Note": {
+        "boostedWired": "{a} and {b} are both installed, but boosted reflexes can never be used with wired reflexes (Street Samurai Catalog p. 87): only the better reflexes count",
+        "boostedVcr": "{a} and {b} are both installed, but boosted reflexes can never be used with a vehicle control rig (Street Samurai Catalog p. 87): the GM decides which one goes",
+        "orthoPlating": "Orthoskin and dermal plating don't work together (Shadowtech p. 17): only {better} counts, {worse} gives nothing",
+        "limbStrengthCap": "The four limbs' average Strength {average} is over the cap of {cap} (twice Body or Body + 4, Cybertechnology p. 51)",
+        "limbQuicknessCap": "The four limbs' average Quickness {average} is over the cap of {cap} (twice Quickness or Quickness + 4, Cybertechnology p. 51)"
+      },
+      "Mod": {
+        "limbLead": "Leading with {limb} (four limbs' average Strength {average})"
+      },
+      "Sheet": {
+        "limbEssence": "enhancements +{essence} Essence"
+      }
     }
   },
   "TYPES": {
