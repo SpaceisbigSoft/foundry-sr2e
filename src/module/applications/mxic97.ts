@@ -242,6 +242,12 @@ async function unimproviseGm(host: any, decker: any, rec: X.HostMx, id: string):
 }
 
 /**
+ * v0.97.1: the requests that record a maneuver's result, or (`unexposed`) take a penalty off the decker: each needs its
+ * test card (X.maneuverFromCard). The take-backs of the decker's own bonuses (unparry, unevade, unpos) need none.
+ */
+const CARD_OPS = ['parry', 'evade', 'exposed', 'pos', 'unexposed'] as const;
+
+/**
  * GM side (documents/index.ts applyHostChange, after a GM's click or on the GM's own client): record what a decker's
  * request names, every value read from GM-owned documents (the host, the IC, the GM-posted choice card), never from the
  * request or the decker's flags beyond who and which. Returns the host card's plain-text notes.
@@ -263,13 +269,28 @@ export async function applyMx97(host: any, raw: unknown, pre: { rating: number; 
   const card: any = m.cardId ? G()?.messages?.get?.(m.cardId) : null;
   const choice: any = card && authorIsGm(card) ? card.flags?.[SYSTEM_ID]?.mxic97Choice : null;
   const choiceOk = choice && choice.deckerUuid === me && choice.hostUuid === host.uuid && !card.getFlag?.(SYSTEM_ID, 'mxic97Done');
-  // v0.97.1: the decker's visit stamp now (each entry counts only in the visit it was recorded in, VR2 p. 40).
+  // v0.97.1: the decker's visit stamp now (each entry counts only in the visit it was recorded in, VR2 p. 40), and the
+  // opponent's (an entry ends with either visit).
   const run = runOf(decker);
+  const vsRun = runOf(sync(m.vs));
+  // v0.97.1: a maneuver's result only from its own test card, posted by the decker's owner (or a GM): the kind, the
+  // opponent and the entry id must match, and the net is the card's own (its successes over the opponent's), never the
+  // request's. The same card's result applies once (a Karma re-roll or a bought success on it applies again).
+  let cardNet = 0;
+  if ((CARD_OPS as readonly string[]).includes(m.op)) {
+    const c = X.maneuverFromCard(card && authorOwns(card, decker) ? card.flags?.[SYSTEM_ID]?.test : null, m);
+    if (!c) return [];
+    const k = `card|${m.op}|${m.cardId}`;
+    const was = rec.seen.find((x) => x.k === k);
+    if (was && was.seq >= c.rev) return [];
+    rec = { ...rec, seen: [...rec.seen.filter((x) => x.k !== k), { k, seq: c.rev }].slice(-X.LIST_CAP * 4) };
+    cardNet = c.net;
+  }
   switch (m.op) {
     case 'parry': {
       if (!m.vs || !m.id) return [];
-      const net = X.maneuverCap(m.net ?? 0, dice);
-      await saveRec(host, { ...rec, parry: [...rec.parry.filter((e) => !(e.decker === me && e.vs === m.vs)), ...(net > 0 ? [{ decker: me, vs: m.vs, net, id: m.id, run }] : [])] });
+      const net = X.maneuverCap(cardNet, dice);
+      await saveRec(host, { ...rec, parry: [...rec.parry.filter((e) => !(e.decker === me && e.vs === m.vs)), ...(net > 0 ? [{ decker: me, vs: m.vs, net, id: m.id, run, vsRun }] : [])] });
       return [tx('SR2E.MxIc97.Gm.parried', { decker: String(decker.name ?? ''), net })];
     }
     case 'unparry':
@@ -277,12 +298,12 @@ export async function applyMx97(host: any, raw: unknown, pre: { rating: number; 
       return [];
     case 'evade': {
       if (!m.vs) return [];
-      const net = X.maneuverCap(m.net ?? 0, dice);
+      const net = X.maneuverCap(cardNet, dice);
       const t = now();
       const end = X.evadeEnd({ round: t.round, worldTime: t.worldTime, net, gain: 0, secondsPerTurn: RULES.MATRIX_V57.maneuvers.secondsPerTurn });
       await saveRec(host, {
         ...rec, parry: rec.parry.filter((e) => !(e.decker === me && e.vs === m.vs)),
-        evade: [...rec.evade.filter((e) => !(e.decker === me && e.vs === m.vs)), { decker: me, vs: m.vs, net, tallyAt: tallyNow(decker, host.uuid), round: end.round, worldTime: end.worldTime, combatId: String(t.combatId ?? ''), run }],
+        evade: [...rec.evade.filter((e) => !(e.decker === me && e.vs === m.vs)), { decker: me, vs: m.vs, net, tallyAt: tallyNow(decker, host.uuid), round: end.round, worldTime: end.worldTime, combatId: String(t.combatId ?? ''), run, vsRun }],
       });
       return [tx('SR2E.MxIc97.Gm.evaded', { decker: String(decker.name ?? ''), net })];
     }
@@ -294,8 +315,8 @@ export async function applyMx97(host: any, raw: unknown, pre: { rating: number; 
       const opp = sync(m.vs);
       if (!m.vs || !m.id || !opp) return [];
       const oppDice = opp.type === 'ic' ? Number(host.system?.securityValue ?? opp.system?.rating ?? 0) : Number(opp.system?.derived?.matrix?.sensors ?? 0) + Number(opp.system?.derived?.hackingPool ?? 0);
-      const net = X.maneuverCap(m.net ?? 0, oppDice);
-      await saveRec(host, { ...rec, exposed: [...rec.exposed.filter((e) => !(e.decker === me && e.vs === m.vs)), ...(net > 0 ? [{ decker: me, vs: m.vs, net, id: m.id, run }] : [])] });
+      const net = X.maneuverCap(cardNet, oppDice);
+      await saveRec(host, { ...rec, exposed: [...rec.exposed.filter((e) => !(e.decker === me && e.vs === m.vs)), ...(net > 0 ? [{ decker: me, vs: m.vs, net, id: m.id, run, vsRun }] : [])] });
       return [tx('SR2E.MxIc97.Gm.exposed', { decker: String(decker.name ?? ''), vs: String(opp.name ?? ''), net })];
     }
     case 'unexposed':
@@ -304,8 +325,8 @@ export async function applyMx97(host: any, raw: unknown, pre: { rating: number; 
     case 'pos': {
       // v0.97.1 (VR2 p. 122): a position the decker won, at most what the maneuver could give (their dice, and 30).
       if (!m.vs || !m.id || !isIn(decker, String(host.uuid))) return [];
-      const net = X.maneuverCap(m.net ?? 0, dice);
-      await saveRec(host, { ...rec, pos: [...rec.pos.filter((e) => !(e.decker === me && e.vs === m.vs)), ...(net > 0 ? [{ decker: me, vs: m.vs, net, id: m.id, run }] : [])] });
+      const net = X.maneuverCap(cardNet, dice);
+      await saveRec(host, { ...rec, pos: [...rec.pos.filter((e) => !(e.decker === me && e.vs === m.vs)), ...(net > 0 ? [{ decker: me, vs: m.vs, net, id: m.id, run, vsRun }] : [])] });
       return [tx('SR2E.MxIc97.Gm.posed', { decker: String(decker.name ?? ''), vs: String(sync(m.vs)?.name ?? ''), net })];
     }
     case 'unpos':
@@ -562,7 +583,7 @@ export const bookManeuver = (kind: string): boolean => (kind === 'parry' || kind
  * position entries, a position won against them, the evade's tally mark), the old list's evade entry for net Combat
  * Turns, a black IC hold freed. A Karma re-roll replaces the entry the card left. Null when the kind runs the old way.
  */
-export async function resolveManeuver(decker: any, snap: any): Promise<{ html: string; snap: any } | null> {
+export async function resolveManeuver(decker: any, snap: any, fu?: { mx97After?: Array<(cardId: string) => Promise<void>> }): Promise<{ html: string; snap: any } | null> {
   const mv = snap?.maneuver;
   if (!mv || !bookManeuver(mv.kind)) return null;
   const host = hostOf(decker);
@@ -588,21 +609,27 @@ export async function resolveManeuver(decker: any, snap: any): Promise<{ html: s
   await decker.update(up);
   // The GM side records a won parry or evade on the host (a re-roll that loses takes it back).
   const hostDoc: any = sync(host);
+  // v0.97.1: each request names this test's card (the GM side reads the result from it): sent once the card is posted
+  // (documents/index.ts #post runs fu.mx97After with its id; a Karma re-roll updates the same card, so the same id).
+  const later = async (m: X.Mx97Change, label: string): Promise<void> => {
+    const send = (cardId: string) => request(hostDoc, decker, { ...m, ...(cardId ? { cardId: cardId.slice(0, 60) } : {}) }, label);
+    if (fu) (fu.mx97After ??= []).push(send); else await send('');
+  };
   const won = out.who === 'me';
   // A position lost (it backfires): the opponent's bonus, recorded on the host too.
   const lost = mv.kind === 'position' && out.who === 'them';
   if (hostDoc?.type === 'host' && mv.kind === 'position' && (lost || mv.lost97)) {
-    await request(hostDoc, decker, { op: lost ? 'exposed' : 'unexposed', deckerUuid: String(decker.uuid), vs: String(mv.targetUuid), id, seq: nextSeq(), ...(lost ? { net: out.net } : {}) },
+    await later({ op: lost ? 'exposed' : 'unexposed', deckerUuid: String(decker.uuid), vs: String(mv.targetUuid), id, seq: nextSeq(), ...(lost ? { net: out.net } : {}) },
       tx('SR2E.MxIc97.Gm.exposedReq', { decker: String(decker.name ?? ''), vs: String(mv.targetName ?? ''), net: lost ? out.net : 0 }));
   }
   // v0.97.1: a position won is the GM side's to record too (VR2 p. 122), capped there at the decker's dice.
   if (hostDoc?.type === 'host' && mv.kind === 'position' && (won || mv.won97)) {
-    await request(hostDoc, decker, { op: won ? 'pos' : 'unpos', deckerUuid: String(decker.uuid), vs: String(mv.targetUuid), id, seq: nextSeq(), ...(won ? { net: out.net } : {}) },
+    await later({ op: won ? 'pos' : 'unpos', deckerUuid: String(decker.uuid), vs: String(mv.targetUuid), id, seq: nextSeq(), ...(won ? { net: out.net } : {}) },
       tx('SR2E.MxIc97.Gm.posReq', { decker: String(decker.name ?? ''), vs: String(mv.targetName ?? ''), net: won ? out.net : 0 }));
   }
   if (hostDoc?.type === 'host' && (mv.kind === 'parry' || mv.kind === 'evade') && (won || mv.won97)) {
     const op: X.Mx97Change['op'] = mv.kind === 'parry' ? (won ? 'parry' : 'unparry') : (won ? 'evade' : 'unevade');
-    await request(hostDoc, decker, { op, deckerUuid: String(decker.uuid), vs: String(mv.targetUuid), id, seq: nextSeq(), ...(won ? { net: out.net } : {}) },
+    await later({ op, deckerUuid: String(decker.uuid), vs: String(mv.targetUuid), id, seq: nextSeq(), ...(won ? { net: out.net } : {}) },
       mv.kind === 'parry' ? tx('SR2E.MxIc97.Gm.parry', { decker: String(decker.name ?? ''), net: won ? out.net : 0 }) : tx('SR2E.MxIc97.Gm.evade', { decker: String(decker.name ?? ''), net: won ? out.net : 0 }));
   }
   const who = escHtml(String(mv.targetName ?? ''));
@@ -629,8 +656,8 @@ export function attackMods(attacker: any, target: any, as: string = 'tn'): { mod
   if (X.on('position')) {
     // v0.97.1: the attacker's won position from the host's record only (the GM side's), this visit's, not used up.
     const hostRaw = flag(sync(host), HOST_FLAG);
-    const own = attacker.type === 'ic' || !isIn(attacker, host) ? null : X.hostPos(hostRaw, me, String(target.uuid), used(attacker), runOf(attacker));
-    const exp = target.type === 'ic' ? null : X.hostExposed(hostRaw, String(target.uuid), me, used(attacker), runOf(target));
+    const own = attacker.type === 'ic' || !isIn(attacker, host) ? null : X.hostPos(hostRaw, me, String(target.uuid), used(attacker), runOf(attacker), runOf(target));
+    const exp = target.type === 'ic' ? null : X.hostExposed(hostRaw, String(target.uuid), me, used(attacker), runOf(target), runOf(attacker));
     const net = (own?.net ?? 0) + (exp?.net ?? 0);
     if (net > 0) {
       const u = X.positionUse(net, as);
@@ -657,7 +684,7 @@ export function parryMod(target: any, attackerUuid: string, t: { round: number |
   if (!X.on('parry')) return { mod: parryPenalty(target.system?.matrix?.maneuvers ?? [], attackerUuid, String(target.name ?? ''), t), id: null };
   // The host's record (the GM side's), never the parrying decker's own flags.
   const attacker = sync(attackerUuid);
-  const e = X.hostParry(flag(sync(hostOf(target)), HOST_FLAG), String(target.uuid), attackerUuid, used(attacker), runOf(target));
+  const e = X.hostParry(flag(sync(hostOf(target)), HOST_FLAG), String(target.uuid), attackerUuid, used(attacker), runOf(target), runOf(attacker));
   return e ? { mod: { id: 'parry97', label: tx('SR2E.MxIc97.Maneuver.parryMod', { name: String(target.name ?? '') }), value: e.net }, id: e.id } : { mod: null, id: null };
 }
 
@@ -674,7 +701,7 @@ export function icMods(ic: any, target: any): { mods: TargetNumberModifier[]; us
   if (p.id) out.parryId = p.id;
   if (X.on('position')) {
     // The host's record (the GM side's), never the decker's own flags: the IC's attack takes it off (afterAttack).
-    const exp = X.hostExposed(flag(sync(hostOf(target)), HOST_FLAG), String(target.uuid), String(ic.uuid), [], runOf(target));
+    const exp = X.hostExposed(flag(sync(hostOf(target)), HOST_FLAG), String(target.uuid), String(ic.uuid), [], runOf(target), runOf(ic));
     if (exp) { out.mods.push({ id: 'positionManeuver', label: tx('SR2E.MxIc97.Maneuver.exposedMod', { name: String(target.name ?? '') }), value: -exp.net }); out.exposedId = exp.id; }
   }
   return out;
@@ -705,7 +732,7 @@ export function evaded(decker: any, icUuid: string): boolean | null {
   if (!X.on('evade') || !RULES.MATRIX_V57.maneuvers.evadeBlocks) return null;
   // Only the host's record (the GM side's): its end and the tally then; the decker's own list never decides.
   const host = hostOf(decker);
-  const r = X.hostEvade(flag(sync(host), HOST_FLAG), String(decker?.uuid ?? ''), icUuid, runOf(decker));
+  const r = X.hostEvade(flag(sync(host), HOST_FLAG), String(decker?.uuid ?? ''), icUuid, runOf(decker), runOf(sync(icUuid)));
   if (!r) return false;
   return X.evadeHolds({ round: r.round, worldTime: r.worldTime, net: r.net, combatId: r.combatId }, now(), Math.max(0, tallyNow(decker, host) - r.tallyAt));
 }

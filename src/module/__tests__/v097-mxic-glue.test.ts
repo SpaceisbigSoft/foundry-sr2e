@@ -220,6 +220,13 @@ const prog = (d: any, p: any) => {
 
 const PLAYER = () => ({ id: 'p1', name: 'Pat', isGM: false, can: () => true });
 
+/** v0.97.1 (A fix round): a maneuver test's card as #post stores it (the GM side reads the result from it). */
+async function mvCard(d: any, kind: string, vs: string, id: string, mine: number, theirs: number, more: any = {}): Promise<string> {
+  const m = await g.ChatMessage.create({ content: 'maneuver', flags: { [F]: { test: { kind: 'maneuver', actorUuid: d.uuid, successes: mine, rerolls: 0, maneuver: { kind, targetUuid: vs, opp: theirs, entry97: id } , ...more } } } });
+  return m.id;
+}
+
+
 describe('v0.97.0 suppressing IC (VR2 p. 40): the GM side\'s record', () => {
   test('a crash asks (the GM side\'s card): suppressing takes 1 off the Detection Factor, recorded on the host; releasing puts the points on', async () => {
     const h = host();
@@ -400,7 +407,8 @@ describe('v0.97.0 combat maneuvers (VR2 pp. 121–122)', () => {
     const r = await ic.icAttack({ targetUuid: d.uuid });
     assert.ok(r, 'not hidden');
     assert.equal(r.targetNumber, 4);
-    await MXG.applyMx97(h, { op: 'parry', deckerUuid: d.uuid, vs: ic.uuid, id: 'p', net: 30 });
+    // v0.97.1: the net is the test card's (30 vs 0 here), capped at the dice; the request's own net counts for nothing.
+    await MXG.applyMx97(h, { op: 'parry', deckerUuid: d.uuid, vs: ic.uuid, id: 'p', net: 1, cardId: await mvCard(d, 'parry', ic.uuid, 'p', 30, 0) });
     const dice = d.system.derived.matrix.evasion + d.system.derived.hackingPool;
     assert.equal(h.flags[F].mxic97.parry[0].net, dice);
   });
@@ -409,6 +417,7 @@ describe('v0.97.0 combat maneuvers (VR2 pp. 121–122)', () => {
     const ic = icIn(h);
     const d = inside(h);
     g.game.actors = [d, ic];
+    d.ownership = { default: 0, p1: 3 };
     g.game.user = PLAYER();
     h.isOwner = false;
     faces.push(1, 1, 1, 1, 5, 5, 1, 1, 1);
@@ -710,7 +719,7 @@ describe('v0.97.0 test-plan fixes', () => {
     const ic = icIn(h);
     const d = inside(h);
     g.game.actors = [d, ic];
-    const parry = { op: 'parry', deckerUuid: d.uuid, vs: ic.uuid, id: 'e1', net: 3, seq: 100 };
+    const parry = { op: 'parry', deckerUuid: d.uuid, vs: ic.uuid, id: 'e1', net: 3, seq: 100, cardId: await mvCard(d, 'parry', ic.uuid, 'e1', 3, 0) };
     const unparry = { op: 'unparry', deckerUuid: d.uuid, vs: ic.uuid, id: 'e1', seq: 200 };
     await SR2Actor.applyHostChange(h.uuid, { mx97: unparry });
     await SR2Actor.applyHostChange(h.uuid, { mx97: parry });

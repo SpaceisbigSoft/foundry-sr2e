@@ -131,9 +131,11 @@ describe('v0.97.1 C: maneuver results by themselves (pure)', () => {
     assert.equal(safeAutoApply('applyHost', parry, t(false)), false, 'setting off: as before');
     assert.equal(safeAutoApply('applyHost', parry, t(true)), true);
     assert.equal(safeAutoApply('applyHost', parry, t(true, [])), false, 'not the author\'s decker');
-    for (const op of ['evade', 'unevade', 'unparry', 'exposed', 'unexposed']) {
+    for (const op of ['evade', 'unevade', 'unparry', 'exposed']) {
       assert.equal(safeAutoApply('applyHost', hc({ op, deckerUuid: MINE, vs: 'Actor.icC', id: 'x', net: 2 }), t(true)), true, op);
     }
+    // v0.97.1 fix round (A): unexposed takes a penalty off the decker: never by itself.
+    assert.equal(safeAutoApply('applyHost', hc({ op: 'unexposed', deckerUuid: MINE, vs: 'Actor.icC', id: 'x' }), t(true)), false, 'unexposed');
     assert.equal(maneuverOnly97({ hostUuid: 'H', mx97: { op: 'parry', deckerUuid: MINE, vs: 'V', id: 'p' } }, (u) => u === MINE), true, 'no source key: fine');
   });
   test('everything else in a host change still waits for the GM', () => {

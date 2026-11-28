@@ -1527,6 +1527,8 @@ interface FollowUps {
   riggerShock?: RiggerShock;
   /** Set by a system operation: the change to a host's data stores or alert follows its card. */
   hostChange?: { host: any; change: HostChange; label: string };
+  /** v0.97.1 (RULES.MXIC_V97): requests to send once the card is posted, given its id (applications/mxic97.ts resolveManeuver). */
+  mx97After?: Array<(cardId: string) => Promise<void>>;
   /** Set when hot-sim Matrix damage overloads the decker: a simsense overload test follows (the Power). */
   overload?: number;
   /** Set when blaster or sparky IC crash a persona: deck damage (and sparky's biofeedback) follows. */
@@ -3367,7 +3369,7 @@ export class SR2Actor extends Actor {
       case 'mperceive':
         return this.#resolvePerception(snap);
       case 'maneuver':
-        return this.#resolveManeuver(snap);
+        return this.#resolveManeuver(snap, fu);
       case 'mutility':
         return this.#resolveUtility(snap);
       default:
@@ -3881,6 +3883,7 @@ export class SR2Actor extends Actor {
         flags: { [SYSTEM_ID]: { overload: { deckerUuid: this.uuid, tn: overload } } },
       });
     }
+    for (const send of fu.mx97After ?? []) await send(String(posted?.id ?? ''));
     const hostChange = fu.hostChange;
     if (hostChange) await SR2Actor.changeHost(hostChange.host, hostChange.change, hostChange.label, this.uuid as string);
     const siteChange = fu.siteChange;
@@ -15146,7 +15149,7 @@ export class SR2Actor extends Actor {
         const parent: any = parentUuid ? fromUuidSync(parentUuid) : null;
         const who: any = sy.frameUuid ? fromUuidSync(sy.frameUuid) : this;
         if (sy.frameUuid) await who?.update({ 'system.hostUuid': parentUuid });
-        else await this.update({ 'system.matrix.hostUuid': parentUuid, 'system.matrix.passed': [] });
+        else await this.update({ 'system.matrix.hostUuid': parentUuid, 'system.matrix.passed': [], ...MXG97.visitUpdate() });
         body = `<p>${tx('SR2E.Card.Actor.logsOffTo', { whoName: escText(who?.name ?? this.name), hostName: escText(host?.name ?? tx('SR2E.Card.Actor.theHost')), name: escText(parent?.name ?? tx('SR2E.Card.Actor.theGrid')) })}</p>`;
         break;
       }
@@ -15165,7 +15168,7 @@ export class SR2Actor extends Actor {
           const transit = turns > 0
             ? { hostUuid: sy.targetUuid ?? '', hops, round: now.round != null ? now.round + turns : -1, worldTime: now.worldTime + turns * RULES.MATRIX.travel.secondsPerTurn }
             : { hostUuid: '', hops: 0, round: -1, worldTime: -1 };
-          await this.update({ 'system.matrix.hostUuid': sy.targetUuid ?? '', 'system.matrix.passed': [], 'system.matrix.transit': transit });
+          await this.update({ 'system.matrix.hostUuid': sy.targetUuid ?? '', 'system.matrix.passed': [], 'system.matrix.transit': transit, ...MXG97.visitUpdate() });
           if (turns > 0) travel = ` ${tCount(hops, 'SR2E.Card.Actor.hopsAcrossTheGridArrivesIn')} <strong>${tCount(turns, 'SR2E.Card.Actor.combatTurns')}</strong>${transit.round >= 0 ? tx('SR2E.Card.Actor.combatTurn2', { transitRound: transit.round }) : ` (${turns * RULES.MATRIX.travel.secondsPerTurn} s)`}.`;
         }
         // Dialling a number logs on from anywhere, and the decker remembers it (v0.46.0).
@@ -17133,9 +17136,10 @@ export class SR2Actor extends Actor {
   }
 
   /** A maneuver's outcome; a Karma re-roll replaces the entry it left (or takes it away). */
-  async #resolveManeuver(snap: TestSnapshot): Promise<Resolved> {
+  async #resolveManeuver(snap: TestSnapshot, fu: FollowUps = {}): Promise<Resolved> {
     // v0.97.0 (RULES.MXIC_V97.parry, position, evade; VR2 pp. 121–122): the book's maneuvers (applications/mxic97.ts).
-    const r97 = await MXG97.resolveManeuver(this, snap);
+    // v0.97.1: its requests to the GM side go after the card is posted (they name it: fu.mx97After).
+    const r97 = await MXG97.resolveManeuver(this, snap, fu);
     if (r97) return { html: r97.html, flags: {}, snap: r97.snap };
     const mv = snap.maneuver!;
     const o = maneuverOutcome(mv.kind, snap.successes, mv.opp);

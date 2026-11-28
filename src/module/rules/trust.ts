@@ -508,6 +508,9 @@ export function mx97Line(v: any, nameOf: (uuid: string) => string, mxName: Mx97N
     case 'suppress': what = told ? tx('SR2E.MxIc97.Trust.suppress', { vs: told }) : tx('SR2E.MxIc97.Trust.suppressAny'); break;
     case 'release': what = tx('SR2E.MxIc97.Trust.release', { vs: icon }); break;
     case 'bomb': what = tx('SR2E.MxIc97.Trust.bomb', { vs: told || tx('SR2E.MxIc97.Trust.aDataBomb') }); break;
+    // v0.97.1 (A): an improvised attack (VR2 p. 123): the GM side reads its Power and points from the test's card.
+    case 'improvise': what = tx('SR2E.MxIc97.Trust.improvise', { net }); break;
+    case 'unimprovise': what = tx('SR2E.MxIc97.Trust.unimprovise'); break;
     default: return tx('SR2E.MxIc97.Gm.trustLine', { op: op.slice(0, 20), name, vs, net });
   }
   return tx('SR2E.MxIc97.Trust.line', { name, what });

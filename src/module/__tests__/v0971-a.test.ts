@@ -220,6 +220,13 @@ const prog = (d: any, p: any) => {
 
 const PLAYER = () => ({ id: 'p1', name: 'Pat', isGM: false, can: () => true });
 
+/** v0.97.1 (A fix round): a maneuver test's card as #post stores it (the GM side reads the result from it). */
+async function mvCard(d: any, kind: string, vs: string, id: string, mine: number, theirs: number, more: any = {}): Promise<string> {
+  const m = await g.ChatMessage.create({ content: 'maneuver', flags: { [F]: { test: { kind: 'maneuver', actorUuid: d.uuid, successes: mine, rerolls: 0, maneuver: { kind, targetUuid: vs, opp: theirs, entry97: id } , ...more } } } });
+  return m.id;
+}
+
+
 const file = (extra: any = {}) => ({ id: 'f1', name: 'Data', size: 10, value: 0, paydata: false, encrypted: 0, scramble: 0, bomb: 0, ...extra });
 const sleaze = (d: any) => prog(d, { id: 'sl', type: 'program', name: 'Sleaze', system: { kind: 'sleaze', rating: 5 } });
 /** Move a jacked-in decker to another host as jackIn does (a new visit stamp), then the lead GM's upkeep (optional). */
@@ -236,7 +243,7 @@ async function suppress(h: any, d: any, ic: any) {
 
 describe('v0.97.1 pure: visits, the host\'s positions and improvised attacks', () => {
   test('MX97_MANEUVER_OPS is exactly the maneuver ops, every one a request op', () => {
-    assert.deepEqual([...X.MX97_MANEUVER_OPS], ['parry', 'unparry', 'evade', 'unevade', 'exposed', 'unexposed', 'pos', 'unpos']);
+    assert.deepEqual([...X.MX97_MANEUVER_OPS], ['parry', 'unparry', 'evade', 'unevade', 'exposed', 'pos', 'unpos'], 'never unexposed');
     for (const op of X.MX97_MANEUVER_OPS) assert.ok((X.MX97_OPS as readonly string[]).includes(op));
     assert.deepEqual(X.cleanMx97({ op: 'pos', deckerUuid: 'D', vs: 'I', id: 'e', net: 99 }), { op: 'pos', deckerUuid: 'D', vs: 'I', id: 'e', net: 30 });
     assert.equal(gmApplyShapeOk('applyHost', { hostChange: { hostUuid: 'H', mx97: { op: 'unpos', deckerUuid: 'D', id: 'e' } } }), true);
@@ -257,15 +264,35 @@ describe('v0.97.1 pure: visits, the host\'s positions and improvised attacks', (
     assert.equal(X.hostEvade(rec, 'D', 'I', 'v2'), null);
     assert.equal(X.hostMx({ pos: [{ decker: 'D', vs: 'I', net: 99, id: 'x' }] }).pos[0]!.net, 30, 'bounded');
   });
-  test('withoutDecker drops the leaver\'s entries both ways and nothing else', () => {
-    const rec = { parry: [{ decker: 'D', vs: 'I', net: 3, id: 'p' }, { decker: 'E', vs: 'I', net: 1, id: 'p2' }], exposed: [{ decker: 'E', vs: 'D', net: 2, id: 'x' }],
+  test('withoutDecker drops only the leaver\'s own entries; one naming them as the opponent ends with their visit (vsRun)', () => {
+    const rec = { parry: [{ decker: 'D', vs: 'I', net: 3, id: 'p' }, { decker: 'E', vs: 'D', net: 1, id: 'p2', vsRun: 'd1' }], exposed: [{ decker: 'E', vs: 'D', net: 2, id: 'x', vsRun: 'd1' }],
       pos: [{ decker: 'D', vs: 'I', net: 2, id: 'q' }], suppressed: [{ decker: 'D', id: 'i', name: 'i', points: 4 }], offered: ['i'] };
     const out = X.withoutDecker(rec, 'D')!;
-    assert.deepEqual(out.parry.map((e) => e.id), ['p2']);
-    assert.equal(out.exposed.length, 0, 'a position D won on E');
+    assert.deepEqual(out.parry.map((e) => e.id), ['p2'], 'E\'s parry against D stays');
+    assert.equal(out.exposed.length, 1, 'D\'s position on E stays on the record');
     assert.equal(out.pos.length + out.suppressed.length, 0);
     assert.deepEqual(out.offered, ['i'], 'the crash choice stays offered');
     assert.equal(X.withoutDecker(rec, 'Z'), null);
+    assert.equal(X.hostParry(out, 'E', 'D', [], '', 'd1')?.net, 1);
+    assert.equal(X.hostParry(out, 'E', 'D', [], '', 'd2'), null, 'D\'s new visit: it no longer counts');
+    assert.equal(X.hostExposed(out, 'E', 'D', [], '', 'd2'), null);
+  });
+  test('maneuverFromCard: the card\'s own result, kind, opponent and entry id', () => {
+    const card = (successes: number, opp: number, more: any = {}) => ({ kind: 'maneuver', actorUuid: 'D', successes, rerolls: 0, maneuver: { kind: 'parry', targetUuid: 'I', opp, entry97: 'e' }, ...more });
+    const m = { op: 'parry', deckerUuid: 'D', vs: 'I', id: 'e' };
+    assert.deepEqual(X.maneuverFromCard(card(5, 2), m), { net: 3, rev: 0 });
+    assert.equal(X.maneuverFromCard(card(2, 2), m), null, 'a tie fails');
+    assert.equal(X.maneuverFromCard(card(5, 2), { ...m, op: 'evade' }), null, 'another kind');
+    assert.equal(X.maneuverFromCard(card(5, 2), { ...m, vs: 'J' }), null);
+    assert.equal(X.maneuverFromCard(card(5, 2), { ...m, id: 'f' }), null);
+    assert.equal(X.maneuverFromCard(card(5, 2), { ...m, deckerUuid: 'E' }), null);
+    assert.equal(X.maneuverFromCard(card(5, 2, { kind: 'plain' }), m), null);
+    assert.equal(X.maneuverFromCard(card(5, 2, { rerolls: 1 }), m)?.rev, 1000);
+    const pos = (s: number, o: number) => ({ kind: 'maneuver', actorUuid: 'D', successes: s, rerolls: 0, maneuver: { kind: 'position', targetUuid: 'I', opp: o, entry97: 'e' } });
+    assert.equal(X.maneuverFromCard(pos(1, 4), { op: 'exposed', deckerUuid: 'D', vs: 'I', id: 'e' })?.net, 3);
+    assert.equal(X.maneuverFromCard(pos(1, 4), { op: 'pos', deckerUuid: 'D', vs: 'I', id: 'e' }), null);
+    assert.equal(X.maneuverFromCard(pos(1, 4), { op: 'unexposed', deckerUuid: 'D', vs: 'I', id: 'e' }), null, 'still lost: the penalty stays');
+    assert.ok(X.maneuverFromCard(pos(4, 1), { op: 'unexposed', deckerUuid: 'D', vs: 'I', id: 'e' }));
   });
   test('the give-back is only what the improvisation took and what is still off', () => {
     assert.deepEqual(X.giveBackRecorded({ bod: 3, evasion: 2, masking: 0, sensors: 0 }, { evasion: 2, bod: 1 }), { bod: 2, evasion: 0, masking: 0, sensors: 0 });
@@ -333,8 +360,8 @@ describe('v0.97.1 finding 1: suppression and maneuvers end with the visit (VR2 p
     const d = inside(h);
     g.game.actors = [d, ic, h, e];
     await d.update(MXG.runStartUpdate(d));
-    await MXG.applyMx97(h, { op: 'parry', deckerUuid: d.uuid, vs: ic.uuid, id: 'p1', net: 3 });
-    await MXG.applyMx97(h, { op: 'pos', deckerUuid: d.uuid, vs: ic.uuid, id: 'q1', net: 2 });
+    await MXG.applyMx97(h, { op: 'parry', deckerUuid: d.uuid, vs: ic.uuid, id: 'p1', cardId: await mvCard(d, 'parry', ic.uuid, 'p1', 3, 0) });
+    await MXG.applyMx97(h, { op: 'pos', deckerUuid: d.uuid, vs: ic.uuid, id: 'q1', cardId: await mvCard(d, 'position', ic.uuid, 'q1', 2, 0) });
     assert.equal(MXG.parryMod(d, ic.uuid).mod?.value, 3);
     assert.ok(MXG.attackMods(d, ic).mods.some((m: any) => m.id === 'positionManeuver'));
     await move(d, e);
@@ -348,7 +375,7 @@ describe('v0.97.1 finding 1: suppression and maneuvers end with the visit (VR2 p
     const ic = icIn(h);
     const d = inside(h);
     g.game.actors = [d, ic, h];
-    await MXG.applyMx97(h, { op: 'parry', deckerUuid: d.uuid, vs: ic.uuid, id: 'p1', net: 3 });
+    await MXG.applyMx97(h, { op: 'parry', deckerUuid: d.uuid, vs: ic.uuid, id: 'p1', cardId: await mvCard(d, 'parry', ic.uuid, 'p1', 3, 0) });
     await d.update({ 'system.matrix.jackedIn': false, 'system.matrix.hostUuid': '' });
     await MXG.onActorUpdateMx97(d, { system: { matrix: { jackedIn: false, hostUuid: '' } } }, true);
     assert.equal(h.flags[F].mxic97.parry.length, 0);
@@ -358,7 +385,7 @@ describe('v0.97.1 finding 1: suppression and maneuvers end with the visit (VR2 p
     const ic = icIn(h);
     const d = inside(h);
     g.game.actors = [d, ic, h, e];
-    await MXG.applyMx97(h, { op: 'parry', deckerUuid: d.uuid, vs: ic.uuid, id: 'p1', net: 3 });
+    await MXG.applyMx97(h, { op: 'parry', deckerUuid: d.uuid, vs: ic.uuid, id: 'p1', cardId: await mvCard(d, 'parry', ic.uuid, 'p1', 3, 0) });
     await d.update({ 'system.matrix.hostUuid': e.uuid });
     await MXG.onActorUpdateMx97(d, { system: { matrix: { hostUuid: e.uuid } } }, false);
     assert.equal(h.flags[F].mxic97.parry.length, 1);
@@ -384,7 +411,7 @@ describe('v0.97.1 finding 2: a won position is the host\'s record (VR2 p. 122)',
     const ic = icIn(h);
     const d = inside(h);
     g.game.actors = [d, ic];
-    await MXG.applyMx97(h, { op: 'pos', deckerUuid: d.uuid, vs: ic.uuid, id: 'q', net: 30 });
+    await MXG.applyMx97(h, { op: 'pos', deckerUuid: d.uuid, vs: ic.uuid, id: 'q', net: 1, cardId: await mvCard(d, 'position', ic.uuid, 'q', 30, 0) });
     const dice = d.system.derived.matrix.evasion + (RULES.MATRIX_V57.maneuvers.pool ? d.system.derived.hackingPool : 0);
     assert.equal(h.flags[F].mxic97.pos[0].net, Math.min(30, dice));
   });
@@ -393,6 +420,7 @@ describe('v0.97.1 finding 2: a won position is the host\'s record (VR2 p. 122)',
     const ic = icIn(h);
     const d = inside(h);
     g.game.actors = [d, ic];
+    d.ownership = { default: 0, p1: 3 };
     g.game.user = PLAYER();
     h.isOwner = false;
     faces.push(1, 1, 1, 1, /* decker */ 5, 5, 5, 1, 1);
@@ -557,5 +585,97 @@ describe('v0.97.1 finding 8: the data bomb\'s choice card', () => {
     assert.equal((String(c.content).match(/ disabled>/g) ?? []).length, 2);
     assert.equal(c.flags[F].mxic97Done, true);
     assert.equal(h.system.tallies.find((t: any) => t.key === d.uuid)?.tally, 4);
+  });
+});
+
+describe('v0.97.1 fix round: a maneuver request is only what its test card shows', () => {
+  test('forge: a player\'s own request with net 30 and no card, another\'s card, or the same card twice records nothing', async () => {
+    const h = host();
+    const ic = icIn(h);
+    const d = inside(h);
+    d.ownership = { default: 0, p1: 3 };
+    g.game.actors = [d, ic];
+    for (const op of ['parry', 'evade', 'pos']) await SR2Actor.applyHostChange(h.uuid, { mx97: { op, deckerUuid: d.uuid, vs: ic.uuid, id: 'z', net: 30 } });
+    const r = h.flags?.[F]?.mxic97 ?? {};
+    assert.equal((r.parry ?? []).length + (r.evade ?? []).length + (r.pos ?? []).length, 0, 'no card');
+    const other = { id: 'p2', name: 'Other', isGM: false };
+    const theirs = await g.ChatMessage.create({ author: other, content: 'x', flags: { [F]: { test: { kind: 'maneuver', actorUuid: d.uuid, successes: 9, rerolls: 0, maneuver: { kind: 'parry', targetUuid: ic.uuid, opp: 0, entry97: 'z' } } } } });
+    await SR2Actor.applyHostChange(h.uuid, { mx97: { op: 'parry', deckerUuid: d.uuid, vs: ic.uuid, id: 'z', cardId: theirs.id } });
+    assert.equal((h.flags?.[F]?.mxic97?.parry ?? []).length, 0, 'not by the decker\'s owner');
+    const id = await mvCard(d, 'parry', ic.uuid, 'z', 4, 2);
+    await SR2Actor.applyHostChange(h.uuid, { mx97: { op: 'parry', deckerUuid: d.uuid, vs: ic.uuid, id: 'z', net: 30, cardId: id } });
+    assert.equal(h.flags[F].mxic97.parry[0].net, 2, 'the card\'s 4 − 2, not the request\'s 30');
+    faces.push(1, 1, 1, 1);
+    await ic.icAttack({ targetUuid: d.uuid });
+    assert.equal(h.flags[F].mxic97.parry.length, 0, 'used up');
+    await SR2Actor.applyHostChange(h.uuid, { mx97: { op: 'parry', deckerUuid: d.uuid, vs: ic.uuid, id: 'z', cardId: id } });
+    assert.equal(h.flags[F].mxic97.parry.length, 0, 'the same card once');
+    // A Karma re-roll updates the same card: its request applies again.
+    const c = chat.find((m: any) => m.id === id);
+    c.flags[F].test = { ...c.flags[F].test, successes: 5, rerolls: 1 };
+    await SR2Actor.applyHostChange(h.uuid, { mx97: { op: 'parry', deckerUuid: d.uuid, vs: ic.uuid, id: 'z', cardId: id } });
+    assert.equal(h.flags[F].mxic97.parry[0].net, 3);
+  });
+  test('unexposed needs the card to show the position is no longer lost', async () => {
+    const h = host();
+    const ic = icIn(h);
+    const d = inside(h);
+    g.game.actors = [d, ic];
+    const id = await mvCard(d, 'position', ic.uuid, 'x', 1, 3);
+    await MXG.applyMx97(h, { op: 'exposed', deckerUuid: d.uuid, vs: ic.uuid, id: 'x', cardId: id });
+    assert.equal(h.flags[F].mxic97.exposed[0].net, 2);
+    await MXG.applyMx97(h, { op: 'unexposed', deckerUuid: d.uuid, vs: ic.uuid, id: 'x' });
+    await MXG.applyMx97(h, { op: 'unexposed', deckerUuid: d.uuid, vs: ic.uuid, id: 'x', cardId: id });
+    assert.equal(h.flags[F].mxic97.exposed.length, 1, 'no card, or the card still shows the loss');
+    const c = chat.find((m: any) => m.id === id);
+    c.flags[F].test = { ...c.flags[F].test, successes: 4, rerolls: 1 };
+    await MXG.applyMx97(h, { op: 'unexposed', deckerUuid: d.uuid, vs: ic.uuid, id: 'x', cardId: id });
+    assert.equal(h.flags[F].mxic97.exposed.length, 0, 'the re-roll won');
+  });
+  test('the real flow: the request names the maneuver\'s card, sent after it is posted', async () => {
+    const h = host();
+    const ic = icIn(h);
+    const d = inside(h);
+    d.ownership = { default: 0, p1: 3 };
+    g.game.actors = [d, ic];
+    g.game.user = PLAYER();
+    h.isOwner = false;
+    faces.push(1, 1, 1, 1, 5, 5, 5, 1, 1);
+    await d.matrixManeuver('evade', ic.uuid);
+    const req = card('hostChange');
+    const mvc = chat.find((m: any) => m.flags?.[F]?.test?.kind === 'maneuver');
+    assert.ok(mvc && chat.indexOf(mvc) < chat.indexOf(req), 'the card first');
+    assert.equal(req.flags[F].hostChange.mx97.cardId, mvc.id);
+    g.game.user = GM();
+    await SR2Actor.applyHostChange(h.uuid, req.flags[F].hostChange);
+    assert.equal(h.flags[F].mxic97.evade[0].net, 3);
+  });
+});
+
+describe('v0.97.1 fix round: leaving drops only the leaver\'s entries; Log On and Log Off renew the visit', () => {
+  test('A moving away and back doesn\'t wipe B\'s parry against A on the record, but it no longer counts', async () => {
+    const h = host(), e = host();
+    const a = inside(h), b = inside(h);
+    g.game.actors = [a, b, h, e];
+    await a.update(MXG.runStartUpdate(a));
+    await b.update(MXG.runStartUpdate(b));
+    await MXG.applyMx97(h, { op: 'parry', deckerUuid: b.uuid, vs: a.uuid, id: 'bp', cardId: await mvCard(b, 'parry', a.uuid, 'bp', 3, 0) });
+    assert.equal(MXG.parryMod(b, a.uuid).mod?.value, 3);
+    await move(a, e);
+    assert.equal(h.flags[F].mxic97.parry.length, 1, 'B\'s entry stays');
+    await move(a, h);
+    assert.equal(MXG.parryMod(b, a.uuid).mod, null, 'A\'s new visit');
+  });
+  test('Log On to a host gives a new visit stamp', async () => {
+    const h = host();
+    const d = decker({});
+    d.system.matrix.jackedIn = true; d.system.prepareDerivedData();
+    g.game.actors = [d, h];
+    await d.update(MXG.runStartUpdate(d));
+    const s0 = d.flags[F].run97;
+    faces.push(1, 1, 1, 1, 5, 5, 5, 5, 5);
+    await d.systemTest('', { operationId: 'logon', targetUuid: h.uuid });
+    assert.equal(d.system.matrix.hostUuid, h.uuid);
+    assert.notEqual(d.flags[F].run97, s0);
   });
 });
