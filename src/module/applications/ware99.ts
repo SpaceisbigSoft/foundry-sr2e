@@ -7,13 +7,16 @@
  *   `surgeryClash` lets the surgery button refuse the same way.
  * - Leading with a cyberlimb in melee (Cybertechnology p. 50): `limbLeadModifier`, the attack's TN modifier.
  *
+ * The refusals run on the writer's client: the lead GM whispers the GMs when a player's write still leaves a pair in
+ * (noticeInstalledPair; no write). Inside a GM's re-run of a player's card the player's rules apply (actingAuthor).
  * This only keeps a player from putting the pair in on their own character: the sheet still counts only the better
  * of orthoskin and plating (rules/ware99.ts orthoPlating) and the better reflexes (the stacking rule) whatever got in.
  * It imports nothing from documents/ or the sheets (they call into this file).
  */
 import { escHtml } from '../rules/html.ts';
-import { tKey } from '../helpers/i18n.ts';
+import { t as tx, tKey } from '../helpers/i18n.ts';
 import * as W from '../rules/ware99.ts';
+import { isLeadGm } from './leader.ts';
 
 const g = (): any => globalThis as any;
 const num = (x: unknown): number => (Number.isFinite(Number(x)) ? Number(x) : 0);
@@ -39,9 +42,23 @@ export function wareClash(item: any, change: any, create = false): { why: string
   return W.installClash(merged(item, change), othersOf(item));
 }
 
-const isGm = (userId?: string): boolean => Boolean(g().game?.users?.get?.(userId)?.isGM ?? (userId === undefined && g().game?.user?.isGM));
+/**
+ * The author a GM's re-run of a player's card acts for (SR2Actor.actingAuthor), when that author is not a GM: inside
+ * such a run the write is the player's, whoever's client makes it (v0.99.0 fix C7).
+ */
+function actingPlayer(): any {
+  const a: any = g().CONFIG?.Actor?.documentClass?.actingAuthor ?? null;
+  return a && !a.isGM ? a : null;
+}
+const isGm = (userId?: string): boolean => !actingPlayer() && Boolean(g().game?.users?.get?.(userId)?.isGM ?? (userId === undefined && g().game?.user?.isGM));
+/** The refusal as a warning, its values escaped where they are passed (as the other v0.9x notifications do). */
 const warn = (c: { why: string; other: string }, item: any): void => {
-  g().ui?.notifications?.warn?.(escHtml(tKey(c.why, { name: String(item?.name ?? ''), other: c.other })));
+  const n = g().ui?.notifications;
+  const name = escHtml(String(item?.name ?? ''));
+  const other = escHtml(c.other);
+  if (c.why === W.PAIR_KEY('boostedVcr')) n?.warn?.(tx('SR2E.Ware99.Refuse.boostedVcr', { name, other }));
+  else if (c.why === W.PAIR_KEY('orthoPlating')) n?.warn?.(tx('SR2E.Ware99.Refuse.orthoPlating', { name, other }));
+  else n?.warn?.(tx('SR2E.Ware99.Refuse.boostedWired', { name, other }));
 };
 
 /** preUpdateItem: a player's ware that may not go in beside what is there stays out; a GM is only warned. False: nothing left. */
@@ -72,7 +89,32 @@ export function surgeryClash(item: any): boolean {
   const c = item?.system?.installed ? null : W.installClash({ id: item?.id, name: item?.name, type: item?.type, system: { ...(item?.system ?? {}), installed: true } }, othersOf(item));
   if (!c) return false;
   warn(c, item);
-  return !g().game?.user?.isGM;
+  return !isGm();
+}
+
+/**
+ * The ware a pair on `item`'s actor clashes with once it is in (the install refusals above run on the writer's client
+ * only), or null. Reads the item as it is now.
+ */
+export function installedClash(item: any): { why: string; other: string } | null {
+  if (item?.type !== 'cyberware' || !item?.system?.installed) return null;
+  return W.installClash({ id: item.id, name: item.name, type: item.type, system: item.system }, othersOf(item));
+}
+
+/**
+ * updateItem / createItem on the lead GM (v0.99.0 fix S9): a player's write that leaves such a pair installed (their
+ * client skipped the refusal) gets a whisper to the GMs. Nothing is written to the item or the actor.
+ */
+export async function noticeInstalledPair(item: any, change: any, userId: string | undefined, create = false): Promise<boolean> {
+  if (!g().game?.user?.isGM || !isLeadGm()) return false;
+  if (!create && change?.system?.installed !== true) return false;
+  if (Boolean(g().game?.users?.get?.(userId)?.isGM)) return false;
+  const c = installedClash(item);
+  if (!c) return false;
+  const who = g().game?.users?.get?.(userId);
+  const gms = [...(g().game?.users ?? [])].filter((u: any) => u.isGM).map((u: any) => u.id);
+  await g().ChatMessage?.create?.({ whisper: gms, content: `<p>${tx('SR2E.Ware99.Gm.pairInstalled', { user: escHtml(String(who?.name ?? '')), actor: escHtml(String(item?.parent?.name ?? '')), name: escHtml(String(item?.name ?? '')), other: escHtml(c.other) })}</p>` });
+  return true;
 }
 
 /**
@@ -91,4 +133,6 @@ export function registerWare99(): void {
   const H = g().Hooks;
   H?.on?.('preUpdateItem', (item: any, change: any, _opts: any, userId: string) => preUpdateWare(item, change, userId));
   H?.on?.('preCreateItem', (item: any, data: any, _opts: any, userId: string) => preCreateWare(item, data, userId));
+  H?.on?.('updateItem', (item: any, change: any, _opts: any, userId: string) => { void noticeInstalledPair(item, change, userId).catch(() => {}); });
+  H?.on?.('createItem', (item: any, _opts: any, userId: string) => { void noticeInstalledPair(item, null, userId, true).catch(() => {}); });
 }

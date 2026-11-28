@@ -2394,9 +2394,11 @@ export class SR2Actor extends Actor {
     const who: SR2Actor = opts.surgeon ?? this;
     const sg = RULES.BIOWARE.surgery;
     const sd = who.#skillDice(who.findSkill(sg.skill), false, null, 'intelligence');
-    const points = it.system.bioware ? it.system.bodyIndex ?? 0 : it.system.essenceCost ?? 0;
+    // v0.99.0 fix (C2, RULES.WARE_V99.limbs 'book'): a cyberlimb's enhancement Essence counts in the size and the TN.
+    const cost99 = it.system.bioware ? 0 : W99.limbEssenceCost(Number(it.system.essenceCost ?? 0), it, this.sys.metatype);
+    const points = it.system.bioware ? it.system.bodyIndex ?? 0 : W99.w99('limbs') ? cost99 : it.system.essenceCost ?? 0;
     // v0.92.3 (RULES.GEAR_V923.surgery 'book', Cybertechnology p. 53): cyberware's TN is 10 − the Essence left after it.
-    const essAfter = it.system.bioware ? null : Number(this.sys.derived?.essence ?? 6) - (it.system.installed ? 0 : essenceLoss({ essenceCost: Number(it.system.essenceCost ?? 0), grade: it.system.grade }));
+    const essAfter = it.system.bioware ? null : Number(this.sys.derived?.essence ?? 6) - (it.system.installed ? 0 : essenceLoss({ essenceCost: cost99, grade: it.system.grade }));
     return who.#runTest(tx('SR2E.Card.Actor.surgeryInto', { name: it.name, name2: this.name, grade: it.system.grade, sdSuffix: sd.suffix }), sd.dice, {
       targetNumber: surgeryTarget(it.system.grade, essAfter), modifiers: sd.modifiers,
     }, { kind: 'surgery', surgery: { id: (foundry as any).utils?.randomID?.() ?? Math.random().toString(36).slice(2, 18), patientUuid: this.uuid as string, patientName: this.name as string, itemId, itemName: it.name, points,
@@ -2465,7 +2467,8 @@ export class SR2Actor extends Actor {
     if (strict && !it) return null;
     const careIds = (RULES.HEALING.natural.care as readonly any[]).map((c: any) => String(c.id));
     const care = raw.care === '' || careIds.includes(String(raw.care ?? '')) ? String(raw.care) : String(RULES.BIOWARE.recovery.defaultCare ?? '');
-    const points = it ? Number(it.system?.bioware ? it.system?.bodyIndex ?? 0 : it.system?.essenceCost ?? 0) || 0 : Math.max(0, Math.min(6, Number(raw.points) || 0));
+    // v0.99.0 fix (C2, RULES.WARE_V99.limbs 'book'): a cyberlimb's points include its enhancement Essence.
+    const points = it ? Number(it.system?.bioware ? it.system?.bodyIndex ?? 0 : W99.limbEssenceCost(Number(it.system?.essenceCost ?? 0), it, patient.system?.metatype)) || 0 : Math.max(0, Math.min(6, Number(raw.points) || 0));
     const saved = id ? (patient.getFlag?.(SYSTEM_ID, 'surgeryState') as Record<string, any> | undefined)?.[id] : undefined;
     const st = id ? (saved ?? {}) : raw;
     return {
@@ -5951,7 +5954,8 @@ export class SR2Actor extends Actor {
     // v0.92.3 (RULES.GEAR_V923.limbHoused 'book'): housed ware costs its Cybertechnology p. 49 Essence.
     const hc = housed ? housedEssenceCost({ name: item.name, essenceCost: item.system.essenceCost }) : null;
     // v0.72.0 (O11): Sensitive System's dearer Essence, as in augmentationsOf.
-    return housed && hc === null ? 0 : essenceLoss({ essenceCost: sensitiveEssence(Number(hc ?? item.system.essenceCost ?? 0), qualityVitals(actor?.system?.qualities ?? [], RULES.STREET.qualities.enabled)), grade: item.system.grade });
+    // v0.99.0 fix (C2, RULES.WARE_V99.limbs 'book'): a cyberlimb's enhancement Essence, as in augmentationsOf.
+    return housed && hc === null ? 0 : essenceLoss({ essenceCost: sensitiveEssence(Number(hc ?? W99.limbEssenceCost(Number(item.system.essenceCost ?? 0), item, actor?.system?.metatype)), qualityVitals(actor?.system?.qualities ?? [], RULES.STREET.qualities.enabled)), grade: item.system.grade });
   }
 
   // ---- Filtration, bone lacing
@@ -14228,8 +14232,8 @@ export class SR2Actor extends Actor {
     const itemUpdates: any[] = [];
     for (const it of extra.items) {
       const ex: any = byName(it.type, it.name);
-      if (ex) itemUpdates.push({ _id: ex.id, system: it.system });
-      else itemCreates.push({ name: it.name, type: it.type, system: it.system });
+      if (ex) itemUpdates.push({ _id: ex.id, system: it.system, ...(it.flags ? { flags: it.flags } : {}) });
+      else itemCreates.push({ name: it.name, type: it.type, system: it.system, ...(it.flags ? { flags: it.flags } : {}) });
     }
     if (itemCreates.length) await this.createEmbeddedDocuments('Item', itemCreates);
     if (itemUpdates.length) await this.updateEmbeddedDocuments('Item', itemUpdates);

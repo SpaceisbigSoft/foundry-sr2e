@@ -13,6 +13,8 @@ import { attributeMaximums } from './core.ts';
 import { adeptItemCost, on as on96 } from './spirits96.ts';
 const adeptCostsOn96 = (): boolean => on96('adeptCosts');
 import { t as tx } from '../helpers/i18n.ts';
+import { limbStamp, LIMB_PAID_FLAG } from './ware99.ts';
+import { SYSTEM_ID } from '../config/system.ts';
 
 /**
  * Best-effort parser for SR2-style NPC stat blocks pasted as text, e.g.
@@ -406,6 +408,8 @@ export interface StatBlockItem {
   name: string;
   type: string;
   system: Record<string, unknown>;
+  /** v0.99.0: item flags (a cyberlimb's limb99Paid stamp, rules/ware99.ts); copied onto the item where it is made. */
+  flags?: Record<string, Record<string, unknown>>;
 }
 
 // ---------------------------------------------------------------- Entry parsing
@@ -959,6 +963,9 @@ function cyberwareItem(c: ParsedCyberware, p: ParsedStatBlock, notes: { essence:
   if (c.essence !== undefined) {
     // The block's Essence is for its grade; the item stores the standard cost (the grade multiplies it).
     system.essenceCost = round2(c.essence / mult);
+    // v0.99.0 fix (C1, RULES.WARE_V99.limbs): the block's Essence includes a cyberlimb's enhancements: stamp them as priced.
+    const st = system.kind === 'cyberlimb' ? limbStamp({ type: 'cyberware', name: c.name, system }) : null;
+    if (st) return { name: c.name, type: 'cyberware', system, flags: { [SYSTEM_ID]: { [LIMB_PAID_FLAG]: st } } };
   } else {
     const guess = rule ? rule.essence(ctx) : null;
     if (guess === null) notes.unknownEssence.push(c.name);

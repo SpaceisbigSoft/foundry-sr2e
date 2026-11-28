@@ -8,6 +8,7 @@ import { t as tx, tCount } from './helpers/i18n.ts';
 import { collectNotice923, notice923Html } from './notice923.ts';
 import { foreignWorldSigns, ignoringForeignWorld } from './helpers/foreign.ts';
 import { needsMove, moveWorldDocuments, moveWorldSettings, MOVE_DONE_KEY, OLD_ID } from './helpers/move.ts';
+import { limbStamp, LIMB_PAID_FLAG } from './rules/ware99.ts';
 export { FOREIGN_WORLD, foreignWorldSigns } from './helpers/foreign.ts';
 
 /**
@@ -96,7 +97,33 @@ const MIGRATIONS: Migration[] = [
   // v0.93.1: the new system id. A world from the old id is moved before the steps run (runMigrations, helpers/move.ts);
   // this step only records the version.
   { version: "0.93.1", label: "The new system id (no data changes here)", run: async () => {} },
+  // v0.99.0 (RULES.WARE_V99.limbs, Cybertechnology pp. 49–51): a cyberlimb's enhancement Essence is now added to its own
+  // cost; existing limbs had it typed into essenceCost, so each gets a stamp of the points already priced (limb99Paid).
+  // Safe to run twice: a stamped limb is skipped. World actors, unlinked tokens' actors and world items.
+  { version: "0.99.0", get label() { return tx('SR2E.Ware99.Migration.limbs99'); }, changes: true, run: async () => {
+    await stampLimbs99();
+  } },
 ];
+
+/** v0.99.0: the update that stamps an existing cyberlimb with the points its Essence already prices (null = none). */
+export function limbStampUpdate(i: any): Record<string, unknown> | null {
+  const st = limbStamp(i);
+  return st ? { [`flags.${SYSTEM.id}.${LIMB_PAID_FLAG}`]: st } : null;
+}
+
+/** v0.99.0: stamp every existing cyberlimb (limbStampUpdate). Returns how many were stamped. */
+export async function stampLimbs99(): Promise<number> {
+  let n = 0;
+  for (const actor of everyActor()) {
+    const ups = ownItems(actor).map((i: any) => { const up = limbStampUpdate(i); return up ? { _id: i.id, ...up } : null; }).filter(Boolean) as any[];
+    if (ups.length) { await actor.updateEmbeddedDocuments("Item", ups); n += ups.length; }
+  }
+  for (const item of [...(game.items ?? [])] as any[]) {
+    const up = limbStampUpdate(item);
+    if (up) { await item.update(up); n++; }
+  }
+  return n;
+}
 
 /**
  * v0.92.3: whisper the rules-changes notice to this (the lead) GM: the actors whose numbers change with the new defaults,

@@ -139,6 +139,8 @@ export interface CharacterImportItem {
   type: string;
   name: string;
   system: Record<string, unknown>;
+  /** v0.99.0: item flags from the statblock (a cyberlimb's limb99Paid stamp). */
+  flags?: Record<string, Record<string, unknown>>;
   /** An item of this type and name is already on the actor: update it instead of creating one. */
   replace?: boolean;
 }
@@ -1172,7 +1174,7 @@ export function characterImportPlan(p: ParsedCharacter, current: CharacterImport
   // ---- Items first: the attribute mods depend on them.
   const extra = statBlockItems(p, { adept: true, ...(metatypeId ? { metatype: metatypeId } : {}) });
   warnings.push(...extra.warnings);
-  for (const it of extra.items) items.push({ type: it.type, name: it.name, system: it.system });
+  for (const it of extra.items) items.push({ type: it.type, name: it.name, system: it.system, ...(it.flags ? { flags: it.flags } : {}) });
 
   for (const s of p.skills) {
     const rating = Math.max(0, Math.round(s.rating));
