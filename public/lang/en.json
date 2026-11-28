@@ -20925,7 +20925,16 @@
         "relocated": "{name} has found {hider} again.",
         "scoreRow": "{name}: partial {partial}, Open Test {open} (Control Pool {cp}), Driver Points {driver}: Maneuver Score {score}",
         "scoresHint": "Passengers may take offensive actions only in Combat Phases up to their vehicle's Driver Points (Rigger 2 p. 49).",
-        "scoresTitle": "Maneuver Scores, Combat Turn {round}"
+        "scoresTitle": "Maneuver Scores, Combat Turn {round}",
+        "gmButton": "The positioning successes count toward next turn's Driver Points once a GM records them with this button (the GM doesn't run the chase turn again):",
+        "record": "Record positioning (GM)",
+        "already": "This pair's positioning was already recorded for this Combat Turn.",
+        "gone": "A vehicle of that chase no longer exists.",
+        "stale": "That chase turn belongs to another Combat Turn: its positioning no longer counts.",
+        "recordTitle": "Record a chase turn's positioning",
+        "recordLine": "{name}: {successes} positioning successes (of {dice} dice) toward next turn's Driver Points",
+        "rollLine": "{name}: the card's author doesn't own it, so its positioning test is rolled now, on your client",
+        "scoreRow98": "{name} ({type}, speed {speed}, driver {driverName}): partial {partial}, Open Test {open} (Control Pool {cp}), Driver Points {driver}: Maneuver Score {score}"
       },
       "Mod": {
         "autonav": "Autonav active (rating {rating})",
@@ -20990,7 +20999,10 @@
         "selected": "Selected: {names}",
         "title": "Vehicle chase (book rules)",
         "wall": "Hit a wall",
-        "poolHint": "Control Pool dice each jumped-in rigger puts on this turn's Driver Points Open Test (they don't refresh until the turn ends; at most the skill)."
+        "poolHint": "Control Pool dice each jumped-in rigger puts on this turn's Driver Points Open Test (they don't refresh until the turn ends; at most the skill).",
+        "cp": "Control Pool",
+        "speed": "speed {speed}",
+        "typeHint": "Each vehicle's type for its Vehicle Points: kept on the combat for the next turns (a change on a player's vehicle sheet doesn't change it here)."
       },
       "Type": {
         "byCategory": "(by category)",
@@ -21022,10 +21034,12 @@
       "Why": {
         "hidden": "{target} has broken contact with {vehicle}: relocate it first.",
         "passengerPhase": "{name} rides in {vehicle}: no offensive action in Combat Phase {phase}, above its Driver Points ({points}).",
-        "ramTooFar": "{name} is {gap} m from {target}: a ram needs less than its Acceleration ({accel}). Accelerate first."
+        "ramTooFar": "{name} is {gap} m from {target}: a ram needs less than its Acceleration ({accel}). Accelerate first.",
+        "gmWarned": "{text} (GM: a warning only, not refused.)"
       },
       "alreadyDone": "That was already done.",
-      "ownerOnly": "Only {name}'s owner or the GM can do that."
+      "ownerOnly": "Only {name}'s owner or the GM can do that.",
+      "gmOnly": "Only a GM can do that."
     },
     "VRig98": {
       "roll": "{dice} vs TN {tn} ({successes} successes)",
@@ -21154,7 +21168,19 @@
         "regenAction": "Regenerating signal degradation",
         "regenRoll": "{name}'s ECCM Test on the {channel}",
         "regenDone": "{boxes} boxes cleared ({left} left).",
-        "clean": "{name}'s network has no degradation."
+        "clean": "{name}'s network has no degradation.",
+        "pending": "The GM rolls {target}'s side of the test when applying this card.",
+        "gmIntruder": "{name} (from the card): {dice} dice vs TN {tn}, rolled {faces}: {successes} successes.",
+        "gmDefender": "{name} (rolled now): {dice} dice vs TN {tn}, rolled {faces}: {successes} successes.",
+        "gmGear": "Protocol emulation module {pem}, intruder's ECM {ecm}; {target}'s ECCM {eccm}.",
+        "gmResult": "Result: {boxes} boxes on the {channel} of {target}.",
+        "gmHeld": "Result: {target}'s network holds.",
+        "gmBackfire": "And {boxes} boxes on {name}'s own system channel (interference lost).",
+        "appliedCard": "GM: {name}'s {op} on the {channel} of {target}, the defence rolled on applying",
+        "sameDice": "Refused: these dice match a MIJI card already applied against {target} (a copy of it). A fresh roll is a new card."
+      },
+      "Ew": {
+        "mod": "Electronic warfare: Signature +{n}"
       }
     },
     "VSec98": {
@@ -21177,7 +21203,10 @@
         "rolled": "{intruder}: {step}",
         "send": "Send the request",
         "step": "Step",
-        "title": "Access a rigged security system (Rigger 2 p. 79)"
+        "title": "Access a rigged security system (Rigger 2 p. 79)",
+        "lostCard": "{intruder}'s first roll card for {step} was deleted before it was applied. It counts as a failed test.",
+        "confirmLost": "{intruder}: {step}, the first roll card was deleted: it counts as a failed test ({need} successes needed).",
+        "confirmChanged": "{intruder}: {step}, the first roll card's dice differ from those it was posted with (or don't make the test): it counts as a failed test ({need} successes needed)."
       },
       "Attr": {
         "body": "Body",
@@ -21265,7 +21294,8 @@
         "securityRigger": "Security rigger",
         "tie": "A tie: nothing happens.",
         "title": "Rigger combat (Rigger 2 p. 79)",
-        "who": "Who attacks"
+        "who": "Who attacks",
+        "resistAgain": "{name} has already resisted this damage (a resistance card for it was posted). Resist it again anyway?"
       },
       "Decking": {
         "tn": "Rigger decking (VCR)"

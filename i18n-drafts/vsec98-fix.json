@@ -1,6 +1,0 @@
-{
-  "SR2E.VSec98.Access.lostCard": "{intruder}'s first roll card for {step} was deleted before it was applied. It counts as a failed test.",
-  "SR2E.VSec98.Access.confirmLost": "{intruder}: {step}, the first roll card was deleted: it counts as a failed test ({need} successes needed).",
-  "SR2E.VSec98.Access.confirmChanged": "{intruder}: {step}, the first roll card's dice differ from those it was posted with (or don't make the test): it counts as a failed test ({need} successes needed).",
-  "SR2E.VSec98.Combat.resistAgain": "{name} has already resisted this damage (a resistance card for it was posted). Resist it again anyway?"
-}
