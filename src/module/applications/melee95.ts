@@ -34,6 +34,7 @@ import { withGmLock } from './gmlock.ts';
 import { authorIsGm } from './trust.ts';
 import { pxPerMetre, pointsBlocked, sceneMetres, measureTokens } from './canvas.ts';
 import * as M from '../rules/melee95.ts';
+import { storedXY } from '../helpers/tokenpos.ts';
 
 const PEOPLE = ['character', 'npc', 'spirit'];
 const FLAG_SUBDUED = 'subdued95';
@@ -527,7 +528,9 @@ export async function watchMove(doc: any, change: any, options: any): Promise<nu
   // Where the move started: the mover's client says (the options), else Foundry's own record, else what this client saw last.
   const key = String(doc?.uuid ?? doc?.id ?? '');
   const from = options?.sr2eFrom95 ?? doc?.movement?.origin ?? lastSpot.get(key);
-  lastSpot.set(key, { x: num(doc?.x), y: num(doc?.y) });
+  // v0.96.4: where the move ends is the update's (v14's doc.x is still the animated, old spot here).
+  const end = storedXY(doc, change);
+  lastSpot.set(key, end);
   if (lastSpot.size > 2000) lastSpot.clear();
   if (!from || !Number.isFinite(Number(from.x)) || !Number.isFinite(Number(from.y))) return 0;
   const scene = doc?.parent;
@@ -541,7 +544,6 @@ export async function watchMove(doc: any, change: any, options: any): Promise<nu
   const squareMetres = (num(scene.grid?.distance ?? g().canvas?.grid?.distance) || 1) * sceneMetres();
   const others = all.filter((c: any) => c !== mover && !c.isDefeated);
   // The path of this move: Foundry's own waypoints when they end where the token now is, else a straight line.
-  const end = { x: num(doc.x), y: num(doc.y) };
   let path: Array<{ x: number; y: number }> = [{ x: num(from.x), y: num(from.y) }, end];
   try {
     const wp: any[] = doc.movement?.passed?.waypoints ?? [];
@@ -552,7 +554,7 @@ export async function watchMove(doc: any, change: any, options: any): Promise<nu
   const final = pts[pts.length - 1]!;
   const told = M.sidesTold(all.map((c) => ({ side: sideOfCombatant(c) })));
   const bystanders: M.Bystander[] = others.map((c) => {
-    const centre = centreOf(c.token, { x: num(c.token.x), y: num(c.token.y) }, size);
+    const centre = centreOf(c.token, storedXY(c.token), size);
     return { id: String(c.id), x: centre.x, y: centre.y, side: sideOfCombatant(c), canMelee: canMelee(c.actor), bodyMetres: ((num(doc.width) || 1) + (num(c.token.width) || 1)) / 2 * squareMetres };
   });
   const ids = new Set<string>();
@@ -682,7 +684,8 @@ export function registerMelee95(): void {
   // Where the token stood before the move (the mover's client knows; the GM's client reads it from the options).
   H?.on?.('preUpdateToken', (doc: any, change: any, options: any) => {
     if ((change?.x === undefined && change?.y === undefined) || !gameNow()?.combat?.started || !M.interceptionOn() || !options) return;
-    options.sr2eFrom95 = { x: num(doc.x), y: num(doc.y) };
+    // v0.96.4: the stored spot (v14's doc.x follows the animation of an earlier move).
+    options.sr2eFrom95 = storedXY(doc);
   });
   H?.on?.('updateToken', (doc: any, change: any, options: any, userId: string) => {
     if (change?.x === undefined && change?.y === undefined) return;

@@ -405,6 +405,18 @@ describe('v0.95.0 glue: interception', () => {
     f.c.pass = 1;
     assert.equal(await moved(f), 1);
   });
+  test('v0.96.4: Foundry v14 animates doc.x: the move ends where the update says, the start is the stored spot', async () => {
+    const f = fight();
+    // v14 inside updateToken: doc.x still gives the old spot (0), the stored spot and the change the new one (900).
+    f.mover.token.x = 0; f.mover.token._source = { x: 900, y: 0 };
+    assert.equal(await watchMove(f.mover.token, { x: 900 }, { sr2eFrom95: { x: 0, y: 0 } }), 1);
+    // A bystander mid-animation is placed by its stored spot too (its doc.x says it stands on the path; it doesn't).
+    posted = []; _resetOffers();
+    const g = fight();
+    g.guard.token.x = 400; g.guard.token.y = 100; g.guard.token._source = { x: 400, y: 900 };
+    g.mover.token._source = { x: 900, y: 0 };
+    assert.equal(await watchMove(g.mover.token, { x: 900 }, { sr2eFrom95: { x: 0, y: 0 } }), 0);
+  });
   test('no offer: not a fight, no start point, a hidden mover, the rule off, someone who can\'t attack', async () => {
     let f = fight();
     f.c.started = false;

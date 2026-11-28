@@ -176,6 +176,25 @@ describe('v0.60.0 regions (glue)', () => {
     assert.equal(detected.length, 2);
   });
 
+  test('v0.96.4: Foundry v14 animates doc.x: the entry is read from the update, not the old spot', async () => {
+    const detected: any[] = [];
+    const site = { uuid: 'Actor.site14', type: 'site', name: 'Lab', system: { guards: [], riggerUuid: '', devices: [{ id: 'cam', name: 'Lobby cam', kind: 'camera', rating: 4, active: true, bypassed: false, sense: 'visual' }] },
+      detect: async (...a: any[]) => { detected.push(a); return { detected: true }; } };
+    uuids.set('Actor.site14', site);
+    const cam = region('c14', { siteUuid: 'Actor.site14', deviceId: 'cam' }, [{ type: 'rectangle', x: 1000, y: 0, width: 500, height: 500 }]);
+    const runner: any = { uuid: 'Scene.s.Token.t14', name: 'Runner', x: 0, y: 0, width: 1, height: 1, elevation: 0, hidden: false, _source: { x: 0, y: 0, elevation: 0 }, actor: { uuid: 'Actor.runner14', id: 'runner14', isToken: false, system: {} } };
+    scene([cam], [runner]);
+    settings.regionDetect = 'prompt';
+    fire('createToken', runner);
+    chat.length = 0;
+    // v14: the stored spot and the change say 1100, while doc.x still gives the animated old spot.
+    runner._source = { x: 1100, y: 100, elevation: 0 };
+    fire('updateToken', runner, { x: 1100, y: 100 });
+    await new Promise((r) => setTimeout(r, 10));
+    assert.equal(chat.length, 1);
+    assert.match(chat[0].content, /Lobby cam.*Runner walks in/);
+  });
+
   test('saving a region keeps its environment tidy; the config fields carry the current values', () => {
     const doc = { flags: { shadowrun2e_unified: { env: { backgroundCount: 2, light: 'partial' } } } };
     const change: any = { flags: { shadowrun2e_unified: { env: { backgroundCount: '4', smoke: 'oops' } } } };

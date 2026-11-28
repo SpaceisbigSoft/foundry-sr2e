@@ -14,6 +14,7 @@ import { escHtml } from '../rules/html.ts';
 import { isLeadGm } from './leader.ts';
 import { auto } from '../helpers/automation.ts';
 import { t as tx } from '../helpers/i18n.ts';
+import { storedXY } from '../helpers/tokenpos.ts';
 
 /** A-15: the shared escape helper (rules/html.ts). */
 const esc = escHtml;
@@ -56,6 +57,18 @@ export function tokenPoint(t: any): { x: number; y: number; elevation: number } 
   const size = Number(doc.parent?.grid?.size ?? (globalThis as any).canvas?.grid?.size ?? 100) || 100;
   if (!Number.isFinite(Number(doc.x))) return null;
   return { x: Number(doc.x) + (Number(doc.width ?? 1) * size) / 2, y: Number(doc.y) + (Number(doc.height ?? 1) * size) / 2, elevation: Number(doc.elevation ?? 0) };
+}
+
+/**
+ * v0.96.4: a token document's centre from its stored spot (Foundry v14's doc.x follows the movement animation, so in
+ * `updateToken` it is still the old spot); with `change`, where the move ends.
+ */
+function movedPoint(doc: any, change?: any): { x: number; y: number; elevation: number } | null {
+  if (!doc || (!Number.isFinite(Number(doc._source?.x ?? doc.x)) && change?.x === undefined)) return null;
+  const size = Number(doc.parent?.grid?.size ?? (globalThis as any).canvas?.grid?.size ?? 100) || 100;
+  const at = storedXY(doc, change);
+  const elevation = Number(change?.elevation ?? doc._source?.elevation ?? doc.elevation ?? 0);
+  return { x: at.x + (Number(doc.width ?? 1) * size) / 2, y: at.y + (Number(doc.height ?? 1) * size) / 2, elevation };
 }
 
 function sceneOfToken(t: any): any {
@@ -308,13 +321,13 @@ export function registerRegionHooks(): void {
   // Where the mover's client saw the token before the move (the GM's own record may be missing after a reload).
   Hooks.on('preUpdateToken', (doc: any, change: any, options: any) => {
     if (change?.x === undefined && change?.y === undefined && change?.elevation === undefined) return;
-    const p = tokenPoint(doc);
+    const p = movedPoint(doc);
     if (p) options.sr2eWatchedBefore = watchedIdsAt(doc.parent, p);
   });
   Hooks.on('updateToken', (doc: any, change: any, options: any) => {
     if (change?.x === undefined && change?.y === undefined && change?.elevation === undefined) return;
     if (!gmWindow()) return;
-    const p = tokenPoint(doc);
+    const p = movedPoint(doc, change);
     if (!p) return;
     const now = watchedIdsAt(doc.parent, p);
     const before = lastSeen.get(String(doc.uuid)) ?? (Array.isArray(options?.sr2eWatchedBefore) ? options.sr2eWatchedBefore : now);
