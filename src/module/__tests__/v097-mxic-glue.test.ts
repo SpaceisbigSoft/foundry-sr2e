@@ -65,8 +65,10 @@ const asMessage = (d: any) => ({ id: `m${++mid}`, timestamp: mid, ...d, getFlag(
 
 before(async () => {
   // This area's English while its draft isn't merged into public/lang/en.json (the lead deletes the draft then).
-  const draft = join('i18n-drafts', 'mxic97.json');
-  if (existsSync(draft)) g.__SR2E_EN__ = { ...(g.__SR2E_EN__ ?? {}), ...JSON.parse(readFileSync(draft, 'utf8')) };
+  for (const f of ['mxic97.json', 'mxic97-fix.json']) {
+    const draft = join('i18n-drafts', f);
+    if (existsSync(draft)) g.__SR2E_EN__ = { ...(g.__SR2E_EN__ ?? {}), ...JSON.parse(readFileSync(draft, 'utf8')) };
+  }
   // As in glue.test.ts and v072.test.ts: rules that add steps or prompts are off unless a test turns them on.
   (RULES.DISASTERS as any).prompt = false;
   (RULES.MAGIC_V39.ritualStages as any).enabled = false;
@@ -250,7 +252,7 @@ describe('v0.97.0 suppressing IC (VR2 p. 40): the GM side\'s record', () => {
     const d = inside(h);
     g.game.actors = [d, ic];
     ic.system.matrix.monitor = 10; ic.system.prepareDerivedData();
-    await MXG.applyMx97(h, { op: 'crash', deckerUuid: d.uuid, id: ic.uuid });
+    await MXG.offerCrash(h, d, ic);
     const choice = card('mxic97Choice');
     d.flags[F] = { ...(d.flags[F] ?? {}), suppressed97: [{ id: 'x', hostUuid: h.uuid, name: 'x', points: 0 }], mxicCards97: [choice.id] };
     const df = d.liveDetectionFactor();
@@ -269,7 +271,7 @@ describe('v0.97.0 suppressing IC (VR2 p. 40): the GM side\'s record', () => {
     const d = inside(h);
     g.game.actors = [d, ic];
     ic.system.matrix.monitor = 10; ic.system.prepareDerivedData();
-    await MXG.applyMx97(h, { op: 'crash', deckerUuid: d.uuid, id: ic.uuid });
+    await MXG.offerCrash(h, d, ic);
     const choice = card('mxic97Choice');
     g.game.user = PLAYER();
     h.isOwner = false;
@@ -623,5 +625,49 @@ describe('v0.97.0 persona speed (VR2 pp. 84–87, 120)', () => {
     const d = decker();
     d.items.get('deck').system.realityFilter = true; d.items.get('deck').system.hotAsist97 = true; d.system.prepareDerivedData();
     assert.deepEqual([d.system.derived.matrix.mpcp, d.system.derived.matrix.reaction, d.system.derived.matrix.initiativeDice, d.system.derived.matrix.nonCombat97], [6, 7, 2, null]);
+  });
+});
+
+describe('v0.97.0 review: forged requests (VR2 pp. 40–41, 122)', () => {
+  const file = (extra: any = {}) => ({ id: 'f1', name: 'Data', size: 10, value: 0, paydata: false, encrypted: 0, scramble: 0, bomb: 0, ...extra });
+  test('a crash choice comes only from the GM side, once per IC; a crash request on a card is dropped', async () => {
+    const h = host();
+    const ic = icIn(h);
+    const d = inside(h);
+    g.game.actors = [d, ic];
+    ic.system.matrix.monitor = 10; ic.system.prepareDerivedData();
+    await SR2Actor.applyHostChange(h.uuid, { mx97: { op: 'crash', deckerUuid: d.uuid, id: ic.uuid } });
+    assert.equal(card('mxic97Choice'), undefined, 'not a request');
+    assert.equal(await MXG.offerCrash(h, d, ic), true);
+    assert.equal(await MXG.offerCrash(h, d, ic), false, 'once');
+    assert.equal(chat.filter((m: any) => m.flags?.[F]?.mxic97Choice).length, 1);
+    g.game.user = PLAYER();
+    const ic2 = icIn(h);
+    ic2.system.matrix.monitor = 10; ic2.system.prepareDerivedData();
+    assert.equal(await MXG.crashChoice(h, d, ic2, 6, null), false, 'a player\'s client keeps the old tally path');
+  });
+  test('a bomb request counts only beside the blast (bombOff) of the same change', async () => {
+    const h = host({ files: [file({ bomb: 4 })] });
+    const d = inside(h);
+    g.game.actors = [d];
+    await SR2Actor.applyHostChange(h.uuid, { mx97: { op: 'bomb', deckerUuid: d.uuid, id: 'f:f1' } });
+    assert.equal(card('mxic97Choice'), undefined, 'no blast, no choice');
+    await SR2Actor.applyHostChange(h.uuid, { bombOff: { subsystem: 'files', erase: true }, mx97: { op: 'bomb', deckerUuid: d.uuid, id: 'f:f1' } });
+    assert.equal(card('mxic97Choice'), undefined, 'another bomb');
+    await SR2Actor.applyHostChange(h.uuid, { bombOff: { fileId: 'f1', erase: true }, mx97: { op: 'bomb', deckerUuid: d.uuid, id: 'f:f1' } });
+    assert.equal(card('mxic97Choice').flags[F].mxic97Choice.points, 4);
+  });
+  test('a position lost to IC is the host\'s record: the decker clearing their own flag changes nothing', async () => {
+    const h = host();
+    const ic = icIn(h);
+    const d = inside(h);
+    g.game.actors = [d, ic];
+    faces.push(5, 5, 5, 1, /* decker */ 5, 1, 1, 1, 1);
+    await d.matrixManeuver('position', ic.uuid);
+    assert.equal(h.flags[F].mxic97.exposed[0].net, 2);
+    d.flags[F] = { ...(d.flags[F] ?? {}), mx97: { parry: [], pos: [], exposed: [], evade: [] } };
+    faces.push(1, 1, 1, 1);
+    assert.equal((await ic.icAttack({ targetUuid: d.uuid })).targetNumber, 2);
+    assert.equal(h.flags[F].mxic97.exposed.length, 0, 'used up');
   });
 });

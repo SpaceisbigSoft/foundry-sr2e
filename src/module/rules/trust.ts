@@ -254,6 +254,16 @@ export function hostChangeShapeOk(f: any): boolean {
 }
 
 /**
+ * Pure (v0.97.0, RULES.MXIC_V97): a host change's Matrix request (`mx97`) may come only from someone who owns the decker
+ * it names (`owns`: the card author's ownership); any other change is not this rule's business (true).
+ */
+export function mx97OwnerOk(f: any, owns: (uuid: string) => boolean): boolean {
+  const d = f?.mx97?.deckerUuid;
+  if (f?.mx97 === undefined) return true;
+  try { return safeStr(d, 400) && owns(String(d)); } catch { return false; }
+}
+
+/**
  * Pure (v0.81.1, A-3 / SEC1-7): a possessor as a possession card carries it (`#possess`): its uuid and name, mental
  * attributes (at most 10, each 0–50) and copied skills (at most 200, ratings 0–20).
  */
@@ -481,7 +491,7 @@ export function describeGmChange(action: string, flags: Record<string, any>, nam
         else if (k === 'bombFound') out.push(tx('SR2E.Text.Trust.findsDataBomb', { name: nm(v?.deckerUuid) }));
         else if (k === 'defuse') out.push(tx('SR2E.Text.Trust.dataBombDefused', { what: plainOf(v) }));
         else if (k === 'bombOff') out.push(tx('SR2E.Text.Trust.dataBombGoesOff', { what: plainOf(v) }));
-        else if (k === 'mx97') out.push(tx('SR2E.MxIc97.Gm.trustLine', { op: String(v?.op ?? ''), name: nm(v?.deckerUuid), net: Number(v?.net ?? 0) }));
+        else if (k === 'mx97') out.push(tx('SR2E.MxIc97.Gm.trustLine', { op: String(v?.op ?? ''), name: nm(v?.deckerUuid), vs: v?.vs ? nm(v.vs) : String(v?.id ?? ''), net: Number(v?.net ?? 0) }));
         else out.push(`${k}: ${plainOf(v)}`);
       }
       break;

@@ -25,7 +25,7 @@ import { blastThroughWalls, crossingFraction, indirectScatterDice, indirectScatt
 import { tokensNear, scatterPoint, blastBlocked, wallDistances, wallsBetweenPoints, sightBlockedBetweenPoints, wallsNear, scatterStop, tokenOf, drawArea, placeWardRegion } from './canvas.ts';
 import { escHtml } from '../rules/html.ts';
 import { foldDiceOn } from './fixes942.ts';
-import { safeAutoApply, gmApplyShapeOk, describeGmChange, cardTargetUuid, cardSourceUuids, safeInt, safePath, boundPower, boundLevel, safeStr, deepSafeKeys, trustedSource, GM_APPLY_SPECS } from '../rules/trust.ts';
+import { safeAutoApply, gmApplyShapeOk, describeGmChange, cardTargetUuid, cardSourceUuids, safeInt, safePath, boundPower, boundLevel, safeStr, deepSafeKeys, trustedSource, GM_APPLY_SPECS, mx97OwnerOk } from '../rules/trust.ts';
 import { onIntercept95, onRelease95, subdueOptionAttr, bindSubdueBox } from './melee95.ts';
 import { authorIsGm, authorOwns, cardAuthor, cardTrust, speakerActorUuid, nameOfUuid, playerMay, gmMay } from './trust.ts';
 import { applyTransferAsGm, transferLiveLines } from './trade942.ts';
@@ -2423,6 +2423,8 @@ async function onApplyHost(message: any, button: HTMLButtonElement): Promise<voi
   if (!c) return;
   if (!game.user?.isGM) return ui.notifications.warn(tx('SR2E.Notify.Chat.onlyTheGmCanChangeA2'));
   if (message.getFlag(SYSTEM_ID, 'hostApplied')) return ui.notifications.warn(tx('SR2E.Notify.Chat.thisHasAlreadyBeenApplied'));
+  // v0.97.0 (RULES.MXIC_V97): a decker's Matrix request only from someone who owns that decker (rules/trust.ts mx97OwnerOk).
+  if (!mx97OwnerOk(c, (u) => authorOwns(message, u))) return ui.notifications.warn(tx('SR2E.MxIc97.notYourDecker'));
   const v = await gmApplyFlag<typeof c>(message, 'applyHost');
   if (!v) return;
   // v0.81.1 (A2): the change is made under the GM lock, after any dialog.

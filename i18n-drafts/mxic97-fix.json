@@ -1,0 +1,6 @@
+{
+  "SR2E.MxIc97.Gm.trustLine": "Matrix: {op} for {name}, against {vs} ({net})",
+  "SR2E.MxIc97.Gm.exposed": "{vs}'s position on {decker} (+{net}) recorded",
+  "SR2E.MxIc97.Gm.exposedReq": "{vs} won a position on {decker} ({net})",
+  "SR2E.MxIc97.notYourDecker": "That Matrix request names a decker its author doesn't own: not applied."
+}
