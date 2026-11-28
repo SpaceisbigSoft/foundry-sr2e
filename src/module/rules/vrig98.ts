@@ -127,6 +127,14 @@ export function fluxRangeKm(flux: number): number {
 
 // ---------------------------------------------------------------- ECM, ECCM, ED and ECD (Rigger 2 pp. 31–32)
 
+/**
+ * The most an electronic warfare rating (ECM, ECCM, ED, ECD, Sensor) counts for in these tests: the fields are on a
+ * player-writable vehicle and become dice rolled on whoever's client scans (a GM's too). Rigger 2's devices top out
+ * well below it (VERIFY: a guard, not a book number).
+ */
+export const EW_MAX = 20;
+const ew = (v: unknown): number => Math.min(EW_MAX, whole(v));
+
 export interface Side { dice: number; tn: number }
 const side = (dice: number, tn: number): Side => ({ dice: whole(dice), tn: Math.max(RULES.MIN_TARGET_NUMBER, whole(tn)) });
 
@@ -134,12 +142,12 @@ const side = (dice: number, tn: number): Side => ({ dice: whole(dice), tn: Math.
  * The opposed tests a Sensor Test against an ECM-equipped vehicle calls for (Rigger 2 p. 31). The ECM Test: the jammer
  * its ECM's Flux vs the scanner's Sensor Rating, the scanner its sensors' Flux (less its ECD while it runs, p. 32) vs the
  * ECM Rating. The ECCM Test (when the scanner has ECCM): the scanner's ECCM vs the ECM Rating, the jammer's ECM Rating vs
- * the ECCM. Null when the target has no ECM or under 'v971'.
+ * the ECCM. Every rating counts at most EW_MAX. Null when the target has no ECM or under 'v971'.
  */
 export function ecmPlan(o: { ecm: number; sensor: number; eccm?: number; ecd?: number }): { jammer: Side; scanner: Side; eccm: { counter: Side; jammer: Side } | null } | null {
-  const ecm = whole(o.ecm), sensor = whole(o.sensor), eccm = whole(o.eccm);
+  const ecm = ew(o.ecm), sensor = ew(o.sensor), eccm = ew(o.eccm);
   if (!on('ecmTest') || ecm <= 0) return null;
-  const drain = edOn() ? whole(o.ecd) : 0;
+  const drain = edOn() ? ew(o.ecd) : 0;
   return {
     jammer: side(deviceFlux(ecm), sensor),
     scanner: side(Math.max(0, deviceFlux(sensor) - drain), ecm),
@@ -164,9 +172,9 @@ export function ecmSignature(o: { jammer: number; scanner: number; counter?: num
  * success); the scanner's ECD dice vs the ED Rating (each success negates one). Null when off or without ED.
  */
 export function edPlan(o: { ed: number; sensor: number; ecd?: number }): { ed: Side; ecd: Side | null } | null {
-  const ed = whole(o.ed);
+  const ed = ew(o.ed), ecd = ew(o.ecd);
   if (!edOn() || ed <= 0) return null;
-  return { ed: side(ed, whole(o.sensor)), ecd: whole(o.ecd) > 0 ? side(whole(o.ecd), ed) : null };
+  return { ed: side(ed, ew(o.sensor)), ecd: ecd > 0 ? side(ecd, ed) : null };
 }
 
 /** The Signature increase from ED (Rigger 2 p. 32): its successes less the ECD's, never below 0. */
@@ -353,4 +361,28 @@ export function regenerate(raw: unknown, channel: Channel, successes: number): S
 /** The TN modifier rows for a degraded channel (empty without degradation). */
 export function degradationMods(value: number, label: string): TargetNumberModifier[] {
   return whole(value) ? [{ id: 'signalDegradation', label, value: whole(value) }] : [];
+}
+
+// ---------------------------------------------------------------- Applied MIJI cards (GM-side once-guard)
+
+/** How many applied MIJI cards a network remembers (the oldest drop off). */
+export const APPLIED_KEEP = 60;
+
+/**
+ * A MIJI card's dice signature: the operation, the two sides and the intruder's faces in order. A reposted copy of an
+ * applied card has the same one (a fresh roll almost never does: 6^-n for n dice; VERIFY known limit for 1–2 dice).
+ */
+export function mijiSignature(o: { intruderUuid: string; targetUuid: string; op: string; channel: string; mod: number; faces: readonly number[] }): string {
+  return ['sig', str(o.intruderUuid, 120), str(o.targetUuid, 120), str(o.op, 20), str(o.channel, 20), whole(o.mod), (o.faces ?? []).map((f) => whole(f)).join('')].join('|').slice(0, 400);
+}
+
+/** The applied-card record as stored (strings only, at most APPLIED_KEEP; anything malformed reads as empty). */
+export function appliedList(raw: unknown): string[] {
+  return (Array.isArray(raw) ? raw : []).filter((x): x is string => typeof x === 'string' && x.length > 0 && x.length <= 400).slice(-APPLIED_KEEP);
+}
+
+/** The record with `keys` added (the newest last, at most APPLIED_KEEP). */
+export function withApplied(raw: unknown, keys: readonly string[]): string[] {
+  const list = appliedList(raw).filter((k) => !keys.includes(k));
+  return [...list, ...keys.filter((k) => typeof k === 'string' && k)].slice(-APPLIED_KEEP);
 }

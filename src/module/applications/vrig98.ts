@@ -9,9 +9,12 @@
  * continuous-lock launch and the subscriber list are player-writable. They only count on that player's own side: a
  * rigger's network (degradation on its drones' tests, the phase rule) is honoured only for drones with exactly the
  * rigger's owners. Degradation on someone else's network is written by a GM: at once on a GM's client, else from a
- * MIJI card a GM applies, which counts the card's own dice again against TNs read now from the documents, and only for
- * an intruder the card's author owns. The scene's Flux conditions are a scene flag (GM-written). Every value put into
- * HTML is escaped.
+ * MIJI card a GM applies, which counts only the card's intruder dice again against TNs read now from the documents
+ * (and only for an intruder the card's author owns) and rolls the defender's test on the GM's own client; the cards
+ * applied are remembered on the target network (`vrig98MijiApplied`, GM-written), by card id and by dice signature,
+ * never on the player's card. The GM's write runs under the GM lock (inline inside a card's re-run). The scene's Flux
+ * conditions are a scene flag (GM-written). A vehicle's ECM, ECCM, ED, ECD and Sensor count at most
+ * rules/vrig98.ts EW_MAX. Every value put into HTML is escaped.
  */
 import { SYSTEM_ID } from '../config/system.ts';
 import { RULES } from '../rules/config.ts';
@@ -19,10 +22,11 @@ import { escHtml } from '../rules/html.ts';
 import { t as tx, tKey } from '../helpers/i18n.ts';
 import { successTest, type SuccessTestResult, type TargetNumberModifier } from '../rules/dice.ts';
 import { signalCheck, type SignalCheck } from '../rules/netrig.ts';
-import { droneLinkOf } from '../rules/dronelink.ts';
+import { droneLinkOf, linkEncryption } from '../rules/dronelink.ts';
 import * as X from '../rules/vrig98.ts';
 import { authorOwns, gmMay } from './trust.ts';
 import { allActors } from '../helpers/actors.ts';
+import { withGmLock } from './gmlock.ts';
 
 const G = (): any => (globalThis as any).game;
 const isGm = (): boolean => Boolean(G()?.user?.isGM);
@@ -40,12 +44,19 @@ const gmIds = (): string[] => users().filter((u: any) => u.isGM).map((u: any) =>
 const flag = (a: any, k: string): unknown => (typeof a?.getFlag === 'function' ? a.getFlag(SYSTEM_ID, k) : a?.flags?.[SYSTEM_ID]?.[k]);
 const now = (): { round: number | null; worldTime: number; combatId: string | null } => actorClass()?.matrixNow?.() ?? { round: null, worldTime: 0, combatId: null };
 const canWrite = (doc: any): boolean => Boolean(doc?.isOwner);
+/** A GM write step: under the GM lock, inline inside a card's re-run (which already holds it, applications/core95.ts gmRun). */
+const gmLocked = <T>(fn: () => Promise<T>): Promise<T> => {
+  const cls = actorClass();
+  return cls?.actingAuthor || cls?.inAuthorRun ? fn() : withGmLock(fn);
+};
 
 /** The flags this file keeps: a rigger's network Signal Monitor, the captain's chair, a vehicle's continuous-lock launch; the scene's Flux conditions. */
 export const SIGNAL_FLAG = 'vrig98Signal';
 export const CHAIR_FLAG = 'vrig98Chair';
 export const LOCK_FLAG = 'vrig98Lock';
 export const FLUX_FLAG = 'vrig98Flux';
+/** The MIJI cards a GM applied against a network (on the target rigger, written by the GM: rules/vrig98.ts appliedList). */
+export const APPLIED_FLAG = 'vrig98MijiApplied';
 
 /** Dice rolled with Foundry (shown by Dice So Nice through the card's rolls). */
 function roller(sink: any[]): (count: number) => Promise<number[]> {
@@ -113,7 +124,15 @@ export async function sensorEw(scanner: any, target: any): Promise<TargetNumberM
     lines.push(rollHtml(tx('SR2E.VRig98.Ed.ed', { name: raw(target) }), e));
     if (d) lines.push(rollHtml(tx('SR2E.VRig98.Ed.ecd', { name: raw(scanner) }), d));
     const inc = X.edSignature(e.successes, d?.successes ?? 0);
-    if (inc) out.push({ id: 'ed98', label: tx('SR2E.VRig98.Ed.mod', { n: inc }), value: inc });
+    if (inc && isGm()) out.push({ id: 'ed98', label: tx('SR2E.VRig98.Ed.mod', { n: inc }), value: inc });
+    else if (inc) {
+      // A player's own Sensor card: ED's effect is on the GMs' card only, so no ED row: one electronic warfare row with
+      // the ECM's increase folded in (the TN still counts it; VERIFY known limit).
+      const ecmRow = out.findIndex((m) => m.id === 'ecm98');
+      const total = inc + (ecmRow >= 0 ? Number(out[ecmRow]!.value) : 0);
+      if (ecmRow >= 0) out.splice(ecmRow, 1);
+      out.push({ id: 'ew98', label: tx('SR2E.VRig98.Ew.mod', { n: total }), value: total });
+    }
   }
   if (lines.length) {
     // ED's effect is the GM's secret (Rigger 2 p. 32): that card goes to the GMs only.
@@ -137,18 +156,30 @@ export function sensorResultHtml(successes: number): string {
 // ================================================================ Missiles (Rigger 2 p. 59)
 
 /**
- * A guided missile fired from a vehicle (documents/index.ts, the attack's dice): continuous lock mode's extra dice (half
- * the vehicle's Sensor), the timing line, and the launch noted on the vehicle for its other Driving Tests this turn.
+ * A guided missile fired from a vehicle (documents/index.ts planAttack, the attack's dice): continuous lock mode's extra
+ * dice (half the vehicle's Sensor) and the timing line. Writes nothing (planAttack also runs for a preview and before
+ * the attack's refusals): the launch is noted by noteLaunch once the attack rolled.
  */
 export function missileFire(mv: any, guidance: number, mode: unknown): { dice: number; note: string } {
   if (!X.on('missiles') || !(Number(guidance) > 0)) return { dice: 0, note: '' };
   const sensor = Number(mv?.system?.derived?.working?.sensor ?? mv?.system?.sensor ?? 0);
   const dice = mv ? X.continuousDice(mode, sensor) : 0;
   const n = now();
-  if (mode === 'continuous' && mv && n.round !== null && canWrite(mv)) void mv.setFlag?.(SYSTEM_ID, LOCK_FLAG, { round: n.round, combatId: String(n.combatId ?? '') });
   const timing = n.round !== null ? tx('SR2E.VRig98.Missile.phase0') : '';
   const lock = mode === 'continuous' ? tx('SR2E.VRig98.Missile.continuous', { dice }) : '';
   return { dice, note: [lock, timing].filter(Boolean).join(' ') };
+}
+
+/**
+ * After a mounted attack rolled (documents/index.ts #attackWith): a guided missile fired in continuous lock mode is noted
+ * on the firing vehicle for its other Driving Tests this turn (Rigger 2 p. 59). Awaited; nothing under 'v971'.
+ */
+export async function noteLaunch(mounted: { vehicleUuid?: string } | null | undefined, guidance: number, mode: unknown): Promise<void> {
+  if (!X.on('missiles') || mode !== 'continuous' || !(Number(guidance) > 0) || !mounted) return;
+  const mv: any = sync(mounted.vehicleUuid);
+  const n = now();
+  if (!mv || n.round === null || !canWrite(mv)) return;
+  await mv.setFlag?.(SYSTEM_ID, LOCK_FLAG, { round: n.round, combatId: String(n.combatId ?? '') });
 }
 
 /** The fire-mode row of the mounted-fire dialog for a guided missile ('' when it isn't one or under 'v971'). */
@@ -191,6 +222,13 @@ export function commandLost(rigger: any): string {
   return X.on('miji') && X.channelLost(monitorOf(rigger), 'command') ? tx('SR2E.VRig98.Miji.commandLost', { name: String(rigger?.name ?? '') }) : '';
 }
 
+/** A group command refused for a lost command channel: one warning for the whole network (true: refused). */
+export function commandRefused(rigger: any): boolean {
+  const lost = commandLost(rigger);
+  if (lost) warn(lost);
+  return Boolean(lost);
+}
+
 /** Why a rigger can't rig a drone through the deck now (the simsense carrier is lost, Rigger 2 p. 70); '' when they can. */
 export function simsenseLost(rigger: any): string {
   return X.on('miji') && X.channelLost(monitorOf(rigger), 'simsense') ? tx('SR2E.VRig98.Miji.simsenseLost', { name: String(rigger?.name ?? '') }) : '';
@@ -211,7 +249,8 @@ export function runsDrone(rigger: any, drone: any): boolean {
 
 /**
  * After initiative is rolled (documents/index.ts SR2Combat.rollInitiative): each network drone takes its rigger's score
- * (it acts in the rigger's phase, the rigger first: networkOrder). Only combatants this client may update.
+ * (it acts in the rigger's phase, the rigger first: networkOrder). Only combatants this client may update. Foundry has
+ * already fixed `turn` by then: on a GM's client the acting combatant stays the acting one (as SR2Combat.alignParties).
  */
 export async function networkPhase(combat: any): Promise<void> {
   if (!X.on('dronePhase')) return;
@@ -222,7 +261,13 @@ export async function networkPhase(combat: any): Promise<void> {
     const r = list.find((o: any) => o !== c && o.initiative !== null && o.initiative !== undefined && runsDrone(o.actor, c.actor));
     if (r && Number(c.initiative) !== Number(r.initiative)) updates.push({ _id: String(c.id), initiative: Number(r.initiative) });
   }
-  if (updates.length) await combat.updateEmbeddedDocuments('Combatant', updates);
+  if (!updates.length) return;
+  const current: string | null = combat?.started ? (combat.combatant?.id ?? null) : null;
+  await combat.updateEmbeddedDocuments('Combatant', updates);
+  if (current && isGm() && typeof combat.update === 'function') {
+    const i = [...(combat.turns ?? [])].findIndex((c: any) => c?.id === current);
+    if (i >= 0 && i !== combat.turn) await combat.update({ turn: i });
+  }
 }
 
 /** The initiative order between two combatants at the same score: a rigger before their network drones (0: no say). */
@@ -259,7 +304,9 @@ export async function comprehends(rigger: any, drone: any, tn?: number | null): 
 
 /** The sheet's captain's chair button (null when it doesn't apply). */
 export function chairContext(actor: any): { on: boolean } | null {
-  if (!X.on('captainsChair') || !(Number(actor?.system?.derived?.rigging?.rcd ?? 0) > 0)) return null;
+  // Rigger 2 p. 65: the chair keeps the control rig's Initiative, so it needs a rig as well as the deck.
+  const r = actor?.system?.derived?.rigging;
+  if (!X.on('captainsChair') || !(Number(r?.rcd ?? 0) > 0) || !(Number(r?.vcr ?? 0) > 0)) return null;
   return { on: Boolean(flag(actor, CHAIR_FLAG)) };
 }
 
@@ -294,15 +341,22 @@ export function fluxCheck(flux: number, km: number): SignalCheck {
   return { checked: true, inRange, far, rangeKm, km: d, modifiers: far && s.farTn ? [{ id: 'weakSignal', label: tx('SR2E.Card.Mod.weakSignal'), value: s.farTn }] : [], note };
 }
 
+/** The rigger's best working remote control deck (as documents/index.ts #droneLinkFacts picks it). */
+function deckOf(rigger: any): any | null {
+  return [...(rigger?.items ?? [])].filter((i: any) => i.type === 'gear' && Number(i.system?.rcdRating ?? 0) > 0 && !i.system?.damaged && i.system?.carried !== false)
+    .sort((a: any, b: any) => Number(b.system.rcdRating) - Number(a.system.rcdRating))[0] ?? null;
+}
+
 /**
  * A rigger's remote link to a vehicle (documents/index.ts remoteLink): the deck's Flux after the scene's conditions,
- * the link's encryption and the ECCM of the vehicle the deck rides in. Null under 'v971'.
+ * the link's encryption (the better of the drone's and the deck's, rules/dronelink.ts linkEncryption) and the
+ * network's ECCM (eccmOf: the vehicle the deck rides in, or ECCM gear). Null under 'v971'.
  */
 export function linkFlux(rigger: any, vehicle: any, flux: number, km: number): { flux: number; check: SignalCheck } | null {
   if (!X.on('flux')) return null;
   const scene = vehicle?.sceneHere?.() ?? (globalThis as any).canvas?.scene ?? null;
-  const aboard: any = rigger?.vehicleAboard?.() ?? null;
-  const f = X.modifiedFlux({ flux, conditions: sceneConditions(scene), encryption: droneLinkOf(vehicle?.system).encryption > 0, eccm: Number(aboard?.system?.eccm ?? 0) });
+  const encryption = linkEncryption({ drone: droneLinkOf(vehicle?.system).encryption, rcd: Number(deckOf(rigger)?.system?.radio?.encryption ?? 0) });
+  const f = X.modifiedFlux({ flux, conditions: sceneConditions(scene), encryption: encryption > 0, eccm: eccmOf(rigger) });
   return { flux: f.flux, check: fluxCheck(f.flux, km) };
 }
 
@@ -384,11 +438,13 @@ export async function mijiDialog(intruder: any): Promise<void> {
 }
 
 /**
- * The MIJI Test (Rigger 2 p. 69), rolled on the intruder's client: both sides' dice on one card. The degradation goes on
- * the target network's Signal Monitor at once on a GM's client (or a network this user owns and shares a side with),
- * else through the card's Apply (GM) button; an interference attempt lost degrades the intruder's own system channel.
+ * The MIJI Test (Rigger 2 p. 69). On a GM's client both sides are rolled on one card and the degradation goes on the
+ * target network's Signal Monitor at once (an interference attempt lost degrades the intruder's own system channel). On
+ * a player's client only the intruder's side is rolled: the card's Apply (GM) button rolls the defender's side on the
+ * GM's client and writes the result (applyMiji). Returns the outcome when both sides were rolled here, else
+ * `{ target: 0, self: 0, pending: true }`.
  */
-export async function mijiTest(intruder: any, target: any, op: X.MijiOp, channel: X.Channel, mod = 0): Promise<{ target: number; self: number } | null> {
+export async function mijiTest(intruder: any, target: any, op: X.MijiOp, channel: X.Channel, mod = 0): Promise<{ target: number; self: number; pending?: boolean } | null> {
   if (!intruder || !target) return null;
   const plan = X.mijiPlan({ op, channel, ...mijiValues(intruder, target) });
   if (plan.why) { warn(tKey(plan.why)); return null; }
@@ -400,19 +456,32 @@ export async function mijiTest(intruder: any, target: any, op: X.MijiOp, channel
   const rolls: any[] = [];
   const mods: TargetNumberModifier[] = extra ? [{ id: 'other', label: tx('SR2E.Card.Mod.other'), value: extra }] : [];
   const mine = await rollTest(plan.intruder.dice, plan.intruder.tn, rolls, mods);
+  const head = `<p><strong>${tx('SR2E.VRig98.Miji.card', { name: name(intruder), op: escHtml(opLabel(op)), channel: escHtml(chLabel(channel)), target: name(target) })}</strong></p>`;
+  const mineHtml = rollHtml(tx('SR2E.VRig98.Miji.intruderRoll', { name: raw(intruder) }), mine);
+  const flags = { [SYSTEM_ID]: { vrig98Miji: { intruderUuid: String(intruder.uuid), targetUuid: String(target.uuid), op, channel, mod: extra } } };
+  if (!isGm()) {
+    // The defender's dice are the GM side's: rolled on the GM's client at Apply, never taken from this card.
+    const button = `<p><button type="button" data-sr2e-action="vrig98Apply">${tx('SR2E.VRig98.Miji.apply')}</button></p>`;
+    await post(`${head}${mineHtml}<p>${tx('SR2E.VRig98.Miji.pending', { target: name(target) })}</p>${button}`, { speaker: speaker(intruder), rolls, flags });
+    return { target: 0, self: 0, pending: true };
+  }
   const theirs = await rollTest(plan.defender.dice, plan.defender.tn, rolls);
   const res = X.mijiOutcome(op, mine.successes, theirs.successes);
-  const lines = rollHtml(tx('SR2E.VRig98.Miji.intruderRoll', { name: raw(intruder) }), mine) + rollHtml(tx('SR2E.VRig98.Miji.defenderRoll', { name: raw(target) }), theirs);
-  const self = res.self ? `<p>${tx('SR2E.VRig98.Miji.backfire', { name: name(intruder), boxes: res.self })}</p>` : '';
-  const direct = isGm();
-  const button = res.target && !direct ? `<p><button type="button" data-sr2e-action="vrig98Apply">${tx('SR2E.VRig98.Miji.apply')}</button></p>` : '';
-  await post(`<p><strong>${tx('SR2E.VRig98.Miji.card', { name: name(intruder), op: escHtml(opLabel(op)), channel: escHtml(chLabel(channel)), target: name(target) })}</strong></p>${lines}<p><strong>${res.target ? tx('SR2E.VRig98.Miji.hit', { boxes: res.target, channel: escHtml(chLabel(channel)), target: name(target) }) : tx('SR2E.VRig98.Miji.held', { target: name(target) })}</strong></p>${self}${button}`, {
-    speaker: speaker(intruder), rolls,
-    flags: { [SYSTEM_ID]: { vrig98Miji: { intruderUuid: String(intruder.uuid), targetUuid: String(target.uuid), op, channel, mod: extra } } },
-  });
-  if (res.target && direct) await degradeNetwork(target, channel, res.target, op, { rating: Math.max(v.intruderRcd, v.intruderEcm), uuid: String(intruder.uuid) });
-  if (res.self && canWrite(intruder)) await degradeNetwork(intruder, 'system', res.self, op, { rating: v.targetRcd, uuid: String(target.uuid) });
+  await post(`${head}${mineHtml}${outcomeHtml(intruder, target, channel, res, theirs)}`, { speaker: speaker(intruder), rolls, flags });
+  await gmLocked(() => writeOutcome(intruder, target, op, channel, res, v));
   return res;
+}
+
+/** The defender's roll and the outcome lines of a MIJI card. */
+function outcomeHtml(intruder: any, target: any, channel: X.Channel, res: { target: number; self: number }, theirs: SuccessTestResult): string {
+  const self = res.self ? `<p>${tx('SR2E.VRig98.Miji.backfire', { name: name(intruder), boxes: res.self })}</p>` : '';
+  return `${rollHtml(tx('SR2E.VRig98.Miji.defenderRoll', { name: raw(target) }), theirs)}<p><strong>${res.target ? tx('SR2E.VRig98.Miji.hit', { boxes: res.target, channel: escHtml(chLabel(channel)), target: name(target) }) : tx('SR2E.VRig98.Miji.held', { target: name(target) })}</strong></p>${self}`;
+}
+
+/** A MIJI result on the two monitors (a GM's client; the intruder's own monitor also on its owner's). */
+async function writeOutcome(intruder: any, target: any, op: X.MijiOp, channel: X.Channel, res: { target: number; self: number }, v: ReturnType<typeof mijiValues>): Promise<void> {
+  if (res.target) await degradeNetwork(target, channel, res.target, op, { rating: Math.max(v.intruderRcd, v.intruderEcm), uuid: String(intruder.uuid) });
+  if (res.self) await degradeNetwork(intruder, 'system', res.self, op, { rating: v.targetRcd, uuid: String(target.uuid) });
 }
 
 /** Write boxes on a network's monitor (a GM's client, or the network's own owner), with its card line when the channel is lost. */
@@ -438,15 +507,32 @@ async function replay(faces: number[], dice: number, tn: number, mods: TargetNum
   } catch { return null; }
 }
 
+/** The applied-card keys of a MIJI card: its id and its dice signature (rules/vrig98.ts mijiSignature). */
+function appliedKeys(card: any, c: any, faces: readonly number[]): { id: string; sig: string } {
+  return { id: `id|${String(card?.id ?? '').slice(0, 64)}`, sig: X.mijiSignature({ intruderUuid: String(c.intruderUuid ?? ''), targetUuid: String(c.targetUuid ?? ''), op: String(c.op ?? ''), channel: String(c.channel ?? ''), mod: int(c.mod, 0, 12, 0), faces }) };
+}
+/** Whether the target network's GM-written record already holds a key ('id' or 'sig'), or ''. */
+function appliedBefore(target: any, keys: { id: string; sig: string }): '' | 'id' | 'sig' {
+  const list = X.appliedList(flag(target, APPLIED_FLAG));
+  return list.includes(keys.id) ? 'id' : list.includes(keys.sig) ? 'sig' : '';
+}
+const refuseApplied = (why: '' | 'id' | 'sig', target: any): boolean => {
+  if (why === 'id') warn(tx('SR2E.VRig98.alreadyDone'));
+  else if (why === 'sig') warn(tx('SR2E.VRig98.Miji.sameDice', { target: String(target?.name ?? '') }));
+  return Boolean(why);
+};
+
 /**
  * GM side: a MIJI card's Apply. Only a card whose author owns the intruder; the plan is made again from the documents
- * now (the same dice and TNs, the player's own TN modifier counted only upward), the card's own dice counted again,
- * and the result written on the target network's monitor. Once per card.
+ * now (the same dice and TNs, the player's own TN modifier counted only upward), only the intruder's dice are counted
+ * again from the card, the defender's test is rolled here on the GM's client, both shown in the GM's dialog, and the
+ * result is written on the monitors under the GM lock. Once per card and once per dice signature, remembered on the
+ * target network (APPLIED_FLAG, GM-written), never on the card. True when the result was written.
  */
 export async function applyMiji(card: any): Promise<boolean> {
   if (!isGm()) { warn(tx('SR2E.VRig98.gmOnly')); return false; }
   const c: any = card?.flags?.[SYSTEM_ID]?.vrig98Miji;
-  if (!c || card?.getFlag?.(SYSTEM_ID, 'vrig98Done')) { warn(tx('SR2E.VRig98.alreadyDone')); return false; }
+  if (!c || typeof c !== 'object') { warn(tx('SR2E.VRig98.refused')); return false; }
   const intruder: any = sync(c.intruderUuid), target: any = sync(c.targetUuid);
   const op = (X.OPS as readonly string[]).includes(c.op) ? c.op as X.MijiOp : null;
   const channel = (X.CHANNELS as readonly string[]).includes(c.channel) ? c.channel as X.Channel : null;
@@ -457,20 +543,38 @@ export async function applyMiji(card: any): Promise<boolean> {
   if (plan.why) { warn(tKey(plan.why)); return false; }
   const extra = int(c.mod, 0, 12, 0);
   const faces = cardFaces(card);
+  const keys = appliedKeys(card, c, faces);
+  if (refuseApplied(appliedBefore(target, keys), target)) return false;
   const mine = await replay(faces, plan.intruder.dice, plan.intruder.tn, extra ? [{ id: 'other', label: '', value: extra }] : []);
-  const theirs = mine ? await replay(faces, plan.defender.dice, plan.defender.tn, []) : null;
-  if (!mine || !theirs) { warn(tx('SR2E.VRig98.refused')); return false; }
+  if (!mine) { warn(tx('SR2E.VRig98.refused')); return false; }
+  const rolls: any[] = [];
+  const theirs = await rollTest(plan.defender.dice, plan.defender.tn, rolls);
   const res = X.mijiOutcome(op, mine.successes, theirs.successes);
-  if (!res.target) { await card.setFlag?.(SYSTEM_ID, 'vrig98Done', true); return false; }
-  const ok = await gmMay(card, { title: tx('SR2E.VRig98.Miji.gmTitle'), lines: [tx('SR2E.VRig98.Miji.gmLine', { name: String(intruder.name ?? ''), boxes: res.target, channel: chLabel(channel), target: String(target.name ?? '') })], target: String(target.uuid), sources: [String(intruder.uuid)], always: true });
+  const lines = [
+    tx('SR2E.VRig98.Miji.gmIntruder', { name: raw(intruder), dice: plan.intruder.dice, tn: mine.targetNumber, faces: diceText(mine) || '-', successes: mine.successes }),
+    tx('SR2E.VRig98.Miji.gmDefender', { name: raw(target), dice: plan.defender.dice, tn: theirs.targetNumber, faces: diceText(theirs) || '-', successes: theirs.successes }),
+    tx('SR2E.VRig98.Miji.gmGear', { pem: v.pem, ecm: v.intruderEcm, target: raw(target), eccm: eccmOf(target) }),
+    res.target ? tx('SR2E.VRig98.Miji.gmResult', { boxes: res.target, channel: chLabel(channel), target: raw(target) }) : tx('SR2E.VRig98.Miji.gmHeld', { target: raw(target) }),
+    ...(res.self ? [tx('SR2E.VRig98.Miji.gmBackfire', { boxes: res.self, name: raw(intruder) })] : []),
+  ];
+  // The GM's dialog before the lock (never a dialog while holding it).
+  const ok = await gmMay(card, { title: tx('SR2E.VRig98.Miji.gmTitle'), lines, target: String(target.uuid), sources: [String(intruder.uuid)], always: true });
   if (!ok) return false;
-  await card.setFlag?.(SYSTEM_ID, 'vrig98Done', true);
-  return degradeNetwork(target, channel, res.target, op, { rating: Math.max(v.intruderRcd, v.intruderEcm), uuid: String(intruder.uuid) });
+  return gmLocked(async () => {
+    // Again under the lock: another click (or GM) may have applied it meanwhile.
+    if (refuseApplied(appliedBefore(target, keys), target)) return false;
+    await target.setFlag(SYSTEM_ID, APPLIED_FLAG, X.withApplied(flag(target, APPLIED_FLAG), [keys.id, keys.sig]));
+    // The acting-author guard cancels a write quietly: only a record that landed counts as applied.
+    if (appliedBefore(target, keys) !== 'id') { warn(tx('SR2E.VRig98.refused')); return false; }
+    await post(`<p><strong>${tx('SR2E.VRig98.Miji.appliedCard', { name: name(intruder), op: escHtml(opLabel(op)), channel: escHtml(chLabel(channel)), target: name(target) })}</strong></p>${rollHtml(tx('SR2E.VRig98.Miji.intruderRoll', { name: raw(intruder) }), mine)}${outcomeHtml(intruder, target, channel, res, theirs)}`, { speaker: speaker(target), rolls });
+    await writeOutcome(intruder, target, op, channel, res, v);
+    return true;
+  });
 }
 
 /** The network's ECCM for regenerating (Rigger 2 p. 72): the vehicle the deck rides in, else ECCM gear ("ECCM 4"). */
 function eccmOf(rigger: any): number {
-  return Math.max(Number(rigger?.vehicleAboard?.()?.system?.eccm ?? 0) || 0, ratedGear(rigger, ECCM));
+  return Math.min(X.EW_MAX, Math.max(Number(rigger?.vehicleAboard?.()?.system?.eccm ?? 0) || 0, ratedGear(rigger, ECCM)));
 }
 
 /** Regenerate one channel (Rigger 2 p. 72): the network's owner, a Complex Action, ECCM vs the intruder's rating + 3. */
@@ -513,9 +617,19 @@ export function signalContext(actor: any): { text: string; any: boolean } | null
 }
 
 /** The chat card buttons of this file. */
+/** The MIJI cards whose Apply is running on this client (a double click is one Apply). */
+const busy = new Set<string>();
+
 export async function onCard(message: any, button: HTMLButtonElement, action: string): Promise<void> {
   if (action === 'vrig98Apply') {
-    button.disabled = true;
-    await applyMiji(message);
+    const id = String(message?.id ?? '');
+    if (busy.has(id)) return;
+    busy.add(id);
+    if (button) button.disabled = true;
+    try {
+      const done = await applyMiji(message);
+      // Refused or cancelled: the GM can press it again (an applied card stays refused by the GM-side record).
+      if (!done && button) button.disabled = false;
+    } finally { busy.delete(id); }
   }
 }
