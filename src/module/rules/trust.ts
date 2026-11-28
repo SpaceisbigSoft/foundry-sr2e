@@ -12,7 +12,7 @@
  * So a GM-side change made because of a card must be bound to the card's author: the author is a GM, or owns the
  * actor the change comes from (the roller, the healer, the holder), and the values are bounded here.
  */
-import { MX97_OPS } from './mxic97.ts';
+import { MX97_OPS, MX97_MANEUVER_OPS } from './mxic97.ts';
 import { describeBundle } from './arcanum.ts';
 import { t as tx, tCount } from '../helpers/i18n.ts';
 import { RULES } from './config.ts';
@@ -433,8 +433,8 @@ export function safeAutoApply(action: string, flags: Record<string, any>, trust:
   }
 }
 
-// keep in step with MX97_MANEUVER_OPS (rules/mxic97.ts)
-const MANEUVER97 = ['parry', 'unparry', 'evade', 'unevade', 'exposed', 'unexposed', 'pos', 'unpos'] as const;
+// The maneuver ops that may apply by themselves (rules/mxic97.ts MX97_MANEUVER_OPS).
+const MANEUVER97 = MX97_MANEUVER_OPS;
 
 /**
  * Pure (v0.97.1, C; owner 27 Nov 2026): a host change that is only a decker's Matrix maneuver result (parry, evade, a
