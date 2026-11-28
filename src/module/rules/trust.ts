@@ -255,7 +255,7 @@ export function hostChangeShapeOk(f: any): boolean {
     && intIn(f.passcode97.days, 0, 180) && ['user', 'superuser', 'supervisor'].includes(f.passcode97.level))) return false;
   if (f.located97 !== undefined && !(onlyKeys(f.located97, ['deckerUuid', 'uuids']) && safeStr(f.located97.deckerUuid, 400) && strList(f.located97.uuids, 50))) return false;
   // v0.97.0 (RULES.MXIC_V97): a decker's request: who and which (the GM side reads every value itself).
-  if (f.mx97 !== undefined && !(onlyKeys(f.mx97, ['op', 'deckerUuid', 'vs', 'id', 'net', 'cardId']) && (MX97_OPS as readonly string[]).includes(f.mx97.op)
+  if (f.mx97 !== undefined && !(onlyKeys(f.mx97, ['op', 'deckerUuid', 'vs', 'id', 'net', 'cardId', 'seq']) && (f.mx97.seq === undefined || (typeof f.mx97.seq === 'number' && Number.isFinite(f.mx97.seq) && f.mx97.seq >= 0)) && (MX97_OPS as readonly string[]).includes(f.mx97.op)
     && safeStr(f.mx97.deckerUuid, 400) && optStr(f.mx97.vs) && optStr(f.mx97.id, 400) && optStr(f.mx97.cardId, 60) && (f.mx97.net === undefined || intIn(f.mx97.net, 0, 30)))) return false;
   return true;
 }

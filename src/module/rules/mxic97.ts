@@ -25,14 +25,15 @@ export const on = (key: MxIc97Switch): boolean => (V() as any)[key] === 'book';
  * Detection Factor points this decker loses to suppression (VR2 p. 40: 1 per suppressed IC), from the host's own
  * record (`hostRaw`: the host's mxic97 flag, written by the GM side); 0 under 'v965'.
  */
-export function suppressedDfLoss(hostRaw: unknown, deckerUuid: string): number {
+export function suppressedDfLoss(hostRaw: unknown, deckerUuid: string, run = ''): number {
   if (!on('suppress') || !deckerUuid) return 0;
-  return hostMx(hostRaw).suppressed.filter((s) => s.decker === deckerUuid).length;
+  // Only this run's (`run`: the decker's jack-in stamp): the reduction ends when the decker leaves the system (VR2 p. 40).
+  return hostMx(hostRaw).suppressed.filter((s) => s.decker === deckerUuid && s.run === String(run ?? '')).length;
 }
 
 /** The Detection Factor after suppression (never below the minimum TN). */
-export function suppressedDf(df: number, hostRaw: unknown, deckerUuid: string): number {
-  const loss = suppressedDfLoss(hostRaw, deckerUuid);
+export function suppressedDf(df: number, hostRaw: unknown, deckerUuid: string, run = ''): number {
+  const loss = suppressedDfLoss(hostRaw, deckerUuid, run);
   return loss > 0 ? minTn(num(df) - loss) : num(df);
 }
 
@@ -315,11 +316,13 @@ export function defuseOp97<T extends { id: string; utility?: string }>(o: T): T 
 export interface HostMx {
   parry: Array<{ decker: string; vs: string; net: number; id: string }>;
   evade: Array<{ decker: string; vs: string; net: number; tallyAt: number; round: number; worldTime: number; combatId: string }>;
-  suppressed: Array<{ decker: string; id: string; name: string; points: number }>;
+  suppressed: Array<{ decker: string; id: string; name: string; points: number; run: string }>;
   /** Positions won against a decker (`vs` gets `net` off its next attack on `decker`; VR2 p. 122: a backfire). */
   exposed: Array<{ decker: string; vs: string; net: number; id: string }>;
   /** IC whose crash choice the GM side has offered (one choice per crash, VR2 p. 40). */
   offered: string[];
+  /** The newest request applied per kind, decker and opponent (`k`), so an older one that arrives later is ignored. */
+  seen: Array<{ k: string; seq: number }>;
 }
 
 const rows = (raw: unknown): any[] => (Array.isArray(raw) ? raw.filter((x) => x && typeof x === 'object').slice(0, LIST_CAP * 4) : []);
@@ -330,14 +333,29 @@ export function hostMx(raw: unknown): HostMx {
     parry: rows(r.parry).filter((x) => str(x.decker) && str(x.vs) && str(x.id)).map((x) => ({ decker: str(x.decker), vs: str(x.vs), net: Math.min(30, whole(x.net)), id: str(x.id, 60) })),
     evade: rows(r.evade).filter((x) => str(x.decker) && str(x.vs)).map((x) => ({ decker: str(x.decker), vs: str(x.vs), net: Math.min(30, whole(x.net)), tallyAt: Math.min(9999, whole(x.tallyAt)),
       round: Number.isFinite(Number(x.round)) ? Math.floor(Number(x.round)) : -1, worldTime: num(x.worldTime), combatId: str(x.combatId, 60) })),
-    suppressed: rows(r.suppressed).filter((x) => str(x.decker) && str(x.id)).map((x) => ({ decker: str(x.decker), id: str(x.id), name: str(x.name, 120), points: Math.min(30, whole(x.points)) })),
+    suppressed: rows(r.suppressed).filter((x) => str(x.decker) && str(x.id)).map((x) => ({ decker: str(x.decker), id: str(x.id), name: str(x.name, 120), points: Math.min(30, whole(x.points)), run: str(x.run, 60) })),
     exposed: rows(r.exposed).filter((x) => str(x.decker) && str(x.vs) && str(x.id)).map((x) => ({ decker: str(x.decker), vs: str(x.vs), net: Math.min(30, whole(x.net)), id: str(x.id, 60) })),
+    seen: rows(r.seen).filter((x) => str(x.k, 900)).map((x) => ({ k: str(x.k, 900), seq: Math.min(SEQ_MAX, whole(x.seq)) })),
     offered: (Array.isArray(r.offered) ? r.offered : []).filter((x: unknown) => typeof x === 'string' && x).slice(-LIST_CAP * 4).map((x: string) => x.slice(0, 400)),
   };
 }
 
 /** A decker's request to the GM side (the `mx97` key of a host change): what to record, never how much is trusted. */
-export interface Mx97Change { op: 'parry' | 'unparry' | 'evade' | 'unevade' | 'exposed' | 'unexposed' | 'bomb' | 'count' | 'suppress' | 'release'; deckerUuid: string; vs?: string; id?: string; net?: number; cardId?: string }
+export interface Mx97Change { op: 'parry' | 'unparry' | 'evade' | 'unevade' | 'exposed' | 'unexposed' | 'bomb' | 'count' | 'suppress' | 'release'; deckerUuid: string; vs?: string; id?: string; net?: number; cardId?: string; seq?: number }
+/** The largest request sequence kept (a millisecond time stamp fits). */
+export const SEQ_MAX = 9e15;
+
+/**
+ * Whether a maneuver request is not older than the newest already applied for the same kind, decker and opponent (a
+ * Karma re-roll's request applied before the first one's): the record after taking it, or null to ignore it.
+ */
+export function takeSeq(rec: HostMx, kind: string, decker: string, vs: string, seq: number | undefined): HostMx | null {
+  const k = `${kind}|${decker}|${vs}`;
+  const before = rec.seen.find((x) => x.k === k);
+  if (seq === undefined) return rec;
+  if (before && before.seq > seq) return null;
+  return { ...rec, seen: [...rec.seen.filter((x) => x.k !== k), { k, seq }].slice(-LIST_CAP * 4) };
+}
 /** The requests a host change may carry (a crash's choice is the GM side's own, never a request). */
 export const MX97_OPS = ['parry', 'unparry', 'evade', 'unevade', 'exposed', 'unexposed', 'bomb', 'count', 'suppress', 'release'] as const;
 
@@ -361,6 +379,7 @@ export function cleanMx97(raw: unknown): Mx97Change | null {
     op: r.op, deckerUuid: str(r.deckerUuid),
     ...(str(r.vs) ? { vs: str(r.vs) } : {}), ...(str(r.id) ? { id: str(r.id) } : {}), ...(str(r.cardId, 60) ? { cardId: str(r.cardId, 60) } : {}),
     ...(r.net !== undefined ? { net: Math.min(30, whole(r.net)) } : {}),
+    ...(r.seq !== undefined && Number.isFinite(Number(r.seq)) ? { seq: Math.min(SEQ_MAX, whole(r.seq)) } : {}),
   };
 }
 

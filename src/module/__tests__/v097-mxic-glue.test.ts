@@ -671,3 +671,51 @@ describe('v0.97.0 review: forged requests (VR2 pp. 40–41, 122)', () => {
     assert.equal(h.flags[F].mxic97.exposed.length, 0, 'used up');
   });
 });
+
+describe('v0.97.0 test-plan fixes', () => {
+  test('a relaunched IC that crashes again: no second choice, the plain tally instead', async () => {
+    const h = host();
+    const ic = icIn(h);
+    const d = inside(h);
+    g.game.actors = [d, ic];
+    faces.push(1, 1, 1, 1);
+    await ic.resistMatrixDamage({ targetUuid: ic.uuid, melee: false, damageType: 'physical', power: 6, level: 'D', matrix: true, matrixAttacker: d.uuid });
+    assert.equal(chat.filter((m: any) => m.flags?.[F]?.mxic97Choice).length, 1);
+    assert.equal(h.system.tallies.find((t: any) => t.key === d.uuid), undefined);
+    ic.system.matrix.monitor = 0; ic.system.prepareDerivedData();
+    faces.push(1, 1, 1, 1);
+    await ic.resistMatrixDamage({ targetUuid: ic.uuid, melee: false, damageType: 'physical', power: 6, level: 'D', matrix: true, matrixAttacker: d.uuid });
+    assert.equal(chat.filter((m: any) => m.flags?.[F]?.mxic97Choice).length, 1, 'no second choice');
+    assert.equal(h.system.tallies.find((t: any) => t.key === d.uuid)?.tally, 6, 'the tally');
+  });
+  test('suppression lasts the run: jacking in again brings the Detection Factor back', async () => {
+    const h = host();
+    const ic = icIn(h);
+    const d = inside(h);
+    prog(d, { id: 'sl', type: 'program', name: 'Sleaze', system: { kind: 'sleaze', rating: 5 } });
+    g.game.actors = [d, ic];
+    await d.update(MXG.runStartUpdate(d));
+    ic.system.matrix.monitor = 10; ic.system.prepareDerivedData();
+    await MXG.offerCrash(h, d, ic);
+    await MXG.onCard(card('mxic97Choice'), btn(), 'mxic97Suppress');
+    assert.equal(d.liveDetectionFactor(), 4);
+    d.system.prepareDerivedData();
+    assert.equal(d.system.derived.matrix.detectionFactor, 4, 'the sheet (prepared again)');
+    await d.update(MXG.runStartUpdate(d));
+    assert.equal(d.liveDetectionFactor(), 5, 'a new run');
+    assert.equal(d.system.derived.matrix.detectionFactor, 5);
+  });
+  test('maneuver requests apply in order: a re-roll\'s unparry applied first beats the first roll\'s parry', async () => {
+    const h = host();
+    const ic = icIn(h);
+    const d = inside(h);
+    g.game.actors = [d, ic];
+    const parry = { op: 'parry', deckerUuid: d.uuid, vs: ic.uuid, id: 'e1', net: 3, seq: 100 };
+    const unparry = { op: 'unparry', deckerUuid: d.uuid, vs: ic.uuid, id: 'e1', seq: 200 };
+    await SR2Actor.applyHostChange(h.uuid, { mx97: unparry });
+    await SR2Actor.applyHostChange(h.uuid, { mx97: parry });
+    assert.equal((h.flags[F].mxic97.parry ?? []).length, 0, 'the older parry is ignored');
+    await SR2Actor.applyHostChange(h.uuid, { mx97: { ...parry, seq: 300 } });
+    assert.equal(h.flags[F].mxic97.parry[0].net, 3, 'a newer one applies');
+  });
+});
