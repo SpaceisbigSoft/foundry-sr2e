@@ -35,6 +35,8 @@ import { confirmAdvRevertCard, applyAdvRevertAsGm } from './revert942.ts';
 import { RULES, autoResists, blastRadius, blastLoss, scatter, damageLabel, scatterDiceFor, scatterMetres, confinedBlast, throwBackScatter, blastScatterDice, fusedScatter, canThrowBack, stopsAtWalls, grenadeKind, toxinOnsetLabel, scatterDirection, bearingDeg, type TargetNumberModifier } from '../rules/index.ts';
 import { modKey } from '../rules/dice.ts';
 import * as SP96G from './spirits96.ts';
+// v0.97.0 (RULES.MXLIFE_V97): the decker's life outside a fight (applications/mxlife97.ts).
+import { onCard as onCardMxl97 } from './mxlife97.ts';
 import { isLeadGm, isPromptWindow, leadSettled } from './leader.ts';
 import { t as tx, tCount, tKey } from '../helpers/i18n.ts';
 // v0.93.5: the next step on a card, and the attack banner's waiting state (rules/cards935.ts).
@@ -3641,6 +3643,8 @@ function dispatch(message: any, button: HTMLButtonElement, action: string): Prom
   else if (action.startsWith('c95')) return onCard95(message, button, action);
   // v0.96.0 (RULES.HEALTH_V96): the health book rules' card buttons (applications/health96.ts).
   else if (action.startsWith('h96')) return onCard96(message, button, action);
+  // v0.97.0 (RULES.MXLIFE_V97): the psychotropic recovery card (applications/mxlife97.ts).
+  else if (action.startsWith('mxl97')) return onCardMxl97(message, button, action);
   else if (action === 'evict') return onEvict(message, button);
   else if (action === 'drugCrash') return onDrugCrash(message, button);
   else if (action === 'karmaReroll' || action === 'avoidDisaster') return onKarma(message, button, action);

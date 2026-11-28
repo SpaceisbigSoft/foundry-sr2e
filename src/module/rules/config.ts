@@ -31,6 +31,7 @@ import { HEALTH_V96 } from './config96/health.ts';
 import { FIRE_V95 } from './config95/fire.ts';
 import { MELEE_V95 } from './config95/melee.ts';
 import { SPIRITS_V96 } from './config96/spirits.ts';
+import { MXLIFE_V97 } from './config97/mxlife.ts';
 
 /**
  * SR2e rules constants.
@@ -3422,6 +3423,8 @@ export const RULES = {
   SPIRITS_V96,
   /** v0.96.0: rules completeness, Damage, health and hazards (rules/config96/health.ts). */
   HEALTH_V96,
+  /** v0.97.0: rules completeness, the decker's life outside a fight (rules/config97/mxlife.ts). */
+  MXLIFE_V97,
 } as const;
 
 export type RangeBand = keyof typeof RULES.RANGE_TN;

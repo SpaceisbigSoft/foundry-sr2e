@@ -180,6 +180,9 @@ import * as SP923 from '../rules/spirits923.ts';
 // v0.96.0 (RULES.SPIRITS_V96): spirits and astral rules completeness.
 import * as SP96 from '../rules/spirits96.ts';
 import * as SP96G from '../applications/spirits96.ts';
+// v0.97.0 (RULES.MXLIFE_V97): the decker's life outside a fight (rules/mxlife97.ts, applications/mxlife97.ts).
+import * as MXL97 from '../rules/mxlife97.ts';
+import * as MXL97G from '../applications/mxlife97.ts';
 import * as S923 from '../rules/sorcery923.ts';
 import { riggerDumpShock, rcdFlux, castingPoolDice } from '../rules/docs79-drones-magic.ts';
 import * as M923 from '../rules/matrix923.ts';
@@ -1378,7 +1381,7 @@ export interface TestSnapshot {
   /** A sustained power changing attributes (resist 'none'): its targets and the effect id once applied. */
   powerEffect?: FxSpec & { targetUuids: string[]; effectId?: string };
   /** code: writing a program or building a deck part (v0.46.0), once applied. */
-  code?: { mode: 'program' | 'deck'; name: string; baseDays: number; system?: Record<string, unknown>; part?: DeckPart; rating?: number; cost?: number; deckId?: string; applied?: boolean; size?: number; memory?: boolean; projectId?: string };
+  code?: { mode: 'program' | 'deck'; name: string; baseDays: number; system?: Record<string, unknown>; part?: DeckPart; rating?: number; cost?: number; deckId?: string; applied?: boolean; size?: number; memory?: boolean; projectId?: string; cook97?: { dice: number; mpcp: number; rolled?: { days: number; ok: boolean; text: string } } };
   /** v0.49.0: installing a vehicle modification (applied once; a re-roll only changes the time). */
   install?: { vehicleUuid: string; vehicleName: string; index: number; modName: string; rating: number; baseHours: number; payerUuid: string; applied?: boolean; botchApplied?: boolean; projectId?: string };
   /** v0.56.0 learn: learning (or raising) a spell; Karma paid and the spell written once. */
@@ -8426,6 +8429,8 @@ export class SR2Actor extends Actor {
         await SR2Actor.#safehouseTick(a, time);
         await SR2Actor.#trainingTick(a, time);
         await SR2Actor.#projectTick(a, time);
+        // v0.97.0 (RULES.MXLIFE_V97): psychotropic recovery tests falling due, paydata going stale.
+        await MXL97G.lifeTick97(a, time);
         // v0.81.1 (D2-7, RA2-3): the combat whose round ticked, not the GM's viewed one.
         await SR2Actor.burningTick(a, at.round ?? null, (at as any).combatId ?? null);
         await SR2Actor.#repeatPowerTick(a, at.round ?? null, (at as any).combatId ?? null);
@@ -16175,7 +16180,8 @@ export class SR2Actor extends Actor {
     const icSv = icHost?.type === 'host' && !['frame', 'agent'].includes(this.sys.kind) ? Number(icHost.system.securityValue ?? 0) : 0;
     const dice = ic ? (icSv > 0 ? icSv : (this.sys.rating as number)) : (m.bod as number);
     const hardening = ic || RULES.MATRIX_V923.iconHardening !== 'hardening' ? 0 : (m.hardening as number);
-    const armor = soaker('armor');
+    // v0.97.0 (RULES.MXLIFE_V97.otakuArmor): a living persona's free Armor = Willpower (VR2 p. 145).
+    const armor = MXL97G.livingArmor(this, soaker('armor'));
     const result = await successTest({ dice, poolDice: pool, targetNumber: matrixSoakTn(damage.power, hardening, armor?.rating ?? 0), roll: foundryRoller(rolls) });
     if (pool > 0) await this.#spendPool('hacking', pool);
     const before = (this.sys.matrix?.monitor as number | undefined) ?? 0;
@@ -17239,7 +17245,8 @@ export class SR2Actor extends Actor {
   otakuChannel(sub: string): number {
     if (!this.sys.derived?.matrix?.living) return 0;
     const r = Math.max(0, Math.floor(Number(this.sys.matrix?.channels?.[sub] ?? 0)));
-    return RULES.MATRIX.otaku.channels.maxFromMpcp ? Math.min(r, otakuCap(this.sys.derived.matrix.mpcp ?? 0)) : r;
+    // v0.97.0 (RULES.MXLIFE_V97.otakuChannels): a channel is a skill, not capped by the MPCP (VR2 p. 144).
+    return MXL97.channelCapped() ? Math.min(r, otakuCap(this.sys.derived.matrix.mpcp ?? 0)) : r;
   }
 
   /** Raise a channel by one for Good Karma (at most MPCP). */
@@ -17249,8 +17256,9 @@ export class SR2Actor extends Actor {
     if (!(RULES.MATRIX.subsystems as readonly string[]).includes(sub)) return false;
     const from = Math.max(0, Math.floor(Number(this.sys.matrix?.channels?.[sub] ?? 0)));
     const to = from + 1;
-    if (RULES.MATRIX.otaku.channels.maxFromMpcp && to > otakuCap(m.mpcp)) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.canTGoAboveMpcp', { sub: escHtml(cap(sub)), mpcp: escHtml(m.mpcp) })); return false; }
-    const cost = channelRaiseCost(to);
+    if (MXL97.channelCapped() && to > otakuCap(m.mpcp)) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.canTGoAboveMpcp', { sub: escHtml(cap(sub)), mpcp: escHtml(m.mpcp) })); return false; }
+    // v0.97.0 (RULES.MXLIFE_V97.otakuChannels): Karma as a Willpower-linked active skill (VR2 p. 144; otaku errata 3).
+    const cost = MXL97G.channelCost(this, from, to) ?? channelRaiseCost(to);
     const good = Number(this.sys.karma?.good ?? 0);
     if (good < cost) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.hasGoodKarmaCosts', { name: escHtml(this.name), good, sub: escHtml(cap(sub)), to, cost })); return false; }
     if (approvalNeeded(this)) { await fileRequest(this, { kind: 'improve', label: `${cap(sub)} channel ${from} → ${to}`, karma: cost, data: { method: 'raiseChannel', args: [sub] } }); return false; }
@@ -17265,15 +17273,21 @@ export class SR2Actor extends Actor {
     if (!m?.living) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.hasNoLivingPersonaOtakuHouse', { name: escHtml(this.name) })); return null; }
     if (!(UTILITY_KINDS as readonly string[]).includes(o.kind)) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.unknownProgramKind', { kind: escHtml(o.kind) })); return null; }
     const rating = Math.max(1, Math.floor(o.rating || 1));
-    if (RULES.MATRIX.otaku.complexForms.maxFromMpcp && rating > otakuCap(m.mpcp)) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.aComplexFormCanTBe', { mpcp: escHtml(m.mpcp) })); return null; }
+    // v0.97.0 (RULES.MXLIFE_V97.complexForms): at most the Computer Skill, no operational utility (VR2 p. 145; otaku errata).
+    const why97 = MXL97G.complexFormRefusal(this, o.kind, rating);
+    if (why97) { MXL97G.warnWhy(why97); return null; }
+    if (why97 === null && RULES.MATRIX.otaku.complexForms.maxFromMpcp && rating > otakuCap(m.mpcp)) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.aComplexFormCanTBe', { mpcp: escHtml(m.mpcp) })); return null; }
     const cost = complexFormCost(rating);
     const good = Number(this.sys.karma?.good ?? 0);
     if (good < cost) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.hasGoodKarmaThatComplexForm', { name: escHtml(this.name), good, cost })); return null; }
     const name = o.name || `${cap(o.kind)} ${rating} (complex form)`;
     if (approvalNeeded(this)) { await fileRequest(this, { kind: 'improve', label: tx('SR2E.Text.Actor.complexForm', { name }), karma: cost, data: { method: 'learnComplexForm', args: [{ ...o }] } }); return null; }
-    const [made] = await this.createEmbeddedDocuments('Item', [{ name, type: 'program', system: { kind: o.kind, rating, size: 0, loaded: true, erased: false, damageLevel: o.damageLevel ?? 'M', complexForm: true } }], { sr2eComplexForm: true });
+    // v0.97.0 (RULES.MXLIFE_V97.complexForms): the book's programming task (VR2 p. 145); false = the design failed.
+    const task97 = await MXL97G.complexFormTask(this, { name, kind: o.kind, rating, damageLevel: o.damageLevel ?? 'M' });
+    if (task97 === false) return null;
+    const [made] = task97 ? [null] : await this.createEmbeddedDocuments('Item', [{ name, type: 'program', system: { kind: o.kind, rating, size: 0, loaded: true, erased: false, damageLevel: o.damageLevel ?? 'M', complexForm: true } }], { sr2eComplexForm: true });
     await this.update({ 'system.karma.good': good - cost, 'system.ledger': this.#ledgerWith({ kind: 'karma', amount: -cost, reason: tx('SR2E.Text.Actor.complexForm', { name }) }) });
-    await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p><strong>${escText(this.name)}</strong> ${tx('SR2E.Card.Actor.learnsTheComplexForm')} <strong>${escText(name)}</strong> ${tx('SR2E.Card.Actor.forKarma', { cost })}</p>` });
+    if (!task97) await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<p><strong>${escText(this.name)}</strong> ${tx('SR2E.Card.Actor.learnsTheComplexForm')} <strong>${escText(name)}</strong> ${tx('SR2E.Card.Actor.forKarma', { cost })}</p>` });
     return made ?? null;
   }
 
@@ -17342,17 +17356,20 @@ export class SR2Actor extends Actor {
     const what = plan.memory ? `${plan.label.replace(/\s*\(.*\)$/, '')} +${rating}` : `${plan.label} ${rating}`;
     return this.#runTest(tx('SR2E.Card.Actor.buildMpDesignMaterials', { deckName, what, planSize: plan.size, planCost: plan.cost.toLocaleString(), part: skill ? ` (${skill.name})` : '', sdSuffix: sd.suffix, part2: suite.note ? ` [${suite.note}]` : '' }), sd.dice + suite.dice, {
       targetNumber: plan.tn, modifiers: [...(o.modifiers ?? []), ...sd.modifiers, ...suite.modifiers], poolDice: 0,
-    }, { kind: 'code', code: { mode: 'deck', name: deckName, baseDays: plan.baseDays, part: o.part as DeckPart, rating, cost: pay ? plan.cost : 0, deckId: deck?.id ?? '', size: plan.size, memory: plan.memory } });
+    }, { kind: 'code', code: { mode: 'deck', name: deckName, baseDays: plan.baseDays, part: o.part as DeckPart, rating, cost: pay ? plan.cost : 0, deckId: deck?.id ?? '', size: plan.size, memory: plan.memory, ...MXL97G.cookCtx({ dice: sd.dice, mpcp: deck ? Number(deck.system.mpcp ?? 0) : rating }) } });
   }
 
   /** A programming or deck-building test's result, applied once (a re-roll only changes the time). */
   async #resolveCode(snap: TestSnapshot): Promise<Resolved> {
     const c = snap.code!;
     const s = snap.successes;
-    const days = workDays(c.baseDays, s);
+    // v0.97.0 (RULES.MXLIFE_V97.cookInstall): the part's Cook and Installation tasks follow its design (VR2 pp. 77, 82–88).
+    const days0 = workDays(c.baseDays, s);
+    const cook97 = days0 ? await MXL97G.cookInstall(c) : null;
+    const days = days0 && cook97 ? (cook97.ok ? days0 + cook97.days : null) : days0;
     if (!days && c.projectId) return { html: `<p><strong>${tx('SR2E.Card.Actor.noProgress')}</strong>.${await this.dropProjectOnFailure(c.projectId)}</p>`, flags: {}, snap: { ...snap, code: { ...c, applied: false, projectId: undefined } } };
     if (!days) return { html: `<p><strong>${tx('SR2E.Card.Actor.noProgress')}</strong>: ${c.mode === 'program' ? tx('SR2E.Card.Actor.isNotWritten', { name: escText(c.name) }) : tx('SR2E.Card.Actor.thePartDoesNotWork')}.${c.applied ? ` <em>${tx('SR2E.Card.Actor.itWasAlreadyAppliedUndoIt')}</em>` : ''}</p>`, flags: {}, snap };
-    const time = `<strong>${tCount(days, 'SR2E.Card.Actor.days')}</strong> ${tx('SR2E.Card.Actor.ofWork', { baseDays: c.baseDays, s })}`;
+    const time = `<strong>${tCount(days, 'SR2E.Card.Actor.days')}</strong> ${tx('SR2E.Card.Actor.ofWork', { baseDays: c.baseDays, s })}${cook97 ? ` ${escText(cook97.text)}` : ''}`;
     if (c.applied) {
       // v0.65.0: a re-roll of work under way changes how long it takes.
       const p = await this.retimeProject(c.projectId, days * 24);
@@ -17418,7 +17435,7 @@ export class SR2Actor extends Actor {
   /** GM: launch an IC actor into a host. */
   static async launchIc(host: any, data: { name: string; category: string; icType: string; rating: number; damageLevel: string; damageType: string; behavior?: string; guards?: string; traceMode?: string; attribute?: string; payload?: string; party?: string; construct?: string[] }): Promise<any> {
     const cls: any = (Actor as any).implementation ?? Actor;
-    return cls.create({
+    const made: any = await cls.create({
       name: data.name || `${data.icType || 'IC'} ${data.rating}`,
       type: 'ic',
       prototypeToken: { name: data.name || `${data.icType || 'IC'} ${data.rating}`, actorLink: true },
@@ -17431,6 +17448,9 @@ export class SR2Actor extends Actor {
         ...(data.party ? { party: data.party } : {}), ...(data.construct?.length ? { construct: data.construct } : {}),
       },
     });
+    // v0.97.0 (RULES.MXLIFE_V97.icToken): a token beside the host's on the GM's viewed Matrix scene.
+    if (made) await MXL97G.placeIcToken(host, made);
+    return made;
   }
 
   // ---------------------------------------------------------------- Vehicles and rigging (v0.24.0)

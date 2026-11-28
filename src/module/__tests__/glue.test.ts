@@ -6509,7 +6509,9 @@ describe("v0.46.0 Matrix and rigging", () => {
     assert.match(chat.at(-1).content, /Agent searches 2 hosts.*2 searched, 2 files found/s);
   });
 
-  test("writing a program and building a deck part: the item, the days and the parts' cost", async () => {
+  test("writing a program and building a deck part: the item, the days and the parts' cost", async (t) => {
+    // v0.97.0: the v0.96.5 way (the book's is v097-mxlife-glue.test.ts's).
+    t.after(oldWay({ 'MXLIFE_V97.cookInstall': 'v965' }));
     chat.length = 0; warnings.length = 0;
     const a = decker("Coder", { extra: { nuyen: 20000 } });
     faces.push(5, 5, 1, 1, 1);                                         // Computer 5 vs Browse 3
@@ -7501,7 +7503,9 @@ describe("v0.49.0 street, Matrix, rigging and security leftovers", () => {
     assert.match(JSON.stringify(chat.at(-1)), /Street lifestyle/);
   });
 
-  test("otaku: channels and complex forms for Karma; a channel works as a utility on its subsystem", async () => {
+  test("otaku: channels and complex forms for Karma; a channel works as a utility on its subsystem", async (t) => {
+    // v0.97.0: the v0.96.5 way (the book's is v097-mxlife-glue.test.ts's).
+    t.after(oldWay({ 'MXLIFE_V97.otakuChannels': 'v965', 'MXLIFE_V97.complexForms': 'v965' }));
     const old = RULES.MATRIX.otaku.enabled;
     (RULES.MATRIX.otaku as any).enabled = true;
     try {
@@ -7527,7 +7531,9 @@ describe("v0.49.0 street, Matrix, rigging and security leftovers", () => {
     } finally { (RULES.MATRIX.otaku as any).enabled = old; }
   });
 
-  test("writing with program options and a programming suite; building memory adds Mp", async () => {
+  test("writing with program options and a programming suite; building memory adds Mp", async (t) => {
+    // v0.97.0: the v0.96.5 way (the book's is v097-mxlife-glue.test.ts's).
+    t.after(oldWay({ 'MXLIFE_V97.cookInstall': 'v965' }));
     chat.length = 0;
     const a = person([skill("sk", "Computer", 5, "intelligence"), deck(), { id: "su", type: "gear", name: "Suite", system: { suite: 3, quantity: 1 } }], { name: "Coder", nuyen: 20000 });
     faces.push(5, 5, 1, 1, 1, 1, 1, 1);                                // Computer 5 + suite 3 vs TN 5: 2

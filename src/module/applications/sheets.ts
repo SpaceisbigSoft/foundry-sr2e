@@ -116,6 +116,8 @@ import { ruleAuto } from '../rules/automation941.ts';
 import { wireFireModeRows, senseChecksHtml } from './dialogs935.ts';
 import { catalogueTemplates, saveCatalogueTemplates } from './catalogue942.ts';
 import * as SP96G from "./spirits96.ts";
+// v0.97.0 (RULES.MXLIFE_V97): the otaku dialogs follow the book (applications/mxlife97.ts).
+import * as MXL97G from "./mxlife97.ts";
 
 /** v0.73.0 (O24): the known-hosts context for this decker and the viewing user. */
 function knowledgeCtx(actor: any): any {
@@ -1870,17 +1872,20 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const actor: any = this.document;
     const sub = String(target.dataset.channel ?? "");
     const to = Number(actor.system.matrix?.channels?.[sub] ?? 0) + 1;
-    const ok = await foundry.applications.api.DialogV2.confirm({ window: { title: tx('SR2E.Dialog.Sheet.channel', { sub: cap(sub) }) }, content: `<p>${tx('SR2E.Dialog.Sheet.raiseTheChannelToFor', { sub: escHtml(cap(sub)), to })} <strong>${channelRaiseCost(to)}</strong> ${tx('SR2E.Dialog.Sheet.goodKarmaOnHand', { karmaGood: escHtml(actor.system.karma?.good ?? 0) })}</p>`, rejectClose: false });
+    // v0.97.0 (RULES.MXLIFE_V97.otakuChannels): a channel costs Karma as a Willpower-linked skill.
+    const cost97 = MXL97G.channelCost(actor, to - 1, to) ?? channelRaiseCost(to);
+    const ok = await foundry.applications.api.DialogV2.confirm({ window: { title: tx('SR2E.Dialog.Sheet.channel', { sub: cap(sub) }) }, content: `<p>${tx('SR2E.Dialog.Sheet.raiseTheChannelToFor', { sub: escHtml(cap(sub)), to })} <strong>${cost97}</strong> ${tx('SR2E.Dialog.Sheet.goodKarmaOnHand', { karmaGood: escHtml(actor.system.karma?.good ?? 0) })}</p>`, rejectClose: false });
     if (ok) await actor.raiseChannel(sub);
   }
 
   /** v0.49.0: learn a complex form (an otaku's program) for Karma. */
   static async #onLearnComplexForm(this: SR2CharacterSheet) {
     const actor: any = this.document;
-    const cap0 = otakuCap(actor.system.derived?.matrix?.mpcp ?? 0);
+    // v0.97.0 (RULES.MXLIFE_V97.complexForms): at most the Computer Skill, no operational utilities.
+    const cap0 = MXL97G.complexFormCap(actor) ?? otakuCap(actor.system.derived?.matrix?.mpcp ?? 0);
     const choice = await foundry.applications.api.DialogV2.prompt({
       window: { title: tx('SR2E.Dialog.Sheet.learnAComplexForm', { actorName: actor.name }) },
-      content: `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.kind')}</label><select name="kind" autofocus>${UTILITY_KINDS.filter((k) => !["other", "frame", "smart-frame", "agent"].includes(k)).map((k) => `<option value="${k}">${escHtml(cap(k))}</option>`).join("")}</select></div>
+      content: `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.kind')}</label><select name="kind" autofocus>${MXL97G.complexFormKinds(UTILITY_KINDS).filter((k) => !["other", "frame", "smart-frame", "agent"].includes(k)).map((k) => `<option value="${k}">${escHtml(cap(k))}</option>`).join("")}</select></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.ratingAtMost', { cap0 })}</label><input name="rating" type="number" value="${Math.min(4, Math.max(1, cap0))}" min="1" max="${Math.max(1, cap0)}"></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.attackDamageLevel')}</label><select name="level">${["L", "M", "S", "D"].map((k) => `<option value="${escHtml(k)}" ${k === "M" ? "selected" : ""}>${escHtml(k)}</option>`).join("")}</select></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.name')}</label><input name="name" type="text" placeholder="${tx('SR2E.Dialog.Sheet.kindAndRating')}"></div>
