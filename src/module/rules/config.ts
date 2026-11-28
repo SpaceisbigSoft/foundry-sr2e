@@ -36,6 +36,7 @@ import { MXOPS_V97 } from './config97/mxops.ts';
 import { MXIC_V97 } from './config97/mxic.ts';
 import { VDRIVE_V98 } from './config98/vdrive.ts';
 import { VSEC_V98 } from './config98/vsec.ts';
+import { WARE_V99 } from './config99/ware.ts';
 import { VRIG_V98 } from './config98/vrig.ts';
 
 /**
@@ -3441,6 +3442,8 @@ export const RULES = {
   VDRIVE_V98,
   /** v0.98.0: rules completeness, building security and vehicle upkeep (rules/config98/vsec.ts). */
   VSEC_V98,
+  /** v0.99.0: rules completeness, cyberware and bioware effects (rules/config99/ware.ts). */
+  WARE_V99,
   /** v0.98.0: rules completeness, rigging, drones, sensors and electronic warfare (rules/config98/vrig.ts). */
   VRIG_V98,
 } as const;

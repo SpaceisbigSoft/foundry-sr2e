@@ -57,6 +57,7 @@ import * as MX97 from '../rules/mxic97.ts';
 import { vdrive98Fields, vdrive98Working } from '../rules/vdrive98.ts';
 import * as VS98 from '../rules/vsec98.ts';
 import * as VR98 from '../rules/vrig98.ts';
+import * as W99 from '../rules/ware99.ts';
 
 const f = () => foundry.data.fields;
 /** World time now (0 outside Foundry). */
@@ -179,6 +180,9 @@ export function augmentationsOf(actor: any): Augmentation[] {
   const awakened = Number(actor?.system?.magic ?? 0) > 0;
   // v0.92.3 (RULES.GEAR_V923.boneLacing 'book'): cyber replacements weaken bone lacing (Cybertechnology pp. 49–50).
   const replacements = cyberReplacements(items.filter((i) => i.type === 'cyberware' && i.system.installed && !i.system.bioware).map((i) => ({ name: i.name, kind: i.system.kind })));
+  // v0.99.0 (RULES.WARE_V99.orthoskin 'book', Shadowtech p. 17): of orthoskin and dermal plating only the better counts.
+  const op99 = W99.orthoPlating(items.filter((i) => i.type === 'cyberware'), healing);
+  const meta99 = actor?.system?.metatype;
   return items
     .filter((i) => i.type === 'cyberware')
     .map((i) => {
@@ -187,7 +191,7 @@ export function augmentationsOf(actor: any): Augmentation[] {
       const attributes = { ...(i.system.attributes ?? {}) };
       if (e) for (const [k, v] of Object.entries(e.attributes)) attributes[k] = (attributes[k] ?? 0) + v;
       // v0.92.3 (RULES.GEAR_V923.dermal 'body', Core p. 248): dermal plating adds its rating to Body (not armor).
-      if (gearBook('dermal') && isDermalPlating({ name: i.name, bioware: i.system.bioware, kind: i.system.kind })) attributes['body'] = (attributes['body'] ?? 0) + dermalRating(i.system);
+      if (gearBook('dermal') && isDermalPlating({ name: i.name, bioware: i.system.bioware, kind: i.system.kind }) && !W99.droppedBy(op99, i)) attributes['body'] = (attributes['body'] ?? 0) + dermalRating(i.system);
       // v0.92.3 (RULES.GEAR_V923.boneLacing 'book', Shadowtech p. 42): bone lacing adds to Body.
       if (i.system.kind === 'boneLacing') attributes['body'] = (attributes['body'] ?? 0) + boneLacingBook(String(i.system.lacing ?? ''), replacements).body;
       const housed = Boolean(i.system.housedIn && limbs.has(i.system.housedIn));
@@ -196,7 +200,8 @@ export function augmentationsOf(actor: any): Augmentation[] {
       return {
         // Bioware costs Body Index instead of Essence; cyberware housed in a cyberlimb uses its capacity.
         essenceCost: i.system.bioware ? awakenedBioEssence(culturedBodyCost(i.system.bodyIndex ?? 0, Boolean(i.system.cultured), String(i.system.bioKind ?? ''), String(i.name ?? '')), awakened)
-          : housed ? (housedCost === null ? 0 : sensitiveEssence(housedCost, qv)) : sensitiveEssence(i.system.essenceCost, qv),
+          // v0.99.0 (RULES.WARE_V99.limbs 'book', Cybertechnology p. 50): a cyberlimb's enhancements past 3 points cost Essence.
+          : housed ? (housedCost === null ? 0 : sensitiveEssence(housedCost, qv)) : sensitiveEssence(W99.limbEssenceCost(i.system.essenceCost, i, meta99), qv),
         grade: i.system.bioware ? 'standard' : i.system.grade,
         installed: i.system.installed && !healing.has(i.id),
         // v0.54.0: Essence goes at implant, even while the item heals in (it works only after).
@@ -230,9 +235,12 @@ function bioItemOf(i: any, healing?: Set<string>) {
 /** v0.30.0: what the wearer's bioware adds up to beyond attributes (armor, toxins, platelets, compensators, warnings). */
 function bioDerived(ware: any[], dermal: { ballistic: number; impact: number }, healing?: Set<string>) {
   const bio = ware.filter((i: any) => i.system.bioware).map((i: any) => bioItemOf(i, healing));
-  const effects = bio.map((b) => bioEffect(b));
+  // v0.99.0 (RULES.WARE_V99.orthoskin 'book', Shadowtech p. 17): orthoskin losing to dermal plating gives nothing.
+  const op99 = W99.orthoPlating(ware, healing ?? new Set());
+  const bioWare = ware.filter((i: any) => i.system.bioware);
+  const effects = bio.map((b, n) => bioEffect(W99.droppedBy(op99, bioWare[n]) ? { ...b, installed: false } : b));
   const sum = (k: 'ballistic' | 'impact' | 'toxinDice' | 'inhalantDice' | 'boxesOff' | 'ignoreBoxes' | 'physicalSkillDice' | 'stunBoxesOff' | 'perceptionTn') => effects.reduce((n, e) => n + e[k], 0);
-  const cyberNames = ware.filter((i: any) => !i.system.bioware && i.system.installed && !i.system.damaged).map((i: any) => String(i.name ?? ''));
+  const cyberNames = ware.filter((i: any) => !i.system.bioware && i.system.installed && !i.system.damaged && !(op99 && W99.wareClass(i) === 'plating')).map((i: any) => String(i.name ?? ''));
   const conflicts = bioConflicts(bio, cyberNames);
   return {
     // v0.54.0: compared kind by kind (ballistic with ballistic, impact with impact).
@@ -272,7 +280,9 @@ function cyberDerived(actor: any, ware: any[]) {
   const skillwires = max((i) => (i.system.kind === 'skillwires' ? i.system.rating : 0));
   const limbs = live.filter((i: any) => i.system.kind === 'cyberlimb').map((i: any) => {
     const housed = ware.filter((h: any) => h.system.housedIn === i.id).map((h: any) => ({ essenceCost: h.system.essenceCost, grade: h.system.grade }));
-    return { id: i.id, name: i.name, location: i.system.limb?.location ?? 'other', strength: i.system.limb?.strength ?? 0, quickness: i.system.limb?.quickness ?? 0, capacity: limbCapacity(i.system.limb?.capacity ?? 0, housed),
+    // v0.99.0 (RULES.WARE_V99.limbs 'book', Cybertechnology pp. 49–51): built-in Strength 3 (troll 8); enhancement Essence.
+    const ls99 = W99.limbStats(i, actor?.system?.metatype);
+    return { id: i.id, name: i.name, location: i.system.limb?.location ?? 'other', strength: ls99.strength, quickness: ls99.quickness, essence99: ls99.essence, capacity: limbCapacity(i.system.limb?.capacity ?? 0, housed),
       // v0.43.0: a limb's armor counts against called shots at it (RULES.GEAR.cyberlimbs).
       ballistic: i.system.armorBallistic ?? 0, impact: i.system.armorImpact ?? 0 };
   });
@@ -303,7 +313,7 @@ function cyberDerived(actor: any, ware: any[]) {
     lacing: ((l) => (gearBook('boneLacing') ? { ...l, soakDice: 0 } : l))(boneLacingTotals(live.filter((i: any) => i.system.kind === 'boneLacing').map((i: any) => ({ kind: i.system.lacing || '' })))),
     ultrasound: live.some((i: any) => i.system.ultrasound),
     /** v0.92.3 (RULES.GEAR_V923.dermal 'body', limbPairs 'body'): dermal armor's Body (plating and pairs of cyberlimbs). */
-    dermal: (gearBook('dermal') ? live.filter((i: any) => isDermalPlating({ name: i.name, bioware: i.system.bioware, kind: i.system.kind })).reduce((n: number, i: any) => n + dermalRating(i.system), 0) : 0)
+    dermal: (gearBook('dermal') ? live.filter((i: any) => isDermalPlating({ name: i.name, bioware: i.system.bioware, kind: i.system.kind }) && !W99.droppedBy(W99.orthoPlating(ware, healing), i)).reduce((n: number, i: any) => n + dermalRating(i.system), 0) : 0)
       + limbPairsBody(live.filter((i: any) => i.system.kind === 'cyberlimb' && !i.system.bioware).map((i: any) => ({ name: i.name, location: i.system.limb?.location ?? 'other' }))),
     pheromones: max((i) => i.system.pheromones),
     datajack, chipjack, skillwires, limbs, softs,
@@ -861,6 +871,8 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
     const dermalBody = gearBook('dermal');
     const lacingArmor = boneLacingBook(String(installed.filter((i: any) => i.system.kind === 'boneLacing').map((i: any) => String(i.system.lacing ?? '')).sort((a: string, b: string) => boneLacingBook(b).impact + boneLacingBook(b).ballistic - boneLacingBook(a).impact - boneLacingBook(a).ballistic)[0] ?? ''), cyberReplacements(installed.filter((i: any) => !i.system.bioware).map((i: any) => ({ name: i.name, kind: i.system.kind }))));
     const cyberWarnings = [...stacked.notes, ...reflexNotes, ...(initDice.capped ? [tx('SR2E.App.Models.initiativeDiceCappedAt', { dice: initDice.dice })] : []), ...limbOver, ...bw.warnings];
+    // v0.99.0 (RULES.WARE_V99.boosted, orthoskin; SSC p. 87, Shadowtech p. 17): ware installed together that may not be.
+    cyberWarnings.push(...W99.wareNotes(ware, healing));
 
     const totals = {} as Attributes;
     const race = metatype(sys.metatype);
@@ -884,6 +896,8 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
       sys.attributes[k].total = v;
       (totals as any)[k] = v;
     }
+    // v0.99.0 (RULES.WARE_V99.limbs 'book', Cybertechnology pp. 50–51): the four limbs' average Strength and Quickness caps.
+    cyberWarnings.push(...W99.limbCapText(cyber.limbs, { strength: totals.strength, quickness: totals.quickness, body: sys.attributes.body.natural, naturalQuickness: sys.attributes.quickness.natural }));
     // A possessed body thinks with its possessor's mind (v0.45.0; actor flag possessedBy).
     const possessor = (this as any).parent?.flags?.[SYSTEM_ID]?.possessedBy;
     if (possessor?.attributes) {

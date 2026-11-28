@@ -7,6 +7,7 @@ import { test, describe, before, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { RULES } from '../rules/index.ts';
 import { oldWay } from '../rules/__tests__/oldway.ts';
+import { WARE_V980_WAY } from '../rules/__tests__/ware980.ts';
 
 const g = globalThis as any;
 const faces: number[] = [];
@@ -171,6 +172,7 @@ describe('v0.92.3 gear glue: dermal plating, cyberlimbs, bone lacing', () => {
     assert.deepEqual(a.system.derived.cyberArmor, { ballistic: 2, impact: 2 });
   });
   test('review fix: plating that is Body no longer takes orthoskin\'s armor away; the old way keeps the conflict', (t) => {
+    t.after(oldWay(WARE_V980_WAY)); // v0.99.0: v099-ware-glue.test.ts has the book's (only the better of the two counts)
     const ortho = { id: 'os', type: 'cyberware', name: 'Orthoskin 3', system: { bioware: true, bioKind: 'orthoskin', rating: 3, bodyIndex: 0.5, installed: true, attributes: {} } };
     const a = who({}, [ware('dp', 'Dermal plating 2', { rating: 2, armorBallistic: 2, armorImpact: 2, essenceCost: 1 }), ortho]);
     assert.deepEqual(a.system.derived.cyberArmor, { ballistic: 1, impact: 2 }, 'orthoskin 3: 2 impact, 1 ballistic');

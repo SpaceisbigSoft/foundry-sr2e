@@ -70,6 +70,7 @@ import { registerQuenchBatches } from "../quench/sr2e-quench.ts";
 import { registerFixes942 } from "./applications/fixes942.ts";
 import { registerMelee95 } from "./applications/melee95.ts";
 import { registerSorcery96 } from "./applications/sorcery96.ts";
+import { registerWare99 } from "./applications/ware99.ts";
 
 export class SR2System {
   constructor() {
@@ -160,6 +161,8 @@ export class SR2System {
     registerMelee95();
     // v0.96.0: sorcery (the foci limit, a ward's days).
     registerSorcery96();
+    // v0.99.0: cyberware and bioware (ware that may not be installed together).
+    registerWare99();
     registerFloatingDamage();
     registerHiddenNumbers();
     // v0.94.2: nested items (accessories, programs on decks, containers).

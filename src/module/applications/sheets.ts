@@ -125,6 +125,7 @@ import * as MX97 from "../rules/mxic97.ts";
 import { riggerPoolOnDetection, modSkillNames } from "../rules/vsec98.ts";
 import * as VR98G from "./vrig98.ts";
 import * as VR98 from "../rules/vrig98.ts";
+import * as W99 from "../rules/ware99.ts";
 
 /** v0.73.0 (O24): the known-hosts context for this decker and the viewing user. */
 function knowledgeCtx(actor: any): any {
@@ -6451,7 +6452,10 @@ export function cyberRow(actor: any, i: any): any {
   if (sy.bioware && sy.bioKind && sy.bioKind !== "other") parts.push(`${sy.bioKind} ${sy.rating}${sy.cultured ? tx('SR2E.App.Sheets.culturedNote') : ""}${sy.bioKind === "adrenalPump" ? (sy.bioActive ? tx('SR2E.App.Sheets.activeNote') : tx('SR2E.App.Sheets.offNote')) : ""}`);
   if (sy.kind === "cyberlimb") {
     const l = limbs.find((x: any) => x.id === i.id);
-    parts.push(l ? tx('SR2E.App.Sheets.limbStatsCapacity', { strength: sy.limb?.strength, quickness: sy.limb?.quickness, used: l.capacity.used, capacity: l.capacity.capacity }) : tx('SR2E.App.Sheets.limbStats', { strength: sy.limb?.strength, quickness: sy.limb?.quickness }));
+    // v0.99.0 (RULES.WARE_V99.limbs 'book', Cybertechnology pp. 49–51): the limb's own Strength and Quickness and its enhancement Essence.
+    const ls = W99.w99("limbs") ? W99.limbStats(i, actor.system?.metatype) : { strength: sy.limb?.strength, quickness: sy.limb?.quickness, essence: 0 };
+    parts.push(l ? tx('SR2E.App.Sheets.limbStatsCapacity', { strength: ls.strength, quickness: ls.quickness, used: l.capacity.used, capacity: l.capacity.capacity }) : tx('SR2E.App.Sheets.limbStats', { strength: ls.strength, quickness: ls.quickness }));
+    if (ls.essence > 0) parts.push(tKey('SR2E.Ware99.Sheet.limbEssence', { essence: ls.essence }));
   }
   if (sy.kind === "skillwires") parts.push(tx('SR2E.App.Sheets.ratingLower', { rating: sy.rating }));
   if (sy.reflexes || /reflex|enhancer/i.test(i.name)) parts.push(tx('SR2E.App.Sheets.reflexesLine', { reflexes: sy.reflexes || tx('SR2E.App.Sheets.reflexes'), reaction: sy.reaction, dice: sy.initiativeDice }));

@@ -507,6 +507,8 @@ export function blindIfSecret(key: string, data: any): any {
 import { privacyGroup } from '../rules/qol.ts';
 import * as VS98 from '../rules/vsec98.ts';
 import * as VSG98 from '../applications/vsec98.ts';
+import * as W99 from '../rules/ware99.ts';
+import * as WG99 from '../applications/ware99.ts';
 
 /**
  * Foundry's roll mode (public, GM only, blind, self) on a card (v0.36.0). Cards someone else must
@@ -2381,6 +2383,8 @@ export class SR2Actor extends Actor {
   async surgery(itemId: string, opts: { surgeon?: any; care?: string; pay?: boolean } = {}): Promise<SuccessTestResult | null> {
     const it: any = [...this.items].find((i: any) => i.id === itemId);
     if (!it || it.type !== 'cyberware') return null;
+    // v0.99.0 (RULES.WARE_V99.boosted, orthoskin; SSC p. 87, Shadowtech p. 17): ware that may not go in beside what is there.
+    if (WG99.surgeryClash(it)) return null;
     const who: SR2Actor = opts.surgeon ?? this;
     const sg = RULES.BIOWARE.surgery;
     const sd = who.#skillDice(who.findSkill(sg.skill), false, null, 'intelligence');
@@ -2472,7 +2476,9 @@ export class SR2Actor extends Actor {
     const sg = SR2Actor.surgeryFromCard(snap?.surgery, patient, true);
     if (!sg) return tx('SR2E.Text.Actor.itNamesNoCyberwareThePatient');
     const cyberBook = gearBook('surgery') && !([...(patient?.items ?? [])].find((i: any) => i.id === sg.itemId)?.system?.bioware ?? true);
-    const base = recoveryDays(sg.points, cyberBook ? Math.max(1, safeInt(snap?.successes, 0, 40, 0)) : safeInt(snap?.successes, 0, 40, 0));
+    const opIt99: any = [...(patient?.items ?? [])].find((i: any) => i.id === sg.itemId);
+    // v0.99.0 (RULES.WARE_V99.bioRecovery 'book', Shadowtech p. 6): bioware × 3, cultured × 2.
+    const base = W99.bioRecoveryDays(recoveryDays(sg.points, cyberBook ? Math.max(1, safeInt(snap?.successes, 0, 40, 0)) : safeInt(snap?.successes, 0, 40, 0)), opIt99?.system, String(opIt99?.name ?? ''));
     if (base === null) return tx('SR2E.Text.Actor.complicationsNoMoneyChangesHands');
     const lifestyle = String(patient?.system?.lifestyle?.level ?? '');
     const days = sg.care ? recoveryWithCare(base, sg.care, lifestyle) : base;
@@ -2529,7 +2535,8 @@ export class SR2Actor extends Actor {
       if (cost !== Number(opItem.system.essenceCost ?? 0)) await opItem.update({ 'system.essenceCost': cost });
       essNote = ` ${tx('SR2E.Card.Actor.surgeryEssenceCost', { name: escText(sg.itemName), base: baseEss, cost })}${capped ? ` ${tx('SR2E.Card.Actor.surgeryEssenceZero')}` : ''}`;
     }
-    const base = recoveryDays(sg.points, cyberBook ? Math.max(1, snap.successes) : snap.successes);
+    // v0.99.0 (RULES.WARE_V99.bioRecovery 'book', Shadowtech p. 6): bioware × 3, cultured × 2.
+    const base = W99.bioRecoveryDays(recoveryDays(sg.points, cyberBook ? Math.max(1, snap.successes) : snap.successes), opItem?.system, String(opItem?.name ?? ''));
     // v0.48.0: the patient's care stretches or shortens the recovery.
     const care = sg.care ?? '';
     const lifestyle = String(patient?.system?.lifestyle?.level ?? '');
@@ -3643,7 +3650,8 @@ export class SR2Actor extends Actor {
       result.status = monitorStatus(result.monitor, ctxBody);
     }
     // Trauma dampers take boxes off each Stun hit, never below 1 (v0.45.0; only when nothing overflowed).
-    const td = ctx.type === 'stun' && ctx.noun === 'damage' ? Number(this.sys.derived?.bio?.stunBoxesOff ?? 0) : 0;
+    // v0.99.0 (RULES.WARE_V99.damper 'book', Shadowtech p. 29): one box, not with a pain editor or an unexceeded compensator.
+    const td = ctx.type === 'stun' && ctx.noun === 'damage' ? W99.damperStunCut(Number(this.sys.derived?.bio?.stunBoxesOff ?? 0), { damper: H96G.bioOn(this, 'traumaDamper'), painEditor: H96G.bioOn(this, 'painEditor'), compensatorBoxes: H96G.bioOn(this, 'damageCompensator') ? Number(this.sys.derived?.bio?.ignoreBoxes ?? 0) : 0, after: result.monitor }) : 0;
     if (td > 0 && result.boxes > 1 && result.monitor.physical === ctx.before.physical) {
       const kept = dampedStunBoxes(result.boxes, td);
       result.monitor.stun -= result.boxes - kept;
@@ -8944,6 +8952,8 @@ export class SR2Actor extends Actor {
     if (!blast && ownArmor !== armorKindFor(melee)) extras.armorKind = ownArmor;
     if (mag > 0 && range !== opts.range) notes.push(tx('SR2E.Card.Actor.magnificationRange', { mag, range }));
     if (arm.limbName && (w.strengthPower || w.strengthRange)) notes.push(tx('SR2E.Card.Actor.limbStrength', { limb: arm.limbName, strength }));
+    // v0.99.0 (RULES.WARE_V99.limbLead 'book', Cybertechnology p. 50): leading with a stronger cyberlimb in melee.
+    { const ll99 = melee ? WG99.limbLeadModifier(this, arm.limbName, strength) : null; if (ll99) fireMods.push(ll99); }
     let ammoShort: string | null = null;
     if (!melee) {
       const allowed = parseFiringModes(w.modes);
