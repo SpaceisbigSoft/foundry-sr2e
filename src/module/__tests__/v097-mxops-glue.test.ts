@@ -311,6 +311,8 @@ describe('v0.97.0 the new system operations (VR2 pp. 111–117)', () => {
     assert.equal(T.gmApplyShapeOk('applyHost', { hostChange: { hostUuid: 'Actor.h', validate: 'Actor.d', passcode97: { deckerUuid: 'Actor.d', days: 5, level: 'user' } } }), true);
     assert.ok(T.cardSourceUuids('applyHost', { hostChange: ok }).includes('Actor.d'));
     assert.ok(T.describeGmChange('applyHost', { hostChange: ok }).some((l: string) => /decoy/.test(l)));
+    assert.ok(T.describeGmChange('applyHost', { hostChange: { ...ok, decoy97: { deckerUuid: 'Actor.d', successes: 6 } } }).some((l: string) => /draws every proactive IC attack/.test(l)), 'a big decoy is visible to the GM');
+    assert.ok(!T.describeGmChange('applyHost', { hostChange: ok }).some((l: string) => /draws every/.test(l)));
   });
 
   test('switch: none of the new operations', async (t) => {
@@ -409,6 +411,20 @@ describe('v0.97.0 Validate Passcode (VR2 p. 118)', () => {
     await G97.onActorUpdate97(h, { system: { alert: 'active' } }, true);
     assert.deepEqual(h.system.validated, []);
     assert.deepEqual(h.flags[SID].passcodes97, []);
+  });
+  test('a frame validating: the owner\'s passcode gets its record in the same host change, so it counts', async () => {
+    const h = host();
+    const d = inside(h);
+    const fr = icIn(h, { kind: 'frame', ownerUuid: d.uuid, rating: 5, name: 'Frame 5' });
+    g.game.actors = [d, fr, h];
+    // A dumb frame rolls its owner's Computer (5 dice) vs Control 5.
+    noDetect(); faces.push(5, 5, 1, 1, 1, /* 1D6 */ 4);
+    await d.systemTest('', { operationId: 'validatePasscode', frameUuid: fr.uuid });
+    assert.deepEqual(h.system.validated, [d.uuid]);
+    assert.equal(h.flags[SID].passcodes97[0].deckerUuid, d.uuid);
+    assert.equal(h.flags[SID].passcodes97[0].days, 8);
+    const G97 = await import('../applications/mxops97.ts');
+    assert.equal(G97.passcodeLiveFor(d, h), true);
   });
   test('forged: a passcode record on the decker\'s own actor does not count; no record on the host: not live', async () => {
     const h = host({ validated: [] });

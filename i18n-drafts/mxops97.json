@@ -97,5 +97,6 @@
   "SR2E.MxOps97.Scan.gone": "The icon is no longer here (or no longer located): nothing learned.",
   "SR2E.MxOps97.Trust.decoy": "a decoy for {name} ({n} successes)",
   "SR2E.MxOps97.Trust.passcode": "{name}'s passcode lasts {days} days",
-  "SR2E.MxOps97.Trust.located": "{name} locates {list}"
+  "SR2E.MxOps97.Trust.located": "{name} locates {list}",
+  "SR2E.MxOps97.Trust.decoyAll": "a decoy for {name} ({n} successes): it draws every proactive IC attack"
 }

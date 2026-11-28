@@ -15037,7 +15037,8 @@ export class SR2Actor extends Actor {
           fu.hostChange = { host, change: { validate: this.uuid as string }, label: tx('SR2E.Card.Actor.validatesAPasscodeIn', { by, hostName: host.name }) };
           body = `<p>${tx('SR2E.Card.Actor.nowHoldsA', { name: escText(this.name) })} <strong>${tx('SR2E.Card.Actor.validPasscode')}</strong> ${tx('SR2E.Card.Actor.inItsDetectionRollsAgainstThem', { hostName: escText(host.name), validateDfBonus: RULES.MATRIX_V57.utilities.validate.dfBonus })}</p>`;
           // v0.97.0: it lasts 1D6 × net successes days (VR2 p. 118; RULES.MXOPS_V97.validatePasscode).
-          if (!sy.frameUuid) body += await MO97G.passcodeDuration(this, host, outcome.net, sy.mx97?.level, fu);
+          // A frame validates its owner's passcode: the record goes in the same host change either way.
+          body += await MO97G.passcodeDuration(this, host, outcome.net, sy.mx97?.level, fu);
         }
         break;
       case 'invalidate':
