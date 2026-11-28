@@ -9931,7 +9931,38 @@
         "SPIRITS_V96__cleansing": "Cleansing: a count up to the grade only, then (count)D Willpower Drain, Awakenings p. 100 (book) or any count, no Drain (v951)",
         "SPIRITS_V96__adeptCosts": "Imported adept power costs: by band (attributes, Improved Ability) and Distance Strike double beside Killing Hands, Core pp. 125–126, Awakenings p. 116 (book) or flat guesses (v951)",
         "SPIRITS_V96__critterOpposed": "Confusion, Fear, Engulf: Confusion and Fear Essence against Willpower, Confusion half the net successes, Fear's severity, Engulf's entry and escape lines, Predator and Prey pp. 89–92 (book) or the power's own dice (v951)",
-        "SPIRITS_V96__astralPerceiving": "Astral Combat Pool while perceiving: astral actions of a perceiving magician use the Astral Combat Pool, Core p. 147 (book) or the Combat Pool (v951)"
+        "SPIRITS_V96__astralPerceiving": "Astral Combat Pool while perceiving: astral actions of a perceiving magician use the Astral Combat Pool, Core p. 147 (book) or the Combat Pool (v951)",
+        "MXIC_V97__suppress": "Suppressing IC: when IC crashes (or a data bomb goes off) the decker chooses the tally or −1 Detection Factor, VR2 p. 40 (book) or the tally at once (v965)",
+        "MXIC_V97__blackIcKill": "Black IC's last shot: killing or knocking out the decker, it hits the MPCP at double rating and may wipe the run's data, VR2 p. 48 (book) or nothing more (v965)",
+        "MXIC_V97__improvised": "Improvised attacks: Power from Evasion and Bod, Computer vs Power for the level, VR2 p. 123 (book) or none (v965)",
+        "MXIC_V97__parry": "Parry maneuver: lasts until the opponent's next attack, no cap, VR2 p. 122 (book) or until the next Combat Turn ends (v965)",
+        "MXIC_V97__position": "Position maneuver: the winner (it can backfire) gets −TN or +Power on its next attack, VR2 p. 122 (book) or −TN for the decker only, a turn long (v965)",
+        "MXIC_V97__evade": "Evade detection: IC finds the icon again after net Combat Turns, 1 sooner per tally point, VR2 p. 121 (book) or a turn long (v965)",
+        "MXIC_V97__ripper": "Ripper IC: cripples the icon, then a Ripper Test vs MPCP + Hardening takes 1 per success off the chip, VR2 p. 43 (book) or the loss goes on the deck (v965)",
+        "MXIC_V97__tar": "Tar baby and tar pit: opposed rating tests, both crash, tar pit's corruption test vs MPCP + Hardening, VR2 pp. 42–43 (book) or the IC's attack test (v965)",
+        "MXIC_V97__scramble": "Scramble IC: poison scramble's Poison Test vs Computer after a failed decryption, VR2 p. 42 (book) or the file is destroyed (v965)",
+        "MXIC_V97__dataBomb": "Data bombs: defuse vs the subsystem with the Defuse utility, all 1s sets it off; the blast's rating on the tally unless suppressed, VR2 p. 41 (book) or Decrypt vs the rating and an alert (v965)",
+        "MXIC_V97__coolInit": "Running a hot deck cool: a deck marked Hot ASIST in cold sim gets 1D6 less Matrix Initiative, VR2 p. 85 (book) or none (v965)",
+        "MXIC_V97__realityFilter": "Reality filters: one more level of Response Increase (5 at most) and MPCP −1, lost where a sculpted host's test fails (needs the book persona speed), VR2 pp. 84, 87 (book) or the old Reaction and pool bonus (v965)",
+        "MXIC_V97__nonCombat": "Non-combat actions: Reaction ÷ 10 (round up) + 1 per extra Initiative die per turn, shown on the persona, VR2 p. 120 (book) or not shown (v965)",
+        "MXLIFE_V97__psychRecovery": "Psychotropic recovery: a Willpower (IC rating) test every week (Matrix maniac every day), treatment modifiers, rolled from a GM card on the world clock, VR2 p. 50 (book) or the GM clears the effect by hand (v965)",
+        "MXLIFE_V97__paydataDecay": "Paydata going stale: a decker's unsold Paydata Points drop by 1 a day (the GM's story files are left alone), VR2 p. 65 (book) or they keep (v965)",
+        "MXLIFE_V97__cookInstall": "Deck parts: Cook and Installation tasks after the design, each base time ÷ successes, VR2 pp. 77, 82–88 (book) or the design's days only (v965)",
+        "MXLIFE_V97__otakuChannels": "Otaku channels as skills: Karma as a Willpower-linked active skill, no MPCP cap, VR2 p. 144 and otaku errata (book) or rating × Karma at most MPCP (v965)",
+        "MXLIFE_V97__complexForms": "Complex forms: at most the Computer Skill, no operational utilities, a programming task with the otaku task bonus, VR2 p. 145 and otaku errata (book) or learned at once, at most MPCP (v965)",
+        "MXLIFE_V97__otakuArmor": "Otaku's free Armor: the living persona soaks with Armor = Willpower unless a better Armor is loaded, VR2 p. 145 (book) or only a loaded Armor utility (v965)",
+        "MXLIFE_V97__icToken": "IC on the Matrix scene: launched IC gets a hidden token beside its host's token on the GM's viewed scene (scene) or no token (v965, a table convenience)",
+        "MXOPS_V97__analyzeHost": "Analyze Host: one item per net success (Security Rating or a subsystem), all at 7, VR2 p. 111 (book) or everything on a success (v965)",
+        "MXOPS_V97__analyzeHostAll": "Analyze Host (book): successes that tell everything (7)",
+        "MXOPS_V97__operations": "System operations: Analyze Subsystem, Crash Application, Decoy, Disinfect, Dump Log, Locate Decker/Frame/IC, Retrain and Scan Icon in the catalog, VR2 p. 162 (book) or not (v965)",
+        "MXOPS_V97__locateDeckerTn": "Locate Decker (book): the Sensor Test's TN (the book gives none; 4)",
+        "MXOPS_V97__decoyBoxes": "Decoy (book): boxes in a decoy's Condition Monitor (10)",
+        "MXOPS_V97__validatePasscode": "Validate Passcode: superuser +2 / supervisor +6 TN, lasts 1D6 × net successes days, deleted at an active alert, VR2 p. 118 (book) or for ever (v965)",
+        "MXOPS_V97__slow": "Slow utility: Slow rating vs the cybercombat TN, opposed by the IC's Security Value vs the rating; an action per 2 net; not on reactive IC, VR2 p. 99 (book) or Computer vs the IC's rating, Initiative per net (v965)",
+        "MXOPS_V97__slowPerAction": "Slow (book): Initiative points one action is worth (10)",
+        "MXOPS_V97__restore": "Restore utility: rating vs the damaging program's rating, a point per 2 successes, no deck damage, no wear, VR2 p. 100 (book) or the old TN and a point per success (v965)",
+        "MXOPS_V97__interrogation": "Interrogations: the question's TN modifier (+2 … −2) and \"not here\" once 3 successes are counted, VR2 p. 110 (book) or neither (v965)",
+        "MXOPS_V97__notThereAt": "Interrogations (book): successes after which the host says it does not hold what is sought (3)"
       }
     },
     "Rules": {
@@ -20470,6 +20501,288 @@
         "duel": "Force against Force",
         "cancel": "Cancel",
         "needTwo": "Select exactly two spirit tokens."
+      }
+    },
+    "MxIc97": {
+      "roll": "{dice} ({successes} successes)",
+      "gmOnly": "GM only ·",
+      "ownerOnly": "Only {name}'s owner or the GM can do that.",
+      "alreadyDone": "That has already been done.",
+      "nonCombat": "Non-combat actions per turn",
+      "Why": {
+        "improviseOff": "An improvised attack needs a jacked-in decker (and the book's improvised attacks rule).",
+        "improviseNone": "Take at least 1 point from Evasion or Bod for the improvised attack's Power.",
+        "improviseMore": "The persona doesn't have that many points of Evasion or Bod to give.",
+        "improviseMpcp": "An improvised attack's Power may not be above the MPCP ({mpcp})."
+      },
+      "Suppress": {
+        "crashed": "<strong>{ic}</strong> crashes. {decker} may let it count ({points} on their security tally) or suppress it (Detection Factor −1 while in this host; VR2 p. 40).",
+        "count": "Security tally +{points}",
+        "countLine": "{decker}'s security tally +{points} (crashed IC or a data bomb).",
+        "suppress": "Suppress it (Detection Factor −1)",
+        "done": "{decker} suppresses <strong>{name}</strong>: Detection Factor now {df} while in this host.",
+        "release": "Release it (Free Action)",
+        "released": "{decker} releases <strong>{name}</strong>: the Detection Factor point is back, and {points} go on the security tally.",
+        "releasedLine": "{decker} releases {name}: security tally +{points}."
+      },
+      "Bomb": {
+        "name": "Data bomb ({where})",
+        "choice": "<strong>A data bomb goes off</strong> on {where}. {decker} may let it count ({points} on their security tally) or suppress it (Detection Factor −1 while in this host; VR2 p. 41).",
+        "defuseTn": "{sub} {tn} (data bomb {bomb})"
+      },
+      "BlackIc": {
+        "lastShot": "has {decker} down: before the connection goes, it takes a last shot at the MPCP as blaster IC with double its rating ({rating}). If the MPCP is destroyed, the run's downloads are deleted (VR2 p. 48).",
+        "button": "Deck damage: Blaster {rating} vs MPCP",
+        "reason": "black IC's last shot",
+        "wiped": "The MPCP of {deck} is destroyed (rating 0): {files} file(s) downloaded this run are deleted."
+      },
+      "Improvise": {
+        "name": "Improvised attack",
+        "option": "Improvise one (a Simple Action: points from Evasion and Bod)",
+        "fromEvasion": "Improvised: points from Evasion",
+        "fromBod": "Improvised: points from Bod",
+        "action": "an improvised attack program",
+        "test": "{decker} writes an attack program (Computer {computer} vs TN {tn})",
+        "ready": "Improvised attack ready: {power}{level}.",
+        "readyNote": "Evasion −{evasion}, Bod −{bod} until it is used (one attack).",
+        "failed": "The program doesn't come together.",
+        "failedNote": "Evasion −{evasion}, Bod −{bod} until the decker's next action.",
+        "restore": "Next action: restore Evasion and Bod",
+        "restored": "{decker}'s Evasion and Bod are back."
+      },
+      "Maneuver": {
+        "fails": "<strong>The maneuver fails</strong> ({mine} vs {theirs}).",
+        "position": "<strong>{name} gains position</strong> on {target} ({mine} vs {theirs}): {net} off the TN or onto the Power of their next attack on them.",
+        "backfires": "<strong>The maneuver backfires</strong> ({mine} vs {theirs}): {target} gets {net} off the TN of their next attack on {name}.",
+        "parry": "<strong>{name} parries</strong> ({mine} vs {theirs}): +{net} TN on {target}'s next attack on them.",
+        "evade": "<strong>{name} evades {target}</strong> ({mine} vs {theirs}): IC finds them again after {net} Combat Turn(s), 1 sooner for every point on their security tally meanwhile.",
+        "positionMod": "Position maneuver",
+        "parryMod": "{name}'s parry",
+        "exposedMod": "Position on {name}",
+        "positionAs": "A position bonus goes",
+        "asTn": "off the TN",
+        "asPower": "onto the Power"
+      },
+      "Ripper": {
+        "test": "Ripper Test: {ic} {rating} vs MPCP + Hardening {tn}",
+        "loss": "<strong>{loss} off {deck}'s {attr} chip</strong> for good (replace the chip).",
+        "holds": "{deck}'s persona chip holds."
+      },
+      "Tar": {
+        "defense": "{program} resists the tar ({dice} dice vs TN {tn})",
+        "pitTest": "Tar Pit Test: {ic} {rating} vs MPCP + Hardening {tn}",
+        "corrupts": "<strong>The viral code corrupts every copy in the deck</strong>: the utility is lost until reloaded from outside the deck after jacking out.",
+        "defeated": "The viral code is defeated: reload the utility with a Swap Memory operation."
+      },
+      "Scramble": {
+        "test": "Poison Test: {file}'s scramble IC {rating} vs Computer {tn}",
+        "destroys": "<strong>The scramble IC destroys {file}.</strong>",
+        "suppressed": "The decker suppresses the poison IC's destruct code: the data survives."
+      },
+      "Filter": {
+        "holds": "<strong>The filter holds</strong>: its level of Response Increase stays in {host}.",
+        "fails": "<strong>The filter fights {host}'s sculpture</strong>: −2 Reaction and −1D6 Initiative here (its Response Increase level is lost)."
+      },
+      "gmCardOnly": "Only the GM side's own cards can do that.",
+      "hotAsist": "Hot ASIST",
+      "hotAsistHint": "A hot ASIST interface: run cool (cold sim, with a keyboard) it costs 1D6 Matrix Initiative (VR2 p. 85). Off: a cool deck, no penalty.",
+      "Gm": {
+        "crash": "{ic} crashes: the tally or suppress",
+        "count": "{decker} lets it count",
+        "suppress": "{decker} suppresses it",
+        "release": "{decker} releases a suppressed IC",
+        "parry": "{decker} parries ({net})",
+        "evade": "{decker} evades ({net})",
+        "parried": "{decker}'s parry +{net} recorded",
+        "evaded": "{decker}'s evade ({net} turns) recorded",
+        "trustLine": "Matrix: {op} for {name} ({net})"
+      }
+    },
+    "MxLife97": {
+      "gmOnly": "GM only",
+      "gmButton": "Only the GM rolls this.",
+      "alreadyDone": "This card has already been rolled.",
+      "Psyche": {
+        "due": "<strong>{name}</strong>: recovery from {label} ({icName}, rating {rating}) is due. Tests due: {n} (Willpower against the IC's rating, VR2 p. 50).",
+        "hint": "Each test that fails waits for the next period. Medication or magical treatment −1 TN, intensive psychotherapy (Hospitalized lifestyle) −2, a sustained spell a further −1.",
+        "hintPhobia": "Cyberphobia: recovery begins only once the decker is medicated or under magical treatment (VR2 p. 49). Medication −1 TN, psychotherapy (Hospitalized lifestyle) −2, a sustained spell a further −1.",
+        "hintJudas": "Judas: recovery begins only once the companions have found the compulsion out and stop the decker (VR2 p. 49). Medication −1 TN, psychotherapy (Hospitalized lifestyle) −2, a sustained spell a further −1.",
+        "hintConditioning": "Positive conditioning: +1 TN for the counter-conditioning (VR2 p. 50). Medication −1 TN, psychotherapy (Hospitalized lifestyle) −2, a sustained spell a further −1.",
+        "roll": "Roll the recovery",
+        "title": "Recovering from a psychotropic effect",
+        "care": "Treatment",
+        "spell": "Under a sustained, locked or quickened spell (−1 TN)",
+        "caught": "The companions caught the compulsion and stop it",
+        "gone": "That psychotropic effect is no longer on the decker.",
+        "recovers": "<strong>{name}</strong> recovers from {label} ({icName}): Willpower {dice} dice against TN {tn}, successes {results}. The effect is gone.",
+        "stays": "<strong>{name}</strong> is still afflicted by {label} ({icName}): Willpower {dice} dice against TN {tn}, successes {results}. The next test comes with the next period."
+      },
+      "Care": {
+        "none": "None",
+        "medication": "Medication or magical treatment (−1 TN)",
+        "therapy": "Intensive psychotherapy, Hospitalized lifestyle (−2 TN)"
+      },
+      "Why": {
+        "phobiaUntreated": "Cyberphobia: recovery begins only under medication or magical treatment (VR2 p. 49).",
+        "judasUncaught": "Judas: recovery begins only once the companions have caught the compulsion and stop the decker (VR2 p. 49).",
+        "formOperational": "An operational utility can't be a complex form: otaku use their channels (and channel specializations) for those (otaku errata, entry 6).",
+        "formHardening": "Hardening is part of the living persona, not a complex form (otaku errata, entry 5).",
+        "formAboveComputer": "A complex form's rating may not exceed the otaku's Computer Skill (VR2 p. 145).",
+        "formArmorBelow": "The living persona already has Armor equal to Willpower: an Armor complex form must rate above it (VR2 p. 145)."
+      },
+      "Paydata": {
+        "stale": "<strong>{name}</strong>'s unsold paydata goes stale (VR2 p. 65): Paydata Points lost {n} ({files}), left {left}."
+      },
+      "Cook": {
+        "cook": "Cook Task",
+        "install": "Installation Task",
+        "line": "{label}: Computer B/R against TN {tn}, base {base} days, successes {s} (tries {tries}): {days} days.",
+        "failed": "{label}: Computer B/R against TN {tn}, base {base} days: no success in {tries} tries ({days} days lost). The part can't be finished with these dice.",
+        "public": "Cook and Installation Tasks: {days} more days (the GM rolled them secretly, VR2 p. 77).",
+        "publicCookFailed": "The Cook Task failed after {tries} tries: the part can't be finished with these dice (VR2 p. 77).",
+        "publicInstallFailed": "The Installation Task failed after {tries} tries: the part can't be finished with these dice (VR2 p. 77)."
+      },
+      "Form": {
+        "failed": "<strong>{name}</strong>'s design of {form} is flawed: Computer against TN {tn}, no success. Days lost: {days} (base {base} ÷ 2D6). No Karma is spent; try again (VR2 pp. 77, 145).",
+        "underWay": "<strong>{name}</strong> begins programming {form}: size {size} Mp, base {base} days, Computer against TN {tn}, successes {s}, otaku task bonus {bonus}: ready in {days} days (VR2 p. 145).",
+        "done": "<strong>{name}</strong> programs {form} into the living persona: size {size} Mp, base {base} days, Computer against TN {tn}, successes {s}, otaku task bonus {bonus}: {days} days of work (VR2 p. 145).",
+        "project": "Programming {form}"
+      },
+      "Otaku": {
+        "armor": "Living persona Armor (Willpower)"
+      }
+    },
+    "MxOps97": {
+      "Op": {
+        "analyzeSubsystem": "Analyze subsystem (pick the subsystem)",
+        "crashApplication": "Crash application (pick the subsystem)",
+        "decoy": "Decoy",
+        "disinfect": "Disinfect (pick the subsystem)",
+        "dumpLog": "Dump log",
+        "locateDeckerOp": "Locate decker",
+        "locateFrame": "Locate frame",
+        "locateIcOp": "Locate IC",
+        "retrain": "Retrain (I/O bandwidth)",
+        "scanIcon": "Scan icon (pick the icon)"
+      },
+      "Item": {
+        "security": "Security Rating",
+        "access": "Access",
+        "control": "Control",
+        "index": "Index",
+        "files": "Files",
+        "slave": "Slave",
+        "mpcp": "MPCP",
+        "bod": "Bod",
+        "evasion": "Evasion",
+        "masking": "Masking",
+        "sensors": "Sensors",
+        "responseIncrease": "Response Increase"
+      },
+      "Level": {
+        "user": "User",
+        "superuser": "Superuser (+{tn} TN)",
+        "supervisor": "Supervisor (+{tn} TN)"
+      },
+      "Query": {
+        "veryVague": "Extremely vague question (+{tn} TN)",
+        "vague": "Vague question (+{tn} TN)",
+        "plain": "Plain question",
+        "sharp": "Well-phrased question ({tn} TN)",
+        "insightful": "Insightful question ({tn} TN)"
+      },
+      "Dialog": {
+        "first": "Learn first (Analyze Host, Scan Icon)",
+        "firstAny": "In the book's order",
+        "level": "Validate Passcode: passcode",
+        "query": "Interrogation: the question",
+        "icons": "Icons you have located (Scan Icon)"
+      },
+      "Mod": {
+        "level": "Passcode: {level}",
+        "query": "The question",
+        "sleaze": "Target's sleaze {rating}"
+      },
+      "Why": {
+        "scanTarget": "Pick a decker, frame or agent in this host that you have located (Locate Decker, Locate Frame) to scan.",
+        "slowReactive": "{name} is reactive IC: the slow utility does not work on it (VR2 p. 99).",
+        "slowTrace": "{name} has locked on: trace IC is open to the slow utility only while it hunts (VR2 p. 99)."
+      },
+      "AnalyzeHost": {
+        "nothing": "No successes to spend: nothing learned.",
+        "more": "(one item per success; 7 tell all)"
+      },
+      "Scan": {
+        "tn": "{name}'s Masking {masking}",
+        "nothing": "Nothing learned.",
+        "gone": "The icon is no longer here (or no longer located): nothing learned."
+      },
+      "Subsystem": {
+        "found": "{sub}: {list}.",
+        "clean": "{sub}: nothing out of the ordinary.",
+        "bomb": "a data bomb, rating {rating}",
+        "pavlov": "(Pavlov)",
+        "bombLabel": "{by} finds the data bombs on {sub}"
+      },
+      "CrashApp": {
+        "done": "{by} crashes an application on the {sub} subsystem. GM: which one; it does not touch IC, frames, constructs or deckers."
+      },
+      "Disinfect": {
+        "done": "{by} destroys the worms on the {sub} subsystem (GM: any there are gone)."
+      },
+      "Retrain": {
+        "done": "{by} retrains the I/O bandwidth (the optional bandwidth rule, VR2 p. 90, is the GM's to track)."
+      },
+      "Decoy": {
+        "made": "{name} puts up a decoy ({n} successes): proactive IC that attack them roll 1D6, and on {n} or less hit the decoy.",
+        "frame": "A frame's decoy: the GM runs it.",
+        "missed": "{ic} ignores {name}'s decoy (1D6 {d6} against {n}).",
+        "drawn": "{ic} attacks {name}'s decoy instead (1D6 {d6} against {n}): {level} damage, the decoy has {boxes} of {max} boxes filled.",
+        "gone": "The decoy is gone.",
+        "label": "{by} puts up a decoy",
+        "note": "a decoy ({n} successes)"
+      },
+      "DumpLog": {
+        "open": "{name} opens {host}'s access log: the GM answers their questions (an interrogation).",
+        "file": "The 24-hour log ({size} Mp) can be downloaded.",
+        "fileName": "System access log (24 hours)",
+        "label": "{by} opens the access log"
+      },
+      "Locate": {
+        "sensor": "Sensor Test: {dice} dice vs {tn}, {successes} successes.",
+        "deckers": "Located: {list}.",
+        "noDeckers": "No other decker located.",
+        "frames": "Smart frames and agents: {list}.",
+        "noFrames": "No smart frame or agent running here.",
+        "ic": "IC located: {list}.",
+        "noIc": "No IC running here.",
+        "label": "{by} locates icons",
+        "note": "{n} icon(s) located"
+      },
+      "NotThere": {
+        "line": "{total} successes: the host does not hold what is sought."
+      },
+      "Passcode": {
+        "days": "The {level} passcode lasts {days} days (1D6 {d6} × {net}), unless the host goes to an active alert while they use it.",
+        "alert": "{host}'s active alert flags the passcodes of {names} as illegal: deleted.",
+        "note": "the passcode lasts {days} days"
+      },
+      "Slow": {
+        "label": "{name} {rating} slows {target}: TN {tn} (cybercombat); its Resistance Test {dice} dice vs {rtn}: {resistance} successes",
+        "actions": "It loses {actions} action(s) this turn ({initiative} Initiative; {net} net over its {resistance}).",
+        "none": "No action lost ({net} net over its {resistance}; it takes 2).",
+        "hangs": "It has no action left: it hangs until the next turn.",
+        "hint": "Slow rating (+ Hacking Pool) vs the cybercombat TN, opposed by the IC's Resistance Test (Security Value vs the Slow rating); every 2 net successes take an action ({per} Initiative) this turn. Not on reactive IC; on trace IC only while it hunts."
+      },
+      "Restore": {
+        "hint": "Restore rating vs the rating of the program that crippled the icon; a point per 2 successes. It cannot mend the deck's permanent damage.",
+        "label": "{name} {rating}: Restore Test vs {tn} (the damaging program's rating)"
+      },
+      "Trust": {
+        "decoy": "a decoy for {name} ({n} successes)",
+        "passcode": "{name}'s passcode lasts {days} days",
+        "located": "{name} locates {list}",
+        "decoyAll": "a decoy for {name} ({n} successes): it draws every proactive IC attack"
       }
     }
   },
