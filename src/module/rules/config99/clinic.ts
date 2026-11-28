@@ -21,14 +21,17 @@ export const CLINIC_V99 = {
   /**
    * The surgeon's fee (Cybertechnology p. 54, Medical Costs Table, "Surgery (includes cost of surgeon)"; Core
    * pp. 114–115 for the sizes): minor cosmetic 1,000¥, minor invasive 5,000¥, major invasive 25,000¥, drastic invasive
-   * 250,000¥ by the operation's size (Essence: none, up to .4, .41–.99, 1+; bioware by its Body Index bands), charged to
-   * the patient once per operation. 'v980': no fee (only the recovery care is charged).
+   * 250,000¥ by the operation's size (the Essence the ware actually costs, its grade applied: none, up to .4, .41–.99,
+   * 1+; bioware by its Body Index bands), at the list price (the graded × 50 / × 200 is on the daily rates only, see
+   * gradedFees), charged to the patient once per operation and once per ware put in. Surgery on ware already in is
+   * refused (remove it first). 'v980': no fee (only the recovery care is charged).
    */
   surgeonFee: 'book' as 'book' | 'v980',
   /**
    * Graded clinic fees (Cybertechnology p. 44, Cost Multiplier and Medical Fees; SSC p. 98): for alpha- and beta-grade
    * cybersurgery the doctor's fees and hospitalization are 50 times the medical rates, for delta-grade 200 times: the
-   * surgeon's fee and the recovery care's daily cost are multiplied. 'v980': graded ware pays the standard rates.
+   * daily Doctor's Services and Hospitalization rates (Cybertechnology p. 54 table; Core pp. 114–115), i.e. the
+   * recovery care's daily cost, not the surgery's own cost. 'v980': graded ware pays the standard rates.
    */
   gradedFees: 'book' as 'book' | 'v980',
   /** The graded multipliers (Cybertechnology p. 44): alpha and beta 50, delta 200. */
@@ -36,7 +39,7 @@ export const CLINIC_V99 = {
   feeDelta: 200,
   /**
    * Removing cyberware (Shadowtech pp. 36–41, Cybersystem Implementation; SSC p. 97 for upgrades): the surgeon's
-   * Biotech (B/R) or Cybernetics (B/R), whichever is lower, against 10 − the patient's current Essence (round down); no
+   * Biotech (B/R) or Cybertechnology (B/R), whichever is lower, against 10 − the patient's current Essence (round down); no
    * successes and the patient also loses 10% of the ware's Essence cost (rounded up to the tenth) for good. The GM's
    * tool runs it (the surgeon is often an NPC); the ware comes out (its Essence stays lost: an Essence hole). 'v980':
    * no removal test (unticking Installed takes it out).
@@ -46,13 +49,13 @@ export const CLINIC_V99 = {
    * Ware damage levels (Shadowtech pp. 36–41, System Damage): a damaged system is Light (it works at half: its
    * bonuses halved, fractions dropped), Moderate (it stops working), Serious (stops; +1 TN on every test the character
    * makes) or Deadly (stops; +2 TN), each system's penalty adding up; past Deadly it is destroyed (no penalty, it can
-   * only be replaced). The system damage check writes the level on the item; the lead GM keeps it in a GM-written
+   * only be replaced; destroyed on the item alone counts the same: no better for the player). The system damage check writes the level on the item; the lead GM keeps it in a GM-written
    * record, so lowering the item's own level doesn't lower it. A second hit before repair raises the level one step
    * past the worse of the two (Shadowtech: "accumulates"; VERIFY). 'v980': damaged or not (Moderate or worse stops it).
    */
   damageLevels: 'book' as 'book' | 'v980',
   /**
-   * Repair by damage level (Shadowtech pp. 36–41): the lower of Biotech (B/R) and Cybernetics (B/R) against 2 (Light),
+   * Repair by damage level (Shadowtech pp. 36–41): the lower of Biotech (B/R) and Cybertechnology (B/R) against 2 (Light),
    * 3 (Moderate), 4 (Serious) or 8 (Deadly), doubled for alpha and tripled for beta grade (delta: tripled, VERIFY);
    * base time twice the ware's base Essence cost in hours, × 2 Moderate, × 3 Serious, × 4 Deadly (delta × 4 more,
    * Cybertechnology p. 44), ÷ the successes; parts 5% / 10% / 20% / 40% of its cost by level (shown). A destroyed

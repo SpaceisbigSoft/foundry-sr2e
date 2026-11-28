@@ -603,6 +603,8 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
         factor: new fields.NumberField({ required: true, min: 0, initial: 1 }),
         /** v0.48.0: whether paid care (hospital, intensive) was paid for the days it set. */
         paid: new fields.BooleanField({ required: true, initial: false }),
+        /** v0.99.0 fix (RULES.CLINIC_V99.gradedFees, C7): the ¥ paid for that care (a change of care refunds no more). */
+        paidAmount: new fields.NumberField({ required: true, min: 0, initial: 0 }),
       })),
       /** v0.48.0: radiation dose built up (rating × hours) and when it was last updated (world time). */
       radiation: new fields.SchemaField({
