@@ -1,4 +1,5 @@
 import { RULES, icInitiative, initiativeWoundPenalty, projectingInitiativeMinus, jackedInInitiativeMinus, vehicleDamageInitiative } from '../rules/index.ts';
+import { captainInitiative } from '../rules/vrig98.ts';
 
 /**
  * v0.71.0 (R15): what an actor's initiative is rolled from: dice, base (Reaction or its stand-in) and the wound
@@ -38,6 +39,9 @@ export function initiativeFormula(actor: any): { dice: number; base: number; min
   const rv: any = d?.rigging?.jumpedIn ? actor?.riggedVehicle?.() : null;
   const rvd = rv?.type === 'vehicle' ? vehicleDamageInitiative(Number(rv.system?.condition ?? 0)) : 0;
   if (d?.rigging?.jumpedIn) return out(d.rigging.initiativeDice, d.rigging.reaction, w + rvd, 'rigged');
+  // v0.98.0 (RULES.VRIG_V98.captainsChair 'book', Rigger 2 p. 65): in the captain's chair the rig's Initiative still counts.
+  const chair98 = captainInitiative(actor);
+  if (chair98) return out(chair98.dice, chair98.base, w, 'rigged');
   // A projecting magician acts at astral speed. VERIFY
   // v0.72.0 (O20): the astral form's wounds (astral damage marks the same monitor) slow it too (MAGIC_V72.astralWounds).
   if (d?.astralMode === 'projecting' && d.astral) return out(d.astral.initiativeDice, d.astral.initiativeBase, projectingInitiativeMinus(w), 'astral');

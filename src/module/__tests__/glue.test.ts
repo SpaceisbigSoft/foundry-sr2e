@@ -3414,7 +3414,9 @@ describe("v0.25.0 vehicle combat, sensors, remote decks, chases", () => {
     delete g.game.actors;
   });
 
-  test("ECM, ECCM and ECD in a sensor test", async () => {
+  test("ECM, ECCM and ECD in a sensor test", async (t) => {
+    // v0.98.0: the opposed ECM Test is RULES.VRIG_V98.ecmTest 'book' (v098-vrig-glue.test.ts); this pins ECM beyond ECCM on the TN.
+    t.after(oldWay({ 'VRIG_V98.ecmTest': 'v971', 'VRIG_V98.sensorResults': 'v971' }));
     chat.length = 0;
     const scanner = veh("Scanner", { sensor: 3, eccm: 1 });
     const stealth = veh("Stealth", { signature: 5, ecm: 3, ecd: 2 });
@@ -3460,7 +3462,9 @@ describe("v0.25.0 vehicle combat, sensors, remote decks, chases", () => {
     assert.doesNotMatch(card.content, /data-sr2e-action="ramSelf"/);
   });
 
-  test("remote control decks: jumping in from outside needs one; drones subscribe up to capacity and take group commands", async () => {
+  test("remote control decks: jumping in from outside needs one; drones subscribe up to capacity and take group commands", async (t) => {
+    // v0.98.0: group commands call for Comprehension Tests under RULES.VRIG_V98.comprehension 'book' (v098-vrig-glue.test.ts).
+    t.after(oldWay({ 'VRIG_V98.comprehension': 'v971' }));
     chat.length = 0; warnings.length = 0;
     const rig = person("Remote rigger", rigItems());
     const d1 = veh("Drone 1", { drone: true, pilot: 3, autonav: 0 }, [mg("turret")]);

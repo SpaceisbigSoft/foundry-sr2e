@@ -1,6 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { RULES } from '../config.ts';
+import { oldWay } from './oldway.ts';
 import { DRONES_V73 } from '../config73/drones.ts';
 import {
   droneLinkOf, droneLinkKind, linkEncryption, linkGearOk, droneInterceptTest, droneSpoofTest, spoofOutcome,
@@ -130,7 +131,9 @@ describe('v0.73.0 O28 (5-A10): firmpoints and hardpoints', () => {
     withRule('mounts.turretNeedsHard', true, () => assert.equal(mountPointFor({ name: 'SMG', mount: 'turret' }), 'hard'));
   });
 
-  test('capacity: untracked when both are 0; from Body when asked', () => {
+  test('capacity: untracked when both are 0; from Body when asked', (t) => {
+    // v0.98.0: the Body as one shared budget is RULES.VRIG_V98.mountBudget 'book' (v098-vrig.test.ts); this pins the old counts.
+    t.after(oldWay({ 'VRIG_V98.mountBudget': 'v971' }));
     assert.deepEqual(mountCapacity({ body: 4, firmpoints: 0, hardpoints: 0 }), { tracked: false, firm: 0, hard: 0 });
     withRule('mounts.capacityFrom', 'body', () => assert.deepEqual(mountCapacity({ body: 4, firmpoints: 0, hardpoints: 0 }), { tracked: true, firm: 4, hard: 2 }));
     withRule('mounts.capacityFrom', 'body', () => assert.deepEqual(mountCapacity({ body: 4, firmpoints: 1, hardpoints: 0 }), { tracked: true, firm: 1, hard: 2 }));

@@ -10,6 +10,7 @@ import type { TargetNumberModifier } from './dice.ts';
 import { interceptTest } from './paperwork.ts';
 import { DRONES_V73, type LinkGear, type SpoofEffect, type MountPoint } from './config73/drones.ts';
 import { t as tx, tCount, tList } from '../helpers/i18n.ts';
+import { on as vrigOn, mountBudget } from './vrig98.ts';
 
 export type { LinkGear, SpoofEffect, MountPoint };
 
@@ -177,6 +178,8 @@ export function mountCapacity(o: { body: number; firmpoints: number; hardpoints:
     if (!firm) firm = Math.floor(whole(o?.body) * Math.max(0, num(cfg.firmPerBody)));
     if (!hard) hard = Math.floor(whole(o?.body) * Math.max(0, num(cfg.hardPerBody)));
   }
+  // v0.98.0 (RULES.VRIG_V98.mountBudget 'book', Rigger 2 p. 22): the Body is one budget for every mount (mountUsage).
+  if (vrigOn('mountBudget') && cfg.mode !== 'off') return { tracked: true, firm, hard, body: whole(o?.body), sheetFirm: whole(o?.firmpoints), sheetHard: whole(o?.hardpoints) } as { tracked: boolean; firm: number; hard: number };
   return { tracked: firm + hard > 0, firm, hard };
 }
 
@@ -199,13 +202,22 @@ export function mountUsage(cap0: { tracked: boolean; firm: number; hard: number 
     if (p === 'firm') firmNeeded++;
     else if (p === 'hard') hardNeeded++;
   }
+  // v0.98.0 (RULES.VRIG_V98.mountBudget 'book', Rigger 2 p. 22): a hardpoint weapon takes 2 of the Body's points, a firmpoint one 1.
+  const c98: any = cap0;
+  const b = c98.body !== undefined ? mountBudget({ body: c98.body, firmpoints: c98.sheetFirm, hardpoints: c98.sheetHard, firmNeeded, hardNeeded }) : null;
+  if (b && !b.fromSheet) {
+    const over = cap.tracked && b.over;
+    const label = !(cap.tracked && b.used > 0) ? '' : over ? tx('SR2E.VRig98.Mount.over', { used: b.used, budget: b.budget }) : tx('SR2E.VRig98.Mount.budget', { used: b.used, budget: b.budget });
+    return { tracked: cap.tracked && b.used > 0, firm: cap.firm, hard: cap.hard, firmNeeded, hardNeeded, onSpareHard: 0, overFirm: 0, overHard: over ? Math.ceil((b.used - b.budget) / 2) : 0, over, label };
+  }
+  if (b) cap.tracked = cap.tracked && cap.firm + cap.hard > 0;
   const overHard = Math.max(0, hardNeeded - cap.hard);
   const spareHard = Math.max(0, cap.hard - hardNeeded);
   const firmLeftOver = Math.max(0, firmNeeded - cap.firm);
   const onSpareHard = cfg.hardTakesFirm ? Math.min(spareHard, firmLeftOver) : 0;
   const overFirm = firmLeftOver - onSpareHard;
-  const over = cap.tracked && overHard + overFirm > 0;
-  const label = cap.tracked
+  const over = cap.tracked && (overHard + overFirm > 0 || Boolean(b?.sheetOver));
+  const label = b?.sheetOver && cap.tracked ? tx('SR2E.VRig98.Mount.sheetOver', { used: b.used, budget: b.budget }) : cap.tracked
     ? (over
       ? tx('SR2E.Text.Dronelink.firmpointsHardpointsTooMany', { firmUsed: Math.min(firmNeeded, cap.firm), firm: cap.firm, hardUsed: Math.min(cap.hard, hardNeeded + onSpareHard), hard: cap.hard, over: tList([overHard ? tCount(overHard, 'SR2E.Text.Dronelink.hardpointWeapon') : '', overFirm ? tCount(overFirm, 'SR2E.Text.Dronelink.firmpointWeapon') : '']) })
       : tx('SR2E.Text.Dronelink.firmpointsHardpoints', { firmUsed: Math.min(firmNeeded, cap.firm), firm: cap.firm, hardUsed: Math.min(cap.hard, hardNeeded + onSpareHard), hard: cap.hard }))

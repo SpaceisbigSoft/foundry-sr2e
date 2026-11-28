@@ -645,7 +645,9 @@ describe('O28 (5-A10) firmpoints and hardpoints', () => {
     return it._preCreate({ type: 'weapon', ...data }, {}, 'gm1');
   };
 
-  test('the vehicle model counts the points; untracked (both 0) as before', () => {
+  test('the vehicle model counts the points; untracked (both 0) as before', (t) => {
+    // v0.98.0: the Body as one shared budget is RULES.VRIG_V98.mountBudget 'book' (v098-vrig.test.ts); this pins the old counts.
+    t.after(oldWay({ 'VRIG_V98.mountBudget': 'v971' }));
     const v = vehicle({ firmpoints: 1, hardpoints: 1 }, [mg('fixed'), { ...mg('turret', {}, 'Assault cannon'), id: 'ac' }]);
     const u = v.system.derived.mountUsage;
     assert.deepEqual({ t: u.tracked, f: u.firmNeeded, h: u.hardNeeded, o: u.over }, { t: true, f: 1, h: 1, o: false });

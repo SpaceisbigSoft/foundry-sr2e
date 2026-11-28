@@ -26,6 +26,7 @@ import { SR2TeamKarma } from './teamkarma.ts';
 import { openConversionTool } from './nesting942.ts';
 import { openLoot942 } from './trade942.ts';
 import { openBookTool } from './core95.ts';
+import { openRiggingTool } from './vrig98.ts';
 import { openSpiritsTool } from './spirits96.ts';
 import { openChaseTool } from './vdrive98.ts';
 import { openVsecTool } from './vsec98.ts';
@@ -102,6 +103,7 @@ export const TOOL_ACTIONS: Record<string, () => void> = {
   tourGm: () => { if (isGm()) void startTour('gm-panel'); },
   accessoryItems: () => { if (isGm()) void openConversionTool(); },
   bookRules95: () => { if (isGm()) void openBookTool(); },
+  rigging98: () => { if (isGm()) void openRiggingTool(); },
   spirits96: () => { if (isGm()) void openSpiritsTool(); },
   chase98: () => { if (isGm()) void openChaseTool(); },
   vsec98: () => { if (isGm()) void openVsecTool(); },
