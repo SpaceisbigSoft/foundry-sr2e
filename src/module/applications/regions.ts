@@ -236,7 +236,8 @@ function watchedIdsAt(scene: any, p: { x: number; y: number; elevation?: number 
 
 function seedSeen(scene: any): void {
   try {
-    for (const t of [...(scene?.tokens ?? [])]) { const p = tokenPoint(t); if (p) lastSeen.set(String(t.uuid), watchedIdsAt(scene, p)); }
+    // v0.96.4: the stored spot (a token mid-animation has an in-between doc.x).
+    for (const t of [...(scene?.tokens ?? [])]) { const p = movedPoint(t); if (p) lastSeen.set(String(t.uuid), watchedIdsAt(scene, p)); }
   } catch { /* no scene */ }
 }
 
@@ -272,9 +273,10 @@ function wardMove(doc: any, change: any, userId: string): boolean {
   const presence = wardPresence(a ? { type: a.type, materialized: a.system?.materialized, astralMode: a.system?.derived?.astralMode, dualNatured: Boolean(a.system?.derived?.dualNatured) } : null);
   if (!presence.astral && !presence.physical) return true;
   const scene = doc.parent;
-  const from = tokenPoint(doc);
+  // v0.96.4: from the stored spot (an earlier move may still be animating doc.x) to where the change puts it.
+  const from = movedPoint(doc);
   if (!from || !scene) return true;
-  const to = tokenPoint({ ...((typeof doc.toObject === 'function' ? doc.toObject() : doc)), parent: scene, x: change.x ?? doc.x, y: change.y ?? doc.y, elevation: change.elevation ?? doc.elevation });
+  const to = movedPoint(doc, change);
   if (!to) return true;
   for (const w of wardsBetween({ document: doc, center: from, parent: scene }, { document: doc, center: to, parent: scene })) {
     const kind = String(w.system?.barrierKind ?? 'ward');

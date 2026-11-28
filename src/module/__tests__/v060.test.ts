@@ -120,6 +120,17 @@ describe('v0.60.0 regions (glue)', () => {
     assert.equal(regions.astralForm({ type: 'spirit', system: { materialized: true } }), false);
   });
 
+  test('v0.96.4: a ward is checked from the stored spot, not v14\'s animated doc.x', () => {
+    settings.wardsStopAstral = 'block';
+    uuids.set('Actor.ward14', { uuid: 'Actor.ward14', type: 'barrier', name: 'Ward', system: { rating: 5 } });
+    const sc = scene([region('w14', { wardUuid: 'Actor.ward14' }, [{ type: 'circle', x: 0, y: 0, radius: 300 }])]);
+    // Stored inside the ward; an earlier move's animation still shows it outside (doc.x 1000).
+    const doc: any = { name: 'Mage', x: 1000, y: -50, width: 1, height: 1, elevation: 0, _source: { x: -50, y: -50, elevation: 0 }, parent: sc, actor: { type: 'character', system: { derived: { astralMode: 'projecting' } } } };
+    const move = (change: any) => fire('preUpdateToken', doc, change, {}, 'u1')[0];
+    assert.equal(move({ x: 1100 }), false, 'leaving the ward from the stored spot is stopped');
+    assert.equal(move({ x: 100 }), undefined, 'a move that stays inside passes');
+  });
+
   test('a camera region tells the GM who walks in (once), or rolls detection', async () => {
     const detected: any[] = [];
     const site = { uuid: 'Actor.site', type: 'site', name: 'Lab', system: { guards: ['Actor.guard'], riggerUuid: '', devices: [{ id: 'cam', name: 'Lobby cam', kind: 'camera', rating: 4, active: true, bypassed: false, sense: 'visual' }] },

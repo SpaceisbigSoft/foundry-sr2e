@@ -5,6 +5,7 @@ This is the history of the unofficial Shadowrun 2nd Edition system for Foundry V
 ## v0.96.4 — Interception and region entries in Foundry v14 (27 Nov 2026)
 - **Fixed:** a move past an opponent in a fight offers the interception again. In Foundry v14 a token's position follows its movement animation, so when the move was reported the token still seemed to stand where it started and nobody was offered (Core p. 83).
 - **Fixed:** a camera or other watched region notices a token walking in on the move itself, not a move late (same cause).
+- **Fixed:** a ward is checked from where an astral token really stands when it moves again before the last move has finished drawing (same cause).
 - API changes: none.
 
 ## v0.96.3 — Engulf's lines on a damage card (27 Nov 2026)
