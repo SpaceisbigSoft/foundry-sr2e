@@ -115,8 +115,10 @@ before(async () => {
   g.CONFIG = { Actor: { documentClass: SR2Actor } };
   VG = await import('../applications/vrig98.ts');
   // This area's English while its draft isn't merged into public/lang/en.json (the lead deletes the draft then).
-  const draft = join('i18n-drafts', 'vrig98.json');
-  if (existsSync(draft)) g.__SR2E_EN__ = { ...(g.__SR2E_EN__ ?? {}), ...JSON.parse(readFileSync(draft, 'utf8')) };
+  for (const f of ['vrig98.json', 'vrig98-fix.json']) {
+    const draft = join('i18n-drafts', f);
+    if (existsSync(draft)) g.__SR2E_EN__ = { ...(g.__SR2E_EN__ ?? {}), ...JSON.parse(readFileSync(draft, 'utf8')) };
+  }
 });
 
 beforeEach(() => {
@@ -325,42 +327,105 @@ describe('MIJI and the Signal Monitor (Rigger 2 pp. 69–72)', () => {
     g.game.actors = [intruder, corp, drone];
     return { intruder, corp, drone };
   };
-  test("a player's meaconing card: the GM's Apply counts the card's dice again and degrades the corp network", async () => {
-    const { intruder, corp, drone } = setup();
+  /** The player's meaconing card (Trixie: 8 dice vs 3, five successes) and the GM back at the table. */
+  const playerCard = async () => {
+    const s = setup();
     g.game.user = PLAYER();
-    corp.isOwner = false;
-    // Trixie: 8 dice vs 3 (five successes); the corp: 5 dice vs 6 (one).
-    faces.push(3, 3, 4, 5, 5, 1, 1, 2, 6, 1, 2, 3, 1, 2);
-    const res = await VG.mijiTest(intruder, corp, 'meaconing', 'system');
-    assert.deepEqual(res, { target: 4, self: 0 });
-    assert.equal(corp.flags?.[SYSTEM_ID]?.vrig98Signal, undefined);    // not the player's to write
-    const card = chat.find((m) => m.flags?.[SYSTEM_ID]?.vrig98Miji);
-    assert.match(card.content, /vrig98Apply/);
-    card.rolls = (card.rolls ?? []);
+    s.corp.isOwner = false;
+    faces.push(3, 3, 4, 5, 5, 1, 1, 2);
+    const res = await VG.mijiTest(s.intruder, s.corp, 'meaconing', 'system');
+    const card = [...chat].reverse().find((m) => m.flags?.[SYSTEM_ID]?.vrig98Miji);
     g.game.user = GM();
-    corp.isOwner = true;
-    // The GM confirms the change (gmMay: a player's card); the dialog's lines come from the re-count.
+    s.corp.isOwner = true;
+    return { ...s, res, card };
+  };
+  const confirming = async <T>(fn: () => Promise<T>, seen: string[] = []): Promise<T> => {
     const dlg = g.foundry.applications.api.DialogV2;
     const confirm0 = dlg.confirm;
-    dlg.confirm = async () => true;
-    try { assert.equal(await VG.applyMiji(card), true); } finally { dlg.confirm = confirm0; }
+    dlg.confirm = async (o: any) => { seen.push(String(o?.content ?? '')); return true; };
+    try { return await fn(); } finally { dlg.confirm = confirm0; }
+  };
+  test("a player's meaconing card: only the intruder's dice are on it; the GM's Apply rolls the defender and degrades the corp network", async () => {
+    const { corp, drone, res, card } = await playerCard();
+    assert.deepEqual(res, { target: 0, self: 0, pending: true });
+    assert.equal(corp.flags?.[SYSTEM_ID]?.vrig98Signal, undefined);    // not the player's to write
+    assert.match(card.content, /vrig98Apply/);
+    assert.equal(card.rolls.length, 1);                                   // the defender isn't rolled on the player's client
+    // S5: a forged "defender" roll of all ones added to the card counts for nothing: the corp rolls on the GM's client
+    // (5 dice vs the PEM 6: one success, the 6 re-rolled to 8).
+    card.rolls.push({ dice: [{ results: [1, 1, 1, 1, 1].map((result) => ({ result })) }] });
+    faces.push(6, 1, 2, 3, 1, 2);
+    const seen: string[] = [];
+    assert.equal(await confirming(() => VG.applyMiji(card), seen), true);
     assert.equal(corp.flags[SYSTEM_ID].vrig98Signal.system.boxes, 4);
-    // Twice is once.
-    assert.equal(await VG.applyMiji(card), false);
+    // The GM's dialog shows both sides' dice and TNs, the PEM and the ECCM.
+    assert.match(seen[0]!, /8 dice vs TN 3, rolled 3, 3, 4, 5, 5, 1, 1, 2: 5 successes/);
+    assert.match(seen[0]!, /5 dice vs TN 6, rolled 8, 1, 2, 3, 1: 1 successes/);
+    assert.match(seen[0]!, /Protocol emulation module 6/);
+    assert.match(seen[0]!, /ECCM 0/);
+    // The GM's own card carries the defender's roll.
+    assert.ok(chat.some((m) => m !== card && m.rolls?.length > 0 && /GM: Trixie/.test(m.content) && /8, 1, 2, 3, 1 vs TN 6/.test(m.content)));
     // The meaconed system channel: +2 on the corp drone's own Pilot tests.
     assert.deepEqual(VG.driveMods(drone, drone, 'autopilot', false).map((m: any) => m.value), [2]);
   });
+  test('S6: applied once, remembered on the target network, not on the card; a reposted copy is refused', async () => {
+    const { corp, card } = await playerCard();
+    faces.push(1, 1, 1, 1, 1);
+    assert.equal(await confirming(() => VG.applyMiji(card)), true);
+    assert.equal(corp.flags[SYSTEM_ID].vrig98Signal.system.boxes, 5);
+    assert.equal(corp.flags[SYSTEM_ID].vrig98MijiApplied.length, 2);
+    // The player's own card flags count for nothing (the old once-guard lived there).
+    card.flags[SYSTEM_ID].vrig98Done = false;
+    assert.equal(await confirming(() => VG.applyMiji(card)), false);
+    assert.ok(warnings.some((w) => /already been applied/.test(w)));
+    // A copy posted again (a new message, the same flags and dice): refused by its dice signature.
+    const copy = await g.ChatMessage.create({ author: PLAYER(), content: card.content, rolls: card.rolls, flags: JSON.parse(JSON.stringify(card.flags)) });
+    assert.notEqual(copy.id, card.id);
+    assert.equal(await confirming(() => VG.applyMiji(copy)), false);
+    assert.ok(warnings.some((w) => /match a MIJI card already applied/.test(w)));
+    assert.equal(corp.flags[SYSTEM_ID].vrig98Signal.system.boxes, 5);
+  });
+  test('P5: a double click on Apply is one Apply (one dialog, one roll, one write)', async () => {
+    const { corp, card } = await playerCard();
+    faces.push(1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
+    let dialogs = 0;
+    const dlg = g.foundry.applications.api.DialogV2;
+    const confirm0 = dlg.confirm;
+    dlg.confirm = async () => { dialogs++; await new Promise((r) => setTimeout(r, 5)); return true; };
+    const button: any = { disabled: false };
+    try { await Promise.all([VG.onCard(card, button, 'vrig98Apply'), VG.onCard(card, button, 'vrig98Apply')]); } finally { dlg.confirm = confirm0; }
+    assert.equal(dialogs, 1);
+    assert.equal(corp.flags[SYSTEM_ID].vrig98Signal.system.boxes, 5);
+    assert.equal(button.disabled, true);
+    assert.equal(faces.length, 5);                                        // the defender rolled once
+  });
+  test('C6: the GM write runs under the GM lock, inline inside a card re-run (no deadlock)', async () => {
+    const { corp, card } = await playerCard();
+    faces.push(1, 1, 1, 1, 1);
+    const run = confirming(() => SR2Actor.runAsAuthor(GM(), () => VG.applyMiji(card)));
+    const timeout = new Promise((r) => { const tm = setTimeout(() => r('deadlock'), 2000); (tm as any).unref?.(); });
+    assert.equal(await Promise.race([run, timeout]), true);
+    assert.equal(corp.flags[SYSTEM_ID].vrig98Signal.system.boxes, 5);
+    // Outside a re-run it waits for the lock: another GM task holding it finishes first.
+    const second = await playerCard();
+    faces.push(1, 1, 1, 1, 1);
+    const { withGmLock } = await import('../applications/gmlock.ts');
+    let release!: () => void;
+    const held = withGmLock(() => new Promise<void>((r) => { release = r; }));
+    const apply = confirming(() => VG.applyMiji(second.card));
+    await new Promise((r) => setTimeout(r, 10));
+    assert.equal(second.corp.flags?.[SYSTEM_ID]?.vrig98Signal, undefined);
+    release();
+    await held;
+    assert.equal(await apply, true);
+    assert.equal(second.corp.flags[SYSTEM_ID].vrig98Signal.system.boxes, 5);
+  });
   test('a card whose author does not own the intruder is refused; so is a card whose dice don\'t add up', async () => {
-    const { intruder, corp } = setup();
-    faces.push(3, 3, 4, 5, 5, 1, 1, 2, 6, 1, 2, 3, 1, 2);
-    g.game.user = PLAYER();
-    await VG.mijiTest(intruder, corp, 'meaconing', 'system');
-    const card = chat.find((m) => m.flags?.[SYSTEM_ID]?.vrig98Miji);
-    g.game.user = GM();
+    const { corp, card } = await playerCard();
     card.author = { id: 'p2', name: 'Someone else', isGM: false };
     assert.equal(await VG.applyMiji(card), false);
     card.author = PLAYER();
-    card.rolls = card.rolls.slice(0, 1);
+    card.rolls = [];
     assert.equal(await VG.applyMiji(card), false);
     assert.equal(corp.flags?.[SYSTEM_ID]?.vrig98Signal, undefined);
   });
@@ -386,5 +451,85 @@ describe('MIJI and the Signal Monitor (Rigger 2 pp. 69–72)', () => {
     assert.deepEqual(VG.driveMods(drone, drone, 'autopilot', false).map((m: any) => m.value), [3]);
     t.after(oldWay({ 'VRIG_V98.miji': 'v971' }));
     assert.deepEqual(VG.driveMods(drone, drone, 'autopilot', false), []);
+  });
+});
+
+describe('v0.98.0 review fixes (glue)', () => {
+  test('C2: network drones taking the rigger\'s score keep the acting combatant acting (GM client)', async () => {
+    g.game.users = Object.assign([GM(), PLAYER()], { activeGM: { id: 'gm1', isSelf: true } });
+    const r = owners(rigger([rcd(3)]), ['p1']);
+    const mine = owners(vehicle({ name: 'Mine', drone: true, pilot: 3 }), ['p1']);
+    const npc = owners(vehicle({ name: 'NPC drone', drone: true, pilot: 3 }), []);
+    r.system.rigging.subscribed = [mine.uuid];
+    g.game.actors = [r, mine, npc];
+    const cbt = (id: string, actor: any, initiative: number) => ({ id, actor, initiative, canUserModify: () => true });
+    const combat: any = {
+      started: true, turn: 1, combatants: [cbt('c1', r, 14), cbt('c2', mine, 7), cbt('c3', npc, 9)],
+      get turns() { return [...this.combatants].sort((a: any, b: any) => b.initiative - a.initiative || VG.networkOrder(a, b)); },
+      get combatant() { return this.turns[this.turn]; },
+      async updateEmbeddedDocuments(_t: string, ups: any[]) { for (const u of ups) combat.combatants.find((c: any) => c.id === u._id).initiative = u.initiative; },
+      async update(d: any) { Object.assign(combat, d); },
+    };
+    assert.equal(combat.combatant.id, 'c3');                              // the NPC drone acts
+    await VG.networkPhase(combat);
+    assert.deepEqual(combat.turns.map((c: any) => c.id), ['c1', 'c2', 'c3']);
+    assert.equal(combat.combatant.id, 'c3');                              // still the NPC drone
+  });
+  test('C3: a preview of a continuous-lock missile writes no launch; the attack that rolled does', async () => {
+    const missile = mg('hardpoint', { guidance: 4, damagePower: 12, modes: 'SS' }, 'Missile');
+    const d = vehicle({ name: 'Hunter', drone: true, pilot: 4, sensor: 4, hardpoints: 1 }, [missile]);
+    const prey = vehicle({ name: 'Prey', signature: 4 });
+    g.game.actors = [d, prey];
+    g.game.combat = { started: true, round: 2, id: 'cb1' };
+    d.system.locks = [{ targetUuid: prey.uuid, targetName: 'Prey', successes: 2, round: 2, worldTime: 0, combatId: 'cb1' }];
+    const w = d.items.get(missile.id);
+    const o = { mounted: { vehicleUuid: d.uuid, role: 'autopilot' }, missileMode98: 'continuous', targetUuid: prey.uuid };
+    assert.ok(d.planAttack(w, o).guidance98 > 0);
+    d.previewAttack(w, o);
+    await new Promise((r) => setTimeout(r, 0));
+    assert.equal(d.flags?.[SYSTEM_ID]?.vrig98Lock, undefined);
+    for (let i = 0; i < 40; i++) faces.push(4);
+    const res = await d.fireMounted(d, w, { range: 'short', missileMode98: 'continuous', targetUuid: prey.uuid });
+    assert.ok(res, warnings.join(' | '));
+    assert.deepEqual(d.flags[SYSTEM_ID].vrig98Lock, { round: 2, combatId: 'cb1' });
+  });
+  test("P7: the captain's chair needs a control rig as well as the deck", () => {
+    const deckOnly = who({ name: 'Decker' }, [rcd(3)]);
+    assert.equal(VG.chairContext(deckOnly), null);
+    assert.deepEqual(VG.chairContext(rigger([rcd(3)])), { on: false });
+  });
+  test("P8: with the optional ED rule, a player's own Sensor card gets no ED row (one electronic warfare row); the GM's does", async (t) => {
+    t.after(oldWay({ 'VRIG_V98.ed': 'book' }));
+    const scanner = vehicle({ name: 'Doberman', drone: true, pilot: 3, sensor: 4 });
+    const target = vehicle({ name: 'Ghost', ed: 3 });
+    g.game.user = PLAYER();
+    faces.push(5, 5, 1);                                                  // ED 3 dice vs Sensor 4: two successes
+    const mine = await VG.sensorEw(scanner, target);
+    assert.deepEqual(mine.map((m: any) => [m.id, m.value]), [['ew98', 2]]);
+    assert.doesNotMatch(mine[0].label, /deception|ED/);
+    g.game.user = GM();
+    faces.push(5, 5, 1);
+    assert.deepEqual((await VG.sensorEw(scanner, target)).map((m: any) => m.id), ['ed98']);
+  });
+  test("P9 / C11: the link's Flux takes the deck's encryption (linkEncryption) and ECCM gear (eccmOf); 'v971' the plain one", (t) => {
+    const r = rigger([rcd(3, { signal: 4, radio: { encryption: 2 } }), { id: 'eccm', type: 'gear', name: 'ECCM 4', system: { carried: true } }]);
+    const d = vehicle({ name: 'Spotter', drone: true, pilot: 3 });
+    d.sceneHere = () => ({ flags: {} });
+    assert.equal(r.remoteLink(d).signal, 1.5);                            // 4 − 0.5 (the deck's encryption) − 2 (ECCM 4)
+    t.after(oldWay({ 'VRIG_V98.flux': 'v971' }));
+    assert.equal(r.remoteLink(d).signal, 4);
+  });
+  test('C9: a lost command channel refuses a group command with one warning, not one per drone', async () => {
+    const r = rigger([rcd(3)]);
+    const a = vehicle({ name: 'One', drone: true, pilot: 3 }), b = vehicle({ name: 'Two', drone: true, pilot: 3 });
+    r.system.rigging.subscribed = [a.uuid, b.uuid];
+    g.game.actors = [r, a, b];
+    r.flags[SYSTEM_ID] = { vrig98Signal: { command: { boxes: 10, ops: ['jamming'] } } };
+    assert.equal(await r.groupDrive({}), 0);
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0]!, /command channel is lost/);
+    warnings.length = 0;
+    assert.equal(await r.groupAttack(a.uuid, {}), 0);
+    assert.equal(warnings.length, 1);
   });
 });

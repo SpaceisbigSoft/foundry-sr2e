@@ -9299,7 +9299,7 @@ export class SR2Actor extends Actor {
     const mods95 = melee && opts.intercept95
       ? [...sd.modifiers, ...situationalModifiers(M95.interceptSituational(situational), 'normal'), ...attackerReachModifiers(((w.reach as number | undefined) ?? 0) + this.reachBonus + (style?.style.reach ?? 0), opts.targetReach ?? 0), ...wall95]
       : [...modifiers, ...wall95];
-    return { w, melee, blast, base, power, level, damageType, modeLabel, rounds, earlier, wasted, extras, notes, situational, dice, suffix, modifiers: mods95, ammoShort, sd, pool, blastExtras, firstShotSingle };
+    return { w, melee, blast, base, power, level, damageType, modeLabel, rounds, earlier, wasted, extras, notes, situational, dice, suffix, modifiers: mods95, ammoShort, sd, pool, blastExtras, firstShotSingle, guidance98: guidance };
   }
 
   /**
@@ -9598,6 +9598,8 @@ export class SR2Actor extends Actor {
     });
     // v0.95.0 (FIRE_V95.misfire 'book', Core p. 93): explosive rounds and all ones: the round goes off in the gun.
     await F95.afterAttack(this, weapon, plan, opts, rolled95);
+    // v0.98.0 (RULES.VRIG_V98.missiles 'book', Rigger 2 p. 59): a continuous-lock launch noted once the attack rolled.
+    if (rolled95) await VR98G.noteLaunch(opts.mounted, plan.guidance98, opts.missileMode98);
     return rolled95;
   }
 
@@ -18396,6 +18398,8 @@ export class SR2Actor extends Actor {
 
   /** A group command: every subscribed drone makes the same driving test (each on its own autopilot or driver). */
   async groupDrive(opts: DriveOptions = {}): Promise<number> {
+    // v0.98.0 (RULES.VRIG_V98.miji 'book', Rigger 2 p. 70): the command channel lost, no drone takes it (one warning).
+    if (VR98G.commandRefused(this)) return 0;
     // v0.59.0: a command to the subscribed drones takes the rigger's action (RULES.ACTIONS.costs.droneCommand).
     if (!(await this.useAction('droneCommand', tx('SR2E.Card.Actor.aCommandToTheDrones')))) return 0;
     let n = 0;
@@ -18411,6 +18415,8 @@ export class SR2Actor extends Actor {
 
   /** A group command: every subscribed drone fires its first mounted weapon at the target on its own autopilot. */
   async groupAttack(targetUuid: string, opts: AttackOptions = {}): Promise<number> {
+    // v0.98.0 (RULES.VRIG_V98.miji 'book', Rigger 2 p. 70): the command channel lost, no drone takes it (one warning).
+    if (VR98G.commandRefused(this)) return 0;
     if (!(await this.useAction('droneCommand', tx('SR2E.Card.Actor.aCommandToTheDrones')))) return 0;
     let n = 0;
     for (const d of this.subscribedDrones()) {
@@ -19066,9 +19072,6 @@ export class SR2Actor extends Actor {
 
   /** Whether this rigger can send a drone a group command: not jammed, and in range unless that only warns. */
   #canCommand(drone: any): boolean {
-    // v0.98.0 (RULES.VRIG_V98.miji 'book', Rigger 2 p. 70): the command channel lost, the drones are cut off.
-    const lost98 = VR98G.commandLost(this);
-    if (lost98) { ui.notifications?.warn?.(escHtml(lost98)); return false; }
     // v0.73.0 (O28): a link taken over by a spoofer refuses its own rigger's commands too (jamming as before).
     const blk = droneCommandBlock(drone.system);
     if (blk.blocked) {

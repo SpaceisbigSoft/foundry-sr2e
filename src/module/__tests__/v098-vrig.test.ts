@@ -19,8 +19,10 @@ function english(): Record<string, string> {
   const flat: Record<string, string> = {};
   const walk = (o: unknown, p: string): void => { if (typeof o === 'string') { flat[p] = o; return; } if (o && typeof o === 'object') for (const [k, v] of Object.entries(o)) walk(v, p ? `${p}.${k}` : k); };
   walk(JSON.parse(readFileSync(join('public', 'lang', 'en.json'), 'utf8')), '');
-  const draft = join('i18n-drafts', 'vrig98.json');
-  if (existsSync(draft)) Object.assign(flat, JSON.parse(readFileSync(draft, 'utf8')));
+  for (const f of ['vrig98.json', 'vrig98-fix.json']) {
+    const draft = join('i18n-drafts', f);
+    if (existsSync(draft)) Object.assign(flat, JSON.parse(readFileSync(draft, 'utf8')));
+  }
   return flat;
 }
 (globalThis as any).__SR2E_EN__ = { ...((globalThis as any).__SR2E_EN__ ?? {}), ...english() };
@@ -291,5 +293,31 @@ describe("every switch at 'v971' together", () => {
     assert.equal(X.edPlan({ ed: 3, sensor: 4 }), null);
     assert.equal(X.comprehensionPlan({ pilot: 3, primaryJumped: false }), null);
     assert.deepEqual(mountCapacity({ body: 4, firmpoints: 0, hardpoints: 0 }), { tracked: false, firm: 0, hard: 0 });
+  });
+});
+
+describe('v0.98.0 review fixes (pure)', () => {
+  test('S7: ECM, ECCM, ED, ECD and Sensor count at most EW_MAX (player-writable fields rolled on any client)', (t) => {
+    const p = X.ecmPlan({ ecm: 999, sensor: 999, eccm: 999 })!;
+    assert.deepEqual(p.jammer, { dice: X.deviceFlux(X.EW_MAX), tn: X.EW_MAX });
+    assert.deepEqual(p.scanner, { dice: X.deviceFlux(X.EW_MAX), tn: X.EW_MAX });
+    assert.deepEqual(p.eccm, { counter: { dice: X.EW_MAX, tn: X.EW_MAX }, jammer: { dice: X.EW_MAX, tn: X.EW_MAX } });
+    t.after(oldWay({ 'VRIG_V98.ed': 'book' }));
+    assert.deepEqual(X.edPlan({ ed: 1e6, sensor: 1e6, ecd: 1e6 }), { ed: { dice: X.EW_MAX, tn: X.EW_MAX }, ecd: { dice: X.EW_MAX, tn: X.EW_MAX } });
+    // Book-sized ratings are untouched.
+    assert.deepEqual(X.edPlan({ ed: 5, sensor: 4, ecd: 2 }), { ed: { dice: 5, tn: 4 }, ecd: { dice: 2, tn: 5 } });
+  });
+  test('S6: the MIJI dice signature and the applied record', () => {
+    const a = X.mijiSignature({ intruderUuid: 'A', targetUuid: 'B', op: 'jamming', channel: 'command', mod: 0, faces: [1, 2, 6] });
+    assert.equal(a, X.mijiSignature({ intruderUuid: 'A', targetUuid: 'B', op: 'jamming', channel: 'command', mod: 0, faces: [1, 2, 6] }));
+    assert.notEqual(a, X.mijiSignature({ intruderUuid: 'A', targetUuid: 'B', op: 'jamming', channel: 'command', mod: 0, faces: [1, 2, 5] }));
+    assert.notEqual(a, X.mijiSignature({ intruderUuid: 'A', targetUuid: 'B', op: 'jamming', channel: 'system', mod: 0, faces: [1, 2, 6] }));
+    assert.deepEqual(X.appliedList(null), []);
+    assert.deepEqual(X.appliedList(['x', 3, '', 'y']), ['x', 'y']);
+    const many = Array.from({ length: X.APPLIED_KEEP + 5 }, (_v, i) => `k${i}`);
+    const kept = X.withApplied(many, ['new']);
+    assert.equal(kept.length, X.APPLIED_KEEP);
+    assert.equal(kept.at(-1), 'new');
+    assert.deepEqual(X.withApplied(['a', 'b'], ['a']), ['b', 'a']);
   });
 });

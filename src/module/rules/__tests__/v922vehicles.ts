@@ -7,6 +7,7 @@ import { before, after } from 'node:test';
 import { VEHICLES_V923_OLD } from '../config923/vehicles.ts';
 import { oldWay } from './oldway.ts';
 import { VDRIVE_V971_WAY } from './vdrive971.ts';
+import { VRIG_V971_WAY } from './vrig971.ts';
 
 export const V922_VEHICLES: Record<string, unknown> = {
   ...Object.fromEntries(Object.entries(VEHICLES_V923_OLD).map(([k, v]) => [`VEHICLES_V923.${k}`, v])),
@@ -18,6 +19,7 @@ export const V922_VEHICLES: Record<string, unknown> = {
   'GEAR.spellsVsVehicles.combatArmor': false,
   // v0.98.0: nor the vehicle rules v0.98.0 added (RULES.VDRIVE_V98 at 'v971').
   ...VDRIVE_V971_WAY,
+  ...VRIG_V971_WAY,
 };
 
 export function v922Vehicles(extra: Record<string, unknown> = {}): () => void {

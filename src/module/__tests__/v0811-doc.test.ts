@@ -8,8 +8,11 @@ import assert from 'node:assert/strict';
 import { RULES } from '../rules/index.ts';
 import { oldWay as oldWay98 } from '../rules/__tests__/oldway.ts';
 import { VDRIVE_V971_WAY } from '../rules/__tests__/vdrive971.ts';
+import { VRIG_V971_WAY } from '../rules/__tests__/vrig971.ts';
 // v0.98.0: these tests pin the v0.97.1 vehicle behaviour (RULES.VDRIVE_V98 at 'v971'); v098-vdrive*.test.ts test the book's.
 oldWay98(VDRIVE_V971_WAY);
+// v0.98.0: and the v0.97.1 rigging, sensor and electronic warfare rules (RULES.VRIG_V98; the book way is v098-vrig*.test.ts's).
+oldWay98(VRIG_V971_WAY);
 
 const g = globalThis as any;
 const faces: number[] = [];
