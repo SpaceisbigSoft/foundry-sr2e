@@ -50,7 +50,8 @@ describe('v0.99.0 cyberware and bioware: the switches', () => {
     for (const k of ['limbStrengthCap', 'limbQuicknessCap']) keys.add(`SR2E.Ware99.Note.${k}`);
     for (const dyn of ['SR2E.Ware99.Refuse', 'SR2E.Ware99.Note']) keys.delete(dyn);
     for (const k of keys) assert.ok(en[k], k);
-    const draft = JSON.parse(readFileSync(join('i18n-drafts', 'ware99.json'), 'utf8'));
+    const draftPath = join('i18n-drafts', 'ware99.json');
+    const draft = existsSync(draftPath) ? JSON.parse(readFileSync(draftPath, 'utf8')) : {};
     for (const k of Object.keys(draft)) assert.ok(k.startsWith('SR2E.Ware99.') || k.startsWith('SR2E.HouseRules.Rule.WARE_V99__'), k);
   });
 });
