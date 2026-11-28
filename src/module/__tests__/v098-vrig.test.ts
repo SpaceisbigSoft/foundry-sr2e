@@ -19,7 +19,7 @@ function english(): Record<string, string> {
   const flat: Record<string, string> = {};
   const walk = (o: unknown, p: string): void => { if (typeof o === 'string') { flat[p] = o; return; } if (o && typeof o === 'object') for (const [k, v] of Object.entries(o)) walk(v, p ? `${p}.${k}` : k); };
   walk(JSON.parse(readFileSync(join('public', 'lang', 'en.json'), 'utf8')), '');
-  for (const f of ['vrig98.json', 'vrig98-fix.json']) {
+  for (const f of ['vrig98.json', 'vrig98-fix.json', 'vrig98-fix2.json']) {
     const draft = join('i18n-drafts', f);
     if (existsSync(draft)) Object.assign(flat, JSON.parse(readFileSync(draft, 'utf8')));
   }
@@ -319,5 +319,29 @@ describe('v0.98.0 review fixes (pure)', () => {
     assert.equal(kept.length, X.APPLIED_KEEP);
     assert.equal(kept.at(-1), 'new');
     assert.deepEqual(X.withApplied(['a', 'b'], ['a']), ['b', 'a']);
+  });
+});
+
+describe('v0.98.0 second-round fixes (pure)', () => {
+  const vals = { intruderRcd: 6, intruderFlux: 8, pem: 6, intruderEcm: 0, targetRcd: 3, targetFlux: 5 };
+  test('R3: a jammer of 1000 gives the capped TN; every MIJI rating counts at most EW_MAX', () => {
+    assert.deepEqual(X.mijiPlan({ op: 'jamming', channel: 'command', ...vals, intruderEcm: 1000 }).defender, { dice: 5, tn: X.EW_MAX });
+    assert.deepEqual(X.mijiPlan({ op: 'meaconing', channel: 'system', ...vals, pem: 1000 }).defender, { dice: 5, tn: X.EW_MAX });
+    const big = X.mijiPlan({ op: 'meaconing', channel: 'system', intruderRcd: 1e6, intruderFlux: 1e6, pem: 6, intruderEcm: 0, targetRcd: 1e6, targetFlux: 1e6 });
+    assert.deepEqual({ i: big.intruder, d: big.defender }, { i: { dice: X.EW_MAX, tn: X.EW_MAX }, d: { dice: X.EW_MAX, tn: 6 } });
+    // Book-sized ratings are untouched.
+    assert.deepEqual(X.mijiPlan({ op: 'jamming', channel: 'command', ...vals, intruderEcm: 4 }).defender, { dice: 5, tn: 4 });
+  });
+  test('R4: the once-per-Combat-Turn key: the combat and its round, else the world time', () => {
+    const k = (now: any, channel = 'command') => X.mijiTurnKey({ intruderUuid: 'A', targetUuid: 'B', channel, now });
+    const r2 = { round: 2, worldTime: 50, combatId: 'cb1' };
+    assert.equal(k(r2), k({ ...r2, worldTime: 99 }));
+    assert.notEqual(k(r2), k({ ...r2, round: 3 }));
+    assert.notEqual(k(r2), k({ ...r2, combatId: 'cb2' }));
+    assert.notEqual(k(r2), k(r2, 'system'));
+    const out = { round: null, worldTime: 50, combatId: null };
+    assert.equal(k(out), k({ ...out }));
+    assert.notEqual(k(out), k({ ...out, worldTime: 51 }));
+    assert.ok(X.APPLIED_KEEP >= 3 * 20);
   });
 });
