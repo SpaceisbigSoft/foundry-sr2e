@@ -20938,7 +20938,8 @@
         "notChaseCard": "This card's author owns neither vehicle of the chase: not a chase turn to record.",
         "vehDone": "{name}: positioning already recorded this Combat Turn (kept)",
         "mismatch": "{name}'s positioning dice on the card don't add up ({dice} dice on the card, at most {most} by the GM's count, or the faces don't match): not recorded.",
-        "replayLine": "{name}: {successes} positioning successes recounted from the card's {dice} dice (at most {most}), TN {tn} on the card, at least {gmTn} by the GM's count"
+        "replayLine": "{name}: {successes} positioning successes recounted from the card's {dice} dice (at most {most}), TN {tn} on the card, at least {gmTn} by the GM's count",
+        "notPair": "These two vehicles aren't chasing each other in this combat (or the GM left one out of the scores): nothing to record."
       },
       "Mod": {
         "autonav": "Autonav active (rating {rating})",

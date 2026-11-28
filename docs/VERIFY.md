@@ -1000,6 +1000,7 @@ Switches in `RULES.VDRIVE_V98` (`rules/config98/vdrive.ts`, house-rules window: 
 - The Light hit's once-guard falls back to this client's memory when the vehicle is a player's and there is neither a started combat nor a viewed scene to record it on.
 - A vehicle without a combatant (an empty vehicle not added to the combat) doesn't count as a pursuer: add the chasing vehicles to the combat.
 - The GM's pick of a vehicle type is per combat (it starts again by category in a new combat).
+- The GM's "Record positioning" button checks that the two vehicles are a chase pair (one is the other's quarry) and that the GM hasn't left either out of the scores; it doesn't check that the card holds a real roll (card dice can be forged anyway: the most a forged card can get is the dice the GM's client allows that vehicle, once per turn).
 
 **Review fixes and notes (v0.98.0):**
 
@@ -1052,7 +1053,7 @@ Switches in `RULES.VRIG_V98` (`rules/config98/vrig.ts`, house-rules window: Vehi
 **Known limits (v0.98.0):**
 
 - The record lives on the target network's actor. When the target network is a player rigger's (player vs player), its owner can pre-fill or clear that record: harmless, as they can clear their own Signal Monitor too; only MIJI against their own network is affected.
-- Outside combat "once per turn" is per world time: a GM who doesn't advance the clock between scenes sees a second MIJI on the same channel refused until time moves (or a combat starts).
+- (Changed by the lead after the last review) Outside a combat there is no once-per-turn key at all; the card's id and dice signature still refuse a replay or a copy. Formerly: outside combat "once per turn" was per world time: a GM who doesn't advance the clock between scenes sees a second MIJI on the same channel refused until time moves (or a combat starts).
 
 #### Building security and vehicle upkeep (v0.98.0, RULES.VSEC_V98)
 

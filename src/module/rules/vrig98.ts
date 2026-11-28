@@ -386,7 +386,10 @@ export function mijiSignature(o: { intruderUuid: string; targetUuid: string; op:
  * with the combat's id and round when a combat runs, else the world time.
  */
 export function mijiTurnKey(o: { intruderUuid: string; targetUuid: string; channel: string; now: { round: number | null; worldTime: number; combatId: string | null } }): string {
-  const when = o.now.round !== null ? `c${str(o.now.combatId ?? '', 64)}:${whole(o.now.round)}` : `t${Math.floor(Number(o.now.worldTime) || 0)}`;
+  // Lead fix (re-review L2): outside a combat there is no Combat Turn to count by, so no turn key ('' is never stored
+  // or matched); the card's id and its dice signature still refuse a replay or a copy.
+  if (o.now.round === null) return '';
+  const when = `c${str(o.now.combatId ?? '', 64)}:${whole(o.now.round)}`;
   return ['turn', str(o.intruderUuid, 120), str(o.targetUuid, 120), str(o.channel, 20), when].join('|').slice(0, 400);
 }
 

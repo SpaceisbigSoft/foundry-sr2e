@@ -332,16 +332,16 @@ describe('v0.98.0 second-round fixes (pure)', () => {
     // Book-sized ratings are untouched.
     assert.deepEqual(X.mijiPlan({ op: 'jamming', channel: 'command', ...vals, intruderEcm: 4 }).defender, { dice: 5, tn: 4 });
   });
-  test('R4: the once-per-Combat-Turn key: the combat and its round, else the world time', () => {
+  test('R4: the once-per-Combat-Turn key: the combat and its round; none outside a combat', () => {
     const k = (now: any, channel = 'command') => X.mijiTurnKey({ intruderUuid: 'A', targetUuid: 'B', channel, now });
     const r2 = { round: 2, worldTime: 50, combatId: 'cb1' };
     assert.equal(k(r2), k({ ...r2, worldTime: 99 }));
     assert.notEqual(k(r2), k({ ...r2, round: 3 }));
     assert.notEqual(k(r2), k({ ...r2, combatId: 'cb2' }));
     assert.notEqual(k(r2), k(r2, 'system'));
-    const out = { round: null, worldTime: 50, combatId: null };
-    assert.equal(k(out), k({ ...out }));
-    assert.notEqual(k(out), k({ ...out, worldTime: 51 }));
+    // Outside a combat: no turn key at all (the id and dice keys still refuse a replay).
+    assert.equal(k({ round: null, worldTime: 50, combatId: null }), '');
+    assert.deepEqual(X.withApplied([], ['id|x', 'sig|y', '']), ['id|x', 'sig|y']);
     assert.ok(X.APPLIED_KEEP >= 3 * 20);
   });
 });

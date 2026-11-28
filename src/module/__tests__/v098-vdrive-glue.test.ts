@@ -544,6 +544,7 @@ function vanAndCop(): { mine: any; cop: any; pc: any } {
   const cop = own(vehicle({ name: 'Patrol car', autonav: 0, currentSpeed: 60 }));
   const pc = own(who({ name: 'Blade' }, [skill('car', 'Car', 5)]), 'p1');
   mine.system.controllerUuid = pc.uuid; mine.system.controlMode = 'manual';
+  mine.system.chase = { ...(mine.system.chase ?? {}), quarryUuid: cop.uuid };
   g.game.actors = [mine, cop, pc];
   return { mine, cop, pc };
 }
@@ -581,6 +582,24 @@ describe('v0.98.0 review C4 / P2: a player\'s chase turn\'s positioning, recorde
     assert.equal(c.flags[NS].vdrive98.carry.find((x: any) => x.v === mine.uuid).pos, 3);
     assert.equal(c.flags[NS].vdrive98.carry.find((x: any) => x.v === cop.uuid)?.pos ?? 0, copPos);
     assert.ok(warnings.some((w) => /already/.test(w)), warnings.join('|'));
+  });
+  test('lead fix L1: a card naming two vehicles that aren\'t a chase pair, or one the GM unticked, is refused', async () => {
+    withPlayers();
+    const c = combat(1);
+    const { mine, cop } = vanAndCop();
+    const other = own(vehicle({ name: 'Bystander' }));
+    g.game.actors.push(other);
+    g.game.user = GM();
+    const base = { pursuerUuid: mine.uuid, quarryUuid: other.uuid, combatId: c.id, round: c.round, pd: 1, pf: [[6]], pt: 4, qd: 0, qf: [], qt: 4 };
+    warnings.length = 0;
+    await VD.onCard(card(P1(), { vdrive98Pos: base }), button(), 'vdrive98Pos');
+    assert.equal(c.flags[NS]?.vdrive98?.carry?.length ?? 0, 0);
+    assert.equal(warnings.length, 1);
+    c.flags[NS] = { vdrive98: { combatId: c.id, round: c.round, off: [mine.uuid] } };
+    await VD.onCard(card(P1(), { vdrive98Pos: { ...base, quarryUuid: cop.uuid } }), button(), 'vdrive98Pos');
+    assert.equal((c.flags[NS].vdrive98.carry ?? []).length, 0);
+    assert.equal(warnings.length, 2);
+    assert.equal(warnings[0], warnings[1], warnings.join('|'));
   });
   test('a GM running the turn records at once, and only once per pair and turn', async () => {
     const c = combat(1);

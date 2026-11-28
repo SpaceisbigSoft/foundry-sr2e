@@ -376,7 +376,7 @@ describe('MIJI and the Signal Monitor (Rigger 2 pp. 69–72)', () => {
     faces.push(1, 1, 1, 1, 1);
     assert.equal(await confirming(() => VG.applyMiji(card)), true);
     assert.equal(corp.flags[SYSTEM_ID].vrig98Signal.system.boxes, 5);
-    assert.equal(corp.flags[SYSTEM_ID].vrig98MijiApplied.length, 3);    // id, dice, turn
+    assert.equal(corp.flags[SYSTEM_ID].vrig98MijiApplied.length, 2);    // id, dice (no turn key outside a combat)
     // The player's own card flags count for nothing (the old once-guard lived there).
     card.flags[SYSTEM_ID].vrig98Done = false;
     assert.equal(await confirming(() => VG.applyMiji(card)), false);
@@ -406,19 +406,15 @@ describe('MIJI and the Signal Monitor (Rigger 2 pp. 69–72)', () => {
     assert.equal(s.corp.flags[SYSTEM_ID].vrig98Signal.command.boxes, 5);
     assert.equal(s.corp.flags[SYSTEM_ID].vrig98Signal.by.rating, 20);
   });
-  test('R4: a card with faces missing is refused; once per intruder, target and channel per Combat Turn', async () => {
+  test('R4: a card with faces missing is refused; a fresh roll outside a combat counts', async () => {
     const { corp, intruder, card } = await playerCard();
     const short = await g.ChatMessage.create({ author: PLAYER(), content: card.content, rolls: [{ dice: [{ results: [3, 3, 4].map((result) => ({ result })) }] }], flags: JSON.parse(JSON.stringify(card.flags)) });
     assert.equal(await confirming(() => VG.applyMiji(short)), false);
     faces.push(1, 1, 1, 1, 1);
     assert.equal(await confirming(() => VG.applyMiji(card), []), true);
-    // A fresh roll (other dice) by the same intruder on the same channel in the same turn: refused.
+    // Outside a combat a fresh roll (other dice) on the same channel counts (no Combat Turn to limit it; the
+    // once-per-turn key is tested on its own in v098-vrig.test.ts).
     const again = await g.ChatMessage.create({ author: PLAYER(), content: card.content, rolls: [{ dice: [{ results: [5, 5, 5, 5, 5, 5, 5, 5].map((result) => ({ result })) }] }], flags: JSON.parse(JSON.stringify(card.flags)) });
-    assert.equal(await confirming(() => VG.applyMiji(again)), false);
-    assert.ok(warnings.some((w) => /already been applied this Combat Turn/.test(w)));
-    assert.equal(corp.flags[SYSTEM_ID].vrig98Signal.system.boxes, 5);
-    // Later (another world time outside combat; in combat the next round): it counts.
-    g.game.time.worldTime = 10;
     faces.push(1, 1, 1, 1, 1);
     assert.equal(await confirming(() => VG.applyMiji(again)), true);
     assert.equal(corp.flags[SYSTEM_ID].vrig98Signal.system.boxes, 10);

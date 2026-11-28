@@ -597,6 +597,10 @@ async function recordPositioning(message: any, button: HTMLButtonElement): Promi
   if (!c) { warn(tx('SR2E.VDrive98.Chase.noCombat')); return; }
   if (String(f.combatId ?? '') !== c.id || int(f.round, -1, 100000, -1) !== c.round) { warn(tx('SR2E.VDrive98.Chase.stale')); return; }
   if (!authorOwns(message, p) && !authorOwns(message, q)) { warn(tx('SR2E.VDrive98.Chase.notChaseCard')); return; }
+  // Lead fix (re-review L1): the two must be a chase pair (one is the other's quarry), and neither unticked by the GM.
+  const paired = p.system?.chase?.quarryUuid === q.uuid || q.system?.chase?.quarryUuid === p.uuid;
+  const offList: string[] = c.st.off ?? [];
+  if (!paired || offList.includes(String(p.uuid)) || offList.includes(String(q.uuid))) { warn(tx('SR2E.VDrive98.Chase.notPair')); return; }
   const k = posKeys(c.round, p, q);
   if (c.st.pos.includes(k.pair)) { warn(tx('SR2E.VDrive98.alreadyDone')); return; }
   const sides = [
