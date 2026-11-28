@@ -2488,6 +2488,10 @@
       "tradeOn": {
         "Name": "Give, stash and loot (without Item Piles)",
         "Hint": "Give to… on item rows, Give nuyen…, safehouse stashes and the Loot window. Turn it off when your table uses the Item Piles module for trading and loot instead."
+      },
+      "autoApplyManeuvers97": {
+        "Name": "Apply players' Matrix maneuvers by themselves",
+        "Hint": "A player's parry, evade, or a position won or lost in cybercombat is applied by the GM's client without asking (no Apply click, no confirmation); the GM gets one short note per card. A player could post a forged result, but only for a decker they own and only within the caps (the GM side limits every result to the dice the decker or the IC has). Every other host change (counting or suppressing a crash, a data bomb, alerts, files, passcodes) still waits for the GM's click."
       }
     },
     "Notify": {
@@ -19715,7 +19719,8 @@
         "regionDetect": "Someone walks into a watched region: a GM card, a detection roll by itself, or nothing.",
         "wardsStopAstral": "Anything with an astral presence moving across a ward's edge: stopped, warned, or let through.",
         "hoverCard": "Hovering a token you own shows its pools, monitors, initiative and state.",
-        "approvalQueue": "Players' purchases, additions and Karma spending wait for the GM's approval."
+        "approvalQueue": "Players' purchases, additions and Karma spending wait for the GM's approval.",
+        "autoApplyManeuvers97": "The GM's client applies players' parries, evades and positions in cybercombat by itself; other host changes still wait for the GM."
       },
       "Rule": {
         "KARMA__refresh": "Karma Pools refresh on their own",
@@ -20510,7 +20515,7 @@
       "alreadyDone": "That has already been done.",
       "nonCombat": "Non-combat actions per turn",
       "Why": {
-        "improviseOff": "An improvised attack needs a jacked-in decker (and the book's improvised attacks rule).",
+        "improviseOff": "An improvised attack needs a decker jacked in to a host (and the book's improvised attacks rule).",
         "improviseNone": "Take at least 1 point from Evasion or Bod for the improvised attack's Power.",
         "improviseMore": "The persona doesn't have that many points of Evasion or Bod to give.",
         "improviseMpcp": "An improvised attack's Power may not be above the MPCP ({mpcp})."
@@ -20596,9 +20601,40 @@
         "evaded": "{decker}'s evade ({net} turns) recorded",
         "trustLine": "Matrix: {op} for {name}, against {vs} ({net})",
         "exposed": "{vs}'s position on {decker} (+{net}) recorded",
-        "exposedReq": "{vs} won a position on {decker} ({net})"
+        "exposedReq": "{vs} won a position on {decker} ({net})",
+        "posReq": "{decker} won a position on {vs} ({net})",
+        "posed": "{decker}'s position on {vs} (+{net}) recorded",
+        "unpos": "{decker} uses up a position",
+        "improvise": "{decker} writes an improvised attack (Power {power})",
+        "improvised": "{decker}'s improvised attack {power}{level} recorded: its points are off Evasion and Bod",
+        "improviseFailed": "{decker}'s improvised attack failed: its points are off Evasion and Bod until the next action",
+        "unimprovise": "{decker} gets an improvised attack's points back",
+        "unimprovised": "{decker}'s Evasion and Bod points are back",
+        "autoApplied": "{by}'s card applied by itself: {line}"
       },
-      "notYourDecker": "That Matrix request names a decker its author doesn't own: not applied."
+      "notYourDecker": "That Matrix request names a decker its author doesn't own: not applied.",
+      "Trust": {
+        "line": "Matrix, {name}: {what}",
+        "parry": "parry against {vs} (+{net} TN on its next attack)",
+        "unparry": "take back the parry against {vs}",
+        "evade": "evade {vs} (for {net} turns)",
+        "unevade": "take back the evade from {vs}",
+        "exposed": "{vs} won a position on them (−{net} TN or +{net} Power on its next attack)",
+        "unexposed": "take back the position {vs} won on them",
+        "pos": "won a position on {vs} (−{net} TN or +{net} Power on their next attack)",
+        "unpos": "take back their position on {vs}",
+        "count": "count the crash of {vs} on the security tally",
+        "countAny": "count the crash on the security tally",
+        "suppress": "suppress {vs} (Detection Factor −1 while they stay in this system)",
+        "suppressAny": "suppress the crashed IC (Detection Factor −1 while they stay in this system)",
+        "release": "release the suppressed {vs} (its points go on the security tally)",
+        "bomb": "{vs} goes off against them",
+        "bombInFile": "the data bomb on {file}",
+        "bombInSubsystem": "the data bomb on the {subsystem} subsystem",
+        "aDataBomb": "a data bomb",
+        "anIcon": "an icon that is gone",
+        "someone": "an unknown decker"
+      }
     },
     "MxLife97": {
       "gmOnly": "GM only",
@@ -20642,7 +20678,13 @@
         "failed": "{label}: Computer B/R against TN {tn}, base {base} days: no success in {tries} tries ({days} days lost). The part can't be finished with these dice.",
         "public": "Cook and Installation Tasks: {days} more days (the GM rolled them secretly, VR2 p. 77).",
         "publicCookFailed": "The Cook Task failed after {tries} tries: the part can't be finished with these dice (VR2 p. 77).",
-        "publicInstallFailed": "The Installation Task failed after {tries} tries: the part can't be finished with these dice (VR2 p. 77)."
+        "publicInstallFailed": "The Installation Task failed after {tries} tries: the part can't be finished with these dice (VR2 p. 77).",
+        "publicAsked": "The GM rolls the Cook and Installation Tasks secretly and adds their days to the work (VR2 p. 77).",
+        "askFailed": "The GM's client did not take the Cook and Installation Tasks ({note}): ask the GM to roll them.",
+        "refused": "That Cook and Installation request does not match the builder's work.",
+        "gmAdded": "{days} days added to the work under way.",
+        "gmDropped": "The part can't be finished: the work under way is given up (what was paid comes back).",
+        "gmDoneAlready": "The part was already finished (no work time to add to): undo it by hand."
       },
       "Form": {
         "failed": "<strong>{name}</strong>'s design of {form} is flawed: Computer against TN {tn}, no success. Days lost: {days} (base {base} ÷ 2D6). No Karma is spent; try again (VR2 pp. 77, 145).",
@@ -20709,12 +20751,19 @@
       "Why": {
         "scanTarget": "Pick a decker, frame or agent in this host that you have located (Locate Decker, Locate Frame) to scan.",
         "slowReactive": "{name} is reactive IC: the slow utility does not work on it (VR2 p. 99).",
-        "slowTrace": "{name} has locked on: trace IC is open to the slow utility only while it hunts (VR2 p. 99)."
+        "slowTrace": "{name} has locked on: trace IC is open to the slow utility only while it hunts (VR2 p. 99).",
+        "tarNotHere": "{ic} is not a tar of this host that derezzes with the utility: nothing done",
+        "tarGone": "{ic} is already derezzed",
+        "tarProgram": "{name}'s utility was not crashed: {ic} stays up",
+        "deckerNotHere": "the decker is no longer in this host: nothing done",
+        "slowNotHere": "{name} is not an IC of this host that is still up: not slowed",
+        "slowNoCombatant": "{name} has no Initiative in that combat: not slowed"
       },
       "AnalyzeHost": {
         "nothing": "No successes to spend: nothing learned.",
-        "more": "(one item per success; 7 tell all)",
-        "vmGm": "the GM says whether it is one"
+        "more": "(one item per success; {n} tell all)",
+        "vmGm": "the GM says whether it is one",
+        "morePerSuccess": "(one item per success)"
       },
       "Scan": {
         "tn": "{name}'s Masking {masking}",
@@ -20786,7 +20835,18 @@
         "decoy": "a decoy for {name} ({n} successes)",
         "passcode": "{name}'s passcode lasts {days} days",
         "located": "{name} locates {list}",
-        "decoyAll": "a decoy for {name} ({n} successes): it draws every proactive IC attack"
+        "decoyAll": "a decoy for {name} ({n} successes): it draws every proactive IC attack",
+        "crashIc": "{ic} derezzes (the tar crashed {name}'s utility)",
+        "slow": "{name}'s Slow on {ic}: Initiative lowered by {delta} (a negative number raises it)"
+      },
+      "Gm": {
+        "tarLabel": "{ic} derezzes with {name}'s utility",
+        "tarSent": "{ic} derezzes with it: sent to the GM to apply.",
+        "tarDone": "{ic} derezzes with the utility it crashed",
+        "slowLabel": "{name} slows {ic}: Initiative −{delta}",
+        "slowSent": "Sent to the GM: its Initiative −{delta}.",
+        "slowBackSent": "Sent to the GM: {delta} Initiative given back.",
+        "slowDone": "{ic} is slowed: Initiative {from} → {to}"
       }
     }
   },

@@ -796,6 +796,46 @@ Every behaviour change is a house-rule switch in `RULES.DOCS_V79` (`rules/config
 
 **Not changed (kept for the alternate ruleset):** stun overflow 1:1, the trauma patch's Body test, stun recovery vs 2, first aid lowering one level, bleeding every 10 minutes, Magic loss on 2D6 ≤ Magic and on treatment without the magician modifier, melee and initiative ties, attacker staging, shotgun shot as flechette, the dodge / clean-miss defense flow (the v0.77.0 book check confirms the system's dodge: Core Rules), the Control Pool limits, rigger feedback 6M/6S, passengers, the manual gunnery table, sensor lock as a Complex action, ramming Power from speed, the subscriber list at 2 × rating, drones on the rigger's initiative, going over the natural maximum: no official source backs these.
 
+## Fixes after the v0.97.0 live run (v0.97.1, 27 Nov 2026)
+
+These amend the rows of "Rules completeness (v0.97.0)" below; where they disagree, these are current.
+
+### IC and cybercombat
+
+Replace the **Suppressing IC** row's third column with:
+as before (the GM side's choice card, recorded on the host), and: the reduction lasts only while the decker stays in that host (v0.97.1: a new visit stamp on every host entered, and the lead GM's client drops a leaver's entries from the host they left). Moving to another host and back, or jacking out, ends it with no tally (VR2 p. 40 says the reduction holds "while they stay in that host" and puts the points on the tally only on a release, so leaving just ends it: VERIFY). A Release pressed after leaving does nothing. An IC that crashes again after a relaunch or reset gets no second choice: its points go on the tally as usual | VR2 pp. 40, 120 | `MXIC_V97.suppress`
+
+Add to the **combat maneuvers** rows (parry / position / evade), third column:
+v0.97.1: a won position is recorded on the host by the GM side, like a parry: at most the decker's Evasion + Hacking Pool dice (and 30), a player's needs the GM's Apply, and the next attack on that opponent uses it up (the attacker's client asks the GM side to take it off). The decker's own `mx97.pos` flag is no longer read. Parries, evades and positions both ways end when either decker leaves the host (VR2 p. 122) | VR2 pp. 121–122 | `MXIC_V97.position`, `parry`, `evade`
+
+Add to the **Improvised attacks** row, third column:
+v0.97.1: needs a host. The Computer Test's card goes to the GM side (a host change), which checks the points are there and the Power is at most the MPCP, counts the card's own dice for the Damage Level, takes the points off the persona and records the attack on the host. Only that record gives an "Improvised" attack, and using it (or Restore after a failed test) gives back only the points it took, no more than are still off. Leaving the host with one not used gives the points back and loses it | VR2 pp. 120, 123 | `MXIC_V97.improvised`
+
+Replace the note "the persona sheet's Detection Factor follows a suppression when the decker's sheet is prepared again (any change to the decker)" with:
+Note: the deckers in a host are prepared again and their open sheets redrawn on every client when the host's record changes (v0.97.1), so the sheet's Detection Factor follows a suppression or a release at once.
+
+In the **Accepted (the player's own sheet)** paragraph, drop `mx97.pos` and `improvised97` from the list (v0.97.1: both are the host's record now). The visit stamp `run97` stays there: changing it only ends the decker's own entries early, and keeping an old one is undone by the GM side dropping a leaver's entries.
+
+Known limit (v0.97.1): between an attack and the GM's Apply of its take-back request (a used position or improvised attack, for a player), the entry is marked used only on the attacker's own actor.
+
+### System operations and the decker's life
+
+| Rule | Was (v0.97.0) | Now (v0.97.1) | Book | Switch |
+|---|---|---|---|---|
+| Deck part cook and install (replaces the v0.97.0 row's "who rolls" part) | the builder's own client rolled the tasks and posted the GM whisper, so a player read their own "GM only" numbers; the decker's card gave the days added | a player's tasks are rolled on the lead GM's client (relay op `mxlife97`): the GM side reads the builder (owned by the asking user), the part, rating and deck from the work under way (else the request, bounded), the deck's MPCP and the builder's own Computer B/R dice; the numbers go to the GMs only, on a GM-authored whisper that also marks the job rolled (a second request is not rolled again); the days are added to the work under way (and kept for a Karma re-roll of the design), or a task that can't be done gives the work up (paid back) and tells the builder's owners. The decker's card says only that the GM rolls them. A GM's own client still rolls at once, as before | VR2 p. 77 | `MXLIFE_V97.cookInstall` 'book' / 'v965' (unchanged) |
+| Analyze Host's hint | "(one item per success; 7 tell all)" on every partial card | "(one item per success)"; "N tell all" only when `analyzeHostAll` is below the number of items (7) | VR2 p. 111 | `MXOPS_V97.analyzeHost` 'book' |
+| Tar baby / tar pit crash themselves (flow only) | from a player's client: a refused write to the GM's IC (red error), "GM: derez" | an Apply (GM) host change (`crashIc97`): the GM side derezzes only a tar of that host (tarDerezzes), still up, with the decker on the host and the named utility really crashed | VR2 pp. 42–43 | `MXIC_V97.tar` (as before) |
+| Slow (flow only) | from a player's client: "GM: lower its Initiative by N by hand" | an Apply (GM) host change (`slow97`): the GM side checks the IC is that host's and up, one Slow works on, the decker on the host, the combatant that IC's; at most `slowPerAction` × 4 per request | VR2 p. 99 | `MXOPS_V97.slow` 'book' (v965 unchanged) |
+
+**Accepted:** the builder's work time (the project's hours) is on the player's own sheet, so the total of the GM's task days can be read there, as any work time can; the TNs, base days and successes stay with the GM.
+
+### Automation and wording
+
+| Rule | Now (v0.97.1) | Book |
+|---|---|---|
+| Matrix maneuvers applied by themselves (setting `autoApplyManeuvers97`, off by default) | No rule changes. With the setting on, a player's parry, evade, position (won/lost) or their take-backs (VR2 p. 122) apply on the GM's client without the Apply click or confirm, when the card's author owns the decker and the request is only that maneuver; the GM side still caps every net by the dice (applyMx97). Count, suppress, release, bomb and every other host change still wait for the GM. | VR2 p. 122 |
+| Apply (GM) confirm for Matrix requests | Wording only: the line names the decker and the IC/file in words ("Matrix, ZZ Decker: parry against Killer-6 (+3 TN on its next attack)"), never a raw uuid; count/suppress/release/bomb show no number. No "Host: no change." note after a Matrix request. | VR2 pp. 40, 122 |
+
 ## Rules completeness (v0.97.0, 27 Nov 2026)
 
 v0.97.0 built book rules from the Matrix's "Not built" list above (Virtual Realities 2.0). Each has a house-rule switch whose first choice is the book's way (optional book rules ship off) and whose other choice (`v965`) puts v0.96.5 back: `RULES.MXIC_V97`, `RULES.MXOPS_V97`, `RULES.MXLIFE_V97` (`rules/config97/*.ts`). Rows marked VERIFY below are readings the builders could not settle from the books. GM-trusted Matrix state (decoys, passcodes, located icons, parries, suppressed IC) is kept on GM-owned documents, never on the decker's own actor.

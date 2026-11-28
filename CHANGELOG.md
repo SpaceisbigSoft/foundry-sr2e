@@ -2,6 +2,16 @@
 
 This is the history of the unofficial Shadowrun 2nd Edition system for Foundry VTT (system id `shadowrun2e_unified`; `sr2e` until v0.93.0), newest version first. Every rules change since v0.70.0 has a house-rule switch that puts the old behaviour back. The system was built with AI (Anthropic's Claude) under human direction, and it has not yet been play-tested at a real table.
 
+## v0.97.1 — Matrix fixes after the live run (27 Nov 2026)
+- **Fixed:** suppressing a crashed IC (and a parry, evade or position) now lasts only while the decker stays in that host: moving to another host and back, or jacking out, ends it (VR2 p. 40). A release after leaving adds nothing to the tally.
+- **Fixed (security):** a won position and an improvised attack are now recorded on the host by the GM side, capped by the dice the decker really had; a player could no longer give themselves a bigger bonus by editing their own character's data, and an improvised attack gives back only the points it took.
+- **Fixed:** a tar baby or tar pit that beats a player's defense now crashes itself through the GM (no permission error for the player), and a player's Slow lowers the IC's Initiative through the GM's Apply instead of asking the GM to do it by hand.
+- **Fixed:** a player's Cook and Installation tasks for a deck part are rolled secretly on the GM's side; the player no longer sees the GM's numbers (VR2 p. 77).
+- **Fixed:** a card's follow-ups (such as a decryption's host change after a Karma re-roll) no longer wait for Dice So Nice to finish its animation, which never ends in a hidden browser tab.
+- **Fixed:** the decker's sheet shows the new Detection Factor at once after a suppression or release; the data bomb card names the file; a choice card's buttons are disabled once it is answered; Analyze Host's "tell all" hint only shows when it can matter; the GM's confirm box for a Matrix request says in words what it does; no empty "no change" note after one.
+- **New (optional):** the automation setting "Apply players' Matrix maneuvers by themselves" (off by default): a player's parry, evade or position result applies on the GM's side without the two clicks.
+- API changes: none (a new automation setting `autoApplyManeuvers97` only).
+
 ## v0.97.0 — Rules completeness: the Matrix (27 Nov 2026)
 About 30 Matrix rules from Virtual Realities 2.0 that the system didn't have yet. Each has a house-rule switch whose other choice puts v0.96.5 back (Magic and the Matrix section): `RULES.MXIC_V97`, `RULES.MXOPS_V97`, `RULES.MXLIFE_V97`.
 - **IC and cybercombat:** crashed IC can be suppressed instead of going on the tally (−1 Detection Factor each, released later); black IC's last shot at the MPCP after a kill, and the run's downloaded files wiped; improvised attacks; parry lasting until the opponent's next attack, position as −TN or +Power (and it can backfire), evade for net Combat Turns; the ripper's chip damage; tar baby and tar pit as opposed tests; scramble IC's poison test; data bombs on the tally and the Defuse utility; reality filters as an extra Response Increase level; non-combat actions per turn; running a hot deck cool costs 1D6 Initiative.
