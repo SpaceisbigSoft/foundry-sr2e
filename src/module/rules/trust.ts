@@ -248,7 +248,7 @@ export function hostChangeShapeOk(f: any): boolean {
   if (f.call !== undefined && !(onlyKeys(f.call, ['op', 'id', 'from', 'to', 'by', 'who']) && ['place', 'tap', 'reroute', 'end'].includes(f.call.op)
     && safeStr(f.call.id, 200) && ['from', 'to', 'by', 'who'].every((k) => optStr(f.call[k])))) return false;
   // v0.97.0 (RULES.MXIC_V97): a decker's request: who and which (the GM side reads every value itself).
-  if (f.mx97 !== undefined && !(onlyKeys(f.mx97, ['op', 'deckerUuid', 'vs', 'id', 'net', 'cardId']) && (MX97_OPS as readonly string[]).includes(f.mx97.op)
+  if (f.mx97 !== undefined && !(onlyKeys(f.mx97, ['op', 'deckerUuid', 'vs', 'id', 'net', 'cardId', 'seq']) && (f.mx97.seq === undefined || (typeof f.mx97.seq === 'number' && Number.isFinite(f.mx97.seq) && f.mx97.seq >= 0)) && (MX97_OPS as readonly string[]).includes(f.mx97.op)
     && safeStr(f.mx97.deckerUuid, 400) && optStr(f.mx97.vs) && optStr(f.mx97.id, 400) && optStr(f.mx97.cardId, 60) && (f.mx97.net === undefined || intIn(f.mx97.net, 0, 30)))) return false;
   return true;
 }

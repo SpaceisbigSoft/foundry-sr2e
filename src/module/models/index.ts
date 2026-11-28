@@ -1171,7 +1171,7 @@ function deckerDerived(actor: any, sys: any, intelligence: number, totals: Recor
       deckDamage: { mpcp: 0, bod: 0, evasion: 0, masking: 0, sensors: 0, ...(base.damage ?? {}) },
       sleaze: run(sleaze?.rating),
       // v0.97.0 (RULES.MXIC_V97.suppress 'book', VR2 p. 40): 1 less per IC suppressed in this host.
-      detectionFactor: MX97.suppressedDf(detectionFactor(d.masking, run(sleaze?.rating)), suppressedHost97(sys.matrix?.hostUuid), String(actor?.uuid ?? '')),
+      detectionFactor: MX97.suppressedDf(detectionFactor(d.masking, run(sleaze?.rating)), suppressedHost97(sys.matrix?.hostUuid), String(actor?.uuid ?? ''), String(actor?.flags?.[SYSTEM_ID]?.run97 ?? '')),
       // v0.71.0 (R7): the base deck's limits, plus what the working MPCP caps (or, with 'warn', exceeds).
       warnings: [...personaWarnings(base), ...mpcpWarnings],
       effectiveMpcp: d.mpcp,

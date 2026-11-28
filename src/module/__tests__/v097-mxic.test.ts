@@ -237,3 +237,20 @@ describe('v0.97.0 review: who may ask the GM side', () => {
     assert.equal(X.bombMatches('s:slave', null), false);
   });
 });
+
+describe('v0.97.0 test-plan fixes (pure)', () => {
+  test('suppression counts for the decker\'s current run only', () => {
+    const rec = { suppressed: [{ decker: 'D', id: 'a', name: 'a', points: 5, run: 'r1' }] };
+    assert.equal(X.suppressedDfLoss(rec, 'D', 'r1'), 1);
+    assert.equal(X.suppressedDfLoss(rec, 'D', 'r2'), 0);
+  });
+  test('an older maneuver request than the one applied is ignored; no sequence applies as before', () => {
+    const r0 = X.hostMx({});
+    const r1 = X.takeSeq(r0, 'parry', 'D', 'I', 200)!;
+    assert.equal(X.takeSeq(r1, 'parry', 'D', 'I', 100), null);
+    assert.ok(X.takeSeq(r1, 'parry', 'D', 'I', 300));
+    assert.ok(X.takeSeq(r1, 'parry', 'D', 'J', 100), 'another opponent');
+    assert.equal(X.takeSeq(r1, 'parry', 'D', 'I', undefined), r1);
+    assert.equal(X.cleanMx97({ op: 'parry', deckerUuid: 'D', seq: 5 })!.seq, 5);
+  });
+});
