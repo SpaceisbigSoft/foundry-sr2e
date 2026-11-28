@@ -248,11 +248,6 @@ export function actorKeyOf(key: string): string {
   return i > 0 ? key.slice(0, i) : '';
 }
 
-/** The oldest of these keys for ware not installed, else the oldest (keys in the record's order, oldest first). */
-function victim(keys: readonly string[], installed: (k: string) => boolean): string | undefined {
-  return keys.find((k) => !installed(k)) ?? keys[0];
-}
-
 /**
  * The record with this item at `level`, as the newest entry (fix2 M2, L2). A rise is never refused for a good key:
  * when the character already has RECORD_PER_ACTOR other entries, their oldest entry for ware not installed goes (else
