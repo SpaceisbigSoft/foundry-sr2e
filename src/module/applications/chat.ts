@@ -25,7 +25,7 @@ import { blastThroughWalls, crossingFraction, indirectScatterDice, indirectScatt
 import { tokensNear, scatterPoint, blastBlocked, wallDistances, wallsBetweenPoints, sightBlockedBetweenPoints, wallsNear, scatterStop, tokenOf, drawArea, placeWardRegion } from './canvas.ts';
 import { escHtml } from '../rules/html.ts';
 import { foldDiceOn } from './fixes942.ts';
-import { safeAutoApply, gmApplyShapeOk, describeGmChange, cardTargetUuid, cardSourceUuids, safeInt, safePath, boundPower, boundLevel, safeStr, deepSafeKeys, trustedSource, GM_APPLY_SPECS, mx97OwnerOk } from '../rules/trust.ts';
+import { safeAutoApply, gmApplyShapeOk, describeGmChange, cardTargetUuid, cardSourceUuids, safeInt, safePath, boundPower, boundLevel, safeStr, deepSafeKeys, trustedSource, GM_APPLY_SPECS, mx97OwnerOk, type CardTrust } from '../rules/trust.ts';
 import { onIntercept95, onRelease95, subdueOptionAttr, bindSubdueBox } from './melee95.ts';
 import { authorIsGm, authorOwns, cardAuthor, cardTrust, speakerActorUuid, nameOfUuid, playerMay, gmMay } from './trust.ts';
 import { applyTransferAsGm, transferLiveLines } from './trade942.ts';
@@ -1584,13 +1584,13 @@ async function gmApplyFlag<T = any>(message: any, action: string): Promise<T | n
   if (!spec) return null;
   const auto = applying.get(message?.id);
   if (auto) {
-    if (!safeAutoApply(action, auto.flags, cardTrust(message))) return null;
+    if (!safeAutoApply(action, auto.flags, autoTrust(message))) return null;
     return snapshot(auto.flags[spec.flag]) as T;
   }
   const flags = snapshot(sr2eFlags(message));
   if (!gmApplyShapeOk(action, flags)) { ui.notifications.warn(tx('SR2E.Notify.Chat.thisCardSDataIsNot')); return null; }
   // v0.81.1 (SEC1-16): the speaker is not a source (it made "the author owns none of them" never refuse).
-  const lines = describeGmChange(action, flags, nameOfUuid);
+  const lines = describeGmChange(action, flags, nameOfUuid, mx97NameOf);
   // v0.81.1 (SEC1-7, RA2-1, FX-DOC wiring): what the surgery does with money, worked out as the Apply will (plain text).
   if (action === 'applySurgery') {
     try { const m = (CONFIG.Actor.documentClass as any).surgeryApplyMoney?.(flags[spec.flag]?.snap); if (typeof m === 'string' && m) lines.push(tx('SR2E.Dialog.Chat.money', { m })); } catch { /* the line stays out */ }
@@ -1812,11 +1812,53 @@ export function pendingGmApplies(content: string, done: (flag: string) => boolea
  */
 export { safeAutoApply };
 
+/** Whether the world setting `autoApplyManeuvers97` is on (v0.97.1, C: players' Matrix maneuvers apply by themselves). */
+function maneuversAuto97(): boolean {
+  try { return auto<boolean>('autoApplyManeuvers97', false) === true; } catch { return false; }
+}
+
+/** The card's trust for `safeAutoApply`, with the maneuver setting (rules/trust.ts never reads Foundry settings). */
+function autoTrust(message: any): CardTrust {
+  return { ...cardTrust(message), maneuvers97: maneuversAuto97() };
+}
+
+/**
+ * v0.97.1 (C, live-run finding 8): a name for what a Matrix request names, from documents only the GM side writes:
+ * the GM-posted choice card (`cardId`: the crashed IC or the bomb it offers), the host's record of suppressed IC (a
+ * release), or the host's file a bomb is in (`f:<id>`). '' when none is found (rules/trust.ts mx97Line says so in words).
+ */
+function mx97NameOf(m: { op: string; id?: string; cardId?: string; hostUuid?: string }): string {
+  try {
+    if (m.cardId && (m.op === 'count' || m.op === 'suppress')) {
+      const card: any = game.messages?.get?.(m.cardId);
+      const choice: any = card && authorIsGm(card) ? card.flags?.[SYSTEM_ID]?.mxic97Choice : null;
+      return choice && typeof choice.name === 'string' ? choice.name.slice(0, 120) : '';
+    }
+    const host: any = m.hostUuid ? fromUuidSync(m.hostUuid) : null;
+    if (host?.type !== 'host' || !m.id) return '';
+    if (m.op === 'release') {
+      const rec: any = host.flags?.[SYSTEM_ID]?.mxic97;
+      const e = Array.isArray(rec?.suppressed) ? rec.suppressed.find((x: any) => x?.id === m.id) : null;
+      return typeof e?.name === 'string' && e.name ? e.name.slice(0, 120) : (m.id.startsWith('bomb:') ? '' : nameOfUuid(m.id));
+    }
+    if (m.op === 'bomb' && m.id.startsWith('f:')) {
+      const file: any = (Array.isArray(host.system?.files) ? host.system.files : []).find((f: any) => f?.id === m.id!.slice(2));
+      return file?.name ? tx('SR2E.MxIc97.Trust.bombInFile', { file: String(file.name).slice(0, 120) }) : '';
+    }
+    if (m.op === 'bomb' && m.id.startsWith('s:')) return tx('SR2E.MxIc97.Trust.bombInSubsystem', { subsystem: m.id.slice(2, 60) });
+  } catch { /* no name: the line says "a data bomb" or "an icon" */ }
+  return '';
+}
+
 const autoApplied = new Set<string>();
 async function autoApplyGmCard(message: any): Promise<void> {
+  // v0.97.1 (C, owner 27 Nov 2026): with only `autoApplyManeuvers97` on, a card whose one pending action is applyHost
+  // (and that safeAutoApply finds to be a maneuver result only) applies by itself; nothing else does.
+  let all = false;
   try {
     if (!game.user?.isGM || !isLeadGm()) return;
-    if (auto('autoApplyGm', false) === false) return;
+    all = auto('autoApplyGm', false) !== false;
+    if (!all && !maneuversAuto97()) return;
   } catch { return; }
   if (autoApplied.has(message.id) || message.getFlag?.(SYSTEM_ID, 'supersededBy')) return;
   // v0.94.1 (report item 30): nothing from a typed physical-dice result applies by itself: the GM applies it.
@@ -1824,10 +1866,11 @@ async function autoApplyGmCard(message: any): Promise<void> {
   // A-12: only a card with an Apply (GM) button left is copied at all.
   const pending = pendingGmApplies(String(message.content ?? ''), (f) => Boolean(message.getFlag?.(SYSTEM_ID, f)));
   if (!pending.length) return;
+  if (!all && !(pending.length === 1 && pending[0] === 'applyHost')) return;
   // Round 2 (R2-SEC-2): vetted once, on a copy; every action below applies that copy (gmApplyFlag). v0.81.1 (SEC1-6,
   // design 3): the kind's own source keys only, never the speaker.
   const flags = snapshot(sr2eFlags(message));
-  const trust = cardTrust(message);
+  const trust = autoTrust(message);
   const todo = pending.filter((a) => safeAutoApply(a, flags, trust));
   if (!todo.length) return;
   autoApplied.add(message.id);
@@ -1847,14 +1890,25 @@ async function runAutoApply(message: any, todo: string[]): Promise<void> {
     applyActorUpdate: onApplyActorUpdate, applySurgery: onApplySurgery, applyHeal: onApplyHeal, applyPatch: onApplyPatch,
     applyVehicleJob: onApplyVehicleJob, applyTimedStatus: onApplyTimedStatus, applyTransfer: onApplyTransfer,
   };
+  const by = message.author?.name ?? tx('SR2E.Card.Chat.aPlayer');
+  const gmIds = () => [...(game.users ?? [])].filter((u: any) => u.isGM).map((u: any) => u.id);
+  let mxNote: string | null = null;
   for (const a of todo) {
     const b = document.createElement('button');
     autoButtons.add(b);
     try { await run[a]!(message, b); } catch (err) { console.warn('sr2e | auto-apply', a, err); }
+    if (autoNotes.has(b)) mxNote = autoNotes.get(b) ?? '';
+  }
+  // v0.97.1 (C): a Matrix request applied by itself: one whisper to the GM, what it was and what the host recorded.
+  if (mxNote !== null && todo.length === 1 && message.getFlag?.(SYSTEM_ID, 'hostApplied')) {
+    const c: any = applying.get(message.id)?.flags?.hostChange ?? {};
+    const line = describeGmChange('applyHost', { hostChange: { mx97: c.mx97, hostUuid: c.hostUuid } }, nameOfUuid, mx97NameOf).slice(1).join('; ');
+    await ChatMessage.create({ speaker: { alias: tx('SR2E.Card.Chat.sr2e') }, whisper: gmIds(),
+      content: `<p class="hint"><em>${tx('SR2E.Card.Chat.gmOnly')}</em> ${tx('SR2E.MxIc97.Gm.autoApplied', { by: escHtml(by), line: escHtml(line) })}</p>${mxNote}` });
+    return;
   }
   // The GM sees what went through by itself, and from whom.
-  const by = message.author?.name ?? tx('SR2E.Card.Chat.aPlayer');
-  await ChatMessage.create({ speaker: { alias: tx('SR2E.Card.Chat.sr2e') }, whisper: [...(game.users ?? [])].filter((u: any) => u.isGM).map((u: any) => u.id),
+  await ChatMessage.create({ speaker: { alias: tx('SR2E.Card.Chat.sr2e') }, whisper: gmIds(),
     content: `<p class="hint"><em>${tx('SR2E.Card.Chat.gmOnly')}</em> ${tx('SR2E.Card.Chat.appliedByItselfFromSCard', { by: escHtml(by), todo: escHtml(todo.map((a) => a.replace(/^apply/, '')).join(', ')) })}</p>` });
 }
 
@@ -2437,9 +2491,26 @@ async function onApplyHost(message: any, button: HTMLButtonElement): Promise<voi
     const note = await cls.applyHostChange(hostUuid, change);
     if (note === null) { button.disabled = false; return ui.notifications.warn(tx('SR2E.Notify.Chat.thatHostNoLongerExists')); }
     await message.setFlag(SYSTEM_ID, 'hostApplied', true);
+    // v0.97.1 (C, live-run finding 8): a Matrix request's own steps post their cards (a tally, a suppression, a
+    // release, a bomb's choice): a note that only says "no change" is left out. While the card applies by itself as a
+    // maneuver only, runAutoApply posts one line for it with this note (autoNotes).
+    const empty = v.mx97 !== undefined && hostNoteEmpty(String(note), hostUuid);
+    if (button && autoButtons.has(button) && v.mx97 !== undefined) { autoNotes.set(button, empty ? '' : String(note)); return; }
+    if (empty) return;
     await ChatMessage.create({ speaker: { alias: tx('SR2E.Card.Chat.host') }, content: note, whisper: [game.user.id] });
   });
 }
+
+/** v0.97.1 (C): whether a host change's note (documents/index.ts applyHostChange) says only "no change". */
+function hostNoteEmpty(note: string, hostUuid: string): boolean {
+  const none = `: ${escHtml(tx('SR2E.Card.Actor.noChange'))}.</p>`;
+  let host: any = null;
+  try { host = fromUuidSync(hostUuid); } catch { host = null; }
+  return host?.name !== undefined ? note === `<p>${escHtml(String(host.name))}${none}` : note.startsWith('<p>') && note.endsWith(none) && !note.slice(3, -none.length).includes(';');
+}
+
+/** v0.97.1 (C): the host note of a Matrix request applied by itself, kept for runAutoApply's one line (by stand-in button). */
+const autoNotes = new WeakMap<object, string>();
 
 /** GM: apply security tally successes that a player's system test posted. */
 async function onApplyTally(message: any, button: HTMLButtonElement): Promise<void> {

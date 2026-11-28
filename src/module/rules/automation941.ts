@@ -35,6 +35,8 @@ export const AUTOMATION_SETTINGS: readonly AutomationSettingDef[] = [
   { key: 'soundCues', group: 'dice' },
   { key: 'defendPrompt', group: 'combat' },
   { key: 'autoApplyGm', group: 'combat' },
+  // v0.97.1 (C): players' Matrix maneuver results only.
+  { key: 'autoApplyManeuvers97', group: 'combat' },
   { key: 'autoResistNpc', group: 'combat' },
   { key: 'floatingDamage', group: 'combat' },
   { key: 'turnPing', group: 'combat' },
@@ -53,6 +55,7 @@ export const AUTOMATION_DEFAULTS: Readonly<Record<string, unknown>> = {
   defendPrompt: 'dialog',
   floatingDamage: true,
   autoApplyGm: false,
+  autoApplyManeuvers97: false,
   autoResistNpc: false,
   regionDetect: 'prompt',
   wardsStopAstral: 'block',
@@ -65,7 +68,7 @@ type Lower = (stored: unknown) => unknown;
 
 /**
  * What each setting reads as while Manual table is on. Decisions:
- * - autoApplyGm, autoResistNpc: off (the GM applies and resists from the cards).
+ * - autoApplyGm, autoApplyManeuvers97, autoResistNpc: off (the GM applies and resists from the cards).
  * - floatingDamage: off (no numbers floating over tokens).
  * - defendPrompt: a window ('dialog') becomes a notification ('notify'): no window pops up for anyone; 'off' stays off.
  * - regionDetect: 'auto' (rolls detection by itself) becomes 'prompt' (a GM card with the button); 'off' stays.
@@ -75,6 +78,7 @@ type Lower = (stored: unknown) => unknown;
  */
 export const MANUAL_SETTINGS: Readonly<Record<string, Lower>> = {
   autoApplyGm: () => false,
+  autoApplyManeuvers97: () => false,
   autoResistNpc: () => false,
   floatingDamage: () => false,
   defendPrompt: (v) => (v === 'dialog' ? 'notify' : v),
@@ -154,7 +158,7 @@ export const RULESET_PRESETS: readonly RulesetPreset[] = [
   { id: 'urr', label: 'SR2E.Automation.Preset.urr', hint: 'SR2E.Automation.Preset.urrHint', rulesSource: 'urr', houseRules: 'clear', settings: {} },
   {
     id: 'light', label: 'SR2E.Automation.Preset.light', hint: 'SR2E.Automation.Preset.lightHint', rulesSource: 'book', houseRules: 'clear',
-    settings: { manualTable: false, autoApplyGm: false, autoResistNpc: false, defendPrompt: 'dialog', floatingDamage: true, regionDetect: 'prompt', wardsStopAstral: 'warn' },
+    settings: { manualTable: false, autoApplyGm: false, autoApplyManeuvers97: false, autoResistNpc: false, defendPrompt: 'dialog', floatingDamage: true, regionDetect: 'prompt', wardsStopAstral: 'warn' },
   },
 ];
 

@@ -90,6 +90,11 @@ export interface CardTrust {
   authorIsGm: boolean; owns: (uuid: string) => boolean;
   /** v0.94.2 review (finding 2): whether a transfer card moves only plain items, read from the documents (applications/trade942.ts). */
   transferPlain?: (f: any) => boolean;
+  /**
+   * v0.97.1 (C, owner 27 Nov 2026): the world setting `autoApplyManeuvers97` (players' Matrix maneuver results apply by
+   * themselves), read by the caller (applications/chat.ts); this file never asks Foundry.
+   */
+  maneuvers97?: boolean;
 }
 
 /** The uuid strings in a list (anything else dropped, repeats once). */
@@ -401,7 +406,10 @@ export function safeAutoApply(action: string, flags: Record<string, any>, trust:
     // v0.81.1 round 2 (FIX2-BRIEF B, V-SEC 4): a tally, a site change and a host change never apply by themselves,
     // whatever source the card names: a tally walks the sheaf (alerts, IC), a site's tally raises its alert, a host
     // change raises alerts or hands out passcodes, and the source is the author's own claim. The GM clicks them.
-    case 'applyTally': case 'applySite': case 'applyHost': return false;
+    // v0.97.1 (C): one exception, opt-in: a card that is only a decker's maneuver result by the decker's owner
+    // (`maneuverOnly97`), when the world setting `autoApplyManeuvers97` is on.
+    case 'applyHost': return trust.maneuvers97 === true && maneuverOnly97(f, (u) => { try { return trust.owns(u); } catch { return false; } });
+    case 'applyTally': case 'applySite': return false;
     case 'applyLocks': return sourced && owns(f.vehicleUuid);
     // Jams and holds only on what the author owns (anything else waits for the GM's click).
     case 'applyJam': return owns(f.droneUuid);
@@ -425,6 +433,26 @@ export function safeAutoApply(action: string, flags: Record<string, any>, trust:
   }
 }
 
+// keep in step with MX97_MANEUVER_OPS (rules/mxic97.ts)
+const MANEUVER97 = ['parry', 'unparry', 'evade', 'unevade', 'exposed', 'unexposed', 'pos', 'unpos'] as const;
+
+/**
+ * Pure (v0.97.1, C; owner 27 Nov 2026): a host change that is only a decker's Matrix maneuver result (parry, evade, a
+ * position won or lost, or taking one back; VR2 p. 122), which the GM's client may apply without asking when the world
+ * setting `autoApplyManeuvers97` is on: nothing but `hostUuid`, `mx97` and the decker as `sourceUuid`, an op from the
+ * maneuver list, the request's shape as the system posts it, the card's author owning the decker, and `net` at most 30.
+ * The GM side still caps every net by the dice the decker (or the opponent) has (applications/mxic97.ts applyMx97).
+ */
+export function maneuverOnly97(f: any, owns: (uuid: string) => boolean): boolean {
+  if (!f || typeof f !== 'object' || !onlyKeys(f, ['hostUuid', 'mx97', 'sourceUuid']) || f.mx97 === undefined) return false;
+  const m = f.mx97;
+  if (!safeStr(f.hostUuid, 400) || !hostChangeShapeOk(f)) return false;
+  if (!m || typeof m !== 'object' || !(MANEUVER97 as readonly string[]).includes(String(m.op))) return false;
+  if (m.net !== undefined && !intIn(m.net, 0, 30)) return false;
+  if (f.sourceUuid !== undefined && f.sourceUuid !== m.deckerUuid) return false;
+  return mx97OwnerOk(f, owns);
+}
+
 /** A short plain-text view of a value from a flag (key: value pairs, not raw JSON). */
 function plainOf(v: unknown, depth = 0): string {
   if (v === null || v === undefined) return tx('SR2E.Text.Trust.none');
@@ -439,10 +467,51 @@ export function boundPower(v: unknown): number { return safeInt(v, 0, 60, 0); }
 export function boundLevel(v: unknown): string { return LEVELS.includes(String(v)) ? String(v) : 'L'; }
 
 /**
+ * v0.97.1 (C): what a host change's Matrix request (`mx97`) names, as a caller on the GM's client can tell it: the IC
+ * or bomb a choice card (`cardId`) offers, or the file a bomb id (`f:<id>`) or a suppressed bomb (`bomb:…`) is in. ''
+ * when it can't tell.
+ */
+export type Mx97Namer = (m: { op: string; id?: string; cardId?: string; hostUuid?: string }) => string;
+
+/**
+ * Pure (v0.97.1, C, live-run finding 8): the GM's confirm line for a decker's Matrix request, in words: who, what the
+ * op does and against whom, never a raw uuid (an unknown name reads "an icon"; a bomb id "a data bomb"), and the net
+ * only where it means something (parry, evade, positions: VR2 p. 122). An op this doesn't know keeps the old line.
+ */
+export function mx97Line(v: any, nameOf: (uuid: string) => string, mxName: Mx97Namer = () => '', hostUuid = ''): string {
+  const plain = (u: unknown): string => { if (!safeStr(u, 400)) return ''; try { return nameOf(u) || ''; } catch { return ''; } };
+  const op = String(v?.op ?? '');
+  const id = safeStr(v?.id, 400) ? String(v.id) : '';
+  const name = plain(v?.deckerUuid) || tx('SR2E.MxIc97.Trust.someone');
+  const net = safeInt(v?.net, 0, 30, 0);
+  const told = (() => { try { return mxName({ op, ...(id ? { id } : {}), ...(safeStr(v?.cardId, 60) ? { cardId: String(v.cardId) } : {}), ...(hostUuid ? { hostUuid } : {}) }) || ''; } catch { return ''; } })();
+  const bombish = /^(bomb:|f:|s:)/.test(id);
+  const icon = told || plain(v?.vs) || (bombish ? tx('SR2E.MxIc97.Trust.aDataBomb') : plain(id)) || tx('SR2E.MxIc97.Trust.anIcon');
+  const vs = plain(v?.vs) || icon;
+  let what: string;
+  switch (op) {
+    case 'parry': what = tx('SR2E.MxIc97.Trust.parry', { vs, net }); break;
+    case 'unparry': what = tx('SR2E.MxIc97.Trust.unparry', { vs }); break;
+    case 'evade': what = tx('SR2E.MxIc97.Trust.evade', { vs, net }); break;
+    case 'unevade': what = tx('SR2E.MxIc97.Trust.unevade', { vs }); break;
+    case 'exposed': what = tx('SR2E.MxIc97.Trust.exposed', { vs, net }); break;
+    case 'unexposed': what = tx('SR2E.MxIc97.Trust.unexposed', { vs }); break;
+    case 'pos': what = tx('SR2E.MxIc97.Trust.pos', { vs, net }); break;
+    case 'unpos': what = tx('SR2E.MxIc97.Trust.unpos', { vs }); break;
+    case 'count': what = told ? tx('SR2E.MxIc97.Trust.count', { vs: told }) : tx('SR2E.MxIc97.Trust.countAny'); break;
+    case 'suppress': what = told ? tx('SR2E.MxIc97.Trust.suppress', { vs: told }) : tx('SR2E.MxIc97.Trust.suppressAny'); break;
+    case 'release': what = tx('SR2E.MxIc97.Trust.release', { vs: icon }); break;
+    case 'bomb': what = tx('SR2E.MxIc97.Trust.bomb', { vs: told || tx('SR2E.MxIc97.Trust.aDataBomb') }); break;
+    default: return tx('SR2E.MxIc97.Gm.trustLine', { op: op.slice(0, 20), name, vs, net });
+  }
+  return tx('SR2E.MxIc97.Trust.line', { name, what });
+}
+
+/**
  * Pure: plain-text lines naming exactly what an Apply (GM) card changes, built from its flags (not its content),
  * for the GM's confirmation. `nameOf` turns a uuid into a name (or '').
  */
-export function describeGmChange(action: string, flags: Record<string, any>, nameOf: (uuid: string) => string = () => ''): string[] {
+export function describeGmChange(action: string, flags: Record<string, any>, nameOf: (uuid: string) => string = () => '', mxName: Mx97Namer = () => ''): string[] {
   const spec = GM_APPLY_SPECS[action];
   const f: any = spec ? flags?.[spec.flag] ?? {} : {};
   const nm = (u: unknown) => (safeStr(u, 400) ? nameOf(u) || String(u) : tx('SR2E.Text.Trust.nobody'));
@@ -502,7 +571,7 @@ export function describeGmChange(action: string, flags: Record<string, any>, nam
         else if (k === 'decoy97') out.push(Number(v?.successes) >= 6 ? tx('SR2E.MxOps97.Trust.decoyAll', { name: nm(v?.deckerUuid), n: Number(v?.successes) || 0 }) : tx('SR2E.MxOps97.Trust.decoy', { name: nm(v?.deckerUuid), n: Number(v?.successes) || 0 }));
         else if (k === 'passcode97') out.push(tx('SR2E.MxOps97.Trust.passcode', { name: nm(v?.deckerUuid), days: Number(v?.days) || 0 }));
         else if (k === 'located97') out.push(tx('SR2E.MxOps97.Trust.located', { name: nm(v?.deckerUuid), list: (Array.isArray(v?.uuids) ? v.uuids : []).map((u: unknown) => nm(String(u))).join(', ') }));
-        else if (k === 'mx97') out.push(tx('SR2E.MxIc97.Gm.trustLine', { op: String(v?.op ?? ''), name: nm(v?.deckerUuid), vs: v?.vs ? nm(v.vs) : String(v?.id ?? ''), net: Number(v?.net ?? 0) }));
+        else if (k === 'mx97') out.push(mx97Line(v, nameOf, mxName, safeStr(f.hostUuid, 400) ? String(f.hostUuid) : ''));
         else out.push(`${k}: ${plainOf(v)}`);
       }
       break;
