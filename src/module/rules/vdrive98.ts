@@ -230,10 +230,11 @@ export interface Hide98 { hider: string; from: string[]; successes: number; roun
 export interface Type98 { v: string; type: string }
 /**
  * `used`: the positioning successes this turn's scores spent (a second roll of the scores in the same turn reads them
- * again); `types`: the GM's vehicle types; `pos`: the chase turns whose positioning a GM recorded (`round|pursuer|quarry`).
+ * again); `types`: the GM's vehicle types; `pos`: the chase turns and vehicles whose positioning a GM recorded
+ * (`posKey`, `posVehKey`); `off`: the pursuers the GM unticked in the scores dialog (fix2 R7: not in the chase).
  */
-export interface Chase98 { combatId: string; round: number; scores: Score98[]; carry: Carry98[]; hides: Hide98[]; used: Carry98[]; types: Type98[]; pos: string[] }
-export const NO_CHASE: Chase98 = { combatId: '', round: -1, scores: [], carry: [], hides: [], used: [], types: [], pos: [] };
+export interface Chase98 { combatId: string; round: number; scores: Score98[]; carry: Carry98[]; hides: Hide98[]; used: Carry98[]; types: Type98[]; pos: string[]; off: string[] }
+export const NO_CHASE: Chase98 = { combatId: '', round: -1, scores: [], carry: [], hides: [], used: [], types: [], pos: [], off: [] };
 
 const uuidOk = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.length <= 400;
 
@@ -248,7 +249,8 @@ export function chaseState(raw: unknown): Chase98 {
     carry: list(r.carry).filter((e) => uuidOk(e.v)).map((e) => ({ v: e.v, pos: Math.min(60, whole(e.pos)) })),
     used: list(r.used).filter((e) => uuidOk(e.v)).map((e) => ({ v: e.v, pos: Math.min(60, whole(e.pos)) })),
     types: list(r.types).filter((e) => uuidOk(e.v) && VEHICLE_TYPES.includes(e.type)).map((e) => ({ v: e.v, type: e.type })),
-    pos: (Array.isArray(r.pos) ? r.pos : []).filter((e: unknown) => typeof e === 'string' && e.length <= 900).slice(-LIST_CAP),
+    pos: (Array.isArray(r.pos) ? r.pos : []).filter((e: unknown) => typeof e === 'string' && e.length <= 900).slice(-LIST_CAP * 3),
+    off: (Array.isArray(r.off) ? r.off : []).filter(uuidOk).slice(0, LIST_CAP),
     hides: list(r.hides).filter((e) => uuidOk(e.hider)).map((e) => ({ hider: e.hider, from: (Array.isArray(e.from) ? e.from : []).filter(uuidOk).slice(0, 20), successes: Math.min(60, whole(e.successes)), round: Math.floor(num(e.round, -1)) })),
   };
 }
@@ -289,19 +291,46 @@ export const typeOn = (st: Chase98, uuid: string): string => st.types.find((t) =
  * in the same turn, the positioning recorded since for next turn stays and `used` is unchanged. `types`: the GM's
  * vehicle types to keep.
  */
-export function withScores(st: Chase98, o: { combatId: string; round: number; scores: Score98[]; types?: Type98[] }): Chase98 {
+export function withScores(st: Chase98, o: { combatId: string; round: number; scores: Score98[]; types?: Type98[]; off?: string[] }): Chase98 {
   const same = sameTurn(st, o.combatId, o.round);
   const kept = st.combatId === o.combatId ? st.hides : [];
   const types = (o.types ?? st.types).filter((t) => uuidOk(t.v) && VEHICLE_TYPES.includes(t.type)).slice(0, LIST_CAP);
-  return { combatId: o.combatId, round: o.round, scores: o.scores.slice(0, LIST_CAP), carry: same ? st.carry : [], hides: kept, used: same ? st.used : st.carry, types, pos: st.combatId === o.combatId ? st.pos : [] };
+  return { combatId: o.combatId, round: o.round, scores: o.scores.slice(0, LIST_CAP), carry: same ? st.carry : [], hides: kept, used: same ? st.used : st.carry, types, pos: st.combatId === o.combatId ? st.pos : [], off: (o.off ?? (st.combatId === o.combatId ? st.off : [])).filter(uuidOk).slice(0, LIST_CAP) };
 }
 
-/** The key of a chase turn's positioning on the record (once per pair and Combat Turn). */
-export const posKey = (round: number, pursuer: string, quarry: string): string => `${Math.floor(num(round, -1))}|${str(pursuer)}|${str(quarry)}`;
+/**
+ * The key of a chase turn's positioning on the record: once per pair and Combat Turn, the pair sorted (fix2 R5: either
+ * vehicle's chase turn of the pair is the same one).
+ */
+export const posKey = (round: number, pursuer: string, quarry: string): string => {
+  const [a, b] = [str(pursuer), str(quarry)].sort();
+  return `${Math.floor(num(round, -1))}|${a}|${b}`;
+};
+/** The key of one vehicle's positioning on the record (fix2 R5: once per vehicle and Combat Turn, Rigger 2 p. 46). */
+export const posVehKey = (round: number, uuid: string): string => `${Math.floor(num(round, -1))}|v|${str(uuid)}`;
+
+/**
+ * A positioning test's successes recounted from its card's own dice (fix2 R5): `faces` one list per die (Rule of Six:
+ * every face but a die's last is a 6), exactly `dice` dice, each total against `tn` (at least the minimum TN). Null on
+ * a mismatch (a wrong count, a missing or leftover die, an impossible face).
+ */
+export function replayFaces(faces: unknown, dice: number, tn: number): number | null {
+  const n = Math.floor(num(dice, -1));
+  if (!Array.isArray(faces) || n < 0 || n > LIST_CAP || faces.length !== n) return null;
+  const target = Math.max(RULES.MIN_TARGET_NUMBER, Math.floor(num(tn, RULES.MIN_TARGET_NUMBER)));
+  let successes = 0;
+  for (const die of faces) {
+    if (!Array.isArray(die) || !die.length || die.length > 20) return null;
+    const ok = die.every((f, i) => Number.isInteger(f) && f >= 1 && f <= 6 && (i === die.length - 1 || f === 6));
+    if (!ok) return null;
+    if (die.reduce((a: number, b: number) => a + b, 0) >= target) successes++;
+  }
+  return successes;
+}
 
 /** The record with a chase turn's positioning marked recorded. */
 export function withPosKey(st: Chase98, key: string): Chase98 {
-  return { ...st, pos: [...st.pos.filter((k) => k !== key), key].slice(-LIST_CAP) };
+  return { ...st, pos: [...st.pos.filter((k) => k !== key), key].slice(-LIST_CAP * 3) };
 }
 
 /** The record with a positioning result for the next turn's Driver Points (Rigger 2 p. 46). */
