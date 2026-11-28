@@ -10008,11 +10008,11 @@
         "VSEC_V98__riggerCombat": "Rigger combat and decking a rigged system: opposed Willpower, (Willpower)L Stun, Rigger 2 pp. 79–80 (book) or not built (v971)",
         "VSEC_V98__riggerDecking": "Riggers decking: +1 TN on Matrix tests and Hacking Pool − VCR level, Rigger 2 p. 16 (book) or no penalty (v971)",
         "CLINIC_V99__clinicSearch": "Finding a shadow clinic: a contact's Etiquette (Street) vs 12/15 (corps 11/17) or a search, SSC p. 99 (book) or no clinic step (v980)",
-        "CLINIC_V99__surgeonFee": "Surgeon's fee: 1,000 / 5,000 / 25,000 / 250,000¥ by the operation's size, Cybertechnology p. 54 (book) or no fee (v980)",
-        "CLINIC_V99__gradedFees": "Graded clinic fees: the surgeon's fee and the care × 50 for alpha and beta, × 200 for delta, Cybertechnology p. 44 (book) or standard rates (v980)",
+        "CLINIC_V99__surgeonFee": "Surgeon's fee: 1,000 / 5,000 / 25,000 / 250,000¥ list price by the Essence the ware costs, once per ware put in, Cybertechnology p. 54 (book) or no fee (v980)",
+        "CLINIC_V99__gradedFees": "Graded clinic fees: the daily care (doctor's services, hospitalization) × 50 for alpha and beta, × 200 for delta, Cybertechnology p. 44 (book) or standard rates (v980)",
         "CLINIC_V99__feeAlphaBeta": "Graded clinic fees: the multiplier for alpha and beta ware (Cybertechnology p. 44: 50)",
         "CLINIC_V99__feeDelta": "Graded clinic fees: the multiplier for delta ware (Cybertechnology p. 44: 200)",
-        "CLINIC_V99__removal": "Removing cyberware: the lower of Biotech and Cybernetics vs 10 − Essence; no successes loses 10% more, Shadowtech (book) or no test (v980)",
+        "CLINIC_V99__removal": "Removing cyberware: the lower of Biotech and Cybertechnology vs 10 − Essence; no successes loses 10% more; players can't untick Installed, Shadowtech (book) or no test (v980)",
         "CLINIC_V99__damageLevels": "Ware damage levels: Light half bonuses, Moderate stops, Serious +1 and Deadly +2 TN on every test, Shadowtech (book) or damaged / not damaged (v980)",
         "CLINIC_V99__repair": "Cyberware repair by damage level: TN 2/3/4/8 (× 2 alpha, × 3 beta), 2 × Essence hours × level, Shadowtech (book) or the repair table (v980)",
         "KIT_V99__smartlink2": "Smartlink Level II: called shot +2 (not +4), a rangefinder −1 long / −2 extreme, a linked launcher −1, with a Level II receptor and smartgun, FoF pp. 84–85 and errata (book) or none (v980)",
@@ -21499,7 +21499,7 @@
       "nothingRecorded": "The damage record has nothing for that ware (already cleared).",
       "noPeople": "There are no characters or NPCs in the world.",
       "noWare": "Nobody has cyberware for this.",
-      "roll": "{dice} vs {tn}: {successes} successes",
+      "roll": "{dice} vs {tn}: successes {successes}",
       "patient": "Character",
       "contact": "Contact",
       "typed": "Type the contact's ratings",
@@ -21543,17 +21543,17 @@
       "Search": {
         "title": "Find a shadow clinic",
         "ratings": "The contact's ratings (from the actor where there is one; change them as you like).",
-        "head": "{contact} looks for a {grade}-grade shadow clinic for {patient} through {route}.",
-        "headTyped": "A contact looks for a {grade}-grade shadow clinic for {patient} through {route}.",
-        "knows": "They know a {grade}-grade clinic.",
-        "foundIn": "They find a {grade}-grade clinic in {days} days.",
-        "notFound": "No {grade}-grade clinic (needs {need} successes).",
-        "delta": "{patient} has the way into a {grade}-grade clinic (the GM's decision)."
+        "head": "{contact} looks for a shadow clinic (grade: {grade}) for {patient} through {route}.",
+        "headTyped": "A contact looks for a shadow clinic (grade: {grade}) for {patient} through {route}.",
+        "knows": "They know a clinic (grade: {grade}).",
+        "foundIn": "They find a clinic (grade: {grade}) in {days} days.",
+        "notFound": "No clinic found (grade: {grade}; successes needed: {need}).",
+        "delta": "{patient} has the way into a clinic (grade: {grade}; the GM's decision)."
       },
       "noClinic": "No {grade}-grade clinic has been found for this character (the GM's tool).",
       "atClinic": "At the {grade}-grade clinic found.",
       "feeReason": "Surgeon's fee: {item}",
-      "feePaid": "Surgeon's fee ¥{fee} paid (× {factor}).",
+      "feePaid": "Surgeon's fee ¥{fee} paid (list price).",
       "feeShort": "{patient} can't pay the surgeon's fee of ¥{fee}.",
       "feeConfirm": "and the surgeon's fee of ¥{fee}",
       "Remove": {
@@ -21577,7 +21577,16 @@
       "clearAsked": "The GM clears the damage record (until then it still counts).",
       "clearTitle": "Clear a ware's damage record",
       "clearLine": "{owner}'s {item}: {level} in the record becomes not damaged",
-      "cleared": "{owner}'s {item}: the damage record is cleared."
+      "cleared": "{owner}'s {item}: the damage record is cleared.",
+      "recordFull": "{owner}'s ware fills that character's share of the damage record ({max} entries): further damage to their ware isn't recorded until some is cleared (the Clinics and ware damage tool).",
+      "cameBack": "{owner} deleted their {item} while it had {level} damage in the record: the new {item} keeps that level (clear it with the tool if it is really new).",
+      "untickRefused": "{name} stays installed: under the book's removal rule the GM takes cyberware out (Clinics and ware damage tool, Remove cyberware).",
+      "untickGm": "{name} is taken out without the removal test (the book's way is the Clinics and ware damage tool, Remove cyberware).",
+      "notInNow": "{name} is no longer installed: nothing removed.",
+      "clearUsed": "That clear card (or the repair test it names) has already cleared a damage record.",
+      "noRepairProof": "No repair test backs this card: its repair card is missing, by someone else, of other ware, without successes at the damage level's target number, or already used.",
+      "clearProof": "Repair test by {roller}: successes {successes} at TN {tn}",
+      "alreadyIn": "{name} is already installed: remove it first (the GM's Clinics and ware damage tool) for another operation."
     },
     "Kit99": {
       "Mod": {
@@ -21626,14 +21635,14 @@
         "stripRow": "{name}: strip search"
       },
       "Sniff": {
-        "standardRounds": "{n} standard rounds",
-        "explosiveRounds": "{n} explosive rounds",
-        "fragGrenades": "{n} fragmentation or concussion grenades",
-        "smokeGrenades": "{n} smoke or flash grenades",
-        "miniGrenades": "{n} mini-grenades",
+        "standardRounds": "standard rounds: {n}",
+        "explosiveRounds": "explosive rounds: {n}",
+        "fragGrenades": "fragmentation or concussion grenades: {n}",
+        "smokeGrenades": "smoke or flash grenades: {n}",
+        "miniGrenades": "mini-grenades: {n}",
         "standardGrams": "{n} g of explosive",
         "plastiqueGrams": "{n} g of plastique",
-        "row": "{name} (chemical sniffer, TN {tn}): {successes} successes"
+        "row": "{name} (chemical sniffer, TN {tn}): successes {successes}"
       },
       "gmOnly": "GM only:",
       "Police": {
@@ -21648,15 +21657,16 @@
         "roll": "Roll",
         "off": "The police check is off (house rules: KIT_V99.policeCheck).",
         "noOne": "No one to check: put tokens on the scene or make player characters.",
-        "head": "Police check of {subject} by {officer} ({dice} dice, enforcement {enforcement}).",
+        "head": "Police check of {subject} by {officer} (dice: {dice}, enforcement {enforcement}).",
         "anOfficer": "an officer",
-        "row": "{name} (legality {code}, TN {tn}): {dice} → {successes} successes:",
+        "row": "{name} (legality {code}, TN {tn}): {dice} → successes {successes}:",
         "none": "not noticed",
         "warn": "noticed: a warning",
         "press": "presses the issue: a permit, or an arrest",
         "nothing": "They carry nothing restricted.",
         "nothingShown": "Nothing restricted in plain sight (tick \"Everything they carry\" if the officer suspects more).",
-        "hint": "What the character carries is read from their own items. A concealed item needs the officer's Perception Test (a search) first."
+        "hint": "What the character carries is read from their own items. A concealed item needs the officer's Perception Test (a search) first.",
+        "catalogue": "(the GM's catalogue entry says {n}: the stricter counts)"
       }
     },
     "Ware99": {
@@ -21677,6 +21687,12 @@
       },
       "Sheet": {
         "limbEssence": "enhancements +{essence} Essence"
+      },
+      "Gm": {
+        "pairInstalled": "{user} installed {name} on {actor} beside {other}, though the two may not be installed together (Street Samurai Catalog p. 87; Shadowtech p. 17). The player's client skipped the refusal; nothing was changed."
+      },
+      "Migration": {
+        "limbs99": "Cyberlimb enhancements already priced in their Essence (v0.99.0)"
       }
     }
   },

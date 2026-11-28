@@ -460,7 +460,7 @@ See `docs/TRANSLATING.md` for the rest.
 | `SR2E.Dialog.Trust.applyThis`: {part}. Apply this? | `{part}` | `SR2E.Dialog.Trust.for` ( (for {from}))<br>`SR2E.Dialog.Trust.theCardNamesNoCharacterIt` ( (the card names no character it comes from)) |
 | `SR2E.Dialog.Trust.whoIsNotAGmAnd`: , who is not a GM and doesn't own {actingName}. It says it comes from {from}. Go ahead? | `{actingName}` | `SR2E.Dialog.Trust.thisCharacter` (this character) |
 | `SR2E.Dialog.Ui.membersInGoodStandingUseThe`: Members in good standing use the shared sites and grimoire ({grimoireLength}), and initiate at the group's lower Karma cost. | `{grimoireLength}` | `SR2E.Count.spell` ({count} spell \| {count} spells) |
-| `SR2E.Kit99.Police.head`: Police check of {subject} by {officer} ({dice} dice, enforcement {enforcement}). | `{officer}` | `SR2E.Kit99.Police.anOfficer` (an officer) |
+| `SR2E.Kit99.Police.head`: Police check of {subject} by {officer} (dice: {dice}, enforcement {enforcement}). | `{officer}` | `SR2E.Kit99.Police.anOfficer` (an officer) |
 | `SR2E.MxIc97.Trust.bomb`: {vs} goes off against them | `{vs}` | `SR2E.MxIc97.Trust.aDataBomb` (a data bomb) |
 | `SR2E.Notify.Actor.aRatingFocusNeedsMaterialHas`: A rating {focusRating} focus needs {need}; {name} has {have}. | `{need}` | `SR2E.Count.kindMaterial` ({count} {kind} material \| {count} {kind} materials) |
 | `SR2E.Notify.Actor.alreadyHasBoundElementalLimit`: {name} already has {bound} (limit {max}). | `{bound}` | `SR2E.Count.boundElemental` ({count} bound elemental \| {count} bound elementals) |
