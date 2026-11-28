@@ -18,7 +18,7 @@ function english(): Record<string, string> {
   const flat: Record<string, string> = {};
   const walk = (o: unknown, p: string): void => { if (typeof o === 'string') { flat[p] = o; return; } if (o && typeof o === 'object') for (const [k, v] of Object.entries(o)) walk(v, p ? `${p}.${k}` : k); };
   walk(JSON.parse(readFileSync(join('public', 'lang', 'en.json'), 'utf8')), '');
-  for (const f of ['clinic99.json', 'clinic99-fix.json', 'clinic99-fix-replace.json']) {
+  for (const f of ['clinic99.json', 'clinic99-fix.json', 'clinic99-fix-replace.json', 'clinic99-fix2.json', 'clinic99-fix2-replace.json']) {
     const draft = join('i18n-drafts', f);
     if (!existsSync(draft)) continue;
     for (const [k, v] of Object.entries(JSON.parse(readFileSync(draft, 'utf8')) as Record<string, string>)) flat[k.replace(/^REPLACE:/, '')] = v;
@@ -210,7 +210,7 @@ describe('repair by damage level (Shadowtech pp. 36–41; Cybertechnology p. 44)
 });
 
 describe('v0.99.0 fixes: the damage record\'s bounds, notes and proofs (pure)', () => {
-  test('S2: the newest entries are kept; a character holds at most RECORD_PER_ACTOR; a write that wouldn\'t survive is skipped', () => {
+  test('S2: the newest entries are kept; a character holds at most RECORD_PER_ACTOR (fix2 M2: the oldest makes room)', () => {
     const raw: Record<string, string> = {};
     for (let i = 0; i < X.RECORD_MAX + 5; i++) raw[`Actor_a${i}_Item_w`] = 'L';
     const rec = X.damageRecord(raw);
@@ -220,7 +220,7 @@ describe('v0.99.0 fixes: the damage record\'s bounds, notes and proofs (pure)', 
     let mine: X.DamageRecord = {};
     for (let i = 0; i < X.RECORD_PER_ACTOR; i++) mine = X.recordWith(mine, `Actor_p_Item_i${i}`, 'M').rec;
     const over = X.recordWith(mine, 'Actor_p_Item_new', 'S');
-    assert.deepEqual([over.refused, over.full, over.rec.Actor_p_Item_new], [true, true, undefined]);
+    assert.deepEqual([over.refused, over.evicted, over.rec.Actor_p_Item_new], [false, ['Actor_p_Item_i0'], 'S']);
     const again = X.recordWith(mine, 'Actor_p_Item_i3', 'S');
     assert.equal(again.refused, false, 'a rise of an entry already there is kept');
     assert.equal(Object.keys(again.rec).pop(), 'Actor_p_Item_i3', 'and moves to the newest');
@@ -238,7 +238,7 @@ describe('v0.99.0 fixes: the damage record\'s bounds, notes and proofs (pure)', 
   });
   test('S3, P1, P2: deleted ware kept by name and kind; used ids; the cleared stamp', () => {
     let m = X.damageMeta(null);
-    m = X.metaGone(m, { actor: 'Actor_a', name: 'Wired Reflexes', kind: 'bodyware', level: 'S', at: 1 });
+    m = X.metaGone(m, { actor: 'Actor_a', name: 'Wired Reflexes', kind: 'bodyware', level: 'S', at: 1 }).meta;
     assert.equal(X.metaTake(m, 'Actor_a', 'Wired Reflexes', 'headware').entry, null, 'another kind');
     const t = X.metaTake(m, 'Actor_a', 'Wired Reflexes', 'bodyware');
     assert.equal(t.entry!.level, 'S');

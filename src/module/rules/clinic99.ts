@@ -248,19 +248,38 @@ export function actorKeyOf(key: string): string {
   return i > 0 ? key.slice(0, i) : '';
 }
 
+/** The oldest of these keys for ware not installed, else the oldest (keys in the record's order, oldest first). */
+function victim(keys: readonly string[], installed: (k: string) => boolean): string | undefined {
+  return keys.find((k) => !installed(k)) ?? keys[0];
+}
+
 /**
- * The record with this item at `level`, as the newest entry. `refused` when the character already has RECORD_PER_ACTOR
- * other entries (the write is skipped: it wouldn't survive); `full` when this write fills the character's share.
+ * The record with this item at `level`, as the newest entry (fix2 M2, L2). A rise is never refused for a good key:
+ * when the character already has RECORD_PER_ACTOR other entries, their oldest entry for ware not installed goes (else
+ * their oldest); when the whole record is full, the oldest entry for ware not installed goes (else the oldest entry
+ * of the character holding the most). `evicted`: the keys that went (the GM is told). `refused`: a bad key or no level.
  */
-export function recordWith(rec: DamageRecord, key: string, level: WareLevel): { rec: DamageRecord; refused: boolean; full: boolean } {
-  if (!safeKey(key) || !level) return { rec, refused: true, full: false };
-  const ak = actorKeyOf(key);
-  const mine = Object.keys(rec).filter((k) => k !== key && actorKeyOf(k) === ak).length;
-  if (ak && mine >= RECORD_PER_ACTOR) return { rec, refused: true, full: true };
+export function recordWith(rec: DamageRecord, key: string, level: WareLevel, installed: (k: string) => boolean = () => true): { rec: DamageRecord; refused: boolean; evicted: string[] } {
+  if (!safeKey(key) || !level) return { rec, refused: true, evicted: [] };
   const next: DamageRecord = { ...rec };
   delete next[key];
+  const evicted: string[] = [];
+  const ak = actorKeyOf(key);
+  const mine = Object.keys(next).filter((k) => ak && actorKeyOf(k) === ak);
+  if (ak && mine.length >= RECORD_PER_ACTOR) {
+    const v = victim(mine, installed);
+    if (v) { delete next[v]; evicted.push(v); }
+  }
+  const others = Object.keys(next);
+  if (others.length >= RECORD_MAX) {
+    const counts = new Map<string, number>();
+    for (const k of others) counts.set(actorKeyOf(k), (counts.get(actorKeyOf(k)) ?? 0) + 1);
+    const most = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? '';
+    const v = others.find((k) => !installed(k)) ?? others.find((k) => actorKeyOf(k) === most);
+    if (v) { delete next[v]; evicted.push(v); }
+  }
   next[key] = level;
-  return { rec: damageRecord(next), refused: false, full: Boolean(ak) && mine + 1 >= RECORD_PER_ACTOR };
+  return { rec: damageRecord(next), refused: false, evicted };
 }
 
 /** The record without these keys. */
@@ -285,13 +304,18 @@ export function recordedLevel(uuid: unknown): WareLevel {
 
 /** A recorded ware deleted by a player: kept by character, name and kind, so the same ware made again keeps its level. */
 export interface GoneEntry { actor: string; name: string; kind: string; level: WareLevel; at: number }
+/** A record entry's notes (fix2 M1, M3): when it last rose (ms, the server's clock) and the ware's name and kind when first recorded. */
+export interface RiseInfo { at: number; name: string; kind: string }
 /**
  * The damage record's notes: when the GM cleared each key (a reload's sweep then ignores an item level set before
- * that), the repair tests and clear cards already used to clear (a copy is refused), and deleted recorded ware.
+ * that), the repair tests and clear cards already used to clear (a copy is refused), deleted recorded ware, and each
+ * recorded key's rise (a repair card older than the rise proves nothing; the name and kind a deletion is noted by).
  */
-export interface DamageMeta { cleared: Record<string, number>; used: string[]; gone: GoneEntry[] }
+export interface DamageMeta { cleared: Record<string, number>; used: string[]; gone: GoneEntry[]; info: Record<string, RiseInfo> }
 export const META_USED_MAX = 500;
 export const META_GONE_MAX = 200;
+/** The most deleted-ware notes a character keeps (fix2 M3: the oldest goes, and the GM is told). */
+export const GONE_PER_ACTOR = 20;
 const short = (v: unknown, n: number): string => String(v ?? '').slice(0, n);
 export function damageMeta(raw: unknown): DamageMeta {
   const r: any = raw && typeof raw === 'object' ? raw : {};
@@ -300,7 +324,32 @@ export function damageMeta(raw: unknown): DamageMeta {
   const used = (Array.isArray(r.used) ? r.used : []).map((x: unknown) => short(x, 80)).filter(Boolean).slice(-META_USED_MAX);
   const gone: GoneEntry[] = (Array.isArray(r.gone) ? r.gone : []).filter((g: any) => g && typeof g === 'object' && safeKey(String(g.actor ?? '')) && levelOf(g.level))
     .map((g: any) => ({ actor: short(g.actor, 200), name: short(g.name, 200), kind: short(g.kind, 60), level: levelOf(g.level), at: num(g.at) })).slice(-META_GONE_MAX);
-  return { cleared, used, gone };
+  const info: Record<string, RiseInfo> = {};
+  for (const [k, v] of Object.entries(r.info && typeof r.info === 'object' ? r.info : {}).slice(-RECORD_MAX)) {
+    if (safeKey(k) && v && typeof v === 'object') info[k] = { at: num((v as any).at), name: short((v as any).name, 200), kind: short((v as any).kind, 60) };
+  }
+  return { cleared, used, gone, info };
+}
+/** The notes after a key's level rose at `at` (ms): the name and kind stay those it was first recorded with. */
+export function metaRose(m: DamageMeta, key: string, at: number, name: unknown, kind: unknown): DamageMeta {
+  if (!safeKey(key)) return m;
+  const was = m.info[key];
+  const info = { ...m.info };
+  delete info[key];
+  info[key] = { at: num(at), name: was ? was.name : short(name, 200), kind: was ? was.kind : short(kind, 60) };
+  return damageMeta({ ...m, info });
+}
+/** The notes without these keys' rise notes (cleared, or the item is gone). */
+export function metaInfoWithout(m: DamageMeta, keys: Iterable<string>): DamageMeta {
+  const info = { ...m.info };
+  for (const k of keys) delete info[k];
+  return { ...m, info };
+}
+/** Whether a repair card made at `cardAt` (ms) is newer than the key's last rise (fix2 M1: no rise noted, no proof). */
+export function newerThanRise(m: DamageMeta, key: string, cardAt: unknown): boolean {
+  const rose = m.info[key]?.at;
+  const at = num(cardAt, 0);
+  return rose !== undefined && rose > 0 && at >= rose;
 }
 /** The notes after the GM cleared a key at `at` (ms). */
 export function metaCleared(m: DamageMeta, key: string, at: number): DamageMeta {
@@ -318,10 +367,18 @@ export function metaUse(m: DamageMeta, ids: readonly unknown[]): DamageMeta {
 export function metaUsed(m: DamageMeta, ids: readonly unknown[]): boolean {
   return ids.some((x) => { const s = short(x, 80); return Boolean(s) && m.used.includes(s); });
 }
-/** The notes with a deleted ware kept (the same character, name and kind replaced). */
-export function metaGone(m: DamageMeta, e: GoneEntry): DamageMeta {
+/**
+ * The notes with a deleted ware kept (the same character, name and kind replaced). A character keeps at most
+ * GONE_PER_ACTOR notes and the world META_GONE_MAX: the oldest go (fix2 M3), returned in `evicted` (the GM is told).
+ */
+export function metaGone(m: DamageMeta, e: GoneEntry): { meta: DamageMeta; evicted: GoneEntry[] } {
   const same = (g: GoneEntry): boolean => g.actor === e.actor && g.name === e.name && g.kind === e.kind;
-  return damageMeta({ ...m, gone: [...m.gone.filter((g) => !same(g)), e] });
+  let gone = m.gone.filter((g) => !same(g));
+  const evicted: GoneEntry[] = [];
+  const mine = gone.filter((g) => g.actor === e.actor);
+  if (mine.length >= GONE_PER_ACTOR) { const v = mine[0]!; evicted.push(v); gone = gone.filter((g) => g !== v); }
+  if (gone.length >= META_GONE_MAX) { const v = gone[0]!; evicted.push(v); gone = gone.slice(1); }
+  return { meta: damageMeta({ ...m, gone: [...gone, e] }), evicted };
 }
 /** The deleted ware a new item on this character matches (by name and kind), and the notes without it. */
 export function metaTake(m: DamageMeta, actor: string, name: string, kind: string): { entry: GoneEntry | null; meta: DamageMeta } {

@@ -20,7 +20,7 @@ import { wareCost } from '../rules/bioware.ts';
 import { essenceLoss } from '../rules/cyberware.ts';
 import * as X from '../rules/clinic99.ts';
 import { authorOwns, gmMay } from './trust.ts';
-import { withGmLock, gmLockHeld } from './gmlock.ts';
+import { withGmLock } from './gmlock.ts';
 import { leadSettled } from './leader.ts';
 import { sysNow } from '../helpers/clock.ts';
 
@@ -94,12 +94,13 @@ const gmSelf = (): boolean => isGm() && !actorClass()?.actingAuthor;
 const actingPlayer = (): any => { const a = actorClass()?.actingAuthor; return a && !a.isGM ? a : null; };
 
 /**
- * A GM write step after its dialogs, under the GM lock (inline inside a card's re-run or a GM card's locked task,
- * which hold it: awaiting it again would deadlock).
+ * A GM write step after its dialogs, under the GM lock: inline only inside a card's re-run (which holds it: awaiting
+ * it again would deadlock), or when the caller says it runs inside its own locked task (`inLock`, M4). Any other
+ * locked task on this client holding the lock is no reason to run inline: the step queues behind it.
  */
-function gmStep<T>(fn: () => Promise<T>): Promise<T> {
+function gmStep<T>(fn: () => Promise<T>, inLock = false): Promise<T> {
   const cls = actorClass();
-  return cls?.actingAuthor || cls?.inAuthorRun || gmLockHeld() ? fn() : withGmLock(fn);
+  return inLock || cls?.actingAuthor || cls?.inAuthorRun ? fn() : withGmLock(fn);
 }
 
 async function writeRecord(rec: X.DamageRecord): Promise<void> {
@@ -110,35 +111,55 @@ async function writeMeta(m: X.DamageMeta): Promise<void> {
   await G().settings.set(SYSTEM_ID, META_SETTING, m, { sr2eRelay: true });
 }
 
-/** Characters whose share of the record is full (the GM is told once a session). */
-const fullTold = new Set<string>();
-async function tellFull(item: any): Promise<void> {
-  const ak = X.actorKeyOf(X.recordKey(item?.uuid));
-  if (!ak || fullTold.has(ak)) return;
-  fullTold.add(ak);
-  await post(`<p><em>${tx('SR2E.Clinic99.gmOnly')}</em> ${tx('SR2E.Clinic99.recordFull', { owner: name(item?.parent), max: X.RECORD_PER_ACTOR })}</p>`, { whisper: gmIds() });
+/** The server's clock (ms): a rise is compared with a card's creation time and an item's modified time (the server's). */
+const nowMs = (): number => { const t = Number(G()?.time?.serverTime); return Number.isFinite(t) && t > 0 ? t : Date.now(); };
+/** When a chat card was made (the server's stamp; its author can't change it), ms. */
+const cardTime = (card: any): number => Number(card?._stats?.createdTime ?? card?.timestamp ?? 0) || 0;
+const timeText = (ms: number): string => (ms > 0 ? new Date(ms).toLocaleString() : tx('SR2E.Clinic99.timeUnknown'));
+
+/** Every item there is by its record key (world items, actors' and unlinked tokens' items). */
+function itemIndex(): Map<string, any> {
+  const out = new Map<string, any>();
+  for (const i of [...((G()?.items ?? []) as any[])]) out.set(X.recordKey(i?.uuid), i);
+  for (const a of allActors()) for (const i of [...(a?.items ?? [])]) out.set(X.recordKey(i?.uuid), i);
+  return out;
 }
 
-/** GM only: the record keeps this item at least at `level` (a rise; never lowered here). */
-export async function recordRise(item: any, level: unknown): Promise<boolean> {
+/** The GM is told of every entry that left the record to make room (fix2 M2, L2), naming the ware. */
+async function tellEvicted(gone: any, key: string, info: X.RiseInfo | undefined, by: any): Promise<void> {
+  const what = escHtml(String(gone?.name ?? info?.name ?? key));
+  const owner = gone?.parent ? name(gone.parent) : escHtml(X.actorKeyOf(key));
+  await post(`<p><em>${tx('SR2E.Clinic99.gmOnly')}</em> ${tx('SR2E.Clinic99.recordEvicted', { item: what, owner, by: name(by), byOwner: name(by?.parent) })}</p>`, { whisper: gmIds() });
+}
+
+/**
+ * GM only: the record keeps this item at least at `level` (a rise; never lowered here), and notes the rise's time
+ * and the ware's name and kind (fix2 M1, M3). Ware not installed isn't recorded (fix2 M2; `force`: the GM's own
+ * setting, or a deleted ware's note applied); a rise for installed ware is never refused: an older entry makes room.
+ */
+export async function recordRise(item: any, level: unknown, o: { force?: boolean } = {}): Promise<boolean> {
   if (!isGm() || !item?.uuid) return false;
+  if (!o.force && !item.system?.installed) return false;
   const rec = damageRecord();
   const key = X.recordKey(item.uuid);
   const next = X.worse(rec[key], level);
   if (!next || next === rec[key]) return false;
-  const w = X.recordWith(rec, key, next);
-  if (w.full) await tellFull(item);
+  const idx = itemIndex();
+  const w = X.recordWith(rec, key, next, (k) => Boolean(idx.get(k)?.system?.installed));
   if (w.refused) return false;
   await writeRecord(w.rec);
+  const was = damageMeta();
+  await writeMeta(X.metaInfoWithout(X.metaRose(was, key, nowMs(), item.name, item.system?.kind), w.evicted));
+  for (const k of w.evicted) await tellEvicted(idx.get(k), k, was.info[k], item);
   return true;
 }
 
-/** GM only: the record forgets this item (a repair, or the GM's own clearing), stamped as cleared now; `used`: the ids that cleared it. */
+/** GM only: the record forgets this item (a repair, or the GM's own clearing), stamped as cleared now; `used`: the ids that cleared it (marked used even with nothing recorded). */
 export async function recordClear(item: any, used: readonly unknown[] = []): Promise<boolean> {
   if (!isGm() || !item?.uuid) return false;
   const rec = damageRecord();
   const key = X.recordKey(item.uuid);
-  let m = X.metaCleared(damageMeta(), key, Date.now());
+  let m = X.metaInfoWithout(X.metaCleared(damageMeta(), key, nowMs()), [key]);
   if (used.length) m = X.metaUse(m, used);
   await writeMeta(m);
   if (!rec[key]) return false;
@@ -251,22 +272,27 @@ function proofTn(item: any, level: string): number {
 /**
  * The GM's check of a repair test behind a clear (S4): its card (by the test's id) is a cyberRepair of this item, its
  * author owns the ware's character and the repairer, it has successes at the recorded level's TN (counted again from
- * its dice), and neither it nor the clear card has cleared a record before. `author`: the clear card's author must be
+ * its dice), it was made after the damage last rose (fix2 M1), and neither it nor the clear card has cleared a record before. `author`: the clear card's author must be
  * the repair card's (a card the GM's client posted: none). Null when it doesn't check out.
  */
-export function repairProofFor(item: any, testId: unknown, o: { author?: any; clearId?: string } = {}): { card: any; successes: number; tn: number; roller: string } | null {
+export function repairProofFor(item: any, testId: unknown, o: { author?: any; clearId?: string } = {}): { card: any; successes: number; tn: number; roller: string; cardAt: number; roseAt: number } | null {
   const card = repairCard(testId);
   const owner = item?.parent;
   if (!card || !owner) return null;
   const snap = card.flags[SYSTEM_ID].test;
-  if (X.metaUsed(damageMeta(), [`test:${String(testId)}`, o.clearId ? `card:${o.clearId}` : ''])) return null;
+  const meta = damageMeta();
+  if (X.metaUsed(meta, [`test:${String(testId)}`, o.clearId ? `card:${o.clearId}` : ''])) return null;
+  // fix2 M1: the repair card must be newer than the damage's last rise (an old test proves nothing about new damage).
+  const key = X.recordKey(item.uuid);
+  const cardAt = cardTime(card);
+  if (!X.newerThanRise(meta, key, cardAt)) return null;
   if (o.author && String(card.author?.id ?? card.author) !== String(o.author?.id ?? o.author)) return null;
   if (!authorOwns(card, owner)) return null;
   const roller = sync(snap.actorUuid);
   if (!roller || !authorOwns(card, roller)) return null;
   const tn = proofTn(item, X.recordedLevel(item.uuid) || X.levelOf(snap.cyberRepair?.level99));
   const successes = X.repairProof(snap, { itemId: String(item.id ?? ''), ownerUuid: String(owner.uuid ?? ''), tn });
-  return successes > 0 ? { card, successes, tn, roller: String(roller.name ?? '') } : null;
+  return successes > 0 ? { card, successes, tn, roller: String(roller.name ?? ''), cardAt, roseAt: meta.info[key]?.at ?? 0 } : null;
 }
 
 /** The "clear the damage record" card for the GM: whispered, naming the item and the repair test (S4). */
@@ -293,25 +319,30 @@ export async function repaired(item: any, o: { project?: boolean; repairer?: any
   const level = X.wareLevel(item);
   try { await item.setFlag(SYSTEM_ID, X.WARE_FLAG, ''); } catch { /* not ours */ }
   const recorded = X.recordedLevel(item.uuid);
+  // fix2 M1: the GM's own repair marks its test used even with nothing recorded.
+  if (gmSelf()) { if (recorded || o.testId) await gmStep(() => recordClear(item, o.testId ? [`test:${o.testId}`] : [])); return ''; }
   if (!recorded) return '';
-  if (gmSelf()) { await gmStep(() => recordClear(item, o.testId ? [`test:${o.testId}`] : [])); return ''; }
   await askClear(item, level || recorded, o.testId, { repairer: o.repairer, author: acting });
   return ` ${tx('SR2E.Clinic99.clearAsked')}`;
 }
 
 /**
- * The lead GM, when a repair project's effect has written its test's id on the ware (S5): the record is cleared when
- * the repair test was the GM's own, else the GM is asked (only for a test that checks out). Whispers nothing otherwise.
+ * The lead GM, when a repair project's effect has written its test's id on the ware (S5): the record is cleared
+ * directly only when both the repair test and the item update that wrote the id are a GM's (fix2 M1: `userId`, the
+ * writer); else the GM is asked (only for a test that checks out). The test is marked used even with nothing recorded.
  */
-export async function completedRepair(item: any, testId: unknown): Promise<boolean> {
+export async function completedRepair(item: any, testId: unknown, userId?: string): Promise<boolean> {
   if (!isGm() || !X.on('damageLevels') || !item || item.type !== 'cyberware') return false;
+  const id = String(testId ?? '').slice(0, 80);
+  if (!id) return false;
   const recorded = X.recordedLevel(item.uuid);
-  if (!recorded) return false;
-  const proof = repairProofFor(item, testId);
+  if (!recorded) { const m = damageMeta(); if (!X.metaUsed(m, [`test:${id}`])) await writeMeta(X.metaUse(m, [`test:${id}`])); return false; }
+  const proof = repairProofFor(item, id);
   if (!proof) return false;
   const author = G()?.users?.get?.(String(proof.card.author?.id ?? proof.card.author));
-  if (author?.isGM) { await recordClear(item, [`test:${String(testId)}`]); return true; }
-  await askClear(item, recorded, testId);
+  const writer = G()?.users?.get?.(String(userId ?? ''));
+  if (author?.isGM && writer?.isGM) { await recordClear(item, [`test:${id}`]); return true; }
+  await askClear(item, recorded, id);
   return true;
 }
 
@@ -380,9 +411,10 @@ function feeIsPaid(patient: any, keys: readonly string[]): boolean {
 /**
  * The surgeon's fee, charged to the patient once per operation (its id) and once per item put in (P4). On the GM's
  * client the paid marker is the GM-written record (S6); on a player's client (their own surgery, their own money) it is
- * the patient's flag. Returns the card's note ('' when there is no fee and no clinic to note).
+ * the patient's flag. `inLock`: the caller runs inside its own locked task (the GM's Apply of a surgery card, M4).
+ * Returns the card's note ('' when there is no fee and no clinic to note).
  */
-export async function chargeSurgeonFee(patient: any, item: any, op: { id?: string; points: number; pay?: boolean; itemName: string; grade?: unknown }): Promise<string> {
+export async function chargeSurgeonFee(patient: any, item: any, op: { id?: string; points: number; pay?: boolean; itemName: string; grade?: unknown; inLock?: boolean }): Promise<string> {
   if (!patient || !item) return '';
   const c = surgeryCharges(patient, item, op.points, op.grade);
   const gradeText = escHtml(tKey(`SR2E.Clinic99.Grade.${gradeFor(item, op.grade)}`));
@@ -397,7 +429,7 @@ export async function chargeSurgeonFee(patient: any, item: any, op: { id?: strin
   const marks = Object.fromEntries(keys.map((k) => [k, c.fee]));
   if (isGm()) {
     const pk = X.recordKey(patient.uuid);
-    try { await gmStep(() => G().settings.set(SYSTEM_ID, FEE_SETTING, X.feeWith(feeRecord(), pk, keys, c.fee), { sr2eRelay: true })); } catch { /* not saved */ }
+    try { await gmStep(() => G().settings.set(SYSTEM_ID, FEE_SETTING, X.feeWith(feeRecord(), pk, keys, c.fee), { sr2eRelay: true }), Boolean(op.inLock)); } catch { /* not saved */ }
   } else { try { await patient.setFlag(SYSTEM_ID, FEE_FLAG, marks); } catch { /* not saved */ } }
   return `${note} ${tx('SR2E.Clinic99.feePaid', { fee: c.fee.toLocaleString() })}`;
 }
@@ -594,7 +626,7 @@ export async function setLevelAsGm(item: any, level: unknown): Promise<boolean> 
   const l = X.levelOf(level);
   await gmStep(async () => {
     await item.update({ [`flags.${SYSTEM_ID}.${X.WARE_FLAG}`]: l, 'system.damaged': X.levelStops(l) });
-    if (l) { await recordClear(item); await recordRise(item, l); } else await recordClear(item);
+    if (l) { await recordClear(item); await recordRise(item, l, { force: true }); } else await recordClear(item);
   });
   await post(`<p><em>${tx('SR2E.Clinic99.gmOnly')}</em> ${tx('SR2E.Clinic99.levelSet', { item: name(item), owner: name(item.parent), level: escHtml(levelLabel(l)) })}</p>`, { whisper: gmIds() });
   return true;
@@ -663,7 +695,7 @@ export async function applyClear(message: any): Promise<boolean> {
   const byGm = Boolean(message?.author?.isGM);
   const proof = repairProofFor(item, f?.testId, { clearId, ...(byGm ? {} : { author: message?.author }) });
   if (!proof) { warn(tx('SR2E.Clinic99.noRepairProof')); return false; }
-  const ok = await gmMay(message, { title: tx('SR2E.Clinic99.clearTitle'), lines: [tx('SR2E.Clinic99.clearLine', { item: String(item.name ?? ''), owner: String(owner?.name ?? ''), level: levelLabel(recorded) }), tx('SR2E.Clinic99.clearProof', { roller: proof.roller, successes: proof.successes, tn: proof.tn })], sources: [owner?.uuid], always: true });
+  const ok = await gmMay(message, { title: tx('SR2E.Clinic99.clearTitle'), lines: [tx('SR2E.Clinic99.clearLine', { item: String(item.name ?? ''), owner: String(owner?.name ?? ''), level: levelLabel(recorded) }), tx('SR2E.Clinic99.clearProof', { roller: proof.roller, successes: proof.successes, tn: proof.tn }), tx('SR2E.Clinic99.clearTimes', { card: timeText(proof.cardAt), rose: timeText(proof.roseAt) })], sources: [owner?.uuid], always: true });
   if (!ok) return false;
   const done = await gmStep(async () => {
     // Checked again inside the step (two GMs, or a double click past the guard).
@@ -695,14 +727,6 @@ function refreshFor(keys: Set<string>): void {
   }
 }
 
-/** The record keys of every item there is (world items, actors' and unlinked tokens' items). */
-function liveKeys(): Set<string> {
-  const keys = new Set<string>();
-  for (const i of [...((G()?.items ?? []) as any[])]) keys.add(X.recordKey(i?.uuid));
-  for (const a of allActors()) for (const i of [...(a?.items ?? [])]) keys.add(X.recordKey(i?.uuid));
-  return keys;
-}
-
 /**
  * The lead GM copies rises of the ware's own level into the record (sweeps once at start for any made while away),
  * skipping a level the GM cleared since the item last changed (P2), and drops keys whose item is gone (S2).
@@ -720,26 +744,53 @@ export async function sweepLevels(): Promise<number> {
     }
   }
   const rec = damageRecord();
-  const live = liveKeys();
+  const live = itemIndex();
   const dead = Object.keys(rec).filter((k) => !live.has(k));
   if (dead.length) await writeRecord(X.recordWithout(rec, dead));
+  const m = damageMeta();
+  const stale = Object.keys(m.info).filter((k) => !damageRecord()[k]);
+  if (stale.length) await writeMeta(X.metaInfoWithout(m, stale));
   return n;
 }
 
+/** A ware's name and kind as a note matches them. */
+const sameWare = (i: any, nm: string, kind: string): boolean => String(i?.name ?? '').slice(0, 200) === nm && String(i?.system?.kind ?? '').slice(0, 60) === kind;
+
 /**
- * The lead GM, when a recorded ware is deleted: its key leaves the record (S2); deleted by a player, the character
- * keeps a note of it by name and kind, so the same ware made again on that character (or moved back) keeps the level (S3).
+ * The lead GM, when a recorded ware is deleted: its key leaves the record (S2). Deleted by a player (fix2 M3): by the
+ * name and kind it had when its level was first recorded, every character that player owns (and the ware's own) gets
+ * the level: an installed copy already there now, else a note for a copy made later (or moved back); the GM is told.
  */
 export async function wareDeleted(item: any, userId: string): Promise<void> {
   if (!isGm() || !X.on('damageLevels') || item?.type !== 'cyberware') return;
   const key = X.recordKey(item.uuid);
   const rec = damageRecord();
-  const level = X.worse(rec[key], X.trustedOwnLevel(item));
+  const meta = damageMeta();
+  const info = meta.info[key];
+  const level = X.worse(rec[key], item.system?.installed ? X.trustedOwnLevel(item) : '');
   if (rec[key]) await writeRecord(X.recordWithout(rec, [key]));
-  const byGm = Boolean(G()?.users?.get?.(userId)?.isGM);
-  const actorKey = X.recordKey(item.parent?.uuid);
-  if (!level || byGm || !item.parent || item.system?.bioware) return;
-  await writeMeta(X.metaGone(damageMeta(), { actor: actorKey, name: String(item.name ?? ''), kind: String(item.system?.kind ?? ''), level, at: Date.now() }));
+  let m = info ? X.metaInfoWithout(meta, [key]) : meta;
+  const user = G()?.users?.get?.(userId);
+  if (!level || user?.isGM || !item.parent || item.system?.bioware) { if (m !== meta) await writeMeta(m); return; }
+  const nm = info?.name || String(item.name ?? '').slice(0, 200);
+  const kind = info ? info.kind : String(item.system?.kind ?? '').slice(0, 60);
+  const actors = [item.parent, ...(user ? people().filter((a: any) => a?.testUserPermission?.(user, 'OWNER')) : [])]
+    .filter((a: any, n: number, all: any[]) => a?.uuid && all.findIndex((b: any) => b?.uuid === a.uuid) === n);
+  const copies: any[] = [];
+  const evicted: X.GoneEntry[] = [];
+  for (const a of actors) {
+    const here = [...(a.items ?? [])].filter((i: any) => i.id !== item.id && i.type === 'cyberware' && !i.system?.bioware && i.system?.installed && sameWare(i, nm, kind));
+    if (here.length) { copies.push(...here); continue; }
+    const r = X.metaGone(m, { actor: X.recordKey(a.uuid), name: nm, kind, level, at: nowMs() });
+    m = r.meta;
+    evicted.push(...r.evicted);
+  }
+  await writeMeta(m);
+  for (const e of evicted) await post(`<p><em>${tx('SR2E.Clinic99.gmOnly')}</em> ${tx('SR2E.Clinic99.goneEvicted', { item: escHtml(e.name), level: escHtml(levelLabel(e.level)) })}</p>`, { whisper: gmIds() });
+  for (const c of copies) {
+    await recordRise(c, level, { force: true });
+    await post(`<p><em>${tx('SR2E.Clinic99.gmOnly')}</em> ${tx('SR2E.Clinic99.copyGotLevel', { item: name(c), owner: name(c.parent), level: escHtml(levelLabel(level)) })}</p>`, { whisper: gmIds() });
+  }
 }
 
 /** The lead GM, when cyberware is made on a character that deleted recorded ware of that name and kind: it keeps the level (S3). */
@@ -748,7 +799,7 @@ export async function wareCreated(item: any): Promise<boolean> {
   const t = X.metaTake(damageMeta(), X.recordKey(item.parent.uuid), String(item.name ?? ''), String(item.system?.kind ?? ''));
   if (!t.entry) return false;
   await writeMeta(t.meta);
-  await recordRise(item, t.entry.level);
+  await recordRise(item, t.entry.level, { force: true });
   await post(`<p><em>${tx('SR2E.Clinic99.gmOnly')}</em> ${tx('SR2E.Clinic99.cameBack', { item: name(item), owner: name(item.parent), level: escHtml(levelLabel(t.entry.level)) })}</p>`, { whisper: gmIds() });
   return true;
 }
@@ -771,6 +822,20 @@ export function preUntick(item: any, change: any, userId?: string, options: any 
   if (!Object.keys(change).filter((k) => k !== '_id').length) return false;
 }
 
+const installedNow = (change: any): boolean => change?.system?.installed === true || change?.['system.installed'] === true;
+
+/** C6/S9 gap (fix2): a player's cyberware went from installed to not installed under the book's removal (past the refusal). */
+export function untickedByPlayer(item: any, change: any, userId: string): boolean {
+  if (!X.on('removal') || item?.type !== 'cyberware' || item.system?.bioware || item.system?.installed) return false;
+  if (change?.system?.installed !== false && change?.['system.installed'] !== false) return false;
+  return !G()?.users?.get?.(userId)?.isGM;
+}
+/** The lead GM's whisper for it (after the fact: nothing is written back). */
+export async function tellUnticked(item: any, userId: string): Promise<void> {
+  const who = escHtml(String(G()?.users?.get?.(userId)?.name ?? ''));
+  await post(`<p><em>${tx('SR2E.Clinic99.gmOnly')}</em> ${tx('SR2E.Clinic99.untickedAfter', { name: name(item), owner: name(item.parent), user: who })}</p>`, { whisper: gmIds() });
+}
+
 export function registerClinic99(isLead: () => boolean): void {
   const s: any = G()?.settings;
   let last: X.DamageRecord = {};
@@ -788,11 +853,14 @@ export function registerClinic99(isLead: () => boolean): void {
   const H: any = (globalThis as any).Hooks;
   const run = (what: () => Promise<unknown>): void => { void withGmLock(what).catch((err) => console.warn('sr2e | ware damage', err)); };
   H?.on?.('preUpdateItem', (item: any, change: any, o: any, userId: string) => preUntick(item, change, userId, o));
-  H?.on?.('updateItem', (item: any, change: any) => {
-    if (!isLead() || !X.on('damageLevels') || item?.type !== 'cyberware') return;
+  H?.on?.('updateItem', (item: any, change: any, _o: any, userId: string) => {
+    if (!isLead() || item?.type !== 'cyberware') return;
+    if (untickedByPlayer(item, change, userId)) run(() => tellUnticked(item, userId));
+    if (!X.on('damageLevels')) return;
     const fix = change?.flags?.[SYSTEM_ID]?.[FIX_FLAG];
-    if (typeof fix === 'string' && fix) run(() => completedRepair(item, fix));
-    if (change?.flags?.[SYSTEM_ID]?.[X.WARE_FLAG] === undefined) return;
+    if (typeof fix === 'string' && fix) run(() => completedRepair(item, fix, userId));
+    // fix2 M2: a level is recorded from the item when it changes, or when the ware goes in.
+    if (change?.flags?.[SYSTEM_ID]?.[X.WARE_FLAG] === undefined && !installedNow(change)) return;
     const own = X.trustedOwnLevel(item);
     if (own) run(() => recordRise(item, own));
   });
