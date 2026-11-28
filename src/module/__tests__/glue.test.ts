@@ -9,6 +9,7 @@ import { SORCERY_V951 } from '../rules/__tests__/sorcery951.ts';
 import { SPIRITS_V922_WAY } from '../rules/__tests__/spirits922.ts';
 import { SPIRITS_V951_WAY } from '../rules/__tests__/spirits951.ts';
 import { MXIC_V965_WAY } from '../rules/__tests__/mxic965.ts';
+import { VSEC_V971_WAY } from '../rules/__tests__/vsec971.ts';
 import { matrix922 } from "./helpers/matrix922.ts";
 import { SORCERY_V922 } from '../rules/__tests__/sorcery922.ts';
 import assert from "node:assert/strict";
@@ -68,6 +69,8 @@ before(async () => {
   oldWay(SPIRITS_V951_WAY);
   // v0.97.0: and the v0.96.5 Matrix IC and cybercombat rules (the book way is v097-mxic*.test.ts's).
   oldWay(MXIC_V965_WAY);
+  // v0.98.0: and the v0.97.1 building security and vehicle upkeep rules (the book way is v098-vsec*.test.ts's).
+  oldWay(VSEC_V971_WAY);
   // The disaster GM card (v0.35.0) would be the last message after every all-ones roll; its own test turns it on.
   (RULES.DISASTERS as any).prompt = false;
   // v0.39.0 rules that add steps or warnings are switched on only in their own tests.

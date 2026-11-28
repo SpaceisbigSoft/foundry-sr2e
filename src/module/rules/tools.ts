@@ -62,6 +62,8 @@ export const TOOLS: readonly ToolDef[] = [
   { id: 'bookRules95', icon: 'fa-solid fa-book-skull', who: 'gm', toolbar: false },
   // v0.96.0 (RULES.SPIRITS_V96.spiritDuel): spirit against spirit, Force against Force.
   { id: 'spirits96', icon: 'fa-solid fa-ghost', who: 'gm', toolbar: false },
+  // v0.98.0 (RULES.VSEC_V98): building security and vehicle upkeep (a site's CCSS values, rigger perception and combat, design).
+  { id: 'vsec98', icon: 'fa-solid fa-building-shield', who: 'gm', toolbar: false },
   { id: 'tourGm', icon: 'fa-solid fa-person-chalkboard', who: 'gm', toolbar: false },
 ];
 

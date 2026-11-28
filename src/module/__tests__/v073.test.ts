@@ -15,6 +15,7 @@ import { initiativeFormula } from '../helpers/initiative.ts';
 import { oldWay } from '../rules/__tests__/oldway.ts';
 import { shown } from './helpers/shown.ts';
 import { useV922Vehicles } from '../rules/__tests__/v922vehicles.ts';
+import { VSEC_V971_WAY } from '../rules/__tests__/vsec971.ts';
 
 const g = globalThis as any;
 const faces: number[] = [];
@@ -73,6 +74,8 @@ const PLAYER = () => ({ id: 'p1', name: 'Corvo', isGM: false, can: () => false }
 const asMessage = (d: any) => ({ id: `m${++mid}`, timestamp: mid, ...d, getFlag(s: string, k: string) { return this.flags?.[s]?.[k]; }, async setFlag(s: string, k: string, v: any) { ((this.flags ??= {})[s] ??= {})[k] = v; } });
 
 before(async () => {
+  // v0.98.0: the v0.97.1 modification prices and install tests (the book way is v098-vsec*.test.ts's).
+  oldWay(VSEC_V971_WAY);
   // As in glue.test.ts and v072.test.ts: rules that add steps or prompts are off unless a test turns them on.
   (RULES.DISASTERS as any).prompt = false;
   (RULES.MAGIC_V39.ritualStages as any).enabled = false;

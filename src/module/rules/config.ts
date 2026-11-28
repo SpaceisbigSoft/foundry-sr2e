@@ -34,6 +34,7 @@ import { SPIRITS_V96 } from './config96/spirits.ts';
 import { MXLIFE_V97 } from './config97/mxlife.ts';
 import { MXOPS_V97 } from './config97/mxops.ts';
 import { MXIC_V97 } from './config97/mxic.ts';
+import { VSEC_V98 } from './config98/vsec.ts';
 
 /**
  * SR2e rules constants.
@@ -2430,7 +2431,8 @@ export const RULES = {
      * invisibility (physical: fools cameras), chameleon suits (ruthenium polymers) and thermal
      * masking. Its rating is the spell's successes or the suit's rating.
      */
-    senses: ['', 'visual', 'lowLight', 'thermal', 'ultrasound', 'motion', 'pressure', 'acoustic'] as ReadonlyArray<string>,
+    // v0.98.0: 'vibration' (CSH p. 100; RULES.VSEC_V98.motion).
+    senses: ['', 'visual', 'lowLight', 'thermal', 'ultrasound', 'motion', 'pressure', 'acoustic', 'vibration'] as ReadonlyArray<string>,
     concealmentKinds: ['', 'invisibility', 'improvedInvisibility', 'chameleon', 'thermal', 'silence', 'mask', 'physicalMask'] as ReadonlyArray<string>,
     concealment: {
       visual: { invisibility: 0, improvedInvisibility: 'blind', chameleon: 1, thermal: 0, silence: 0 },
@@ -3433,6 +3435,8 @@ export const RULES = {
   MXLIFE_V97,
   /** v0.97.0: rules completeness, the Matrix: IC and cybercombat (rules/config97/mxic.ts). */
   MXIC_V97,
+  /** v0.98.0: rules completeness, building security and vehicle upkeep (rules/config98/vsec.ts). */
+  VSEC_V98,
 } as const;
 
 export type RangeBand = keyof typeof RULES.RANGE_TN;

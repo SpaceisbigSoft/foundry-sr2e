@@ -1,4 +1,5 @@
 import { RULES } from './config.ts';
+import { modSpec98, type ModVehicle } from './vsec98.ts';
 import type { TargetNumberModifier } from './dice.ts';
 import { fencePrice } from './street.ts';
 import { programDesign } from './netrig.ts';
@@ -306,9 +307,12 @@ export function turretCheck(t: { facing?: number; traverse?: number; limit?: num
 // ---------------------------------------------------------------- Modification installation
 
 /** Installing a modification of this rating: the TN and the base hours. */
-export function modInstallPlan(rating: number): { tn: number; baseHours: number } {
+export function modInstallPlan(rating: number, kind?: string, veh?: ModVehicle): { tn: number; baseHours: number } {
   const i = RULES.VEHICLES.install;
   const r = Math.max(1, Math.floor(rating || 1));
+  // v0.98.0 (RULES.VSEC_V98.modSpecs 'book', Rigger 2 pp. 120–140): the item's own Installation Test TN and base time.
+  const spec = kind && veh ? modSpec98(kind, r, veh) : null;
+  if (spec) return { tn: spec.tn, baseHours: Math.max(1, spec.hours) };
   return { tn: Math.max(RULES.MIN_TARGET_NUMBER, i.tn + i.tnPerRating * r), baseHours: r * i.hoursPerRating };
 }
 

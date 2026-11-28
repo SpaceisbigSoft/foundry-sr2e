@@ -503,6 +503,8 @@ export function blindIfSecret(key: string, data: any): any {
   return { ...data, whisper: [...((game as any).users ?? [])].filter((u: any) => u.isGM).map((u: any) => u.id), blind: true };
 }
 import { privacyGroup } from '../rules/qol.ts';
+import * as VS98 from '../rules/vsec98.ts';
+import * as VSG98 from '../applications/vsec98.ts';
 
 /**
  * Foundry's roll mode (public, GM only, blind, self) on a card (v0.36.0). Cards someone else must
@@ -14503,7 +14505,9 @@ export class SR2Actor extends Actor {
     // v0.57.0: the persona's own Matrix damage, and a reality filter that failed in this host.
     const filter = this.sys.derived?.matrix?.filterModifiers ?? [];
     return [...this.connectionMods(), ...(this.matrixLink()?.modifiers ?? []), ...t, ...psycheModifiers(this.sys.matrix?.psyche ?? [], SR2Actor.matrixNow().worldTime), ...SR2Actor.smokeMods(host),
-      ...(opts.wounds === false ? [] : matrixWoundModifiers(Number(this.sys.matrix?.monitor ?? 0))), ...filter];
+      ...(opts.wounds === false ? [] : matrixWoundModifiers(Number(this.sys.matrix?.monitor ?? 0))), ...filter,
+      // v0.98.0 (RULES.VSEC_V98.riggerDecking 'book', Rigger 2 p. 16): a rigger decking +1 TN.
+      ...VSG98.riggerDeckingMods(this)];
   }
 
   /** Grid travel still to go (v0.40.0): the node, and Combat Turns or seconds left; null once arrived. */
@@ -18763,6 +18767,25 @@ export class SR2Actor extends Actor {
     return { cost: d.cost, warnings: d.warnings };
   }
 
+  /**
+   * v0.98.0 (RULES.VSEC_V98.riggerCombat 'book', Rigger 2 pp. 79–80): resist rigger combat's Stun: Body (a decker:
+   * Willpower, as non-lethal black IC) against the winner's Willpower, plus Control Pool dice up to Body (spent).
+   */
+  async resistRiggerCombat98(r: { tn: number; level: DamageLevel; attribute: 'body' | 'willpower'; pool: number }): Promise<void> {
+    const pool = Math.max(0, Math.min(Math.floor(Number(r.pool) || 0), Number(this.sys.derived?.controlPoolLeft ?? 0), Number(this.sys.attributes?.body?.total ?? 0)));
+    if (pool > 0) await this.#spendPool('control', pool);
+    await this.#drainTest({
+      label: tx('SR2E.VSec98.Combat.resistLabel'), attribute: r.attribute === 'willpower' ? 'willpower' : 'body', targetNumber: r.tn,
+      level: r.level, type: 'stun', poolDice: 0, noun: 'damage', ...(pool ? { extraDice: pool, extraNote: tx('SR2E.VSec98.Combat.poolNote', { pool }) } : {}),
+    });
+  }
+
+  /** v0.98.0 (RULES.VSEC_V98.riggerCombat): spend Control Pool dice on the rigger combat attack (the GM's tool). */
+  async spendControl98(n: number): Promise<void> {
+    const k = Math.max(0, Math.min(Math.floor(Number(n) || 0), Number(this.sys.derived?.controlPoolLeft ?? 0)));
+    if (k > 0) await this.#spendPool('control', k);
+  }
+
   /** A rigger resists feedback or dump shock: Willpower (v0.79.0: Body for a deck's dump shock) vs the TN, staged down by successes. */
   async rollRiggerShock(r: { tn: number; level: DamageLevel; type: DamageType; kind: 'feedback' | 'dump'; attribute?: 'body' | 'willpower' }): Promise<void> {
     await this.#drainTest({
@@ -18862,7 +18885,7 @@ export class SR2Actor extends Actor {
       : any ? `<strong>${later ? tx('SR2E.Card.Actor.whatToRepair', { what: escText(what) }) : tx('SR2E.Card.Actor.whatRepaired', { what: escText(what) })}</strong>${repaired ? ` (${before} → ${before - repaired})` : ''}` : '';
     await ChatMessage.create(withRollMode({
       speaker: ChatMessage.getSpeaker({ actor: this }),
-      content: `${describeResult(tx('SR2E.Card.Actor.repairs2', { name: this.name, vehicleName: vehicle.name, skillName: skill?.name ?? tx('SR2E.Card.Actor.noBRSkill'), sdSuffix: sd.suffix }), r)}<p>${any ? tCount(plan.hours, 'SR2E.Card.Actor.hoursOfWork2', { lead, part: later ? tx('SR2E.Card.Actor.upkeepTabUnderWay') : '' }) : lead || tx('SR2E.Card.Actor.noProgress2')}</p>${toolNote && fx.enabled ? `<p class="hint">${tx('SR2E.Card.Actor.tools', { toolNote: escText(toolNote) })}</p>` : ''}`,
+      content: `${describeResult(tx('SR2E.Card.Actor.repairs2', { name: this.name, vehicleName: vehicle.name, skillName: skill?.name ?? tx('SR2E.Card.Actor.noBRSkill'), sdSuffix: sd.suffix }), r)}<p>${any ? tCount(plan.hours, 'SR2E.Card.Actor.hoursOfWork2', { lead, part: later ? tx('SR2E.Card.Actor.upkeepTabUnderWay') : '' }) : lead || tx('SR2E.Card.Actor.noProgress2')}</p>${toolNote && fx.enabled ? `<p class="hint">${tx('SR2E.Card.Actor.tools', { toolNote: escText(toolNote) })}</p>` : ''}${VSG98.repairPartsLine(vehicle, repaired)}`,
       rolls,
     }));
     if (later) await this.startProject({ kind: 'vrepair', area: 'vehicles', label: plan.rebuild ? `Rebuilding ${vehicle.name}` : `Repairing ${vehicle.name} (${what})`, hours: plan.hours, effect: { call: { method: 'finishVehicleRepair', args: [vehicle.uuid, repaired, plan.parts, plan.rebuild] } } });
@@ -19352,12 +19375,13 @@ export class SR2Actor extends Actor {
     // v0.78.0 (RULES.BOOK_V78.adaptation 'text'): the rigger adaptation goes in on top of the remote adaptation.
     const needs = modPrerequisite(mod.kind, (vehicle.system.mods ?? []).filter((m: any) => m.installed).map((m: any) => String(m.kind)));
     if (needs) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.needsFirst', { vehicleName: escHtml(vehicle.name), needs: escHtml(needs) })); return null; }
-    const fx = modificationEffect(mod.kind, mod.rating, Number(vehicle.system.body ?? 0));
+    const fx = modificationEffect(mod.kind, mod.rating, Number(vehicle.system.body ?? 0), vehicle.system);
     const cost = mod.cost > 0 ? mod.cost : fx.cost;
     if (opts.payer && cost > Number(opts.payer.system?.nuyen ?? 0)) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.canTPayForTheParts', { payerName: escHtml(opts.payer.name), cost: escHtml(cost.toLocaleString()) })); return null; }
-    const plan = modInstallPlan(mod.rating);
+    const plan = modInstallPlan(mod.rating, mod.kind, vehicle.system);
     const vr = RULES.SKILLS.vehicleRepair;
-    const skill = vr.skills.map((n) => this.findSkill(n)).find((x: any) => x && (x.system?.rating ?? 0) > 0);
+    // v0.98.0 (RULES.VSEC_V98.modSpecs 'book'): the item's own B/R skill (Electronics or Computer B/R) first.
+    const skill = [...VS98.modSkillNames(mod.kind, vehicle.system), ...vr.skills].map((n) => this.findSkill(n)).find((x: any) => x && (x.system?.rating ?? 0) > 0);
     const sd = this.#skillDice(skill, false, null, 'intelligence');
     const modName = mod.name || fx.label;
     return this.#runTest(tx('SR2E.Card.Actor.installIn2', { modName, modRating: mod.rating, vehicleName: vehicle.name, skillName: skill?.name ?? tx('SR2E.Card.Actor.noBRSkill'), sdSuffix: sd.suffix }), sd.dice, {
@@ -19391,7 +19415,7 @@ export class SR2Actor extends Actor {
       // Review fix: the list may have changed since the test; find the mod by its name like finishModInstall does.
       const allMods: any[] = vehicle.system?.mods ?? [];
       const mod: any = ((String(allMods[c.index]?.name ?? '') === c.modName || (allMods[c.index] && !String(allMods[c.index]?.name ?? ''))) ? allMods[c.index] : allMods.find((m: any) => String(m?.name ?? '') === c.modName && !m?.installed)) ?? {};
-      const fx: any = modificationEffect(mod.kind, mod.rating, Number(vehicle.system?.body ?? 0));
+      const fx: any = modificationEffect(mod.kind, mod.rating, Number(vehicle.system?.body ?? 0), vehicle.system);
       const pay = modInstallPayment({ modCost: Number(mod.cost ?? 0), tableCost: Number(fx?.cost ?? 0), payerUuid: c.payerUuid || null, installerUuid: String(this.uuid), waits: true });
       const label = tx('SR2E.Text.Actor.installingIn', { modName: c.modName, vehicleName: c.vehicleName });
       if (pay.upFront) {
@@ -19442,7 +19466,7 @@ export class SR2Actor extends Actor {
     if (mod.installed) return false;
     const needs = modPrerequisite(mod.kind, list.filter((m: any) => m.installed).map((m: any) => String(m.kind)));
     if (needs) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.needsFirst2', { name: escHtml(this.name), needs: escHtml(needs) })); return false; }
-    const fx = modificationEffect(mod.kind, mod.rating, Number(this.sys.body ?? 0));
+    const fx = modificationEffect(mod.kind, mod.rating, Number(this.sys.body ?? 0), this.sys);
     const cost = mod.cost > 0 ? mod.cost : fx.cost;
     if (opts.payer && cost > 0 && !(await opts.payer.adjustNuyen(-cost, tx('SR2E.Text.Actor.ratingForVehicle', { label: fx.label, rating: mod.rating, vehicleName: this.name })))) return false;
     const update: Record<string, unknown> = {};
@@ -21462,7 +21486,10 @@ export class SR2Actor extends Actor {
     const skill: any = intruder.findSkill?.(det.skill);
     const stealth = (skill?.system?.rating as number | undefined) ?? 0;
     const tns = detectionTargets({ deviceRating: d.rating, stealthRating: stealth });
-    const rigger = this.securityRigger();
+    // v0.98.0 (RULES.VSEC_V98.motion 'book', CSH pp. 99–100): a motion or vibration sensor: the intruder's Stealth Test alone.
+    if (VS98.sensorTestKind(String(d.sense ?? ''))) return VSG98.sensorDetect(this, d, intruder, opts.modifiers ?? []);
+    // v0.98.0 (RULES.VSEC_V98.ccssPools 'book', Rigger 2 p. 78): no Control Pool while the rigger assumes the body.
+    const rigger = VS98.riggerPoolOnDetection() ? this.securityRigger() : null;
     const pool = rigger ? Math.max(0, Math.min(opts.poolDice ?? 0, rigger.system.derived?.controlPoolLeft ?? 0)) : 0;
     const rolls: any[] = [];
     const dev = await successTest({ dice: d.rating, poolDice: pool, targetNumber: tns.deviceTn, modifiers: [...hidden.modifiers, ...this.deviceSight(d, intruder).filter((m) => !modIn(opts.exclude ?? [], m)), ...(opts.modifiers ?? [])], roll: foundryRoller(rolls) });

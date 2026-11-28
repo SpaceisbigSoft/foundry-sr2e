@@ -27,6 +27,7 @@ import { openConversionTool } from './nesting942.ts';
 import { openLoot942 } from './trade942.ts';
 import { openBookTool } from './core95.ts';
 import { openSpiritsTool } from './spirits96.ts';
+import { openVsecTool } from './vsec98.ts';
 
 const { HandlebarsApplicationMixin, ApplicationV2 } = foundry.applications.api;
 
@@ -101,6 +102,7 @@ export const TOOL_ACTIONS: Record<string, () => void> = {
   accessoryItems: () => { if (isGm()) void openConversionTool(); },
   bookRules95: () => { if (isGm()) void openBookTool(); },
   spirits96: () => { if (isGm()) void openSpiritsTool(); },
+  vsec98: () => { if (isGm()) void openVsecTool(); },
 };
 
 /** Run a tool by id (false when the id is unknown or the tool is the GM's and the user isn't). */

@@ -121,6 +121,7 @@ import * as MXL97G from "./mxlife97.ts";
 import * as MO97G from "./mxops97.ts";
 import * as MXG97 from "./mxic97.ts";
 import * as MX97 from "../rules/mxic97.ts";
+import { riggerPoolOnDetection } from "../rules/vsec98.ts";
 
 /** v0.73.0 (O24): the known-hosts context for this decker and the viewing user. */
 function knowledgeCtx(actor: any): any {
@@ -6820,7 +6821,7 @@ export class SR2VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       sensorModes: [{ key: "active", label: tx('SR2E.App.Sheets.active') }, { key: "passive", label: tx('SR2E.App.Sheets.passive') }],
       passiveTn: RULES.VEHICLES.sensorModes.passiveTn,
       mods: (sys.mods ?? []).map((m: any, index: number) => {
-        const fx = modificationEffect(m.kind, m.rating, Number(sys.body ?? 0));
+        const fx = modificationEffect(m.kind, m.rating, Number(sys.body ?? 0), sys);
         const delta = m.installed ? m.delta : fx.delta;
         return { ...m, index, name: m.name || fx.label, label: modificationDef(m.kind)?.label ?? m.kind, costLabel: (m.cost > 0 ? m.cost : fx.cost).toLocaleString(),
           effect: (m.installed ? m.stat : fx.stat) ? `${cap(m.installed ? m.stat : fx.stat)} ${delta >= 0 ? "+" : ""}${delta}` : "" };
@@ -6907,7 +6908,7 @@ export class SR2VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       ok: { label: tx('SR2E.Dialog.Sheet.save'), callback: (_e: Event, b: any) => { const el = b.form.elements; return { kind: String(el.kind.value), name: String(el.name.value ?? "").trim(), rating: Math.max(1, Math.floor(Number(el.rating.value) || 1)), cost: Math.max(0, Math.floor(Number(el.cost.value) || 0)) }; } },
       render: (_e: Event, dialog: any) => {
         const form = dialog?.element?.querySelector("form");
-        const show = () => { const el = form?.elements; if (!el) return; const fx = modificationEffect(String(el.kind.value), Number(el.rating.value) || 1, body); const t = form.querySelector(".sr2e-plan"); if (t) t.textContent = tx('SR2E.Dialog.Sheet.tableCost', { part: fx.stat ? `${cap(fx.stat)} ${fx.delta >= 0 ? "+" : ""}${fx.delta}` : tx('SR2E.Dialog.Sheet.noStatChange'), fxCost: fx.cost.toLocaleString() }); };
+        const show = () => { const el = form?.elements; if (!el) return; const fx = modificationEffect(String(el.kind.value), Number(el.rating.value) || 1, body, vehicle.system); const t = form.querySelector(".sr2e-plan"); if (t) t.textContent = tx('SR2E.Dialog.Sheet.tableCost', { part: fx.stat ? `${cap(fx.stat)} ${fx.delta >= 0 ? "+" : ""}${fx.delta}` : tx('SR2E.Dialog.Sheet.noStatChange'), fxCost: fx.cost.toLocaleString() }); };
         form?.addEventListener("change", show); form?.addEventListener("input", show); show();
       },
       rejectClose: false,
@@ -6935,7 +6936,7 @@ export class SR2VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const mod = (vehicle.system.mods ?? [])[index];
     if (!mod) return;
     const people = allActors().filter((a: any) => a.isOwner && ["character", "npc"].includes(a.type));
-    const plan = modInstallPlan(mod.rating);
+    const plan = modInstallPlan(mod.rating, mod.kind, vehicle.system);
     const vr = RULES.SKILLS.vehicleRepair;
     const skillOf = (a: any) => vr.skills.map((n) => a.findSkill?.(n)).find((x: any) => x && (x.system?.rating ?? 0) > 0);
     const direct = !RULES.VEHICLES.install.required || game.user?.isGM;
@@ -7386,7 +7387,7 @@ function vehiclePartOpts(v: string): { vehiclePart?: string; occupantUuid?: stri
 
 /* ---- v0.26.0: building security ---- */
 
-const SENSE_LABELS: Record<string, string> = { "": "SR2E.App.Sheets.senseNone", visual: "SR2E.App.Sheets.senseVisual", lowLight: "SR2E.App.Sheets.senseLowLight", thermal: "SR2E.App.Sheets.senseThermal", ultrasound: "SR2E.App.Sheets.senseUltrasound", motion: "SR2E.App.Sheets.senseMotion", pressure: "SR2E.App.Sheets.sensePressure", acoustic: "SR2E.App.Sheets.senseAcoustic" };
+const SENSE_LABELS: Record<string, string> = { "": "SR2E.App.Sheets.senseNone", visual: "SR2E.App.Sheets.senseVisual", lowLight: "SR2E.App.Sheets.senseLowLight", thermal: "SR2E.App.Sheets.senseThermal", ultrasound: "SR2E.App.Sheets.senseUltrasound", motion: "SR2E.App.Sheets.senseMotion", pressure: "SR2E.App.Sheets.sensePressure", acoustic: "SR2E.App.Sheets.senseAcoustic", vibration: "SR2E.VSec98.senseVibration" };
 const CONCEAL_LABELS: Record<string, string> = { "": "SR2E.App.Sheets.concealNone", invisibility: "SR2E.App.Sheets.concealInvisibility", improvedInvisibility: "SR2E.App.Sheets.concealImprovedInvisibility", chameleon: "SR2E.App.Sheets.concealChameleon", thermal: "SR2E.App.Sheets.concealThermal", silence: "SR2E.App.Sheets.concealSilence", mask: "SR2E.App.Sheets.concealMask", physicalMask: "SR2E.App.Sheets.concealPhysicalMask" };
 
 const DEVICE_LOCKS = ["maglock", "door"];
@@ -7605,7 +7606,7 @@ export class SR2SiteSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       window: { title: tx('SR2E.Dialog.Sheet.detect', { name: d.name }) },
       content: `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.intruder')}</label><select name="target">${options}</select></div>
         <p class="hint sr2e-sight">${from ? tx('SR2E.Dialog.Sheet.lineOfSightIsCheckedFrom') : tx('SR2E.Dialog.Sheet.theDeviceHasNoTokenLine')}</p>
-        ${rigger ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.sControlPoolLeft', { riggerName: escHtml(rigger.name), left: escHtml(left) })}</label><input name="pool" type="number" value="0" min="0" max="${escHtml(left)}"></div>` : ""}
+        ${rigger && riggerPoolOnDetection() ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.sControlPoolLeft', { riggerName: escHtml(rigger.name), left: escHtml(left) })}</label><input name="pool" type="number" value="0" min="0" max="${escHtml(left)}"></div>` : ""}
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.otherTnModifier')}</label><input name="mod" type="number" value="0"></div>
         <div class="sr2e-preview" aria-live="polite"></div>
         ${d.sense ? `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.intruderSConcealment')}</label><select name="conceal"><option value="auto">${tx('SR2E.Dialog.Sheet.fromTheirSuitAndSpells')}</option>${RULES.SECURITY.concealmentKinds.map((k) => `<option value="${escHtml(k)}">${escHtml(CONCEAL_LABELS[k] ? tKey(CONCEAL_LABELS[k]!) : k)}</option>`).join("")}</select></div>
