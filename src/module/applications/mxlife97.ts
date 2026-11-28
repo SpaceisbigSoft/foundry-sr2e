@@ -20,6 +20,7 @@ import { skillCost } from '../rules/upkeep.ts';
 import { newSkillCost } from '../rules/core923.ts';
 import { skillBandAttribute } from '../rules/charfix.ts';
 import { authorIsGm } from './trust.ts';
+import { isLeadGm } from './leader.ts';
 import * as M from '../rules/mxlife97.ts';
 
 const G = (): any => (globalThis as any).game;
@@ -74,22 +75,47 @@ export async function psycheTick(a: any, time: number): Promise<boolean> {
   const had: Array<{ key: string; next: number }> = Array.isArray(raw) ? raw.filter((x: any) => x && typeof x.key === 'string') : [];
   if (!effects.length) { if (raw != null) await clearFlag(a, PSY_FLAG); return false; }
   const out: Array<{ key: string; next: number }> = [];
-  let carded = false;
+  const due: Array<{ e: any; key: string; n: number }> = [];
   for (const e of effects) {
     const key = M.psycheKey(e);
     if (out.some((x) => x.key === key)) continue;
     const r = M.recoveryDue(String(e.kind ?? ''), had.find((x) => x.key === key)?.next, time);
     out.push({ key, next: r.next });
-    if (r.due <= 0) continue;
-    carded = true;
+    if (r.due > 0) due.push({ e, key, n: r.due });
+  }
+  // The schedule is written before any card goes out: a second run for the same time finds the period taken.
+  const same = out.length === had.length && out.every((x) => had.some((h) => h.key === x.key && Number(h.next) === x.next));
+  if (!same) await a.setFlag(SYSTEM_ID, PSY_FLAG, out);
+  for (const { e, key, n } of due) {
+    const r = { due: n };
     const k = String(e.kind ?? '');
     const hint = k === 'cyberphobia' ? tx('SR2E.MxLife97.Psyche.hintPhobia') : k === 'judas' ? tx('SR2E.MxLife97.Psyche.hintJudas') : k === 'conditioning' ? tx('SR2E.MxLife97.Psyche.hintConditioning') : tx('SR2E.MxLife97.Psyche.hint');
     await post(`<p><em>${tx('SR2E.MxLife97.gmOnly')}</em> ${tx('SR2E.MxLife97.Psyche.due', { name: name(a), label: escHtml(labelOf(k)), icName: escHtml(String(e.icName ?? '')), rating: whole(e.rating), n: r.due })}</p><p class="hint">${hint}</p><p><button type="button" data-sr2e-action="mxl97Recover">${tx('SR2E.MxLife97.Psyche.roll')}</button></p>`,
       { whisper: gmIds(), speaker: speaker(a), flags: { [SYSTEM_ID]: { mxl97Recover: { actorUuid: String(a.uuid ?? ''), key, tests: r.due } } } });
   }
-  const same = out.length === had.length && out.every((x) => had.some((h) => h.key === x.key && Number(h.next) === x.next));
-  if (!same) await a.setFlag(SYSTEM_ID, PSY_FLAG, out);
-  return carded;
+  return due.length > 0;
+}
+
+/**
+ * A psychotropic effect just took hold (#resolvePsyche): its recovery clock starts now, so a long jump of the world
+ * clock right after still counts its tests (VR2 p. 50). The first tick starts it when this couldn't write.
+ */
+export async function psycheStarted(a: any, e: any, time: number): Promise<void> {
+  if (!M.on('psychRecovery') || !M.recovers(e) || !Number.isFinite(time)) return;
+  const raw: unknown = a?.getFlag?.(SYSTEM_ID, PSY_FLAG);
+  const had: any[] = Array.isArray(raw) ? raw.filter((x: any) => x && typeof x.key === 'string') : [];
+  const key = M.psycheKey(e);
+  if (had.some((x) => x.key === key)) return;
+  try { await a.setFlag(SYSTEM_ID, PSY_FLAG, [...had, { key, next: M.recoveryDue(String(e.kind ?? ''), null, time).next }]); } catch { /* the first tick starts it */ }
+}
+
+/** A file was downloaded (the Download operation): an unsold Paydata Point's day clock starts now (VR2 p. 65). */
+export async function paydataStarted(a: any, time: number): Promise<void> {
+  if (!M.on('paydataDecay') || !Number.isFinite(time)) return;
+  const raw: unknown = a?.getFlag?.(SYSTEM_ID, PAYDATA_FLAG);
+  if (raw !== null && raw !== undefined && raw !== '') return;
+  const any = [...(a?.items ?? [])].some((i: any) => i?.type === 'cyberdeck' && (i.system?.files ?? []).some((f: any) => M.isPaydataPoint(f)));
+  if (any) { try { await a.setFlag(SYSTEM_ID, PAYDATA_FLAG, time); } catch { /* the first tick starts it */ } }
 }
 
 /**
@@ -174,61 +200,81 @@ export async function paydataTick(a: any, time: number): Promise<number> {
   return r.lost;
 }
 
-/** Every v0.97.0 life tick for one actor (documents/index.ts timedEffects, the lead GM's client). */
+/**
+ * Every v0.97.0 life tick for one actor (documents/index.ts timedEffects). Only on the lead GM's client: timedEffects
+ * also runs on any GM's client from a combat round (anyGm), and one period must give one card.
+ */
 export async function lifeTick97(a: any, time: number): Promise<void> {
+  if (!isLeadGm()) return;
   try { await psycheTick(a, time); } catch (err) { console.warn('sr2e | psychotropic recovery', err); }
   try { await paydataTick(a, time); } catch (err) { console.warn('sr2e | paydata', err); }
 }
 
 // ================================================================ Cook and Installation tasks (VR2 pp. 77, 82–88)
 
-/** The deck-building test's extra context (buildDeckPart): the builder's B/R dice and the deck's MPCP. */
-export function cookCtx(o: { dice: number; mpcp: number }): { cook97?: { dice: number; mpcp: number } } {
-  return M.on('cookInstall') ? { cook97: { dice: whole(o.dice), mpcp: whole(o.mpcp) } } : {};
+/** The deck-building test's extra context (buildDeckPart): the builder's Computer B/R dice and TN change, the deck's MPCP. */
+export function cookCtx(o: { dice: number; tnMod?: number; mpcp: number }): { cook97?: { dice: number; mpcp: number; tnMod: number } } {
+  return M.on('cookInstall') ? { cook97: { dice: whole(o.dice), mpcp: whole(o.mpcp), tnMod: Math.floor(Number(o.tnMod) || 0) } } : {};
 }
 
-/** One task's attempts (rolled until done, at most TASK_TRIES_97): its days and a card line. */
-async function runTask(dice: number, t: M.DeckTask97, label: string, sink: any[]): Promise<{ days: number; done: boolean; line: string }> {
+/** One task's attempts (rolled until done, at most TASK_TRIES_97): its days and the GM's line. */
+async function runTask(dice: number, t: M.DeckTask97, tnMod: number, label: string, sink: any[]): Promise<{ days: number; done: boolean; tries: number; line: string }> {
+  const tn = M.taskTn(t, tnMod);
   const attempts: number[] = [];
   const wastes: number[] = [];
   while (attempts.length < M.TASK_TRIES_97) {
-    const s = await successes(dice, t.tn, sink);
+    const s = await successes(dice, tn, sink);
     attempts.push(s);
     if (s > 0) break;
     wastes.push(await twoD6(sink));
   }
   const r = M.taskDays(t.base, attempts, wastes);
   const what = label === 'cook' ? tx('SR2E.MxLife97.Cook.cook') : tx('SR2E.MxLife97.Cook.install');
-  const line = r.done ? tx('SR2E.MxLife97.Cook.line', { label: what, tn: t.tn, base: t.base, s: attempts[attempts.length - 1] ?? 0, tries: r.tries, days: r.days }) : tx('SR2E.MxLife97.Cook.failed', { label: what, tn: t.tn, base: t.base, tries: r.tries, days: r.days });
-  return { days: r.days, done: r.done, line };
+  const line = r.done ? tx('SR2E.MxLife97.Cook.line', { label: what, tn, base: t.base, s: attempts[attempts.length - 1] ?? 0, tries: r.tries, days: r.days }) : tx('SR2E.MxLife97.Cook.failed', { label: what, tn, base: t.base, tries: r.tries, days: r.days });
+  return { days: r.days, done: r.done, tries: r.tries, line };
+}
+
+/** The decker's card line (VR2 p. 77: the tests are the GM's secret): the days added, or which task failed. */
+function publicLine(r: { days: number; ok: boolean; failed?: string; tries?: number }): string {
+  const tries = Math.max(1, Math.min(M.TASK_TRIES_97, whole(r.tries)));
+  if (r.ok) return tx('SR2E.MxLife97.Cook.public', { days: r.days });
+  return r.failed === 'install' ? tx('SR2E.MxLife97.Cook.publicInstallFailed', { tries }) : tx('SR2E.MxLife97.Cook.publicCookFailed', { tries });
 }
 
 /**
- * The Cook and Installation tasks of a deck part whose design just succeeded (#resolveCode): rolled once and kept on
- * the card's code context (a Karma re-roll of the design only changes the design's days). Null under 'v965', for a
- * program, or without the context buildDeckPart adds. `ok` false: the dice could not get it done.
+ * The Cook and Installation tasks of a deck part whose design just succeeded (#resolveCode): rolled once, secretly
+ * (VR2 p. 77: the GM gets the numbers in a whisper), and kept on the card's code context (a Karma re-roll of the design
+ * only changes the design's days). Null under 'v965', for a program, or without the context buildDeckPart adds.
+ * `ok` false: the dice could not get it done. `text` is the decker's line (plain text: the caller escapes it).
  */
 export async function cookInstall(c: any): Promise<{ days: number; ok: boolean; text: string } | null> {
   if (!M.on('cookInstall') || c?.mode !== 'deck' || !c.cook97 || typeof c.cook97 !== 'object') return null;
   const kept = c.cook97.rolled;
-  if (kept && typeof kept === 'object') return { days: Math.min(100_000, whole(kept.days)), ok: Boolean(kept.ok), text: String(kept.text ?? '').slice(0, 600) };
+  if (kept && typeof kept === 'object') {
+    const r = { days: Math.min(100_000, whole(kept.days)), ok: Boolean(kept.ok), failed: kept.failed === 'install' ? 'install' : 'cook', tries: whole(kept.tries) };
+    return { days: r.days, ok: r.ok, text: publicLine(r) };
+  }
   const tasks = M.deckTasks(String(c.part ?? ''), whole(c.rating), whole(c.cook97.mpcp) || whole(c.rating));
   if (!tasks) return null;
   const dice = whole(c.cook97.dice);
+  const tnMod = Math.floor(Number(c.cook97.tnMod) || 0);
   const sink: any[] = [];
   const lines: string[] = [];
   let days = 0;
   let ok = true;
+  let failed = '';
+  let tries = 0;
   for (const [label, t] of [['cook', tasks.cook], ['install', tasks.install]] as Array<[string, M.DeckTask97 | null]>) {
     if (!t) continue;
-    const r = await runTask(dice, t, label, sink);
+    const r = await runTask(dice, t, tnMod, label, sink);
     days += r.days;
     lines.push(r.line);
-    if (!r.done) { ok = false; break; }
+    if (!r.done) { ok = false; failed = label; tries = r.tries; break; }
   }
-  const text = lines.join(' ');
-  c.cook97.rolled = { days, ok, text };
-  return { days, ok, text };
+  const rolled = { days, ok, failed, tries };
+  c.cook97.rolled = rolled;
+  await post(`<p><em>${tx('SR2E.MxLife97.gmOnly')}</em> ${escHtml(String(c.name ?? ''))}: ${escHtml(lines.join(' '))}</p>`, { whisper: gmIds(), rolls: sink });
+  return { days, ok, text: publicLine(rolled) };
 }
 
 // ================================================================ Otaku (VR2 pp. 144–145; otaku errata)
@@ -252,11 +298,12 @@ export function warnWhy(why: string): void {
   else if (why === 'SR2E.MxLife97.Why.formOperational') warn(tx('SR2E.MxLife97.Why.formOperational'));
   else if (why === 'SR2E.MxLife97.Why.formHardening') warn(tx('SR2E.MxLife97.Why.formHardening'));
   else if (why === 'SR2E.MxLife97.Why.formAboveComputer') warn(tx('SR2E.MxLife97.Why.formAboveComputer'));
+  else if (why === 'SR2E.MxLife97.Why.formArmorBelow') warn(tx('SR2E.MxLife97.Why.formArmorBelow'));
 }
 
 /** Why this complex form can't be made (a language key), '' when it can, null under 'v965'. */
 export function complexFormRefusal(actor: any, kind: string, rating: number): string | null {
-  return M.complexFormRefusal(kind, rating, computerRating(actor));
+  return M.complexFormRefusal(kind, rating, computerRating(actor), Number(actor?.system?.attributes?.willpower?.total ?? 0));
 }
 
 /**
@@ -355,5 +402,5 @@ export function complexFormCap(actor: any): number | null {
 
 /** The utility kinds the Learn dialog offers: without the operational ones (book). */
 export function complexFormKinds<T extends string>(kinds: readonly T[]): T[] {
-  return M.on('complexForms') ? kinds.filter((k) => !M.OPERATIONAL_97.includes(k)) : [...kinds];
+  return M.on('complexForms') ? kinds.filter((k) => !M.kindRefusal(k)) : [...kinds];
 }

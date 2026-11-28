@@ -39,5 +39,9 @@
   "SR2E.HouseRules.Rule.MXLIFE_V97__otakuChannels": "Otaku channels as skills: Karma as a Willpower-linked active skill, no MPCP cap, VR2 p. 144 and otaku errata (book) or rating × Karma at most MPCP (v965)",
   "SR2E.HouseRules.Rule.MXLIFE_V97__complexForms": "Complex forms: at most the Computer Skill, no operational utilities, a programming task with the otaku task bonus, VR2 p. 145 and otaku errata (book) or learned at once, at most MPCP (v965)",
   "SR2E.HouseRules.Rule.MXLIFE_V97__otakuArmor": "Otaku's free Armor: the living persona soaks with Armor = Willpower unless a better Armor is loaded, VR2 p. 145 (book) or only a loaded Armor utility (v965)",
-  "SR2E.HouseRules.Rule.MXLIFE_V97__icToken": "IC on the Matrix scene: launched IC gets a hidden token beside its host's token on the GM's viewed scene (scene) or no token (v965, a table convenience)"
+  "SR2E.HouseRules.Rule.MXLIFE_V97__icToken": "IC on the Matrix scene: launched IC gets a hidden token beside its host's token on the GM's viewed scene (scene) or no token (v965, a table convenience)",
+  "SR2E.MxLife97.Cook.public": "Cook and Installation Tasks: {days} more days (the GM rolled them secretly, VR2 p. 77).",
+  "SR2E.MxLife97.Cook.publicCookFailed": "The Cook Task failed after {tries} tries: the part can't be finished with these dice (VR2 p. 77).",
+  "SR2E.MxLife97.Cook.publicInstallFailed": "The Installation Task failed after {tries} tries: the part can't be finished with these dice (VR2 p. 77).",
+  "SR2E.MxLife97.Why.formArmorBelow": "The living persona already has Armor equal to Willpower: an Armor complex form must rate above it (VR2 p. 145)."
 }

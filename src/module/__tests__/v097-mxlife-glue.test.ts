@@ -292,35 +292,120 @@ describe('v0.97.0 paydata going stale (VR2 p. 65)', () => {
 });
 
 describe('v0.97.0 Cook and Installation tasks (VR2 pp. 77, 82–88)', () => {
-  test('a new deck\'s MPCP: design, then cook and install, their days added', async () => {
-    const a = pc({ name: 'Builder', nuyen: 1_000_000 }, [skill('br', 'Computer B/R', 4)]); world(a);
+  const gmLine = () => chat.filter((m) => Array.isArray(m.whisper) && /GM only/.test(String(m.content ?? ''))).at(-1);
+  const builder = (items: any[] = [skill('br', 'Computer B/R', 4)], attrs?: Record<string, number>) => pc({ name: 'Builder', nuyen: 1_000_000, karma: { pool: 3, poolSpent: 0, good: 30, career: 30 } }, items, attrs);
+  test('a new deck\'s MPCP: design, then cook and install; the numbers go to the GM only (VR2 p. 77)', async () => {
+    const a = builder(); world(a);
     faces.push(5, 5, 1, 1); // design: MPCP 4, TN 4, 128 Mp × 1 day: 2 successes, 64 days
     faces.push(5, 1, 1, 1); // cook: base 12, TN 4: 1 success, 12 days
     faces.push(5, 5, 5, 5); // install: base 8, TN 4: 4 successes, 2 days
     await a.buildDeckPart({ deckId: null, part: 'mpcp', rating: 4, name: 'Homebrew' });
     const c = last().content;
     assert.match(c, /78 days/);
-    assert.match(c, /Cook Task: Computer B\/R against TN 4, base 12 days, successes 1 \(tries 1\): 12 days/);
-    assert.match(c, /Installation Task: Computer B\/R against TN 4, base 8 days, successes 4 \(tries 1\): 2 days/);
+    assert.match(c, /Cook and Installation Tasks: 14 more days/);
+    assert.doesNotMatch(c, /TN 4, base 12/, 'no secret numbers on the decker\'s card');
+    const gm = gmLine();
+    assert.deepEqual(gm.whisper, ['gm1']);
+    assert.match(gm.content, /Cook Task: Computer B\/R against TN 4, base 12 days, successes 1 \(tries 1\): 12 days/);
+    assert.match(gm.content, /Installation Task: Computer B\/R against TN 4, base 8 days, successes 4 \(tries 1\): 2 days/);
   });
   test('a failed cook wastes base ÷ 2D6 days and is tried again', async () => {
-    const a = pc({ name: 'Builder', nuyen: 1_000_000 }, [skill('br', 'Computer B/R', 4)]); world(a);
+    const a = builder(); world(a);
     faces.push(5, 5, 1, 1);
     faces.push(1, 1, 1, 1, 3, 3); // cook fails; 2D6 = 6: 12 ÷ 6 = 2 days lost
     faces.push(5, 5, 1, 1); // cook: 2 successes, 6 days
     faces.push(5, 5, 5, 5);
     await a.buildDeckPart({ deckId: null, part: 'mpcp', rating: 4, name: 'Homebrew' });
-    assert.match(last().content, /Cook Task: .*successes 2 \(tries 2\): 8 days/);
+    assert.match(gmLine().content, /Cook Task: .*successes 2 \(tries 2\): 8 days/);
     assert.match(last().content, /74 days/);
+  });
+  test('a Karma re-roll of the design keeps the stored cook result; a cook that can\'t be done says so, also after the re-roll', async () => {
+    const a = builder(); world(a);
+    faces.push(5, 1, 1, 1); // design: 1 success, 128 days
+    for (let i = 0; i < 10; i++) faces.push(1, 1, 1, 1, 3, 4); // the cook fails ten times
+    await a.buildDeckPart({ deckId: null, part: 'mpcp', rating: 4, name: 'Homebrew' });
+    assert.match(last().content, /The Cook Task failed after 10 tries/);
+    assert.equal(faces.length, 0);
+    const snap = last().flags[SYS].test;
+    assert.equal(snap.code.cook97.rolled.ok, false);
+    faces.push(5, 5, 1); // the re-roll of the 3 failed design dice: 2 more successes
+    await a.karmaReroll(snap, last());
+    assert.equal(faces.length, 0, 'the cook is not rolled again');
+    assert.match(last().content, /The Cook Task failed after 10 tries/);
+  });
+  test('a successful cook survives the design\'s re-roll unchanged', async () => {
+    const a = builder(); world(a);
+    faces.push(5, 1, 1, 1, 5, 1, 1, 1, 5, 5, 5, 5); // design 1 success (128 days); cook 12; install 2
+    await a.buildDeckPart({ deckId: null, part: 'mpcp', rating: 4, name: 'Homebrew' });
+    assert.match(last().content, /142 days/);
+    const gmCards = chat.filter((m) => /GM only/.test(String(m.content ?? ''))).length;
+    faces.push(5, 1, 1); // 1 more success: 64 days
+    await a.karmaReroll(last().flags[SYS].test, last());
+    assert.equal(faces.length, 0);
+    assert.match(last().content, /78 days/);
+    assert.equal(chat.filter((m) => /GM only/.test(String(m.content ?? ''))).length, gmCards, 'no second secret roll');
+  });
+  test('the tasks are Computer B/R tests: an Electronics B/R builder defaults (Intelligence, a higher TN)', async () => {
+    const a = builder([skill('el', 'Electronics B/R', 5)], { ...A, intelligence: 3 }); world(a);
+    faces.push(5, 5, 1, 1, 1); // design with Electronics B/R 5: 2 successes
+    faces.push(...Array(50).fill(1)); // Intelligence 3 dice (not Electronics B/R's 5), ten failed tries with their 2D6
+
+    await a.buildDeckPart({ deckId: null, part: 'mpcp', rating: 4, name: 'Homebrew' });
+    assert.equal(faces.length, 0, 'three dice a try');
+    const m = /Cook Task: Computer B\/R against TN (\d+)/.exec(gmLine().content);
+    assert.ok(m && Number(m[1]) > 4, `defaulting raises the TN: ${gmLine().content}`);
   });
   test('v965: the design\'s days only', async (t) => {
     t.after(oldWay({ 'MXLIFE_V97.cookInstall': 'v965' }));
-    const a = pc({ name: 'Builder', nuyen: 1_000_000 }, [skill('br', 'Computer B/R', 4)]); world(a);
+    const a = builder(); world(a);
     faces.push(5, 5, 1, 1);
     await a.buildDeckPart({ deckId: null, part: 'mpcp', rating: 4, name: 'Homebrew' });
     assert.match(last().content, /64 days/);
-    assert.doesNotMatch(last().content, /Cook Task/);
+    assert.doesNotMatch(text(), /Cook Task|Cook and Installation/);
     assert.equal(faces.length, 0);
+  });
+});
+
+describe('v0.97.0 the clocks: started on gaining, one card per period, time going back', () => {
+  test('a psychotropic hit starts the clock: one 5-day jump gives 5 daily tests', async () => {
+    const a = pc({ name: 'Decker', ...MATRIX() }); world(a);
+    g.game.time = { worldTime: 1000 };
+    const t0 = SR2Actor.matrixNow().worldTime;
+    faces.push(1, 1, 1, 1, 1); // Willpower 5 vs 5: the payload takes hold
+    await a.resistPsychotropic({ icName: 'Maniac-5', rating: 5, kind: 'frenzy' }, 0);
+    assert.equal(a.system.matrix.psyche.length, 1);
+    assert.equal(a.getFlag(SYS, 'psycheRecovery97')[0].next, t0 + DAY);
+    await SR2Actor.timedEffects({ worldTime: t0 + 5 * DAY, anyGm: true });
+    assert.equal(recoverCard()[0]?.flags[SYS].mxl97Recover.tests, 5);
+  });
+  test('a download starts the paydata clock: one 5-day jump loses the points', async () => {
+    const a = pc({ name: 'Decker' }, [deck({ files: [{ name: 'Paydata 1', size: 60, value: 5000, paydata: true, source: 'H' }, { name: 'Paydata 2', size: 60, value: 5000, paydata: true, source: 'H' }] })]); world(a);
+    await G97.paydataStarted(a, 100);
+    assert.equal(a.getFlag(SYS, 'paydataSince97'), 100);
+    await SR2Actor.timedEffects({ worldTime: 100 + 5 * DAY, anyGm: true });
+    assert.deepEqual(a.items.get('deck').system.files.map((f: any) => f.value), [0, 0]);
+    await G97.paydataStarted(a, 100 + 6 * DAY);
+    assert.equal(a.getFlag(SYS, 'paydataSince97'), undefined, 'no points, no clock');
+  });
+  test('only the lead GM\'s client ticks, and the same time twice gives one card', async () => {
+    const a = pc({ name: 'Decker', ...MATRIX({ psyche: [psyche('frenzy', 5)] }) }); world(a);
+    await SR2Actor.timedEffects({ worldTime: 0, anyGm: true });
+    g.game.users.activeGM = { id: 'gm2', isSelf: false };
+    await SR2Actor.timedEffects({ worldTime: DAY, anyGm: true });
+    assert.equal(recoverCard().length, 0, 'another GM\'s client posts nothing');
+    g.game.users.activeGM = { id: 'gm1', isSelf: true };
+    await G97.psycheTick(a, DAY);
+    await G97.psycheTick(a, DAY);
+    assert.equal(recoverCard().length, 1);
+  });
+  test('time going backwards: no tests, no lost points, no negative days', async () => {
+    const a = pc({ name: 'Decker', ...MATRIX({ psyche: [psyche('frenzy', 5)] }) }, [deck({ files: [{ name: 'Paydata 1', size: 60, value: 5000, paydata: true, source: 'H' }] })]); world(a);
+    await SR2Actor.timedEffects({ worldTime: 10 * DAY, anyGm: true });
+    await SR2Actor.timedEffects({ worldTime: 2 * DAY, anyGm: true });
+    assert.equal(recoverCard().length, 0);
+    assert.equal(a.items.get('deck').system.files[0].value, 5000);
+    assert.equal(a.getFlag(SYS, 'psycheRecovery97')[0].next, 3 * DAY, 'the clock starts again from the earlier time');
+    assert.equal(a.getFlag(SYS, 'paydataSince97'), 2 * DAY);
   });
 });
 
@@ -359,6 +444,15 @@ describe('v0.97.0 otaku (VR2 pp. 144–145; otaku errata)', () => {
     assert.ok(form?.system.complexForm, 'made (WAITING is off in these tests)');
     assert.equal(a.system.karma.good, 26);
     assert.match(last().content, /otaku task bonus 3/);
+  });
+  test('an Armor form at or below Willpower is refused before any Karma; the dialog drops refused kinds', async () => {
+    const a = otaku(); world(a);
+    assert.equal(await a.learnComplexForm({ kind: 'armor', rating: 5 }), null);
+    assert.match(warnings.at(-1) ?? '', /Armor equal to Willpower/);
+    assert.equal(a.system.karma.good, 30);
+    assert.equal(faces.length, 0);
+    const kinds = G97.complexFormKinds(['attack', 'analyze', 'hardening', 'armor']);
+    assert.deepEqual(kinds, ['attack', 'armor']);
   });
   test('a failed design costs no Karma and makes nothing', async () => {
     const a = otaku(); world(a);

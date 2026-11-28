@@ -140,6 +140,11 @@ export function taskDays(base: number, attempts: readonly number[], wasteRolls: 
 /** How many times a task is tried before the card gives up (the dice can't do it). */
 export const TASK_TRIES_97 = 10;
 
+/** A deck task's TN with the builder's defaulting modifiers (`tnMod`), never below 2. */
+export function taskTn(t: DeckTask97, tnMod: number): number {
+  return Math.max(RULES.MIN_TARGET_NUMBER, t.tn + Math.floor(num(tnMod)));
+}
+
 // ---------------------------------------------------------------- Otaku (VR2 pp. 144–145; otaku errata)
 
 /** The operational utilities (VR2 pp. 96–99): channel specializations, never complex forms (otaku errata entry 6). */
@@ -155,11 +160,20 @@ export function channelCapped(): boolean {
  * MPCP cap). Book (VR2 p. 145; errata entries 5, 6): rating at most the Computer Skill; not an operational utility;
  * no Hardening form.
  */
-export function complexFormRefusal(kind: string, rating: number, computer: number): string | null {
+export function complexFormRefusal(kind: string, rating: number, computer: number, willpower = 0): string | null {
   if (!on('complexForms')) return null;
+  const k = kindRefusal(kind);
+  if (k) return k;
+  if (whole(rating) > whole(computer)) return `${WHY}formAboveComputer`;
+  // VR2 p. 145: the living persona already has Armor = Willpower; an Armor form must be above it.
+  if (kind === 'armor' && whole(rating) <= whole(willpower)) return `${WHY}formArmorBelow`;
+  return '';
+}
+
+/** Why a kind can never be a complex form (book): an operational utility or Hardening; '' otherwise. */
+export function kindRefusal(kind: string): string {
   if (OPERATIONAL_97.includes(kind)) return `${WHY}formOperational`;
   if (kind === 'hardening') return `${WHY}formHardening`;
-  if (whole(rating) > whole(computer)) return `${WHY}formAboveComputer`;
   return '';
 }
 
@@ -177,7 +191,8 @@ export function complexFormTask(o: { kind: string; rating: number; bonus: number
   const plan = programPlan({ kind: o.kind, rating: Math.max(1, whole(o.rating)) });
   const base = Math.max(1, plan.baseDays);
   const s = whole(o.successes);
-  if (s <= 0) return { size: plan.size, base, tn: plan.tn, days: Math.ceil(base / Math.max(2, whole(o.waste2d6 ?? 7))), done: false };
+  // VR2 p. 77: task bonuses apply to the days a flawed design wastes too.
+  if (s <= 0) return { size: plan.size, base, tn: plan.tn, days: Math.max(1, Math.ceil(Math.ceil(base / Math.max(2, whole(o.waste2d6 ?? 7))) / (1 + whole(o.bonus)))), done: false };
   const period = Math.ceil(base / s);
   return { size: plan.size, base, tn: plan.tn, days: Math.max(1, Math.ceil(period / (1 + whole(o.bonus)))), done: true };
 }

@@ -1381,7 +1381,7 @@ export interface TestSnapshot {
   /** A sustained power changing attributes (resist 'none'): its targets and the effect id once applied. */
   powerEffect?: FxSpec & { targetUuids: string[]; effectId?: string };
   /** code: writing a program or building a deck part (v0.46.0), once applied. */
-  code?: { mode: 'program' | 'deck'; name: string; baseDays: number; system?: Record<string, unknown>; part?: DeckPart; rating?: number; cost?: number; deckId?: string; applied?: boolean; size?: number; memory?: boolean; projectId?: string; cook97?: { dice: number; mpcp: number; rolled?: { days: number; ok: boolean; text: string } } };
+  code?: { mode: 'program' | 'deck'; name: string; baseDays: number; system?: Record<string, unknown>; part?: DeckPart; rating?: number; cost?: number; deckId?: string; applied?: boolean; size?: number; memory?: boolean; projectId?: string; cook97?: { dice: number; mpcp: number; tnMod?: number; rolled?: { days: number; ok: boolean; failed?: string; tries?: number } } };
   /** v0.49.0: installing a vehicle modification (applied once; a re-roll only changes the time). */
   install?: { vehicleUuid: string; vehicleName: string; index: number; modName: string; rating: number; baseHours: number; payerUuid: string; applied?: boolean; botchApplied?: boolean; projectId?: string };
   /** v0.56.0 learn: learning (or raising) a spell; Karma paid and the spell written once. */
@@ -15155,6 +15155,8 @@ export class SR2Actor extends Actor {
         if (file && deck) {
           const list = [...(deck.system.files ?? []), { name: file.name, size: file.size, value: file.value, paydata: file.paydata, source: host?.name ?? '' }];
           await deck.update({ 'system.files': list });
+          // v0.97.0 (RULES.MXLIFE_V97.paydataDecay): a Paydata Point's day clock starts at the download (VR2 p. 65).
+          await MXL97G.paydataStarted(this, SR2Actor.matrixNow().worldTime);
           const used = list.reduce((t: number, f: any) => t + (f.size ?? 0), 0);
           const turns = downloadTurns(file.size, deck.system.ioSpeed ?? 0);
           body = `<p>${tx('SR2E.Card.Actor.downloading')} <strong>${escText(file.name)}</strong> ${tx('SR2E.Card.Actor.mpTakes2', { fileSize: file.size })} <strong>${tCount(turns, 'SR2E.Card.Actor.combatTurns')}</strong> ${tx('SR2E.Card.Actor.atIOStorageMp', { deckIoSpeed: escText(deck.system.ioSpeed), used: escText(used), deckStorageMemory: escText(deck.system.storageMemory), part: used > deck.system.storageMemory ? ` <strong class="sr2e-warn">${tx('SR2E.Card.Actor.over')}</strong>` : '' })}</p>`;
@@ -16261,6 +16263,8 @@ export class SR2Actor extends Actor {
     const bk = M923.psychotropicBook();
     const effect = bk ? { kind: ps.kind, icName: ps.icName, rating: ps.rating, until: M923.PSYCHE_UNTIL_RECOVERED } : psychotropicEffect(ps.kind, ps.icName, ps.rating, SR2Actor.matrixNow().worldTime);
     await this.update({ 'system.matrix.psyche': [...list, effect] });
+    // v0.97.0 (RULES.MXLIFE_V97.psychRecovery): the recovery clock starts when the effect takes hold (VR2 p. 50).
+    await MXL97G.psycheStarted(this, effect, SR2Actor.matrixNow().worldTime);
     const days = bk ? ` ${tx('SR2E.Card.Actor.untilRecovered923', { rating: ps.rating, every: ps.kind === 'frenzy' ? tx('SR2E.Card.Actor.daily923') : tx('SR2E.Card.Actor.weekly923') })}` : effect.until < 0 ? '' : tCount(Number(Math.round((effect.until - SR2Actor.matrixNow().worldTime) / 86400)), 'SR2E.Card.Actor.forDays');
     const what: Record<string, string> = {
       cyberphobia: tx('SR2E.Card.Actor.tnOnEveryMatrixTest', { tn: M923.cyberphobiaTn(ps.rating) }),
@@ -17356,7 +17360,19 @@ export class SR2Actor extends Actor {
     const what = plan.memory ? `${plan.label.replace(/\s*\(.*\)$/, '')} +${rating}` : `${plan.label} ${rating}`;
     return this.#runTest(tx('SR2E.Card.Actor.buildMpDesignMaterials', { deckName, what, planSize: plan.size, planCost: plan.cost.toLocaleString(), part: skill ? ` (${skill.name})` : '', sdSuffix: sd.suffix, part2: suite.note ? ` [${suite.note}]` : '' }), sd.dice + suite.dice, {
       targetNumber: plan.tn, modifiers: [...(o.modifiers ?? []), ...sd.modifiers, ...suite.modifiers], poolDice: 0,
-    }, { kind: 'code', code: { mode: 'deck', name: deckName, baseDays: plan.baseDays, part: o.part as DeckPart, rating, cost: pay ? plan.cost : 0, deckId: deck?.id ?? '', size: plan.size, memory: plan.memory, ...MXL97G.cookCtx({ dice: sd.dice, mpcp: deck ? Number(deck.system.mpcp ?? 0) : rating }) } });
+    }, { kind: 'code', code: { mode: 'deck', name: deckName, baseDays: plan.baseDays, part: o.part as DeckPart, rating, cost: pay ? plan.cost : 0, deckId: deck?.id ?? '', size: plan.size, memory: plan.memory, ...MXL97G.cookCtx({ ...this.#cookDice97(), mpcp: deck ? Number(deck.system.mpcp ?? 0) : rating }) } });
+  }
+
+  /**
+   * v0.97.0 (RULES.MXLIFE_V97.cookInstall): the Cook and Installation tests are Computer B/R tests (VR2 pp. 82–88):
+   * that skill's dice, defaulting as any skill does (the related Computer skill through the Skill Web, else Intelligence).
+   */
+  #cookDice97(): { dice: number; tnMod: number } {
+    const name = RULES.MATRIX.deckBuilding.skills[0]!;
+    const own = this.findSkill(name);
+    const related = own ? null : this.findSkill(RULES.MATRIX.programming.skill);
+    const sd = this.#skillDice(own, false, related?.id ?? null, 'intelligence', { skillName: name });
+    return { dice: sd.dice, tnMod: sd.modifiers.reduce((n: number, m: any) => n + (Number(m.value) || 0), 0) };
   }
 
   /** A programming or deck-building test's result, applied once (a re-roll only changes the time). */
@@ -17367,8 +17383,9 @@ export class SR2Actor extends Actor {
     const days0 = workDays(c.baseDays, s);
     const cook97 = days0 ? await MXL97G.cookInstall(c) : null;
     const days = days0 && cook97 ? (cook97.ok ? days0 + cook97.days : null) : days0;
-    if (!days && c.projectId) return { html: `<p><strong>${tx('SR2E.Card.Actor.noProgress')}</strong>.${await this.dropProjectOnFailure(c.projectId)}</p>`, flags: {}, snap: { ...snap, code: { ...c, applied: false, projectId: undefined } } };
-    if (!days) return { html: `<p><strong>${tx('SR2E.Card.Actor.noProgress')}</strong>: ${c.mode === 'program' ? tx('SR2E.Card.Actor.isNotWritten', { name: escText(c.name) }) : tx('SR2E.Card.Actor.thePartDoesNotWork')}.${c.applied ? ` <em>${tx('SR2E.Card.Actor.itWasAlreadyAppliedUndoIt')}</em>` : ''}</p>`, flags: {}, snap };
+    const fail97 = cook97 && !cook97.ok ? ` ${escText(cook97.text)}` : '';
+    if (!days && c.projectId) return { html: `<p><strong>${tx('SR2E.Card.Actor.noProgress')}</strong>.${fail97}${await this.dropProjectOnFailure(c.projectId)}</p>`, flags: {}, snap: { ...snap, code: { ...c, applied: false, projectId: undefined } } };
+    if (!days) return { html: `<p><strong>${tx('SR2E.Card.Actor.noProgress')}</strong>: ${c.mode === 'program' ? tx('SR2E.Card.Actor.isNotWritten', { name: escText(c.name) }) : tx('SR2E.Card.Actor.thePartDoesNotWork')}.${fail97}${c.applied ? ` <em>${tx('SR2E.Card.Actor.itWasAlreadyAppliedUndoIt')}</em>` : ''}</p>`, flags: {}, snap };
     const time = `<strong>${tCount(days, 'SR2E.Card.Actor.days')}</strong> ${tx('SR2E.Card.Actor.ofWork', { baseDays: c.baseDays, s })}${cook97 ? ` ${escText(cook97.text)}` : ''}`;
     if (c.applied) {
       // v0.65.0: a re-roll of work under way changes how long it takes.

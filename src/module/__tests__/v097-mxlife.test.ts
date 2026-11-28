@@ -124,6 +124,10 @@ describe('v0.97.0 Cook and Installation tasks (VR2 pp. 77, 82–88)', () => {
     assert.deepEqual(M.taskDays(18, [0, 2], [7]), { days: 3 + 9, done: true, tries: 2 });
     assert.deepEqual(M.taskDays(18, [0, 0], [12, 4]), { days: 2 + 5, done: false, tries: 2 });
   });
+  test('the builder\'s defaulting TN change rides on each task\'s TN, never below 2', () => {
+    assert.equal(M.taskTn({ base: 12, tn: 4 }, 4), 8);
+    assert.equal(M.taskTn({ base: 12, tn: 2 }, -3), 2);
+  });
   test('v965: no tasks', (t) => {
     t.after(oldWay({ 'MXLIFE_V97.cookInstall': 'v965' }));
     assert.equal(M.deckTasks('mpcp', 6, 6), null);
@@ -143,6 +147,10 @@ describe('v0.97.0 otaku (VR2 pp. 144–145; otaku errata)', () => {
     assert.equal(M.complexFormRefusal('read/write', 3, 6), 'SR2E.MxLife97.Why.formOperational');
     assert.equal(M.complexFormRefusal('hardening', 3, 6), 'SR2E.MxLife97.Why.formHardening');
     assert.equal(M.complexFormRefusal('armor', 3, 6), '');
+    assert.equal(M.complexFormRefusal('armor', 6, 8, 6), 'SR2E.MxLife97.Why.formArmorBelow', 'the free Armor is Willpower already');
+    assert.equal(M.complexFormRefusal('armor', 7, 8, 6), '');
+    assert.equal(M.kindRefusal('hardening'), 'SR2E.MxLife97.Why.formHardening');
+    assert.equal(M.kindRefusal('attack'), '');
     t.after(oldWay({ 'MXLIFE_V97.complexForms': 'v965' }));
     assert.equal(M.complexFormRefusal('analyze', 9, 1), null);
   });
@@ -156,7 +164,7 @@ describe('v0.97.0 otaku (VR2 pp. 144–145; otaku errata)', () => {
     assert.equal(t2.days, Math.ceil(Math.ceil(one.base / 2) / 3));
     assert.equal(t2.done, true);
     const bad = M.complexFormTask({ kind: 'attack', rating: 4, bonus: 2, successes: 0, waste2d6: 6 });
-    assert.deepEqual([bad.done, bad.days], [false, Math.ceil(one.base / 6)]);
+    assert.deepEqual([bad.done, bad.days], [false, Math.ceil(Math.ceil(one.base / 6) / 3)], 'the task bonus cuts the wasted days too (VR2 p. 77)');
   });
   test('free Armor = Willpower unless a loaded Armor rates higher; decks and v965 untouched', (t) => {
     assert.deepEqual(M.livingArmor({ living: true, willpower: 5, loaded: 0 }), { rating: 5, free: true });
