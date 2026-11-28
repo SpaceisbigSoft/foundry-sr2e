@@ -599,3 +599,4 @@ See `docs/TRANSLATING.md` for the rest.
 | `SR2E.Text.Sorcery.physicalAdeptsCanLearnOnly`: Physical adepts can learn only {list}. | `{list}` | `SR2E.Text.Sorcery.noTechniques` (no techniques) |
 | `SR2E.Text.Trust.patchOn`: {name} ({kind} {rating}) on {target} | `{name}` | `SR2E.Text.Trust.aPatch` (A patch) |
 | `SR2E.Trade.liveEffect`: {item} carries an Active Effect “{name}”: {changes} | `{changes}` | `SR2E.Trade.liveEffectNone` (no changes) |
+| `SR2E.VSec98.Repair.parts`: Replacement parts (Rigger 2 p. 26): {cost}¥ for {boxes} boxes ({percent}% of the vehicle's cost per box), Availability {availability}; the repair starts when the parts arrive. | `{availability}` | `SR2E.VSec98.Repair.noAvailability` (as the vehicle) |
