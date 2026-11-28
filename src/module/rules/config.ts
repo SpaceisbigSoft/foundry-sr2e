@@ -31,6 +31,7 @@ import { HEALTH_V96 } from './config96/health.ts';
 import { FIRE_V95 } from './config95/fire.ts';
 import { MELEE_V95 } from './config95/melee.ts';
 import { SPIRITS_V96 } from './config96/spirits.ts';
+import { MXOPS_V97 } from './config97/mxops.ts';
 
 /**
  * SR2e rules constants.
@@ -647,6 +648,8 @@ export const RULES = {
         frame: 2, 'smart-frame': 3, agent: 6,
         // v0.92.3: utilities of VR2 p. 161 the operations table uses.
         camo: 3, crash: 3, commlink: 1, scanner: 3, defuse: 2,
+        // v0.97.0: the disinfect utility (VR2 p. 96, multiplier 2).
+        disinfect: 2,
       } as Record<string, number>,
     },
     /**
@@ -3420,6 +3423,8 @@ export const RULES = {
   SORCERY_V96,
   /** v0.96.0: rules completeness, conjuring, spirits, astral, adepts and critter powers (rules/config96/spirits.ts). */
   SPIRITS_V96,
+  /** v0.97.0: rules completeness, the Matrix's system operations (rules/config97/mxops.ts). */
+  MXOPS_V97,
   /** v0.96.0: rules completeness, Damage, health and hazards (rules/config96/health.ts). */
   HEALTH_V96,
 } as const;

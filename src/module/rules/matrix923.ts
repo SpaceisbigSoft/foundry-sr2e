@@ -6,6 +6,7 @@ import { RULES, type DamageLevel } from './config.ts';
 import type { TargetNumberModifier } from './dice.ts';
 import { own } from './util.ts';
 import { t as tx } from '../helpers/i18n.ts';
+import { extraOperations } from './mxops97.ts';
 
 const V = () => RULES.MATRIX_V923;
 const minTn = (n: number) => Math.max(RULES.MIN_TARGET_NUMBER, n);
@@ -40,7 +41,8 @@ type Op = (typeof RULES.MATRIX.operations)[number];
 
 /** The operations in force: the book's table, or ('v922') the old values patched over it without the new rows. */
 export function matrixOperations(): Op[] {
-  const list = [...RULES.MATRIX.operations];
+  // v0.97.0: the System Operations Table's rows the catalog lacked (RULES.MXOPS_V97.operations; none under 'v965').
+  const list = [...RULES.MATRIX.operations, ...(extraOperations() as unknown as Op[])];
   if (V().operations !== 'v922') return list;
   const old = V().oldOperations;
   return list.filter((o) => !V().newOperations.includes(o.id)).map((o) => (own(old, o.id) ? { ...o, ...own(old, o.id) } as Op : o));

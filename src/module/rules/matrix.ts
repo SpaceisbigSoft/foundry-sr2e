@@ -13,6 +13,8 @@ export const UTILITY_KINDS = [
   'slow', 'restore',
   // v0.92.3: the utilities VR2's System Operations Table (p. 161) uses.
   'camo', 'crash', 'commlink', 'scanner', 'defuse',
+  // v0.97.0: the Disinfect operation's utility (VR2 p. 96).
+  'disinfect',
 ] as const;
 export type UtilityKind = (typeof UTILITY_KINDS)[number];
 

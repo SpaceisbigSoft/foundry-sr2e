@@ -180,6 +180,8 @@ import * as SP923 from '../rules/spirits923.ts';
 // v0.96.0 (RULES.SPIRITS_V96): spirits and astral rules completeness.
 import * as SP96 from '../rules/spirits96.ts';
 import * as SP96G from '../applications/spirits96.ts';
+import * as MO97 from '../rules/mxops97.ts';
+import * as MO97G from '../applications/mxops97.ts';
 import * as S923 from '../rules/sorcery923.ts';
 import { riggerDumpShock, rcdFlux, castingPoolDice } from '../rules/docs79-drones-magic.ts';
 import * as M923 from '../rules/matrix923.ts';
@@ -1403,7 +1405,9 @@ export interface TestSnapshot {
   mutility?: { kind: 'slow' | 'restore'; programId: string; programName: string; rating: number; targetUuid?: string; targetName?: string;
     applied?: number; before?: { crippled: DeckDamage; deck: DeckDamage }; degraded?: boolean;
     /** v0.81.0 (D3-5): Restore: what it left (a re-roll writes only over that), and the deck it read. */
-    after?: { crippled: DeckDamage; deck: DeckDamage }; deckId?: string };
+    after?: { crippled: DeckDamage; deck: DeckDamage }; deckId?: string;
+    /** v0.97.0 (RULES.MXOPS_V97.slow, restore): rolled the book's way; Slow: the IC's Resistance Test successes. */
+    book97?: boolean; resist97?: number };
   /** psyche: a psychotropic IC's test (v0.40.0); the effect it left, once applied. */
   psyche?: { icName: string; rating: number; kind: string; hostUuid?: string; applied?: boolean; effect?: PsycheEffect | null };
 }
@@ -1441,6 +1445,8 @@ export interface SystemContext {
   bombed?: boolean;
   /** v0.92.3: the host's successes on its opposed Security Test (VR2 p. 19). */
   hostSuccesses?: number;
+  /** v0.97.0 (RULES.MXOPS_V97): what to learn first, a passcode's level, how a question was put (cleaned). */
+  mx97?: { first?: string; level?: string; query?: string };
   /** v0.92.3: Locate File's accumulated successes before this test, and the files it found (VR2 p. 110). */
   locateBefore?: number;
 }
@@ -14619,6 +14625,8 @@ export class SR2Actor extends Actor {
     ignorePath?: boolean;
     /** v0.57.0: a subsystem data bomb to defuse; a comcall on the LTG. */
     bombSubsystem?: string | null; callId?: string | null;
+    /** v0.97.0 (RULES.MXOPS_V97): the operation dialog's book rows. */
+    mx97?: { first?: string; level?: string; query?: string };
   } = {}): Promise<SuccessTestResult | null> {
     const m = this.sys.derived.matrix;
     const frame: any = opts.frameUuid ? await fromUuid(opts.frameUuid) : null;
@@ -14691,7 +14699,8 @@ export class SR2Actor extends Actor {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.isNotInAHostFirst', { part: frame ? escHtml(frame.name) : escHtml(this.name), part2: frame ? tx('SR2E.Notify.Actor.launchItIntoOne') : tx('SR2E.Notify.Actor.jackInToOne') }));
       return null;
     }
-    const sub = op?.subsystem ?? subsystem;
+    // v0.97.0: an operation on the targeted (or appropriate) subsystem is tested on the one picked (RULES.MXOPS_V97.operations).
+    const sub = MO97.opSubsystem(op as any, subsystem) ?? subsystem;
     const rating = host.system.subsystems?.[sub];
     if (typeof rating !== 'number') {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.unknownSubsystem', { sub: escHtml(sub) }));
@@ -14717,6 +14726,9 @@ export class SR2Actor extends Actor {
       return null;
     }
     const ctx: SystemContext = { hostName: host.name, hostUuid: host.uuid, subsystem: cap(sub), operation: opts.operation || op?.label || '', ...(op ? { opId: op.id, effect } : {}), ...(frame ? { frameUuid: frame.uuid } : {}) };
+    // v0.97.0 (RULES.MXOPS_V97): the dialog's choices; a passcode's level and the question put change the TN (VR2 pp. 110, 118).
+    const mx97 = MO97G.cleanMx97(opts.mx97);
+    if (mx97) { ctx.mx97 = mx97; const xm = MO97G.extraMods(effect, mx97); if (xm.length) opts = { ...opts, modifiers: [...(opts.modifiers ?? []), ...xm] }; }
     if (effect === 'logon') {
       ctx.targetUuid = host.uuid;
       ctx.fromUuid = hereUuid ?? '';
@@ -14799,6 +14811,15 @@ export class SR2Actor extends Actor {
       }
       ctx.targetUuid = target.uuid;
     }
+    // v0.97.0: Scan Icon tests Computer against the icon's Masking, + its sleaze (VR2 p. 117).
+    if (effect === 'scanIcon97') {
+      const sc = MO97G.scanTarget(host, this, SR2Actor.hostIc(host), opts.targetUuid);
+      if (!sc) return null;
+      tn = sc.tn;
+      tnNote = sc.note;
+      ctx.targetUuid = sc.uuid;
+      if (sc.mods.length) opts = { ...opts, modifiers: [...(opts.modifiers ?? []), ...sc.mods] };
+    }
     if (effect === 'controlSlave' || effect === 'monitorSlave') {
       const dev = SR2Actor.slaveDevices(host).find((x) => x.site.uuid === opts.siteUuid && x.device.id === opts.deviceId);
       if (!dev) {
@@ -14863,7 +14884,8 @@ export class SR2Actor extends Actor {
     if (!legit) {
       const ownDf = agent && RULES.MATRIX.agents.ownDetection;
       // v0.57.0: a validated passcode makes the decker harder to spot.
-      const validated = !ownDf && (host.system.validated ?? []).includes(this.uuid);
+      // v0.97.0: a passcode past its days no longer counts (VR2 p. 118; RULES.MXOPS_V97.validatePasscode).
+      const validated = !ownDf && (host.system.validated ?? []).includes(this.uuid) && MO97G.passcodeLiveFor(this, host.uuid);
       const df = ownDf ? agentDetectionFactor(frame.system.rating, frame.bestUtility('sleaze')?.system?.rating ?? 0) : validatedDf(this.liveDetectionFactor(), validated);
       const hostRolls: any[] = [];
       // v0.50.0: smoke in the host hampers its own detection too (RULES.TN_AUTO.matrix.smokeOnDetection).
@@ -14945,6 +14967,9 @@ export class SR2Actor extends Actor {
     let fileGone = false;
     switch (sy.effect) {
       case 'analyzeHost': {
+        // v0.97.0: an item per net success, the decker's choice first (VR2 p. 111; RULES.MXOPS_V97.analyzeHost).
+        const ah97 = MO97.analyzeHostReveal(outcome.net, sy.mx97?.first);
+        if (ah97) { body = await MO97G.analyzeHostBody(this, host, ah97); break; }
         // v0.73.0 (O24): its code and Security Value are known now.
         if (host) await this.learnHostKnowledge(host.uuid, 'analyzed');
         const subs = RULES.MATRIX.subsystems.map((k) => `${cap(k)} ${host?.system?.subsystems?.[k] ?? '?'}`).join(', ');
@@ -14965,6 +14990,8 @@ export class SR2Actor extends Actor {
         if (host) {
           fu.hostChange = { host, change: { validate: this.uuid as string }, label: tx('SR2E.Card.Actor.validatesAPasscodeIn', { by, hostName: host.name }) };
           body = `<p>${tx('SR2E.Card.Actor.nowHoldsA', { name: escText(this.name) })} <strong>${tx('SR2E.Card.Actor.validPasscode')}</strong> ${tx('SR2E.Card.Actor.inItsDetectionRollsAgainstThem', { hostName: escText(host.name), validateDfBonus: RULES.MATRIX_V57.utilities.validate.dfBonus })}</p>`;
+          // v0.97.0: it lasts 1D6 × net successes days (VR2 p. 118; RULES.MXOPS_V97.validatePasscode).
+          if (!sy.frameUuid) body += await MO97G.passcodeDuration(this, host, outcome.net, sy.mx97?.level);
         }
         break;
       case 'invalidate':
@@ -15119,6 +15146,7 @@ export class SR2Actor extends Actor {
         // v0.92.3: a paydata point per net success (VR2 p. 115); Locate File adds up net successes, a file every 5 (VR2 p. 110).
         let finds = outcome.net;
         let progress = '';
+        let total97 = -1;
         if (sy.effect === 'locateFile' && RULES.MATRIX_V923.operations !== 'v922') {
           const key = `${host?.uuid ?? ''}`;
           const saved: any = (this as any).flags?.[SYSTEM_ID]?.locate923 ?? {};
@@ -15128,6 +15156,7 @@ export class SR2Actor extends Actor {
           next.locateBefore = before;
           await this.update({ [`flags.${SYSTEM_ID}.locate923`]: { hostUuid: key, total: pr.total } });
           progress = ` ${tx('SR2E.Card.Actor.locateProgress923', { total: pr.total, need: RULES.MATRIX_V923.locateFileSuccesses })}`;
+          total97 = pr.total;
         }
         const ids = host ? locateFiles(files, this.uuid as string, finds, sy.effect === 'locatePaydata') : [];
         const names = files.filter((f) => ids.includes(f.id));
@@ -15136,6 +15165,8 @@ export class SR2Actor extends Actor {
           ? `<p>${tx('SR2E.Card.Actor.found2', { names: names.map((f) => `<strong>${escText(f.name)}</strong> ${tx('SR2E.Card.Actor.mp', { size: f.size, part: f.paydata ? tx('SR2E.Card.Actor.paydata', { value: f.value }) : '', part2: f.scramble ? tx('SR2E.Card.Actor.scrambleIc2') : f.encrypted ? tx('SR2E.Card.Actor.encrypted') : '' })}`).join('; ') })}</p>`
           : `<p>${tx('SR2E.Card.Actor.nothingNewFound')}</p>`;
         if (progress) body += `<p>${escText(progress.trim())}</p>`;
+        // v0.97.0: 3 successes and nothing (more) to find: the host holds no such file, and the decker knows (VR2 p. 110).
+        if (total97 >= 0 && !ids.length) body += MO97G.notThereLine(total97, locateFiles(files, this.uuid as string, 1, false).length);
         break;
       }
       case 'locateSlave': {
@@ -15231,6 +15262,8 @@ export class SR2Actor extends Actor {
         }
         break;
       default:
+        // v0.97.0: the System Operations Table's new rows (RULES.MXOPS_V97.operations); '' for anything else.
+        body = await MO97G.resolveOp97(this, { effect: String(sy.effect ?? ''), host, net: outcome.net, by, sy, fu, hostIc: host ? SR2Actor.hostIc(host) : [] });
         break;
     }
     // v0.57.0: a Pavlov or subsystem bomb goes off on top of what the operation did.
@@ -15252,7 +15285,8 @@ export class SR2Actor extends Actor {
    * a bomb that isn't Pavlov is used up and, on a file, erases it (`stops`: the operation does nothing).
    */
   #bombCheck(host: any, sy: SystemContext, file: DataFile | undefined): { html: string; flags: Record<string, unknown>; change: HostChange; stops: boolean } | null {
-    if (sy.effect === 'defuseBomb' || sy.effect === 'scanFile') return null;
+    // v0.97.0: Analyze Subsystem looks for the bomb without setting it off (VR2 p. 111).
+    if (sy.effect === 'defuseBomb' || sy.effect === 'scanFile' || sy.effect === 'analyzeSubsystem97') return null;
     const f: any = file;
     const sub = String(sy.subsystem ?? '').toLowerCase();
     const sb: any = (host.system.bombs ?? []).find((b: any) => b.subsystem === sub && b.rating > 0);
@@ -15304,6 +15338,8 @@ export class SR2Actor extends Actor {
   static async #raiseHostAlert(host: any, alert: AlertLevel): Promise<void> {
     const was = String(host.system.alert ?? 'none');
     await host.update({ 'system.alert': alert });
+    // v0.97.0: an active alert deletes the passcodes of the deckers on the host (VR2 p. 118; RULES.MXOPS_V97.validatePasscode).
+    if (was !== alert) await MO97G.alertPasscodes(host, alert);
     for (const site of allActors().filter((a: any) => a.type === 'site' && a.system.hostUuid === host.uuid)) {
       const want = siteAlertForHost(alert);
       if (!alertAtLeast(site.system.alert, want)) await SR2Actor.applySiteChange(site.uuid, { minAlert: want });
@@ -15746,7 +15782,7 @@ export class SR2Actor extends Actor {
     if (target.type === 'ic' && !['frame', 'agent'].includes(target.system?.kind)) return true;
     const who: any = target.type === 'ic' ? (target.system?.ownerUuid ? fromUuidSync(target.system.ownerUuid) : null) : target;
     if (!who) return false;
-    return (host.system?.validated ?? []).includes(who.uuid) || SR2Actor.isSecurityDecker(host, who);
+    return ((host.system?.validated ?? []).includes(who.uuid) && MO97G.passcodeLiveFor(who, host.uuid)) || SR2Actor.isSecurityDecker(host, who);
   }
 
   /** A frame or agent attacks (v0.40.0): rating + pool dice, Power from its carried attack utility. */
@@ -15913,6 +15949,8 @@ export class SR2Actor extends Actor {
       ? tx('SR2E.Card.Actor.attacks2', { name: this.name, part: behavior !== this.sys.behavior ? tx('SR2E.Card.Actor.construct2', { icBehaviorLabels: IC_BEHAVIOR_LABELS[behavior] }) : '', part2: target ? tx('SR2E.Card.Actor.tnS2', { targetName: target.name, part: program ? tx('SR2E.Card.Actor.rating10') : tx('SR2E.Card.Actor.evasion') }) : tx('SR2E.Card.Actor.tn42'), power, level, part3: black ? ` ${damageType}` : '', part4: tortoise && this.sys.category === 'black' ? tx('SR2E.Card.Actor.aTortoiseMatrixDamageOnly') : '' })
       : `${this.name} (${IC_BEHAVIOR_LABELS[behavior]}${behavior !== this.sys.behavior ? tx('SR2E.Card.Actor.construct') : ''}) ${kind === 'trace' ? tx('SR2E.Card.Actor.traces') : kind === 'utility' ? tx('SR2E.Card.Actor.goesAfter', { progName: prog?.name }) : kind === 'attribute' ? tx('SR2E.Card.Actor.goesAfter2', { attribute: cap(attribute) }) : tx('SR2E.Card.Actor.acts2')}${target ? tx('SR2E.Card.Actor.tn10', { label: t.label, tn: t.tn }) : ''}`;
     const from = RULES.MATRIX.icAttackTn[behavior] ?? 'evasion';
+    // v0.97.0: a decoy may draw a proactive IC's attack (not trace IC's): 1D6 vs its successes (VR2 p. 112; RULES.MXOPS_V97.operations).
+    if (proactive && target && !program && behavior !== 'trace' && !opts.force && await MO97G.decoyIntercept(this, target, host, String(level))) return null;
     // v0.57.0: black IC that attack a decker engage them: they can't simply jack out.
     // v0.92.3: only once it hits (VR2 p. 47; RULES.MATRIX_V923.blackIc): see #matrixHit.
     if (this.sys.category === 'black' && target && !program && RULES.MATRIX_V57.blackIcHold.enabled && RULES.MATRIX_V923.blackIc === 'v922') await SR2Actor.#engage(target, this.uuid as string);
@@ -16093,6 +16131,8 @@ export class SR2Actor extends Actor {
         } else {
           const cur = { bod: 0, evasion: 0, masking: 0, sensors: 0, ...(target?.system?.matrix?.crippled ?? {}) };
           await target?.update({ 'system.matrix.crippled': { ...cur, [attr]: cur[attr] + loss } });
+          // v0.97.0: Restore's TN is the crippler's rating (VR2 p. 100; RULES.MXOPS_V97.restore).
+          if (loss > 0) await MO97G.noteCrippler(target, cur, Number(ic!.rating ?? 0));
           body = `<strong>${tx('SR2E.Card.Actor.cripples', { icIcName: escText(ic!.icName), attr: escText(cap(attr)), loss })}</strong> ${tx('SR2E.Card.Actor.onSPersonaUntilTheyJack', { tName: escText(tName) })}`;
         }
       } else if (kind === 'utility') {
@@ -17026,6 +17066,17 @@ export class SR2Actor extends Actor {
         ui.notifications?.warn?.(tx('SR2E.Notify.Actor.pickAnIcNotDerezzedTo'));
         return null;
       }
+      // v0.97.0: an attack test with the Slow rating vs the cybercombat TN, opposed by the IC's Resistance Test (VR2 p. 99).
+      const sr97 = await MO97G.slowResistance(target, this, rating);
+      if (sr97 && 'why' in sr97) { ui.notifications?.warn?.(escHtml(tKey(sr97.why, { name: target.name }))); return null; }
+      if (sr97) {
+        const ct = SR2Actor.#matrixTargetTn(target);
+        const tn97 = ct?.tn ?? Number(target.system.rating ?? 4);
+        return this.#runTest(tx('SR2E.MxOps97.Slow.label', { name: p.name, rating, target: target.name, tn: tn97, resistance: sr97.resistance, dice: sr97.dice, rtn: sr97.tn }), rating, {
+          targetNumber: tn97, poolDice: opts.poolDice ?? 0, pool: 'hacking',
+          modifiers: [...(opts.modifiers ?? []), ...this.#maneuverMods(target), ...this.matrixTestMods()],
+        }, { kind: 'mutility', mutility: { kind: 'slow', programId: p.id, programName: p.name, rating, targetUuid: target.uuid, targetName: target.name, book97: true, resist97: sr97.resistance } });
+      }
       const own = this.#matrixDice();
       return this.#runTest(tx('SR2E.Card.Actor.slowOnTnItsRating', { name: p.name, rating, targetName: target.name, targetRating: target.system.rating, ownSuffix: own.suffix }), own.dice, {
         targetNumber: Number(target.system.rating ?? 4), poolDice: opts.poolDice ?? 0, pool: 'hacking',
@@ -17035,6 +17086,14 @@ export class SR2Actor extends Actor {
     const cfg = RULES.MATRIX_V57.utilities.restore;
     const deck: any = this.activeDeck();
     const before = { crippled: { ...NO_DECK_DAMAGE, ...(this.sys.matrix?.crippled ?? {}) }, deck: { ...NO_DECK_DAMAGE, ...(deck?.system?.damage ?? {}) } };
+    // v0.97.0: a Restore Test against the damaging program's rating (VR2 p. 100; RULES.MXOPS_V97.restore).
+    if (MO97.on('restore')) {
+      const host97: any = this.currentHost();
+      const tn97 = MO97G.restoreTnFor(this, host97 ? SR2Actor.hostIc(host97) : []);
+      return this.#runTest(tx('SR2E.MxOps97.Restore.label', { name: p.name, rating, tn: tn97 }), rating, {
+        targetNumber: tn97, poolDice: cfg.pool ? (opts.poolDice ?? 0) : 0, pool: 'hacking', modifiers: [...(opts.modifiers ?? []), ...this.matrixTestMods()],
+      }, { kind: 'mutility', mutility: { kind: 'restore', programId: p.id, programName: p.name, rating, before, book97: true, ...(deck?.id ? { deckId: deck.id as string } : {}) } });
+    }
     return this.#runTest(tx('SR2E.Card.Actor.restoreVs', { name: p.name, rating, cfgTn: cfg.tn }), rating, {
       targetNumber: cfg.tn, poolDice: cfg.pool ? (opts.poolDice ?? 0) : 0, pool: 'hacking', modifiers: [...(opts.modifiers ?? []), ...this.matrixTestMods()],
     }, { kind: 'mutility', mutility: { kind: 'restore', programId: p.id, programName: p.name, rating, before, ...(deck?.id ? { deckId: deck.id as string } : {}) } });
@@ -17044,7 +17103,9 @@ export class SR2Actor extends Actor {
     const u = snap.mutility!;
     const s = snap.successes;
     if (u.kind === 'slow') {
-      const e = slowEffect(s, u.rating);
+      // v0.97.0: an action per 2 net successes over the IC's Resistance Test (VR2 p. 99).
+      const b97 = u.book97 ? MO97.slowBook(s, Number(u.resist97 ?? 0)) : null;
+      const e = b97 ?? slowEffect(s, u.rating);
       const done = u.applied ?? 0;
       const delta = e.initiative - done;
       // v0.81.0 (D3-2): the target's own combatant (an unlinked token's actor id is its base actor's).
@@ -17059,12 +17120,18 @@ export class SR2Actor extends Actor {
           applied = e.initiative;
         } catch { note = ` <em>${tx('SR2E.Card.Actor.gmItsInitiativeByByHand', { part: delta > 0 ? tx('SR2E.Card.Actor.lower') : tx('SR2E.Card.Actor.raise'), delta: Math.abs(delta) })}</em>`; }
       } else if (e.initiative && !c) note = ` <em>${tx('SR2E.Card.Actor.itIsNotInACombat')}</em>`;
+      if (b97) {
+        const after = c && c.initiative != null ? Number(c.initiative) : null;
+        const html97 = MO97G.slowCard(b97, Number(u.resist97 ?? 0), after, { note, done, target: String(u.targetName ?? '') });
+        return { html: html97, flags: {}, snap: { ...snap, mutility: { ...u, applied } } };
+      }
       const html = e.initiative ? `<p><strong>${tx('SR2E.Card.Actor.isSlowed', { targetName: escText(u.targetName ?? tx('SR2E.Card.Actor.theIc')) })}</strong> ${tx('SR2E.Card.Actor.initiativeNetAtMostTheSlow', { initiative: e.initiative, net: e.net, rating: u.rating, note })}</p>` : `<p><strong>${tx('SR2E.Card.Actor.isNotSlowed', { targetName: escText(u.targetName ?? tx('SR2E.Card.Actor.theIc')) })}</strong>${done ? ` <em>${tx('SR2E.Card.Actor.theEarlierIsTakenBack', { done })}</em>` : ''}</p>`;
       return { html, flags: {}, snap: { ...snap, mutility: { ...u, applied } } };
     }
     // Restore: from the state before the test, so a re-roll replaces rather than adds.
     const before = u.before ?? { crippled: { ...NO_DECK_DAMAGE }, deck: { ...NO_DECK_DAMAGE } };
-    const plan = restorePlan(before.crippled, before.deck, s);
+    // v0.97.0: a point per 2 successes; never the deck's permanent damage (VR2 p. 100).
+    const plan = u.book97 ? MO97G.restoreBookPlan(before.crippled, before.deck, s) : restorePlan(before.crippled, before.deck, s);
     // v0.81.0 (D3-5): the deck it was rolled on, and only over what is still there from then (or from the last roll).
     const deck: any = u.deckId ? this.items.get(u.deckId) : this.activeDeck();
     const keys = Object.keys(NO_DECK_DAMAGE) as Array<keyof DeckDamage>;
@@ -17072,7 +17139,7 @@ export class SR2Actor extends Actor {
     const expect = u.after ?? before;
     const nowCrippled = { ...NO_DECK_DAMAGE, ...(this.sys.matrix?.crippled ?? {}) };
     const nowDeck = { ...NO_DECK_DAMAGE, ...(deck?.system?.damage ?? {}) };
-    const deckToo = Boolean(deck && RULES.MATRIX_V57.utilities.restore.deckDamage);
+    const deckToo = Boolean(deck && RULES.MATRIX_V57.utilities.restore.deckDamage) && !u.book97;
     if (!same(nowCrippled, expect.crippled) || (deckToo && !same(nowDeck, expect.deck))) {
       return { html: `<p><em>${tx('SR2E.Card.Actor.sPersonaChangedSinceThisWas', { name: escText(this.name) })}</em></p>`, flags: {}, snap };
     }
@@ -17081,7 +17148,8 @@ export class SR2Actor extends Actor {
     const after = { crippled: { ...NO_DECK_DAMAGE, ...nowCrippled, bod: plan.crippled.bod, evasion: plan.crippled.evasion, masking: plan.crippled.masking, sensors: plan.crippled.sensors }, deck: deckToo ? { ...NO_DECK_DAMAGE, ...plan.deckDamage } : nowDeck };
     let degraded = Boolean(u.degraded);
     let wear = '';
-    if (!degraded && RULES.MATRIX_V57.utilities.restore.degrades) {
+    // v0.97.0: the book's restore loses no rating (VR2 p. 100).
+    if (!degraded && RULES.MATRIX_V57.utilities.restore.degrades && !u.book97) {
       const prog: any = this.items.get(u.programId);
       if (prog) { const to = Math.max(0, Number(prog.system.rating ?? 0) - 1); await prog.update({ 'system.rating': to }); wear = tx('SR2E.Card.Actor.dropsToRating2', { programName: escText(u.programName), to }); }
       degraded = true;

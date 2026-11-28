@@ -21,6 +21,9 @@ const OLD: Array<[string, unknown]> = [
   ['MATRIX.party.sharedInitiative', true], ['MATRIX.programming.daysPerMp', 1], ['MATRIX.iccm.blackIcStun', true],
   ['MATRIX.iccm.dicePerRating', 1], ['MATRIX_V57.dumpShock.levelBy', 'fixed'], ['MATRIX_V57.icAttackDice', 'rating'],
   ['MATRIX_V57.utilities.validate.dfBonus', 2],
+  // v0.97.0: the system operations' book rules (RULES.MXOPS_V97) came after v0.92.2.
+  ['MXOPS_V97.analyzeHost', 'v965'], ['MXOPS_V97.operations', 'v965'], ['MXOPS_V97.validatePasscode', 'v965'], ['MXOPS_V97.slow', 'v965'],
+  ['MXOPS_V97.restore', 'v965'], ['MXOPS_V97.interrogation', 'v965'],
 ];
 
 /** Set the v0.92.2 values; returns a function that puts the current ones back. */

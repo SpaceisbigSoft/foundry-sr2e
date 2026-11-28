@@ -16,6 +16,9 @@ export const allowKey = (r: Pick<HtmlScanRow, 'fn' | 'sink' | 'expr'>): string =
 
 /** Reviewed: HTML on purpose, or a value the scanner can't follow that was checked by reading the code. */
 export const ALLOWED: Record<string, Record<string, string>> = {
+  'src/module/applications/mxops97.ts': {
+    'P | html | html': "v0.97.0: wraps a card line in <p>: every caller passes HTML built in this file, whose interpolations are scanned where they are written (names and values escaped there).",
+  },
   'src/module/rules/printsheet.ts': {
     'printHtml | html | esc(safeBase(opts.base))': "v0.87.0: safeBase keeps only an http(s) address ending in '/' (no javascript:, quotes or angle brackets; tests in v087), escaped as well.",
     'printHtml | html | n.html': "v0.87.0: the actor's rich-text fields for the printout, passed already cleaned by applications/print.ts (enrichFields: cleanRichHtml before and after enrichHTML, as the sheets show them); the page is printed from a frame sandboxed without scripts, or opened under a no-script CSP.",
