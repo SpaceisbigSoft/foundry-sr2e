@@ -7,14 +7,16 @@
  * Security: the chase record (every vehicle's Maneuver Score, Driver Points, positioning carried over, who is hidden
  * from whom, the GM's vehicle types, the chase turns whose positioning was recorded) lives on the combat, written only
  * by a GM's client. A player's vehicle is player-writable, so what the GM's client reads from one is checked or bounded
- * there (v0.98.0 review): its current speed is capped at 1.5 × the Speed again; its driver counts only when on the
- * vehicle's side (`onSide`) or pointing back at it; its vehicle type is the GM's (shown on each score row, changeable in
- * the tool); its passengers (`occupants`) count for the passenger limit and the hidden-contact refusal only when on its
- * side (a GM is warned, never refused); a pursuer counts only with a combatant in the combat. A card's positioning
- * successes are recorded by a GM's button (gmMay, bounded by the dice, once per card and per pair and turn on the
+ * there (v0.98.0 review): its Speed at most the books' largest and its current speed at most 1.5 × the Speed again;
+ * its driver counts only when on the vehicle's side (`onSide`) or pointing back at it; its vehicle type is the GM's
+ * (shown on each score row, changeable in the tool; by category noted unconfirmed); its passengers (`occupants`) count
+ * for the passenger limit and the hidden-contact refusal only when on its side (a GM is warned, never refused); a
+ * pursuer counts only with a combatant in the combat and while the GM's scores dialog has it ticked. A card's
+ * positioning successes are recorded by a GM's button (gmMay; the author's side recounted from the card's dice faces,
+ * at most the dice and at least the TN the GM's client works out; once per pair and per vehicle and turn on the
  * record), the side the author doesn't own rolled on the GM's client. Passengers' extra resistance dice count only from
  * a GM's card or a crash card whose author owns that vehicle, bounded (`trustDice`). The Light hit on a vehicle goes
- * through gmMay unless the card's author owns the vehicle, once per card on GM-written state (`lightDone`). Each GM
+ * through gmMay unless the card's author owns the vehicle, once per card on a GM-written world setting (`lightDone`). Each GM
  * write step runs under the GM lock (inline inside a card's re-run), after its dialog; each GM button has an in-flight
  * guard. Every value put into HTML is escaped.
  */
@@ -23,7 +25,7 @@ import { RULES, type DamageLevel } from '../rules/config.ts';
 import { escHtml } from '../rules/html.ts';
 import { t as tx, tKey } from '../helpers/i18n.ts';
 import { replaceFlag } from '../helpers/flags.ts';
-import { successTest, type SuccessTestResult, type TargetNumberModifier } from '../rules/dice.ts';
+import { finalTargetNumber, successTest, type SuccessTestResult, type TargetNumberModifier } from '../rules/dice.ts';
 import * as X from '../rules/vdrive98.ts';
 import { CHASE98 } from '../rules/config98/vdrive.ts';
 import { allActors } from '../helpers/actors.ts';
@@ -140,11 +142,17 @@ function inCombat(a: any): boolean {
     return Boolean(same) && (!scene || !cb?.sceneId || String(cb.sceneId) === scene);
   });
 }
-/** The vehicles chasing this one (with a combatant in the combat). */
-const pursuersOf = (v: any): any[] => vehicles().filter((a: any) => a.uuid !== v?.uuid && a.system?.chase?.quarryUuid === v?.uuid && inCombat(a));
+/**
+ * The vehicles chasing this one (with a combatant in the combat), less those the GM unticked in the scores dialog (fix2
+ * R7: the record's `off`; `all` keeps them, for the dialog's list).
+ */
+const pursuersOf = (v: any, all = false): any[] => {
+  const off = all ? [] : chaseNow()?.st.off ?? [];
+  return vehicles().filter((a: any) => a.uuid !== v?.uuid && a.system?.chase?.quarryUuid === v?.uuid && inCombat(a) && !off.includes(String(a.uuid)));
+};
 /** Everyone this vehicle is in a chase with (its pursuers and its quarry). */
-export function opponentsOf(v: any): any[] {
-  const out = pursuersOf(v);
+export function opponentsOf(v: any, all = false): any[] {
+  const out = pursuersOf(v, all);
   const q = sync(v?.system?.chase?.quarryUuid);
   if (q?.type === VEHICLE && !out.some((a) => a.uuid === q.uuid)) out.push(q);
   return out;
@@ -352,36 +360,30 @@ async function lightTo(v: any): Promise<void> {
   await post(`<p>${tx('SR2E.VDrive98.Passenger.applied', { vehicle: name(v), after, max })}</p>`, { speaker: speaker(v) });
 }
 
-/** The flag (a list of card ids) holding the Light hits applied, on GM-written state. */
-export const LIGHT_FLAG = 'vdrive98Lights';
-
 /**
- * Where a GM records a Light hit applied (S6): the vehicle when no player owns it, else the started combat, else the
- * viewed scene (GM-owned documents); null when there is none.
+ * The world setting (a list of card ids, newest last, at most LIGHT_KEEP) holding the Light hits applied (fix2 R8: one
+ * GM-written record; a world setting only a GM's client can write). Registered in settings.ts.
  */
-function lightRecord(v: any): any | null {
-  if (v && !playerOwners(v).length) return v;
-  const combat: any = G()?.combat;
-  if (combat?.started) return combat;
-  return G()?.scenes?.viewed ?? G()?.scenes?.active ?? null;
-}
-const idsOn = (doc: any, key: string): string[] => {
-  const raw = typeof doc?.getFlag === 'function' ? doc.getFlag(SYSTEM_ID, key) : doc?.flags?.[SYSTEM_ID]?.[key];
-  return (Array.isArray(raw) ? raw : []).filter((x: unknown) => typeof x === 'string').slice(-200);
+export const LIGHT_SETTING = 'vdrive98Lights';
+export const LIGHT_KEEP = 200;
+const lightIds = (): string[] => {
+  let raw: unknown = [];
+  try { raw = G()?.settings?.get?.(SYSTEM_ID, LIGHT_SETTING); } catch { raw = []; }
+  return (Array.isArray(raw) ? raw : []).filter((x: unknown): x is string => typeof x === 'string' && x.length > 0 && x.length <= 100).slice(-LIGHT_KEEP);
 };
-/** Ids applied on this client since it loaded (the in-memory part of the record, for a GM with no record to write). */
+/** Ids applied on this client since it loaded (until the setting's write lands). */
 const lightsHere = new Set<string>();
-/** Whether this card's Light hit was applied (GM-written record only; the card's own flags are the author's). */
-export function lightDone(message: any, v: any): boolean {
+/** Whether this card's Light hit was applied (the GM-written record only; the card's own flags are the author's). */
+export function lightDone(message: any, _v?: any): boolean {
   const id = String(message?.id ?? '');
-  return Boolean(id) && (lightsHere.has(id) || idsOn(lightRecord(v), LIGHT_FLAG).includes(id));
+  return Boolean(id) && (lightsHere.has(id) || lightIds().includes(id));
 }
-async function markLight(message: any, v: any): Promise<void> {
+async function markLight(message: any): Promise<void> {
   const id = String(message?.id ?? '');
   if (!id) return;
   lightsHere.add(id);
-  const doc = lightRecord(v);
-  if (doc && typeof doc.setFlag === 'function') { try { await doc.setFlag(SYSTEM_ID, LIGHT_FLAG, [...idsOn(doc, LIGHT_FLAG), id].slice(-200)); } catch { /* kept in memory */ } }
+  if (!isGm()) return;
+  try { await G()?.settings?.set?.(SYSTEM_ID, LIGHT_SETTING, [...lightIds().filter((x) => x !== id), id].slice(-LIGHT_KEEP)); } catch { /* kept in memory */ }
 }
 
 /** The card buttons (chat.ts dispatches `vdrive98…`). */
@@ -402,7 +404,7 @@ async function applyLight(message: any, button: HTMLButtonElement): Promise<void
   button.disabled = true;
   const write = async (): Promise<void> => {
     if (lightDone(message, v)) { warn(tx('SR2E.VDrive98.alreadyDone')); return; }
-    await markLight(message, v);
+    await markLight(message);
     await lightTo(v);
   };
   await (isGm() ? locked(write) : write());
@@ -496,11 +498,33 @@ export const speedOnlyGap = (): boolean => X.on('chase');
 
 /** A test's successes for the record, bounded by its dice. */
 const succ = (r: SuccessTestResult | null | undefined): number => Math.min(int(r?.successes, 0, 60, 0), int(r?.totalDice, 0, 60, 0));
+/** A test's dice faces for the card (one list per die), at most LIST_CAP dice. */
+const facesOf = (r: SuccessTestResult | null | undefined): number[][] => (Array.isArray(r?.dice) ? r!.dice : []).slice(0, X.LIST_CAP).map((d) => (Array.isArray(d?.faces) ? d.faces.slice(0, 20).map((f) => int(f, 0, 6, 0)) : []));
+
+/** The record's keys a chase turn's positioning marks: the sorted pair and each vehicle, this Combat Turn (fix2 R5). */
+const posKeys = (round: number, a: any, b: any): { pair: string; va: string; vb: string } => ({ pair: X.posKey(round, String(a.uuid), String(b.uuid)), va: X.posVehKey(round, String(a.uuid)), vb: X.posVehKey(round, String(b.uuid)) });
+
+/**
+ * The record with a chase turn's positioning (Rigger 2 p. 46), once per pair and per vehicle in the Combat Turn: a
+ * vehicle whose positioning this turn is already recorded keeps it. Null when the pair's turn is already recorded or
+ * neither vehicle is left to record.
+ */
+function withTurn(st: X.Chase98, round: number, a: any, as: number, b: any, bs: number): X.Chase98 | null {
+  const k = posKeys(round, a, b);
+  if (st.pos.includes(k.pair)) return null;
+  const doA = !st.pos.includes(k.va), doB = !st.pos.includes(k.vb);
+  if (!doA && !doB) return null;
+  let next = X.withPosKey(st, k.pair);
+  if (doA) next = X.withPosKey(X.withPositioning(next, String(a.uuid), as), k.va);
+  if (doB) next = X.withPosKey(X.withPositioning(next, String(b.uuid), bs), k.vb);
+  return next;
+}
 
 /**
  * After a chase turn's positioning tests: their successes go to next turn's Driver Points. A GM's client records them at
- * once (once per pair and Combat Turn); a player's card carries them for a GM's button (`vdrive98Pos`, C4 / P2), so the
- * GM never runs the turn again (which would move the gap twice). Returns the card's line; `positionFlags` its flags.
+ * once (once per pair and per vehicle in the Combat Turn); a player's card carries them for a GM's button
+ * (`vdrive98Pos`, C4 / P2), so the GM never runs the turn again (which would move the gap twice). Returns the card's
+ * line; `positionFlags` its flags.
  */
 export async function afterPositioning(pursuer: any, quarry: any, pr: SuccessTestResult | null, qr: SuccessTestResult | null): Promise<string> {
   if (!X.on('chase')) return '';
@@ -508,56 +532,105 @@ export async function afterPositioning(pursuer: any, quarry: any, pr: SuccessTes
   if (!c) return `<p>${tx('SR2E.VDrive98.Chase.noCombat')}</p>`;
   const ps = succ(pr), qs = succ(qr);
   if (!isGm()) return `<p>${tx('SR2E.VDrive98.Chase.gmButton')} <button type="button" data-sr2e-action="vdrive98Pos">${tx('SR2E.VDrive98.Chase.record')}</button></p>`;
-  const key = X.posKey(c.round, String(pursuer.uuid), String(quarry.uuid));
   const done = await locked(async () => {
     const now = chaseNow() ?? c;
-    if (now.st.pos.includes(key)) return true;
-    await writeChase(now.combat, X.withPosKey(X.withPositioning(X.withPositioning(now.st, String(pursuer.uuid), ps), String(quarry.uuid), qs), key));
+    const next = withTurn(now.st, now.round, pursuer, ps, quarry, qs);
+    if (!next) return true;
+    await writeChase(now.combat, next);
     return false;
   });
   if (done) return `<p>${tx('SR2E.VDrive98.Chase.already')}</p>`;
   return `<p>${tx('SR2E.VDrive98.Chase.positioned', { a: name(pursuer), as: ps, b: name(quarry), bs: qs })}</p>`;
 }
 
-/** The chase-turn card's flags for the GM's button (a player's client under the book chase), else null. */
+/**
+ * The chase-turn card's flags for the GM's button (a player's client under the book chase), else null: each side's
+ * successes, dice, TN and dice faces (fix2 R5: the GM recounts the author's side from them).
+ */
 export function positionFlags(pursuer: any, quarry: any, pr: SuccessTestResult | null, qr: SuccessTestResult | null): Record<string, unknown> | null {
   const c = X.on('chase') && !isGm() ? chaseNow() : null;
   if (!c) return null;
-  return { vdrive98Pos: { pursuerUuid: String(pursuer.uuid), quarryUuid: String(quarry.uuid), ps: succ(pr), pd: int(pr?.totalDice, 0, 60, 0), qs: succ(qr), qd: int(qr?.totalDice, 0, 60, 0), combatId: c.id, round: c.round } };
+  return { vdrive98Pos: {
+    pursuerUuid: String(pursuer.uuid), quarryUuid: String(quarry.uuid), combatId: c.id, round: c.round,
+    ps: succ(pr), pd: int(pr?.totalDice, 0, 60, 0), pt: int(pr?.targetNumber, 0, 100, 0), pf: facesOf(pr),
+    qs: succ(qr), qd: int(qr?.totalDice, 0, 60, 0), qt: int(qr?.targetNumber, 0, 100, 0), qf: facesOf(qr),
+  } };
 }
 
 /**
- * The GM's button on a player's chase-turn card (C4 / P2): records the card's positioning successes (bounded by its
- * dice, gmMay) for next turn's Driver Points, once per card and per pair and Combat Turn (on the combat's record). A
- * vehicle the card's author doesn't own makes its positioning test now, on the GM's client (its dice on the card could
- * be forged). The gap was moved by the player's turn: it isn't moved again.
+ * The most dice and the least TN a vehicle's positioning test can have, worked out on the GM's client (fix2 R5): the
+ * driver as the chase turn finds it (a controller only when it counts: `ctlOf`; else the autopilot), with or without a
+ * specialization, + the Control Pool jumped in (at most the skill dice), and the faster vehicle's modifier.
+ */
+export function positionBound(v: any, other: any): { dice: number; tn: number } {
+  const m = chaseSpeedModifier(Number(v?.system?.currentSpeed ?? 0), Number(other?.system?.currentSpeed ?? 0));
+  const faster: TargetNumberModifier[] = m ? [{ id: 'faster', label: tx('SR2E.Card.Mod.faster'), value: m }] : [];
+  const ctl: any = ctlOf(v);
+  const who: any = ctl ?? (v?.system?.controllerUuid ? null : v);
+  const looks: any[] = [];
+  for (const spec of [false, true]) {
+    try { const pv = who?.previewDrive?.({ vehicle: v, kind: 'maneuver', useSpecialization: spec }); if (pv) looks.push(pv); } catch { /* none */ }
+  }
+  if (!looks.length) return { dice: int(v?.system?.derived?.autopilotRating, 0, 60, 0), tn: RULES.MIN_TARGET_NUMBER };
+  const dice = Math.max(...looks.map((pv) => int(pv.dice, 0, 60, 0)));
+  const jumped = Boolean(ctl) && v.system?.controlMode === 'jumped' && Boolean(ctl.system?.rigging?.jumpedIn);
+  const pool = jumped ? Math.min(dice, int(ctl.system?.derived?.controlPool, 0, 60, 0)) : 0;
+  const tn = Math.min(...looks.map((pv) => finalTargetNumber(Number(pv.base ?? 0), [...(pv.modifiers ?? []), ...faster]).targetNumber));
+  return { dice: Math.min(60, dice + pool), tn };
+}
+
+/**
+ * The GM's button on a player's chase-turn card (C4 / P2; fix2 R5): records the card's positioning successes for next
+ * turn's Driver Points, once per pair and per vehicle in the Combat Turn (on the combat's record). The card must be
+ * this turn's, and its author must own one of the vehicles; that side's successes are recounted from the card's own
+ * dice faces (exactly its dice, at most the dice the GM's client works out, against at least the TN it works out:
+ * `positionBound`), else refused. A vehicle the author doesn't own makes its positioning test now, on the GM's client.
+ * The gap was moved by the player's turn: it isn't moved again.
  */
 async function recordPositioning(message: any, button: HTMLButtonElement): Promise<void> {
   if (!isGm()) { warn(tx('SR2E.VDrive98.gmOnly')); return; }
   if (!X.on('chase')) return;
   const f: any = message?.flags?.[SYSTEM_ID]?.vdrive98Pos;
   const p: any = sync(f?.pursuerUuid), q: any = sync(f?.quarryUuid);
-  if (p?.type !== VEHICLE || q?.type !== VEHICLE) { warn(tx('SR2E.VDrive98.Chase.gone')); return; }
+  if (p?.type !== VEHICLE || q?.type !== VEHICLE || p.uuid === q.uuid) { warn(tx('SR2E.VDrive98.Chase.gone')); return; }
   const c = chaseNow();
   if (!c) { warn(tx('SR2E.VDrive98.Chase.noCombat')); return; }
   if (String(f.combatId ?? '') !== c.id || int(f.round, -1, 100000, -1) !== c.round) { warn(tx('SR2E.VDrive98.Chase.stale')); return; }
-  const key = X.posKey(c.round, String(p.uuid), String(q.uuid));
-  if (c.st.pos.includes(key)) { warn(tx('SR2E.VDrive98.alreadyDone')); return; }
-  const sides = [{ v: p, other: q, s: Math.min(int(f.ps, 0, 60, 0), int(f.pd, 0, 60, 0)), d: int(f.pd, 0, 60, 0) }, { v: q, other: p, s: Math.min(int(f.qs, 0, 60, 0), int(f.qd, 0, 60, 0)), d: int(f.qd, 0, 60, 0) }];
-  const lines = sides.map((x) => (authorOwns(message, x.v) ? tx('SR2E.VDrive98.Chase.recordLine', { name: String(x.v.name ?? ''), successes: x.s, dice: x.d }) : tx('SR2E.VDrive98.Chase.rollLine', { name: String(x.v.name ?? '') })));
+  if (!authorOwns(message, p) && !authorOwns(message, q)) { warn(tx('SR2E.VDrive98.Chase.notChaseCard')); return; }
+  const k = posKeys(c.round, p, q);
+  if (c.st.pos.includes(k.pair)) { warn(tx('SR2E.VDrive98.alreadyDone')); return; }
+  const sides = [
+    { v: p, other: q, key: k.va, d: int(f.pd, 0, 60, 0), tn: int(f.pt, 0, 100, 0), faces: f.pf, s: 0, skip: c.st.pos.includes(k.va) },
+    { v: q, other: p, key: k.vb, d: int(f.qd, 0, 60, 0), tn: int(f.qt, 0, 100, 0), faces: f.qf, s: 0, skip: c.st.pos.includes(k.vb) },
+  ];
+  if (sides.every((x) => x.skip)) { warn(tx('SR2E.VDrive98.alreadyDone')); return; }
+  const lines: string[] = [];
+  for (const x of sides) {
+    const nm = String(x.v.name ?? '');
+    if (x.skip) { lines.push(tx('SR2E.VDrive98.Chase.vehDone', { name: nm })); continue; }
+    if (!authorOwns(message, x.v)) { lines.push(tx('SR2E.VDrive98.Chase.rollLine', { name: nm })); continue; }
+    const b = positionBound(x.v, x.other);
+    const tn = Math.max(x.tn, b.tn);
+    const got = x.d <= b.dice ? X.replayFaces(x.faces, x.d, tn) : null;
+    if (got === null) { warn(tx('SR2E.VDrive98.Chase.mismatch', { name: nm, dice: x.d, most: b.dice })); return; }
+    x.s = got;
+    lines.push(tx('SR2E.VDrive98.Chase.replayLine', { name: nm, successes: got, dice: x.d, most: b.dice, tn: x.tn, gmTn: b.tn }));
+  }
   if (!(await gmMay(message, { title: tx('SR2E.VDrive98.Chase.recordTitle'), lines, sources: [p.uuid, q.uuid] }))) return;
   button.disabled = true;
   // The side the author doesn't own rolls its positioning test here (before the lock: the test posts its own card).
   for (const x of sides) {
-    if (authorOwns(message, x.v)) continue;
+    if (x.skip || authorOwns(message, x.v)) continue;
     const m = chaseSpeedModifier(Number(x.v.system?.currentSpeed ?? 0), Number(x.other.system?.currentSpeed ?? 0));
     const r: SuccessTestResult | null = await x.v.driveTest({ kind: 'maneuver', label: tx('SR2E.Card.Actor.positioningChase'), ...(m ? { modifiers: [{ id: 'faster', label: tx('SR2E.Card.Mod.faster'), value: m }] } : {}) });
     x.s = succ(r);
   }
   const wrote = await locked(async () => {
     const now = chaseNow();
-    if (!now || now.id !== c.id || now.round !== c.round || now.st.pos.includes(key)) return false;
-    await writeChase(now.combat, X.withPosKey(X.withPositioning(X.withPositioning(now.st, String(p.uuid), sides[0]!.s), String(q.uuid), sides[1]!.s), key));
+    if (!now || now.id !== c.id || now.round !== c.round) return false;
+    const next = withTurn(now.st, now.round, p, sides[0]!.s, q, sides[1]!.s);
+    if (!next) return false;
+    await writeChase(now.combat, next);
     return true;
   });
   if (!wrote) { warn(tx('SR2E.VDrive98.alreadyDone')); return; }
@@ -577,9 +650,9 @@ const sceneTerrain = (v: any): string => {
 /** The vehicles in the chases on this combat: the selected ones and everyone in a chase with them (else every chase). */
 function chaseVehicles(): any[] {
   const sel = controlled();
-  const base = sel.length ? sel : vehicles().filter((v: any) => v.system?.chase?.quarryUuid || pursuersOf(v).length);
+  const base = sel.length ? sel : vehicles().filter((v: any) => v.system?.chase?.quarryUuid || pursuersOf(v, true).length);
   const out: any[] = [];
-  for (const v of base) for (const a of [v, ...opponentsOf(v)]) if (a && !out.some((o) => o.uuid === a.uuid)) out.push(a);
+  for (const v of base) for (const a of [v, ...opponentsOf(v, true)]) if (a && !out.some((o) => o.uuid === a.uuid)) out.push(a);
   return out.filter((v) => !v.system?.derived?.destroyed).slice(0, X.LIST_CAP);
 }
 
@@ -606,11 +679,15 @@ function typeFor(v: any, st: X.Chase98, types: Record<string, string>): string {
   return X.VEHICLE_TYPES.includes(own) && !playerOwners(v).length ? own : '';
 }
 
-/** The speed the score counts (S4): the vehicle's current speed, capped again here at 1.5 × its Speed (`speedCap`). */
+/**
+ * The speed the score counts (S4): the vehicle's current speed, capped again here at 1.5 × its Speed (`speedCap`); the
+ * Speed read at most the books' largest (fix2 R6: `CHASE98.speedMax`, Rigger 2 p. 154) and the speed at most 1.5 × that.
+ */
 function scoreSpeed(v: any): number {
   const sys = v.system ?? {};
-  const now = int(sys.currentSpeed, 0, 100000, 0);
-  const cap = X.maxSpeed(Number(sys.derived?.working?.speed ?? sys.speed ?? 0));
+  const most = Math.floor(CHASE98.speedMax * CHASE98.maxSpeedFactor);
+  const now = int(sys.currentSpeed, 0, most, 0);
+  const cap = X.maxSpeed(Math.min(CHASE98.speedMax, Number(sys.derived?.working?.speed ?? sys.speed ?? 0)));
   return cap === null ? now : Math.min(now, cap);
 }
 
@@ -619,7 +696,7 @@ function scoreSpeed(v: any): number {
  * the GM's vehicle type per vehicle ('' = by category), kept on the record. Rolled again in the same Combat Turn, the
  * positioning successes the first roll spent count again (P11).
  */
-export async function rollScores(pool: Record<string, number> = {}, types: Record<string, string> = {}): Promise<boolean> {
+export async function rollScores(pool: Record<string, number> = {}, types: Record<string, string> = {}, counts: Record<string, boolean> = {}): Promise<boolean> {
   if (!isGm() || !X.on('chase')) return false;
   const c = chaseNow();
   if (!c) { warn(tx('SR2E.VDrive98.Chase.noCombat')); return false; }
@@ -630,7 +707,11 @@ export async function rollScores(pool: Record<string, number> = {}, types: Recor
   const rows: string[] = [];
   const kept: X.Type98[] = c.st.types.filter((t) => !list.some((v) => String(v.uuid) === t.v));
   const carry = X.turnCarry(c.st, c.id, c.round);
+  // fix2 R7: the pursuers the GM unticked are out of the chase (no score; not counted as an opponent).
+  const off = new Set(c.st.off);
+  for (const v of list) { const u = String(v.uuid); if (counts[u] === false) off.add(u); else if (counts[u] === true) off.delete(u); }
   for (const v of list) {
+    if (off.has(String(v.uuid))) continue;
     const sys = v.system ?? {};
     const type = typeFor(v, c.st, types);
     if (type) kept.push({ v: String(v.uuid), type });
@@ -649,7 +730,7 @@ export async function rollScores(pool: Record<string, number> = {}, types: Recor
   }
   await locked(async () => {
     const now = chaseNow() ?? c;
-    await writeChase(now.combat, X.withScores(now.st, { combatId: c.id, round: c.round, scores, types: kept }));
+    await writeChase(now.combat, X.withScores(now.st, { combatId: c.id, round: c.round, scores, types: kept, off: [...off] }));
   });
   await post(`<div class="sr2e-roll"><h3>${tx('SR2E.VDrive98.Chase.scoresTitle', { round: c.round })}</h3><ul>${rows.join('')}</ul><p class="hint">${tx('SR2E.VDrive98.Chase.scoresHint')}</p></div>`, { rolls });
   return true;
@@ -716,6 +797,7 @@ export async function hitWall(v: any, barrier: number): Promise<boolean> {
 }
 
 const SELECTED = ' selected';
+const CHECKED = ' checked';
 /** A vehicle-type picker for the GM's dialog (`picked` preselected; '' = by category). */
 function typeSelect(i: number, picked: string): string {
   const keys = ['', ...X.VEHICLE_TYPES];
@@ -725,31 +807,44 @@ function typeSelect(i: number, picked: string): string {
   return `<select name="type${i}">${options}</select>`;
 }
 
+/** A pursuer's tick box for the GM's dialog (fix2 R7): ticked unless the record has it out; a player's vehicle noted. */
+function countBox(i: number, v: any, st: X.Chase98): string {
+  if (!v.system?.chase?.quarryUuid) return '';
+  const ticked = st.off.includes(String(v.uuid)) ? '' : CHECKED;
+  const whose = playerOwners(v).length ? ` ${tx('SR2E.VDrive98.Tool.players')}` : '';
+  return ` <input type="checkbox" name="in${i}"${ticked}> ${tx('SR2E.VDrive98.Tool.counts')}${whose}`;
+}
+
 /**
  * The GM's questions before the scores (Rigger 2 p. 42, step 3; S4): each chase vehicle's type for its Vehicle Points
- * (the record's, else the vehicle's own field) and the Control Pool dice each jumped-in rigger puts on the Open Test.
+ * (the record's, else the vehicle's own field; fix2 R6: a player's vehicle by its category is noted unconfirmed), the
+ * Control Pool dice each jumped-in rigger puts on the Open Test, and (fix2 R7) whether each pursuer is in the chase.
  * Null when the GM cancels.
  */
-async function askScores(): Promise<{ pool: Record<string, number>; types: Record<string, string> } | null> {
+async function askScores(): Promise<{ pool: Record<string, number>; types: Record<string, string>; counts: Record<string, boolean> } | null> {
   const list = chaseVehicles();
-  if (!list.length) return { pool: {}, types: {} };
+  if (!list.length) return { pool: {}, types: {}, counts: {} };
   const c = chaseNow();
   const st = c ? c.st : X.NO_CHASE;
   const rows = list.map((v, i) => {
     const dr = driverOf(v);
+    const type = typeFor(v, st, {});
+    const unsure = !type && playerOwners(v).length ? ` ${tx('SR2E.VDrive98.Tool.typeUnconfirmed')}` : '';
     const cp = dr.jumped ? ` ${tx('SR2E.VDrive98.Tool.cp')} <input type="number" name="cp${i}" min="0" value="0">` : '';
-    return `<label>${name(v)} (${name(dr.who)}, ${tx('SR2E.VDrive98.Tool.speed', { speed: scoreSpeed(v) })}) ${typeSelect(i, typeFor(v, st, {}))}${cp}</label>`;
+    return `<label>${name(v)} (${name(dr.who)}, ${tx('SR2E.VDrive98.Tool.speed', { speed: scoreSpeed(v) })}) ${typeSelect(i, type)}${unsure}${cp}${countBox(i, v, st)}</label>`;
   }).join('<br>');
-  const got = await dialogs()?.prompt?.({ window: { title: tx('SR2E.VDrive98.Tool.scores') }, content: `<p class="hint">${tx('SR2E.VDrive98.Tool.typeHint')}</p><p class="hint">${tx('SR2E.VDrive98.Tool.poolHint')}</p>${rows}`,
-    ok: { callback: (_e: any, b: any) => list.map((_v, i) => [b?.form?.elements?.[`cp${i}`]?.value, b?.form?.elements?.[`type${i}`]?.value]) }, rejectClose: false });
+  const field = (b: any, key: string): any => b?.form?.elements?.[key] ?? null;
+  const got = await dialogs()?.prompt?.({ window: { title: tx('SR2E.VDrive98.Tool.scores') }, content: `<p class="hint">${tx('SR2E.VDrive98.Tool.typeHint')}</p><p class="hint">${tx('SR2E.VDrive98.Tool.poolHint')}</p><p class="hint">${tx('SR2E.VDrive98.Tool.countsHint')}</p>${rows}`,
+    ok: { callback: (_e: any, b: any) => list.map((_v, i) => { const box = field(b, `in${i}`); return [field(b, `cp${i}`)?.value, field(b, `type${i}`)?.value, box ? Boolean(box.checked) : null]; }) }, rejectClose: false });
   if (!Array.isArray(got)) return null;
-  const pool: Record<string, number> = {}, types: Record<string, string> = {};
+  const pool: Record<string, number> = {}, types: Record<string, string> = {}, counts: Record<string, boolean> = {};
   list.forEach((v, i) => {
-    const [cp, type] = Array.isArray(got[i]) ? got[i] : [];
+    const [cp, type, ticked] = Array.isArray(got[i]) ? got[i] : [];
     pool[String(v.uuid)] = int(cp, 0, 60, 0);
     if (typeof type === 'string' && (type === '' || X.VEHICLE_TYPES.includes(type))) types[String(v.uuid)] = type;
+    if (typeof ticked === 'boolean') counts[String(v.uuid)] = ticked;
   });
-  return { pool, types };
+  return { pool, types, counts };
 }
 
 let scoring = false;
@@ -772,7 +867,7 @@ export async function openChaseTool(): Promise<void> {
     // P5: one roll of the scores at a time (a second press waits for none and does nothing).
     if (scoring) return;
     scoring = true;
-    try { const a = await askScores(); if (a) await rollScores(a.pool, a.types); } finally { scoring = false; }
+    try { const a = await askScores(); if (a) await rollScores(a.pool, a.types, a.counts); } finally { scoring = false; }
     return;
   }
   if (!pick || pick === 'cancel') return;

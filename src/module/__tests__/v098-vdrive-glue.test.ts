@@ -183,7 +183,7 @@ const NS = 'shadowrun2e_unified';
 const one = (k: string, v: string) => oldWay({ [`VDRIVE_V98.${k}`]: v });
 let VD: any;
 before(async () => {
-  for (const f of ['vdrive98.json', 'vdrive98-fix.json']) {
+  for (const f of ['vdrive98.json', 'vdrive98-fix.json', 'vdrive98-fix2.json']) {
     const draft = join('i18n-drafts', f);
     if (existsSync(draft)) g.__SR2E_EN__ = { ...(g.__SR2E_EN__ ?? {}), ...JSON.parse(readFileSync(draft, 'utf8')) };
   }
@@ -535,37 +535,50 @@ describe('v0.98.0 review S6 / P5: a Deadly hit\'s Light to the vehicle, once (GM
     await VD.onCard(m, button(), 'vdrive98Light');
     assert.equal(v.system.condition, 1);
     assert.ok(VD.lightDone(m, v));
-    assert.deepEqual(v.flags[NS][VD.LIGHT_FLAG], [m.id]);
   });
 });
 
+/** A player's van driven by their own character (Car 5, by hand) and an NPC patrol car (fix2 R5). */
+function vanAndCop(): { mine: any; cop: any; pc: any } {
+  const mine = own(vehicle({ name: 'Runner van', autonav: 0 }), 'p1');
+  const cop = own(vehicle({ name: 'Patrol car', autonav: 0, currentSpeed: 60 }));
+  const pc = own(who({ name: 'Blade' }, [skill('car', 'Car', 5)]), 'p1');
+  mine.system.controllerUuid = pc.uuid; mine.system.controlMode = 'manual';
+  g.game.actors = [mine, cop, pc];
+  return { mine, cop, pc };
+}
+/** A positioning test's result with these dice faces (TN 4). */
+function posResult(f: number[][], tn = 4): any {
+  const dice = f.map((x) => ({ faces: x, total: x.reduce((a, b) => a + b, 0), success: x.reduce((a, b) => a + b, 0) >= tn }));
+  return { successes: dice.filter((d) => d.success).length, totalDice: f.length, targetNumber: tn, dice };
+}
 describe('v0.98.0 review C4 / P2: a player\'s chase turn\'s positioning, recorded by the GM\'s button', () => {
-  test('the player\'s card carries the successes; the GM records them once (bounded by the dice), rolling the NPC side', async (t) => {
+  test('the player\'s card carries the successes; the GM records them once (recounted from the faces), rolling the NPC side', async (t) => {
     withPlayers();
     withConfirm(t);
     const c = combat(1);
-    const mine = own(vehicle({ name: 'Runner van', autonav: 0 }), 'p1');
-    const cop = own(vehicle({ name: 'Patrol car', autonav: 0, currentSpeed: 60 }));
-    g.game.actors = [mine, cop];
+    const { mine, cop } = vanAndCop();
     asPlayer();
-    const r = { successes: 3, totalDice: 5 }, q = { successes: 0, totalDice: 4 };
+    const r = posResult([[6, 6, 1], [6, 6, 1], [6, 6, 1], [1], [1]]), q = { successes: 0, totalDice: 4, targetNumber: 4, dice: [] };
     const got = { html: await VD.afterPositioning(mine, cop, r, q), flags: VD.positionFlags(mine, cop, r, q) };
     assert.match(got.html, /vdrive98Pos/);
     assert.equal((c as any).flags[NS], undefined, 'a player\'s client writes nothing');
+    assert.equal(got.flags.vdrive98Pos.pf.length, 5);
     g.game.user = GM();
-    // A forged card: 50 successes on 5 dice count 5; the NPC side is rolled here.
+    // A forged card: 50 successes on 5 dice count the 3 its faces make; the NPC side is rolled here.
     const m = card(P1(), { vdrive98Pos: { ...got.flags.vdrive98Pos, ps: 50 } });
     const before = chat.length;
     for (let i = 0; i < 40; i++) faces.push(6);
     await Promise.all([VD.onCard(m, button(), 'vdrive98Pos'), VD.onCard(m, button(), 'vdrive98Pos')]);
     const st = c.flags[NS].vdrive98;
-    assert.equal(st.carry.find((x: any) => x.v === mine.uuid).pos, 5);
+    assert.equal(st.carry.find((x: any) => x.v === mine.uuid).pos, 3);
     assert.ok(chat.length > before);
     const copPos = st.carry.find((x: any) => x.v === cop.uuid)?.pos ?? 0;
-    // A second copy of the card for the same pair and turn: refused.
-    const again = card(P1(), { vdrive98Pos: got.flags.vdrive98Pos });
-    await VD.onCard(again, button(), 'vdrive98Pos');
-    assert.equal(c.flags[NS].vdrive98.carry.find((x: any) => x.v === mine.uuid).pos, 5);
+    // A second copy of the card for the same pair and turn, or the pair the other way round: refused.
+    for (const f of [got.flags.vdrive98Pos, { ...got.flags.vdrive98Pos, pursuerUuid: cop.uuid, quarryUuid: mine.uuid }]) {
+      await VD.onCard(card(P1(), { vdrive98Pos: f }), button(), 'vdrive98Pos');
+    }
+    assert.equal(c.flags[NS].vdrive98.carry.find((x: any) => x.v === mine.uuid).pos, 3);
     assert.equal(c.flags[NS].vdrive98.carry.find((x: any) => x.v === cop.uuid)?.pos ?? 0, copPos);
     assert.ok(warnings.some((w) => /already/.test(w)), warnings.join('|'));
   });
@@ -633,5 +646,136 @@ describe('v0.98.0 review C10 / C12: the sheet\'s score of 0; a turret hit withou
     assert.equal(VD.partHits(v, 'mount', 'S', null), true);
     t.after(one('calledThreshold', 'v971'));
     assert.equal(VD.partHits(v, 'mount', 'L', null), true);
+  });
+});
+
+// ================================================================ v0.98.0 review fix2 (fix98b.md, "vdrive")
+
+describe('v0.98.0 review fix2 R5: a chase-turn card\'s positioning, recounted on the GM\'s side', () => {
+  test('more dice than the GM\'s count, leftover or impossible faces, or a card whose author owns neither vehicle: refused', async (t) => {
+    withPlayers();
+    withConfirm(t);
+    const c = combat(1);
+    const { mine, cop } = vanAndCop();
+    assert.equal(VD.positionBound(mine, cop).dice, 5, 'Car 5 by hand');
+    asPlayer();
+    const flags = (r: any) => VD.positionFlags(mine, cop, r, null).vdrive98Pos;
+    const nine = flags(posResult(Array.from({ length: 9 }, () => [6, 6, 1])));
+    const two = flags(posResult([[6, 6, 1], [5]]));
+    const oneDie = flags(posResult([[6, 6, 1]]));
+    g.game.user = GM();
+    const tries = [
+      card(P1(), { vdrive98Pos: nine }),
+      card(P1(), { vdrive98Pos: { ...nine, pd: 5 } }),
+      card(P1(), { vdrive98Pos: { ...two, pf: [[5, 6, 1], [5]] } }),
+      card(P2(), { vdrive98Pos: oneDie }),
+    ];
+    for (const m of tries) await VD.onCard(m, button(), 'vdrive98Pos');
+    assert.equal(c.flags[NS]?.vdrive98?.carry?.length ?? 0, 0, JSON.stringify(c.flags[NS]));
+    assert.ok(warnings.some((w) => /add up/.test(w)), warnings.join('|'));
+    assert.ok(warnings.some((w) => /owns neither/.test(w)), warnings.join('|'));
+  });
+  test('once per vehicle per turn: a second chase with the same vehicle keeps its first positioning', async (t) => {
+    withPlayers();
+    withConfirm(t);
+    const c = combat(1);
+    const { mine, cop } = vanAndCop();
+    const cop2 = own(vehicle({ name: 'Patrol car 2', autonav: 0, currentSpeed: 60 }));
+    g.game.actors.push(cop2);
+    asPlayer();
+    const f1 = VD.positionFlags(mine, cop, posResult([[6, 6, 1], [6, 6, 1], [1]]), null).vdrive98Pos;
+    const f2 = VD.positionFlags(cop2, mine, null, posResult([[6, 6, 1], [6, 6, 1], [6, 6, 1], [6, 6, 1]])).vdrive98Pos;
+    g.game.user = GM();
+    await VD.onCard(card(P1(), { vdrive98Pos: f1 }), button(), 'vdrive98Pos');
+    await VD.onCard(card(P1(), { vdrive98Pos: f2 }), button(), 'vdrive98Pos');
+    assert.equal(c.flags[NS].vdrive98.carry.find((x: any) => x.v === mine.uuid).pos, 2);
+    // The GM running a turn for that vehicle again this Combat Turn: its positioning stays.
+    await VD.afterPositioning(mine, cop2, { successes: 5, totalDice: 5 }, { successes: 0, totalDice: 4 });
+    assert.equal(c.flags[NS].vdrive98.carry.find((x: any) => x.v === mine.uuid).pos, 2);
+  });
+});
+
+/** Runs the GM's tool's "Maneuver Scores": the dialog's content goes to `seen`; `answer` ticks the boxes per row. */
+async function scoresTool(t: any, seen: string[], ticked: (row: string) => boolean = () => true): Promise<void> {
+  const api = g.foundry.applications.api.DialogV2;
+  const was = { wait: api.wait, prompt: api.prompt };
+  api.wait = async () => 'scores';
+  api.prompt = async (o: any) => {
+    seen.push(o.content);
+    const elements: Record<string, any> = {};
+    String(o.content).split('<br>').forEach((row: string, i: number) => { elements[`in${i}`] = /name="in\d+"/.test(row) ? { checked: ticked(row) } : undefined; elements[`type${i}`] = { value: '' }; elements[`cp${i}`] = { value: '0' }; });
+    return o.ok.callback(null, { form: { elements } });
+  };
+  t.after(() => { api.wait = was.wait; api.prompt = was.prompt; });
+  await VD.openChaseTool();
+}
+
+describe('v0.98.0 review fix2 R6: a player\'s vehicle\'s Speed bounded; its type by category marked unconfirmed', () => {
+  test('a Speed of 100000 counts as 1800 (at most 2700 current); the dialog says the type is the player\'s by category', async (t) => {
+    withPlayers();
+    const c = combat(1);
+    const v = own(vehicle({ name: 'Runner van', currentSpeed: 100000, speed: 100000, autonav: 0 }), 'p1');
+    const cop = own(vehicle({ name: 'Patrol car', currentSpeed: 0, autonav: 0 }));
+    cop.system.chase = { quarryUuid: v.uuid, metres: 50 };
+    g.game.actors = [v, cop];
+    c.combatants = [{ actor: v }, { actor: cop }];
+    for (let i = 0; i < 60; i++) faces.push(1);
+    const seen: string[] = [];
+    await scoresTool(t, seen);
+    const s = c.flags[NS].vdrive98.scores.find((x: any) => x.v === v.uuid);
+    // car 0, normal terrain −2, 2700 ÷ 10 = 270.
+    assert.equal(s.partial, 268);
+    const row = seen[0]!.split('<br>').find((r) => r.includes('Runner van'))!;
+    assert.match(row, /by category, player's vehicle/);
+    assert.ok(!/by category, player's vehicle/.test(seen[0]!.split('<br>').find((r) => r.includes('Patrol car'))!));
+  });
+});
+
+describe('v0.98.0 review fix2 R7: the GM confirms the pursuers in the scores dialog', () => {
+  test('a player\'s pursuer unticked: no score, not an opponent; ticked again, it counts', async (t) => {
+    withPlayers();
+    const c = combat(1);
+    const { v, a } = await jumped({ currentSpeed: 250, speed: 210 });
+    const p1 = own(vehicle({ name: 'Cruiser', autonav: 0 }));
+    const p2 = own(vehicle({ name: 'Player van', autonav: 0 }), 'p2');
+    p1.system.chase = { quarryUuid: v.uuid, metres: 300 };
+    p2.system.chase = { quarryUuid: v.uuid, metres: 300 };
+    g.game.actors = [v, p1, p2, a];
+    c.combatants = [{ actor: v }, { actor: p1 }, { actor: p2 }];
+    assert.ok(modValues(a.previewDrive({ vehicle: v, push: 260 })).includes('opponents98:1'));
+    for (let i = 0; i < 80; i++) faces.push(1);
+    const seen: string[] = [];
+    await scoresTool(t, seen, (row) => !row.includes('Player van'));
+    assert.match(seen[0]!.split('<br>').find((r) => r.includes('Player van'))!, /\(player's\)/);
+    assert.ok(!c.flags[NS].vdrive98.scores.some((x: any) => x.v === p2.uuid));
+    assert.ok(c.flags[NS].vdrive98.scores.some((x: any) => x.v === p1.uuid));
+    assert.ok(!modValues(a.previewDrive({ vehicle: v, push: 260 })).includes('opponents98:1'));
+    for (let i = 0; i < 80; i++) faces.push(1);
+    const again: string[] = [];
+    await scoresTool(t, again);
+    assert.ok(!/name="in\d+" checked[^<]*Player van/.test(again[0]!), 'the dialog shows it unticked');
+    assert.ok(c.flags[NS].vdrive98.scores.some((x: any) => x.v === p2.uuid));
+    assert.ok(modValues(a.previewDrive({ vehicle: v, push: 260 })).includes('opponents98:1'));
+  });
+});
+
+describe('v0.98.0 review fix2 R8: the Light hits applied, on one world setting', () => {
+  test('the card id goes on the world setting (not the combat or the scene); still once after the combat ends', async (t) => {
+    withPlayers();
+    withConfirm(t);
+    const set = g.game.settings.set;
+    g.game.settings.set = async (_s: string, k: string, v: unknown) => { settings[k] = v; };
+    t.after(() => { g.game.settings.set = set; });
+    const c = combat(1);
+    const v = own(vehicle({ name: 'Patrol car' }), 'p2');
+    const pc = own(who({ name: 'Blade' }), 'p1');
+    const m = card(P1(), { vdrive98Light: { vehicleUuid: v.uuid, passengerUuid: pc.uuid } });
+    await VD.onCard(m, button(), 'vdrive98Light');
+    assert.equal(v.system.condition, 1);
+    assert.deepEqual(settings[VD.LIGHT_SETTING], [m.id]);
+    assert.equal(c.flags[NS], undefined);
+    delete g.game.combat;
+    await VD.onCard(m, button(), 'vdrive98Light');
+    assert.equal(v.system.condition, 1);
   });
 });

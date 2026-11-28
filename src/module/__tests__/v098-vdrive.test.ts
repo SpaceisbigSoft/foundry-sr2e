@@ -19,7 +19,7 @@ function english(): Record<string, string> {
   const flat: Record<string, string> = {};
   const walk = (o: unknown, p: string): void => { if (typeof o === 'string') { flat[p] = o; return; } if (o && typeof o === 'object') for (const [k, v] of Object.entries(o)) walk(v, p ? `${p}.${k}` : k); };
   walk(JSON.parse(readFileSync(join('public', 'lang', 'en.json'), 'utf8')), '');
-  for (const f of ['vdrive98.json', 'vdrive98-fix.json']) {
+  for (const f of ['vdrive98.json', 'vdrive98-fix.json', 'vdrive98-fix2.json']) {
     const draft = join('i18n-drafts', f);
     if (existsSync(draft)) Object.assign(flat, JSON.parse(readFileSync(draft, 'utf8')));
   }
@@ -263,5 +263,37 @@ describe('passengers in a crash (Rigger 2 pp. 50, 53, 128) and called shots (p. 
     assert.deepEqual(X.passengerSafety({ power: 15, level: 'S', belted: true, apps: true, cage: true, cp: 3 }), { power: 15, level: 'S', dice: 0 });
     assert.equal(X.deadlyPassengerHit('D'), false);
     assert.equal(X.partKnockedOut('tires', 'L'), true);
+  });
+});
+
+describe('v0.98.0 review fix2 R5 / R7: the positioning record\'s keys, a card\'s dice recounted, the GM\'s unticked pursuers', () => {
+  test('the pair key is sorted (either vehicle\'s chase turn is the same); each vehicle has its own key', () => {
+    assert.equal(X.posKey(3, 'B', 'A'), X.posKey(3, 'A', 'B'));
+    assert.notEqual(X.posKey(3, 'A', 'B'), X.posKey(4, 'A', 'B'));
+    assert.notEqual(X.posVehKey(3, 'A'), X.posVehKey(3, 'B'));
+    assert.notEqual(X.posVehKey(3, 'A'), X.posKey(3, 'A', 'B'));
+  });
+  test('replayFaces: the dice against the TN; a wrong count, a leftover die or an impossible face is refused', () => {
+    assert.equal(X.replayFaces([[5], [6, 2], [1], [4], [3]], 5, 4), 3);
+    assert.equal(X.replayFaces([[5], [6, 2], [1], [4], [3]], 5, 9), 0);
+    assert.equal(X.replayFaces([[6, 6, 1]], 1, 13), 1);
+    assert.equal(X.replayFaces([[2]], 1, 0), 1, 'a TN below the minimum counts as the minimum');
+    assert.equal(X.replayFaces([[5], [5]], 3, 4), null, 'missing a die');
+    assert.equal(X.replayFaces([[5], [5], [5]], 2, 4), null, 'a leftover die');
+    assert.equal(X.replayFaces([[5, 3]], 1, 4), null, 'only a 6 rolls again');
+    assert.equal(X.replayFaces([[7]], 1, 4), null);
+    assert.equal(X.replayFaces([[]], 1, 4), null);
+    assert.equal(X.replayFaces('x', 0, 4), null);
+    assert.equal(X.replayFaces([], 0, 4), 0);
+  });
+  test('the unticked pursuers stay on the record for the combat, a new combat starts with none', () => {
+    const st = X.chaseState({ combatId: 'c1', round: 1, off: ['A', '', 7] });
+    assert.deepEqual(st.off, ['A']);
+    assert.deepEqual(X.withScores(st, { combatId: 'c1', round: 2, scores: [] }).off, ['A']);
+    assert.deepEqual(X.withScores(st, { combatId: 'c1', round: 2, scores: [], off: ['B'] }).off, ['B']);
+    assert.deepEqual(X.withScores(st, { combatId: 'c2', round: 1, scores: [] }).off, []);
+  });
+  test('R6: the bound on a vehicle\'s Speed is the books\' largest (the Federated-Boeing Eagle\'s 1800)', () => {
+    assert.equal(CHASE98.speedMax, 1800);
   });
 });

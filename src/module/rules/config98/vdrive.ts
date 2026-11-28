@@ -152,6 +152,11 @@ export const CHASE98 = {
   barrierSpeed: 20,
   /** Exceeding the Speed: at most this × (Rigger 2 p. 22). */
   maxSpeedFactor: 1.5,
+  /**
+   * The largest Speed of any vehicle in the books (the Federated-Boeing Eagle, Rigger 2 p. 154): the GM's Maneuver
+   * Scores read a player's vehicle's Speed at most this (v0.98.0 review fix2 R6; its Speed is player-writable).
+   */
+  speedMax: 1800,
   /** A crash cage's dice (Rigger 2 p. 128). */
   crashCageDice: 6,
 };

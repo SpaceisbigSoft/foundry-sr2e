@@ -9,7 +9,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const EN = ((globalThis as any).__SR2E_EN__ ??= {});
-for (const f of ['vdrive98.json', 'vdrive98-fix.json']) {
+for (const f of ['vdrive98.json', 'vdrive98-fix.json', 'vdrive98-fix2.json']) {
   const draft = join('i18n-drafts', f);
   if (existsSync(draft)) for (const [k, v] of Object.entries(JSON.parse(readFileSync(draft, 'utf8')))) if (!Object.hasOwn(EN, k)) EN[k] = v;
 }

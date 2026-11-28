@@ -1804,6 +1804,8 @@ export function registerSettings(): void {
   // v0.51.0: GM panel scene presets and per-scene encounter notes.
   game.settings.register(SYSTEM.id, "scenePresets", { scope: "world", config: false, type: Array, default: [] });
   game.settings.register(SYSTEM.id, "encounterNotes", { scope: "world", config: false, type: Object, default: {} });
+  // v0.98.0 review fix2 R8: the card ids whose Deadly-passenger Light hit a GM applied (applications/vdrive98.ts).
+  game.settings.register(SYSTEM.id, "vdrive98Lights", { scope: "world", config: false, type: Array, default: [] });
   game.settings.register(SYSTEM.id, "diceColours", {
     name: "SR2E.Settings.diceColours.Name", hint: "SR2E.Settings.diceColours.Hint",
     scope: "client", config: true, type: String, default: "default",
