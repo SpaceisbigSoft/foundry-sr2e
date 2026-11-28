@@ -190,6 +190,7 @@ import * as MX97 from '../rules/mxic97.ts';
 import * as MXG97 from '../applications/mxic97.ts';
 import * as S923 from '../rules/sorcery923.ts';
 import { riggerDumpShock, rcdFlux, castingPoolDice } from '../rules/docs79-drones-magic.ts';
+import * as VR98G from '../applications/vrig98.ts';
 import * as M923 from '../rules/matrix923.ts';
 import { attackPowerTweak, isCarried, accessoryPlan, readAccessories, normalizeTweaks, ACCESSORY_NAME_KEYS, TWEAK_MAX } from '../rules/index.ts';
 import * as U80C from '../rules/urr80-combat.ts';
@@ -724,6 +725,8 @@ export interface DriveOptions {
 /** Options for SR2Actor.attackWith / planAttack / previewAttack. */
 export interface AttackOptions {
   targetUuid?: string | null; range?: RangeBand; modifiers?: TargetNumberModifier[]; poolDice?: number;
+  /** v0.98.0 (RULES.VRIG_V98.missiles, Rigger 2 p. 59): a guided missile's fire mode (default fire-and-forget). */
+  missileMode98?: 'forget' | 'continuous';
   /** v0.93.3 (a known limit until now): Karma Pool dice bought for the attack (Core p. 191; capped like any test's). */
   karmaDice?: number;
   /** Ranged only. Falls back to the weapon's first mode if not one it has. */
@@ -9229,8 +9232,11 @@ export class SR2Actor extends Actor {
     const focusExtra = melee && weapon.id !== 'unarmed' ? bonusNote(weaponFocusDice(this.foci(), weapon.name), 0) : { dice: 0, note: '' };
     // A missile's Intelligence adds dice (v0.37.0).
     const guidance = !melee && RULES.COMBAT.missileGuidance && !ml.unguided ? Math.max(0, Number(w.guidance ?? 0)) : 0;
-    const dice = sd.dice + focusExtra.dice + guidance;
-    const suffix = sd.suffix + focusExtra.note + (guidance ? tx('SR2E.Card.Actor.missileIntelligence', { guidance }) : '');
+    // v0.98.0 (RULES.VRIG_V98.missiles 'book', Rigger 2 p. 59): continuous lock adds half the Sensor; missiles strike at Phase 0.
+    const m98 = VR98G.missileFire(mv, guidance, opts.missileMode98);
+    if (m98.note) notes.push(m98.note);
+    const dice = sd.dice + focusExtra.dice + guidance + m98.dice;
+    const suffix = sd.suffix + focusExtra.note + (guidance ? tx('SR2E.Card.Actor.missileIntelligence', { guidance: guidance + m98.dice }) : '');
     const modifiers = [
       ...fireMods,
       ...(this.sys.derived?.dualNatured || this.#sensesAreVehicle(opts) ? [] : perceivingModifiers(this.sys.derived?.astralMode as AstralMode)),
@@ -17718,6 +17724,9 @@ export class SR2Actor extends Actor {
       // v0.73.0 (O28): jammed, or taken over by a spoofer.
       const blk = droneCommandBlock(this.sys);
       if (blk.blocked) return no(`${this.name}: ${blk.reason}.`);
+      // v0.98.0 (RULES.VRIG_V98.miji 'book', Rigger 2 p. 70): the simsense carrier lost.
+      const lost98 = VR98G.simsenseLost(driver);
+      if (lost98) return no(lost98);
       const link = driver.remoteLink?.(this);
       if (link?.check?.checked && !link.check.inRange) {
         if (RULES.SIGNAL.outOfRange === 'block') return no(tx('SR2E.Text.Actor.isOutOfSRemoteControl', { name: this.name, driverName: driver.name, note: link.check.note }));
@@ -17952,6 +17961,8 @@ export class SR2Actor extends Actor {
       if (cs) mods.push(cs);
     }
     if (remote && RULES.RIGGING.remote.tnMod) mods.push({ id: 'remoteControl', label: tx('SR2E.Card.Mod.remoteControl'), value: RULES.RIGGING.remote.tnMod });
+    // v0.98.0 (RULES.VRIG_V98.missiles / miji 'book', Rigger 2 pp. 59, 70–71): a continuous-lock launch; signal degradation.
+    mods.push(...VR98G.driveMods(this, vehicle, mode, remote));
     // v0.48.0: rain, snow, fog and storms make driving harder (v0.50.0: with poor visibility, the worse of the two).
     mods.push(...sight);
     // v0.46.0: an overloaded vehicle handles worse; a remote link near the edge of its range is weak.
@@ -18245,7 +18256,9 @@ export class SR2Actor extends Actor {
     const off = new Set(opts.exclude ?? []);
     // v0.57.0: shot-out sensors work worse.
     const sensor = Number(v.derived?.working?.sensor ?? v.sensor ?? 0);
-    const result = await successTest({ dice: sensor + clearsight, poolDice: pool, targetNumber: t.tn, modifiers: [...t.modifiers, ...mode.modifiers, ...sit.modifiers.filter((m) => !modIn(off, m)), ...(opts.modifiers ?? [])], roll: foundryRoller(rolls) });
+    // v0.98.0 (RULES.VRIG_V98.ecmTest 'book', Rigger 2 pp. 31–32): the opposed ECM (and ED) Tests instead of ECM − ECCM.
+    const ew98 = await VR98G.sensorEw(this, target);
+    const result = await successTest({ dice: sensor + clearsight, poolDice: pool, targetNumber: t.tn, modifiers: [...(ew98 ?? t.modifiers), ...mode.modifiers, ...sit.modifiers.filter((m) => !modIn(off, m)), ...(opts.modifiers ?? [])], roll: foundryRoller(rolls) });
     if (pool > 0) await (rigger as SR2Actor).#spendPool('control', pool);
     // v0.57.0: a jumped-in rigger's card (their Karma Pool can re-roll it); the vehicle keeps the lock.
     const poster: SR2Actor = (rigger as SR2Actor | null) ?? this;
@@ -18253,7 +18266,7 @@ export class SR2Actor extends Actor {
       kind: 'sensor', sensor: { targetUuid: target.uuid as string, targetName: target.name as string, vehicleUuid: this.uuid as string },
     }), result, rolls);
     // Electronic counter-detection: the target may notice it is being scanned (not passive sensors).
-    if (isVeh && (target.system.ecd ?? 0) > 0 && mode.noticeable) {
+    if (isVeh && (target.system.ecd ?? 0) > 0 && mode.noticeable && VR98G.ecdNoticeRoll()) {
       const ecdRolls: any[] = [];
       const ecd = await successTest({ dice: target.system.ecd, targetNumber: RULES.VEHICLES.sensors.ecdTn, roll: foundryRoller(ecdRolls) });
       await ChatMessage.create({
@@ -18285,7 +18298,8 @@ export class SR2Actor extends Actor {
       try { await veh.update({ 'system.locks': locks }); } catch { /* the vehicle's owner (the GM) can set it */ }
     }
     return {
-      html: s > 0 ? `<p><strong>${tx('SR2E.Card.Actor.detected', { snTargetName: escText(sn.targetName) })}</strong> ${tx('SR2E.Card.Actor.sensorLockForGunnery', { plural: escText(plural(s, 'success')) })}</p>` : `<p><strong>${tx('SR2E.Card.Actor.isNotDetected', { snTargetName: escText(sn.targetName) })}</strong></p>`,
+      // v0.98.0 (RULES.VRIG_V98.sensorResults 'book', Rigger 2 p. 28): what the successes tell.
+      html: (s > 0 ? `<p><strong>${tx('SR2E.Card.Actor.detected', { snTargetName: escText(sn.targetName) })}</strong> ${tx('SR2E.Card.Actor.sensorLockForGunnery', { plural: escText(plural(s, 'success')) })}</p>` : `<p><strong>${tx('SR2E.Card.Actor.isNotDetected', { snTargetName: escText(sn.targetName) })}</strong></p>`) + VR98G.sensorResultHtml(s),
       flags: {}, snap,
     };
   }
@@ -18358,6 +18372,8 @@ export class SR2Actor extends Actor {
     let n = 0;
     for (const d of this.subscribedDrones()) {
       if (d.system.derived?.destroyed || !this.#canCommand(d)) continue;
+      // v0.98.0 (RULES.VRIG_V98.comprehension 'book', Rigger 2 p. 66): the drone must understand the command.
+      if (!(await VR98G.comprehends(this, d))) continue;
       if (await d.driveTest({ ...opts, poolDice: 0 })) n++;
     }
     if (!n) ui.notifications?.warn?.(tx('SR2E.Notify.Actor.hasNoWorkingSubscribedDrones', { name: escHtml(this.name) }));
@@ -18372,6 +18388,8 @@ export class SR2Actor extends Actor {
       if (d.system.derived?.destroyed || !this.#canCommand(d)) continue;
       const w: any = [...d.items].find((i: any) => i.type === 'weapon' && canFireMount(i.system.mount, 'autopilot'));
       if (!w) continue;
+      // v0.98.0 (RULES.VRIG_V98.comprehension 'book', Rigger 2 p. 66): the drone must understand the command.
+      if (!(await VR98G.comprehends(this, d))) continue;
       // v0.50.0: each drone measured from its own token (range band, distance); else the band picked.
       let own: Partial<AttackOptions> = {};
       try {
@@ -18967,11 +18985,17 @@ export class SR2Actor extends Actor {
       const m = a && b ? measureTokens(a, b) : null;
       if (m) km = m.metres / 1000;
     } catch { /* no canvas */ }
+    // v0.98.0 (RULES.VRIG_V98.flux 'book', Rigger 2 p. 30): the situational range modifiers.
+    const f98 = VR98G.linkFlux(this, vehicle, signal, km);
+    if (f98) return { signal: f98.flux, km, check: f98.check };
     return { signal, km, check: signalCheck(signal, km) };
   }
 
   /** Whether this rigger can send a drone a group command: not jammed, and in range unless that only warns. */
   #canCommand(drone: any): boolean {
+    // v0.98.0 (RULES.VRIG_V98.miji 'book', Rigger 2 p. 70): the command channel lost, the drones are cut off.
+    const lost98 = VR98G.commandLost(this);
+    if (lost98) { ui.notifications?.warn?.(escHtml(lost98)); return false; }
     // v0.73.0 (O28): a link taken over by a spoofer refuses its own rigger's commands too (jamming as before).
     const blk = droneCommandBlock(drone.system);
     if (blk.blocked) {
@@ -22048,12 +22072,17 @@ export class SR2Combat extends Combat {
     const r = await (super.rollInitiative as any)(shared.ids, options);
     try { await shared.after(); } catch (err) { console.warn('sr2e | shared group initiative', err); }
     try { await this.alignParties(); } catch (err) { console.warn('sr2e | party initiative', err); }
+    // v0.98.0 (RULES.VRIG_V98.dronePhase 'book', Rigger 2 p. 66): network drones act in their rigger's phase.
+    try { await VR98G.networkPhase(this); } catch (err) { console.warn('sr2e | network drones', err); }
     return r;
   }
 
   /** Initiative order with SR2 tie-breaks (RULES.INITIATIVE_TIES): Reaction, then Quickness. */
   _sortCombatants(a: any, b: any): number {
     // v0.80.0 (URR_V80.cbtTies, URR): Reaction, then natural Reaction under the Revamp.
+    // v0.98.0 (RULES.VRIG_V98.dronePhase 'book', Rigger 2 p. 66): at the same score the rigger acts before their drones.
+    const nw98 = VR98G.networkOrder(a, b);
+    if (nw98) return nw98;
     const ties = (c: any) => U80C.cbtTieKeys().map((k) => U80C.cbtTieValue(k, c.actor?.system));
     const r = compareInitiative({ initiative: a.initiative, ties: ties(a) }, { initiative: b.initiative, ties: ties(b) });
     return r || String(a.name ?? '').localeCompare(String(b.name ?? '')) || String(a.id).localeCompare(String(b.id));

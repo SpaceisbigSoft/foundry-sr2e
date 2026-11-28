@@ -121,6 +121,8 @@ import * as MXL97G from "./mxlife97.ts";
 import * as MO97G from "./mxops97.ts";
 import * as MXG97 from "./mxic97.ts";
 import * as MX97 from "../rules/mxic97.ts";
+import * as VR98G from "./vrig98.ts";
+import * as VR98 from "../rules/vrig98.ts";
 
 /** v0.73.0 (O24): the known-hosts context for this decker and the viewing user. */
 function knowledgeCtx(actor: any): any {
@@ -393,6 +395,9 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       unsubscribeDrone: SR2CharacterSheet.#onUnsubscribeDrone,
       groupDrive: SR2CharacterSheet.#onGroupDrive,
       groupAttack: SR2CharacterSheet.#onGroupAttack,
+      // v0.98.0 (RULES.VRIG_V98.captainsChair / miji, Rigger 2 pp. 65, 72): the captain's chair; regenerating a channel.
+      vrig98Chair: function (this: any) { return VR98G.toggleChair(this.document); },
+      vrig98Regen: function (this: any) { return VR98G.regenDialog(this.document); },
       quickBypass: SR2CharacterSheet.#onQuickBypass,
       improve: SR2CharacterSheet.#onImprove,
       payLifestyle: SR2CharacterSheet.#onPayLifestyle,
@@ -6563,6 +6568,8 @@ function riggingContext(actor: any) {
       return { uuid: d.uuid, name: d.name, status: d.system.derived?.status ?? "ok", pilot: d.system.derived?.autopilotRating ?? 0,
         ctl: d.system.controllerUuid === actor.uuid ? modeLabel(d.system.controlMode) : "", link, linkBad: Boolean(d.system.jammed?.active || (l?.check?.checked && (!l.check.inRange || l.check.far))) };
     }),
+    // v0.98.0 (RULES.VRIG_V98): the captain's chair and the network's Signal Monitor.
+    chair98: VR98G.chairContext(actor), signal98: VR98G.signalContext(actor),
     site: v?.type === "site" && v.system.riggerUuid === actor.uuid ? { uuid: v.uuid, name: v.name, alert: v.system.alert, tally: v.system.tally, devices: (v.system.devices ?? []).length } : null,
     vehicle: at ? {
       uuid: v.uuid, name: v.name, modeLabel: modeLabel(vs.controlMode) ?? vs.controlMode,
@@ -6804,6 +6811,8 @@ export class SR2VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       locks: (sys.locks ?? []).map((l: any) => ({ ...l })),
       // v0.73.0 (O28): link encryption, interception and spoofing; mount points.
       linkEnabled: RULES.DRONES_V73.link.enabled,
+      // v0.98.0 (RULES.VRIG_V98.ed 'book', Rigger 2 p. 32): the optional electronic deception rating.
+      ed98: VR98.edOn(),
       droneLink: (() => { const l = droneLinkOf(sys); return { encryption: l.encryption, intercepted: l.intercepted.by, spoofed: l.spoofed.active ? l.spoofed.by || tx('SR2E.App.Sheets.someone') : "" }; })(),
       mountsTracked: RULES.DRONES_V73.mounts.mode !== "off",
       mountUsage: sys.derived?.mountUsage ?? null,
@@ -7177,6 +7186,8 @@ export class SR2VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
 /** v0.73.0 (O28): intercept a drone's link, or spoof it a command (RULES.DRONES_V73.link). */
 export async function droneLinkDialog(actor: any): Promise<void> {
+  // v0.98.0 (RULES.VRIG_V98.miji 'book', Rigger 2 pp. 68–72): interception and MIJI against a network.
+  if (VR98.on("miji")) return VR98G.mijiDialog(actor);
   const L = RULES.DRONES_V73.link;
   if (!L.enabled) return ui.notifications.warn(tx('SR2E.Notify.Sheet.interceptingAndSpoofingDroneLinksIs'));
   const drones = allActors().filter((a: any) => a.type === "vehicle" && a.uuid !== actor.uuid);
@@ -7290,6 +7301,7 @@ async function mountedFireDialog(vehicle: any, weapon: any): Promise<void> {
         ${modes.includes("FA" as FiringMode) ? `<div class="form-group" data-sr2e-fire-modes="FA"><label>${tx('SR2E.Dialog.Sheet.fullAutoRounds2')}</label><input name="fa" type="number" value="${RULES.FIRING.fullAutoMin}" min="${RULES.FIRING.fullAutoMin}" max="${RULES.FIRING.fullAutoMax}"></div>` : ""}
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.poolDice')}</label><input name="pool" type="number" value="0" min="0"></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.otherTnModifier')}</label><input name="mod" type="number" value="0"></div>
+        ${VR98G.missileModeRow(weapon)}
         ${vehiclePartRow(vehicle.uuid)}
         ${segRows().length ? `<p class="hint">${tx('SR2E.Dialog.Sheet.withASensorLockSensorEnhanced')}</p>${segRows().filter((r) => r.value).map((r) => `<label class="sr2e-check"><input type="checkbox" name="segRow" value="${escHtml(r.id)}"> ${escHtml(r.label)} (${r.value >= 0 ? "+" : ""}${r.value})</label>`).join("")}` : ""}
         <div class="sr2e-preview" aria-live="polite"></div>
@@ -7301,7 +7313,7 @@ async function mountedFireDialog(vehicle: any, weapon: any): Promise<void> {
         callback: (_e: Event, b: any) => {
           const el2: any = b.form.elements;
           return { firer: String(el2.firer.value), target: String(el2.target.value ?? ""), range: String(el2.range.value), mode: el2.mode ? String(el2.mode.value) : modes[0] ?? "SS",
-            fa: el2.fa ? Number(el2.fa.value) || RULES.FIRING.fullAutoMin : undefined, pool: Math.max(0, Math.floor(Number(el2.pool.value) || 0)), mod: Number(el2.mod.value) || 0, ignoreArc: Boolean(el2.ignoreArc?.checked), ignoreTurret: Boolean(el2.ignoreTurret?.checked), exclude: excludedOf(b.form), part: String(el2.vehiclePart?.value ?? ""), seg: segRowsOf(b.form) };
+            fa: el2.fa ? Number(el2.fa.value) || RULES.FIRING.fullAutoMin : undefined, pool: Math.max(0, Math.floor(Number(el2.pool.value) || 0)), mod: Number(el2.mod.value) || 0, ignoreArc: Boolean(el2.ignoreArc?.checked), ignoreTurret: Boolean(el2.ignoreTurret?.checked), exclude: excludedOf(b.form), part: String(el2.vehiclePart?.value ?? ""), seg: segRowsOf(b.form), mm98: el2.missileMode98?.value === "continuous" ? "continuous" as const : undefined };
         },
       },
       render: (_e: Event, dialog: any) => {
@@ -7348,6 +7360,7 @@ async function mountedFireDialog(vehicle: any, weapon: any): Promise<void> {
       ...(choice.ignoreTurret ? { ignoreTurret: true } : {}),
       ...(choice.exclude.length ? { exclude: choice.exclude } : {}),
       ...vehiclePartOpts(choice.part ?? ""),
+      ...(choice.mm98 ? { missileMode98: choice.mm98 } : {}),
     });
   }
 

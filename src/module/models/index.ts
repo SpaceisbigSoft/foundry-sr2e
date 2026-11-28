@@ -28,7 +28,7 @@ import {
   spiritStatus,
   earsDerived, combineDrugEffects, spiritInitiative, spellAttributesAfterCyber,
   qualityVitals, overflowBody, bioVitals, incompatibleReflexes, drugsForBonuses, painToleranceMonitor, sensitiveEssence, sensitiveBodyIndex, bioKindsV72, astralWoundRules, mountUsage, mountCapacity, racialNatural, racialFloorWarnings, attributeLimitsWith,
-  encephalonTaskPool,
+  encephalonTaskPool, encephalonIntelligence,
   powerFocusRating, ADEPT_SENSES,
 } from '../rules/index.ts';
 // v0.71.0 (R7): MPCP caps on loaded programs.
@@ -54,6 +54,7 @@ import { gearBook, isDermalPlating, dermalRating, limbPairsBody, housedEssenceCo
 import { round2 } from '../rules/util.ts';
 import { SYSTEM_ID } from '../config/system.ts';
 import * as MX97 from '../rules/mxic97.ts';
+import * as VR98 from '../rules/vrig98.ts';
 
 const f = () => foundry.data.fields;
 /** World time now (0 outside Foundry). */
@@ -1068,22 +1069,27 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
     };
     // v0.92.3: the decker's own Reaction (no cyber or magic Reaction boosts) for the persona (VR2 p. 120).
     Object.assign(sys.derived, deckerDerived((this as any).parent, sys, totals.intelligence, totals as unknown as Record<string, number>, tw.pools.hacking ?? 0, d.reaction - bonus.reaction));
-    Object.assign(sys.derived, riggerDerived(sys, installed, d.reaction, bonus, [...((this as any).parent?.items ?? [])], tw.pools.control ?? 0));
+    Object.assign(sys.derived, riggerDerived(sys, installed, d.reaction, bonus, [...((this as any).parent?.items ?? [])], tw.pools.control ?? 0,
+      { quickness: Number(totals.quickness ?? 0), intelligence: Number(totals.intelligence ?? 0), encephalon: Number(cyber.encephalon ?? 0) }));
     // Review fix (RULES.CORE_V923.threat 'book', Core p. 187): a Threat-rated NPC uses no standard Dice Pool at all.
     if (noPools) Object.assign(sys.derived, { taskPool: 0, taskPoolLeft: 0, hackingPool: 0, hackingPoolLeft: 0, controlPool: 0, controlPoolLeft: 0 });
   }
 }
 
 /** Rigger values: control rig, rigged Reaction and initiative, Control Pool, the vehicle driven. */
-function riggerDerived(sys: any, installed: any[], reaction: number, bonus: { reaction: number; initiativeDice: number }, items: any[] = [], tweakPool = 0) {
+function riggerDerived(sys: any, installed: any[], reaction: number, bonus: { reaction: number; initiativeDice: number }, items: any[] = [], tweakPool = 0, attrs98: { quickness: number; intelligence: number; encephalon: number } | null = null) {
   const vcr = controlRigRating(installed.map((i: any) => i.system));
   const rcd = items.filter((i: any) => i.type === 'gear' && isCarried(i)).reduce((n: number, i: any) => Math.max(n, Math.floor(i.system?.rcdRating ?? 0)), 0);
   const subscribed: string[] = [...(sys.rigging?.subscribed ?? [])];
   const rigged = riggedStats({ reaction, cyberReaction: bonus.reaction, cyberDice: bonus.initiativeDice + (sys.initiativeDiceBonus ?? 0), vcr });
+  // v0.98.0 (RULES.VRIG_V98.rigWare 'book', Rigger 2 pp. 16–17): move-by-wire against the rig, an encephalon's Intelligence.
+  const rw = attrs98 ? VR98.rigWareAdjust({ vcr, mbw: VR98.moveByWireLevel(installed.map((i: any) => ({ name: i.name, ...i.system }))), encInt: encephalonIntelligence(attrs98.encephalon), quickness: attrs98.quickness, intelligence: attrs98.intelligence }) : null;
+  const poolPlain = controlPool({ reaction, riggedReaction: rigged.reaction, vcr });
+  if (rw) { rigged.reaction = Math.max(0, rigged.reaction + rw.reaction); rigged.initiativeDice = Math.max(RULES.BASE_INITIATIVE_DICE, rigged.initiativeDice + rw.dice); }
   const vehicleUuid = String(sys.rigging?.vehicleUuid ?? '');
   const jumpedIn = Boolean(sys.rigging?.jumpedIn) && vehicleUuid !== '';
   // v0.92.1: a Control Pool tweak.
-  const pool = Math.max(0, controlPool({ reaction, riggedReaction: rigged.reaction, vcr }) + tweakPool);
+  const pool = Math.max(0, poolPlain + (rw?.pool ?? 0) + tweakPool);
   const usable = !RULES.RIGGING.controlPool.onlyJumpedIn || jumpedIn;
   return {
     controlPool: pool,
@@ -2229,6 +2235,8 @@ export class VehicleDataModel extends foundry.abstract.TypeDataModel {
       ecm: rating(0),
       eccm: rating(0),
       ecd: rating(0),
+      /** v0.98.0 (RULES.VRIG_V98.ed, Rigger 2 p. 32, optional): electronic deception. */
+      ed: rating(0),
       /** v0.43.0: Object Resistance against spells (0 = RULES.GEAR.spellsVsVehicles.objectResistance). */
       objectResistance: rating(0),
       /** Sensor locks this vehicle holds (sensor-enhanced gunnery). */

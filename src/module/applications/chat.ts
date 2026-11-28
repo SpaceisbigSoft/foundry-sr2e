@@ -20,6 +20,7 @@ import * as C923 from '../rules/combat923.ts';
 import { onCard as onCard95 } from './core95.ts';
 import { onCard as onCard96 } from './health96.ts';
 import { onCard as onCardMxIc97 } from './mxic97.ts';
+import { onCard as onCardVr98 } from './vrig98.ts';
 import * as MX97 from '../rules/mxic97.ts';
 import { blastThroughWalls, crossingFraction, indirectScatterDice, indirectScatterMetres, barrierSpellRadius } from '../rules/index.ts';
 import { tokensNear, scatterPoint, blastBlocked, wallDistances, wallsBetweenPoints, sightBlockedBetweenPoints, wallsNear, scatterStop, tokenOf, drawArea, placeWardRegion } from './canvas.ts';
@@ -3726,6 +3727,8 @@ function dispatch(message: any, button: HTMLButtonElement, action: string): Prom
   else if (action.startsWith('mxl97')) return onCardMxl97(message, button, action);
   // v0.97.0 (RULES.MXIC_V97): the Matrix IC and cybercombat book rules' card buttons (applications/mxic97.ts).
   else if (action.startsWith('mxic97')) return onCardMxIc97(message, button, action);
+  // v0.98.0 (RULES.VRIG_V98.miji): a MIJI card's Apply (GM) (applications/vrig98.ts).
+  else if (action.startsWith('vrig98')) return onCardVr98(message, button, action);
   else if (action === 'evict') return onEvict(message, button);
   else if (action === 'drugCrash') return onDrugCrash(message, button);
   else if (action === 'karmaReroll' || action === 'avoidDisaster') return onKarma(message, button, action);

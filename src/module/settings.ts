@@ -19,6 +19,7 @@ import { HOUSE_SPIRITS_V96 } from "./rules/config96/spirits.ts";
 import { HOUSE_MXLIFE_V97 } from "./rules/config97/mxlife.ts";
 import { HOUSE_MXOPS_V97 } from "./rules/config97/mxops.ts";
 import { HOUSE_MXIC_V97 } from "./rules/config97/mxic.ts";
+import { HOUSE_VRIG_V98 } from "./rules/config98/vrig.ts";
 import { SYSTEM } from "./config/system.ts";
 import { worldFloor, flooredMode } from "./rules/hidden941.ts";
 import { RULES, parseSkillWeb, setSkillWeb, PRIVACY_GROUPS, PRIVACY_MODES, SOUND_EVENTS, settingMatches, URR_V80_PATCH, RULES_SOURCES, SHOP_LIST_MODES } from "./rules/index.ts";
@@ -1097,6 +1098,8 @@ export const HOUSE_RULES: HouseRuleDef[] = [
   ...HOUSE_MXOPS_V97,
   // v0.97.0: rules completeness, Matrix IC and cybercombat (rules/config97/mxic.ts).
   ...HOUSE_MXIC_V97,
+  // v0.98.0: rules completeness, rigging, drones, sensors and electronic warfare (rules/config98/vrig.ts).
+  ...HOUSE_VRIG_V98,
 ];
 
 /**
