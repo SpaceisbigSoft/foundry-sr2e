@@ -146,7 +146,11 @@ export async function recordRise(item: any, level: unknown, o: { force?: boolean
   if (!next || next === rec[key]) return false;
   const idx = itemIndex();
   const w = X.recordWith(rec, key, next, (k) => Boolean(idx.get(k)?.system?.installed));
-  if (w.refused) return false;
+  if (w.refused) {
+    // Lead fix (final re-review 1): the character's share is full of damage at least this bad: the GM is told.
+    await post(`<p><em>${tx('SR2E.Clinic99.gmOnly')}</em> ${tx('SR2E.Clinic99.recordFull', { owner: name(item.parent), max: X.RECORD_PER_ACTOR })}</p>`, { whisper: gmIds() });
+    return false;
+  }
   await writeRecord(w.rec);
   const was = damageMeta();
   await writeMeta(X.metaInfoWithout(X.metaRose(was, key, nowMs(), item.name, item.system?.kind), w.evicted));
@@ -779,7 +783,8 @@ export async function wareDeleted(item: any, userId: string): Promise<void> {
   const copies: any[] = [];
   const evicted: X.GoneEntry[] = [];
   for (const a of actors) {
-    const here = [...(a.items ?? [])].filter((i: any) => i.id !== item.id && i.type === 'cyberware' && !i.system?.bioware && i.system?.installed && sameWare(i, nm, kind));
+    // Lead fix (final re-review 2): an uninstalled copy counts too (it gets the level now, recorded by force).
+    const here = [...(a.items ?? [])].filter((i: any) => i.id !== item.id && i.type === 'cyberware' && !i.system?.bioware && sameWare(i, nm, kind));
     if (here.length) { copies.push(...here); continue; }
     const r = X.metaGone(m, { actor: X.recordKey(a.uuid), name: nm, kind, level, at: nowMs() });
     m = r.meta;
@@ -860,6 +865,8 @@ export function registerClinic99(isLead: () => boolean): void {
     const fix = change?.flags?.[SYSTEM_ID]?.[FIX_FLAG];
     if (typeof fix === 'string' && fix) run(() => completedRepair(item, fix, userId));
     // fix2 M2: a level is recorded from the item when it changes, or when the ware goes in.
+    // Lead fix (final re-review 2): ware going in takes a deleted ware's note for its character, name and kind.
+    if (installedNow(change)) run(() => wareCreated(item));
     if (change?.flags?.[SYSTEM_ID]?.[X.WARE_FLAG] === undefined && !installedNow(change)) return;
     const own = X.trustedOwnLevel(item);
     if (own) run(() => recordRise(item, own));

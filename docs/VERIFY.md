@@ -1202,6 +1202,12 @@ Switches in `RULES.CLINIC_V99` (`rules/config99/clinic.ts`, house-rules window: 
 - A damage level on ware not installed is the owner's own: a player can lower it before the ware goes in.
 - The lead GM's whisper for cyberware a player takes out past the refusal comes after the fact; nothing is put back.
 
+**Lead's last fixes and the line drawn (v0.99.0, 28 Nov 2026):**
+
+- A character's full share of the damage record evicts ware not installed first, then the lowest level (oldest first); an entry as bad as the new one or worse is never evicted for it: the new write is refused and the GM told (a flood of Light junk can't push out Deadly damage).
+- A deleted ware's level also goes to an uninstalled copy of the same name and kind on the deleter's characters, and ware going in takes a waiting note for its character.
+- The record only guards a player's own character's ware against its own owner, who can already edit that character's attributes, skills and Essence directly from their own browser. After four rounds of review the remaining ways round it (spamming whispers to bury one; renaming a copy to another name before installing it) are accepted: the GM sees every whisper, and the record is a help for honest tables, not a lock against a player rewriting their own sheet.
+
 #### Gear: smartlinks, skillsofts, concealment, searches and the law (v0.99.0, RULES.KIT_V99)
 
 Switches in `RULES.KIT_V99` (`rules/config99/kit.ts`, house-rules window: Gear); the pure functions are `rules/kit99.ts`, the Foundry glue `applications/kit99.ts`, the GM's tool "Police check (book rules, GM)" (`kit99`). The first choice is the book's way (the default); `v980` puts v0.98.0 back. New fields: weapon `smartgun2` (a "Level II" box beside Smartgun), gear `chip.scope` (the soft's "Skill type"), and `legalCode` on every item with a legality (the book's Legality code, e.g. 6P-CC).

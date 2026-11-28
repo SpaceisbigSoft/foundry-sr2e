@@ -224,6 +224,16 @@ describe('v0.99.0 fixes: the damage record\'s bounds, notes and proofs (pure)', 
     const again = X.recordWith(mine, 'Actor_p_Item_i3', 'S');
     assert.equal(again.refused, false, 'a rise of an entry already there is kept');
     assert.equal(Object.keys(again.rec).pop(), 'Actor_p_Item_i3', 'and moves to the newest');
+    // Lead fix (final re-review 1): a share full of installed ware at least as bad refuses the new entry; the lowest
+    // level goes first; Light junk never pushes Deadly out.
+    let deadly: X.DamageRecord = { Actor_q_Item_real: 'D' } as any;
+    for (let i = 0; i < X.RECORD_PER_ACTOR - 1; i++) deadly = X.recordWith(deadly, `Actor_q_Item_j${i}`, 'L').rec;
+    const junk = X.recordWith(deadly, 'Actor_q_Item_more', 'L');
+    assert.equal(junk.refused, true, 'Light into a share whose lowest is Light: refused');
+    const worse = X.recordWith(deadly, 'Actor_q_Item_hit', 'S');
+    assert.equal(worse.refused, false);
+    assert.equal(worse.rec.Actor_q_Item_real, 'D', 'the Deadly entry stays');
+    assert.deepEqual(worse.evicted, ['Actor_q_Item_j0'], 'the oldest Light goes');
     assert.equal(X.actorKeyOf('Scene_s_Token_t_Actor_a_Item_w'), 'Scene_s_Token_t_Actor_a');
     assert.deepEqual(X.recordWithout({ a_Item_b: 'L', c_Item_d: 'M' } as any, ['a_Item_b']), { c_Item_d: 'M' });
   });

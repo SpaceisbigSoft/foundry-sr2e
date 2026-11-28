@@ -267,8 +267,13 @@ export function recordWith(rec: DamageRecord, key: string, level: WareLevel, ins
   const ak = actorKeyOf(key);
   const mine = Object.keys(next).filter((k) => ak && actorKeyOf(k) === ak);
   if (ak && mine.length >= RECORD_PER_ACTOR) {
-    const v = victim(mine, installed);
-    if (v) { delete next[v]; evicted.push(v); }
+    // Lead fix (final re-review 1): ware not installed goes first; else the lowest level, oldest first; an entry as
+    // bad as the new one or worse is never evicted for it (the new write is refused, and the GM told), so a flood of
+    // Light junk can't push out real Deadly damage.
+    const out = mine.find((k) => !installed(k));
+    const low = out ?? [...mine].sort((a, b) => rank(rec[a] as WareLevel) - rank(rec[b] as WareLevel))[0];
+    if (!out && low && rank(rec[low] as WareLevel) >= rank(level)) return { rec, refused: true, evicted: [] };
+    if (low) { delete next[low]; evicted.push(low); }
   }
   const others = Object.keys(next);
   if (others.length >= RECORD_MAX) {
