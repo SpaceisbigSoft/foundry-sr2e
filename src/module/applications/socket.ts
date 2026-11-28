@@ -19,7 +19,8 @@ export const SOCKET = `system.${SYSTEM_ID}`;
 
 // v0.93.3: 'teamKarma' (a player spends one Team Karma). v0.94.2: 'crewStation' (applications/crew942.ts) and
 // 'trade942' (a player takes from a "free for all" lootable actor: applications/trade942.ts). v0.95.0: 'core95' (applications/core95.ts).
-export type RelayOp = 'nextTurn' | 'roundTicks' | 'drawArea' | 'spendSpellDefense' | 'dismissSpirit' | 'vehicleShop' | 'teamKarma' | 'crewStation' | 'trade942' | 'melee95' | 'core95';
+// v0.97.1: 'mxlife97' (a player's deck part: the GM rolls its Cook and Installation tasks, applications/mxlife97.ts).
+export type RelayOp = 'nextTurn' | 'roundTicks' | 'drawArea' | 'spendSpellDefense' | 'dismissSpirit' | 'vehicleShop' | 'teamKarma' | 'crewStation' | 'trade942' | 'melee95' | 'core95' | 'mxlife97';
 
 export interface RelayRequest { type: 'request'; id: string; op: RelayOp; userId: string; data: Record<string, any> }
 export interface RelayReply { type: 'reply'; id: string; to: string; ok: boolean; note?: string }

@@ -120,8 +120,10 @@ export const GM_APPLY_SPECS: Record<string, { flag: string; keys: readonly strin
     flag: 'hostChange',
     keys: ['hostUuid', 'found', 'decrypt', 'removeFile', 'minAlert', 'smoke', 'spot', 'setAlert', 'resetTally', 'addFile', 'editFile', 'validate', 'invalidate', 'bombFound', 'defuse', 'bombOff', 'call',
       // v0.97.0 (RULES.MXOPS_V97): a decoy, a passcode's days, located icons; (RULES.MXIC_V97) a decker's request; each names the decker it is for.
-      'decoy97', 'passcode97', 'located97', 'mx97', 'sourceUuid'],
-    target: 'hostUuid', sources: ['sourceUuid', 'found.deckerUuid', 'bombFound.deckerUuid', 'decoy97.deckerUuid', 'passcode97.deckerUuid', 'located97.deckerUuid', 'mx97.deckerUuid'],
+      'decoy97', 'passcode97', 'located97', 'mx97', 'sourceUuid',
+      // v0.97.1 (B, live run finding 4): a player's tar that crashed itself, a player's Slow (the GM's client re-reads both).
+      'crashIc97', 'slow97'],
+    target: 'hostUuid', sources: ['sourceUuid', 'found.deckerUuid', 'bombFound.deckerUuid', 'decoy97.deckerUuid', 'passcode97.deckerUuid', 'located97.deckerUuid', 'mx97.deckerUuid', 'crashIc97.deckerUuid', 'slow97.deckerUuid'],
   },
   applyLocks: { flag: 'sensorLocks', keys: ['vehicleUuid', 'targetUuid', 'targetName', 'successes', 'sourceUuid'], target: 'vehicleUuid', sources: ['sourceUuid'] },
   applyJam: { flag: 'jam', keys: ['droneUuid', 'by', 'rating', 'jammerUuid', 'sourceUuid'], target: 'droneUuid', sources: ['jammerUuid', 'sourceUuid'] },
@@ -259,6 +261,10 @@ export function hostChangeShapeOk(f: any): boolean {
   if (f.passcode97 !== undefined && !(onlyKeys(f.passcode97, ['deckerUuid', 'days', 'level']) && safeStr(f.passcode97.deckerUuid, 400) && f.validate === f.passcode97.deckerUuid
     && intIn(f.passcode97.days, 0, 180) && ['user', 'superuser', 'supervisor'].includes(f.passcode97.level))) return false;
   if (f.located97 !== undefined && !(onlyKeys(f.located97, ['deckerUuid', 'uuids']) && safeStr(f.located97.deckerUuid, 400) && strList(f.located97.uuids, 50))) return false;
+  // v0.97.1 (B): a tar's crash and a Slow: who, which IC, the Initiative bounded (applications/mxops97.ts applyGmWrites97 re-reads the rest).
+  if (f.crashIc97 !== undefined && !(onlyKeys(f.crashIc97, ['icUuid', 'deckerUuid', 'programId']) && safeStr(f.crashIc97.icUuid, 400) && safeStr(f.crashIc97.deckerUuid, 400) && optStr(f.crashIc97.programId, 60))) return false;
+  if (f.slow97 !== undefined && !(onlyKeys(f.slow97, ['icUuid', 'deckerUuid', 'combatId', 'combatantId', 'delta']) && safeStr(f.slow97.icUuid, 400) && safeStr(f.slow97.deckerUuid, 400)
+    && optStr(f.slow97.combatId, 60) && optStr(f.slow97.combatantId, 60) && intIn(f.slow97.delta, -400, 400))) return false;
   // v0.97.0 (RULES.MXIC_V97): a decker's request: who and which (the GM side reads every value itself).
   if (f.mx97 !== undefined && !(onlyKeys(f.mx97, ['op', 'deckerUuid', 'vs', 'id', 'net', 'cardId', 'seq']) && (f.mx97.seq === undefined || (typeof f.mx97.seq === 'number' && Number.isFinite(f.mx97.seq) && f.mx97.seq >= 0)) && (MX97_OPS as readonly string[]).includes(f.mx97.op)
     && safeStr(f.mx97.deckerUuid, 400) && optStr(f.mx97.vs) && optStr(f.mx97.id, 400) && optStr(f.mx97.cardId, 60) && (f.mx97.net === undefined || intIn(f.mx97.net, 0, 30)))) return false;
@@ -571,6 +577,8 @@ export function describeGmChange(action: string, flags: Record<string, any>, nam
         else if (k === 'decoy97') out.push(Number(v?.successes) >= 6 ? tx('SR2E.MxOps97.Trust.decoyAll', { name: nm(v?.deckerUuid), n: Number(v?.successes) || 0 }) : tx('SR2E.MxOps97.Trust.decoy', { name: nm(v?.deckerUuid), n: Number(v?.successes) || 0 }));
         else if (k === 'passcode97') out.push(tx('SR2E.MxOps97.Trust.passcode', { name: nm(v?.deckerUuid), days: Number(v?.days) || 0 }));
         else if (k === 'located97') out.push(tx('SR2E.MxOps97.Trust.located', { name: nm(v?.deckerUuid), list: (Array.isArray(v?.uuids) ? v.uuids : []).map((u: unknown) => nm(String(u))).join(', ') }));
+        else if (k === 'crashIc97') out.push(tx('SR2E.MxOps97.Trust.crashIc', { ic: nm(v?.icUuid), name: nm(v?.deckerUuid) }));
+        else if (k === 'slow97') out.push(tx('SR2E.MxOps97.Trust.slow', { ic: nm(v?.icUuid), name: nm(v?.deckerUuid), delta: Number(v?.delta) || 0 }));
         else if (k === 'mx97') out.push(mx97Line(v, nameOf, mxName, safeStr(f.hostUuid, 400) ? String(f.hostUuid) : ''));
         else out.push(`${k}: ${plainOf(v)}`);
       }

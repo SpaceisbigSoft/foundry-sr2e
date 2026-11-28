@@ -1479,6 +1479,9 @@ export interface HostChange {
   located97?: { deckerUuid: string; uuids: string[] };
   /** v0.97.0 (RULES.MXIC_V97): a decker's request the GM side records on the host (applications/mxic97.ts applyMx97). */
   mx97?: MX97.Mx97Change;
+  /** v0.97.1: a player's tar that crashed itself; a player's Slow on the host's IC (applications/mxops97.ts applyGmWrites97). */
+  crashIc97?: { icUuid: string; deckerUuid: string; programId: string };
+  slow97?: { icUuid: string; deckerUuid: string; combatId: string; combatantId: string; delta: number };
 }
 
 /** Dispelling one of another actor's sustained spells. */
@@ -3947,7 +3950,12 @@ export class SR2Actor extends Actor {
     await message.update(upd, { sr2eReroll: true });
     const d3: any = (game as any).dice3d;
     if (typeof d3?.showForRoll === 'function') {
-      for (const r of rolls) { try { await d3.showForRoll(r, (game as any).user, true, message.whisper?.length ? [...message.whisper] : null, Boolean(message.blind)); } catch { /* Dice So Nice: shown or not, the card is right */ } }
+      // v0.97.1 (live run finding 6): shown, not waited for. Dice So Nice's promise ends with its animation, which a
+      // hidden browser tab never plays: the re-roll's follow-ups (a decrypt's host change for the GM) waited for ever.
+      const whisper = message.whisper?.length ? [...message.whisper] : null;
+      void (async () => {
+        for (const r of rolls) { try { await d3.showForRoll(r, (game as any).user, true, whisper, Boolean(message.blind)); } catch { /* Dice So Nice: shown or not, the card is right */ } }
+      })();
     }
     return message;
   }
@@ -14601,7 +14609,7 @@ export class SR2Actor extends Actor {
         tn = m.evasion;
         tnNote = tx('SR2E.Card.Actor.sEvasion', { targetName: target.name, tn });
         const track: any = this.bestUtility('track');
-        extra = [...SR2Actor.mirrorsMods(target), ...utilityModifiers(track ? { name: `${track.name} ${track.system.rating}`, rating: this.utilityRating(track) } : null)];
+        extra = [...SR2Actor.mirrorsMods(target), ...MO97G.withUtilityId(utilityModifiers(track ? { name: `${track.name} ${track.system.rating}`, rating: this.utilityRating(track) } : null))];
       }
       ctx.targetUuid = target.uuid;
     } else if (op === 'rearmDevice') {
@@ -14949,7 +14957,7 @@ export class SR2Actor extends Actor {
     return this.#runTest(`${frame ? `${frame.name}: ` : ''}${ctx.operation ? `${ctx.operation}: ` : ''}${host.name} ${tnNote}${suffix}${legit ? tx('SR2E.Card.Actor.securityDecker2') : ''}`, dice, {
       targetNumber: tn, poolDice: fd ? 0 : opts.poolDice ?? 0, pool: 'hacking', noPenalties: Boolean(fd), ...(opts.exclude?.length ? { exclude: opts.exclude } : {}),
       // A frame runs inside the host: the decker's own connection does not slow it (smoke does).
-      modifiers: [...utilityModifiers(utility), ...book923, ...(opts.modifiers ?? []), ...(fd ? [...SR2Actor.smokeMods(host), ...matrixWoundModifiers(Number(frame.system.matrix?.monitor ?? 0), { ic: true })] : this.matrixTestMods(host)), ...modifiers],
+      modifiers: [...MO97G.withUtilityId(utilityModifiers(utility)), ...book923, ...(opts.modifiers ?? []), ...(fd ? [...SR2Actor.smokeMods(host), ...matrixWoundModifiers(Number(frame.system.matrix?.monitor ?? 0), { ic: true })] : this.matrixTestMods(host)), ...modifiers],
     }, { kind: 'system', system: ctx });
   }
 
@@ -15669,6 +15677,8 @@ export class SR2Actor extends Actor {
     }
     // v0.97.0 (RULES.MXIC_V97): parries, evades, crashes, bombs and suppressed IC, recorded on the host.
     if (c.mx97) notes.push(...(await MXG97.applyMx97(host, c.mx97, pre97)));
+    // v0.97.1 (live run finding 4): a player's tar or Slow on this host's IC, re-checked and written on the GM's client.
+    if (c.crashIc97 || c.slow97) notes.push(...(await MO97G.applyGmWrites97(host, c)));
     return `<p>${escText(host.name)}: ${escText(notes.join('; ') || tx('SR2E.Card.Actor.noChange'))}.</p>`;
   }
 
@@ -16237,10 +16247,16 @@ export class SR2Actor extends Actor {
         // v0.97.0 (RULES.MXIC_V97.tar 'book', VR2 pp. 42–43): tar baby and tar pit crash themselves with the utility.
         if (tar97 ? ['tarBaby', 'tarPit'].includes(ic!.behavior) : ic!.behavior === 'tarBaby' && RULES.MATRIX.tar.tarBabyDerezzes) {
           const icActor: any = fromUuidSync(ic!.icUuid);
-          try {
-            await icActor?.update({ 'system.matrix.monitor': RULES.MATRIX.monitorBoxes });
-            body += tx('SR2E.Card.Actor.derezzes', { icIcName: escText(ic!.icName) });
-          } catch { body += ` <em>${tx('SR2E.Card.Actor.gmDerez', { icIcName: escText(ic!.icName) })}</em>`; }
+          // v0.97.1 (live run finding 4): the IC is the GM's: a player's client asks the GM through its host (no write it may not make).
+          const asked = icActor && !canWriteNow(icActor) ? await MO97G.tarCrashToGm(icActor, target, String(prog?.id ?? ic!.programId ?? ''), String(ic!.icName ?? '')) : '';
+          if (asked) body += asked;
+          else if (!icActor || !canWriteNow(icActor)) body += ` <em>${tx('SR2E.Card.Actor.gmDerez', { icIcName: escText(ic!.icName) })}</em>`;
+          else {
+            try {
+              await icActor.update({ 'system.matrix.monitor': RULES.MATRIX.monitorBoxes });
+              body += tx('SR2E.Card.Actor.derezzes', { icIcName: escText(ic!.icName) });
+            } catch { body += ` <em>${tx('SR2E.Card.Actor.gmDerez', { icIcName: escText(ic!.icName) })}</em>`; }
+          }
         }
       } else if (kind === 'trace') {
         const turns = traceTurns(net) ?? RULES.MATRIX.trace.baseTurns;
@@ -17219,15 +17235,22 @@ export class SR2Actor extends Actor {
       const c: any = tgt?.myCombatant?.() ?? null;
       let note = '';
       let applied = done;
+      let asked97 = 0;
       if (delta && c && c.initiative != null) {
-        try {
-          if (notWritableNow(c)) throw new Error('not owner');
-          await c.update({ initiative: Number(c.initiative) - delta });
-          applied = e.initiative;
-        } catch { note = ` <em>${tx('SR2E.Card.Actor.gmItsInitiativeByByHand', { part: delta > 0 ? tx('SR2E.Card.Actor.lower') : tx('SR2E.Card.Actor.raise'), delta: Math.abs(delta) })}</em>`; }
+        // v0.97.1 (live run finding 4): the book's Slow on the GM's IC from a player's client goes to the GM (a host change).
+        const sent = b97 && notWritableNow(c) ? await MO97G.slowToGm(tgt, this, c, delta) : '';
+        if (sent) { note = sent; applied = e.initiative; asked97 = delta; }
+        else {
+          try {
+            if (notWritableNow(c)) throw new Error('not owner');
+            await c.update({ initiative: Number(c.initiative) - delta });
+            applied = e.initiative;
+          } catch { note = ` <em>${tx('SR2E.Card.Actor.gmItsInitiativeByByHand', { part: delta > 0 ? tx('SR2E.Card.Actor.lower') : tx('SR2E.Card.Actor.raise'), delta: Math.abs(delta) })}</em>`; }
+        }
       } else if (e.initiative && !c) note = ` <em>${tx('SR2E.Card.Actor.itIsNotInACombat')}</em>`;
       if (b97) {
-        const after = c && c.initiative != null ? Number(c.initiative) : null;
+        // A request sent to the GM: the card says what the Initiative will be once applied.
+        const after = c && c.initiative != null ? Number(c.initiative) - asked97 : null;
         const html97 = MO97G.slowCard(b97, Number(u.resist97 ?? 0), after, { note, done, target: String(u.targetName ?? '') });
         return { html: html97, flags: {}, snap: { ...snap, mutility: { ...u, applied } } };
       }
@@ -17531,6 +17554,11 @@ export class SR2Actor extends Actor {
    * v0.97.0 (RULES.MXLIFE_V97.cookInstall): the Cook and Installation tests are Computer B/R tests (VR2 pp. 82–88):
    * that skill's dice, defaulting as any skill does (the related Computer skill through the Skill Web, else Intelligence).
    */
+  /** v0.97.1: the same, for the GM's client that rolls a player's tasks (applications/mxlife97.ts applyCookAsGm). */
+  cookDice97(): { dice: number; tnMod: number } {
+    return this.#cookDice97();
+  }
+
   #cookDice97(): { dice: number; tnMod: number } {
     const name = RULES.MATRIX.deckBuilding.skills[0]!;
     const own = this.findSkill(name);
@@ -17553,8 +17581,10 @@ export class SR2Actor extends Actor {
     const time = `<strong>${tCount(days, 'SR2E.Card.Actor.days')}</strong> ${tx('SR2E.Card.Actor.ofWork', { baseDays: c.baseDays, s })}${cook97 ? ` ${escText(cook97.text)}` : ''}`;
     if (c.applied) {
       // v0.65.0: a re-roll of work under way changes how long it takes.
-      const p = await this.retimeProject(c.projectId, days * 24);
-      return { html: `<p>${p ? tx('SR2E.Card.Actor.underWay', { time }) : `${tx('SR2E.Card.Actor.doneIn2', { time })} <em>${tx('SR2E.Card.Actor.alreadyApplied2')}</em>`}</p>`, flags: {}, snap };
+      // v0.97.1 (live run finding 5): with the days the GM's Cook and Installation tasks added (or asks the GM now).
+      const p = await this.retimeProject(c.projectId, days * 24 + MXL97G.cookHoursFor(this, c.projectId));
+      const ask97 = cook97?.ask ? await MXL97G.askGmCook(this, c, c.projectId, snap.testId) : '';
+      return { html: `<p>${p ? tx('SR2E.Card.Actor.underWay', { time }) : `${tx('SR2E.Card.Actor.doneIn2', { time })} <em>${tx('SR2E.Card.Actor.alreadyApplied2')}</em>`}${ask97}</p>`, flags: {}, snap };
     }
     // v0.65.0: the work takes its days: the program (or the deck part) is ready when they have passed.
     if (this.waitsFor('matrix')) {
@@ -17562,7 +17592,9 @@ export class SR2Actor extends Actor {
       if (c.mode !== 'program' && (c.cost ?? 0) > 0 && !(await this.adjustNuyen(-(c.cost ?? 0), tx('SR2E.Text.Actor.deckMaterials', { label, rating: c.memory ? `+${c.rating}` : c.rating })))) return { html: `<p><em>${tx('SR2E.Card.Actor.notEnoughNuyenForTheMaterials', { cost: c.cost })}</em></p>`, flags: {}, snap };
       const effect: ProjectEffect = c.mode === 'program' ? { creates: [{ name: c.name, type: 'program', system: c.system ?? {} }] } : { call: { method: 'finishDeckPart', args: [c.deckId ?? null, c.name, c.part, c.rating ?? 0, Boolean(c.memory)] } };
       const pr = await this.startProject({ kind: 'code', area: 'matrix', label: c.mode === 'program' ? `Writing ${c.name}` : `${c.name}: ${label} ${c.memory ? `+${c.rating}` : c.rating}`, hours: days * 24, paid: { nuyen: c.mode === 'program' ? 0 : Number(c.cost ?? 0) }, effect });
-      return { html: `<p><strong>${escText(c.name)}</strong>${tx('SR2E.Card.Actor.readyWhenItHasPassedUpkeep', { time })}</p>`, flags: {}, snap: { ...snap, code: { ...c, applied: true, projectId: pr.id } } };
+      // v0.97.1 (live run finding 5): a player's tasks go to the GM, who adds their days to this project.
+      const ask97 = cook97?.ask ? await MXL97G.askGmCook(this, c, pr.id, snap.testId) : '';
+      return { html: `<p><strong>${escText(c.name)}</strong>${tx('SR2E.Card.Actor.readyWhenItHasPassedUpkeep', { time })}${ask97}</p>`, flags: {}, snap: { ...snap, code: { ...c, applied: true, projectId: pr.id } } };
     }
     let body = '';
     try {
@@ -17578,6 +17610,8 @@ export class SR2Actor extends Actor {
         const value = c.memory ? Number(deck?.system?.[c.part!] ?? 0) + (c.rating ?? 0) : c.rating;
         await this.finishDeckPart(deck ? deck.id : null, c.name, c.part!, c.rating ?? 0, Boolean(c.memory));
         body = `<strong>${escText(c.name)}</strong>${tx('SR2E.Card.Actor.in4', { label: escText(label), part: escText(c.memory ? tx('SR2E.Card.Actor.now5', { rating: c.rating, value }) : c.rating), time, part2: (c.cost ?? 0) > 0 ? tx('SR2E.Card.Actor.materials3', { cost: c.cost }) : '' })}`;
+        // v0.97.1 (live run finding 5): no work time to add to: the GM still rolls a player's tasks (and judges a failure).
+        if (cook97?.ask) body += await MXL97G.askGmCook(this, c, undefined, snap.testId);
       }
     } catch (err) {
       console.warn('sr2e | code', err);

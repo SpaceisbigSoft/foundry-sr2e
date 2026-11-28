@@ -86,6 +86,16 @@ export function analyzeHostReveal(net: number, first?: string | null): string[] 
   return n >= Math.max(1, whole(V().analyzeHostAll)) ? all : all.slice(0, n);
 }
 
+/**
+ * v0.97.1 (live run finding 8): the "N successes tell all" hint of Analyze Host's card (VR2 p. 111), only when it can
+ * matter: `analyzeHostAll` below the number of items (with 7 items and 7 for all, one item per success says it all).
+ * Null: no hint.
+ */
+export function analyzeHostAllHint(): number | null {
+  const n = whole(V().analyzeHostAll);
+  return n >= 1 && n < analyzeHostItems().length ? n : null;
+}
+
 /** Scan Icon (VR2 p. 117): an item per net success, in the decker's order. */
 export function scanIconReveal(net: number, first?: string | null): string[] {
   return itemOrder(SCAN_ITEMS, first).slice(0, whole(net));
@@ -262,6 +272,59 @@ export function slowBook(successes: number, resistance: number): { net: number; 
   const net = Math.max(0, whole(successes) - whole(resistance));
   const actions = Math.floor(net / 2);
   return { net, actions, initiative: actions * Math.max(1, whole(V().slowPerAction)) };
+}
+
+/**
+ * v0.97.1 (live run finding 4): the most Initiative a Slow request from a player's card may take off (or give back,
+ * after a re-roll) on the GM's client: `slowPerAction` × SLOW_MAX_ACTIONS. An action per 2 net successes (VR2 p. 99):
+ * 4 actions are 8 net successes over the IC's resistance, beyond nearly every Slow roll (a GM by hand does more).
+ */
+export const SLOW_MAX_ACTIONS = 4;
+export function slowRequestDelta(delta: unknown): number {
+  const cap = SLOW_MAX_ACTIONS * Math.max(1, whole(V().slowPerAction));
+  const n = Math.trunc(num(delta));
+  return Math.max(-cap, Math.min(cap, n));
+}
+
+// ---------------------------------------------------------------- GM-owned IC a player's card changes (v0.97.1)
+
+/**
+ * Whether this IC crashes itself with the utility it crashed (VR2 pp. 42–43): tar baby and tar pit under
+ * RULES.MXIC_V97.tar 'book'; under 'v965' a tar baby when RULES.MATRIX.tar.tarBabyDerezzes.
+ */
+export function tarDerezzes(behavior: string): boolean {
+  if (RULES.MXIC_V97.tar === 'book') return behavior === 'tarBaby' || behavior === 'tarPit';
+  return behavior === 'tarBaby' && Boolean(RULES.MATRIX.tar.tarBabyDerezzes);
+}
+
+/** The facts the GM's client reads itself before it derezzes a tar for a player's card (never the card's word). */
+export interface TarCrashFacts { icType: string; behavior: string; icHostUuid: string; hostUuid: string; crashed: boolean; deckerHostUuid: string; deckerJackedIn: boolean; program: { loaded: boolean; erased: boolean } | null }
+/**
+ * Why the GM's client refuses a player's "the tar crashed itself" request (a language key), or null: an IC of this
+ * host, a tar that derezzes (tarDerezzes), still up; the decker on this host; the utility it named really crashed
+ * on the decker (unloaded or erased: the decker paid for it).
+ */
+export function tarCrashRefusal(f: TarCrashFacts): string | null {
+  if (f.icType !== 'ic' || !f.hostUuid || f.icHostUuid !== f.hostUuid || !tarDerezzes(f.behavior)) return `${WHY}tarNotHere`;
+  if (f.crashed) return `${WHY}tarGone`;
+  if (!f.deckerJackedIn || f.deckerHostUuid !== f.hostUuid) return `${WHY}deckerNotHere`;
+  if (!f.program || (f.program.loaded && !f.program.erased)) return `${WHY}tarProgram`;
+  return null;
+}
+
+/** The facts the GM's client reads itself before it slows an IC for a player's card. */
+export interface SlowFacts { icType: string; behavior: string; icHostUuid: string; hostUuid: string; crashed: boolean; deckerHostUuid: string; deckerJackedIn: boolean; traceLocked: boolean; combatantIsIc: boolean; initiative: number | null }
+/**
+ * Why the GM's client refuses a player's Slow request (a language key), or null (VR2 p. 99): an IC of this host, up,
+ * one Slow works on; the decker on this host; the combatant named is that IC's, with an Initiative.
+ */
+export function slowRequestRefusal(f: SlowFacts): string | null {
+  if (f.icType !== 'ic' || !f.hostUuid || f.icHostUuid !== f.hostUuid || f.crashed) return `${WHY}slowNotHere`;
+  const why = slowRefusal({ behavior: f.behavior, traceLocked: f.traceLocked });
+  if (why) return why;
+  if (!f.deckerJackedIn || f.deckerHostUuid !== f.hostUuid) return `${WHY}deckerNotHere`;
+  if (!f.combatantIsIc || f.initiative === null) return `${WHY}slowNoCombatant`;
+  return null;
 }
 
 // ---------------------------------------------------------------- Restore (VR2 p. 100)

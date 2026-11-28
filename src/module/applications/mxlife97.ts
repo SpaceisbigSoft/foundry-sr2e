@@ -6,7 +6,9 @@
  *
  * Security: the upkeep runs on the lead GM's client only (documents/index.ts timedEffects); the recovery card's button
  * is the GM's, on a GM-posted card, and reads only an actor uuid and a schedule key from it (the IC's rating comes
- * from the actor's own effect, not the card). Every value put into HTML is escaped.
+ * from the actor's own effect, not the card). v0.97.1: a player's Cook and Installation tasks are rolled on the lead
+ * GM's client (relay op 'mxlife97', applyCookAsGm), which re-derives the job from the builder the asking user owns.
+ * Every value put into HTML is escaped.
  */
 import { SYSTEM_ID } from '../config/system.ts';
 import { RULES } from '../rules/config.ts';
@@ -21,6 +23,7 @@ import { newSkillCost } from '../rules/core923.ts';
 import { skillBandAttribute } from '../rules/charfix.ts';
 import { authorIsGm } from './trust.ts';
 import { isLeadGm } from './leader.ts';
+import { onRelay, requestGm } from './socket.ts';
 import * as M from '../rules/mxlife97.ts';
 
 const G = (): any => (globalThis as any).game;
@@ -241,23 +244,8 @@ function publicLine(r: { days: number; ok: boolean; failed?: string; tries?: num
   return r.failed === 'install' ? tx('SR2E.MxLife97.Cook.publicInstallFailed', { tries }) : tx('SR2E.MxLife97.Cook.publicCookFailed', { tries });
 }
 
-/**
- * The Cook and Installation tasks of a deck part whose design just succeeded (#resolveCode): rolled once, secretly
- * (VR2 p. 77: the GM gets the numbers in a whisper), and kept on the card's code context (a Karma re-roll of the design
- * only changes the design's days). Null under 'v965', for a program, or without the context buildDeckPart adds.
- * `ok` false: the dice could not get it done. `text` is the decker's line (plain text: the caller escapes it).
- */
-export async function cookInstall(c: any): Promise<{ days: number; ok: boolean; text: string } | null> {
-  if (!M.on('cookInstall') || c?.mode !== 'deck' || !c.cook97 || typeof c.cook97 !== 'object') return null;
-  const kept = c.cook97.rolled;
-  if (kept && typeof kept === 'object') {
-    const r = { days: Math.min(100_000, whole(kept.days)), ok: Boolean(kept.ok), failed: kept.failed === 'install' ? 'install' : 'cook', tries: whole(kept.tries) };
-    return { days: r.days, ok: r.ok, text: publicLine(r) };
-  }
-  const tasks = M.deckTasks(String(c.part ?? ''), whole(c.rating), whole(c.cook97.mpcp) || whole(c.rating));
-  if (!tasks) return null;
-  const dice = whole(c.cook97.dice);
-  const tnMod = Math.floor(Number(c.cook97.tnMod) || 0);
+/** Roll a deck part's tasks (the GM's client): the days, whether done, which failed, the GM's lines and the dice. */
+async function rollTasks(tasks: { cook: M.DeckTask97 | null; install: M.DeckTask97 | null }, dice: number, tnMod: number): Promise<{ rolled: { days: number; ok: boolean; failed: string; tries: number }; lines: string[]; sink: any[] }> {
   const sink: any[] = [];
   const lines: string[] = [];
   let days = 0;
@@ -271,11 +259,107 @@ export async function cookInstall(c: any): Promise<{ days: number; ok: boolean; 
     lines.push(r.line);
     if (!r.done) { ok = false; failed = label; tries = r.tries; break; }
   }
-  const rolled = { days, ok, failed, tries };
+  return { rolled: { days, ok, failed, tries }, lines, sink };
+}
+
+/**
+ * The Cook and Installation tasks of a deck part whose design just succeeded (#resolveCode): rolled once, secretly
+ * (VR2 p. 77: the GM gets the numbers in a whisper), and kept on the card's code context (a Karma re-roll of the design
+ * only changes the design's days). Null under 'v965', for a program, or without the context buildDeckPart adds.
+ * `ok` false: the dice could not get it done. `text` is the decker's line (plain text: the caller escapes it).
+ * v0.97.1 (live run finding 5): on a player's client nothing is rolled (the author of a whisper reads it): `ask` says
+ * the caller sends the job to the GM (askGmCook) once the work is under way; the card says only that the GM rolls them.
+ */
+export async function cookInstall(c: any): Promise<{ days: number; ok: boolean; text: string; ask?: boolean } | null> {
+  if (!M.on('cookInstall') || c?.mode !== 'deck' || !c.cook97 || typeof c.cook97 !== 'object') return null;
+  if (!isGm()) return { days: 0, ok: true, text: tx('SR2E.MxLife97.Cook.publicAsked'), ask: !c.cook97.asked };
+  const kept = c.cook97.rolled;
+  if (kept && typeof kept === 'object') {
+    const r = { days: Math.min(100_000, whole(kept.days)), ok: Boolean(kept.ok), failed: kept.failed === 'install' ? 'install' : 'cook', tries: whole(kept.tries) };
+    return { days: r.days, ok: r.ok, text: publicLine(r) };
+  }
+  const tasks = M.deckTasks(String(c.part ?? ''), whole(c.rating), whole(c.cook97.mpcp) || whole(c.rating));
+  if (!tasks) return null;
+  const dice = whole(c.cook97.dice);
+  const tnMod = Math.floor(Number(c.cook97.tnMod) || 0);
+  const { rolled, lines, sink } = await rollTasks(tasks, dice, tnMod);
   c.cook97.rolled = rolled;
   await post(`<p><em>${tx('SR2E.MxLife97.gmOnly')}</em> ${escHtml(String(c.name ?? ''))}: ${escHtml(lines.join(' '))}</p>`, { whisper: gmIds(), rolls: sink });
-  return { days, ok, text: publicLine(rolled) };
+  return { days: rolled.days, ok: rolled.ok, text: publicLine(rolled) };
 }
+
+/** On a builder (written by the GM's client): the hours the GM's Cook and Installation tasks added to each project. */
+export const COOK_HOURS_FLAG = 'cook97Hours';
+const RELAY_OP = 'mxlife97' as const;
+
+/** The hours the GM's tasks added to a project (0 when none), for a re-roll of the design that retimes it. */
+export function cookHoursFor(actor: any, projectId: string | undefined): number {
+  const m = actor?.getFlag?.(SYSTEM_ID, COOK_HOURS_FLAG);
+  return projectId && m && typeof m === 'object' ? Math.min(100_000 * 24, whole((m as any)[projectId])) : 0;
+}
+
+/**
+ * v0.97.1 (live run finding 5): a player's client sends the Cook and Installation tasks to the GM (the relay), once the
+ * design's work is under way (`projectId`) or done. The GM's client re-derives everything (applyCookAsGm). Sets
+ * `c.cook97.asked` when the GM took it. Returns a note for the card ('' when the GM took it).
+ */
+export async function askGmCook(actor: any, c: any, projectId: string | undefined, testId: string | undefined): Promise<string> {
+  const key = String(projectId || testId || '').slice(0, 60);
+  if (!key || !c?.cook97) return '';
+  const r = await requestGm(RELAY_OP, { op: 'cook', actorUuid: String(actor?.uuid ?? ''), projectId: String(projectId ?? ''), key, part: String(c.part ?? ''), rating: whole(c.rating), deckId: String(c.deckId ?? ''), name: String(c.name ?? '') });
+  if (r.ok) { c.cook97.asked = true; return ''; }
+  return ` <em>${tx('SR2E.MxLife97.Cook.askFailed', { note: escHtml(String(r.note ?? '')) })}</em>`;
+}
+
+/** Whether a GM's whisper already holds this job's roll (the GM's own guard: a message only the GM authored). */
+function cookRolled(jobKey: string): boolean {
+  const list: any[] = [...((G()?.messages?.contents ?? G()?.messages ?? []) as any[])];
+  return list.some((m: any) => authorIsGm(m) && (m?.flags?.[SYSTEM_ID]?.cook97Job === jobKey || m?.getFlag?.(SYSTEM_ID, 'cook97Job') === jobKey));
+}
+
+/**
+ * The GM's client rolls a player's Cook and Installation tasks (VR2 p. 77): the builder from the uuid, owned by the
+ * user who asked (the socket's sender); the part, rating and deck from the project under way when there is one (else
+ * the request, bounded), the deck's MPCP from the deck, the dice from the builder's own skills. Rolled once per job
+ * (a GM whisper marks it). The numbers go to the GMs only; the days go on the project (and its record, for a re-roll),
+ * or a task that can't be done gives the project up and tells the builder's owners.
+ */
+export async function applyCookAsGm(data: Record<string, any>, user: any): Promise<{ ok: boolean; note?: string }> {
+  if (!M.on('cookInstall') || data?.['op'] !== 'cook') return { ok: false, note: tx('SR2E.MxLife97.Cook.refused') };
+  const actor: any = uuidOk(data['actorUuid']) ? await (globalThis as any).fromUuid?.(data['actorUuid']) : null;
+  if (!actor || !['character', 'npc'].includes(String(actor.type)) || !(user?.isGM || actor.testUserPermission?.(user, 'OWNER'))) return { ok: false, note: tx('SR2E.MxLife97.Cook.refused') };
+  const key = typeof data['key'] === 'string' ? data['key'].slice(0, 60) : '';
+  if (!key) return { ok: false, note: tx('SR2E.MxLife97.Cook.refused') };
+  const jobKey = `${actor.uuid}:${key}`;
+  if (cookRolled(jobKey)) return { ok: true };
+  const pid = typeof data['projectId'] === 'string' ? data['projectId'].slice(0, 60) : '';
+  const project: any = pid ? (actor.projects?.() ?? []).find((p: any) => p?.id === pid) ?? null : null;
+  if (pid && !project) return { ok: false, note: tx('SR2E.MxLife97.Cook.refused') };
+  const args: any[] = project?.effect?.call?.method === 'finishDeckPart' && Array.isArray(project.effect.call.args) ? project.effect.call.args : [];
+  if (project && !args.length) return { ok: false, note: tx('SR2E.MxLife97.Cook.refused') };
+  const deckId = String((project ? args[0] : data['deckId']) ?? '').slice(0, 60);
+  const part = String((project ? args[2] : data['part']) ?? '').slice(0, 40);
+  const rating = Math.min(100_000, whole(project ? args[3] : data['rating']));
+  const partName = String((project ? args[1] : data['name']) ?? '').slice(0, 120);
+  const deck: any = deckId ? actor.items?.get?.(deckId) : null;
+  const tasks = M.deckTasks(part, rating, whole(deck?.system?.mpcp) || rating);
+  if (!tasks) return { ok: false, note: tx('SR2E.MxLife97.Cook.refused') };
+  const own = actor.cookDice97?.() ?? { dice: 0, tnMod: 0 };
+  const { rolled, lines, sink } = await rollTasks(tasks, whole(own.dice), Math.floor(Number(own.tnMod) || 0));
+  const extra = project ? ` ${rolled.ok ? tx('SR2E.MxLife97.Cook.gmAdded', { days: rolled.days }) : tx('SR2E.MxLife97.Cook.gmDropped')}` : rolled.ok ? '' : ` ${tx('SR2E.MxLife97.Cook.gmDoneAlready')}`;
+  await post(`<p><em>${tx('SR2E.MxLife97.gmOnly')}</em> ${name(actor)} · ${escHtml(partName)}: ${escHtml(lines.join(' '))}${escHtml(extra)}</p>`, { whisper: gmIds(), rolls: sink, flags: { [SYSTEM_ID]: { cook97Job: jobKey } } });
+  if (project && rolled.ok) {
+    const hours = rolled.days * 24;
+    await actor.retimeProject?.(pid, Number(project.hours ?? 0) + hours);
+    const m = actor.getFlag?.(SYSTEM_ID, COOK_HOURS_FLAG);
+    await actor.setFlag?.(SYSTEM_ID, COOK_HOURS_FLAG, { ...(m && typeof m === 'object' ? m : {}), [pid]: hours });
+  } else if (project) {
+    await actor.cancelProject?.(pid);
+    await post(`<p>${name(actor)} · ${escHtml(partName)}: ${escHtml(publicLine(rolled))}</p>`, { whisper: ownerIds(actor), speaker: speaker(actor) });
+  }
+  return { ok: true };
+}
+onRelay(RELAY_OP, applyCookAsGm);
 
 // ================================================================ Otaku (VR2 pp. 144–145; otaku errata)
 

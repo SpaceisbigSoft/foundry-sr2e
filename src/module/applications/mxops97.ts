@@ -8,7 +8,8 @@
  * Security: everything runs on the client of the actor that rolled (the decker, who owns themselves) or, for an IC's
  * attack and a host's alert, on the GM's; host changes go through the system test's `fu.hostChange` (applied by the
  * GM, judged by rules/trust.ts). Values a card or a dialog carries are cleaned (`cleanMx97`). Every value put into HTML
- * is escaped.
+ * is escaped. v0.97.1: a player's tar that crashes itself and a player's Slow go to the GM as host changes
+ * (`crashIc97`, `slow97`), which the GM's client re-checks against the documents (applyGmWrites97).
  */
 import { SYSTEM_ID } from '../config/system.ts';
 import { RULES } from '../rules/config.ts';
@@ -175,7 +176,18 @@ export async function analyzeHostBody(actor: any, host: any, items: readonly str
     : i === 'vm' ? `${tx('SR2E.MxOps97.Item.vm')} <em>${tx('SR2E.MxOps97.AnalyzeHost.vmGm')}</em>`
     : `${escHtml(cap(i))} <strong>${escHtml(host.system?.subsystems?.[i] ?? '?')}</strong>`);
   const all = items.length >= M.analyzeHostItems().length;
-  return P(`${name(host)}: ${parts.join(', ')}.${all ? '' : ` <em>${tx('SR2E.MxOps97.AnalyzeHost.more')}</em>`}`);
+  // v0.97.1 (live run finding 8): "N tell all" only when N is below the number of items.
+  const hint = M.analyzeHostAllHint();
+  const more = hint === null ? tx('SR2E.MxOps97.AnalyzeHost.morePerSuccess') : tx('SR2E.MxOps97.AnalyzeHost.more', { n: hint });
+  return P(`${name(host)}: ${parts.join(', ')}.${all ? '' : ` <em>${more}</em>`}`);
+}
+
+/**
+ * v0.97.1 (live run finding 8): the utility's TN modifier of a system test with a stable id (`utility`), so the card's
+ * flags and the dialog's exclusions name it (it had none: `undefined:-4`).
+ */
+export function withUtilityId(mods: readonly TargetNumberModifier[]): TargetNumberModifier[] {
+  return mods.map((m) => ({ ...m, id: m.id ?? 'utility' }));
 }
 
 /**
@@ -331,6 +343,14 @@ const int = (v: unknown, lo: number, hi: number): number => { const n = Math.flo
 /** The book's keys of a host change, cleaned (the rest of the change is cleaned by documents/index.ts). */
 export function cleanHostChange97(c: any): Record<string, unknown> {
   const out: Record<string, unknown> = {};
+  // v0.97.1 (live run finding 4): a player's tar that crashed itself, a player's Slow (applyGmWrites97 re-reads them).
+  if (c?.crashIc97 && typeof c.crashIc97 === 'object' && str400(c.crashIc97.icUuid) && str400(c.crashIc97.deckerUuid)) {
+    out['crashIc97'] = { icUuid: str400(c.crashIc97.icUuid), deckerUuid: str400(c.crashIc97.deckerUuid), programId: str400(c.crashIc97.programId).slice(0, 60) };
+  }
+  if (c?.slow97 && typeof c.slow97 === 'object' && str400(c.slow97.icUuid) && str400(c.slow97.deckerUuid)) {
+    const delta = M.slowRequestDelta(c.slow97.delta);
+    if (delta) out['slow97'] = { icUuid: str400(c.slow97.icUuid), deckerUuid: str400(c.slow97.deckerUuid), combatId: str400(c.slow97.combatId).slice(0, 60), combatantId: str400(c.slow97.combatantId).slice(0, 60), delta };
+  }
   if (c?.decoy97 && typeof c.decoy97 === 'object' && str400(c.decoy97.deckerUuid)) out['decoy97'] = { deckerUuid: str400(c.decoy97.deckerUuid), successes: int(c.decoy97.successes, 0, M.DECOY_MAX) };
   if (c?.passcode97 && typeof c.passcode97 === 'object' && str400(c.passcode97.deckerUuid)) {
     out['passcode97'] = { deckerUuid: str400(c.passcode97.deckerUuid), days: int(c.passcode97.days, 0, M.PASSCODE_MAX_DAYS), level: M.PASSCODE_LEVELS.includes(c.passcode97.level) ? c.passcode97.level : 'user' };
@@ -358,6 +378,82 @@ export function applyHostChange97(host: any, c: any, extra: Record<string, unkno
     extra[`flags.${SYSTEM_ID}.${M.HOST_LOCATED}`] = M.withLocated(hostLocated(host), c.located97.deckerUuid, c.located97.uuids);
     notes.push(tx('SR2E.MxOps97.Locate.note', { n: c.located97.uuids.length }));
   }
+}
+
+// ================================================================ A player's card on the GM's IC (v0.97.1, live run finding 4)
+
+/** The Actor class (documents/index.ts SR2Actor): its host change. */
+const actorCls = (): any => (globalThis as any).CONFIG?.Actor?.documentClass;
+const sync = (u: unknown): any => { try { return typeof u === 'string' && u ? (globalThis as any).fromUuidSync?.(u) ?? null : null; } catch { return null; } };
+const onHost = (decker: any): { deckerJackedIn: boolean; deckerHostUuid: string } => ({ deckerJackedIn: Boolean(decker?.system?.matrix?.jackedIn), deckerHostUuid: String(decker?.system?.matrix?.hostUuid ?? '') });
+const icOf = (ic: any, host: any) => ({ icType: String(ic?.type ?? ''), behavior: String(ic?.system?.behavior ?? ''), icHostUuid: String(ic?.system?.hostUuid ?? ''), hostUuid: String(host?.uuid ?? ''), crashed: Boolean(ic?.system?.derived?.crashed) });
+
+/**
+ * A tar baby or tar pit that crashed a player's utility crashes itself too (VR2 pp. 42–43), but the IC is the GM's:
+ * the player's client asks the GM through the IC's host (a `crashIc97` host change: Apply (GM), or at once on a GM's
+ * client). Returns the card's note, or '' when there is nothing to ask (no host, no utility).
+ */
+export async function tarCrashToGm(icActor: any, decker: any, programId: string, icName: string): Promise<string> {
+  const host: any = sync(icActor?.system?.hostUuid);
+  if (!host || host.type !== 'host' || !decker?.uuid || !programId) return '';
+  const label = tx('SR2E.MxOps97.Gm.tarLabel', { ic: String(icActor?.name ?? icName), name: String(decker.name ?? '') });
+  await actorCls()?.changeHost?.(host, { crashIc97: { icUuid: String(icActor.uuid), deckerUuid: String(decker.uuid), programId: String(programId) } }, label, String(decker.uuid));
+  return ` <em>${tx('SR2E.MxOps97.Gm.tarSent', { ic: escHtml(icName) })}</em>`;
+}
+
+/**
+ * A player's Slow (VR2 p. 99) on the GM's IC: the Initiative comes off on the GM's client (a `slow97` host change:
+ * Apply (GM)). `delta` is what this card takes off now (negative: a re-roll gives some back). Returns the card's note,
+ * or '' when there is nothing to ask (the IC has no host).
+ */
+export async function slowToGm(ic: any, decker: any, combatant: any, delta: number): Promise<string> {
+  const host: any = sync(ic?.system?.hostUuid);
+  const combat: any = combatant?.combat ?? combatant?.parent ?? null;
+  if (!host || host.type !== 'host' || !decker?.uuid || !combat?.id || !combatant?.id) return '';
+  const d = M.slowRequestDelta(delta);
+  if (!d) return '';
+  const label = tx('SR2E.MxOps97.Gm.slowLabel', { ic: String(ic?.name ?? ''), name: String(decker.name ?? ''), delta: d });
+  await actorCls()?.changeHost?.(host, { slow97: { icUuid: String(ic.uuid), deckerUuid: String(decker.uuid), combatId: String(combat.id), combatantId: String(combatant.id), delta: d } }, label, String(decker.uuid));
+  return ` <em>${d > 0 ? tx('SR2E.MxOps97.Gm.slowSent', { delta: d }) : tx('SR2E.MxOps97.Gm.slowBackSent', { delta: -d })}</em>`;
+}
+
+/**
+ * The GM's client applies a host change's `crashIc97` and `slow97` (after the host's own update): every fact read
+ * here from the documents (the IC is that host's and a tar that derezzes, or one Slow works on; the decker is on that
+ * host; the tar's utility really crashed; the combatant is that IC's), the Initiative bounded (M.slowRequestDelta).
+ * Returns notes for the card (plain text).
+ */
+export async function applyGmWrites97(host: any, c: any): Promise<string[]> {
+  const notes: string[] = [];
+  const G0 = G();
+  if (c?.crashIc97) {
+    const ic: any = sync(c.crashIc97.icUuid);
+    const decker: any = sync(c.crashIc97.deckerUuid);
+    const p: any = decker?.items?.get?.(c.crashIc97.programId) ?? null;
+    const why = M.tarCrashRefusal({ ...icOf(ic, host), ...onHost(decker), program: p ? { loaded: Boolean(p.system?.loaded), erased: Boolean(p.system?.erased) } : null });
+    if (why) notes.push(tKey(why, { ic: String(ic?.name ?? ''), name: String(decker?.name ?? '') }));
+    else {
+      await ic.update({ 'system.matrix.monitor': RULES.MATRIX.monitorBoxes });
+      notes.push(tx('SR2E.MxOps97.Gm.tarDone', { ic: String(ic.name ?? '') }));
+    }
+  }
+  if (c?.slow97) {
+    const ic: any = sync(c.slow97.icUuid);
+    const decker: any = sync(c.slow97.deckerUuid);
+    const combat: any = G0?.combats?.get?.(c.slow97.combatId) ?? null;
+    const cb: any = combat?.combatants?.get?.(c.slow97.combatantId) ?? null;
+    const isIc = Boolean(cb && ic && (cb.actor?.uuid === ic.uuid || (cb.actorId === ic.id && !ic.isToken)));
+    const trace = decker?.system?.matrix?.trace;
+    const init = cb && cb.initiative != null && Number.isFinite(Number(cb.initiative)) ? Number(cb.initiative) : null;
+    const why = M.slowRequestRefusal({ ...icOf(ic, host), ...onHost(decker), traceLocked: Boolean(trace?.active && trace.icUuid === ic?.uuid), combatantIsIc: isIc, initiative: init });
+    const delta = M.slowRequestDelta(c.slow97.delta);
+    if (why) notes.push(tKey(why, { name: String(ic?.name ?? '') }));
+    else if (delta && init !== null) {
+      await cb.update({ initiative: init - delta });
+      notes.push(tx('SR2E.MxOps97.Gm.slowDone', { ic: String(ic.name ?? ''), from: init, to: init - delta }));
+    }
+  }
+  return notes;
 }
 
 // ================================================================ Every client's actor updates (registerMxOps97; the lead GM acts)
