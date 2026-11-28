@@ -20,7 +20,8 @@ import { deckerTallyOf, parryPenalty, positionBonus, activeManeuvers, type Maneu
 import { combatStamp } from '../rules/util.ts';
 import * as X from '../rules/mxic97.ts';
 import * as M923 from '../rules/matrix923.ts';
-import { authorIsGm } from './trust.ts';
+import { authorIsGm, authorOwns } from './trust.ts';
+import { allActors } from '../helpers/actors.ts';
 import type { SR2Actor as SR2ActorType } from '../documents/index.ts';
 
 const G = (): any => (globalThis as any).game;
@@ -46,11 +47,14 @@ export const USED_FLAG = 'mxUsed97';
 export const IMPROVISED_FLAG = 'improvised97';
 export const RUN_FLAG = 'runFiles97';
 /**
- * The decker's jack-in stamp. The decker can write it, but changing it only ends their own suppressions early, which
- * jacking out does anyway (no tally either way: VR2 p. 40).
+ * The decker's visit stamp: a new one on jacking in and (v0.97.1) on each host entered, so what the host recorded for
+ * them (suppressed IC, maneuvers) counts only while they stay in that host (VR2 p. 40). The decker can write it, but a
+ * changed stamp only ends their own entries early; a kept one is undone by the GM side dropping a leaver's entries.
  */
 export const RUN_STAMP = 'run97';
 const runOf = (decker: any): string => String(flag(decker, RUN_STAMP) ?? '');
+/** Whether the decker is jacked in to this host now. */
+const isIn = (decker: any, hostUuid: string): boolean => Boolean(decker?.system?.matrix?.jackedIn) && Boolean(hostUuid) && String(decker?.system?.matrix?.hostUuid ?? '') === hostUuid;
 /** The program id of an improvised attack (a one-shot program that is not an item). */
 export const IMPROVISED_ID = 'improvised97';
 
@@ -85,7 +89,7 @@ const inHost = (uuid: string, host: any): boolean => { const a = sync(uuid); ret
 /** Write the host's record; entries of deckers no longer in this host go (suppression lasts while they stay in the system). */
 async function saveRec(host: any, r: X.HostMx): Promise<void> {
   const keep = <T extends { decker: string }>(l: T[]) => l.filter((e) => inHost(e.decker, host)).slice(-X.LIST_CAP * 4);
-  await host.update({ [`flags.${SYSTEM_ID}.${HOST_FLAG}`]: { parry: keep(r.parry), evade: keep(r.evade), suppressed: keep(r.suppressed), exposed: keep(r.exposed), offered: r.offered.slice(-X.LIST_CAP * 4), seen: r.seen } });
+  await host.update({ [`flags.${SYSTEM_ID}.${HOST_FLAG}`]: { parry: keep(r.parry), evade: keep(r.evade), suppressed: keep(r.suppressed), exposed: keep(r.exposed), pos: keep(r.pos), improvised: keep(r.improvised), offered: r.offered.slice(-X.LIST_CAP * 4), seen: r.seen } });
 }
 
 /** Ask the GM side to record something (a host change: at once on a GM's client, else the GM's Apply card). */
@@ -95,6 +99,8 @@ async function request(host: any, decker: any, m: X.Mx97Change, label: string): 
 
 /** The decker's Detection Factor with the IC they suppress in this host taken off (VR2 p. 40), from the host's record. */
 export function liveDf(decker: any, df: number): number {
+  // v0.97.1: only while jacked in to that host, and only this visit's (runOf: a new stamp on each host entered).
+  if (!decker?.system?.matrix?.jackedIn) return df;
   return X.suppressedDf(df, flag(sync(decker?.system?.matrix?.hostUuid), HOST_FLAG), String(decker?.uuid ?? ''), runOf(decker));
 }
 
@@ -114,13 +120,23 @@ async function tallyNowGm(host: any, decker: any, points: number, label: string)
 }
 
 /** GM side: the choice card (VR2 pp. 40–41): its points on the tally, or suppress it. Whispered to the GMs and the decker's owners. */
-async function choiceCardGm(host: any, decker: any, id: string, label: string, points: number, bomb: boolean): Promise<void> {
-  const pts = int(points, 0, 30, 0);
-  const line = bomb ? tx('SR2E.MxIc97.Bomb.choice', { where: escHtml(label), decker: name(decker), points: pts }) : tx('SR2E.MxIc97.Suppress.crashed', { ic: escHtml(label), decker: name(decker), points: pts });
-  await post(`<p>${line}</p><p><button type="button" data-sr2e-action="mxic97Count">${tx('SR2E.MxIc97.Suppress.count', { points: pts })}</button> <button type="button" data-sr2e-action="mxic97Suppress">${tx('SR2E.MxIc97.Suppress.suppress')}</button></p>`, {
+async function choiceCardGm(host: any, decker: any, id: string, label: string, points: number, bomb: boolean, where = ''): Promise<void> {
+  const c = { id: String(id).slice(0, 400), name: String(label ?? '').slice(0, 120), points: int(points, 0, 30, 0), ...(bomb ? { where: String(where ?? '').slice(0, 120) } : {}) };
+  await post(choiceHtml(decker, c, false), {
     speaker: { alias: String(host?.name ?? '') }, whisper: [...new Set([...gmIds(), ...ownerIds(decker)])],
-    flags: { [SYSTEM_ID]: { mxic97Choice: { deckerUuid: String(decker.uuid), hostUuid: String(host.uuid), id: String(id).slice(0, 400), name: String(label ?? '').slice(0, 120), points: pts } } },
+    flags: { [SYSTEM_ID]: { mxic97Choice: { deckerUuid: String(decker.uuid), hostUuid: String(host.uuid), ...c } } },
   });
+}
+
+/** The choice card's HTML (v0.97.1: its buttons disabled once answered; a bomb's line names where it went off). */
+function choiceHtml(decker: any, c: { id?: unknown; name?: unknown; points?: unknown; where?: unknown }, done: boolean): string {
+  const pts = int(c.points, 0, 30, 0);
+  const label = String(c.name ?? '').slice(0, 120);
+  const line = String(c.id ?? '').startsWith('bomb:')
+    ? tx('SR2E.MxIc97.Bomb.choice', { where: escHtml(String(c.where ?? '').slice(0, 120) || label), decker: name(decker), points: pts })
+    : tx('SR2E.MxIc97.Suppress.crashed', { ic: escHtml(label), decker: name(decker), points: pts });
+  const off = done ? ' disabled' : '';
+  return `<p>${line}</p><p><button type="button" data-sr2e-action="mxic97Count"${off}>${tx('SR2E.MxIc97.Suppress.count', { points: pts })}</button> <button type="button" data-sr2e-action="mxic97Suppress"${off}>${tx('SR2E.MxIc97.Suppress.suppress')}</button></p>`;
 }
 
 /**
@@ -168,6 +184,63 @@ export function preMx97(host: any, raw: unknown, bombOff?: { fileId?: string; su
   return { rating: int(b?.rating, 0, 30, 0), where: sub };
 }
 
+/** v0.97.1: the choice card answered: its flag, and its buttons drawn disabled (the GM side posted it, so it may edit it). */
+async function choiceDone(card: any, decker: any, choice: any): Promise<void> {
+  if (typeof card?.update === 'function') await card.update({ content: choiceHtml(decker, choice, true), [`flags.${SYSTEM_ID}.mxic97Done`]: true });
+  else await card.setFlag(SYSTEM_ID, 'mxic97Done', true);
+}
+
+/** The dice faces a card's rolls show, in the order they were rolled. */
+const cardFaces = (card: any): number[] => (Array.isArray(card?.rolls) ? card.rolls : [])
+  .flatMap((r: any) => (r?.dice ?? []).flatMap((term: any) => (term?.results ?? []).map((x: any) => int(x?.result, 1, 6, 1)))).slice(0, 400);
+
+/**
+ * GM side (v0.97.1, VR2 p. 123): an improvised attack from its test's card. Only the decker's owner's (or a GM's) card
+ * of this decker, once; the points must be there to give and the Power at most the MPCP; the Damage Level is the GM
+ * side's own count of the card's dice (the Computer Test vs the Power). The GM side takes the points off the persona and
+ * records what it took (only that is ever given back), so nothing the decker writes on their own actor makes an attack.
+ */
+async function improviseGm(host: any, decker: any, rec0: X.HostMx, card: any, run: string): Promise<string[]> {
+  if (!X.on('improvised') || !card || !isIn(decker, String(host.uuid))) return [];
+  if (!(authorIsGm(card) || authorOwns(card, decker))) return [];
+  const f: any = card.flags?.[SYSTEM_ID]?.mxic97Improvise;
+  const id = String(card.id ?? '').slice(0, 60);
+  if (!f || f.deckerUuid !== decker.uuid || !id || rec0.seen.some((x) => x.k === `improvise|${id}`)) return [];
+  // An earlier one not used yet gives its points back first.
+  const old = rec0.improvised.find((x) => x.decker === decker.uuid);
+  if (old) await unimproviseGm(host, decker, rec0, old.id);
+  const rec = hostRec(host);
+  const mm = decker.system?.derived?.matrix ?? {};
+  const e = int(f.evasion, 0, 30, 0), b = int(f.bod, 0, 30, 0);
+  const plan = X.improvisedPlan({ evasion: Number(mm.evasion ?? 0), bod: Number(mm.bod ?? 0), fromEvasion: e, fromBod: b, mpcp: Number(mm.mpcp ?? 0) });
+  if (plan.why) return [];
+  const computer = Number(decker.findSkill?.(RULES.MATRIX.skill)?.system?.rating ?? 0);
+  const faces = cardFaces(card);
+  let at = 0;
+  let successes = 0;
+  try {
+    const r = await successTest({ dice: Math.max(0, computer), targetNumber: plan.tn, roll: async (count: number) => { const out = faces.slice(at, at + count); at += count; if (out.length < count) throw new Error('short'); return out; } });
+    successes = r.successes;
+  } catch { return []; }
+  const level = X.improvisedLevel(successes) ?? '';
+  const c = { bod: 0, evasion: 0, masking: 0, sensors: 0, ...(decker.system?.matrix?.crippled ?? {}) };
+  await decker.update({ 'system.matrix.crippled': { ...c, evasion: Number(c.evasion ?? 0) + e, bod: Number(c.bod ?? 0) + b } });
+  await saveRec(host, {
+    ...rec, improvised: [...rec.improvised.filter((x) => x.decker !== decker.uuid), { decker: String(decker.uuid), id, power: plan.power, level, evasion: e, bod: b, run }],
+    seen: [...rec.seen, { k: `improvise|${id}`, seq: 0 }].slice(-X.LIST_CAP * 4),
+  });
+  return [level ? tx('SR2E.MxIc97.Gm.improvised', { decker: String(decker.name ?? ''), power: plan.power, level }) : tx('SR2E.MxIc97.Gm.improviseFailed', { decker: String(decker.name ?? '') })];
+}
+
+/** GM side (v0.97.1): an improvised attack used or given up: the points it took come back (only those, VR2 p. 123). */
+async function unimproviseGm(host: any, decker: any, rec: X.HostMx, id: string): Promise<string[]> {
+  const e = rec.improvised.find((x) => x.decker === decker.uuid && x.id === id);
+  if (!e) return [];
+  await decker.update({ 'system.matrix.crippled': X.giveBackRecorded(decker.system?.matrix?.crippled ?? {}, e) });
+  await saveRec(host, { ...hostRec(host), improvised: hostRec(host).improvised.filter((x) => !(x.decker === e.decker && x.id === e.id)) });
+  return [tx('SR2E.MxIc97.Gm.unimprovised', { decker: String(decker.name ?? '') })];
+}
+
 /**
  * GM side (documents/index.ts applyHostChange, after a GM's click or on the GM's own client): record what a decker's
  * request names, every value read from GM-owned documents (the host, the IC, the GM-posted choice card), never from the
@@ -180,7 +253,7 @@ export async function applyMx97(host: any, raw: unknown, pre: { rating: number; 
   let rec = hostRec(host);
   const me = String(decker.uuid);
   // Maneuver requests in order (a re-roll's arriving first must win over the first roll's): older ones are ignored.
-  const kind = m.op === 'parry' || m.op === 'unparry' ? 'parry' : m.op === 'evade' || m.op === 'unevade' ? 'evade' : m.op === 'exposed' || m.op === 'unexposed' ? 'exposed' : '';
+  const kind = m.op === 'parry' || m.op === 'unparry' ? 'parry' : m.op === 'evade' || m.op === 'unevade' ? 'evade' : m.op === 'exposed' || m.op === 'unexposed' ? 'exposed' : m.op === 'pos' || m.op === 'unpos' ? 'pos' : '';
   if (kind) {
     const next = X.takeSeq(rec, kind, me, String(m.vs ?? ''), m.seq);
     if (!next) return [];
@@ -190,11 +263,13 @@ export async function applyMx97(host: any, raw: unknown, pre: { rating: number; 
   const card: any = m.cardId ? G()?.messages?.get?.(m.cardId) : null;
   const choice: any = card && authorIsGm(card) ? card.flags?.[SYSTEM_ID]?.mxic97Choice : null;
   const choiceOk = choice && choice.deckerUuid === me && choice.hostUuid === host.uuid && !card.getFlag?.(SYSTEM_ID, 'mxic97Done');
+  // v0.97.1: the decker's visit stamp now (each entry counts only in the visit it was recorded in, VR2 p. 40).
+  const run = runOf(decker);
   switch (m.op) {
     case 'parry': {
       if (!m.vs || !m.id) return [];
       const net = X.maneuverCap(m.net ?? 0, dice);
-      await saveRec(host, { ...rec, parry: [...rec.parry.filter((e) => !(e.decker === me && e.vs === m.vs)), ...(net > 0 ? [{ decker: me, vs: m.vs, net, id: m.id }] : [])] });
+      await saveRec(host, { ...rec, parry: [...rec.parry.filter((e) => !(e.decker === me && e.vs === m.vs)), ...(net > 0 ? [{ decker: me, vs: m.vs, net, id: m.id, run }] : [])] });
       return [tx('SR2E.MxIc97.Gm.parried', { decker: String(decker.name ?? ''), net })];
     }
     case 'unparry':
@@ -207,7 +282,7 @@ export async function applyMx97(host: any, raw: unknown, pre: { rating: number; 
       const end = X.evadeEnd({ round: t.round, worldTime: t.worldTime, net, gain: 0, secondsPerTurn: RULES.MATRIX_V57.maneuvers.secondsPerTurn });
       await saveRec(host, {
         ...rec, parry: rec.parry.filter((e) => !(e.decker === me && e.vs === m.vs)),
-        evade: [...rec.evade.filter((e) => !(e.decker === me && e.vs === m.vs)), { decker: me, vs: m.vs, net, tallyAt: tallyNow(decker, host.uuid), round: end.round, worldTime: end.worldTime, combatId: String(t.combatId ?? '') }],
+        evade: [...rec.evade.filter((e) => !(e.decker === me && e.vs === m.vs)), { decker: me, vs: m.vs, net, tallyAt: tallyNow(decker, host.uuid), round: end.round, worldTime: end.worldTime, combatId: String(t.combatId ?? ''), run }],
       });
       return [tx('SR2E.MxIc97.Gm.evaded', { decker: String(decker.name ?? ''), net })];
     }
@@ -220,22 +295,34 @@ export async function applyMx97(host: any, raw: unknown, pre: { rating: number; 
       if (!m.vs || !m.id || !opp) return [];
       const oppDice = opp.type === 'ic' ? Number(host.system?.securityValue ?? opp.system?.rating ?? 0) : Number(opp.system?.derived?.matrix?.sensors ?? 0) + Number(opp.system?.derived?.hackingPool ?? 0);
       const net = X.maneuverCap(m.net ?? 0, oppDice);
-      await saveRec(host, { ...rec, exposed: [...rec.exposed.filter((e) => !(e.decker === me && e.vs === m.vs)), ...(net > 0 ? [{ decker: me, vs: m.vs, net, id: m.id }] : [])] });
+      await saveRec(host, { ...rec, exposed: [...rec.exposed.filter((e) => !(e.decker === me && e.vs === m.vs)), ...(net > 0 ? [{ decker: me, vs: m.vs, net, id: m.id, run }] : [])] });
       return [tx('SR2E.MxIc97.Gm.exposed', { decker: String(decker.name ?? ''), vs: String(opp.name ?? ''), net })];
     }
     case 'unexposed':
       await saveRec(host, { ...rec, exposed: rec.exposed.filter((e) => !(e.decker === me && e.id === m.id)) });
       return [];
+    case 'pos': {
+      // v0.97.1 (VR2 p. 122): a position the decker won, at most what the maneuver could give (their dice, and 30).
+      if (!m.vs || !m.id || !isIn(decker, String(host.uuid))) return [];
+      const net = X.maneuverCap(m.net ?? 0, dice);
+      await saveRec(host, { ...rec, pos: [...rec.pos.filter((e) => !(e.decker === me && e.vs === m.vs)), ...(net > 0 ? [{ decker: me, vs: m.vs, net, id: m.id, run }] : [])] });
+      return [tx('SR2E.MxIc97.Gm.posed', { decker: String(decker.name ?? ''), vs: String(sync(m.vs)?.name ?? ''), net })];
+    }
+    case 'unpos':
+      await saveRec(host, { ...rec, pos: rec.pos.filter((e) => !(e.decker === me && e.id === m.id)) });
+      return [];
+    case 'improvise': return improviseGm(host, decker, rec, card, run);
+    case 'unimprovise': return unimproviseGm(host, decker, rec, m.id ?? '');
     case 'bomb': {
       if (pre.rating <= 0) return [];
       // MXIC_V97.suppress 'v965': nothing to suppress with: the bomb's rating goes on the tally (MXIC_V97.dataBomb).
       if (!X.on('suppress')) { await tallyNowGm(host, decker, pre.rating, ''); return []; }
-      await choiceCardGm(host, decker, `bomb:${host.uuid}|${m.id}`, tx('SR2E.MxIc97.Bomb.name', { where: pre.where }), pre.rating, true);
+      await choiceCardGm(host, decker, `bomb:${host.uuid}|${m.id}`, tx('SR2E.MxIc97.Bomb.name', { where: pre.where }), pre.rating, true, pre.where);
       return [];
     }
     case 'count': {
       if (!choiceOk) return [];
-      await card.setFlag(SYSTEM_ID, 'mxic97Done', true);
+      await choiceDone(card, decker, choice);
       await tallyNowGm(host, decker, int(choice.points, 0, 30, 0), '');
       return [];
     }
@@ -245,7 +332,9 @@ export async function applyMx97(host: any, raw: unknown, pre: { rating: number; 
       const ic = id.startsWith('bomb:') ? null : sync(id);
       if (ic && !(ic.type === 'ic' && ic.system?.derived?.crashed)) return [];
       if (rec.suppressed.some((s) => s.decker === me && s.id === id)) return [];
-      await card.setFlag(SYSTEM_ID, 'mxic97Done', true);
+      // v0.97.1: only while the decker is in this host (VR2 p. 40).
+      if (!isIn(decker, String(host.uuid))) return [];
+      await choiceDone(card, decker, choice);
       await saveRec(host, { ...rec, suppressed: [...rec.suppressed, { decker: me, id, name: String(ic?.name ?? choice.name ?? ''), points: int(choice.points, 0, 30, 0), run: runOf(decker) }] });
       const df = Number(decker.liveDetectionFactor?.() ?? 0);
       await post(`<p>${tx('SR2E.MxIc97.Suppress.done', { decker: name(decker), name: escHtml(String(ic?.name ?? choice.name ?? '')), df })}</p><p><button type="button" data-sr2e-action="mxic97Release">${tx('SR2E.MxIc97.Suppress.release')}</button></p>`, {
@@ -254,8 +343,10 @@ export async function applyMx97(host: any, raw: unknown, pre: { rating: number; 
       return [];
     }
     case 'release': {
+      // v0.97.1: an entry of an earlier visit ended when the decker left (no tally: VR2 p. 40); a leftover one is dropped.
       const e = rec.suppressed.find((s) => s.decker === me && s.id === m.id);
       if (!e) return [];
+      if (e.run !== runOf(decker) || !isIn(decker, String(host.uuid))) { await saveRec(host, { ...rec, suppressed: rec.suppressed.filter((s) => s !== e) }); return []; }
       await saveRec(host, { ...rec, suppressed: rec.suppressed.filter((s) => s !== e) });
       await post(`<p>${tx('SR2E.MxIc97.Suppress.released', { decker: name(decker), name: escHtml(e.name), points: e.points })}</p>`, { speaker: speaker(decker) });
       await tallyNowGm(host, decker, e.points, e.name || '-');
@@ -288,9 +379,8 @@ export async function onCard(message: any, button: HTMLButtonElement, action: st
     const decker: any = uuidOk(c?.deckerUuid) ? await (globalThis as any).fromUuid(c.deckerUuid) : null;
     if (!decker) return;
     if (!isGm() && !decker.isOwner) { warn(tx('SR2E.MxIc97.ownerOnly', { name: name(decker) })); return; }
-    if (!X.improvisedOf(flag(decker, IMPROVISED_FLAG))) { warn(tx('SR2E.MxIc97.alreadyDone')); return; }
     button.disabled = true;
-    await spendImprovised(decker);
+    if (!(await spendImprovised(decker))) { warn(tx('SR2E.MxIc97.alreadyDone')); return; }
     await post(`<p>${tx('SR2E.MxIc97.Improvise.restored', { decker: name(decker) })}</p>`, { speaker: speaker(decker) });
   }
 }
@@ -315,12 +405,56 @@ export async function blackIcFinalShot(decker: any, ic: { icName?: string; ratin
 
 /** Jacking in (documents/index.ts jackIn, not already in): the deck's file count, so the wipe knows what came this run. */
 export function runStartUpdate(decker: any): Record<string, unknown> {
-  // A fresh run stamp: suppression counts for this run only (VR2 p. 40: while the decker stays in the system).
-  const stamp = X.on('suppress') ? { [`flags.${SYSTEM_ID}.${RUN_STAMP}`]: newId() } : {};
+  // A fresh visit stamp: suppression counts for this visit only (VR2 p. 40: while the decker stays in that host).
+  const stamp = visitUpdate();
   if (!X.on('blackIcKill')) return stamp;
   const deck: any = decker?.activeDeck?.();
   if (!deck) return stamp;
   return { ...stamp, [`flags.${SYSTEM_ID}.${RUN_FLAG}`]: { deckId: String(deck.id ?? ''), count: Array.isArray(deck.system?.files) ? deck.system.files.length : 0 } };
+}
+
+/**
+ * v0.97.1 (documents/index.ts jackIn, moving to another host while jacked in): a new visit stamp, so the host's entries
+ * for the decker (suppressed IC, parries, evades, positions, an improvised attack) end with the visit (VR2 p. 40).
+ * Nothing when every one of those switches is at 'v965'.
+ */
+export function visitUpdate(): Record<string, unknown> {
+  const any = X.on('suppress') || X.on('parry') || X.on('position') || X.on('evade') || X.on('improvised');
+  return any ? { [`flags.${SYSTEM_ID}.${RUN_STAMP}`]: newId() } : {};
+}
+
+/**
+ * v0.97.1, from applications/mxops97.ts onActorUpdate97 (every client's updateActor hook):
+ * - on every client, a host's record changed: the deckers in that host are prepared again and their open sheets drawn
+ *   again (their Detection Factor follows a suppression at once; a local refresh, no writes);
+ * - on the lead GM's, a decker moved or jacked out: the hosts they left drop their entries (VR2 p. 40: suppression lasts
+ *   "while they stay in that host"; no tally for it), the maneuvers on and by them, and an improvised attack not used
+ *   (its points come back).
+ */
+export async function onActorUpdateMx97(actor: any, change: any, leadGm: boolean): Promise<void> {
+  if (!actor || !change) return;
+  if (actor.type === 'host' && change.flags?.[SYSTEM_ID]?.[HOST_FLAG] !== undefined) refreshDeckers(String(actor.uuid ?? ''));
+  const mm = change.system?.matrix;
+  if (!leadGm || actor.type === 'host' || !mm || typeof mm !== 'object' || !('hostUuid' in mm || 'jackedIn' in mm)) return;
+  const here = actor.system?.matrix?.jackedIn ? String(actor.system?.matrix?.hostUuid ?? '') : '';
+  const uuid = String(actor.uuid ?? '');
+  for (const h of allActors().filter((a: any) => a?.type === 'host' && a.uuid !== here)) {
+    const next = X.withoutDecker(flag(h, HOST_FLAG), uuid);
+    if (!next) continue;
+    try {
+      // An improvised attack not used is lost with the visit: the points it took come back (only those, VR2 p. 123).
+      for (const e of hostRec(h).improvised.filter((x) => x.decker === uuid)) await actor.update({ 'system.matrix.crippled': X.giveBackRecorded(actor.system?.matrix?.crippled ?? {}, e) });
+      await saveRec(h, next);
+    } catch (err) { console.warn('sr2e | leaving a host (IC record)', err); }
+  }
+}
+
+/** The deckers jacked in to this host, prepared again (the derived Detection Factor), their open sheets redrawn. */
+function refreshDeckers(hostUuid: string): void {
+  if (!hostUuid) return;
+  for (const a of allActors().filter((x: any) => x?.type !== 'host' && x?.type !== 'ic' && isIn(x, hostUuid))) {
+    try { a.prepareData?.(); if (a.sheet?.rendered) a.sheet.render(false); } catch (err) { console.warn('sr2e | redraw a decker', err); }
+  }
 }
 
 /**
@@ -353,48 +487,61 @@ function whyText(why: string, mpcp: number): string {
 /** The improvised attack waiting on this decker, as a program for matrixAttack (null when none ready here). */
 export function improvisedProgram(decker: any): any | null {
   if (!X.on('improvised')) return null;
-  const imp = X.improvisedOf(flag(decker, IMPROVISED_FLAG));
-  if (!imp || !imp.level || imp.power <= 0 || imp.hostUuid !== String(decker?.system?.matrix?.hostUuid ?? '')) return null;
+  // v0.97.1: only the host's record (the GM side's, from the test's card), never the decker's own flags.
+  const host = hostOf(decker);
+  if (!isIn(decker, host)) return null;
+  const imp = X.hostImprovised(flag(sync(host), HOST_FLAG), String(decker.uuid), used(decker), runOf(decker));
+  if (!imp || !imp.level || imp.power <= 0) return null;
   return { id: IMPROVISED_ID, name: tx('SR2E.MxIc97.Improvise.name'), system: { kind: 'attack', rating: imp.power, damageLevel: imp.level, loaded: true, erased: false } };
 }
 
-/** The improvised attack is used (or its test failed and the decker acts again): Evasion and Bod get their points back. */
-export async function spendImprovised(decker: any): Promise<void> {
-  const imp = X.improvisedOf(flag(decker, IMPROVISED_FLAG));
-  if (!imp) return;
-  await decker.update({ 'system.matrix.crippled': X.giveBack(decker.system?.matrix?.crippled ?? {}, imp), ...clearFlagUpdate(decker, IMPROVISED_FLAG) });
+/**
+ * The improvised attack is used (or its test failed and the decker acts again): the GM side gives Evasion and Bod back
+ * what it took (v0.97.1: the host's record, a request like any other; marked used here meanwhile). False when none.
+ */
+export async function spendImprovised(decker: any): Promise<boolean> {
+  const hostDoc: any = sync(hostOf(decker));
+  const imp = hostDoc?.type === 'host' ? X.hostImprovised(flag(hostDoc, HOST_FLAG), String(decker?.uuid ?? ''), used(decker)) : null;
+  // A v0.97.0 flag is only cleared (it gives nothing back: its numbers are the decker's own).
+  const up: Record<string, unknown> = flag(decker, IMPROVISED_FLAG) != null ? clearFlagUpdate(decker, IMPROVISED_FLAG) : {};
+  if (imp) up[`flags.${SYSTEM_ID}.${USED_FLAG}`] = X.usedAfter(flag(decker, USED_FLAG), [imp.id]);
+  if (Object.keys(up).length) await decker.update(up);
+  if (!imp) return false;
+  await request(hostDoc, decker, { op: 'unimprovise', deckerUuid: String(decker.uuid), id: imp.id }, tx('SR2E.MxIc97.Gm.unimprovise', { decker: String(decker.name ?? '') }));
+  return true;
 }
 
 /**
  * Write an improvised attack (VR2 p. 123): points from Evasion and Bod (Power at most the MPCP), then a Computer Test
- * against the Power: its successes give the Damage Level. The points stay off until the attack (or, after a failure,
- * the decker's next action: the card's Restore button). The caller spends the Simple Action.
+ * against the Power: its successes give the Damage Level. v0.97.1: the test's card goes to the GM side (a host change),
+ * which takes the points off and records the attack; they stay off until the attack (or, after a failure, the decker's
+ * next action: the card's Restore button). The caller spends the Simple Action.
  */
 export async function improvise(decker: any, o: { fromEvasion: number; fromBod: number }): Promise<boolean> {
   const m = decker?.system?.derived?.matrix;
-  if (!m || !decker.isJackedIn?.()) { warn(tx('SR2E.MxIc97.Why.improviseOff')); return false; }
-  // An earlier one not used yet gives its points back first.
-  if (flag(decker, IMPROVISED_FLAG) != null) await spendImprovised(decker);
-  const mm = decker.system?.derived?.matrix ?? m;
-  const plan = X.improvisedPlan({ evasion: Number(mm.evasion ?? 0), bod: Number(mm.bod ?? 0), fromEvasion: o.fromEvasion, fromBod: o.fromBod, mpcp: Number(mm.mpcp ?? 0) });
-  if (plan.why) { warn(whyText(plan.why, Number(mm.mpcp ?? 0))); return false; }
+  const hostDoc: any = sync(hostOf(decker));
+  if (!m || !decker.isJackedIn?.() || hostDoc?.type !== 'host') { warn(tx('SR2E.MxIc97.Why.improviseOff')); return false; }
+  // An earlier one not used yet: the GM side gives its points back first, so they count as there to give.
+  const old = X.hostImprovised(flag(hostDoc, HOST_FLAG), String(decker.uuid), used(decker));
+  const plan = X.improvisedPlan({ evasion: Number(m.evasion ?? 0) + (old?.evasion ?? 0), bod: Number(m.bod ?? 0) + (old?.bod ?? 0), fromEvasion: o.fromEvasion, fromBod: o.fromBod, mpcp: Number(m.mpcp ?? 0) });
+  if (plan.why) { warn(whyText(plan.why, Number(m.mpcp ?? 0))); return false; }
   const computer = Number(decker.findSkill?.(RULES.MATRIX.skill)?.system?.rating ?? 0);
   const t = await rollTest(computer, plan.tn);
   const level = X.improvisedLevel(t.r.successes);
   const e = Math.floor(Number(o.fromEvasion) || 0), b = Math.floor(Number(o.fromBod) || 0);
-  const c = { bod: 0, evasion: 0, masking: 0, sensors: 0, ...(decker.system?.matrix?.crippled ?? {}) };
-  const stored: X.Improvised = { power: plan.power, level: level ?? '', evasion: e, bod: b, hostUuid: String(decker.system?.matrix?.hostUuid ?? '') };
-  await decker.update({ 'system.matrix.crippled': { ...c, evasion: Number(c.evasion ?? 0) + e, bod: Number(c.bod ?? 0) + b }, [`flags.${SYSTEM_ID}.${IMPROVISED_FLAG}`]: stored });
   const body = level
     ? `<p><strong>${tx('SR2E.MxIc97.Improvise.ready', { power: plan.power, level })}</strong> ${tx('SR2E.MxIc97.Improvise.readyNote', { evasion: e, bod: b })}</p>`
     : `<p><strong>${tx('SR2E.MxIc97.Improvise.failed')}</strong> ${tx('SR2E.MxIc97.Improvise.failedNote', { evasion: e, bod: b })}</p><p><button type="button" data-sr2e-action="mxic97Restore">${tx('SR2E.MxIc97.Improvise.restore')}</button></p>`;
-  await post(rollHtml(tx('SR2E.MxIc97.Improvise.test', { decker: name(decker), computer, tn: plan.tn }), t.r) + body, { speaker: speaker(decker), rolls: t.rolls, flags: level ? {} : { [SYSTEM_ID]: { mxic97Restore: { deckerUuid: String(decker.uuid) } } } });
+  const card = await post(rollHtml(tx('SR2E.MxIc97.Improvise.test', { decker: name(decker), computer, tn: plan.tn }), t.r) + body, {
+    speaker: speaker(decker), rolls: t.rolls,
+    flags: { [SYSTEM_ID]: { mxic97Improvise: { deckerUuid: String(decker.uuid), evasion: e, bod: b }, ...(level ? {} : { mxic97Restore: { deckerUuid: String(decker.uuid) } }) } },
+  });
+  await request(hostDoc, decker, { op: 'improvise', deckerUuid: String(decker.uuid), cardId: String(card?.id ?? ''), net: plan.power }, tx('SR2E.MxIc97.Gm.improvise', { decker: String(decker.name ?? ''), power: plan.power }));
   return Boolean(level);
 }
 
 // ================================================================ Combat maneuvers (VR2 pp. 121–122)
 
-const mx = (a: any): X.MxState => X.mxState(flag(a, MX_FLAG));
 const used = (a: any): string[] => { const u = flag(a, USED_FLAG); return Array.isArray(u) ? u.filter((x) => typeof x === 'string') : []; };
 const hostOf = (a: any): string => String(a?.type === 'ic' ? a?.system?.hostUuid ?? '' : a?.system?.matrix?.hostUuid ?? '');
 const tallyNow = (decker: any, hostUuid: string): number => {
@@ -422,7 +569,8 @@ export async function resolveManeuver(decker: any, snap: any): Promise<{ html: s
   const id = String(mv.entry97 ?? '') || newId();
   const out = X.maneuverAfter(flag(decker, MX_FLAG), { kind: mv.kind, vs: String(mv.targetUuid), hostUuid: host, mine: snap.successes, theirs: mv.opp, id, replaces: mv.entry97 ?? null, tally: tallyNow(decker, host) });
   // Parries and evades are the GM side's to record (on the host, below): the decker's own flag keeps positions only.
-  const up: Record<string, unknown> = { [`flags.${SYSTEM_ID}.${MX_FLAG}`]: { ...out.state, parry: [], evade: [], exposed: [] } };
+  // v0.97.1: positions too (the host's `pos`): the decker's own flag keeps nothing that counts.
+  const up: Record<string, unknown> = { [`flags.${SYSTEM_ID}.${MX_FLAG}`]: { ...out.state, parry: [], evade: [], exposed: [], pos: [] } };
   const t = now();
   const sameEntry = (e: Maneuver) => e.kind === 'evade' && e.targetUuid === mv.targetUuid;
   let list: Maneuver[] = activeManeuvers(decker.system?.matrix?.maneuvers ?? [], t).filter((e) => !sameEntry(e));
@@ -446,6 +594,11 @@ export async function resolveManeuver(decker: any, snap: any): Promise<{ html: s
   if (hostDoc?.type === 'host' && mv.kind === 'position' && (lost || mv.lost97)) {
     await request(hostDoc, decker, { op: lost ? 'exposed' : 'unexposed', deckerUuid: String(decker.uuid), vs: String(mv.targetUuid), id, seq: nextSeq(), ...(lost ? { net: out.net } : {}) },
       tx('SR2E.MxIc97.Gm.exposedReq', { decker: String(decker.name ?? ''), vs: String(mv.targetName ?? ''), net: lost ? out.net : 0 }));
+  }
+  // v0.97.1: a position won is the GM side's to record too (VR2 p. 122), capped there at the decker's dice.
+  if (hostDoc?.type === 'host' && mv.kind === 'position' && (won || mv.won97)) {
+    await request(hostDoc, decker, { op: won ? 'pos' : 'unpos', deckerUuid: String(decker.uuid), vs: String(mv.targetUuid), id, seq: nextSeq(), ...(won ? { net: out.net } : {}) },
+      tx('SR2E.MxIc97.Gm.posReq', { decker: String(decker.name ?? ''), vs: String(mv.targetName ?? ''), net: won ? out.net : 0 }));
   }
   if (hostDoc?.type === 'host' && (mv.kind === 'parry' || mv.kind === 'evade') && (won || mv.won97)) {
     const op: X.Mx97Change['op'] = mv.kind === 'parry' ? (won ? 'parry' : 'unparry') : (won ? 'evade' : 'unevade');
@@ -474,8 +627,10 @@ export function attackMods(attacker: any, target: any, as: string = 'tn'): { mod
   const host = hostOf(attacker);
   const me = String(attacker.uuid);
   if (X.on('position')) {
-    const own = X.bestEntry(mx(attacker).pos, String(target.uuid), host);
-    const exp = target.type === 'ic' ? null : X.hostExposed(flag(sync(host), HOST_FLAG), String(target.uuid), me, used(attacker));
+    // v0.97.1: the attacker's won position from the host's record only (the GM side's), this visit's, not used up.
+    const hostRaw = flag(sync(host), HOST_FLAG);
+    const own = attacker.type === 'ic' || !isIn(attacker, host) ? null : X.hostPos(hostRaw, me, String(target.uuid), used(attacker), runOf(attacker));
+    const exp = target.type === 'ic' ? null : X.hostExposed(hostRaw, String(target.uuid), me, used(attacker), runOf(target));
     const net = (own?.net ?? 0) + (exp?.net ?? 0);
     if (net > 0) {
       const u = X.positionUse(net, as);
@@ -502,7 +657,7 @@ export function parryMod(target: any, attackerUuid: string, t: { round: number |
   if (!X.on('parry')) return { mod: parryPenalty(target.system?.matrix?.maneuvers ?? [], attackerUuid, String(target.name ?? ''), t), id: null };
   // The host's record (the GM side's), never the parrying decker's own flags.
   const attacker = sync(attackerUuid);
-  const e = X.hostParry(flag(sync(hostOf(target)), HOST_FLAG), String(target.uuid), attackerUuid, used(attacker));
+  const e = X.hostParry(flag(sync(hostOf(target)), HOST_FLAG), String(target.uuid), attackerUuid, used(attacker), runOf(target));
   return e ? { mod: { id: 'parry97', label: tx('SR2E.MxIc97.Maneuver.parryMod', { name: String(target.name ?? '') }), value: e.net }, id: e.id } : { mod: null, id: null };
 }
 
@@ -519,7 +674,7 @@ export function icMods(ic: any, target: any): { mods: TargetNumberModifier[]; us
   if (p.id) out.parryId = p.id;
   if (X.on('position')) {
     // The host's record (the GM side's), never the decker's own flags: the IC's attack takes it off (afterAttack).
-    const exp = X.hostExposed(flag(sync(hostOf(target)), HOST_FLAG), String(target.uuid), String(ic.uuid));
+    const exp = X.hostExposed(flag(sync(hostOf(target)), HOST_FLAG), String(target.uuid), String(ic.uuid), [], runOf(target));
     if (exp) { out.mods.push({ id: 'positionManeuver', label: tx('SR2E.MxIc97.Maneuver.exposedMod', { name: String(target.name ?? '') }), value: -exp.net }); out.exposedId = exp.id; }
   }
   return out;
@@ -533,10 +688,13 @@ export async function afterAttack(attacker: any, m: { ownPos: string[]; used: st
     if (host?.type === 'host') { try { await saveRec(host, { ...rec, parry: rec.parry.filter((e) => e.id !== m.parryId), exposed: rec.exposed.filter((e) => e.id !== m.exposedId) }); } catch (err) { console.warn('sr2e | parry used up (the GM\'s client runs IC)', err); } }
   }
   if (!attacker || (!m.ownPos.length && !m.used.length)) return;
-  const up: Record<string, unknown> = {};
-  if (m.ownPos.length) { const s = mx(attacker); up[`flags.${SYSTEM_ID}.${MX_FLAG}`] = { ...s, pos: s.pos.filter((e) => !m.ownPos.includes(e.id)) }; }
-  if (m.used.length) up[`flags.${SYSTEM_ID}.${USED_FLAG}`] = X.usedAfter(flag(attacker, USED_FLAG), m.used);
+  // v0.97.1: the attacker's own won positions are noted used here too, until the GM side takes them off the host.
+  const up: Record<string, unknown> = { [`flags.${SYSTEM_ID}.${USED_FLAG}`]: X.usedAfter(flag(attacker, USED_FLAG), [...m.used, ...m.ownPos]) };
   try { await attacker.update(up); } catch (err) { console.warn('sr2e | maneuvers used up (not the attacker\'s owner)', err); }
+  const host: any = m.ownPos.length ? sync(hostOf(attacker)) : null;
+  if (host?.type !== 'host') return;
+  // The won positions this attack used come off the host's record (VR2 p. 122: the next attack), as a request.
+  for (const id of m.ownPos) await request(host, attacker, { op: 'unpos', deckerUuid: String(attacker.uuid), id }, tx('SR2E.MxIc97.Gm.unpos', { decker: String(attacker.name ?? '') }));
 }
 
 /**
@@ -547,7 +705,7 @@ export function evaded(decker: any, icUuid: string): boolean | null {
   if (!X.on('evade') || !RULES.MATRIX_V57.maneuvers.evadeBlocks) return null;
   // Only the host's record (the GM side's): its end and the tally then; the decker's own list never decides.
   const host = hostOf(decker);
-  const r = hostRec(sync(host)).evade.find((e) => e.decker === String(decker?.uuid ?? '') && e.vs === icUuid);
+  const r = X.hostEvade(flag(sync(host), HOST_FLAG), String(decker?.uuid ?? ''), icUuid, runOf(decker));
   if (!r) return false;
   return X.evadeHolds({ round: r.round, worldTime: r.worldTime, net: r.net, combatId: r.combatId }, now(), Math.max(0, tallyNow(decker, host) - r.tallyAt));
 }

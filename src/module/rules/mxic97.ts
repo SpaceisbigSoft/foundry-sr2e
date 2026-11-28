@@ -314,11 +314,19 @@ export function defuseOp97<T extends { id: string; utility?: string }>(o: T): T 
  * applyMx97, from a host change); a player's own actor flags never count for these.
  */
 export interface HostMx {
-  parry: Array<{ decker: string; vs: string; net: number; id: string }>;
-  evade: Array<{ decker: string; vs: string; net: number; tallyAt: number; round: number; worldTime: number; combatId: string }>;
+  parry: Array<{ decker: string; vs: string; net: number; id: string; run: string }>;
+  evade: Array<{ decker: string; vs: string; net: number; tallyAt: number; round: number; worldTime: number; combatId: string; run: string }>;
+  /** `run` (every entry): the decker's visit stamp when it was recorded (v0.97.1: a new one on each host entered). */
   suppressed: Array<{ decker: string; id: string; name: string; points: number; run: string }>;
   /** Positions won against a decker (`vs` gets `net` off its next attack on `decker`; VR2 p. 122: a backfire). */
-  exposed: Array<{ decker: string; vs: string; net: number; id: string }>;
+  exposed: Array<{ decker: string; vs: string; net: number; id: string; run: string }>;
+  /** v0.97.1: positions a decker won (`decker` gets `net` off the TN or onto the Power of its next attack on `vs`; VR2 p. 122). */
+  pos: Array<{ decker: string; vs: string; net: number; id: string; run: string }>;
+  /**
+   * v0.97.1: improvised attacks the GM side recorded from the test's card (VR2 p. 123): the points it took off the
+   * persona (and gives back), the Power and the Damage Level ('' after a failed test). `id`: the test card's.
+   */
+  improvised: Array<{ decker: string; id: string; power: number; level: DamageLevel | ''; evasion: number; bod: number; run: string }>;
   /** IC whose crash choice the GM side has offered (one choice per crash, VR2 p. 40). */
   offered: string[];
   /** The newest request applied per kind, decker and opponent (`k`), so an older one that arrives later is ignored. */
@@ -330,11 +338,14 @@ const rows = (raw: unknown): any[] => (Array.isArray(raw) ? raw.filter((x) => x 
 export function hostMx(raw: unknown): HostMx {
   const r: any = raw && typeof raw === 'object' ? raw : {};
   return {
-    parry: rows(r.parry).filter((x) => str(x.decker) && str(x.vs) && str(x.id)).map((x) => ({ decker: str(x.decker), vs: str(x.vs), net: Math.min(30, whole(x.net)), id: str(x.id, 60) })),
+    parry: rows(r.parry).filter((x) => str(x.decker) && str(x.vs) && str(x.id)).map((x) => ({ decker: str(x.decker), vs: str(x.vs), net: Math.min(30, whole(x.net)), id: str(x.id, 60), run: str(x.run, 60) })),
     evade: rows(r.evade).filter((x) => str(x.decker) && str(x.vs)).map((x) => ({ decker: str(x.decker), vs: str(x.vs), net: Math.min(30, whole(x.net)), tallyAt: Math.min(9999, whole(x.tallyAt)),
-      round: Number.isFinite(Number(x.round)) ? Math.floor(Number(x.round)) : -1, worldTime: num(x.worldTime), combatId: str(x.combatId, 60) })),
+      round: Number.isFinite(Number(x.round)) ? Math.floor(Number(x.round)) : -1, worldTime: num(x.worldTime), combatId: str(x.combatId, 60), run: str(x.run, 60) })),
     suppressed: rows(r.suppressed).filter((x) => str(x.decker) && str(x.id)).map((x) => ({ decker: str(x.decker), id: str(x.id), name: str(x.name, 120), points: Math.min(30, whole(x.points)), run: str(x.run, 60) })),
-    exposed: rows(r.exposed).filter((x) => str(x.decker) && str(x.vs) && str(x.id)).map((x) => ({ decker: str(x.decker), vs: str(x.vs), net: Math.min(30, whole(x.net)), id: str(x.id, 60) })),
+    exposed: rows(r.exposed).filter((x) => str(x.decker) && str(x.vs) && str(x.id)).map((x) => ({ decker: str(x.decker), vs: str(x.vs), net: Math.min(30, whole(x.net)), id: str(x.id, 60), run: str(x.run, 60) })),
+    pos: rows(r.pos).filter((x) => str(x.decker) && str(x.vs) && str(x.id)).map((x) => ({ decker: str(x.decker), vs: str(x.vs), net: Math.min(30, whole(x.net)), id: str(x.id, 60), run: str(x.run, 60) })),
+    improvised: rows(r.improvised).filter((x) => str(x.decker) && str(x.id)).map((x) => ({ decker: str(x.decker), id: str(x.id, 60), power: Math.min(30, whole(x.power)),
+      level: (['L', 'M', 'S', 'D'].includes(x.level) ? x.level : '') as DamageLevel | '', evasion: Math.min(30, whole(x.evasion)), bod: Math.min(30, whole(x.bod)), run: str(x.run, 60) })),
     seen: rows(r.seen).filter((x) => str(x.k, 900)).map((x) => ({ k: str(x.k, 900), seq: Math.min(SEQ_MAX, whole(x.seq)) })),
     offered: (Array.isArray(r.offered) ? r.offered : []).filter((x: unknown) => typeof x === 'string' && x).slice(-LIST_CAP * 4).map((x: string) => x.slice(0, 400)),
   };
@@ -370,10 +381,57 @@ export function bombMatches(id: string | undefined, bombOff: { fileId?: string; 
   return id.startsWith('f:') ? Boolean(bombOff.fileId) && id.slice(2) === bombOff.fileId : !bombOff.fileId && id.slice(2) === String(bombOff.subsystem ?? '');
 }
 
-/** The host's position entry won by `vs` against `decker` (none used up by that attacker). */
-export function hostExposed(raw: unknown, decker: string, vs: string, used: readonly string[] = []): { net: number; id: string } | null {
-  const e = hostMx(raw).exposed.filter((x) => x.decker === decker && x.vs === vs && x.net > 0 && !used.includes(x.id)).sort((a, b) => b.net - a.net)[0];
+/**
+ * Whether an entry belongs to the decker's current visit (v0.97.1, VR2 p. 40 "while they stay in that host"): `run` is
+ * the decker's visit stamp now (undefined: not checked). Moving to another host and back is a new visit.
+ */
+const visitOk = (e: { run: string }, run: string | undefined): boolean => run === undefined || e.run === String(run ?? '');
+
+/** The best of `list` for `decker` against `vs` in this visit, none used up by that attacker. */
+function best(list: ReadonlyArray<{ decker: string; vs: string; net: number; id: string; run: string }>, decker: string, vs: string, used: readonly string[], run: string | undefined): { net: number; id: string } | null {
+  const e = list.filter((x) => x.decker === decker && x.vs === vs && x.net > 0 && !used.includes(x.id) && visitOk(x, run)).sort((a, b) => b.net - a.net)[0];
   return e ? { net: e.net, id: e.id } : null;
+}
+
+/** The host's position entry won by `vs` against `decker` (none used up by that attacker; `run`: `decker`'s visit stamp). */
+export function hostExposed(raw: unknown, decker: string, vs: string, used: readonly string[] = [], run?: string): { net: number; id: string } | null {
+  return best(hostMx(raw).exposed, decker, vs, used, run);
+}
+
+/** v0.97.1: the host's position entry `decker` won on `vs` (VR2 p. 122), not used up; `run`: `decker`'s visit stamp. */
+export function hostPos(raw: unknown, decker: string, vs: string, used: readonly string[] = [], run?: string): { net: number; id: string } | null {
+  return best(hostMx(raw).pos, decker, vs, used, run);
+}
+
+/** v0.97.1: the improvised attack the GM side recorded for `decker` in this visit (VR2 p. 123), not used up. */
+export function hostImprovised(raw: unknown, decker: string, used: readonly string[] = [], run?: string): HostMx['improvised'][number] | null {
+  return hostMx(raw).improvised.find((x) => x.decker === decker && !used.includes(x.id) && visitOk(x, run)) ?? null;
+}
+
+/** v0.97.1: an evade `decker` made against `vs` in this visit (VR2 p. 121). */
+export function hostEvade(raw: unknown, decker: string, vs: string, run?: string): HostMx['evade'][number] | null {
+  return hostMx(raw).evade.find((x) => x.decker === decker && x.vs === vs && visitOk(x, run)) ?? null;
+}
+
+/**
+ * v0.97.1: the host's record without a decker who left it (VR2 p. 40: suppression lasts "while they stay in that host";
+ * the maneuvers on and by them end too): their suppressed IC (no tally: leaving ends a suppression), parries, evades,
+ * positions both ways and an improvised attack. Null when nothing names them.
+ */
+export function withoutDecker(raw: unknown, uuid: string): HostMx | null {
+  const r = hostMx(raw);
+  if (!uuid) return null;
+  const mine = (e: { decker: string; vs?: string }) => e.decker === uuid || e.vs === uuid;
+  const n = r.parry.filter(mine).length + r.evade.filter(mine).length + r.suppressed.filter(mine).length + r.exposed.filter(mine).length + r.pos.filter(mine).length + r.improvised.filter(mine).length;
+  if (!n) return null;
+  const keep = <T extends { decker: string; vs?: string }>(l: T[]) => l.filter((e) => !mine(e));
+  return { ...r, parry: keep(r.parry), evade: keep(r.evade), suppressed: keep(r.suppressed), exposed: keep(r.exposed), pos: keep(r.pos), improvised: keep(r.improvised) };
+}
+
+/** v0.97.1: the points an improvised attack gives back (VR2 p. 123): only what it took, and no more than is still off. */
+export function giveBackRecorded(crippled: Record<string, number>, imp: { evasion: number; bod: number }): Record<string, number> {
+  const c = { bod: 0, evasion: 0, masking: 0, sensors: 0, ...(crippled ?? {}) };
+  return giveBack(c, { evasion: Math.min(whole(imp.evasion), whole(c.evasion)), bod: Math.min(whole(imp.bod), whole(c.bod)) });
 }
 
 /** A host change's `mx97` key cleaned (bounded strings and numbers), or null. */
@@ -393,10 +451,9 @@ export function maneuverCap(net: number, dice: number): number {
   return Math.max(0, Math.min(whole(net), whole(dice), 30));
 }
 
-/** The host's parry entry for `decker` against `vs` (none used up by that attacker). */
-export function hostParry(raw: unknown, decker: string, vs: string, used: readonly string[] = []): { net: number; id: string } | null {
-  const e = hostMx(raw).parry.filter((x) => x.decker === decker && x.vs === vs && x.net > 0 && !used.includes(x.id)).sort((a, b) => b.net - a.net)[0];
-  return e ? { net: e.net, id: e.id } : null;
+/** The host's parry entry for `decker` against `vs` (none used up by that attacker; `run`: `decker`'s visit stamp). */
+export function hostParry(raw: unknown, decker: string, vs: string, used: readonly string[] = [], run?: string): { net: number; id: string } | null {
+  return best(hostMx(raw).parry, decker, vs, used, run);
 }
 
 /** The deck damage card's IC rating, bounded: black IC's last shot is double the rating (VR2 p. 48). */

@@ -14330,7 +14330,7 @@ export class SR2Actor extends Actor {
       // Barrier IC decrypted in one host do not stay decrypted in the next.
       ...(moved ? { 'system.matrix.passed': [] } : {}),
       // v0.97.0 (RULES.MXIC_V97.blackIcKill 'book', VR2 p. 48): what was on the deck before this run.
-      ...(was ? {} : MXG97.runStartUpdate(this)),
+      ...(was ? (moved ? MXG97.visitUpdate() : {}) : MXG97.runStartUpdate(this)),
     });
     // v0.73.0 (O24): where it jacks in is known now.
     if (hostUuid) await this.learnHostKnowledge(hostUuid, hostEntryKnowledge());

@@ -20,6 +20,7 @@ import { successTest, type SuccessTestResult, type TargetNumberModifier } from '
 import * as M from '../rules/mxops97.ts';
 import { restorePlan } from '../rules/datawar.ts';
 import { NO_DECK_DAMAGE, type DeckDamage } from '../rules/matrix.ts';
+import { onActorUpdateMx97 } from './mxic97.ts';
 
 const G = (): any => (globalThis as any).game;
 const warn = (text: string): void => { (globalThis as any).ui?.notifications?.warn?.(text); };
@@ -367,6 +368,7 @@ export function applyHostChange97(host: any, c: any, extra: Record<string, unkno
  * loses their decoy there and their located icons, and nobody keeps them located (VR2 pp. 112, 114).
  */
 export async function onActorUpdate97(actor: any, change: any, leadGm: boolean): Promise<void> {
+  await onActorUpdateMx97(actor, change, leadGm);
   if (!leadGm || !actor || !change) return;
   const alert = change.system?.alert;
   if (actor.type === 'host' && typeof alert === 'string') await alertPasscodes(actor, alert);
