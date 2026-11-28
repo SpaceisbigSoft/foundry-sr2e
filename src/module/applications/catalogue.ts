@@ -549,8 +549,8 @@ export async function importCharacter(actor: any, text: string): Promise<{ lines
   const updates: any[] = [];
   for (const it of plan.items) {
     const ex: any = it.replace ? byName(it.type, it.name) : null;
-    if (ex) updates.push({ _id: ex.id, system: it.system });
-    else creates.push({ name: it.name, type: it.type, system: it.system });
+    if (ex) updates.push({ _id: ex.id, system: it.system, ...(it.flags ? { flags: it.flags } : {}) });
+    else creates.push({ name: it.name, type: it.type, system: it.system, ...(it.flags ? { flags: it.flags } : {}) });
   }
   // Items first, so attribute bonuses from cyberware are counted once (the plan allows for them).
   if (creates.length) await actor.createEmbeddedDocuments('Item', creates);

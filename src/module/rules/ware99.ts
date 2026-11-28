@@ -10,6 +10,7 @@ import { bioEffect } from './bioware.ts';
 import { gearBook, isDermalPlating, dermalRating, isNeuralBio } from './gear923.ts';
 import { num, round2 } from './util.ts';
 import { tKey } from '../helpers/i18n.ts';
+import { SYSTEM_ID } from '../config/system.ts';
 
 type W = typeof RULES.WARE_V99;
 type Switch = { [K in keyof W]: W[K] extends 'book' | 'v980' ? K : never }[keyof W];
@@ -22,7 +23,7 @@ const V = (): W => RULES.WARE_V99;
 const whole = (x: unknown): number => Math.max(0, Math.floor(num(x)));
 
 /** A cyberware item as these rules read it (an item document or plain data). */
-export interface Ware99 { id?: string; name?: string; type?: string; system?: Record<string, any> }
+export interface Ware99 { id?: string; name?: string; type?: string; system?: Record<string, any>; flags?: Record<string, any> }
 
 // ---------------------------------------------------------------- What an item is
 
@@ -49,7 +50,7 @@ const PAIRS: ReadonlyArray<{ a: WareClass99; b: WareClass99; sw: Switch; key: st
   { a: 'boosted', b: 'vcr', sw: 'boosted', key: 'boostedVcr' },
   { a: 'orthoskin', b: 'plating', sw: 'orthoskin', key: 'orthoPlating' },
 ];
-const PAIR_KEY = (k: string): string => `SR2E.Ware99.Refuse.${k}`;
+export const PAIR_KEY = (k: string): string => `SR2E.Ware99.Refuse.${k}`;
 const NOTE_KEY = (k: string): string => `SR2E.Ware99.Note.${k}`;
 
 /**
@@ -90,20 +91,27 @@ export function orthoskinArmor(i: Ware99): number {
   return e.impact + e.ballistic;
 }
 
+/** How a caller tells orthoPlating about ware damage levels (rules/clinic99.ts): working at all, and Light damage. */
+export interface WareLevelOpts { working?: (i: Ware99) => boolean; light?: (i: Ware99) => boolean }
+
 /**
  * Orthoskin and dermal plating both working (installed, not damaged, not healing in): only the better counts. The
  * plating's Body counts against both kinds of damage (2 × rating); orthoskin's armor is its impact + ballistic; the
  * plating wins a tie. Null when the rule is off, the plating is armor (GEAR_V923.dermal 'armor'), or not both are in.
  */
-export function orthoPlating(items: readonly Ware99[], healing: ReadonlySet<string> = new Set()): { drop: Set<string>; better: string; worse: string; key: string } | null {
+export function orthoPlating(items: readonly Ware99[], healing: ReadonlySet<string> = new Set(), level: WareLevelOpts = {}): { drop: Set<string>; better: string; worse: string; key: string } | null {
   if (!w99('orthoskin') || !gearBook('dermal')) return null;
-  const live = items.filter((i) => Boolean(i.system?.['installed']) && !i.system?.['damaged'] && !(i.id && healing.has(i.id)));
+  // v0.99.0 fix (C5): ware its damage level stops (CLINIC_V99.damageLevels, Moderate or worse) is not working either.
+  const works = level.working ?? (() => true);
+  const live = items.filter((i) => Boolean(i.system?.['installed']) && !i.system?.['damaged'] && !(i.id && healing.has(i.id)) && works(i));
   const ortho = live.filter((i) => wareClass(i) === 'orthoskin');
   const plating = live.filter((i) => wareClass(i) === 'plating');
   if (!ortho.length || !plating.length) return null;
+  // Light damage halves a bonus (Shadowtech pp. 36–41, CLINIC_V99): the plating's Body is compared at that value.
+  const plateBody = (i: Ware99): number => (level.light?.(i) ? Math.trunc(dermalRating(i.system ?? {}) / 2) : dermalRating(i.system ?? {}));
   const bestOrtho = [...ortho].sort((a, b) => orthoskinArmor(b) - orthoskinArmor(a))[0]!;
-  const bestPlate = [...plating].sort((a, b) => dermalRating(b.system ?? {}) - dermalRating(a.system ?? {}))[0]!;
-  const plateWins = 2 * dermalRating(bestPlate.system ?? {}) >= orthoskinArmor(bestOrtho);
+  const bestPlate = [...plating].sort((a, b) => plateBody(b) - plateBody(a))[0]!;
+  const plateWins = 2 * plateBody(bestPlate) >= orthoskinArmor(bestOrtho);
   const losers = plateWins ? ortho : plating;
   return {
     drop: new Set(losers.map((i) => String(i.id ?? i.name ?? ''))),
@@ -146,9 +154,37 @@ export function limbStats(limb: Ware99, metatype: unknown): { strength: number; 
   if (isPartialLimb(limb.name)) return { strength, quickness, essence: 0 };
   const freeS = whole(isTroll(metatype) ? V().limbFreePointsTroll : V().limbFreePoints);
   const freeQ = whole(V().limbFreePoints);
-  const essence = round2(Math.max(0, strength - base.strength - freeS) * Math.max(0, num(V().limbStrengthEssence))
-    + Math.max(0, quickness - base.quickness - freeQ) * Math.max(0, num(V().limbQuicknessEssence)));
+  // v0.99.0 fix (C1): points a limb from before v0.99.0 (or a statblock) already priced into its own Essence are not charged again.
+  const paid = limbPaid(limb);
+  const fromS = Math.max(base.strength + freeS, paid.strength);
+  const fromQ = Math.max(base.quickness + freeQ, paid.quickness);
+  const essence = round2(Math.max(0, strength - fromS) * Math.max(0, num(V().limbStrengthEssence))
+    + Math.max(0, quickness - fromQ) * Math.max(0, num(V().limbQuicknessEssence)));
   return { strength, quickness, essence };
+}
+
+/**
+ * The item flag (no dots) on a cyberlimb from before v0.99.0 or a statblock: the Strength and Quickness its own Essence
+ * cost already prices (players typed the enhancement into essenceCost; statblocks state it). Written by the 0.99.0
+ * migration and the statblock importer; new limbs carry none. Player-writable: it only changes their own limb's Essence.
+ */
+export const LIMB_PAID_FLAG = 'limb99Paid';
+const PAID_MAX = 40;
+
+/** The points a limb's stamp says are already priced (0 and 0 without one). */
+export function limbPaid(limb: Ware99): { strength: number; quickness: number } {
+  const f = (limb as any)?.flags?.[SYSTEM_ID]?.[LIMB_PAID_FLAG];
+  const one = (v: unknown): number => Math.min(PAID_MAX, whole(v));
+  return f && typeof f === 'object' ? { strength: one(f.strength), quickness: one(f.quickness) } : { strength: 0, quickness: 0 };
+}
+
+/** The stamp the 0.99.0 migration gives an existing cyberlimb (its fields as entered), or null (not a limb, or stamped). */
+export function limbStamp(i: Ware99): { strength: number; quickness: number } | null {
+  if (i?.type !== 'cyberware' || i.system?.['kind'] !== 'cyberlimb' || i.system?.['bioware']) return null;
+  const f = (i as any)?.flags?.[SYSTEM_ID]?.[LIMB_PAID_FLAG];
+  if (f && typeof f === 'object') return null;
+  const l = i.system?.['limb'] ?? {};
+  return { strength: Math.min(PAID_MAX, whole(l.strength)), quickness: Math.min(PAID_MAX, whole(l.quickness)) };
 }
 
 /** A cyberlimb item's Essence cost with its enhancements (the cost as entered for anything else, or under 'v980'). */
@@ -216,9 +252,9 @@ export function damperStunCut(old: number, o: { damper: boolean; painEditor: boo
 // ---------------------------------------------------------------- Sheet notes
 
 /** The sheet's warnings for ware installed together that may not be (boosted reflexes, orthoskin and plating). */
-export function wareNotes(items: readonly Ware99[], healing: ReadonlySet<string> = new Set()): string[] {
+export function wareNotes(items: readonly Ware99[], healing: ReadonlySet<string> = new Set(), level: WareLevelOpts = {}): string[] {
   const out = pairNotes(items).map((n) => tKey(n.key, { a: n.a, b: n.b }));
-  const op = orthoPlating(items, healing);
+  const op = orthoPlating(items, healing, level);
   if (op) out.push(tKey(op.key, { better: op.better, worse: op.worse }));
   return out;
 }

@@ -11,10 +11,11 @@ import { oldWay } from '../rules/__tests__/oldway.ts';
 import { WARE_V980_WAY } from '../rules/__tests__/ware980.ts';
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { SYSTEM_ID } from '../config/system.ts';
 
 // Until the lead merges the i18n draft into public/lang/en.json: its English (no draft, no harm).
-{
-  const file = join('i18n-drafts', 'ware99.json');
+for (const f of ['ware99.json', 'ware99-fix.json']) {
+  const file = join('i18n-drafts', f);
   if (existsSync(file)) {
     const en = ((globalThis as any).__SR2E_EN__ ??= {});
     for (const [k, v] of Object.entries(JSON.parse(readFileSync(file, 'utf8')))) if (!(k in en)) en[k] = v;
@@ -319,5 +320,90 @@ describe('v0.99.0 ware glue: the install hooks', () => {
     g.game.user = PLAYER();
     assert.equal(WG.surgeryClash(wr), false);
     assert.equal(WG.preUpdateWare(wr, { system: { installed: true } }, 'p1'), undefined);
+  });
+});
+
+describe('v0.99.0 fix (C2): an enhanced cyberlimb\'s Essence in essenceOf and the surgery', () => {
+  test('essenceOf counts the enhancement (removing the limb gives back what it cost); v980: the plain cost', (t) => {
+    const a = who({}, [arm(8, 3)]);
+    assert.equal(SR2Actor.essenceOf(a.items.get('arm-rightArm'), a), 1.8);
+    t.after(oldWay(WARE_V980_WAY));
+    assert.equal(SR2Actor.essenceOf(a.items.get('arm-rightArm'), a), 1);
+  });
+  test('the surgery\'s size points include the enhancement; v980: the plain cost', async (t) => {
+    const doc = who({}, [{ id: 'cy', type: 'skill', name: 'Cybertechnology', system: { rating: 5, attribute: 'intelligence', kind: 'active', specialization: '', specializationRating: 0 } },
+      { id: 'bt', type: 'skill', name: 'Biotech', system: { rating: 5, attribute: 'intelligence', kind: 'active', specialization: '', specializationRating: 0 } }]);
+    const run = async () => {
+      const p = who({}, [{ ...arm(8, 3), system: { ...arm(8, 3).system, installed: false } }]);
+      world(doc, p);
+      faces.push(...Array(20).fill(5));
+      await p.surgery('arm-rightArm', { surgeon: doc, care: 'hospital', pay: false });
+      return chat.map((m: any) => m.flags?.[SYSTEM_ID]?.test?.surgery?.points).filter((x: any) => x !== undefined).at(-1);
+    };
+    assert.equal(await run(), 1.8);
+    t.after(oldWay(WARE_V980_WAY));
+    assert.equal(await run(), 1);
+  });
+});
+
+describe('v0.99.0 fix (C5): orthoskin against plating counts only working plating', () => {
+  test('plating at Moderate damage stops: orthoskin 3 counts alone, no note; v980 of the damage levels: as before', (t) => {
+    const dp = cw('dp', 'Dermal plating 2', { rating: 2, essenceCost: 1 });
+    dp.flags = { [SYSTEM_ID]: { ware99Dmg: 'M' } };
+    const a = who({}, [dp, bio('os', 'orthoskin', 3, { bodyIndex: 1.5 })]);
+    assert.deepEqual(a.system.derived.cyberArmor, { ballistic: 1, impact: 2 }, 'the orthoskin armor counts');
+    assert.doesNotMatch(warnText(a), /only .* counts/);
+    t.after(oldWay({ 'CLINIC_V99.damageLevels': 'v980' }));
+    a.system.prepareDerivedData();
+    assert.deepEqual(a.system.derived.cyberArmor, { ballistic: 0, impact: 0 }, 'v0.98.0 damage: the plating still wins');
+  });
+});
+
+describe('v0.99.0 fix (C7, S9): the install hooks inside a GM\'s re-run and on the lead GM', () => {
+  const setup = () => {
+    const a = who({ name: 'Sam <b>' }, [cw('br', 'Boosted reflexes <2>', { reaction: 1, initiativeDice: 1 }), cw('wr', 'Wired reflexes 1', { installed: false, reaction: 2, initiativeDice: 1 })]);
+    return { a, wr: a.items.get('wr') };
+  };
+  test('a GM acting for a player\'s card is refused like the player; the GM for themselves is only warned', () => {
+    const { wr } = setup();
+    g.game.users = Object.assign([GM(), PLAYER()], { get: (id: string) => (id === 'gm1' ? GM() : PLAYER()) });
+    const before = g.CONFIG;
+    const cls: any = { actingAuthor: PLAYER() };
+    g.CONFIG = { Actor: { documentClass: cls } };
+    try {
+      const change: any = { system: { installed: true } };
+      assert.equal(WG.preUpdateWare(wr, change, 'gm1'), false);
+      assert.equal(WG.surgeryClash(wr), true);
+      cls.actingAuthor = GM();
+      assert.equal(WG.preUpdateWare(wr, { system: { installed: true } }, 'gm1'), undefined, 'a GM author is a GM');
+    } finally { g.CONFIG = before; }
+    assert.equal(WG.preUpdateWare(wr, { system: { installed: true } }, 'gm1'), undefined);
+  });
+  test('the warning escapes the names once (no double escaping)', () => {
+    const { wr } = setup();
+    g.game.user = PLAYER();
+    WG.surgeryClash(wr);
+    assert.match(warnings.at(-1)!, /beside Boosted reflexes &lt;2&gt;/);
+    assert.doesNotMatch(warnings.at(-1)!, /&amp;lt;/);
+  });
+  test('a player\'s write that leaves a pair installed: the lead GM whispers the GMs (no write); a GM\'s write or v980: nothing', async (t) => {
+    const { a, wr } = setup();
+    g.game.users = Object.assign([GM(), PLAYER()], { get: (id: string) => (id === 'gm1' ? GM() : PLAYER()), activeGM: { id: 'gm1', isSelf: true } });
+    wr.system.installed = true;
+    const flagsBefore = JSON.stringify([a.flags, wr.flags]);
+    assert.equal(await WG.noticeInstalledPair(wr, { system: { installed: true } }, 'p1'), true);
+    const m = chat.at(-1);
+    assert.deepEqual(m.whisper, ['gm1']);
+    assert.match(m.content, /Sam &lt;b&gt;/);
+    assert.match(m.content, /Boosted reflexes &lt;2&gt;/);
+    assert.equal(JSON.stringify([a.flags, wr.flags]), flagsBefore);
+    assert.equal(await WG.noticeInstalledPair(wr, { system: { installed: true } }, 'gm1'), false, 'a GM was warned already');
+    assert.equal(await WG.noticeInstalledPair(wr, { system: { rating: 2 } }, 'p1'), false, 'not an install');
+    assert.equal(await WG.noticeInstalledPair(wr, null, 'p1', true), true, 'created installed');
+    g.game.user = PLAYER();
+    assert.equal(await WG.noticeInstalledPair(wr, { system: { installed: true } }, 'p1'), false, 'only a GM client');
+    g.game.user = GM();
+    t.after(oldWay(WARE_V980_WAY));
+    assert.equal(await WG.noticeInstalledPair(wr, { system: { installed: true } }, 'p1'), false);
   });
 });

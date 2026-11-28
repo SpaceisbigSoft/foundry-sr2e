@@ -61,6 +61,8 @@ import * as W99 from '../rules/ware99.ts';
 import * as CL99 from '../rules/clinic99.ts';
 import * as K99 from '../rules/kit99.ts';
 import { SOFT_SCOPES_99 } from '../rules/config99/kit.ts';
+/** v0.99.0 fix (C5): orthoskin against plating counts only working ware, Light plating at half (RULES.CLINIC_V99.damageLevels). */
+const LV99: W99.WareLevelOpts = { working: (i) => !CL99.wareStops(i), light: (i) => CL99.wareLevel(i) === 'L' };
 
 const f = () => foundry.data.fields;
 /** World time now (0 outside Foundry). */
@@ -186,7 +188,7 @@ export function augmentationsOf(actor: any): Augmentation[] {
   // v0.92.3 (RULES.GEAR_V923.boneLacing 'book'): cyber replacements weaken bone lacing (Cybertechnology pp. 49–50).
   const replacements = cyberReplacements(items.filter((i) => i.type === 'cyberware' && i.system.installed && !i.system.bioware).map((i) => ({ name: i.name, kind: i.system.kind })));
   // v0.99.0 (RULES.WARE_V99.orthoskin 'book', Shadowtech p. 17): of orthoskin and dermal plating only the better counts.
-  const op99 = W99.orthoPlating(items.filter((i) => i.type === 'cyberware'), healing);
+  const op99 = W99.orthoPlating(items.filter((i) => i.type === 'cyberware'), healing, LV99);
   const meta99 = actor?.system?.metatype;
   return items
     .filter((i) => i.type === 'cyberware')
@@ -242,11 +244,11 @@ function bioItemOf(i: any, healing?: Set<string>) {
 function bioDerived(ware: any[], dermal: { ballistic: number; impact: number }, healing?: Set<string>) {
   const bio = ware.filter((i: any) => i.system.bioware).map((i: any) => bioItemOf(i, healing));
   // v0.99.0 (RULES.WARE_V99.orthoskin 'book', Shadowtech p. 17): orthoskin losing to dermal plating gives nothing.
-  const op99 = W99.orthoPlating(ware, healing ?? new Set());
+  const op99 = W99.orthoPlating(ware, healing ?? new Set(), LV99);
   const bioWare = ware.filter((i: any) => i.system.bioware);
   const effects = bio.map((b, n) => bioEffect(W99.droppedBy(op99, bioWare[n]) ? { ...b, installed: false } : b));
   const sum = (k: 'ballistic' | 'impact' | 'toxinDice' | 'inhalantDice' | 'boxesOff' | 'ignoreBoxes' | 'physicalSkillDice' | 'stunBoxesOff' | 'perceptionTn') => effects.reduce((n, e) => n + e[k], 0);
-  const cyberNames = ware.filter((i: any) => !i.system.bioware && i.system.installed && !i.system.damaged && !(op99 && W99.wareClass(i) === 'plating')).map((i: any) => String(i.name ?? ''));
+  const cyberNames = ware.filter((i: any) => !i.system.bioware && i.system.installed && !i.system.damaged && !CL99.wareStops(i) && !(op99 && W99.wareClass(i) === 'plating')).map((i: any) => String(i.name ?? ''));
   const conflicts = bioConflicts(bio, cyberNames);
   return {
     // v0.54.0: compared kind by kind (ballistic with ballistic, impact with impact).
@@ -323,7 +325,7 @@ function cyberDerived(actor: any, ware: any[]) {
     lacing: ((l) => (gearBook('boneLacing') ? { ...l, soakDice: 0 } : l))(boneLacingTotals(live.filter((i: any) => i.system.kind === 'boneLacing').map((i: any) => ({ kind: i.system.lacing || '' })))),
     ultrasound: live.some((i: any) => i.system.ultrasound),
     /** v0.92.3 (RULES.GEAR_V923.dermal 'body', limbPairs 'body'): dermal armor's Body (plating and pairs of cyberlimbs). */
-    dermal: (gearBook('dermal') ? live.filter((i: any) => isDermalPlating({ name: i.name, bioware: i.system.bioware, kind: i.system.kind }) && !W99.droppedBy(W99.orthoPlating(ware, healing), i)).reduce((n: number, i: any) => n + dermalRating(i.system), 0) : 0)
+    dermal: (gearBook('dermal') ? live.filter((i: any) => isDermalPlating({ name: i.name, bioware: i.system.bioware, kind: i.system.kind }) && !W99.droppedBy(W99.orthoPlating(ware, healing, LV99), i)).reduce((n: number, i: any) => n + dermalRating(i.system), 0) : 0)
       + limbPairsBody(live.filter((i: any) => i.system.kind === 'cyberlimb' && !i.system.bioware).map((i: any) => ({ name: i.name, location: i.system.limb?.location ?? 'other' }))),
     pheromones: max((i) => i.system.pheromones),
     datajack, chipjack, skillwires, limbs, softs,
@@ -882,7 +884,7 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
     const lacingArmor = boneLacingBook(String(installed.filter((i: any) => i.system.kind === 'boneLacing').map((i: any) => String(i.system.lacing ?? '')).sort((a: string, b: string) => boneLacingBook(b).impact + boneLacingBook(b).ballistic - boneLacingBook(a).impact - boneLacingBook(a).ballistic)[0] ?? ''), cyberReplacements(installed.filter((i: any) => !i.system.bioware).map((i: any) => ({ name: i.name, kind: i.system.kind }))));
     const cyberWarnings = [...stacked.notes, ...reflexNotes, ...(initDice.capped ? [tx('SR2E.App.Models.initiativeDiceCappedAt', { dice: initDice.dice })] : []), ...limbOver, ...bw.warnings];
     // v0.99.0 (RULES.WARE_V99.boosted, orthoskin; SSC p. 87, Shadowtech p. 17): ware installed together that may not be.
-    cyberWarnings.push(...W99.wareNotes(ware, healing));
+    cyberWarnings.push(...W99.wareNotes(ware, healing, LV99));
 
     const totals = {} as Attributes;
     const race = metatype(sys.metatype);
