@@ -19,8 +19,10 @@ function english(): Record<string, string> {
   const flat: Record<string, string> = {};
   const walk = (o: unknown, p: string): void => { if (typeof o === 'string') { flat[p] = o; return; } if (o && typeof o === 'object') for (const [k, v] of Object.entries(o)) walk(v, p ? `${p}.${k}` : k); };
   walk(JSON.parse(readFileSync(join('public', 'lang', 'en.json'), 'utf8')), '');
-  const draft = join('i18n-drafts', 'vdrive98.json');
-  if (existsSync(draft)) Object.assign(flat, JSON.parse(readFileSync(draft, 'utf8')));
+  for (const f of ['vdrive98.json', 'vdrive98-fix.json']) {
+    const draft = join('i18n-drafts', f);
+    if (existsSync(draft)) Object.assign(flat, JSON.parse(readFileSync(draft, 'utf8')));
+  }
   return flat;
 }
 (globalThis as any).__SR2E_EN__ = { ...((globalThis as any).__SR2E_EN__ ?? {}), ...english() };

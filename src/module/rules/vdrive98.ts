@@ -138,8 +138,12 @@ export const VEHICLE_TYPES = Object.keys(CHASE98.vehiclePoints);
 
 /** Vehicle Points (Rigger 2 p. 41): the vehicle's own type, else its category's. */
 export function vehiclePoints(type: string, category: string): number {
-  const t = VEHICLE_TYPES.includes(type) ? type : (CHASE98.byCategory[category] ?? 'car');
-  return num(CHASE98.vehiclePoints[t]);
+  return num(CHASE98.vehiclePoints[vehicleTypeOf(type, category)]);
+}
+
+/** The vehicle type the Vehicle Points use: its own, else its category's (this system's reading, VERIFY). */
+export function vehicleTypeOf(type: string, category: string): string {
+  return VEHICLE_TYPES.includes(type) ? type : (CHASE98.byCategory[category] ?? 'car');
 }
 
 /** Terrain Points (Rigger 2 p. 41). */
@@ -222,8 +226,14 @@ export function gunneryRows(o: { mine: number | null; theirs: number | null; mot
 export interface Score98 { v: string; score: number; driver: number; partial: number }
 export interface Carry98 { v: string; pos: number }
 export interface Hide98 { hider: string; from: string[]; successes: number; round: number }
-export interface Chase98 { combatId: string; round: number; scores: Score98[]; carry: Carry98[]; hides: Hide98[] }
-export const NO_CHASE: Chase98 = { combatId: '', round: -1, scores: [], carry: [], hides: [] };
+/** The vehicle type the GM gave a vehicle for its Vehicle Points (kept on the record, not the player's vehicle). */
+export interface Type98 { v: string; type: string }
+/**
+ * `used`: the positioning successes this turn's scores spent (a second roll of the scores in the same turn reads them
+ * again); `types`: the GM's vehicle types; `pos`: the chase turns whose positioning a GM recorded (`round|pursuer|quarry`).
+ */
+export interface Chase98 { combatId: string; round: number; scores: Score98[]; carry: Carry98[]; hides: Hide98[]; used: Carry98[]; types: Type98[]; pos: string[] }
+export const NO_CHASE: Chase98 = { combatId: '', round: -1, scores: [], carry: [], hides: [], used: [], types: [], pos: [] };
 
 const uuidOk = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.length <= 400;
 
@@ -236,6 +246,9 @@ export function chaseState(raw: unknown): Chase98 {
     round: Number.isFinite(Number(r.round)) ? Math.floor(Number(r.round)) : -1,
     scores: list(r.scores).filter((e) => uuidOk(e.v)).map((e) => ({ v: e.v, score: Math.max(-200, Math.min(500, Math.floor(num(e.score)))), driver: Math.min(300, whole(e.driver)), partial: Math.max(-200, Math.min(300, Math.floor(num(e.partial)))) })),
     carry: list(r.carry).filter((e) => uuidOk(e.v)).map((e) => ({ v: e.v, pos: Math.min(60, whole(e.pos)) })),
+    used: list(r.used).filter((e) => uuidOk(e.v)).map((e) => ({ v: e.v, pos: Math.min(60, whole(e.pos)) })),
+    types: list(r.types).filter((e) => uuidOk(e.v) && VEHICLE_TYPES.includes(e.type)).map((e) => ({ v: e.v, type: e.type })),
+    pos: (Array.isArray(r.pos) ? r.pos : []).filter((e: unknown) => typeof e === 'string' && e.length <= 900).slice(-LIST_CAP),
     hides: list(r.hides).filter((e) => uuidOk(e.hider)).map((e) => ({ hider: e.hider, from: (Array.isArray(e.from) ? e.from : []).filter(uuidOk).slice(0, 20), successes: Math.min(60, whole(e.successes)), round: Math.floor(num(e.round, -1)) })),
   };
 }
@@ -257,10 +270,38 @@ export function hiddenFrom(st: Chase98, hider: string, from: string): Hide98 | n
   return st.hides.find((h) => h.hider === hider && h.from.includes(from)) ?? null;
 }
 
-/** The record after a new turn's scores: last turn's positioning successes spent, hides kept. */
-export function withScores(st: Chase98, o: { combatId: string; round: number; scores: Score98[] }): Chase98 {
+/** Whether the record already holds this Combat Turn's scores (a second roll of the scores in the same turn). */
+export const sameTurn = (st: Chase98, combatId: string, round: number): boolean => st.combatId === combatId && st.round === round;
+
+/**
+ * The positioning successes a roll of the scores now spends (Rigger 2 p. 46): last turn's (`carry`); rolled again in
+ * the same turn, the ones the first roll spent (`used`), so a second press doesn't lose them (P11).
+ */
+export function turnCarry(st: Chase98, combatId: string, round: number): Carry98[] {
+  return sameTurn(st, combatId, round) ? st.used : st.carry;
+}
+
+/** The GM's vehicle type for a vehicle on this record ('' when none). */
+export const typeOn = (st: Chase98, uuid: string): string => st.types.find((t) => t.v === uuid)?.type ?? '';
+
+/**
+ * The record after a turn's scores: last turn's positioning successes spent (kept as `used`), hides kept. Rolled again
+ * in the same turn, the positioning recorded since for next turn stays and `used` is unchanged. `types`: the GM's
+ * vehicle types to keep.
+ */
+export function withScores(st: Chase98, o: { combatId: string; round: number; scores: Score98[]; types?: Type98[] }): Chase98 {
+  const same = sameTurn(st, o.combatId, o.round);
   const kept = st.combatId === o.combatId ? st.hides : [];
-  return { combatId: o.combatId, round: o.round, scores: o.scores.slice(0, LIST_CAP), carry: [], hides: kept };
+  const types = (o.types ?? st.types).filter((t) => uuidOk(t.v) && VEHICLE_TYPES.includes(t.type)).slice(0, LIST_CAP);
+  return { combatId: o.combatId, round: o.round, scores: o.scores.slice(0, LIST_CAP), carry: same ? st.carry : [], hides: kept, used: same ? st.used : st.carry, types, pos: st.combatId === o.combatId ? st.pos : [] };
+}
+
+/** The key of a chase turn's positioning on the record (once per pair and Combat Turn). */
+export const posKey = (round: number, pursuer: string, quarry: string): string => `${Math.floor(num(round, -1))}|${str(pursuer)}|${str(quarry)}`;
+
+/** The record with a chase turn's positioning marked recorded. */
+export function withPosKey(st: Chase98, key: string): Chase98 {
+  return { ...st, pos: [...st.pos.filter((k) => k !== key), key].slice(-LIST_CAP) };
 }
 
 /** The record with a positioning result for the next turn's Driver Points (Rigger 2 p. 46). */
@@ -284,8 +325,8 @@ export function withRelocated(st: Chase98, hider: string, finder: string): Chase
 }
 
 /** Driver Points (Rigger 2 pp. 41–42, 46, 48): the Open Test + last turn's positioning successes + the Escape Bonus. */
-export function driverPoints(open: number, st: Chase98, uuid: string): number {
-  const pos = st.carry.find((c) => c.v === uuid)?.pos ?? 0;
+export function driverPoints(open: number, st: Chase98, uuid: string, carry: Carry98[] = st.carry): number {
+  const pos = carry.find((c) => c.v === uuid)?.pos ?? 0;
   return whole(open) + whole(pos) + escapeBonus(st, uuid);
 }
 
