@@ -20610,7 +20610,8 @@
         "improviseFailed": "{decker}'s improvised attack failed: its points are off Evasion and Bod until the next action",
         "unimprovise": "{decker} gets an improvised attack's points back",
         "unimprovised": "{decker}'s Evasion and Bod points are back",
-        "autoApplied": "{by}'s card applied by itself: {line}"
+        "autoApplied": "{by}'s card applied by itself: {line}",
+        "autoRefused": "{by}'s card asked for {line}, but nothing was applied: it matches no maneuver test card by the decker's owner."
       },
       "notYourDecker": "That Matrix request names a decker its author doesn't own: not applied.",
       "Trust": {

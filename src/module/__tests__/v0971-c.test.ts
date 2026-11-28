@@ -27,6 +27,7 @@ const EN_C: Record<string, string> = {
   'SR2E.MxIc97.Trust.anIcon': 'an icon that is gone',
   'SR2E.MxIc97.Trust.someone': 'an unknown decker',
   'SR2E.MxIc97.Gm.autoApplied': "{by}'s card applied by itself: {line}",
+  'SR2E.MxIc97.Gm.autoRefused': "{by}'s card asked for {line}, but nothing was applied: it matches no maneuver test card by the decker's owner.",
 };
 const EN = ((globalThis as any).__SR2E_EN__ ??= {});
 for (const [k, v] of Object.entries(EN_C)) if (!Object.hasOwn(EN, k)) EN[k] = v;
@@ -212,6 +213,17 @@ describe('v0.97.1 C: the GM side (chat.ts)', () => {
     assert.match(posted[0].content, /Player One's card applied by itself: Matrix, ZZ Decker: parry against Killer-6/);
     assert.match(posted[0].content, /parry \+3 recorded/);
     assert.deepEqual(posted[0].whisper, ['gm']);
+  });
+  test('setting on, a result the GM side refuses (no maneuver card): the GM line says nothing was applied', async () => {
+    await setup();
+    settingsNow = { autoApplyManeuvers97: true };
+    noteOut = '<p>ZZ Host: no change.</p>';
+    const msg = parryCard();
+    arrive(msg);
+    await tick(80);
+    assert.equal(posted.length, 1, posted.map((p) => p.content).join(' || '));
+    assert.match(posted[0].content, /nothing was applied/);
+    assert.doesNotMatch(posted[0].content, /applied by itself/);
   });
   test('setting off, a count, or another pending action: nothing by itself', async () => {
     await setup();

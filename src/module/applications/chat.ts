@@ -1903,8 +1903,11 @@ async function runAutoApply(message: any, todo: string[]): Promise<void> {
   if (mxNote !== null && todo.length === 1 && message.getFlag?.(SYSTEM_ID, 'hostApplied')) {
     const c: any = applying.get(message.id)?.flags?.hostChange ?? {};
     const line = describeGmChange('applyHost', { hostChange: { mx97: c.mx97, hostUuid: c.hostUuid } }, nameOfUuid, mx97NameOf).slice(1).join('; ');
+    // v0.97.1 live check: a result the GM side refused (no matching maneuver test card) records nothing: say so.
+    const refused = mxNote === '' && ['parry', 'evade', 'pos', 'exposed'].includes(String(c.mx97?.op ?? ''));
+    const head = refused ? tx('SR2E.MxIc97.Gm.autoRefused', { by: escHtml(by), line: escHtml(line) }) : tx('SR2E.MxIc97.Gm.autoApplied', { by: escHtml(by), line: escHtml(line) });
     await ChatMessage.create({ speaker: { alias: tx('SR2E.Card.Chat.sr2e') }, whisper: gmIds(),
-      content: `<p class="hint"><em>${tx('SR2E.Card.Chat.gmOnly')}</em> ${tx('SR2E.MxIc97.Gm.autoApplied', { by: escHtml(by), line: escHtml(line) })}</p>${mxNote}` });
+      content: `<p class="hint"><em>${tx('SR2E.Card.Chat.gmOnly')}</em> ${head}</p>${mxNote}` });
     return;
   }
   // The GM sees what went through by itself, and from whom.
