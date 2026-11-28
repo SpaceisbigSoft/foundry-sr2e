@@ -21686,7 +21686,8 @@
         "limbLead": "Leading with {limb} (four limbs' average Strength {average})"
       },
       "Sheet": {
-        "limbEssence": "enhancements +{essence} Essence"
+        "limbEssence": "enhancements +{essence} Essence",
+        "limbPaid": "priced in its Essence already: Strength {strength}, Quickness {quickness}"
       },
       "Gm": {
         "pairInstalled": "{user} installed {name} on {actor} beside {other}, though the two may not be installed together (Street Samurai Catalog p. 87; Shadowtech p. 17). The player's client skipped the refusal; nothing was changed."

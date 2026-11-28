@@ -6474,6 +6474,9 @@ export function cyberRow(actor: any, i: any): any {
     const ls = W99.w99("limbs") ? W99.limbStats(i, actor.system?.metatype) : { strength: sy.limb?.strength, quickness: sy.limb?.quickness, essence: 0 };
     parts.push(l ? tx('SR2E.App.Sheets.limbStatsCapacity', { strength: ls.strength, quickness: ls.quickness, used: l.capacity.used, capacity: l.capacity.capacity }) : tx('SR2E.App.Sheets.limbStats', { strength: ls.strength, quickness: ls.quickness }));
     if (ls.essence > 0) parts.push(tKey('SR2E.Ware99.Sheet.limbEssence', { essence: ls.essence }));
+    // v0.99.0 review (lead): the 0.99.0 stamp (points already priced into the limb's Essence) shown, so a GM sees a high one.
+    const paid99 = W99.w99("limbs") ? W99.limbPaid(i) : { strength: 0, quickness: 0 };
+    if (paid99.strength > 0 || paid99.quickness > 0) parts.push(tKey('SR2E.Ware99.Sheet.limbPaid', { strength: paid99.strength, quickness: paid99.quickness }));
   }
   if (sy.kind === "skillwires") parts.push(tx('SR2E.App.Sheets.ratingLower', { rating: sy.rating }));
   if (sy.reflexes || /reflex|enhancer/i.test(i.name)) parts.push(tx('SR2E.App.Sheets.reflexesLine', { reflexes: sy.reflexes || tx('SR2E.App.Sheets.reflexes'), reaction: sy.reaction, dice: sy.initiativeDice }));
