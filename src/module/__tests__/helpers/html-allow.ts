@@ -59,6 +59,7 @@ export const ALLOWED: Record<string, Record<string, string>> = {
     'onApplyPatch | html | text': 'SR2Actor.patchEffect returns HTML whose names are escaped (documents/index.ts).',
     'onApplySite | content | note': 'cls.applySiteChange (documents/index.ts) escapes at its return (SEC2 sink pass); `cls` is `any`, so the scanner cannot follow it.',
     'onApplyHost | content | note': 'cls.applyHostChange (documents/index.ts) escapes at its return (SEC2 sink pass); `cls` is `any`.',
+    'runAutoApply | html | mxNote': 'v0.97.1 (C): the note onApplyHost kept (autoNotes): cls.applyHostChange\'s HTML, escaped at its return (documents/index.ts), or \'\'.',
     'onApplyTally | content | note': 'cls.applyTallyCard → SR2Actor.#applyTally (documents/index.ts), escaped names and safeInt successes; `cls` is `any`.',
   },
   'src/module/applications/sheets.ts': {

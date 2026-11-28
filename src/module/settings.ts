@@ -1668,6 +1668,12 @@ export function registerSettings(): void {
     // v0.81.0 (owner, 24 Oct 2026): off by default, as the security audit recommends (SEC1-4).
     scope: "world", config: true, type: Boolean, default: false,
   });
+  // v0.97.1 (C, owner 27 Nov 2026): only players' Matrix maneuver results (parry, evade, a position won or lost: VR2
+  // p. 122) apply by themselves on the GM's client (rules/trust.ts maneuverOnly97); off by default.
+  game.settings.register(SYSTEM.id, "autoApplyManeuvers97", {
+    name: "SR2E.Settings.autoApplyManeuvers97.Name", hint: "SR2E.Settings.autoApplyManeuvers97.Hint",
+    scope: "world", config: true, type: Boolean, default: false,
+  });
   game.settings.register(SYSTEM.id, "karmaRefreshDay", { scope: "world", config: false, type: String, default: "" });
   // v0.60.0: scene regions, NPCs resisting by themselves, roll privacy per kind, turn pings, hover cards, sounds.
   game.settings.register(SYSTEM.id, "wardsStopAstral", {
