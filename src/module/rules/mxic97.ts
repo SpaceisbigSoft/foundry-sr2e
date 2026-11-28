@@ -316,6 +316,10 @@ export interface HostMx {
   parry: Array<{ decker: string; vs: string; net: number; id: string }>;
   evade: Array<{ decker: string; vs: string; net: number; tallyAt: number; round: number; worldTime: number; combatId: string }>;
   suppressed: Array<{ decker: string; id: string; name: string; points: number }>;
+  /** Positions won against a decker (`vs` gets `net` off its next attack on `decker`; VR2 p. 122: a backfire). */
+  exposed: Array<{ decker: string; vs: string; net: number; id: string }>;
+  /** IC whose crash choice the GM side has offered (one choice per crash, VR2 p. 40). */
+  offered: string[];
 }
 
 const rows = (raw: unknown): any[] => (Array.isArray(raw) ? raw.filter((x) => x && typeof x === 'object').slice(0, LIST_CAP * 4) : []);
@@ -327,12 +331,27 @@ export function hostMx(raw: unknown): HostMx {
     evade: rows(r.evade).filter((x) => str(x.decker) && str(x.vs)).map((x) => ({ decker: str(x.decker), vs: str(x.vs), net: Math.min(30, whole(x.net)), tallyAt: Math.min(9999, whole(x.tallyAt)),
       round: Number.isFinite(Number(x.round)) ? Math.floor(Number(x.round)) : -1, worldTime: num(x.worldTime), combatId: str(x.combatId, 60) })),
     suppressed: rows(r.suppressed).filter((x) => str(x.decker) && str(x.id)).map((x) => ({ decker: str(x.decker), id: str(x.id), name: str(x.name, 120), points: Math.min(30, whole(x.points)) })),
+    exposed: rows(r.exposed).filter((x) => str(x.decker) && str(x.vs) && str(x.id)).map((x) => ({ decker: str(x.decker), vs: str(x.vs), net: Math.min(30, whole(x.net)), id: str(x.id, 60) })),
+    offered: (Array.isArray(r.offered) ? r.offered : []).filter((x: unknown) => typeof x === 'string' && x).slice(-LIST_CAP * 4).map((x: string) => x.slice(0, 400)),
   };
 }
 
 /** A decker's request to the GM side (the `mx97` key of a host change): what to record, never how much is trusted. */
-export interface Mx97Change { op: 'parry' | 'unparry' | 'evade' | 'unevade' | 'crash' | 'bomb' | 'count' | 'suppress' | 'release'; deckerUuid: string; vs?: string; id?: string; net?: number; cardId?: string }
-export const MX97_OPS = ['parry', 'unparry', 'evade', 'unevade', 'crash', 'bomb', 'count', 'suppress', 'release'] as const;
+export interface Mx97Change { op: 'parry' | 'unparry' | 'evade' | 'unevade' | 'exposed' | 'unexposed' | 'bomb' | 'count' | 'suppress' | 'release'; deckerUuid: string; vs?: string; id?: string; net?: number; cardId?: string }
+/** The requests a host change may carry (a crash's choice is the GM side's own, never a request). */
+export const MX97_OPS = ['parry', 'unparry', 'evade', 'unevade', 'exposed', 'unexposed', 'bomb', 'count', 'suppress', 'release'] as const;
+
+/** Whether a bomb request names the bomb the same host change sets off (`bombOff`): else it is no blast at all. */
+export function bombMatches(id: string | undefined, bombOff: { fileId?: string; subsystem?: string } | null | undefined): boolean {
+  if (!id || !bombOff) return false;
+  return id.startsWith('f:') ? Boolean(bombOff.fileId) && id.slice(2) === bombOff.fileId : !bombOff.fileId && id.slice(2) === String(bombOff.subsystem ?? '');
+}
+
+/** The host's position entry won by `vs` against `decker` (none used up by that attacker). */
+export function hostExposed(raw: unknown, decker: string, vs: string, used: readonly string[] = []): { net: number; id: string } | null {
+  const e = hostMx(raw).exposed.filter((x) => x.decker === decker && x.vs === vs && x.net > 0 && !used.includes(x.id)).sort((a, b) => b.net - a.net)[0];
+  return e ? { net: e.net, id: e.id } : null;
+}
 
 /** A host change's `mx97` key cleaned (bounded strings and numbers), or null. */
 export function cleanMx97(raw: unknown): Mx97Change | null {

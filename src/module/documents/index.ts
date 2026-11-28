@@ -15571,7 +15571,7 @@ export class SR2Actor extends Actor {
     if (!host || host.type !== 'host') return null;
     const c = SR2Actor.#cleanHostChange(cIn);
     // v0.97.0 (RULES.MXIC_V97.dataBomb): a bomb's rating, read before the change sets it off.
-    const pre97 = c.mx97 ? MXG97.preMx97(host, c.mx97) : undefined;
+    const pre97 = c.mx97 ? MXG97.preMx97(host, c.mx97, c.bombOff) : undefined;
     let files: DataFile[] = [...(host.system.files ?? [])].map((f: any) => ({ ...f, foundBy: [...(f.foundBy ?? [])] }));
     const notes: string[] = [];
     if (c.found) {
@@ -16033,7 +16033,7 @@ export class SR2Actor extends Actor {
     if (this.sys.category === 'black' && target && !program && RULES.MATRIX_V57.blackIcHold.enabled && RULES.MATRIX_V923.blackIc === 'v922') await SR2Actor.#engage(target, this.uuid as string);
     // v0.97.0 (RULES.MXIC_V97.tar 'book'): a Tar Baby Test rolls the tar's rating (not an attack: no maneuvers).
     const r97 = await this.#runTest(`${label}${atk.note && !tar97 ? tx('SR2E.Card.Actor.dice4', { atkNote: atk.note }) : ''}`, tar97 ? rating : atk.dice, { targetNumber: t.tn, modifiers: [...(opts.modifiers ?? []), ...(target ? (tar97 ? SR2Actor.smokeMods(host) : situational(from)) : [...SR2Actor.smokeMods(host), ...matrixWoundModifiers(Number(this.sys.matrix?.monitor ?? 0), { ic: true })])] }, { kind: 'attack', ...(attack ? { attack } : {}) });
-    if (!tar97) await MXG97.afterAttack(this, { ownPos: [], used: m97.used, ...(m97.parryId ? { parryId: m97.parryId } : {}) });
+    if (!tar97) await MXG97.afterAttack(this, { ownPos: [], used: m97.used, ...(m97.parryId ? { parryId: m97.parryId } : {}), ...((m97 as any).exposedId ? { exposedId: (m97 as any).exposedId } : {}) });
     return r97;
   }
 

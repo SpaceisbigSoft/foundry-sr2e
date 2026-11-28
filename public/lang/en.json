@@ -20587,7 +20587,6 @@
       "hotAsist": "Hot ASIST",
       "hotAsistHint": "A hot ASIST interface: run cool (cold sim, with a keyboard) it costs 1D6 Matrix Initiative (VR2 p. 85). Off: a cool deck, no penalty.",
       "Gm": {
-        "crash": "{ic} crashes: the tally or suppress",
         "count": "{decker} lets it count",
         "suppress": "{decker} suppresses it",
         "release": "{decker} releases a suppressed IC",
@@ -20595,8 +20594,11 @@
         "evade": "{decker} evades ({net})",
         "parried": "{decker}'s parry +{net} recorded",
         "evaded": "{decker}'s evade ({net} turns) recorded",
-        "trustLine": "Matrix: {op} for {name} ({net})"
-      }
+        "trustLine": "Matrix: {op} for {name}, against {vs} ({net})",
+        "exposed": "{vs}'s position on {decker} (+{net}) recorded",
+        "exposedReq": "{vs} won a position on {decker} ({net})"
+      },
+      "notYourDecker": "That Matrix request names a decker its author doesn't own: not applied."
     },
     "MxLife97": {
       "gmOnly": "GM only",

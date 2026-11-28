@@ -14,16 +14,22 @@ import { HOUSE_MXIC_V97 } from '../rules/config97/mxic.ts';
 import { MXIC_V965_WAY } from '../rules/__tests__/mxic965.ts';
 import { personaSpeed, matrixOperations } from '../rules/matrix923.ts';
 import { realityFilterEffect } from '../rules/datawar.ts';
+import { mx97OwnerOk, describeGmChange, gmApplyShapeOk } from '../rules/trust.ts';
 
 /** English from public/lang/en.json, with this area's draft while it isn't merged. */
 function english(): Record<string, string> {
   const flat: Record<string, string> = {};
   const walk = (o: unknown, p: string): void => { if (typeof o === 'string') { flat[p] = o; return; } if (o && typeof o === 'object') for (const [k, v] of Object.entries(o)) walk(v, p ? `${p}.${k}` : k); };
   walk(JSON.parse(readFileSync(join('public', 'lang', 'en.json'), 'utf8')), '');
-  const draft = join('i18n-drafts', 'mxic97.json');
-  if (existsSync(draft)) Object.assign(flat, JSON.parse(readFileSync(draft, 'utf8')));
+  for (const f of ['mxic97.json', 'mxic97-fix.json']) {
+    const draft = join('i18n-drafts', f);
+    if (existsSync(draft)) Object.assign(flat, JSON.parse(readFileSync(draft, 'utf8')));
+  }
   return flat;
 }
+
+// This area's English while its drafts aren't merged (t() reads the preload's table).
+(globalThis as any).__SR2E_EN__ = { ...((globalThis as any).__SR2E_EN__ ?? {}), ...english() };
 
 describe('v0.97.0 Matrix IC: the switches', () => {
   test('every switch has a house-rules row, the book first and the default', () => {
@@ -40,7 +46,7 @@ describe('v0.97.0 Matrix IC: the switches', () => {
   test('every house-rules row and every key the code uses has English', () => {
     const en = english();
     for (const r of HOUSE_MXIC_V97) assert.ok(en[`SR2E.HouseRules.Rule.${r.path.replace('.', '__')}`], r.path);
-    const src = ['src/module/rules/mxic97.ts', 'src/module/applications/mxic97.ts', 'src/module/documents/index.ts', 'src/module/applications/sheets.ts', 'public/templates/matrix-section.hbs']
+    const src = ['src/module/rules/mxic97.ts', 'src/module/applications/mxic97.ts', 'src/module/rules/trust.ts', 'src/module/applications/chat.ts', 'src/module/documents/index.ts', 'src/module/applications/sheets.ts', 'public/templates/matrix-section.hbs']
       .map((f) => readFileSync(join(...f.split('/')), 'utf8')).join('\n');
     const keys = new Set([...src.matchAll(/SR2E\.MxIc97\.[A-Za-z0-9_.]+[A-Za-z0-9]/g)].map((m) => m[0]));
     keys.delete('SR2E.MxIc97.Why');
@@ -211,5 +217,23 @@ describe('persona speed (VR2 pp. 84–87, 120; Mapping Matrices p. 69)', () => {
     assert.equal(X.nonCombatActions(13, 3), 4);
     t.after(oldWay({ 'MXIC_V97.nonCombat': 'v965' }));
     assert.equal(X.nonCombatActions(13, 3), null);
+  });
+});
+
+describe('v0.97.0 review: who may ask the GM side', () => {
+  test('a Matrix request only from the decker\'s owner; no crash requests; the confirm names the opponent and the net', () => {
+    assert.equal(mx97OwnerOk({ mx97: { op: 'release', deckerUuid: 'Actor.other' } }, (u) => u === 'Actor.mine'), false);
+    assert.equal(mx97OwnerOk({ mx97: { op: 'release', deckerUuid: 'Actor.mine' } }, (u) => u === 'Actor.mine'), true);
+    assert.equal(mx97OwnerOk({ decrypt: 'f' }, () => false), true, 'not a Matrix request');
+    assert.equal(gmApplyShapeOk('applyHost', { hostChange: { hostUuid: 'H', mx97: { op: 'crash', deckerUuid: 'D', id: 'I' } } }), false);
+    assert.equal(X.cleanMx97({ op: 'crash', deckerUuid: 'D' }), null);
+    const lines = describeGmChange('applyHost', { hostChange: { hostUuid: 'H', mx97: { op: 'parry', deckerUuid: 'D', vs: 'I', net: 3 } } }, (u) => (u === 'I' ? 'Killer-6' : u === 'D' ? 'Decker' : ''));
+    assert.ok(lines.some((l) => /Killer-6/.test(l) && /3/.test(l) && /Decker/.test(l)), lines.join(' | '));
+  });
+  test('a bomb request matches only its own blast', () => {
+    assert.equal(X.bombMatches('f:f1', { fileId: 'f1' }), true);
+    assert.equal(X.bombMatches('f:f1', { subsystem: 'files' }), false);
+    assert.equal(X.bombMatches('s:slave', { subsystem: 'slave' }), true);
+    assert.equal(X.bombMatches('s:slave', null), false);
   });
 });

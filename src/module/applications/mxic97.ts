@@ -79,7 +79,7 @@ const inHost = (uuid: string, host: any): boolean => { const a = sync(uuid); ret
 /** Write the host's record; entries of deckers no longer in this host go (suppression lasts while they stay in the system). */
 async function saveRec(host: any, r: X.HostMx): Promise<void> {
   const keep = <T extends { decker: string }>(l: T[]) => l.filter((e) => inHost(e.decker, host)).slice(-X.LIST_CAP * 4);
-  await host.update({ [`flags.${SYSTEM_ID}.${HOST_FLAG}`]: { parry: keep(r.parry), evade: keep(r.evade), suppressed: keep(r.suppressed) } });
+  await host.update({ [`flags.${SYSTEM_ID}.${HOST_FLAG}`]: { parry: keep(r.parry), evade: keep(r.evade), suppressed: keep(r.suppressed), exposed: keep(r.exposed), offered: r.offered.slice(-X.LIST_CAP * 4) } });
 }
 
 /** Ask the GM side to record something (a host change: at once on a GM's client, else the GM's Apply card). */
@@ -122,8 +122,20 @@ async function choiceCardGm(host: any, decker: any, id: string, label: string, p
  * card in place of the tally (true); a frame's or agent's crash keeps the tally (false).
  */
 export async function crashChoice(host: any, decker: any, ic: any, _points: number, frame: any): Promise<boolean> {
-  if (!X.on('suppress') || frame || !decker || host?.type !== 'host') return false;
-  await request(host, decker, { op: 'crash', deckerUuid: String(decker.uuid), id: String(ic.uuid) }, tx('SR2E.MxIc97.Gm.crash', { ic: String(ic.name ?? '') }));
+  // Only the GM side offers it (the IC's own resistance test, on the GM's client): never a request from a card.
+  if (!X.on('suppress') || frame || !decker || host?.type !== 'host' || !isGm()) return false;
+  await offerCrash(host, decker, ic);
+  return true;
+}
+
+/** GM side: the crash choice for an IC that really crashed in this host, once per IC (the host notes it). */
+export async function offerCrash(host: any, decker: any, ic: any): Promise<boolean> {
+  if (!isGm() || !(ic?.type === 'ic' && ic.system?.derived?.crashed && ic.system?.hostUuid === host?.uuid)) return false;
+  const rec = hostRec(host);
+  if (rec.offered.includes(String(ic.uuid))) return false;
+  const points = M923.crashTallyPoints(Number(ic.system?.rating ?? 0)) + (decker.tracedIn?.(host) ? 1 : 0);
+  await saveRec(host, { ...rec, offered: [...rec.offered, String(ic.uuid)] });
+  if (points > 0) await choiceCardGm(host, decker, String(ic.uuid), String(ic.name ?? ''), points, false);
   return true;
 }
 
@@ -134,10 +146,13 @@ export function bombRequest(decker: any, where: { fileId?: string; subsystem?: s
   return { op: 'bomb', deckerUuid: String(decker.uuid), id };
 }
 
-/** GM side, before a host change applies: what it reads from the host before the change alters it (a bomb's rating). */
-export function preMx97(host: any, raw: unknown): { rating: number; where: string } {
+/**
+ * GM side, before a host change applies: what it reads from the host before the change alters it (a bomb's rating). A
+ * bomb request counts only beside the `bombOff` of the same change (the blast itself), never on its own.
+ */
+export function preMx97(host: any, raw: unknown, bombOff?: { fileId?: string; subsystem?: string } | null): { rating: number; where: string } {
   const m = X.cleanMx97(raw);
-  if (m?.op !== 'bomb' || !m.id) return { rating: 0, where: '' };
+  if (m?.op !== 'bomb' || !m.id || !X.bombMatches(m.id, bombOff)) return { rating: 0, where: '' };
   if (m.id.startsWith('f:')) {
     const f: any = (host?.system?.files ?? []).find((x: any) => x?.id === m.id!.slice(2));
     return { rating: int(f?.bomb, 0, 30, 0), where: String(f?.name ?? '') };
@@ -186,13 +201,18 @@ export async function applyMx97(host: any, raw: unknown, pre: { rating: number; 
     case 'unevade':
       await saveRec(host, { ...rec, evade: rec.evade.filter((e) => !(e.decker === me && e.vs === m.vs)) });
       return [];
-    case 'crash': {
-      const ic = sync(m.id);
-      if (!(ic?.type === 'ic' && ic.system?.derived?.crashed && ic.system?.hostUuid === host.uuid)) return [];
-      const points = M923.crashTallyPoints(Number(ic.system?.rating ?? 0)) + (decker.tracedIn?.(host) ? 1 : 0);
-      if (points > 0) await choiceCardGm(host, decker, String(ic.uuid), String(ic.name ?? ''), points, false);
-      return [];
+    case 'exposed': {
+      // A position the opponent won on the decker: at most the opponent's dice (IC: the host's Security Value).
+      const opp = sync(m.vs);
+      if (!m.vs || !m.id || !opp) return [];
+      const oppDice = opp.type === 'ic' ? Number(host.system?.securityValue ?? opp.system?.rating ?? 0) : Number(opp.system?.derived?.matrix?.sensors ?? 0) + Number(opp.system?.derived?.hackingPool ?? 0);
+      const net = X.maneuverCap(m.net ?? 0, oppDice);
+      await saveRec(host, { ...rec, exposed: [...rec.exposed.filter((e) => !(e.decker === me && e.vs === m.vs)), ...(net > 0 ? [{ decker: me, vs: m.vs, net, id: m.id }] : [])] });
+      return [tx('SR2E.MxIc97.Gm.exposed', { decker: String(decker.name ?? ''), vs: String(opp.name ?? ''), net })];
     }
+    case 'unexposed':
+      await saveRec(host, { ...rec, exposed: rec.exposed.filter((e) => !(e.decker === me && e.id === m.id)) });
+      return [];
     case 'bomb': {
       if (pre.rating <= 0) return [];
       // MXIC_V97.suppress 'v965': nothing to suppress with: the bomb's rating goes on the tally (MXIC_V97.dataBomb).
@@ -383,7 +403,7 @@ export async function resolveManeuver(decker: any, snap: any): Promise<{ html: s
   const id = String(mv.entry97 ?? '') || newId();
   const out = X.maneuverAfter(flag(decker, MX_FLAG), { kind: mv.kind, vs: String(mv.targetUuid), hostUuid: host, mine: snap.successes, theirs: mv.opp, id, replaces: mv.entry97 ?? null, tally: tallyNow(decker, host) });
   // Parries and evades are the GM side's to record (on the host, below): the decker's own flag keeps positions only.
-  const up: Record<string, unknown> = { [`flags.${SYSTEM_ID}.${MX_FLAG}`]: { ...out.state, parry: [], evade: [] } };
+  const up: Record<string, unknown> = { [`flags.${SYSTEM_ID}.${MX_FLAG}`]: { ...out.state, parry: [], evade: [], exposed: [] } };
   const t = now();
   const sameEntry = (e: Maneuver) => e.kind === 'evade' && e.targetUuid === mv.targetUuid;
   let list: Maneuver[] = activeManeuvers(decker.system?.matrix?.maneuvers ?? [], t).filter((e) => !sameEntry(e));
@@ -402,6 +422,12 @@ export async function resolveManeuver(decker: any, snap: any): Promise<{ html: s
   // The GM side records a won parry or evade on the host (a re-roll that loses takes it back).
   const hostDoc: any = sync(host);
   const won = out.who === 'me';
+  // A position lost (it backfires): the opponent's bonus, recorded on the host too.
+  const lost = mv.kind === 'position' && out.who === 'them';
+  if (hostDoc?.type === 'host' && mv.kind === 'position' && (lost || mv.lost97)) {
+    await request(hostDoc, decker, { op: lost ? 'exposed' : 'unexposed', deckerUuid: String(decker.uuid), vs: String(mv.targetUuid), id, ...(lost ? { net: out.net } : {}) },
+      tx('SR2E.MxIc97.Gm.exposedReq', { decker: String(decker.name ?? ''), vs: String(mv.targetName ?? ''), net: lost ? out.net : 0 }));
+  }
   if (hostDoc?.type === 'host' && (mv.kind === 'parry' || mv.kind === 'evade') && (won || mv.won97)) {
     const op: X.Mx97Change['op'] = mv.kind === 'parry' ? (won ? 'parry' : 'unparry') : (won ? 'evade' : 'unevade');
     await request(hostDoc, decker, { op, deckerUuid: String(decker.uuid), vs: String(mv.targetUuid), id, ...(won ? { net: out.net } : {}) },
@@ -414,7 +440,7 @@ export async function resolveManeuver(decker: any, snap: any): Promise<{ html: s
     : mv.kind === 'position' ? tx('SR2E.MxIc97.Maneuver.backfires', { name: name(decker), target: who, net: out.net, mine, theirs })
     : out.who === 'them' ? tx('SR2E.MxIc97.Maneuver.fails', { mine, theirs })
     : mv.kind === 'parry' ? tx('SR2E.MxIc97.Maneuver.parry', { name: name(decker), target: who, net: out.net, mine, theirs })
-    : tx('SR2E.MxIc97.Maneuver.evade', { name: name(decker), target: who, net: out.net, mine, theirs })}</p>`, snap: { ...snap, maneuver: { ...mv, entry97: out.entryId ?? id, freed, won97: out.who === 'me' } } };
+    : tx('SR2E.MxIc97.Maneuver.evade', { name: name(decker), target: who, net: out.net, mine, theirs })}</p>`, snap: { ...snap, maneuver: { ...mv, entry97: out.entryId ?? id, freed, won97: out.who === 'me', lost97: mv.kind === 'position' && out.who === 'them' } } };
 }
 
 /**
@@ -430,7 +456,7 @@ export function attackMods(attacker: any, target: any, as: string = 'tn'): { mod
   const me = String(attacker.uuid);
   if (X.on('position')) {
     const own = X.bestEntry(mx(attacker).pos, String(target.uuid), host);
-    const exp = target.type === 'ic' ? null : X.bestEntry(mx(target).exposed, me, host, used(attacker));
+    const exp = target.type === 'ic' ? null : X.hostExposed(flag(sync(host), HOST_FLAG), String(target.uuid), me, used(attacker));
     const net = (own?.net ?? 0) + (exp?.net ?? 0);
     if (net > 0) {
       const u = X.positionUse(net, as);
@@ -465,26 +491,27 @@ export function parryMod(target: any, attackerUuid: string, t: { round: number |
  * An IC's (or a frame's) attack on a decker (VR2 p. 122): the decker's parry against it (+TN) and a position the decker
  * lost to it (−TN). Each switch at 'v965': the old parry only.
  */
-export function icMods(ic: any, target: any): { mods: TargetNumberModifier[]; used: string[]; parryId?: string } {
-  const out = { mods: [] as TargetNumberModifier[], used: [] as string[], parryId: undefined as string | undefined };
+export function icMods(ic: any, target: any): { mods: TargetNumberModifier[]; used: string[]; parryId?: string; exposedId?: string } {
+  const out = { mods: [] as TargetNumberModifier[], used: [] as string[], parryId: undefined as string | undefined, exposedId: undefined as string | undefined };
   if (!target || target.type === 'ic') return out;
   const p = parryMod(target, String(ic.uuid));
   if (p.mod) out.mods.push(p.mod);
   // IC are the GM's: its attack takes the parry off the host's record itself (afterAttack).
   if (p.id) out.parryId = p.id;
   if (X.on('position')) {
-    const exp = X.bestEntry(mx(target).exposed, String(ic.uuid), hostOf(target), used(ic));
-    if (exp) { out.mods.push({ id: 'positionManeuver', label: tx('SR2E.MxIc97.Maneuver.exposedMod', { name: String(target.name ?? '') }), value: -exp.net }); out.used.push(exp.id); }
+    // The host's record (the GM side's), never the decker's own flags: the IC's attack takes it off (afterAttack).
+    const exp = X.hostExposed(flag(sync(hostOf(target)), HOST_FLAG), String(target.uuid), String(ic.uuid));
+    if (exp) { out.mods.push({ id: 'positionManeuver', label: tx('SR2E.MxIc97.Maneuver.exposedMod', { name: String(target.name ?? '') }), value: -exp.net }); out.exposedId = exp.id; }
   }
   return out;
 }
 
 /** After the attack: the attacker's own positions on the target are used, and the target's entries it used are noted on the attacker. */
-export async function afterAttack(attacker: any, m: { ownPos: string[]; used: string[]; parryId?: string }): Promise<void> {
-  if (m.parryId && attacker?.type === 'ic') {
+export async function afterAttack(attacker: any, m: { ownPos: string[]; used: string[]; parryId?: string; exposedId?: string }): Promise<void> {
+  if ((m.parryId || m.exposedId) && attacker?.type === 'ic') {
     const host: any = sync(hostOf(attacker));
     const rec = hostRec(host);
-    if (host?.type === 'host') { try { await saveRec(host, { ...rec, parry: rec.parry.filter((e) => e.id !== m.parryId) }); } catch (err) { console.warn('sr2e | parry used up (the GM\'s client runs IC)', err); } }
+    if (host?.type === 'host') { try { await saveRec(host, { ...rec, parry: rec.parry.filter((e) => e.id !== m.parryId), exposed: rec.exposed.filter((e) => e.id !== m.exposedId) }); } catch (err) { console.warn('sr2e | parry used up (the GM\'s client runs IC)', err); } }
   }
   if (!attacker || (!m.ownPos.length && !m.used.length)) return;
   const up: Record<string, unknown> = {};
