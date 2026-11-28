@@ -126,6 +126,7 @@ import { riggerPoolOnDetection, modSkillNames } from "../rules/vsec98.ts";
 import * as VR98G from "./vrig98.ts";
 import * as VR98 from "../rules/vrig98.ts";
 import * as W99 from "../rules/ware99.ts";
+import { rowLevel as rowLevel99 } from "./clinic99.ts";
 
 /** v0.73.0 (O24): the known-hosts context for this decker and the viewing user. */
 function knowledgeCtx(actor: any): any {
@@ -6462,7 +6463,10 @@ export function cyberRow(actor: any, i: any): any {
   if (sy.cost) parts.push(`${wareCost(sy)}¥`);
   if (!sy.installed) parts.push(tx('SR2E.App.Sheets.notInstalled'));
   if (sy.damaged) parts.push(tx('SR2E.App.Sheets.damagedCaps'));
-  return { id: i.id, name: i.name, system: sy, summary: parts.join(" · ") };
+  // v0.99.0 (RULES.CLINIC_V99.damageLevels 'book'): the ware's damage level, and a repair button for any level.
+  const w99 = rowLevel99(i);
+  if (w99) parts.push(w99.label);
+  return { id: i.id, name: i.name, system: sy, summary: parts.join(" · "), ware99: w99?.level ?? "" };
 }
 
 /**

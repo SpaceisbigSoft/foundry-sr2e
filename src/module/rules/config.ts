@@ -37,6 +37,7 @@ import { MXIC_V97 } from './config97/mxic.ts';
 import { VDRIVE_V98 } from './config98/vdrive.ts';
 import { VSEC_V98 } from './config98/vsec.ts';
 import { WARE_V99 } from './config99/ware.ts';
+import { CLINIC_V99 } from './config99/clinic.ts';
 import { VRIG_V98 } from './config98/vrig.ts';
 
 /**
@@ -3444,6 +3445,8 @@ export const RULES = {
   VSEC_V98,
   /** v0.99.0: rules completeness, cyberware and bioware effects (rules/config99/ware.ts). */
   WARE_V99,
+  /** v0.99.0: rules completeness, clinics, surgery and ware damage (rules/config99/clinic.ts). */
+  CLINIC_V99,
   /** v0.98.0: rules completeness, rigging, drones, sensors and electronic warfare (rules/config98/vrig.ts). */
   VRIG_V98,
 } as const;
