@@ -58,9 +58,13 @@ export function opSubsystem(op: { subsystem: string; anySub?: boolean } | null |
 
 // ---------------------------------------------------------------- Analyze Host and Scan Icon: an item per success
 
-/** What Analyze Host can tell (VR2 p. 111): the Security Rating, then each subsystem. */
+/**
+ * What Analyze Host can tell (VR2 p. 111): the Security Rating, each subsystem's rating, and whether the host is a
+ * virtual machine (`vm`; hosts have no such field, so the card asks the GM) — seven items, which is why seven
+ * successes tell all (`analyzeHostAll`).
+ */
 export function analyzeHostItems(): string[] {
-  return ['security', ...RULES.MATRIX.subsystems];
+  return ['security', ...RULES.MATRIX.subsystems, 'vm'];
 }
 /** What Scan Icon can tell (VR2 p. 117): the MPCP, each persona rating, the Response Increase. */
 export const SCAN_ITEMS: readonly string[] = ['mpcp', 'bod', 'evasion', 'masking', 'sensors', 'responseIncrease'];

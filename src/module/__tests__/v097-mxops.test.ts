@@ -15,9 +15,9 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
 // The new strings come from public/lang/en.json (english-lang.ts); until the lead merges the draft, from the draft.
-const DRAFT = join(import.meta.dirname, '..', '..', '..', 'i18n-drafts', 'mxops97.json');
+const DRAFTS = ['mxops97.json', 'mxops97-fix.json'].map((f) => join(import.meta.dirname, '..', '..', '..', 'i18n-drafts', f));
 const en = (globalThis as any).__SR2E_EN__ ?? ((globalThis as any).__SR2E_EN__ = {});
-if (existsSync(DRAFT)) for (const [k, v] of Object.entries(JSON.parse(readFileSync(DRAFT, 'utf8')))) if (!(k in en)) en[k] = v;
+for (const d of DRAFTS) if (existsSync(d)) for (const [k, v] of Object.entries(JSON.parse(readFileSync(d, 'utf8')))) if (!(k in en)) en[k] = v;
 
 describe('v0.97.0 system operations: the switches', () => {
   test('every switch has a house-rules row, the book first and the default; numbers as shipped', () => {
@@ -77,7 +77,9 @@ describe('Analyze Host: an item per success (VR2 p. 111)', () => {
     assert.deepEqual(M.analyzeHostReveal(1), ['security']);
     assert.deepEqual(M.analyzeHostReveal(2, 'files'), ['files', 'security']);
     assert.deepEqual(M.analyzeHostReveal(0), []);
-    assert.deepEqual(M.analyzeHostReveal(7), ['security', 'access', 'control', 'index', 'files', 'slave']);
+    assert.deepEqual(M.analyzeHostReveal(6), ['security', 'access', 'control', 'index', 'files', 'slave'], 'six: all but the seventh item');
+    assert.deepEqual(M.analyzeHostReveal(7), ['security', 'access', 'control', 'index', 'files', 'slave', 'vm'], 'seven items: seven tell all');
+    assert.equal(M.analyzeHostItems().length, RULES.MXOPS_V97.analyzeHostAll, 'the threshold is the number of items');
     assert.deepEqual(M.analyzeHostReveal(3, 'bogus'), ['security', 'access', 'control']);
   });
   test('v965: null (the caller tells everything)', (t) => { t.after(oldWay({ 'MXOPS_V97.analyzeHost': 'v965' })); assert.equal(M.analyzeHostReveal(1), null); });

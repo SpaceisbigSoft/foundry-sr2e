@@ -204,10 +204,10 @@ const text = () => chat.map((m) => String(m.content ?? '')).join('\n');
 
 // The new strings come from public/lang/en.json (english-lang.ts); until the lead merges the draft, from the draft.
 const SID = 'shadowrun2e_unified';
-const DRAFT = join(import.meta.dirname, '..', '..', '..', 'i18n-drafts', 'mxops97.json');
+const DRAFTS = ['mxops97.json', 'mxops97-fix.json'].map((f) => join(import.meta.dirname, '..', '..', '..', 'i18n-drafts', f));
 before(() => {
   const en = (globalThis as any).__SR2E_EN__ ?? ((globalThis as any).__SR2E_EN__ = {});
-  if (existsSync(DRAFT)) for (const [k, v] of Object.entries(JSON.parse(readFileSync(DRAFT, 'utf8')))) if (!(k in en)) en[k] = v;
+  for (const d of DRAFTS) if (existsSync(d)) for (const [k, v] of Object.entries(JSON.parse(readFileSync(d, 'utf8')))) if (!(k in en)) en[k] = v;
 });
 
 /** A loaded program on an actor. */
@@ -237,6 +237,14 @@ describe('v0.97.0 Analyze Host: an item per success (VR2 p. 111)', () => {
     noDetect(); deckerRoll(2);
     await d.systemTest('', { operationId: 'analyzeHost', mx97: { first: 'files' } });
     assert.match(text(), /Files <strong>5<\/strong>, Security Rating/);
+    chat.length = 0;
+    // Seven: everything, the virtual-machine question to the GM.
+    const G97 = await import('../applications/mxops97.ts');
+    const M97 = await import('../rules/mxops97.ts');
+    const all = await G97.analyzeHostBody(d, h, M97.analyzeHostReveal(7)!);
+    assert.match(all, /Slave <strong>5<\/strong>, Virtual machine\? <em>the GM says/);
+    assert.doesNotMatch(all, /one item per success/);
+    assert.match(await G97.analyzeHostBody(d, h, M97.analyzeHostReveal(6)!), /one item per success/);
     chat.length = 0;
     const undo = oldWay({ 'MXOPS_V97.analyzeHost': 'v965' });
     try {
