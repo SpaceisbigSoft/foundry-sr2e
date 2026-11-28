@@ -198,14 +198,15 @@ export function complexFormTask(o: { kind: string; rating: number; bonus: number
 }
 
 /**
- * The living persona's Armor (VR2 p. 145): Willpower, unless a loaded Armor (utility or complex form) rates higher.
+ * The living persona's Armor (VR2 p. 145): Willpower, unless a loaded Armor (utility or complex form) rates higher (an equal one doesn't count).
  * Returns the rating that should count and whether it is the free one; null under 'v965' or for a deck.
  */
 export function livingArmor(o: { living: boolean; willpower: number; loaded: number }): { rating: number; free: boolean } | null {
   if (!on('otakuArmor') || !o.living) return null;
   const w = whole(o.willpower);
   const l = whole(o.loaded);
-  return l >= w ? { rating: l, free: false } : { rating: w, free: true };
+  // Only a loaded Armor ABOVE Willpower replaces the free one (VR2 p. 145); an equal one leaves the free Armor (no wear).
+  return l > w ? { rating: l, free: false } : { rating: w, free: true };
 }
 
 // ---------------------------------------------------------------- IC on the Matrix scene (a table convenience)
