@@ -20,6 +20,7 @@ import { HOUSE_MXLIFE_V97 } from "./rules/config97/mxlife.ts";
 import { HOUSE_MXOPS_V97 } from "./rules/config97/mxops.ts";
 import { HOUSE_MXIC_V97 } from "./rules/config97/mxic.ts";
 import { HOUSE_VDRIVE_V98 } from "./rules/config98/vdrive.ts";
+import { HOUSE_VSEC_V98 } from "./rules/config98/vsec.ts";
 import { SYSTEM } from "./config/system.ts";
 import { worldFloor, flooredMode } from "./rules/hidden941.ts";
 import { RULES, parseSkillWeb, setSkillWeb, PRIVACY_GROUPS, PRIVACY_MODES, SOUND_EVENTS, settingMatches, URR_V80_PATCH, RULES_SOURCES, SHOP_LIST_MODES } from "./rules/index.ts";
@@ -1100,6 +1101,8 @@ export const HOUSE_RULES: HouseRuleDef[] = [
   ...HOUSE_MXIC_V97,
   // v0.98.0: rules completeness, vehicles: driving, vehicle combat and chases (rules/config98/vdrive.ts).
   ...HOUSE_VDRIVE_V98,
+  // v0.98.0: rules completeness, building security and vehicle upkeep (rules/config98/vsec.ts).
+  ...HOUSE_VSEC_V98,
 ];
 
 /**

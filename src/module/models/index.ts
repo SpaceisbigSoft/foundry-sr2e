@@ -55,6 +55,7 @@ import { round2 } from '../rules/util.ts';
 import { SYSTEM_ID } from '../config/system.ts';
 import * as MX97 from '../rules/mxic97.ts';
 import { vdrive98Fields, vdrive98Working } from '../rules/vdrive98.ts';
+import * as VS98 from '../rules/vsec98.ts';
 
 const f = () => foundry.data.fields;
 /** World time now (0 outside Foundry). */
@@ -1070,6 +1071,12 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
     // v0.92.3: the decker's own Reaction (no cyber or magic Reaction boosts) for the persona (VR2 p. 120).
     Object.assign(sys.derived, deckerDerived((this as any).parent, sys, totals.intelligence, totals as unknown as Record<string, number>, tw.pools.hacking ?? 0, d.reaction - bonus.reaction));
     Object.assign(sys.derived, riggerDerived(sys, installed, d.reaction, bonus, [...((this as any).parent?.items ?? [])], tw.pools.control ?? 0));
+    // v0.98.0 (RULES.VSEC_V98.riggerDecking 'book', Rigger 2 p. 16): a rigger's Hacking Pool is lowered by the VCR level.
+    const rd98 = VS98.riggerDeckingPenalty({ vcr: Number(sys.derived.rigging?.vcr ?? 0), datajacks: VS98.datajackCount(installed.map((i: any) => String(i.name ?? ''))) });
+    if (rd98.pool && sys.derived.hackingPool > 0) {
+      sys.derived.hackingPool = Math.max(0, sys.derived.hackingPool - rd98.pool);
+      sys.derived.hackingPoolLeft = Math.max(0, sys.derived.hackingPool - (sys.poolSpent?.hacking ?? 0));
+    }
     // Review fix (RULES.CORE_V923.threat 'book', Core p. 187): a Threat-rated NPC uses no standard Dice Pool at all.
     if (noPools) Object.assign(sys.derived, { taskPool: 0, taskPoolLeft: 0, hackingPool: 0, hackingPoolLeft: 0, controlPool: 0, controlPoolLeft: 0 });
   }

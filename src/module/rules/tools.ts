@@ -64,6 +64,8 @@ export const TOOLS: readonly ToolDef[] = [
   { id: 'spirits96', icon: 'fa-solid fa-ghost', who: 'gm', toolbar: false },
   // v0.98.0 (RULES.VDRIVE_V98): the Maneuver Scores, Hiding, Relocating and hitting a wall (applications/vdrive98.ts).
   { id: 'chase98', icon: 'fa-solid fa-car-on', who: 'gm', toolbar: false },
+  // v0.98.0 (RULES.VSEC_V98): building security and vehicle upkeep (a site's CCSS values, rigger perception and combat, design).
+  { id: 'vsec98', icon: 'fa-solid fa-building-shield', who: 'gm', toolbar: false },
   { id: 'tourGm', icon: 'fa-solid fa-person-chalkboard', who: 'gm', toolbar: false },
 ];
 

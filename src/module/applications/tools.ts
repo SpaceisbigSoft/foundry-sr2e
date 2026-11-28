@@ -28,6 +28,7 @@ import { openLoot942 } from './trade942.ts';
 import { openBookTool } from './core95.ts';
 import { openSpiritsTool } from './spirits96.ts';
 import { openChaseTool } from './vdrive98.ts';
+import { openVsecTool } from './vsec98.ts';
 
 const { HandlebarsApplicationMixin, ApplicationV2 } = foundry.applications.api;
 
@@ -103,6 +104,7 @@ export const TOOL_ACTIONS: Record<string, () => void> = {
   bookRules95: () => { if (isGm()) void openBookTool(); },
   spirits96: () => { if (isGm()) void openSpiritsTool(); },
   chase98: () => { if (isGm()) void openChaseTool(); },
+  vsec98: () => { if (isGm()) void openVsecTool(); },
 };
 
 /** Run a tool by id (false when the id is unknown or the tool is the GM's and the user isn't). */

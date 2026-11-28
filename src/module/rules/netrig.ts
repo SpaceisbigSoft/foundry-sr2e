@@ -1,4 +1,5 @@
 import { RULES } from './config.ts';
+import { modSpec98, type ModVehicle } from './vsec98.ts';
 import type { TargetNumberModifier } from './dice.ts';
 import { utilitySize, IC_BEHAVIORS, type IcBehavior } from './matrix.ts';
 import { deckPartBook } from './matrix923.ts';
@@ -247,10 +248,13 @@ export function modificationDef(kind: string): ModificationDef | null {
 }
 
 /** The stat a modification changes and by how much, and its cost, for a vehicle of this Body. */
-export function modificationEffect(kind: string, rating: number, body: number): { stat: string; delta: number; cost: number; label: string } {
+export function modificationEffect(kind: string, rating: number, body: number, veh?: ModVehicle): { stat: string; delta: number; cost: number; label: string } {
   const d = modificationDef(kind);
   const r = Math.max(0, Math.floor(rating || 0));
   if (!d) return { stat: '', delta: 0, cost: 0, label: kind };
+  // v0.98.0 (RULES.VSEC_V98.modSpecs 'book', Rigger 2 pp. 120–140): the item's own parts cost, for this vehicle.
+  const spec = veh ? modSpec98(kind, r, { ...veh, body }) : null;
+  if (spec && spec.cost != null) return { stat: d.stat, delta: d.perRating * r, cost: spec.cost, label: d.label };
   // v0.78.0 (RULES.BOOK_V78.adaptation 'text'): the rigger adaptation is a flat price on top of the remote adaptation.
   if (kind === 'adaptation' && RULES.BOOK_V78.adaptation === 'text') return { stat: d.stat, delta: 0, cost: RULES.BOOK_V78.riggerAdaptationCost * Math.max(1, r), label: d.label };
   return { stat: d.stat, delta: d.perRating * r, cost: d.cost * r * (d.perBody ? Math.max(1, body) : 1), label: d.label };
