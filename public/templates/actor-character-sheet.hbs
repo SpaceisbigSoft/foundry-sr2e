@@ -426,7 +426,7 @@
         <input type="checkbox" data-action="toggleInstalled" data-item-id="{{id}}" {{checked system.installed}} title="{{sr2eT "SR2E.UI.installed"}}">
         <a data-action="editItem" data-item-id="{{id}}">{{name}}</a>
         <span>{{summary}}</span>
-        {{#if system.damaged}}<button type="button" data-action="repairCyber" data-item-id="{{id}}">{{sr2eT "SR2E.UI.repair2"}}</button>{{/if}}
+        {{#if (or system.damaged ware99)}}<button type="button" data-action="repairCyber" data-item-id="{{id}}">{{sr2eT "SR2E.UI.repair2"}}</button>{{/if}}
         {{#unless system.installed}}<button type="button" data-action="surgery" data-item-id="{{id}}" title="{{sr2eT "SR2E.UI.surgeryToInstallIt"}}">{{sr2eT "SR2E.UI.surgery"}}</button>{{/unless}}
         {{#if (eq system.bioKind "adrenalPump")}}{{#if system.installed}}<button type="button" data-action="toggleAdrenal" data-item-id="{{id}}">{{#if system.bioActive}}{{sr2eT "SR2E.UI.switchOff"}}{{else}}{{sr2eT "SR2E.UI.activate"}}{{/if}}</button>{{/if}}{{/if}}
         <a data-action="toggleDamaged" data-item-id="{{id}}" title="{{#if system.damaged}}{{sr2eT "SR2E.UI.markRepaired"}}{{else}}{{sr2eT "SR2E.UI.markDamaged"}}{{/if}}"><i class="fa-solid fa-{{#if system.damaged}}wrench{{else}}burst{{/if}}"></i></a>

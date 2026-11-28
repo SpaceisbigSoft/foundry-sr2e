@@ -23,6 +23,7 @@ import { onCard as onCardMxIc97 } from './mxic97.ts';
 import { onCard as onCardVDrive98 } from './vdrive98.ts';
 import * as VD98G from './vdrive98.ts';
 import { onCard as onCardVsec98 } from './vsec98.ts';
+import { onCard as onCardClinic99 } from './clinic99.ts';
 import { onCard as onCardVr98 } from './vrig98.ts';
 import * as MX97 from '../rules/mxic97.ts';
 import { blastThroughWalls, crossingFraction, indirectScatterDice, indirectScatterMetres, barrierSpellRadius } from '../rules/index.ts';
@@ -3738,6 +3739,8 @@ function dispatch(message: any, button: HTMLButtonElement, action: string): Prom
   else if (action.startsWith('vdrive98')) return onCardVDrive98(message, button, action);
   // v0.98.0 (RULES.VSEC_V98): building security's card buttons (applications/vsec98.ts).
   else if (action.startsWith('vsec98')) return onCardVsec98(message, button, action);
+  // v0.99.0 (RULES.CLINIC_V99): the GM clears a repaired ware's damage record (applications/clinic99.ts).
+  else if (action.startsWith('clinic99')) return onCardClinic99(message, button, action);
   // v0.98.0 (RULES.VRIG_V98.miji): a MIJI card's Apply (GM) (applications/vrig98.ts).
   else if (action.startsWith('vrig98')) return onCardVr98(message, button, action);
   else if (action === 'evict') return onEvict(message, button);

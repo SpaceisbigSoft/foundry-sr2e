@@ -57,6 +57,7 @@ import * as MX97 from '../rules/mxic97.ts';
 import { vdrive98Fields, vdrive98Working } from '../rules/vdrive98.ts';
 import * as VS98 from '../rules/vsec98.ts';
 import * as VR98 from '../rules/vrig98.ts';
+import * as CL99 from '../rules/clinic99.ts';
 
 const f = () => foundry.data.fields;
 /** World time now (0 outside Foundry). */
@@ -193,7 +194,8 @@ export function augmentationsOf(actor: any): Augmentation[] {
       const housed = Boolean(i.system.housedIn && limbs.has(i.system.housedIn));
       // v0.92.3 (RULES.GEAR_V923.limbHoused 'book', Cybertechnology p. 49): only listed ware costs less in a cyberlimb.
       const housedCost = housed ? housedEssenceCost({ name: i.name, essenceCost: i.system.essenceCost }) : null;
-      return {
+      // v0.99.0 (RULES.CLINIC_V99.damageLevels 'book', Shadowtech pp. 36–41): Light halves its bonuses, Moderate+ stops it.
+      return CL99.wareAug(i, {
         // Bioware costs Body Index instead of Essence; cyberware housed in a cyberlimb uses its capacity.
         essenceCost: i.system.bioware ? awakenedBioEssence(culturedBodyCost(i.system.bodyIndex ?? 0, Boolean(i.system.cultured), String(i.system.bioKind ?? ''), String(i.name ?? '')), awakened)
           : housed ? (housedCost === null ? 0 : sensitiveEssence(housedCost, qv)) : sensitiveEssence(i.system.essenceCost, qv),
@@ -207,7 +209,7 @@ export function augmentationsOf(actor: any): Augmentation[] {
         reflexes: i.system.reflexes || e?.reflexes || '',
         name: i.name,
         damaged: Boolean(i.system.damaged),
-      };
+      });
     });
 }
 
@@ -260,7 +262,8 @@ function bioDerived(ware: any[], dermal: { ballistic: number; impact: number }, 
 function cyberDerived(actor: any, ware: any[]) {
   // v0.54.0: ware still healing in after surgery does nothing yet, like its attribute bonuses.
   const healing = new Set(recoveringItemIds(actor?.system?.recovering ?? [], worldNow()));
-  const live = ware.filter((i: any) => i.system.installed && !i.system.damaged && !healing.has(i.id));
+  // v0.99.0 (RULES.CLINIC_V99.damageLevels 'book'): ware at Moderate damage or worse gives nothing.
+  const live = ware.filter((i: any) => i.system.installed && !i.system.damaged && !healing.has(i.id) && !CL99.wareStops(i));
   const max = (f: (i: any) => number) => live.reduce((n: number, i: any) => Math.max(n, f(i) || 0), 0);
   const named = (re: RegExp) => live.some((i: any) => re.test(i.name ?? ''));
   const datajack = live.some((i: any) => i.system.kind === 'datajack') || named(/data\s*-?jack/i);
