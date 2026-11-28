@@ -2,6 +2,13 @@
 
 This is the history of the unofficial Shadowrun 2nd Edition system for Foundry VTT (system id `shadowrun2e_unified`; `sr2e` until v0.93.0), newest version first. Every rules change since v0.70.0 has a house-rule switch that puts the old behaviour back. The system was built with AI (Anthropic's Claude) under human direction, and it has not yet been play-tested at a real table.
 
+## v0.97.0 — Rules completeness: the Matrix (27 Nov 2026)
+About 30 Matrix rules from Virtual Realities 2.0 that the system didn't have yet. Each has a house-rule switch whose other choice puts v0.96.5 back (Magic and the Matrix section): `RULES.MXIC_V97`, `RULES.MXOPS_V97`, `RULES.MXLIFE_V97`.
+- **IC and cybercombat:** crashed IC can be suppressed instead of going on the tally (−1 Detection Factor each, released later); black IC's last shot at the MPCP after a kill, and the run's downloaded files wiped; improvised attacks; parry lasting until the opponent's next attack, position as −TN or +Power (and it can backfire), evade for net Combat Turns; the ripper's chip damage; tar baby and tar pit as opposed tests; scramble IC's poison test; data bombs on the tally and the Defuse utility; reality filters as an extra Response Increase level; non-combat actions per turn; running a hot deck cool costs 1D6 Initiative.
+- **System operations:** Analyze Host tells one item per net success; Analyze Subsystem, Crash Application, Decoy, Disinfect, Dump Log, Locate Decker, Locate Frame, Locate IC, Retrain and Scan Icon; Validate Passcode's superuser and supervisor levels and its duration in days (an active alert deletes passcodes); Slow's and Restore's tests; interrogation question modifiers and "the host doesn't hold it".
+- **The decker's life:** recovery tests from psychotropic IC (weekly, daily for Matrix maniac); unsold paydata losing a point a day; Cook and Installation tasks for deck parts; otaku channels as skills, complex forms by the book with their limits, and the living persona's free Armor; launched IC gets a hidden token beside its host on the Matrix scene.
+- API changes: none (new house-rule switches only).
+
 ## v0.96.5 — Team Karma when the GM re-rolls a player's card; holding (27 Nov 2026)
 - **Fixed:** when the GM pressed a Karma button on a player's card and the Team Karma Pool had to pay, the pool was not charged but the re-roll still happened. Now the pool pays, and if the pool can't be saved, nothing is re-rolled.
 - **Fixed:** a hold can only be tried by the holder's owner or the GM (before, a player who only observed a character could roll its hold test).
