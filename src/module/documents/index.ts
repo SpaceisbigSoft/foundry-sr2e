@@ -187,6 +187,7 @@ import * as MO97 from '../rules/mxops97.ts';
 import * as MO97G from '../applications/mxops97.ts';
 // v0.97.0 (RULES.MXIC_V97): Matrix IC and cybercombat rules completeness.
 import * as MX97 from '../rules/mxic97.ts';
+import * as VD98G from '../applications/vdrive98.ts';
 import * as MXG97 from '../applications/mxic97.ts';
 import * as S923 from '../rules/sorcery923.ts';
 import { riggerDumpShock, rcdFlux, castingPoolDice } from '../rules/docs79-drones-magic.ts';
@@ -719,6 +720,8 @@ export interface DriveOptions {
   push?: number;
   /** v0.92.3: the kind of vehicle test (rigger 2's tables differ; default by crashTest / push, else a Driving Test). */
   kind?: DriveKind;
+  /** v0.98.0 (RULES.VDRIVE_V98.chase): a ram's target (its Maneuver Score row). */
+  ramTarget98?: string;
 }
 
 /** Options for SR2Actor.attackWith / planAttack / previewAttack. */
@@ -1340,7 +1343,9 @@ export interface TestSnapshot {
   /** drive: a vehicle test; a failed crash test crashes the vehicle at its current speed. */
   drive?: { vehicleUuid: string; vehicleName: string; crashTest: boolean; speed: number;
     /** v0.57.0: a push to this speed, and whether it was applied. */
-    push?: number; pushApplied?: boolean };
+    push?: number; pushApplied?: boolean;
+    /** v0.98.0 (RULES.VDRIVE_V98.stress): the card's Stress was worked out (once). */
+    stress98?: boolean };
   /** sensor: a vehicle's sensor test on a target; success gives a sensor lock. */
   sensor?: { targetUuid: string; targetName: string;
     /** v0.57.0: the vehicle whose sensors were used (the card is the jumped-in rigger's, for Karma). */
@@ -3292,16 +3297,13 @@ export class SR2Actor extends Actor {
       case 'bypass':
         return this.#resolveBypass(snap, fu);
       case 'drive': {
-        const d = snap.drive!;
-        if (d.push !== undefined) return this.#resolvePush(snap);
-        if (s > 0) return { html: `<p><strong>${d.crashTest ? tx('SR2E.Card.Actor.staysUnderControl', { vehicleName: escText(d.vehicleName) }) : tx('SR2E.Card.Actor.success2')}</strong> (${escText(plural(s, 'success'))}).</p>`, flags: {}, snap };
-        if (!d.crashTest) return { html: `<p><strong>${tx('SR2E.Card.Actor.theManeuverFails')}</strong></p>`, flags: {}, snap };
-        const c = veh80CrashDamage(d.speed);
-        return {
-          html: `<p><strong>${tx('SR2E.Card.Actor.crash')}</strong> ${tx('SR2E.Card.Actor.crashesAtSpeed', { vehicleName: escText(d.vehicleName), speed: d.speed })}</p>
-            <p><button type="button" data-sr2e-action="vehicleCrash">${tx('SR2E.Card.Actor.crashDamagePower', { power: c.power })}</button></p>`,
-          flags: { crash: { vehicleUuid: d.vehicleUuid, speed: d.speed } }, snap,
-        };
+        // v0.98.0 (RULES.VDRIVE_V98.stress, Rigger 2 pp. 25–26): the Stress Rule of One and the Stress Test, once per card.
+        const st98 = await VD98G.driveStress(this, snap);
+        if (st98.mark) {
+          const base = await this.#resolveDriveCard({ ...snap, drive: { ...snap.drive!, stress98: true } }, s);
+          return { ...base, html: base.html + st98.html, flags: { ...st98.flags, ...base.flags } };
+        }
+        return this.#resolveDriveCard(snap, s);
       }
       case 'defend': {
         const attack = snap.defendAgainst as AttackState;
@@ -9202,7 +9204,9 @@ export class SR2Actor extends Actor {
     vehicleMods.push(...controlRigTn({ test: 'gunnery', vcr: Number(this.sys.derived?.rigging?.vcr ?? 0), jumpedIn: riggedFire } as any));
     // v0.57.0: the chase position won by maneuver score (RULES.VEHICLES_V57.maneuver).
     const combatNow: any = game.combat;
-    if (ride && targetRide && ride !== targetRide) {
+    // v0.98.0 (RULES.VDRIVE_V98.gunneryRows, Rigger 2 p. 57): relative motion and the Maneuver Score difference instead.
+    vehicleMods.push(...VD98G.gunnery(ride, targetRide, still));
+    if (ride && targetRide && ride !== targetRide && !VD98G.replacesPosition()) {
       const pm = positionModifier(ride.system?.position, ride.uuid, targetRide.uuid, combatNow?.started ? Number(combatNow.round ?? 0) : null, combatNow?.started ? String(combatNow.id ?? '') : null);
       if (pm) vehicleMods.push(pm);
     }
@@ -9411,6 +9415,8 @@ export class SR2Actor extends Actor {
 
   async #attackWith(weapon: any, opts: AttackOptions = {}): Promise<SuccessTestResult | null> {
     if (!this.canAct('attack')) return null;
+    // v0.98.0 (RULES.VDRIVE_V98, Rigger 2 pp. 48–49): a passenger above the Driver Points; a target that has hidden.
+    if (VD98G.offenceRefused(this, opts.targetUuid ?? null)) return null;
     // v0.95.0 (MELEE_V95.interception): only against a mover the GM's offer names, once.
     if (opts.intercept95 && !G95.interceptVouched(this, opts.targetUuid)) { ui.notifications?.warn?.(tx('SR2E.Melee95.interceptUsed')); return null; }
     if (this.type === 'vehicle' && this.sys.derived?.destroyed) {
@@ -10350,7 +10356,9 @@ export class SR2Actor extends Actor {
     damage = ap.damage;
     const { kind, armor, occ, occTn, opts } = ap;
     if (occ || damage.noPool) poolDice = 0;
-    await this.resistDamage({ power: damage.power, level: damage.level, type: damage.damageType, armor, poolDice, ...(occTn ? { tnPlus: occTn } : {}), knockdown: !damage.black, ...(damage.spiritAttacker ? { spiritAttacker: true } : {}), knockdownMelee: damage.melee, ...(damage.gel ? { knockdownGel: true } : {}), ...(Number(damage.strength ?? 0) > 0 ? { knockdownStrength: Number(damage.strength) } : {}), ...(damage.cleanMiss80 ? { cleanMiss80: damage.cleanMiss80 } : {}), ...(damage.ignoreArmor || damage.elemental || noArmor ? {} : { armorKind: kind }), ...(noArmor ? { armorSkipped: true } : {}), ...(vuln ? { noRegen: true } : {}), ...F95.screenDice(damage),
+    // v0.98.0 (RULES.VDRIVE_V98.deadlyPassenger, Rigger 2 p. 53): a Deadly hit on a passenger also does Light to the vehicle.
+    await VD98G.deadlyPassenger(this, damage);
+    await this.resistDamage({ power: damage.power, level: damage.level, type: damage.damageType, armor, poolDice, ...(occTn ? { tnPlus: occTn } : {}), knockdown: !damage.black, ...(damage.spiritAttacker ? { spiritAttacker: true } : {}), knockdownMelee: damage.melee, ...(damage.gel ? { knockdownGel: true } : {}), ...(Number(damage.strength ?? 0) > 0 ? { knockdownStrength: Number(damage.strength) } : {}), ...(damage.cleanMiss80 ? { cleanMiss80: damage.cleanMiss80 } : {}), ...(damage.ignoreArmor || damage.elemental || noArmor ? {} : { armorKind: kind }), ...(noArmor ? { armorSkipped: true } : {}), ...(vuln ? { noRegen: true } : {}), ...F95.screenDice(damage), ...(VD98G.extraDice(damage) ? { extraDice98: VD98G.extraDice(damage) } : {}),
       ...(damage.black ? {} : { cyberCheck: { location: damage.calledLocation ?? '' } }), ...(damage.infection ? { infection: damage.infection } : {}), ...(damage.toxinHit ? { toxinHit: damage.toxinHit } : {}), ...(typeof damage.subdueBy95 === 'string' && damage.subdueBy95 ? { subdueBy95: damage.subdueBy95 } : {}) });
     // v0.92.3 (RULES.HEALTH_V923.shock 'disorient', Core p. 103): a stun weapon's hit disorients the target.
     if (damage.shock) await this.shockDisorient(Number(damage.power) || 0, this.armorRating('impact', opts));
@@ -10460,6 +10468,8 @@ export class SR2Actor extends Actor {
     armorSkipped?: boolean;
     /** v0.95.0 (FIRE_V95.shotScreen, Core p. 95): extra dice behind other targets in a shot spread. */
     extraDice95?: number;
+    /** v0.98.0 (RULES.VDRIVE_V98, Rigger 2 p. 50): a crash cage's dice and the rigger's Crash Test Control Pool dice. */
+    extraDice98?: number;
   }): Promise<void> {
     const type: DamageType = opts.type ?? 'physical';
     const tn = resistanceTargetNumber(opts.power, opts.armor ?? 0) + Math.max(0, Number(opts.tnPlus ?? 0) || 0);
@@ -10469,7 +10479,7 @@ export class SR2Actor extends Actor {
     const { lacing, tough, conjDice, dermal, threat, dice } = this.resistDicePlan(type, Boolean(opts.astral), Boolean(opts.spiritAttacker));
     const result = await successTest({
       // v0.58.0: bone lacing adds to Body for damage resistance only.
-      dice: dice + (opts.extraDice95 ?? 0),
+      dice: dice + (opts.extraDice95 ?? 0) + (opts.extraDice98 ?? 0),
       // Threat dice count as Combat Pool dice for a clean miss (Core p. 86), never spent.
       poolDice: poolDice + threat,
       targetNumber: tn,
@@ -10478,7 +10488,7 @@ export class SR2Actor extends Actor {
       roll: foundryRoller(rolls),
     });
     if (poolDice > 0) await this.#spendPool(poolType, poolDice);
-    const armorNote = `${conjDice ? tx('SR2E.Card.Actor.conjuringVsSpirit', { dice: conjDice }) : ''}${opts.armor ? tx('SR2E.Card.Actor.armor', { armor: opts.armor }) : ''}${opts.armorSkipped ? tx('SR2E.Card.Actor.armorSkipped') : ''}${dermal ? tx('SR2E.Card.Actor.dermalBody', { dermal }) : ''}${threat ? tx('SR2E.Card.Actor.threatDice', { threat }) : ''}${!conjDice && lacing ? tx('SR2E.Card.Actor.boneLacing', { lacingLabel: this.sys.derived.cyber.lacing.label, lacing }) : ''}${!conjDice && tough ? tx('SR2E.Card.Actor.toughness2', { tough }) : ''}${F95.screenNote(opts.extraDice95)}`;
+    const armorNote = `${conjDice ? tx('SR2E.Card.Actor.conjuringVsSpirit', { dice: conjDice }) : ''}${opts.armor ? tx('SR2E.Card.Actor.armor', { armor: opts.armor }) : ''}${opts.armorSkipped ? tx('SR2E.Card.Actor.armorSkipped') : ''}${dermal ? tx('SR2E.Card.Actor.dermalBody', { dermal }) : ''}${threat ? tx('SR2E.Card.Actor.threatDice', { threat }) : ''}${!conjDice && lacing ? tx('SR2E.Card.Actor.boneLacing', { lacingLabel: this.sys.derived.cyber.lacing.label, lacing }) : ''}${!conjDice && tough ? tx('SR2E.Card.Actor.toughness2', { tough }) : ''}${F95.screenNote(opts.extraDice95)}${opts.extraDice98 ? tx('SR2E.VDrive98.Text.crashDice', { n: opts.extraDice98 }) : ''}`;
     await this.#post(this.#snapshot((opts.astral ? tx('SR2E.Card.Actor.resist7WithAstral', { power: opts.power, level: opts.level, type, armorNote }) : tx('SR2E.Card.Actor.resist7Plain', { power: opts.power, level: opts.level, type, armorNote })), result, {
       kind: 'soak',
       soak: {
@@ -10632,6 +10642,8 @@ export class SR2Actor extends Actor {
     exclude?: string[];
   } = {}): Promise<SuccessTestResult | null> {
     if (!this.canAct('castSpell')) return null;
+    // v0.98.0 (RULES.VDRIVE_V98, Rigger 2 pp. 48–49): a passenger above the Driver Points; a target that has hidden.
+    if (VD98G.offenceRefused(this, (opts as any).targetUuids?.[0] ?? (opts as any).targetUuid ?? null)) return null;
     const sp = spell.system;
     // v0.61.0: an exclusive spell limits other spellcasting (MAGIC_V61.exclusive).
     {
@@ -11933,6 +11945,8 @@ export class SR2Actor extends Actor {
         }
       }
     }
+    // v0.98.0 (RULES.VDRIVE_V98.speedCap / stress, Rigger 2 pp. 22, 25): at most 1.5 × the Speed; a Stress Point past it.
+    if (this.type === 'vehicle') { const cap98 = VD98G.speedUpdate(this, changed); if (cap98) ui.notifications?.info?.(escHtml(cap98)); }
     // v0.57.0: a host set to shutdown by hand (its sheet) dumps everyone too.
     if (this.type === 'host' && (changed?.system?.alert ?? changed?.['system.alert']) === 'shutdown' && this.sys.alert !== 'shutdown') options.sr2eShutdown = true;
     if (changed?.system?.astral !== undefined || changed?.['system.astral'] !== undefined) options.sr2ePrevAstral = this.sys.astral;
@@ -17795,9 +17809,9 @@ export class SR2Actor extends Actor {
   }
 
   /** Dice for a vehicle test: the vehicle skill, a related skill (+2) or Reaction (+4). */
-  #vehicleSkillDice(skill: any | undefined, skillName: string, useSpecialization?: boolean, relatedSkillId?: string | null, jumped = false) {
+  #vehicleSkillDice(skill: any | undefined, skillName: string, useSpecialization?: boolean, relatedSkillId?: string | null, jumped = false, reactionPlus98 = 0) {
     const def = RULES.VEHICLES.defaultAttribute;
-    const reaction = jumped ? (this.sys.derived?.rigging?.reaction ?? this.sys.derived?.reaction ?? 0) : (this.sys.derived?.reaction ?? 0);
+    const reaction = (jumped ? (this.sys.derived?.rigging?.reaction ?? this.sys.derived?.reaction ?? 0) : (this.sys.derived?.reaction ?? 0)) + reactionPlus98;
     const attr = def === 'reaction' ? reaction : ((this.sys.attributes?.[def]?.total as number | undefined) ?? 0);
     const related = relatedSkillId ? this.items.get(relatedSkillId) : null;
     const r = skillTestDice({
@@ -17810,7 +17824,9 @@ export class SR2Actor extends Actor {
     const suffix = r.using === 'specialization' ? ` (${skill.system.specialization} ${skill.system.specializationRating})`
       : r.using === 'related' ? tx('SR2E.Text.Actor.defaultingTo', { name: related.name })
       : r.using === 'attribute' ? tx('SR2E.Text.Actor.noVehicleSkill', { skill: skillName || tx('SR2E.Text.Actor.vehicle'), attr: cap(def) }) : '';
-    return { dice: r.dice, modifiers: r.modifier ? [r.modifier] : [], suffix };
+    // v0.98.0 (RULES.VDRIVE_V98.riggerDefault, Rigger 2 p. 12): a rigger jumped in defaults at +1 per dot.
+    const dm98 = VD98G.defaultMod(r.modifier, { jumped, using: String(r.using ?? ''), attribute: def, relatedName: String(related?.name ?? '') });
+    return { dice: r.dice, modifiers: dm98 ? [dm98] : [], suffix };
   }
 
   /**
@@ -17945,9 +17961,13 @@ export class SR2Actor extends Actor {
       terrain: opts.terrain ?? SR2Actor.sceneTerrain(vehicle.sceneHere()) ?? 'normal', situational, damageBoxes: v.condition ?? 0, mode,
       vcr: (this.sys.derived?.rigging?.vcr as number | undefined) ?? 0, kind,
     });
+    // v0.98.0 (RULES.VDRIVE_V98, Rigger 2 pp. 45–49): an active autonav on a combat maneuver, and the chase's score rows.
+    mods.push(...VD98G.driveMods(vehicle, { kind, mode, push: opts.push !== undefined, targetUuid: opts.ramTarget98 ?? null }));
+    // v0.98.0 (RULES.VDRIVE_V98.datajackReaction, Rigger 2 p. 124): +1 Reaction driving by datajack.
+    const dj98 = mode === 'autopilot' ? 0 : VD98G.datajackPlus(this, mode, opts.situational);
     // v0.92.3 (RULES.VEHICLES_V923.crashMods 'book', Rigger 2 p. 52): a Crash Test's speed against the driver's Reaction.
     if (kind === 'crash' && veh923('crashMods') === 'book') {
-      const reaction = mode === 'autopilot' ? Number(v.derived?.reaction ?? 0) : mode === 'jumped' ? Number(this.sys.derived?.rigging?.reaction ?? this.sys.derived?.reaction ?? 0) : Number(this.sys.derived?.reaction ?? 0);
+      const reaction = (mode === 'autopilot' ? Number(v.derived?.reaction ?? 0) : mode === 'jumped' ? Number(this.sys.derived?.rigging?.reaction ?? this.sys.derived?.reaction ?? 0) : Number(this.sys.derived?.reaction ?? 0)) + dj98;
       const cs = crashSpeedModifier(Number(v.currentSpeed ?? 0), reaction);
       if (cs) mods.push(cs);
     }
@@ -17984,7 +18004,7 @@ export class SR2Actor extends Actor {
       dice += maneuver;
     } else {
       const skillName = String(v.derived?.skill ?? vehicleCategory(v.category).skill);
-      const sd = this.#vehicleSkillDice(skillName ? this.findSkill(skillName) : undefined, skillName, opts.useSpecialization, opts.relatedSkillId, mode === 'jumped');
+      const sd = this.#vehicleSkillDice(skillName ? this.findSkill(skillName) : undefined, skillName, opts.useSpecialization, opts.relatedSkillId, mode === 'jumped', dj98);
       dice = sd.dice;
       poolCap = sd.dice;
       suffix = sd.suffix;
@@ -17992,7 +18012,7 @@ export class SR2Actor extends Actor {
       // v0.92.3 (RULES.VEHICLES_V923.autonavDice 'book', Rigger 2 pp. 20, 51): the autonav's rating in dice on an
       // ordinary Driving Test and a Crash Test (its collision-avoidance programs), not on the combat maneuvers.
       const nav = Math.max(0, Math.floor(Number(v.autonav ?? 0)));
-      if (nav > 0 && (kind === 'driving' || kind === 'crash') && veh923('autonavDice') === 'book') {
+      if (nav > 0 && (kind === 'driving' || kind === 'crash') && veh923('autonavDice') === 'book' && VD98G.autonavDice(v)) {
         dice += nav;
         suffix += tx('SR2E.Card.Actor.plusAutonavDice', { nav });
       }
@@ -18007,7 +18027,7 @@ export class SR2Actor extends Actor {
    * takes its share. Called on the driver or the vehicle (autopilot).
    */
   async ram(targetUuid: string, opts: DriveOptions = {}): Promise<SuccessTestResult | null> {
-    const setup = this.#driveSetup({ ...opts, kind: 'ram' });
+    const setup = this.#driveSetup({ ...opts, kind: 'ram', ramTarget98: targetUuid });
     if (!setup) return null;
     if ('delegate' in setup) return setup.delegate.ram(targetUuid, { ...opts, vehicle: setup.vehicle, kind: 'ram' });
     const { vehicle, v, mode, handling, mods, dice, suffix } = setup;
@@ -18016,6 +18036,9 @@ export class SR2Actor extends Actor {
       ui.notifications?.warn?.(tx('SR2E.Notify.Actor.pickSomethingToRam'));
       return null;
     }
+    // v0.98.0 (RULES.VDRIVE_V98.ramRange, Rigger 2 p. 47): only closer than the vehicle's Acceleration.
+    const far98 = VD98G.ramRefusal(vehicle, target);
+    if (far98) { ui.notifications?.warn?.(escHtml(far98)); return null; }
     // v0.80.0 (URR_V80.vehImpact): in a chase between the two, the ramming speed is the difference of their speeds.
     const inChase = target.type === 'vehicle' && (v.chase?.quarryUuid === target.uuid || target.system?.chase?.quarryUuid === vehicle.uuid);
     // v0.92.3 (RULES.VEHICLES_V923.ram 'book', Rigger 2 pp. 47, 52): against a vehicle always the difference of the speeds;
@@ -18413,12 +18436,15 @@ export class SR2Actor extends Actor {
     const qr = await quarry.driveTest({ ...(opts.quarry ?? {}), kind: 'maneuver', label: tx('SR2E.Card.Actor.positioningChase'), modifiers: [...(opts.quarry?.modifiers ?? []), ...(qm ? [{ id: 'faster', label: tx('SR2E.Card.Mod.faster'), value: qm }] : [])] });
     const before = Number(c.metres ?? 0);
     // v0.57.0 (Rigger 2 style): maneuver scores from the positioning successes and speed win a firing position.
-    const scored = RULES.VEHICLES_V57.maneuver.mode === 'score';
-    const pScore = scored ? maneuverScore({ successes: pr?.successes ?? 0, speed: ps }) : (pr?.successes ?? 0);
-    const qScore = scored ? maneuverScore({ successes: qr?.successes ?? 0, speed: qs }) : (qr?.successes ?? 0);
+    // v0.98.0 (RULES.VDRIVE_V98.chase, Rigger 2 pp. 42, 46): the book's Maneuver Scores replace these; the gap moves by
+    // speed only and the positioning successes go to next turn's Driver Points (the combat's record).
+    const book98 = VD98G.speedOnlyGap();
+    const scored = RULES.VEHICLES_V57.maneuver.mode === 'score' && !book98;
+    const pScore = book98 ? 0 : scored ? maneuverScore({ successes: pr?.successes ?? 0, speed: ps }) : (pr?.successes ?? 0);
+    const qScore = book98 ? 0 : scored ? maneuverScore({ successes: qr?.successes ?? 0, speed: qs }) : (qr?.successes ?? 0);
     const r = chaseTurn({ metres: before, pursuerSpeed: ps, quarrySpeed: qs, pursuerSuccesses: pScore, quarrySuccesses: qScore });
     await this.update({ 'system.chase.metres': r.metres });
-    let posNote = '';
+    let posNote = book98 ? await VD98G.afterPositioning(this, quarry, pr, qr) : '';
     if (scored) {
       const pos = maneuverPosition(pScore, qScore);
       const combat: any = (game as any).combat;
@@ -18557,7 +18583,7 @@ export class SR2Actor extends Actor {
     await this.#post(this.#snapshot((damage.crash ? tx('SR2E.Card.Actor.resists3WithCrash2', { name: this.name, incPower: inc.power, incLevel: inc.level, notes: notes.join(', ') }) : tx('SR2E.Card.Actor.resists3Plain', { name: this.name, incPower: inc.power, incLevel: inc.level, notes: notes.join(', ') })), result, {
       kind: 'soak',
       soak: { mode: 'stage', noun: 'damage', level: inc.level, type: 'physical', body: v.body ?? 0, before: { physical: 0, stun: 0 }, track: 'vehicle', vehicleBefore: v.condition ?? 0, power: inc.power, ...(damage.crash ? { crash: true } : {}), ...(damage.ramSelf ? { ramSelf: true } : {}), ...((damage as any).vehHit?.impact ? { vehImpact: true } : {}),
-        ...(cp ? { controlUsed: cp } : {}), ...(damage.attackHits !== undefined ? { attackHits: Math.max(0, Number(damage.attackHits) || 0) } : {}),
+        ...(cp ? { controlUsed: cp } : {}), ...(damage.crash && Number((damage as any).cp98) > 0 ? { cp98: Math.min(30, Math.floor(Number((damage as any).cp98))) } : {}), ...(damage.attackHits !== undefined ? { attackHits: Math.max(0, Number(damage.attackHits) || 0) } : {}),
         ...(damage.vehiclePart ? { vehiclePart: damage.vehiclePart, ...(damage.vehicleWeaponId ? { vehicleWeaponId: damage.vehicleWeaponId } : {}) } : {}) },
     }), result, rolls);
   }
@@ -18608,7 +18634,8 @@ export class SR2Actor extends Actor {
         const pd = veh80PassengerDamage({ power: ctx.power ?? 0, level: pLevel, vehicleArmor: this.sys.armor ?? 0, impact: Boolean(ctx.ramSelf || (ctx as any).vehImpact || bookCrash) });
         const aboard = [...(this.sys.occupants ?? [])].filter((u: string) => u && fromUuidSync(u));
         if (this.sys.controllerUuid && this.sys.controlMode === 'manual' && !aboard.includes(this.sys.controllerUuid)) aboard.push(this.sys.controllerUuid);
-        if (pd && aboard.length) fu.passengers = aboard.map((u: string) => ({ targetUuid: u, melee: false, damageType: 'physical' as DamageType, power: pd.power, level: pd.level, armorKind: 'impact' as const, ...(bookImpact ? { noPool: true } : {}) }));
+        // v0.98.0 (RULES.VDRIVE_V98.passengerSafety / cpCarry, Rigger 2 p. 50): seat belts, APPS, a crash cage, the Crash Test's pool.
+        if (pd && aboard.length) fu.passengers = VD98G.safePassengers(this, aboard.map((u: string) => ({ targetUuid: u, melee: false, damageType: 'physical' as DamageType, power: pd.power, level: pd.level, armorKind: 'impact' as const, ...(bookImpact ? { noPool: true } : {}) })), Number((ctx as any).cp98 ?? 0));
       }
     } else {
       note = ` <em>${tx('SR2E.Card.Actor.theVehicleSDamageChangedSince', { resultAfter: result.after })}</em>`;
@@ -18625,7 +18652,10 @@ export class SR2Actor extends Actor {
     let partApplied = Boolean(ctx.partApplied);
     const part = ctx.vehiclePart ? vehiclePart(ctx.vehiclePart) : null;
     let tiresHit = false;
-    if (part && level && !partApplied && current === expected && !result.destroyed) {
+    // v0.98.0 (RULES.VDRIVE_V98.calledThreshold, Rigger 2 p. 53): only damage at the part's threshold knocks it out.
+    const ko98 = part && level ? VD98G.partHits(this, part.id, level, ctx.vehicleWeaponId) : true;
+    if (part && level && !ko98 && !partApplied) extra += ` <em>${tx('SR2E.VDrive98.Text.partHolds', { part: escText(part.label) })}</em>`;
+    if (part && level && !partApplied && current === expected && !result.destroyed && ko98) {
       partApplied = true;
       try {
         if (part.id === 'tires' || part.id === 'sensors' || part.id === 'engine') {
@@ -18709,6 +18739,21 @@ export class SR2Actor extends Actor {
     return this.driveTest({ ...opts, push: Math.max(0, Math.round(to)) });
   }
 
+  /** A 'drive' card's outcome (v0.98.0: split out so the Stress lines can follow it). */
+  async #resolveDriveCard(snap: TestSnapshot, s: number): Promise<Resolved> {
+    const d = snap.drive!;
+    if (d.push !== undefined) return this.#resolvePush(snap);
+    if (s > 0) return { html: `<p><strong>${d.crashTest ? tx('SR2E.Card.Actor.staysUnderControl', { vehicleName: escText(d.vehicleName) }) : tx('SR2E.Card.Actor.success2')}</strong> (${escText(plural(s, 'success'))}).</p>`, flags: {}, snap };
+    if (!d.crashTest) return { html: `<p><strong>${tx('SR2E.Card.Actor.theManeuverFails')}</strong></p>`, flags: {}, snap };
+    const c = veh80CrashDamage(d.speed);
+    return {
+      html: `<p><strong>${tx('SR2E.Card.Actor.crash')}</strong> ${tx('SR2E.Card.Actor.crashesAtSpeed', { vehicleName: escText(d.vehicleName), speed: d.speed })}</p>
+        <p><button type="button" data-sr2e-action="vehicleCrash">${tx('SR2E.Card.Actor.crashDamagePower', { power: c.power })}</button></p>`,
+      // v0.98.0 (RULES.VDRIVE_V98.cpCarry, Rigger 2 p. 50): the Control Pool dice put into this Crash Test.
+      flags: { crash: { vehicleUuid: d.vehicleUuid, speed: d.speed, ...VD98G.crashCarry(snap) } }, snap,
+    };
+  }
+
   /** v0.57.0: a push test's outcome: the extra change it won this Combat Turn, then the speed it allows. */
   async #resolvePush(snap: TestSnapshot): Promise<Resolved> {
     const d = snap.drive!;
@@ -18789,7 +18834,7 @@ export class SR2Actor extends Actor {
   }
 
   /** A vehicle crashes: a card with crash damage for it and for everyone aboard (the manual driver too). */
-  async crash(speed?: number): Promise<void> {
+  async crash(speed?: number, cp98 = 0): Promise<void> {
     if (this.type !== 'vehicle') return;
     const v = this.sys;
     const sp = Math.max(0, Number(speed ?? v.currentSpeed ?? 0));
@@ -18802,14 +18847,15 @@ export class SR2Actor extends Actor {
     const damages: DamageState[] = [{
       targetUuid: this.uuid as string, melee: false, damageType: 'physical', power: c.power, level: c.vehicleLevel, crash: true,
       ...(RULES.VEHICLES.crash.vehicleArmor ? {} : { ignoreArmor: true }),
+      // v0.98.0 (RULES.VDRIVE_V98.cpCarry, Rigger 2 p. 50): the Crash Test's Control Pool dice, for the people aboard.
+      ...(cp98 > 0 ? { cp98: Math.min(30, Math.floor(cp98)) } : {}),
     }];
     // v0.92.3 (RULES.VEHICLES_V923.passengers 'targeted', Rigger 2 p. 50): under the book the people aboard take the crash
     // after the vehicle's own test, at the same damage whatever the vehicle's test leaves (#resolveVehicleSoak); the card
     // says so.
     const afterVehicle = veh923('passengers') === 'targeted';
-    for (const u of afterVehicle ? [] : aboard) {
-      if (u && fromUuidSync(u)) damages.push({ targetUuid: u, melee: false, damageType: 'physical', power: c.power, level: c.passengerLevel, armorKind: 'impact' });
-    }
+    // v0.98.0 (RULES.VDRIVE_V98.passengerSafety / cpCarry): their safety gear and the Crash Test's pool dice.
+    damages.push(...VD98G.safePassengers(this, (afterVehicle ? [] : aboard).filter((u) => u && fromUuidSync(u)).map((u) => ({ targetUuid: u, melee: false, damageType: 'physical' as DamageType, power: c.power, level: c.passengerLevel, armorKind: 'impact' as const })), cp98));
     const rows = damages.map((d, i) => `<li>${escText(fromUuidSync(d.targetUuid)?.name ?? tx('SR2E.Card.Actor.someone'))}: <strong>${d.power}${d.level}</strong>${i === 0 ? '' : tx('SR2E.Card.Actor.impactArmor2')} <button type="button" data-sr2e-action="resist" data-index="${i}">${tx('SR2E.Card.Actor.resist')}</button></li>`).join('');
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor: this }),

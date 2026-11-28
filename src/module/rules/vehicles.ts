@@ -4,6 +4,7 @@ import { stageDown, woundModifier, resistanceTargetNumber } from './damage.ts';
 import { crashVehicleLevel, ramLevels, impactLevel } from './docs79-vehicles.ts';
 import { VEHICLES_V923_OLD, REVAMP_VEHICLE_RULES } from './config923/vehicles.ts';
 import { t as tx } from '../helpers/i18n.ts';
+import { hideTerrain } from './vdrive98.ts';
 
 type V923 = typeof RULES.VEHICLES_V923;
 /**
@@ -27,12 +28,14 @@ export function drivingRows(): ReadonlyArray<{ id: string; label: string; value:
  * (Rigger 2 pp. 20, 45–48, 52): 'driving' an ordinary Driving Test; 'maneuver' accelerating, braking, positioning;
  * 'ram' a ramming test; 'crash' a Crash Test; 'evasion' an evasive-driving defence (the old way only).
  */
-export type DriveKind = 'driving' | 'maneuver' | 'ram' | 'crash' | 'evasion';
+export type DriveKind = 'driving' | 'maneuver' | 'ram' | 'crash' | 'evasion'
+  /** v0.98.0 (RULES.VDRIVE_V98.chase): a Hiding Test (Rigger 2 p. 48), its own terrain row and the rig once. */
+  | 'hide';
 
 /** v0.92.3 (VEHICLES_V923.vcrTn 'byTest'): how many times the control rig's per-level TN counts on this kind of test. */
 export function vcrTnFactor(kind: DriveKind | 'gunnery' | 'sensor'): number {
   if (veh923('vcrTn') !== 'byTest') return 1;
-  return kind === 'driving' ? 2 : kind === 'maneuver' || kind === 'ram' ? 1 : 0;
+  return kind === 'driving' ? 2 : kind === 'maneuver' || kind === 'ram' || kind === 'hide' ? 1 : 0;
 }
 
 /** v0.92.3 (VEHICLES_V923.crashMods 'book', Rigger 2 p. 52): the Crash Test's speed row against the driver's Reaction (null: none). */
@@ -119,7 +122,9 @@ export function drivingModifiers(o: {
   const t = v.terrain.find((x) => x.id === (o.terrain ?? 'normal'));
   // v0.92.3: the Crash Test's and the Ramming Test's own terrain rows (Rigger 2 pp. 52, 48).
   const own = t && kind === 'crash' && veh923('crashMods') === 'book' ? RULES.VEHICLES_V923.crashTerrain[t.id]
-    : t && kind === 'ram' && veh923('ram') === 'book' ? RULES.VEHICLES_V923.ramTerrain[t.id] : undefined;
+    : t && kind === 'ram' && veh923('ram') === 'book' ? RULES.VEHICLES_V923.ramTerrain[t.id]
+    // v0.98.0 (RULES.VDRIVE_V98.chase, Rigger 2 p. 48): the Hiding Test's terrain row.
+    : t && kind === 'hide' ? hideTerrain(t.id) : undefined;
   const tv = t ? (typeof own === 'number' ? own : t.value) : 0;
   if (t && tv) out.push({ label: t.label, value: tv });
   const rows = drivingRows();

@@ -116,6 +116,7 @@ import { ruleAuto } from '../rules/automation941.ts';
 import { wireFireModeRows, senseChecksHtml } from './dialogs935.ts';
 import { catalogueTemplates, saveCatalogueTemplates } from './catalogue942.ts';
 import * as SP96G from "./spirits96.ts";
+import * as VD98G from "./vdrive98.ts";
 // v0.97.0 (RULES.MXLIFE_V97): the otaku dialogs follow the book (applications/mxlife97.ts).
 import * as MXL97G from "./mxlife97.ts";
 import * as MO97G from "./mxops97.ts";
@@ -6808,6 +6809,8 @@ export class SR2VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       mountsTracked: RULES.DRONES_V73.mounts.mode !== "off",
       mountUsage: sys.derived?.mountUsage ?? null,
       ramLabel: (() => { const r = ramDamage({ body: sys.body ?? 0, currentSpeed: Number(sys.currentSpeed ?? 0), speed: Number(sys.speed ?? 0) }); return `${r.power}${r.level}`; })(),
+      // v0.98.0 (RULES.VDRIVE_V98): off-road suspension, the autonav switch, Stress, safety gear, the vehicle type.
+      vdrive98: VD98G.sheetContext(actor),
       chase: sys.chase?.quarryUuid ? { quarryUuid: sys.chase.quarryUuid, quarryName: fromUuidSync(sys.chase.quarryUuid)?.name ?? tx('SR2E.App.Sheets.gone'), metres: sys.chase.metres } : null,
       pursuers: allActors().filter((a: any) => a.type === "vehicle" && a.system.chase?.quarryUuid === actor.uuid).map((a: any) => ({ uuid: a.uuid, name: a.name, metres: a.system.chase.metres })),
       // v0.46.0

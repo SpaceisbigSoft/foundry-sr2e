@@ -13,6 +13,10 @@ import { matrix922 } from "./helpers/matrix922.ts";
 import { SORCERY_V922 } from '../rules/__tests__/sorcery922.ts';
 import assert from "node:assert/strict";
 import { RULES } from "../rules/index.ts";
+import { oldWay as oldWay98 } from '../rules/__tests__/oldway.ts';
+import { VDRIVE_V971_WAY } from '../rules/__tests__/vdrive971.ts';
+// v0.98.0: these tests pin the v0.97.1 vehicle behaviour (RULES.VDRIVE_V98 at 'v971'); v098-vdrive*.test.ts test the book's.
+oldWay98(VDRIVE_V971_WAY);
 import { shown } from "./helpers/shown.ts";
 import { useV922Vehicles } from '../rules/__tests__/v922vehicles.ts';
 import { combat922 } from '../rules/__tests__/combat922.ts';

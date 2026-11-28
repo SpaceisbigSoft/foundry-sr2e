@@ -34,6 +34,7 @@ import { SPIRITS_V96 } from './config96/spirits.ts';
 import { MXLIFE_V97 } from './config97/mxlife.ts';
 import { MXOPS_V97 } from './config97/mxops.ts';
 import { MXIC_V97 } from './config97/mxic.ts';
+import { VDRIVE_V98 } from './config98/vdrive.ts';
 
 /**
  * SR2e rules constants.
@@ -3433,6 +3434,8 @@ export const RULES = {
   MXLIFE_V97,
   /** v0.97.0: rules completeness, the Matrix: IC and cybercombat (rules/config97/mxic.ts). */
   MXIC_V97,
+  /** v0.98.0: rules completeness, vehicles: driving, vehicle combat and chases (rules/config98/vdrive.ts). */
+  VDRIVE_V98,
 } as const;
 
 export type RangeBand = keyof typeof RULES.RANGE_TN;

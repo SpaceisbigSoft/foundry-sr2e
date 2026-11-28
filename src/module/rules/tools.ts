@@ -62,6 +62,8 @@ export const TOOLS: readonly ToolDef[] = [
   { id: 'bookRules95', icon: 'fa-solid fa-book-skull', who: 'gm', toolbar: false },
   // v0.96.0 (RULES.SPIRITS_V96.spiritDuel): spirit against spirit, Force against Force.
   { id: 'spirits96', icon: 'fa-solid fa-ghost', who: 'gm', toolbar: false },
+  // v0.98.0 (RULES.VDRIVE_V98): the Maneuver Scores, Hiding, Relocating and hitting a wall (applications/vdrive98.ts).
+  { id: 'chase98', icon: 'fa-solid fa-car-on', who: 'gm', toolbar: false },
   { id: 'tourGm', icon: 'fa-solid fa-person-chalkboard', who: 'gm', toolbar: false },
 ];
 

@@ -54,6 +54,7 @@ import { gearBook, isDermalPlating, dermalRating, limbPairsBody, housedEssenceCo
 import { round2 } from '../rules/util.ts';
 import { SYSTEM_ID } from '../config/system.ts';
 import * as MX97 from '../rules/mxic97.ts';
+import { vdrive98Fields, vdrive98Working } from '../rules/vdrive98.ts';
 
 const f = () => foundry.data.fields;
 /** World time now (0 outside Foundry). */
@@ -2297,6 +2298,8 @@ export class VehicleDataModel extends foundry.abstract.TypeDataModel {
       /** Current speed (crash damage, the over-speed modifier) and whether it is off-road. */
       currentSpeed: rating(0),
       offroad: new fields.BooleanField({ required: true, initial: false }),
+      /** v0.98.0 (RULES.VDRIVE_V98): off-road suspension, the autonav switched off, Stress Points, the safety gear (seat belts worn, APPS, a crash cage) and the Maneuver Score's vehicle type ('' = by category). */
+      ...vdrive98Fields(fields),
       /** Who controls it: a character's UUID and the mode ('' = nobody: autopilot). */
       controllerUuid: new fields.StringField({ required: true, initial: '' }),
       controlMode: new fields.StringField({ required: true, initial: 'autopilot', choices: [...CONTROL_MODES] }),
@@ -2348,6 +2351,8 @@ export class VehicleDataModel extends foundry.abstract.TypeDataModel {
     // v0.80.0 (URR_V80.vehDamageSpeed): damage lowers the Speed under the Unified Rules Revamp.
     const slowed = veh80DamagedSpeed(working.speed, Number(sys.condition ?? 0));
     if (slowed.note) { working.speed = slowed.speed; working.notes.push(slowed.note); }
+    // v0.98.0 (RULES.VDRIVE_V98.offRoad, Rigger 2 p. 22): off-road, half the Speed without off-road suspension.
+    vdrive98Working(working, sys);
     sys.derived = {
       working,
       cargo: cargoLoad({ itemsKg, people, load: Number(sys.load ?? 0), itemsCf, cargoFactor: Number(sys.cargoFactor ?? 0) }),

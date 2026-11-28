@@ -20,6 +20,7 @@ import * as C923 from '../rules/combat923.ts';
 import { onCard as onCard95 } from './core95.ts';
 import { onCard as onCard96 } from './health96.ts';
 import { onCard as onCardMxIc97 } from './mxic97.ts';
+import { onCard as onCardVDrive98 } from './vdrive98.ts';
 import * as MX97 from '../rules/mxic97.ts';
 import { blastThroughWalls, crossingFraction, indirectScatterDice, indirectScatterMetres, barrierSpellRadius } from '../rules/index.ts';
 import { tokensNear, scatterPoint, blastBlocked, wallDistances, wallsBetweenPoints, sightBlockedBetweenPoints, wallsNear, scatterStop, tokenOf, drawArea, placeWardRegion } from './canvas.ts';
@@ -1506,14 +1507,15 @@ async function onDumpShock(message: any, button: HTMLButtonElement): Promise<voi
 
 /** A failed crash test: post crash damage for the vehicle and everyone aboard. */
 async function onVehicleCrash(message: any, button: HTMLButtonElement): Promise<void> {
-  const c = message.getFlag(SYSTEM_ID, 'crash') as { vehicleUuid: string; speed: number } | undefined;
+  const c = message.getFlag(SYSTEM_ID, 'crash') as { vehicleUuid: string; speed: number; cp98?: number } | undefined;
   const vehicle: any = c ? await fromUuid(c.vehicleUuid) : null;
   if (!c || !vehicle) return ui.notifications.warn(tx('SR2E.Notify.Chat.thatVehicleNoLongerExists'));
   if (!vehicle.isOwner) return ui.notifications.warn(tx('SR2E.Notify.Chat.onlySOwnerOrTheGm13', { vehicleName: escHtml(vehicle.name) }));
   if (!(await playerMay(message, vehicle, origin(message), tx('SR2E.Card.Chat.crashesAtItStopsAndCrash', { vehicleName: vehicle.name, speed: safeInt(c.speed, 0, 2000, 0) })))) return;
   if (cardDone(message, vehicle, 'crashed')) return ui.notifications.warn(tx('SR2E.Notify.Chat.theCrashHasAlreadyBeenPosted'));
   button.disabled = true;
-  await vehicle.crash(safeInt(c.speed, 0, 2000, 0));
+  // v0.98.0 (RULES.VDRIVE_V98.cpCarry): the Crash Test's Control Pool dice, bounded (they only help the people aboard).
+  await vehicle.crash(safeInt(c.speed, 0, 2000, 0), safeInt(c.cp98, 0, Math.min(30, Number(vehicle.controller?.()?.vehicleSkillRating?.(vehicle) ?? 0)), 0));
   await markCardDone(message, vehicle, 'crashed');
 }
 
@@ -3726,6 +3728,7 @@ function dispatch(message: any, button: HTMLButtonElement, action: string): Prom
   else if (action.startsWith('mxl97')) return onCardMxl97(message, button, action);
   // v0.97.0 (RULES.MXIC_V97): the Matrix IC and cybercombat book rules' card buttons (applications/mxic97.ts).
   else if (action.startsWith('mxic97')) return onCardMxIc97(message, button, action);
+  else if (action.startsWith('vdrive98')) return onCardVDrive98(message, button, action);
   else if (action === 'evict') return onEvict(message, button);
   else if (action === 'drugCrash') return onDrugCrash(message, button);
   else if (action === 'karmaReroll' || action === 'avoidDisaster') return onKarma(message, button, action);
