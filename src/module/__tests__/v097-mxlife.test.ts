@@ -169,6 +169,7 @@ describe('v0.97.0 otaku (VR2 pp. 144–145; otaku errata)', () => {
   test('free Armor = Willpower unless a loaded Armor rates higher; decks and v965 untouched', (t) => {
     assert.deepEqual(M.livingArmor({ living: true, willpower: 5, loaded: 0 }), { rating: 5, free: true });
     assert.deepEqual(M.livingArmor({ living: true, willpower: 5, loaded: 7 }), { rating: 7, free: false });
+    assert.deepEqual(M.livingArmor({ living: true, willpower: 5, loaded: 5 }), { rating: 5, free: true }, 'an equal loaded Armor leaves the free one (VR2 p. 145)');
     assert.equal(M.livingArmor({ living: false, willpower: 5, loaded: 0 }), null);
     t.after(oldWay({ 'MXLIFE_V97.otakuArmor': 'v965' }));
     assert.equal(M.livingArmor({ living: true, willpower: 5, loaded: 0 }), null);

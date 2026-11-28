@@ -360,7 +360,9 @@ export async function placeIcToken(host: any, ic: any): Promise<any | null> {
   const scene = viewedScene();
   const coll: any = scene?.tokens;
   const tokens: any[] = coll?.contents ?? (coll && typeof coll[Symbol.iterator] === 'function' ? [...coll] : []);
-  const hostTok = tokens.find((t: any) => t?.actor?.uuid === host.uuid || (t?.actorId && t.actorId === host.id && t.actorLink !== false));
+  // The host's token, linked or not: its actor is the host, or (unlinked) a synthetic copy of the host's world actor.
+  const baseId = String(host?.token ? host.token.actorId ?? '' : host?.id ?? '');
+  const hostTok = tokens.find((t: any) => t?.actor?.uuid === host.uuid || (host.token && t === host.token) || (baseId && t?.actorId === baseId));
   if (!hostTok) return null;
   const already = tokens.filter((t: any) => t?.actor?.type === 'ic' && t.actor?.system?.hostUuid === host.uuid).length;
   const at = storedXY(hostTok);
@@ -386,12 +388,23 @@ export async function onCard(message: any, button: HTMLButtonElement, action: st
   if (!actor) return;
   const e = recovering(actor).find((x: any) => M.psycheKey(x) === d.key);
   if (!e) { warn(tx('SR2E.MxLife97.Psyche.gone')); return; }
-  const choice = await askCare(String(e.kind ?? ''));
-  if (!choice) return;
+  // In flight from before the dialog opens: a double click (or the pop-out copy of the card) opens one dialog only.
+  const id = String(message?.id ?? '');
+  if (!id || rolling.has(id)) return;
+  rolling.add(id);
   button.disabled = true;
-  if (await rollRecovery(actor, d.key, whole(d.tests) || 1, choice)) await message.setFlag?.(SYSTEM_ID, DONE_FLAG, true);
-  else button.disabled = false;
+  try {
+    const choice = await askCare(String(e.kind ?? ''));
+    if (!choice) { button.disabled = false; return; }
+    // Rolled meanwhile (another GM, another window): look again after the dialog.
+    if (message?.getFlag?.(SYSTEM_ID, DONE_FLAG)) { warn(tx('SR2E.MxLife97.alreadyDone')); return; }
+    if (await rollRecovery(actor, d.key, whole(d.tests) || 1, choice)) await message.setFlag?.(SYSTEM_ID, DONE_FLAG, true);
+    else button.disabled = false;
+  } finally { rolling.delete(id); }
 }
+
+/** Recovery cards being rolled on this client (by message id). */
+const rolling = new Set<string>();
 
 // ================================================================ The character sheet's otaku dialogs
 

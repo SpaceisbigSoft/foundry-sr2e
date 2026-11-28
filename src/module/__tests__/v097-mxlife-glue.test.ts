@@ -234,6 +234,30 @@ describe('v0.97.0 psychotropic recovery on the world clock (VR2 p. 50)', () => {
     await G97.onCard(phobia, btn(), 'mxl97Recover');
     assert.match(warnings.at(-1) ?? '', /Only the GM/);
   });
+  test('a double click opens one dialog and rolls once; a cancel re-enables; a card rolled meanwhile isn\'t rolled again', async () => {
+    const a = pc({ name: 'Decker', ...MATRIX({ psyche: [psyche('frenzy', 5)] }) }); world(a);
+    await SR2Actor.timedEffects({ worldTime: 0, anyGm: true });
+    await SR2Actor.timedEffects({ worldTime: DAY, anyGm: true });
+    const card = recoverCard()[0];
+    let asked = 0;
+    let release: (v: any) => void = () => {};
+    dialogs({ prompt: () => { asked++; return new Promise((r) => { release = r; }); } });
+    const b = btn();
+    const first = G97.onCard(card, b, 'mxl97Recover');
+    await new Promise((r) => setTimeout(r, 0));
+    assert.equal(b.disabled, true, 'disabled while the dialog is open');
+    await G97.onCard(card, btn(), 'mxl97Recover');
+    assert.equal(asked, 1, 'one dialog');
+    release(null);
+    await first;
+    assert.equal(b.disabled, false, 'a cancel re-enables it');
+    dialogs({ prompt: async () => { await card.setFlag(SYS, 'mxl97Done', true); return { care: 'none', spell: false, caught: false }; } });
+    const before = chat.length;
+    await G97.onCard(card, btn(), 'mxl97Recover');
+    assert.equal(chat.length, before, 'rolled meanwhile: no second batch');
+    assert.equal(a.system.matrix.psyche.length, 1);
+    assert.match(warnings.at(-1) ?? '', /already/);
+  });
   test('the IC\'s rating comes from the actor, not the card', async () => {
     const a = pc({ name: 'Decker', ...MATRIX({ psyche: [psyche('frenzy', 6)] }) }); world(a);
     await SR2Actor.timedEffects({ worldTime: 0, anyGm: true });
@@ -495,6 +519,17 @@ describe('v0.97.0 IC on the GM\'s viewed Matrix scene', () => {
     const made = sceneWith([{ actor: host, actorId: 'host1', _source: { x: 300, y: 400 }, x: 0, y: 0 }]);
     await G97.placeIcToken(host, ic);
     assert.deepEqual(made.map((d) => [d.x, d.y, d.hidden]), [[400, 400, true]]);
+  });
+  test('an unlinked host token gets the IC beside it too', async () => {
+    const made = sceneWith([{ actor: { uuid: 'Scene.s.Token.t1.Actor.host1', id: 'host1', type: 'host' }, actorId: 'host1', actorLink: false, _source: { x: 100, y: 100 }, x: 0, y: 0 }]);
+    await G97.placeIcToken(host, ic);
+    assert.deepEqual(made.map((d) => [d.x, d.y]), [[200, 100]]);
+    const tok: any = { actorId: 'host1', actorLink: false, _source: { x: 500, y: 500 }, x: 0, y: 0 };
+    const synthetic = { uuid: 'Scene.s.Token.t2.Actor.host1', id: 'host1', type: 'host', token: tok };
+    tok.actor = synthetic;
+    const made2 = sceneWith([tok]);
+    await G97.placeIcToken(synthetic, ic);
+    assert.deepEqual(made2.map((d) => [d.x, d.y]), [[600, 500]], 'the synthetic host itself');
   });
   test('no host token on the viewed scene, a player, or v965: nothing', async (t) => {
     const made = sceneWith([]);
