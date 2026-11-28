@@ -85,7 +85,8 @@ before(async () => {
     applications: { api: { DialogV2: { confirm: async () => false, prompt: async () => null, wait: async () => null } } },
   };
   g.Roll = StubRoll;
-  g.ChatMessage = { create: async (d: any) => { const m = asMessage(d); chat.push(m); return m; }, getSpeaker: () => ({}) };
+  // Foundry sets a message's author to the user who posts it.
+  g.ChatMessage = { create: async (d: any) => { const m: any = asMessage({ author: g.game.user, ...d }); m.isOwner = Boolean(g.game.user?.isGM) || m.author === g.game.user; chat.push(m); return m; }, getSpeaker: () => ({}) };
   g.Hooks = { on: (h: string, fn: any) => { if (!hooks.has(h)) hooks.set(h, []); hooks.get(h)!.push(fn); }, once: () => {}, callAll: () => {} };
   g.game = {
     i18n: { localize: (k: string) => k }, user: GM(), users: Object.assign([GM()], { activeGM: { id: 'gm1', isSelf: true } }),
@@ -121,7 +122,7 @@ beforeEach(() => {
   g.game.users = Object.assign([GM()], { activeGM: { id: 'gm1', isSelf: true } });
   g.game.time = { worldTime: 0 };
   g.game.actors = [];
-  g.game.messages = { contents: [] };
+  g.game.messages = { contents: chat, get: (id: string) => chat.find((m: any) => m.id === id) };
   delete g.game.combat;
   delete g.game.combats;
   delete g.game.scenes;
@@ -215,8 +216,10 @@ const prog = (d: any, p: any) => {
   d.system.prepareDerivedData();
 };
 
-describe('v0.97.0 suppressing IC (VR2 p. 40)', () => {
-  test('a crash asks: suppressing takes 1 off the Detection Factor and no tally; releasing puts the points on', async () => {
+const PLAYER = () => ({ id: 'p1', name: 'Pat', isGM: false, can: () => true });
+
+describe('v0.97.0 suppressing IC (VR2 p. 40): the GM side\'s record', () => {
+  test('a crash asks (the GM side\'s card): suppressing takes 1 off the Detection Factor, recorded on the host; releasing puts the points on', async () => {
     const h = host();
     const ic = icIn(h);
     const d = inside(h);
@@ -230,25 +233,53 @@ describe('v0.97.0 suppressing IC (VR2 p. 40)', () => {
     const choice = card('mxic97Choice');
     assert.ok(choice);
     await MXG.onCard(choice, btn(), 'mxic97Suppress');
+    assert.equal(h.flags[F].mxic97.suppressed.length, 1, 'on the host');
     assert.equal(d.liveDetectionFactor(), 4);
-    assert.equal(d.system.derived.matrix.detectionFactor, 4);
     await MXG.onCard(choice, btn(), 'mxic97Count');
     assert.ok(warnings.some((w) => /already/i.test(w)), 'answered once');
     assert.equal(h.system.tallies.find((t: any) => t.key === d.uuid), undefined);
     await MXG.onCard(card('mxic97Release'), btn(), 'mxic97Release');
     assert.equal(d.liveDetectionFactor(), 5);
     assert.equal(h.system.tallies.find((t: any) => t.key === d.uuid)?.tally, 6);
+    await MXG.onCard(card('mxic97Release') ?? choice, btn(), 'mxic97Release');
+    assert.equal(h.system.tallies.find((t: any) => t.key === d.uuid)?.tally, 6, 'released once');
   });
-  test('counting it puts the points on; a live IC can\'t be suppressed', async () => {
+  test('forge: the decker\'s own flags give no Detection Factor loss and can\'t block the GM\'s Count; a player\'s card does nothing', async () => {
     const h = host();
     const ic = icIn(h);
     const d = inside(h);
     g.game.actors = [d, ic];
-    await MXG.choiceCard({ host: h, decker: d, id: ic.uuid, name: ic.name, points: 6, line: 'x' });
-    Object.assign(card('mxic97Choice'), { author: g.game.user });
-    await MXG.onCard(card('mxic97Choice'), btn(), 'mxic97Suppress');
-    assert.ok(warnings.some((w) => /hasn't crashed/.test(w)));
-    await MXG.onCard(card('mxic97Choice'), btn(), 'mxic97Count');
+    ic.system.matrix.monitor = 10; ic.system.prepareDerivedData();
+    await MXG.applyMx97(h, { op: 'crash', deckerUuid: d.uuid, id: ic.uuid });
+    const choice = card('mxic97Choice');
+    d.flags[F] = { ...(d.flags[F] ?? {}), suppressed97: [{ id: 'x', hostUuid: h.uuid, name: 'x', points: 0 }], mxicCards97: [choice.id] };
+    const df = d.liveDetectionFactor();
+    d.system.prepareDerivedData();
+    assert.equal(d.liveDetectionFactor(), df);
+    await MXG.onCard(choice, btn(), 'mxic97Count');
+    assert.equal(h.system.tallies.find((t: any) => t.key === d.uuid)?.tally, 6, 'the GM\'s Count still applies');
+    g.game.user = PLAYER();
+    const fake = await g.ChatMessage.create({ content: 'x', flags: { [F]: { mxic97Release: { deckerUuid: d.uuid, hostUuid: h.uuid, id: ic.uuid } } } });
+    await MXG.onCard(fake, btn(), 'mxic97Release');
+    assert.ok(warnings.some((w) => /GM side's own cards/.test(w)));
+  });
+  test('a player\'s Count goes to the GM as a host change; the GM side applies it once', async () => {
+    const h = host();
+    const ic = icIn(h);
+    const d = inside(h);
+    g.game.actors = [d, ic];
+    ic.system.matrix.monitor = 10; ic.system.prepareDerivedData();
+    await MXG.applyMx97(h, { op: 'crash', deckerUuid: d.uuid, id: ic.uuid });
+    const choice = card('mxic97Choice');
+    g.game.user = PLAYER();
+    h.isOwner = false;
+    await MXG.onCard(choice, btn(), 'mxic97Count');
+    assert.equal(h.system.tallies.find((t: any) => t.key === d.uuid), undefined);
+    const req = card('hostChange');
+    assert.equal(req.flags[F].hostChange.mx97.op, 'count');
+    g.game.user = GM();
+    await SR2Actor.applyHostChange(h.uuid, req.flags[F].hostChange);
+    await SR2Actor.applyHostChange(h.uuid, req.flags[F].hostChange);
     assert.equal(h.system.tallies.find((t: any) => t.key === d.uuid)?.tally, 6);
   });
   test('v965: the tally at once', async (t) => {
@@ -340,7 +371,7 @@ describe('v0.97.0 improvised attacks (VR2 pp. 120, 123)', () => {
 });
 
 describe('v0.97.0 combat maneuvers (VR2 pp. 121–122)', () => {
-  test('parry: +net TN on the IC\'s next attack only, no cap', async () => {
+  test('parry: recorded on the host, +net TN on the IC\'s next attack only', async () => {
     const h = host();
     const ic = icIn(h);
     const d = inside(h);
@@ -348,12 +379,46 @@ describe('v0.97.0 combat maneuvers (VR2 pp. 121–122)', () => {
     faces.push(1, 1, 1, 1, /* decker Evasion 5 vs SV 4 */ 5, 5, 5, 5, 5);
     await d.matrixManeuver('parry', ic.uuid);
     assert.match(text(), /parries/);
+    assert.equal(h.flags[F].mxic97.parry[0].net, 5);
     faces.push(1, 1, 1, 1);
     const r1 = await ic.icAttack({ targetUuid: d.uuid });
     assert.equal(r1.targetNumber, 4 + 5);
     faces.push(1, 1, 1, 1);
     const r2 = await ic.icAttack({ targetUuid: d.uuid });
     assert.equal(r2.targetNumber, 4, 'used up');
+  });
+  test('forge: a parry or evade the decker writes on their own actor does nothing; the GM side caps a request at the dice', async () => {
+    const h = host();
+    const ic = icIn(h);
+    const d = inside(h);
+    g.game.actors = [d, ic];
+    d.flags[F] = { mx97: { parry: [{ id: 'x1', vs: ic.uuid, net: 30, hostUuid: h.uuid }], pos: [], exposed: [], evade: [{ vs: ic.uuid, tallyAt: 999, hostUuid: h.uuid }] } };
+    d.system.matrix.maneuvers = [{ kind: 'evade', targetUuid: ic.uuid, net: 30, round: 99999, worldTime: 9e9, combatId: '' }];
+    faces.push(1, 1, 1, 1);
+    const r = await ic.icAttack({ targetUuid: d.uuid });
+    assert.ok(r, 'not hidden');
+    assert.equal(r.targetNumber, 4);
+    await MXG.applyMx97(h, { op: 'parry', deckerUuid: d.uuid, vs: ic.uuid, id: 'p', net: 30 });
+    const dice = d.system.derived.matrix.evasion + d.system.derived.hackingPool;
+    assert.equal(h.flags[F].mxic97.parry[0].net, dice);
+  });
+  test('a player\'s parry waits for the GM\'s Apply', async () => {
+    const h = host();
+    const ic = icIn(h);
+    const d = inside(h);
+    g.game.actors = [d, ic];
+    g.game.user = PLAYER();
+    h.isOwner = false;
+    faces.push(1, 1, 1, 1, 5, 5, 1, 1, 1);
+    await d.matrixManeuver('parry', ic.uuid);
+    const req = card('hostChange');
+    assert.equal(req.flags[F].hostChange.mx97.op, 'parry');
+    g.game.user = GM();
+    faces.push(1, 1, 1, 1);
+    assert.equal((await ic.icAttack({ targetUuid: d.uuid })).targetNumber, 4, 'not yet');
+    await SR2Actor.applyHostChange(h.uuid, req.flags[F].hostChange);
+    faces.push(1, 1, 1, 1);
+    assert.equal((await ic.icAttack({ targetUuid: d.uuid })).targetNumber, 6);
   });
   test('position backfires: the IC gets the net off its next attack; won: +Power on the decker\'s attack', async () => {
     const h = host();
@@ -376,7 +441,7 @@ describe('v0.97.0 combat maneuvers (VR2 pp. 121–122)', () => {
     await d.matrixAttack({ targetUuid: ic.uuid, programId: 'atk', positionAs97: 'power' });
     assert.match(String(chat.at(-1).content), /, 4M\)/, 'used up');
   });
-  test('evade: the IC can\'t attack for net Combat Turns, 1 less per tally point', async () => {
+  test('evade: the IC can\'t attack for net Combat Turns, 1 less per tally point (the host\'s record)', async () => {
     const h = host();
     const ic = icIn(h);
     const d = inside(h);
@@ -385,9 +450,8 @@ describe('v0.97.0 combat maneuvers (VR2 pp. 121–122)', () => {
     faces.push(1, 1, 1, 1, 5, 5, 5, 1, 1);
     await d.matrixManeuver('evade', ic.uuid);
     assert.match(text(), /evades/);
+    assert.equal(h.flags[F].mxic97.evade[0].round, 6);
     assert.equal(await ic.icAttack({ targetUuid: d.uuid }), null);
-    g.game.combat.round = 6;
-    assert.equal(await ic.icAttack({ targetUuid: d.uuid }), null, 'through round 3 + 3');
     g.game.combat.round = 5;
     assert.equal(await ic.icAttack({ targetUuid: d.uuid }), null);
     h.system.tallies = [{ key: d.uuid, name: d.name, tally: 2 }];
@@ -508,19 +572,56 @@ describe('v0.97.0 scramble IC and data bombs (VR2 pp. 41–42, 96)', () => {
   });
 });
 
+describe('v0.97.0 data bombs with suppression off; scramble re-rolls (VR2 pp. 40–42)', () => {
+  const file = (extra: any = {}) => ({ id: 'f1', name: 'Data', size: 10, value: 0, paydata: false, encrypted: 0, scramble: 0, bomb: 0, ...extra });
+  test('dataBomb book + suppress v965: the blast\'s rating goes on the tally, no Suppress choice', async (t) => {
+    t.after(oldWay({ 'MXIC_V97.suppress': 'v965' }));
+    const h = host({ files: [file({ bomb: 4 })] });
+    const d = inside(h);
+    g.game.actors = [d];
+    Object.assign(h.system.files[0], { foundBy: [d.uuid], bombFoundBy: [d.uuid] });
+    noDetect(); faces.push(1, 1, 1, 1, 1);
+    await d.systemTest('files', { operationId: 'defuseBomb', fileId: 'f1' });
+    assert.equal(card('mxic97Choice'), undefined);
+    assert.equal(h.system.tallies.find((x: any) => x.key === d.uuid)?.tally, 4);
+  });
+  test('a decryption that failed but left the file can still succeed on a re-resolution', async () => {
+    const h = host({ files: [file({ scramble: 5 })] });
+    const d = inside(h);
+    g.game.actors = [d];
+    h.system.files[0].foundBy = [d.uuid];
+    noDetect(); faces.push(1, 2, 2, 2, 2, /* Poison 5 vs Computer 5 */ 1, 1, 1, 1, 1);
+    await d.systemTest('files', { operationId: 'decryptFile', fileId: 'f1' });
+    assert.equal(h.system.files.length, 1);
+    const sys = chat.find((c: any) => c.flags?.[F]?.test?.kind === 'system');
+    Object.assign(sys, { author: g.game.user, async update(dd: any) { for (const [k, v] of Object.entries(dd)) setPath(this, k, v); } });
+    await SR2Actor.retarget(sys, { baseTargetNumber: 2, modifiers: [] });
+    assert.equal(h.system.files[0].scramble, 0, 'decrypted');
+  });
+});
+
 describe('v0.97.0 persona speed (VR2 pp. 84–87, 120)', () => {
-  test('a reality filter: one more level and MPCP −1; running cool 1D6 less; the non-combat actions', () => {
+  test('a reality filter: one more level and MPCP −1; only a Hot ASIST deck run cool loses 1D6; the non-combat actions', () => {
     const d = decker();
-    assert.deepEqual([d.system.derived.matrix.reaction, d.system.derived.matrix.initiativeDice, d.system.derived.matrix.nonCombat97], [7, 1, 1]);
+    assert.deepEqual([d.system.derived.matrix.reaction, d.system.derived.matrix.initiativeDice, d.system.derived.matrix.nonCombat97], [7, 2, 2]);
+    d.items.get('deck').system.hotAsist97 = true; d.system.prepareDerivedData();
+    assert.equal(d.system.derived.matrix.initiativeDice, 1, 'a hot deck run cool');
+    d.items.get('deck').system.hotAsist97 = false;
     d.items.get('deck').system.realityFilter = true; d.system.prepareDerivedData();
-    assert.deepEqual([d.system.derived.matrix.mpcp, d.system.derived.matrix.reaction, d.system.derived.matrix.initiativeDice], [5, 9, 2]);
+    assert.deepEqual([d.system.derived.matrix.mpcp, d.system.derived.matrix.reaction, d.system.derived.matrix.initiativeDice], [5, 9, 3]);
     d.system.matrix.sim = 'hot'; d.system.prepareDerivedData();
     assert.deepEqual([d.system.derived.matrix.reaction, d.system.derived.matrix.initiativeDice, d.system.derived.matrix.nonCombat97], [11, 4, 5]);
+  });
+  test('the filter with the old persona speed: no MPCP cost', (t) => {
+    t.after(oldWay({ 'MATRIX_V923.initiative': 'v922' }));
+    const d = decker();
+    d.items.get('deck').system.realityFilter = true; d.system.prepareDerivedData();
+    assert.equal(d.system.derived.matrix.mpcp, 6);
   });
   test('v965: the old filter bonus, no cool penalty, no actions shown', (t) => {
     t.after(oldWay({ 'MXIC_V97.realityFilter': 'v965', 'MXIC_V97.coolInit': 'v965', 'MXIC_V97.nonCombat': 'v965' }));
     const d = decker();
-    d.items.get('deck').system.realityFilter = true; d.system.prepareDerivedData();
+    d.items.get('deck').system.realityFilter = true; d.items.get('deck').system.hotAsist97 = true; d.system.prepareDerivedData();
     assert.deepEqual([d.system.derived.matrix.mpcp, d.system.derived.matrix.reaction, d.system.derived.matrix.initiativeDice, d.system.derived.matrix.nonCombat97], [6, 7, 2, null]);
   });
 });

@@ -12,6 +12,7 @@
  * So a GM-side change made because of a card must be bound to the card's author: the author is a GM, or owns the
  * actor the change comes from (the roller, the healer, the holder), and the values are bounded here.
  */
+import { MX97_OPS } from './mxic97.ts';
 import { describeBundle } from './arcanum.ts';
 import { t as tx, tCount } from '../helpers/i18n.ts';
 import { RULES } from './config.ts';
@@ -113,9 +114,9 @@ export const GM_APPLY_SPECS: Record<string, { flag: string; keys: readonly strin
   applyHost: {
     flag: 'hostChange',
     keys: ['hostUuid', 'found', 'decrypt', 'removeFile', 'minAlert', 'smoke', 'spot', 'setAlert', 'resetTally', 'addFile', 'editFile', 'validate', 'invalidate', 'bombFound', 'defuse', 'bombOff', 'call',
-      // v0.97.0 (RULES.MXOPS_V97): a decoy, a passcode's days, located icons; each names the decker it is for.
-      'decoy97', 'passcode97', 'located97', 'sourceUuid'],
-    target: 'hostUuid', sources: ['sourceUuid', 'found.deckerUuid', 'bombFound.deckerUuid', 'decoy97.deckerUuid', 'passcode97.deckerUuid', 'located97.deckerUuid'],
+      // v0.97.0 (RULES.MXOPS_V97): a decoy, a passcode's days, located icons; (RULES.MXIC_V97) a decker's request; each names the decker it is for.
+      'decoy97', 'passcode97', 'located97', 'mx97', 'sourceUuid'],
+    target: 'hostUuid', sources: ['sourceUuid', 'found.deckerUuid', 'bombFound.deckerUuid', 'decoy97.deckerUuid', 'passcode97.deckerUuid', 'located97.deckerUuid', 'mx97.deckerUuid'],
   },
   applyLocks: { flag: 'sensorLocks', keys: ['vehicleUuid', 'targetUuid', 'targetName', 'successes', 'sourceUuid'], target: 'vehicleUuid', sources: ['sourceUuid'] },
   applyJam: { flag: 'jam', keys: ['droneUuid', 'by', 'rating', 'jammerUuid', 'sourceUuid'], target: 'droneUuid', sources: ['jammerUuid', 'sourceUuid'] },
@@ -253,6 +254,9 @@ export function hostChangeShapeOk(f: any): boolean {
   if (f.passcode97 !== undefined && !(onlyKeys(f.passcode97, ['deckerUuid', 'days', 'level']) && safeStr(f.passcode97.deckerUuid, 400) && f.validate === f.passcode97.deckerUuid
     && intIn(f.passcode97.days, 0, 180) && ['user', 'superuser', 'supervisor'].includes(f.passcode97.level))) return false;
   if (f.located97 !== undefined && !(onlyKeys(f.located97, ['deckerUuid', 'uuids']) && safeStr(f.located97.deckerUuid, 400) && strList(f.located97.uuids, 50))) return false;
+  // v0.97.0 (RULES.MXIC_V97): a decker's request: who and which (the GM side reads every value itself).
+  if (f.mx97 !== undefined && !(onlyKeys(f.mx97, ['op', 'deckerUuid', 'vs', 'id', 'net', 'cardId']) && (MX97_OPS as readonly string[]).includes(f.mx97.op)
+    && safeStr(f.mx97.deckerUuid, 400) && optStr(f.mx97.vs) && optStr(f.mx97.id, 400) && optStr(f.mx97.cardId, 60) && (f.mx97.net === undefined || intIn(f.mx97.net, 0, 30)))) return false;
   return true;
 }
 
@@ -488,6 +492,7 @@ export function describeGmChange(action: string, flags: Record<string, any>, nam
         else if (k === 'decoy97') out.push(tx(Number(v?.successes) >= 6 ? 'SR2E.MxOps97.Trust.decoyAll' : 'SR2E.MxOps97.Trust.decoy', { name: nm(v?.deckerUuid), n: Number(v?.successes) || 0 }));
         else if (k === 'passcode97') out.push(tx('SR2E.MxOps97.Trust.passcode', { name: nm(v?.deckerUuid), days: Number(v?.days) || 0 }));
         else if (k === 'located97') out.push(tx('SR2E.MxOps97.Trust.located', { name: nm(v?.deckerUuid), list: (Array.isArray(v?.uuids) ? v.uuids : []).map((u: unknown) => nm(String(u))).join(', ') }));
+        else if (k === 'mx97') out.push(tx('SR2E.MxIc97.Gm.trustLine', { op: String(v?.op ?? ''), name: nm(v?.deckerUuid), net: Number(v?.net ?? 0) }));
         else out.push(`${k}: ${plainOf(v)}`);
       }
       break;

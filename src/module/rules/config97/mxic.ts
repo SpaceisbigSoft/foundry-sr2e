@@ -9,8 +9,9 @@ export const MXIC_V97 = {
    * Suppressing IC (VR2 p. 40; Unsuppress IC, a Free Action, p. 120). When a decker crashes IC (or a data bomb goes off
    * on them) they choose at once: the IC's points go on their security tally, or they suppress it and their Detection
    * Factor drops by 1 per suppressed IC while they stay in that host. Releasing it (any time) gives the point back and
-   * puts its points on the tally. 'book': the crash card asks (its points wait for the choice). 'v965': the points go
-   * on the tally at once (no suppressing).
+   * puts its points on the tally. 'book': the GM side's crash card asks (its points wait for the choice); what was
+   * suppressed is recorded on the host (GM-owned), never on the decker. 'v965': the points go on the tally at once
+   * (no suppressing).
    */
   suppress: 'book' as 'book' | 'v965',
   /**
@@ -29,7 +30,8 @@ export const MXIC_V97 = {
   improvised: 'book' as 'book' | 'v965',
   /**
    * The parry-attack maneuver (VR2 p. 122): its +TN lasts until the opponent's next attack on the parrying icon
-   * (through the opponent's position maneuvers); an evade maneuver ends it. No cap on the net successes. 'v965': until
+   * (through the opponent's position maneuvers); an evade maneuver ends it. No cap beyond the decker's dice for the
+   * test. Recorded by the GM side on the host (a player's maneuver card asks the GM to apply it). 'v965': until
    * the end of the next Combat Turn (RULES.MATRIX_V57.maneuvers.turns), capped at maneuvers.maxTn.
    */
   parry: 'book' as 'book' | 'v965',
@@ -41,7 +43,8 @@ export const MXIC_V97 = {
   position: 'book' as 'book' | 'v965',
   /**
    * Evade detection (VR2 p. 121): IC finds an evading icon again after as many Combat Turns as the net successes,
-   * 1 turn less for every point added to the icon's security tally meanwhile. 'v965': until the end of the next Combat
+   * 1 turn less for every point added to the icon's security tally meanwhile (its end and the tally then recorded on
+   * the host by the GM side). 'v965': until the end of the next Combat
    * Turn (RULES.MATRIX_V57.maneuvers.turns).
    */
   evade: 'book' as 'book' | 'v965',
@@ -73,13 +76,18 @@ export const MXIC_V97 = {
    * RULES.MATRIX_V57.bombs.alert.
    */
   dataBomb: 'book' as 'book' | 'v965',
-  /** Running cool (VR2 p. 85: a hot deck run cool with a keyboard): 1D6 less Initiative (at least 1D6, VERIFY). 'v965': none. */
+  /**
+   * Running a hot deck cool (VR2 p. 85: a hot ASIST deck run cool with a keyboard): 1D6 less Initiative (at least 1D6,
+   * VERIFY). Only a deck marked Hot ASIST (cyberdeck `hotAsist97`, off by default) in cold sim; a cool-only deck runs
+   * cool with no penalty. 'v965': none.
+   */
   coolInit: 'book' as 'book' | 'v965',
   /**
    * Reality filters (VR2 pp. 84, 87; Mapping Matrices p. 69): a filter is one more level of Response Increase (+2
    * Reaction, +1D6), beyond the deck's 3 (5 at most), and lowers the MPCP by 1; in a sculpted host where the MPCP Test
    * fails the bonus is lost. 'v965': +RULES.MATRIX_V57.realityFilter.reaction Reaction and pool on success, +failTn on
-   * failure.
+   * failure. The book's way needs the book persona speed (RULES.MATRIX_V923.initiative 'book'); with 'v922' the old
+   * effect stays (no MPCP cost).
    */
   realityFilter: 'book' as 'book' | 'v965',
   /**

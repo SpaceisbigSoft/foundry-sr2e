@@ -1477,6 +1477,8 @@ export interface HostChange {
   decoy97?: { deckerUuid: string; successes: number };
   passcode97?: { deckerUuid: string; days: number; level: string };
   located97?: { deckerUuid: string; uuids: string[] };
+  /** v0.97.0 (RULES.MXIC_V97): a decker's request the GM side records on the host (applications/mxic97.ts applyMx97). */
+  mx97?: MX97.Mx97Change;
 }
 
 /** Dispelling one of another actor's sustained spells. */
@@ -14968,8 +14970,9 @@ export class SR2Actor extends Actor {
       // v0.97.0 (RULES.MXIC_V97.scramble 'book', VR2 p. 42): poison scramble destroys it only on a successful Poison Test;
       // exploding scramble (with a data bomb) does nothing on a failure.
       if (sy.effect === 'decryptFile' && file?.scramble && !sy.failApplied && !sy.applied && host && MX97.on('scramble')) {
-        next.failApplied = true;
+        // Only a destroyed file counts as applied: a surviving one leaves a re-roll free to succeed.
         if (MX97.poisonScramble(file) && await MXG97.poisonTest(this, file)) {
+          next.failApplied = true;
           fu.hostChange = { host, change: { removeFile: file.id }, label: tx('SR2E.Card.Actor.scrambleIcDestroys2', { name: file.name }) };
           extra = ` <strong>${tx('SR2E.Card.Actor.scrambleIcDestroys', { fileName: escText(file.name) })}</strong>`;
         }
@@ -14980,7 +14983,6 @@ export class SR2Actor extends Actor {
         if (blast) {
           next.failApplied = true;
           fu.hostChange = { host, change: blast.change, label: tx('SR2E.Card.Actor.aDataBombGoesOffOn', { by: this.name }) };
-          if (!sy.frameUuid) await MXG97.bombChoice(host, this, blast.where, blast.rating, blast.id97);
           const failed = `<p><strong>${tx('SR2E.Card.Actor.fails', { name: escText(name) })}</strong>${extra}</p>`;
           return { html: failed + blast.html, flags: blast.flags, snap: { ...snap, system: next } };
         }
@@ -15001,8 +15003,6 @@ export class SR2Actor extends Actor {
     const bomb = host ? this.#bombCheck(host, sy, file) : null;
     if (bomb) {
       next.bombed = true;
-      // v0.97.0 (RULES.MXIC_V97.dataBomb 'book', VR2 p. 41): its rating on the tally, or the decker suppresses it.
-      if (!sy.frameUuid) await MXG97.bombChoice(host, this, bomb.where, bomb.rating, bomb.id97);
       if (bomb.stops) {
         fu.hostChange = { host, change: bomb.change, label: tx('SR2E.Card.Actor.aDataBombGoesOffOn', { by }) };
         next.applied = true;
@@ -15348,9 +15348,12 @@ export class SR2Actor extends Actor {
     const damage: DamageState = { targetUuid: victim, melee: false, damageType: 'physical', power: b.power, level: b.level, matrix: true };
     // v0.97.0 (RULES.MXIC_V97.dataBomb 'book', VR2 p. 41): the tally (the choice card), not an alert, for a decker.
     const alert97 = !(MX97.on('dataBomb') && !sy.frameUuid);
+    // v0.97.0 (RULES.MXIC_V97.dataBomb 'book', VR2 p. 41): the GM side reads the bomb's rating and posts the choice.
+    const mx97 = alert97 ? null : MXG97.bombRequest(this, onFile ? { fileId: f.id } : { subsystem: sub });
     const change: HostChange = {
       bombOff: onFile ? { fileId: f.id, erase: b.erases } : { subsystem: sub, erase: b.erases },
       ...(b.alert && b.alert !== 'none' && alert97 ? { minAlert: b.alert } : {}),
+      ...(mx97 ? { mx97 } : {}),
     };
     const where = onFile ? f.name : tx('SR2E.Card.Actor.theSubsystem', { sub: cap(sub) });
     const html = `<p><strong>${tx('SR2E.Card.Actor.aDataBombGoesOff')}</strong> ${tx('SR2E.Card.Actor.on6', { where: escText(where) })} <strong>${b.power}${b.level}</strong> ${tx('SR2E.Card.Actor.matrixDamage2', { part: b.erases ? (onFile ? tx('SR2E.Card.Actor.andIsErased', { name: escText(f.name) }) : '') : tx('SR2E.Card.Actor.pavlovItReArms') })}</p>
@@ -15552,6 +15555,9 @@ export class SR2Actor extends Actor {
     if (c?.bombFound) { const k = bombKey(c.bombFound); if (k) out.bombFound = { ...k, deckerUuid: str(c.bombFound.deckerUuid) }; }
     if (c?.defuse) { const k = bombKey(c.defuse); if (k) out.defuse = k; }
     if (c?.bombOff) { const k = bombKey(c.bombOff); if (k) out.bombOff = { ...k, erase: Boolean(c.bombOff.erase) }; }
+    // v0.97.0 (RULES.MXIC_V97): who and which only; the GM side reads every value itself.
+    const mx97 = MX97.cleanMx97(c?.mx97);
+    if (mx97) out.mx97 = mx97;
     if (c?.call && typeof c.call === 'object' && ['place', 'tap', 'reroute', 'end'].includes(String(c.call.op))) {
       out.call = { op: String(c.call.op), id: str(c.call.id), ...(c.call.from != null ? { from: str(c.call.from) } : {}), ...(c.call.to != null ? { to: str(c.call.to) } : {}), ...(c.call.by != null ? { by: str(c.call.by) } : {}), ...(c.call.who != null ? { who: str(c.call.who) } : {}) };
     }
@@ -15564,6 +15570,8 @@ export class SR2Actor extends Actor {
     const host: any = await fromUuid(hostUuid);
     if (!host || host.type !== 'host') return null;
     const c = SR2Actor.#cleanHostChange(cIn);
+    // v0.97.0 (RULES.MXIC_V97.dataBomb): a bomb's rating, read before the change sets it off.
+    const pre97 = c.mx97 ? MXG97.preMx97(host, c.mx97) : undefined;
     let files: DataFile[] = [...(host.system.files ?? [])].map((f: any) => ({ ...f, foundBy: [...(f.foundBy ?? [])] }));
     const notes: string[] = [];
     if (c.found) {
@@ -15659,6 +15667,8 @@ export class SR2Actor extends Actor {
         notes.push(tx('SR2E.Card.Actor.alert3', { minAlert: c.minAlert }));
       }
     }
+    // v0.97.0 (RULES.MXIC_V97): parries, evades, crashes, bombs and suppressed IC, recorded on the host.
+    if (c.mx97) notes.push(...(await MXG97.applyMx97(host, c.mx97, pre97)));
     return `<p>${escText(host.name)}: ${escText(notes.join('; ') || tx('SR2E.Card.Actor.noChange'))}.</p>`;
   }
 
@@ -15939,7 +15949,7 @@ export class SR2Actor extends Actor {
     // v0.57.0: the IC's own Matrix damage, and the target's parry.
     // v0.97.0 (RULES.MXIC_V97.parry, position; VR2 p. 122): the decker's parry against this IC (the old list's under
     // 'v965'), and a position the decker lost to it.
-    const m97 = target && !program ? MXG97.icMods(this, target) : { mods: [] as TargetNumberModifier[], used: [] as string[] };
+    const m97 = target && !program ? MXG97.icMods(this, target) : { mods: [] as TargetNumberModifier[], used: [] as string[], parryId: undefined as string | undefined };
     // v0.92.3 (RULES.MATRIX_V923.cybercombat, trace): party IC +1 TN per member on their attacks (VR2 p. 52); a completed
     // trace gives the host's proactive IC −1 TN (VR2 p. 46); Mirrors is VR2's Decoy operation, not a TN.
     const book = M923.cybercombatBook();
@@ -16023,7 +16033,7 @@ export class SR2Actor extends Actor {
     if (this.sys.category === 'black' && target && !program && RULES.MATRIX_V57.blackIcHold.enabled && RULES.MATRIX_V923.blackIc === 'v922') await SR2Actor.#engage(target, this.uuid as string);
     // v0.97.0 (RULES.MXIC_V97.tar 'book'): a Tar Baby Test rolls the tar's rating (not an attack: no maneuvers).
     const r97 = await this.#runTest(`${label}${atk.note && !tar97 ? tx('SR2E.Card.Actor.dice4', { atkNote: atk.note }) : ''}`, tar97 ? rating : atk.dice, { targetNumber: t.tn, modifiers: [...(opts.modifiers ?? []), ...(target ? (tar97 ? SR2Actor.smokeMods(host) : situational(from)) : [...SR2Actor.smokeMods(host), ...matrixWoundModifiers(Number(this.sys.matrix?.monitor ?? 0), { ic: true })])] }, { kind: 'attack', ...(attack ? { attack } : {}) });
-    if (!tar97) await MXG97.afterAttack(this, { ownPos: [], used: m97.used });
+    if (!tar97) await MXG97.afterAttack(this, { ownPos: [], used: m97.used, ...(m97.parryId ? { parryId: m97.parryId } : {}) });
     return r97;
   }
 

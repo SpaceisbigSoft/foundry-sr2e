@@ -49,27 +49,24 @@ describe('v0.97.0 Matrix IC: the switches', () => {
   });
 });
 
-describe('suppressing IC (VR2 p. 40)', () => {
-  const e = (id: string, hostUuid = 'H1') => ({ id, hostUuid, name: id, points: 5 });
-  test('−1 Detection Factor per suppressed IC in this host only, never below 2', () => {
-    const list = [e('a'), e('b'), e('c', 'H2')];
-    assert.equal(X.suppressedDfLoss(list, 'H1'), 2);
-    assert.equal(X.suppressedDf(5, list, 'H1'), 3);
-    assert.equal(X.suppressedDf(3, list, 'H1'), 2);
-    assert.equal(X.suppressedDf(5, list, 'H3'), 5);
-    assert.equal(X.suppressedDf(5, 'junk', 'H1'), 5);
+describe('suppressing IC and the host\'s record (VR2 pp. 40, 121–122)', () => {
+  const rec = { suppressed: [{ decker: 'D1', id: 'a', name: 'a', points: 5 }, { decker: 'D1', id: 'b', name: 'b', points: 4 }, { decker: 'D2', id: 'c', name: 'c', points: 3 }] };
+  test('−1 Detection Factor per IC the host records this decker suppressing, never below 2', () => {
+    assert.equal(X.suppressedDfLoss(rec, 'D1'), 2);
+    assert.equal(X.suppressedDf(5, rec, 'D1'), 3);
+    assert.equal(X.suppressedDf(3, rec, 'D1'), 2);
+    assert.equal(X.suppressedDf(5, rec, 'D3'), 5);
+    assert.equal(X.suppressedDf(5, 'junk', 'D1'), 5);
+    assert.equal(X.hostMx({ suppressed: [{ decker: 'D', id: 'a', points: 999 }] }).suppressed[0]!.points, 30, 'bounded');
   });
-  test('suppressing again is refused; another host\'s entries go; releasing gives the points back', () => {
-    const a = X.suppressAfter([e('x', 'H0')], e('a'))!;
-    assert.deepEqual(a.map((s) => s.id), ['a']);
-    assert.equal(X.suppressAfter(a, e('a')), null);
-    const r = X.releaseSuppressed([...a, e('b')], 'a')!;
-    assert.deepEqual(r.list.map((s) => s.id), ['b']);
-    assert.equal(r.entry.points, 5);
-    assert.equal(X.releaseSuppressed(a, 'zz'), null);
-    assert.equal(X.suppressedList([{ id: 'a', hostUuid: 'H', points: 999 }])[0]!.points, 30, 'bounded');
+  test('a request carries who and which only, bounded; a parry is capped by the decker\'s dice', () => {
+    assert.deepEqual(X.cleanMx97({ op: 'parry', deckerUuid: 'D', vs: 'I', id: 'e', net: 99, evil: 1 }), { op: 'parry', deckerUuid: 'D', vs: 'I', id: 'e', net: 30 });
+    assert.equal(X.cleanMx97({ op: 'hack', deckerUuid: 'D' }), null);
+    assert.equal(X.maneuverCap(30, 7), 7);
+    assert.deepEqual(X.hostParry({ parry: [{ decker: 'D', vs: 'I', net: 3, id: 'p' }] }, 'D', 'I'), { net: 3, id: 'p' });
+    assert.equal(X.hostParry({ parry: [{ decker: 'D', vs: 'I', net: 3, id: 'p' }] }, 'D', 'I', ['p']), null);
   });
-  test('v965: no Detection Factor lost', (t) => { t.after(oldWay({ 'MXIC_V97.suppress': 'v965' })); assert.equal(X.suppressedDf(5, [e('a')], 'H1'), 5); });
+  test('v965: no Detection Factor lost', (t) => { t.after(oldWay({ 'MXIC_V97.suppress': 'v965' })); assert.equal(X.suppressedDf(5, rec, 'D1'), 5); });
 });
 
 describe('black IC\'s last shot (VR2 p. 48)', () => {
@@ -178,10 +175,22 @@ describe('ripper, tar, scramble, data bombs (VR2 pp. 41–43)', () => {
 
 describe('persona speed (VR2 pp. 84–87, 120; Mapping Matrices p. 69)', () => {
   const p = { reaction: 5, responseIncrease: 2, mpcp: 8, tortoise: false };
-  test('running cool costs 1D6 (at least 1)', () => {
-    assert.deepEqual(personaSpeed({ ...p, sim: 'cold' }), { reaction: 9, dice: 2, counted: 2 });
-    assert.deepEqual(personaSpeed({ ...p, responseIncrease: 0, sim: 'cold' }), { reaction: 5, dice: 1, counted: 0 });
-    assert.deepEqual(personaSpeed({ ...p, sim: 'hot' }), { reaction: 11, dice: 4, counted: 2 }, 'hot: unchanged');
+  test('running a hot deck cool costs 1D6 (at least 1); a cool deck runs cool for free', () => {
+    assert.deepEqual(personaSpeed({ ...p, sim: 'cold', hotCool: true }), { reaction: 9, dice: 2, counted: 2 });
+    assert.deepEqual(personaSpeed({ ...p, responseIncrease: 0, sim: 'cold', hotCool: true }), { reaction: 5, dice: 1, counted: 0 });
+    assert.deepEqual(personaSpeed({ ...p, sim: 'cold' }), { reaction: 9, dice: 3, counted: 2 }, 'not a hot deck: no penalty');
+    assert.deepEqual(personaSpeed({ ...p, sim: 'hot', hotCool: true }), { reaction: 11, dice: 4, counted: 2 }, 'hot: unchanged');
+  });
+  test('the reality filter needs the book persona speed: with the old one, no MPCP cost and the old effect', (t) => {
+    t.after(oldWay({ 'MATRIX_V923.initiative': 'v922' }));
+    assert.equal(X.filterMpcp(6, true), 6);
+    assert.equal(X.filterLevel({ realityFilter: true, ok: null }), 0);
+    assert.equal(realityFilterEffect(true).pool, RULES.MATRIX_V57.realityFilter.pool);
+  });
+  test('black IC\'s last shot may carry double a rating of 30', () => {
+    assert.equal(X.deckDamageRating(24, true), 24);
+    assert.equal(X.deckDamageRating(99, true), 60);
+    assert.equal(X.deckDamageRating(24, false), 20);
   });
   test('a reality filter is one more level beyond the deck\'s 3, 5 at most with hot DNI', () => {
     assert.deepEqual(personaSpeed({ ...p, responseIncrease: 3, mpcp: 12, sim: 'hot', filter: 1 }), { reaction: 15, dice: 6, counted: 3 }, '+10 Reaction and 6D6');
@@ -193,7 +202,7 @@ describe('persona speed (VR2 pp. 84–87, 120; Mapping Matrices p. 69)', () => {
   });
   test('v965: no cool penalty, the filter\'s old bonus', (t) => {
     t.after(oldWay({ 'MXIC_V97.coolInit': 'v965', 'MXIC_V97.realityFilter': 'v965' }));
-    assert.deepEqual(personaSpeed({ ...p, sim: 'cold', filter: 1 }), { reaction: 9, dice: 3, counted: 2 });
+    assert.deepEqual(personaSpeed({ ...p, sim: 'cold', filter: 1, hotCool: true }), { reaction: 9, dice: 3, counted: 2 });
     assert.equal(X.filterMpcp(6, true), 6);
     assert.equal(realityFilterEffect(true).pool, RULES.MATRIX_V57.realityFilter.pool);
   });

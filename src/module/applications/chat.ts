@@ -20,6 +20,7 @@ import * as C923 from '../rules/combat923.ts';
 import { onCard as onCard95 } from './core95.ts';
 import { onCard as onCard96 } from './health96.ts';
 import { onCard as onCardMxIc97 } from './mxic97.ts';
+import * as MX97 from '../rules/mxic97.ts';
 import { blastThroughWalls, crossingFraction, indirectScatterDice, indirectScatterMetres, barrierSpellRadius } from '../rules/index.ts';
 import { tokensNear, scatterPoint, blastBlocked, wallDistances, wallsBetweenPoints, sightBlockedBetweenPoints, wallsNear, scatterStop, tokenOf, drawArea, placeWardRegion } from './canvas.ts';
 import { escHtml } from '../rules/html.ts';
@@ -1733,7 +1734,7 @@ async function onDeckDamage(message: any, button: HTMLButtonElement): Promise<vo
   button.disabled = true;
   // v0.92.3: a sparky crash's test has its own TN and is followed by its damage (VR2 p. 44).
   // v0.97.0 (RULES.MXIC_V97.blackIcKill): black IC's last shot may wipe the run's data (the decker's own deck).
-  await decker.takeDeckDamage(String(d.icName ?? 'IC').slice(0, 120), safeInt(d.rating, 0, 20, 0), String(d.reason ?? '').slice(0, 200), { sparky: d.sparky === true, ...((d as any).wipe97 === true ? { wipe97: true } : {}) });
+  await decker.takeDeckDamage(String(d.icName ?? 'IC').slice(0, 120), MX97.deckDamageRating(d.rating, (d as any).wipe97 === true), String(d.reason ?? '').slice(0, 200), { sparky: d.sparky === true, ...((d as any).wipe97 === true ? { wipe97: true } : {}) });
   await markCardDone(message, decker, 'deckDamageRolled');
 }
 
