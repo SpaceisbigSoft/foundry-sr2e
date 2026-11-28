@@ -18466,7 +18466,9 @@ export class SR2Actor extends Actor {
     const qScore = book98 ? 0 : scored ? maneuverScore({ successes: qr?.successes ?? 0, speed: qs }) : (qr?.successes ?? 0);
     const r = chaseTurn({ metres: before, pursuerSpeed: ps, quarrySpeed: qs, pursuerSuccesses: pScore, quarrySuccesses: qScore });
     await this.update({ 'system.chase.metres': r.metres });
+    // v0.98.0 review (C4): a player's card carries the successes for the GM's button (no second run of the turn).
     let posNote = book98 ? await VD98G.afterPositioning(this, quarry, pr, qr) : '';
+    const pos98 = book98 ? VD98G.positionFlags(this, quarry, pr, qr) : null;
     if (scored) {
       const pos = maneuverPosition(pScore, qScore);
       const combat: any = (game as any).combat;
@@ -18485,6 +18487,7 @@ export class SR2Actor extends Actor {
       content: `<div class="sr2e-roll"><h3>${tx('SR2E.Card.Actor.chaseAfter', { name: escText(this.name), quarryName: escText(quarry.name) })}</h3>
         <p>${tx('SR2E.Card.Actor.speedVsVs', { ps, qs, drift: escText(fmt(r.drift)), part: scored ? tx('SR2E.Card.Actor.maneuverScore') : tx('SR2E.Card.Actor.positioning'), pScore, qScore: escText(qScore), shift: escText(fmt(r.shift)), part2: r.winner === 'none' ? '' : tx('SR2E.Card.Actor.gains3', { part: escText(r.winner === 'pursuer' ? this.name : quarry.name) }) })}</p>
         <p>${tx('SR2E.Card.Actor.gap')} <strong>${Math.round(before * 10) / 10} → ${r.metres} m</strong>${r.metres <= 0 ? ` — <strong>${tx('SR2E.Card.Actor.catchesUp', { name: escText(this.name) })}</strong>` : ''}</p>${posNote}${moved}</div>`,
+      ...(pos98 ? { flags: { [SYSTEM_ID]: pos98 } } : {}),
     });
     return { metres: r.metres };
   }
@@ -18657,7 +18660,9 @@ export class SR2Actor extends Actor {
         const aboard = [...(this.sys.occupants ?? [])].filter((u: string) => u && fromUuidSync(u));
         if (this.sys.controllerUuid && this.sys.controlMode === 'manual' && !aboard.includes(this.sys.controllerUuid)) aboard.push(this.sys.controllerUuid);
         // v0.98.0 (RULES.VDRIVE_V98.passengerSafety / cpCarry, Rigger 2 p. 50): seat belts, APPS, a crash cage, the Crash Test's pool.
-        if (pd && aboard.length) fu.passengers = VD98G.safePassengers(this, aboard.map((u: string) => ({ targetUuid: u, melee: false, damageType: 'physical' as DamageType, power: pd.power, level: pd.level, armorKind: 'impact' as const, ...(bookImpact ? { noPool: true } : {}) })), Number((ctx as any).cp98 ?? 0));
+        const people = pd ? aboard.map((u: string) => ({ targetUuid: u, melee: false, damageType: 'physical' as DamageType, power: pd.power, level: pd.level, armorKind: 'impact' as const, ...(bookImpact ? { noPool: true } : {}) })) : [];
+        // v0.98.0 review (C1): the safety gear only in a collision or crash (not gunfire carried through).
+        if (pd && aboard.length) fu.passengers = ctx.crash || ctx.ramSelf || (ctx as any).vehImpact ? VD98G.safePassengers(this, people, Number((ctx as any).cp98 ?? 0)) : people;
       }
     } else {
       note = ` <em>${tx('SR2E.Card.Actor.theVehicleSDamageChangedSince', { resultAfter: result.after })}</em>`;

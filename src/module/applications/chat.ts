@@ -21,6 +21,7 @@ import { onCard as onCard95 } from './core95.ts';
 import { onCard as onCard96 } from './health96.ts';
 import { onCard as onCardMxIc97 } from './mxic97.ts';
 import { onCard as onCardVDrive98 } from './vdrive98.ts';
+import * as VD98G from './vdrive98.ts';
 import { onCard as onCardVsec98 } from './vsec98.ts';
 import { onCard as onCardVr98 } from './vrig98.ts';
 import * as MX97 from '../rules/mxic97.ts';
@@ -1023,7 +1024,8 @@ async function onResist(message: any, button: HTMLButtonElement): Promise<void> 
   const index = safeInt(button.dataset['index'], 0, 99, 0);
   const rawDamage = (dlist[index] ?? message.getFlag(SYSTEM_ID, 'damage')) as DamageState | undefined;
   if (!rawDamage || typeof rawDamage !== 'object') return;
-  const damage = boundDamage(rawDamage, damageCap(message));
+  // v0.98.0 review (Lead/C): the passengers' extra dice only from a card that may give them.
+  const damage = VD98G.trustDice(message, boundDamage(rawDamage, damageCap(message)));
   if (message.getFlag(SYSTEM_ID, 'combinedInto')) return ui.notifications.warn(tx('SR2E.Notify.Chat.thisBlastWasCombinedWithAnother'));
   const target: any = await fromUuid(damage.targetUuid);
   if (!target) return ui.notifications.warn(tx('SR2E.Notify.Chat.theTargetActorNoLongerExists'));
@@ -1216,7 +1218,7 @@ async function autoResistEntries(message: any, hasDamage: boolean, hasSpell: boo
       const damages = message.getFlag(SYSTEM_ID, 'damages');
       const list: DamageState[] = Array.isArray(damages) ? damages : [message.getFlag(SYSTEM_ID, 'damage')].filter((x: any) => x && typeof x === 'object');
       for (let i = 0; i < list.length && i < 100; i++) {
-        const d = list[i] && typeof list[i] === 'object' ? boundDamage(list[i]!, damageCap(message)) : null;
+        const d = list[i] && typeof list[i] === 'object' ? VD98G.trustDice(message, boundDamage(list[i]!, damageCap(message))) : null;
         const t: any = d ? await fromUuid(d.targetUuid) : null;
         if (!t?.isOwner || !mayResistUnseen(message, t, damageSources(message, d)) || !autoResistPlanned(message, 'resist', i, t)) continue;
         // Marked first, so a click on Resist or Resist all meanwhile finds it done.
@@ -1517,7 +1519,8 @@ async function onVehicleCrash(message: any, button: HTMLButtonElement): Promise<
   if (cardDone(message, vehicle, 'crashed')) return ui.notifications.warn(tx('SR2E.Notify.Chat.theCrashHasAlreadyBeenPosted'));
   button.disabled = true;
   // v0.98.0 (RULES.VDRIVE_V98.cpCarry): the Crash Test's Control Pool dice, bounded (they only help the people aboard).
-  await vehicle.crash(safeInt(c.speed, 0, 2000, 0), safeInt(c.cp98, 0, Math.min(30, Number(vehicle.controller?.()?.vehicleSkillRating?.(vehicle) ?? 0)), 0));
+  // v0.98.0 review (S8): bounded by the controller only when it is on the vehicle's side (else 0).
+  await vehicle.crash(safeInt(c.speed, 0, 2000, 0), safeInt(c.cp98, 0, VD98G.cpBound(vehicle), 0));
   await markCardDone(message, vehicle, 'crashed');
 }
 
@@ -1534,9 +1537,11 @@ async function vehicleCrashTest(message: any, button: HTMLButtonElement, c: { ve
   if (!vehicle) { button.disabled = false; return ui.notifications.warn(tx('SR2E.Notify.Chat.thatVehicleNoLongerExists')); }
   const driver: any = vehicle.controller?.() ?? null;
   if (!vehicle.isOwner && !driver?.isOwner) { button.disabled = false; return ui.notifications.warn(tx('SR2E.Notify.Chat.onlySDriverOrTheGm', { vehicleName: escHtml(vehicle.name) })); }
-  if (!(await playerMay(message, driver?.isOwner ? driver : vehicle, origin(message, vehicle.uuid), tx('SR2E.Card.Chat.aCrashTestTn', { vehicleName: vehicle.name, tn: safeInt(c.tn, 2, 30, 4) })))) { button.disabled = false; return; }
+  // v0.98.0 review (C5 / P1): the card's TN modifier from 0 (a 0 was raised to +2: every Crash Test but the tires').
+  const tnPlus = safeInt(c.tn, 0, 30, 4);
+  if (!(await playerMay(message, driver?.isOwner ? driver : vehicle, origin(message, vehicle.uuid), tx('SR2E.Card.Chat.aCrashTestTn', { vehicleName: vehicle.name, tn: tnPlus })))) { button.disabled = false; return; }
   if (cardDone(message, driver?.isOwner ? driver : vehicle, 'crashTestRolled')) return ui.notifications.warn(tx('SR2E.Notify.Chat.theCrashTestHasAlreadyBeen'));
-  const rolled = await vehicle.crashTestFor({ tn: safeInt(c.tn, 2, 30, 4), why: String(c.why ?? '').slice(0, 200) });
+  const rolled = await vehicle.crashTestFor({ tn: tnPlus, why: String(c.why ?? '').slice(0, 200) });
   // v0.92.3 review fix: no test was rolled (no one can drive): an autonav too weak to drive crashes; anything else
   // leaves the card open (the warning said why) instead of losing the crash.
   if (!rolled && !(await vehicle.crashUndriven?.())) { button.disabled = false; return; }
@@ -2173,7 +2178,7 @@ async function onResistAll(message: any, button: HTMLButtonElement): Promise<voi
   if (!game.user?.isGM) return;
   // v0.81.0 (SEC1-5), round 2 (R2-SEC-7): Power bounded; the dialog below is the GM's confirmation (each target and
   // its Power, and who posted a player's card).
-  const damages = listFlag<DamageState>(message.getFlag(SYSTEM_ID, 'damages')).slice(0, 100).map((d) => boundDamage(d, damageCap(message)));
+  const damages = listFlag<DamageState>(message.getFlag(SYSTEM_ID, 'damages')).slice(0, 100).map((d) => VD98G.trustDice(message, boundDamage(d, damageCap(message))));
   const done = new Set<number>(listFlag<number>(message.getFlag(SYSTEM_ID, 'resisted')));
   const rows = await Promise.all(damages.map(async (d, i) => {
     const t: any = await fromUuid(d.targetUuid);

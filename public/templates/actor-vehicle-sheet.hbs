@@ -50,7 +50,7 @@
     <button type="button" data-action="designVehicle" title="{{sr2eT "SR2E.UI.buildItFromAChassisA"}}"><i class="fa-solid fa-compass-drafting"></i> {{sr2eT "SR2E.UI.design"}}</button>
   </div>
   {{#if vdrive98.show}}<div class="sr2e-row sr2e-vdrive98">
-    {{#if vdrive98.chase}}<label title="{{sr2eT "SR2E.VDrive98.Sheet.typeHint"}}">{{sr2eT "SR2E.VDrive98.Sheet.type"}} <select name="system.vehicleType98">{{selectOptions vdrive98.types selected=system.vehicleType98 valueAttr="key" labelAttr="label"}}</select></label>{{#if vdrive98.score}}<span>{{sr2eT "SR2E.VDrive98.Sheet.score" score=vdrive98.score}}</span>{{/if}}{{/if}}
+    {{#if vdrive98.chase}}<label title="{{sr2eT "SR2E.VDrive98.Sheet.typeHint"}}">{{sr2eT "SR2E.VDrive98.Sheet.type"}} <select name="system.vehicleType98">{{selectOptions vdrive98.types selected=system.vehicleType98 valueAttr="key" labelAttr="label"}}</select></label>{{#if vdrive98.hasScore}}<span>{{sr2eT "SR2E.VDrive98.Sheet.score" score=vdrive98.score}}</span>{{/if}}{{/if}}
     {{#if vdrive98.offroad}}<label title="{{sr2eT "SR2E.VDrive98.Sheet.suspensionHint"}}"><input type="checkbox" name="system.offroadSuspension98" {{checked system.offroadSuspension98}}> {{sr2eT "SR2E.VDrive98.Sheet.suspension"}}</label>{{/if}}
     {{#if vdrive98.autonav}}<label title="{{sr2eT "SR2E.VDrive98.Sheet.autonavOffHint"}}"><input type="checkbox" name="system.autonavOff98" {{checked system.autonavOff98}}> {{sr2eT "SR2E.VDrive98.Sheet.autonavOff"}}</label>{{/if}}
     {{#if vdrive98.stress}}<label title="{{sr2eT "SR2E.VDrive98.Sheet.stressHint"}}">{{sr2eT "SR2E.VDrive98.Sheet.stress"}} <input type="number" name="system.stress98" value="{{system.stress98}}" min="0"></label>{{/if}}
