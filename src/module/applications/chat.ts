@@ -19,6 +19,7 @@ import * as U80C from '../rules/urr80-combat.ts';
 import * as C923 from '../rules/combat923.ts';
 import { onCard as onCard95 } from './core95.ts';
 import { onCard as onCard96 } from './health96.ts';
+import { onCard as onCardMxIc97 } from './mxic97.ts';
 import { blastThroughWalls, crossingFraction, indirectScatterDice, indirectScatterMetres, barrierSpellRadius } from '../rules/index.ts';
 import { tokensNear, scatterPoint, blastBlocked, wallDistances, wallsBetweenPoints, sightBlockedBetweenPoints, wallsNear, scatterStop, tokenOf, drawArea, placeWardRegion } from './canvas.ts';
 import { escHtml } from '../rules/html.ts';
@@ -1729,7 +1730,8 @@ async function onDeckDamage(message: any, button: HTMLButtonElement): Promise<vo
   if (cardDone(message, decker, 'deckDamageRolled')) return ui.notifications.warn(tx('SR2E.Notify.Chat.deckDamageHasAlreadyBeenRolled'));
   button.disabled = true;
   // v0.92.3: a sparky crash's test has its own TN and is followed by its damage (VR2 p. 44).
-  await decker.takeDeckDamage(String(d.icName ?? 'IC').slice(0, 120), safeInt(d.rating, 0, 20, 0), String(d.reason ?? '').slice(0, 200), { sparky: d.sparky === true });
+  // v0.97.0 (RULES.MXIC_V97.blackIcKill): black IC's last shot may wipe the run's data (the decker's own deck).
+  await decker.takeDeckDamage(String(d.icName ?? 'IC').slice(0, 120), safeInt(d.rating, 0, 20, 0), String(d.reason ?? '').slice(0, 200), { sparky: d.sparky === true, ...((d as any).wipe97 === true ? { wipe97: true } : {}) });
   await markCardDone(message, decker, 'deckDamageRolled');
 }
 
@@ -3641,6 +3643,8 @@ function dispatch(message: any, button: HTMLButtonElement, action: string): Prom
   else if (action.startsWith('c95')) return onCard95(message, button, action);
   // v0.96.0 (RULES.HEALTH_V96): the health book rules' card buttons (applications/health96.ts).
   else if (action.startsWith('h96')) return onCard96(message, button, action);
+  // v0.97.0 (RULES.MXIC_V97): the Matrix IC and cybercombat book rules' card buttons (applications/mxic97.ts).
+  else if (action.startsWith('mxic97')) return onCardMxIc97(message, button, action);
   else if (action === 'evict') return onEvict(message, button);
   else if (action === 'drugCrash') return onDrugCrash(message, button);
   else if (action === 'karmaReroll' || action === 'avoidDisaster') return onKarma(message, button, action);

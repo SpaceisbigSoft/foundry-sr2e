@@ -346,6 +346,8 @@ export function realityFilterTest(mpcp: number, securityValue: number): { dice: 
 
 /** What the reality filter gives in a host: a bonus on success, a TN penalty on failure, nothing untested. */
 export function realityFilterEffect(ok: boolean | null): { reaction: number; pool: number; modifiers: TargetNumberModifier[] } {
+  // v0.97.0 (RULES.MXIC_V97.realityFilter 'book', VR2 p. 84): a Response Increase level instead (rules/mxic97.ts).
+  if (RULES.MXIC_V97.realityFilter === 'book') return { reaction: 0, pool: 0, modifiers: [] };
   const F = V().realityFilter;
   if (ok === true) return { reaction: F.reaction, pool: F.pool, modifiers: [] };
   if (ok === false) return { reaction: 0, pool: 0, modifiers: F.failTn ? [{ id: 'realityFilterFails', label: tx('SR2E.Card.Mod.realityFilterFails'), value: F.failTn }] : [] };

@@ -14,6 +14,7 @@ import {
   type HoldingIc, type Maneuver,
 } from '../datawar.ts';
 import type { SheafStep } from '../matrix.ts';
+import { oldWay } from './oldway.ts';
 // v0.92.3: these tests pin the v0.92.2 Matrix rules (the book's defaults: v0923-matrix.test.ts).
 import { before as before922, after as after922 } from 'node:test';
 import { matrix922 } from '../../__tests__/helpers/matrix922.ts';
@@ -291,7 +292,9 @@ describe('bombs, comcalls, filter, hitchers, chips', () => {
     assert.deepEqual(endCall(b, '1'), []);
     assert.equal(endCall(b, 'zz').length, 1);
   });
-  test('reality filter', () => {
+  test('reality filter', (t) => {
+    // v0.97.0: the v0.57.0 effect is RULES.MXIC_V97.realityFilter 'v965' (the book's: v097-mxic.test.ts).
+    t.after(oldWay({ 'MXIC_V97.realityFilter': 'v965' }));
     assert.deepEqual(realityFilterTest(6, 1), { dice: 6, tn: 2 });
     assert.deepEqual(realityFilterEffect(true), { reaction: 1, pool: 1, modifiers: [] });
     assert.deepEqual(realityFilterEffect(false), { reaction: 0, pool: 0, modifiers: [{ label: 'Reality filter fails', value: 1 }] });

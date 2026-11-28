@@ -10,6 +10,7 @@ import assert from 'node:assert/strict';
 import { RULES } from '../rules/index.ts';
 import { oldWay } from '../rules/__tests__/oldway.ts';
 import { matrix922 } from './helpers/matrix922.ts';
+import { MXIC_V965_WAY } from '../rules/__tests__/mxic965.ts';
 const g = globalThis as any;
 const faces: number[] = [];
 const chat: any[] = [];
@@ -62,6 +63,8 @@ const GM = () => ({ id: 'gm1', name: 'GM', isGM: true, can: () => true });
 const asMessage = (d: any) => ({ id: `m${++mid}`, timestamp: mid, ...d, getFlag(s: string, k: string) { return this.flags?.[s]?.[k]; }, async setFlag(s: string, k: string, v: any) { ((this.flags ??= {})[s] ??= {})[k] = v; } });
 
 before(async () => {
+  // v0.97.0: these pin the v0.96.5 Matrix IC and cybercombat rules (RULES.MXIC_V97; the book's: v097-mxic*.test.ts).
+  oldWay(MXIC_V965_WAY);
   // As in glue.test.ts and v072.test.ts: rules that add steps or prompts are off unless a test turns them on.
   (RULES.DISASTERS as any).prompt = false;
   (RULES.MAGIC_V39.ritualStages as any).enabled = false;
