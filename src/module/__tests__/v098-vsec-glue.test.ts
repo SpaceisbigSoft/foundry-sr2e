@@ -77,7 +77,7 @@ function actor(o: any) {
 const attrs = (w: number, b: number, i: number) => ({ willpower: { total: w }, body: { total: b }, intelligence: { total: i }, quickness: { total: 4 } });
 
 before(async () => {
-  for (const f of ['vsec98.json', 'vsec98-fix.json']) {
+  for (const f of ['vsec98.json', 'vsec98-fix.json', 'vsec98-fix2.json']) {
     const draft = join('i18n-drafts', f);
     if (existsSync(draft)) g.__SR2E_EN__ = { ...(g.__SR2E_EN__ ?? {}), ...JSON.parse(readFileSync(draft, 'utf8')) };
   }
@@ -448,5 +448,112 @@ describe('review fixes (v0.98.0 fix vsec)', () => {
     t.after(oldWay({ 'VSEC_V98.modSpecs': 'v971' }));
     // modSpecs v971: the old table price (cost × rating), still counted.
     assert.doesNotMatch(G.repairPartsLine(v, 1), /3,250¥/);
+  });
+});
+
+describe('second-round fixes (v0.98.0 fix2 vsec)', () => {
+  const ok = [6, 6, 1, 1, 1, 1, 1, 1, 1, 2, 2]; // decryption: 2 successes (done)
+  const bad = [1, 2, 3, 4, 2, 1, 1, 1, 2]; // none (failed: alert)
+  const drop = (m: any) => { chat.splice(chat.indexOf(m), 1); };
+  const asked: string[] = [];
+  const DLG = () => g.foundry.applications.api.DialogV2;
+  let wasConfirm: any;
+  beforeEach(() => {
+    asked.length = 0;
+    wasConfirm = DLG().confirm;
+    DLG().confirm = async (o: any) => { asked.push(String(o?.content ?? '')); return confirmAnswer; };
+  });
+  const restore = () => { DLG().confirm = wasConfirm; };
+
+  test('R1 (a, c): the GM request card applies its pinned roll; a pinned card that no longer names the request counts as failed', async () => {
+    try {
+      const { req, res } = await requestAndRoll('decrypt', 3, ok);
+      assert.equal(await G.pinFirstRoll(res), true);
+      res.flags[S].vsec98Res = { reqId: 'elsewhere' }; // the player re-points their card
+      await G.onCard(req, { disabled: false } as any, 'vsec98ApplyPin');
+      assert.equal(site.flags[S].vsec98.access, undefined, 'not recorded');
+      assert.equal(siteChanges[0]?.minAlert, 'active', 'the failure\'s alert');
+      assert.ok(req.flags[S].vsec98Used, 'used up');
+      assert.ok(asked.some((c) => c.includes('no longer names this request')));
+    } finally { restore(); }
+  });
+  test('R1 (a): the request card\'s button applies an intact pinned roll; a player can\'t use it', async () => {
+    try {
+      const { req, res } = await requestAndRoll('decrypt', 3, ok);
+      await G.pinFirstRoll(res);
+      g.game.user = P1;
+      await G.onCard(req, { disabled: false } as any, 'vsec98ApplyPin');
+      g.game.user = GM;
+      assert.equal(req.flags[S].vsec98Used, undefined, 'the player: refused');
+      await G.onCard(req, { disabled: false } as any, 'vsec98ApplyPin');
+      assert.equal(site.flags[S].vsec98.access.Actor_run, 2);
+      assert.equal(await G.applyAccess(req), false, 'once');
+    } finally { restore(); }
+  });
+  test('R1 (b): a pinned card stripped of its request id, then deleted, still gets the GM the lost-card notice (and the hook fires)', async () => {
+    const hooks: Record<string, Array<(m: any) => void>> = {};
+    g.Hooks = { on: (n: string, f: any) => { (hooks[n] ??= []).push(f); } };
+    try {
+      G.registerVsec98(() => true);
+      const { withGmLock } = await import('../applications/gmlock.ts');
+      const { req, res } = await requestAndRoll('decrypt', 3, bad);
+      await G.pinFirstRoll(res);
+      delete res.flags[S].vsec98Res;
+      drop(res);
+      for (const f of hooks.deleteChatMessage!) f(res);
+      await withGmLock(async () => {});
+      const notice = chat.find((m) => m.flags?.[S]?.vsec98Lost);
+      assert.ok(notice, 'the notice');
+      assert.equal(notice.flags[S].vsec98Lost.reqId, req.id, 'found from the GM\'s request card');
+      assert.ok(await G.applyAccess(notice));
+      assert.equal(siteChanges[0].minAlert, 'active');
+      // A deleted card no request pinned: nothing.
+      const other = asMessage({ flags: { [S]: { vsec98Res: { reqId: req.id } } } }, P1);
+      assert.equal(await G.lostRoll(other), null);
+    } finally { delete g.Hooks; restore(); }
+  });
+  test('R2: without a pin the GM\'s confirmation says so and counts the roll cards', async () => {
+    try {
+      const { req, res } = await requestAndRoll('decrypt', 3, ok);
+      g.game.user = P1;
+      faces.push(...bad);
+      await G.onCard(req, { disabled: false } as any, 'vsec98Roll');
+      g.game.user = GM;
+      confirmAnswer = false;
+      assert.equal(await G.applyAccess(res), false, 'declined');
+      assert.ok(asked.some((c) => c.includes('No first roll was pinned') && c.includes('the 2 roll card')), asked.join('|'));
+    } finally { restore(); }
+  });
+  test('R2: the lead GM\'s ready pins the earliest surviving roll card of an open request, marked unpinned (shown)', async () => {
+    try {
+      const { req, res } = await requestAndRoll('decrypt', 3, ok);
+      const { req: used } = await requestAndRoll('tap', 3, [6, 5, 1, 1, 2, 3, 4, 2]);
+      used.flags[S].vsec98Used = true;
+      g.game.user = P1;
+      faces.push(...bad);
+      await G.onCard(req, { disabled: false } as any, 'vsec98Roll');
+      g.game.user = GM;
+      assert.equal(await G.pinOpenRequests(), 1);
+      assert.deepEqual(req.flags[S][G.PIN_FLAG], { id: res.id, dice: [ok.slice(0, 9), ok.slice(9)], unpinned: true });
+      assert.equal(used.flags[S][G.PIN_FLAG], undefined, 'a used request is left alone');
+      assert.equal(await G.pinOpenRequests(), 0, 'once');
+      assert.ok(await G.applyAccess(res));
+      assert.ok(asked.some((c) => c.includes('pinned late')));
+    } finally { restore(); }
+  });
+  test('R2: the ready hook waits for the windows to settle, then pins as the lead GM', async () => {
+    const once: Record<string, Array<() => void>> = {};
+    g.Hooks = { on: () => {}, once: (n: string, f: any) => { (once[n] ??= []).push(f); } };
+    try {
+      G.registerVsec98(() => true);
+      const { req } = await requestAndRoll('decrypt', 3, ok);
+      for (const f of once.ready!) f();
+      const { leadSettled } = await import('../applications/leader.ts');
+      await leadSettled();
+      const { withGmLock } = await import('../applications/gmlock.ts');
+      await new Promise((r) => setTimeout(r, 0));
+      await withGmLock(async () => {});
+      assert.equal(req.flags[S][G.PIN_FLAG]?.unpinned, true);
+    } finally { delete g.Hooks; restore(); }
   });
 });

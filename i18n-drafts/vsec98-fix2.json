@@ -1,0 +1,6 @@
+{
+  "SR2E.VSec98.Access.applyPin": "Apply the pinned roll (GM)",
+  "SR2E.VSec98.Access.confirmMoved": "{intruder}: {step}, the first roll card no longer names this request: it counts as a failed test ({need} successes needed).",
+  "SR2E.VSec98.Access.noPin": "No first roll was pinned for this request (the GM was offline when it was rolled): this takes the first of the {count} roll card(s) for it still in the chat.",
+  "SR2E.VSec98.Access.latePin": "This roll was pinned late, when the GM came back online (the GM was offline when it was rolled): the earliest roll card still in the chat then."
+}

@@ -24,6 +24,7 @@ import * as X from '../rules/vsec98.ts';
 import { authorIsGm, authorOwns, gmMay } from './trust.ts';
 import { movedThisTurn } from './canvas.ts';
 import { withGmLock } from './gmlock.ts';
+import { leadSettled } from './leader.ts';
 
 const G = (): any => (globalThis as any).game;
 const isGm = (): boolean => Boolean(G()?.user?.isGM);
@@ -261,7 +262,7 @@ export async function requestAccess(site: any, intruder: any, step: string, devi
   const t = X.accessTest(step, { device, electronics: skillOf(intruder, RULES.SECURITY.bypass.skill), intelligence: total(intruder, 'intelligence'), technical: v.technical, vigilance: v.vigilance });
   if (t.why) { warn(escHtml(tKey(t.why))); return null; }
   const req = { siteUuid: String(site.uuid), intruderUuid: String(intruder.uuid), step, dice: t.dice, tn: t.tn, need: t.need, alertOnFail: t.alertOnFail };
-  return post(`<p>${tx('SR2E.VSec98.Access.request', { intruder: name(intruder), step: escHtml(tKey(`SR2E.VSec98.Step.${step}`)), dice: t.dice, tn: t.tn, need: t.need })}</p><p><button type="button" data-sr2e-action="vsec98Roll">${tx('SR2E.VSec98.Access.roll')}</button></p>`,
+  return post(`<p>${tx('SR2E.VSec98.Access.request', { intruder: name(intruder), step: escHtml(tKey(`SR2E.VSec98.Step.${step}`)), dice: t.dice, tn: t.tn, need: t.need })}</p><p><button type="button" data-sr2e-action="vsec98Roll">${tx('SR2E.VSec98.Access.roll')}</button> <button type="button" data-sr2e-action="vsec98ApplyPin">${tx('SR2E.VSec98.Access.applyPin')}</button></p>`,
     { speaker: { alias: String(site.name ?? '') }, whisper: [...gmIds(), ...ownerIds(intruder)], flags: { [SYSTEM_ID]: { vsec98Req: req } } });
 }
 
@@ -461,14 +462,45 @@ const USED_FLAG = 'vsec98Used';
 const DONE_FLAG = 'vsec98Done';
 
 const msg = (id: unknown): any => (typeof id === 'string' && id ? G()?.messages?.get?.(id.slice(0, 64)) ?? null : null);
+const allMessages = (): any[] => { const all: any = G()?.messages; return all?.contents ?? (all && typeof all[Symbol.iterator] === 'function' ? [...all] : []); };
+const LI_OPEN = '<li>', LI_CLOSE = '</li>';
+const listHtml = (lines: readonly string[]): string => `<ul>${lines.map((l) => LI_OPEN + escHtml(l) + LI_CLOSE).join('')}</ul>`;
 const sameThrows = (a: number[][], b: number[][]): boolean => JSON.stringify(a) === JSON.stringify(b);
 
-/** A request card's pinned first roll (only a GM's card is read). */
-function pinOf(req: any): { id: string; dice: number[][] } | null {
+/**
+ * A request card's pinned first roll (only a GM's card is read). `unpinned`: pinned late, at the lead GM's ready (no
+ * lead GM saw the roll card posted: the earliest roll card still in the chat then).
+ */
+function pinOf(req: any): { id: string; dice: number[][]; unpinned: boolean } | null {
   if (!authorIsGm(req)) return null;
   const p: any = req?.flags?.[SYSTEM_ID]?.[PIN_FLAG];
   if (!p || typeof p.id !== 'string' || !p.id || !Array.isArray(p.dice)) return null;
-  return { id: p.id.slice(0, 64), dice: p.dice.slice(0, 60).map((t: unknown) => (Array.isArray(t) ? t.slice(0, 60).map((f) => Math.floor(Number(f))) : [])) };
+  return { id: p.id.slice(0, 64), dice: p.dice.slice(0, 60).map((t: unknown) => (Array.isArray(t) ? t.slice(0, 60).map((f) => Math.floor(Number(f))) : [])), unpinned: p.unpinned === true };
+}
+
+/** v0.98.0 fix2 R1: the GM's open request card that pinned this card id (found from the GM's cards, never the card's own flags). */
+export function requestPinning(id: unknown): any | null {
+  const k = String(id ?? '');
+  if (!k) return null;
+  return allMessages().find((m: any) => reqOf(m) && pinOf(m)?.id === k && !m.getFlag?.(SYSTEM_ID, USED_FLAG)) ?? null;
+}
+
+/**
+ * v0.98.0 fix2 R2: the lead GM's ready: each open GM request with no pin (no lead GM was online when it was rolled)
+ * gets the earliest roll card still in the chat pinned, marked `unpinned` (the GM's Apply says so). Returns how many.
+ */
+export async function pinOpenRequests(): Promise<number> {
+  if (!isGm() || !X.on('access')) return 0;
+  let n = 0;
+  for (const req of allMessages()) {
+    const q = reqOf(req);
+    if (!q || pinOf(req) || req.getFlag?.(SYSTEM_ID, USED_FLAG)) continue;
+    const first = firstRollFor(String(req.id ?? ''), q.intruderUuid);
+    if (!first) continue;
+    await markCard(req, PIN_FLAG, { id: String(first.id), dice: throwsOf(first), unpinned: true });
+    if (pinOf(req)?.id === String(first.id)) n++;
+  }
+  return n;
 }
 
 /**
@@ -492,10 +524,11 @@ export async function pinFirstRoll(message: any): Promise<boolean> {
  */
 export async function lostRoll(message: any): Promise<any | null> {
   if (!isGm() || !X.on('access')) return null;
-  const reqId = String(message?.flags?.[SYSTEM_ID]?.vsec98Res?.reqId ?? '').slice(0, 64);
-  const req = msg(reqId);
+  // fix2 R1: the request is the GM's card that pinned this id; the deleted card's own (player-written) flags aren't read.
+  const req = requestPinning(message?.id);
   const q = req ? reqOf(req) : null;
-  if (!q || pinOf(req)?.id !== String(message?.id ?? '') || req.getFlag?.(SYSTEM_ID, USED_FLAG)) return null;
+  if (!q) return null;
+  const reqId = String(req.id);
   const intruder = sync(q.intruderUuid);
   return post(`<p><em>${tx('SR2E.VSec98.gmOnly')}</em> ${tx('SR2E.VSec98.Access.lostCard', { intruder: name(intruder), step: escHtml(tKey(`SR2E.VSec98.Step.${q.step}`)) })}</p><p><button type="button" data-sr2e-action="vsec98Apply">${tx('SR2E.VSec98.Access.apply')}</button></p>`,
     { whisper: gmIds(), flags: { [SYSTEM_ID]: { vsec98Lost: { reqId } } } });
@@ -523,9 +556,12 @@ export function registerVsec98(isLead: () => boolean): void {
     if (f.vsec98Res) run(() => pinFirstRoll(m));
     if (f.test?.vsec98HitId) run(() => markResisted(m));
   });
+  // fix2 R1: any deleted card a GM request pinned (its own flags may have been stripped first).
   H?.on?.('deleteChatMessage', (m: any) => {
-    if (m?.flags?.[SYSTEM_ID]?.vsec98Res && isLead()) run(() => lostRoll(m));
+    if (isLead() && X.on('access') && requestPinning(m?.id)) run(() => lostRoll(m));
   });
+  // fix2 R2: once the windows have settled, the lead GM pins the open requests rolled while no lead GM was online.
+  H?.once?.('ready', () => { void leadSettled().then(() => { if (isLead()) run(() => pinOpenRequests()); }); });
 }
 
 export async function onCard(message: any, button: HTMLButtonElement, action: string): Promise<void> {
@@ -551,6 +587,13 @@ export async function onCard(message: any, button: HTMLButtonElement, action: st
     if (!isGm()) { warn(tx('SR2E.VSec98.gmOnlyButton')); return; }
     const reqKey = `apply:${String(flags.vsec98Res?.reqId ?? flags.vsec98Lost?.reqId ?? message?.id ?? '')}`;
     await once(reqKey, button, async () => { await applyAccess(message); });
+    return;
+  }
+  if (action === 'vsec98ApplyPin') {
+    // fix2 R1: the GM's request card applies its pinned roll (whatever the roll card's flags now say).
+    if (!isGm()) { warn(tx('SR2E.VSec98.gmOnlyButton')); return; }
+    if (!reqOf(message)) { warn(tx('SR2E.VSec98.gmCardOnly')); return; }
+    await once(`apply:${String(message?.id ?? '')}`, button, async () => { await applyAccess(message); });
     return;
   }
   if (action === 'vsec98Resist') {
@@ -605,44 +648,56 @@ async function resist(message: any, h: any, loser: any): Promise<void> {
   });
 }
 
-/** The first roll card posted for a request by the intruder's owner (or a GM), in chat order; null if none is found. */
+/** The roll cards still in the chat for a request by the intruder's owner (or a GM), in chat order. */
+function rollCardsFor(reqId: string, intruderUuid: string): any[] {
+  return allMessages().filter((m: any) => String(m?.flags?.[SYSTEM_ID]?.vsec98Res?.reqId ?? '') === reqId && authorOwns(m, intruderUuid));
+}
+/** The first of them; null if none is found. */
 function firstRollFor(reqId: string, intruderUuid: string): any | null {
-  const all: any = G()?.messages;
-  const list: any[] = all?.contents ?? (all && typeof all[Symbol.iterator] === 'function' ? [...all] : []);
-  return list.find((m: any) => String(m?.flags?.[SYSTEM_ID]?.vsec98Res?.reqId ?? '') === reqId && authorOwns(m, intruderUuid)) ?? null;
+  return rollCardsFor(reqId, intruderUuid)[0] ?? null;
 }
 
 /**
  * The GM applies an access roll: the request must be a GM's card, the roll card's author must own the intruder, and
  * it must be the roll card the lead GM pinned on the request when it was posted (without a pin: the first live roll
- * card). The successes are counted again from its dice with the request's dice and TN. A pinned card since deleted,
- * or whose dice differ from the pinned ones (or don't make the test), counts as a failed test. Done: the site records
- * the step; failed decryption or protocols: the site goes on alert. The request is used up (GM-written) once applied.
+ * card, and the GM's confirmation says the pin is missing and how many roll cards there are). The successes are
+ * counted again from its dice with the request's dice and TN. A pinned card since deleted, whose dice differ from the
+ * pinned ones (or don't make the test), or which no longer names this request, counts as a failed test. Done: the
+ * site records the step; failed decryption or protocols: the site goes on alert. The request is used up (GM-written)
+ * once applied. `message` is the roll card, the GM's lost-card notice, or (fix2 R1) the GM's request card itself,
+ * which applies its pinned roll whatever the roll card's flags now say.
  */
 export async function applyAccess(message: any): Promise<boolean> {
   if (!isGm()) return false;
-  const lost: any = authorIsGm(message) ? message?.flags?.[SYSTEM_ID]?.vsec98Lost : null;
-  const reqId = String(lost?.reqId ?? message?.flags?.[SYSTEM_ID]?.vsec98Res?.reqId ?? '').slice(0, 64);
-  const req = msg(reqId);
+  const f: any = message?.flags?.[SYSTEM_ID] ?? {};
+  const own = reqOf(message) ? message : null;
+  const lost: any = !own && authorIsGm(message) ? f.vsec98Lost : null;
+  const req = own ?? msg(String(lost?.reqId ?? f.vsec98Res?.reqId ?? '').slice(0, 64));
   const q = req ? reqOf(req) : null;
   if (!q) { warn(tx('SR2E.VSec98.gmCardOnly')); return false; }
-  if (!lost && !authorOwns(message, q.intruderUuid)) { warn(tx('SR2E.VSec98.Access.notTheirs')); return false; }
+  const reqId = String(req.id ?? '');
+  const fromRoll = !own && !lost;
+  if (fromRoll && !authorOwns(message, q.intruderUuid)) { warn(tx('SR2E.VSec98.Access.notTheirs')); return false; }
   if (req.getFlag?.(SYSTEM_ID, USED_FLAG)) { warn(tx('SR2E.VSec98.already')); return false; }
-  // The pinned first roll; without one (no lead GM saw it posted), the first roll card still in the chat.
+  // The pinned first roll; without one (no lead GM saw it posted), the first roll card still in the chat (fix2 R2: said so).
+  const notes: string[] = [];
   let pin = pinOf(req);
   if (!pin) {
-    const first = firstRollFor(reqId, q.intruderUuid);
-    if (!first) { warn(tx('SR2E.VSec98.Access.notFirst')); return false; }
-    pin = { id: String(first.id), dice: throwsOf(first) };
-  }
+    const cards = rollCardsFor(reqId, q.intruderUuid);
+    if (!cards.length) { warn(tx('SR2E.VSec98.Access.notFirst')); return false; }
+    pin = { id: String(cards[0].id), dice: throwsOf(cards[0]), unpinned: false };
+    notes.push(tx('SR2E.VSec98.Access.noPin', { count: cards.length }));
+  } else if (pin.unpinned) notes.push(tx('SR2E.VSec98.Access.latePin'));
   const pinned = msg(pin.id);
   let fail: '' | 'lost' | 'changed' = '';
+  let moved = false;
   let r: SuccessTestResult | null = null;
   if (!pinned) fail = 'lost';
-  else if (pinned !== message) { warn(tx('SR2E.VSec98.Access.notFirst')); return false; }
-  else if (!sameThrows(throwsOf(message), pin.dice)) fail = 'changed';
+  else if (fromRoll && pinned !== message) { warn(tx('SR2E.VSec98.Access.notFirst')); return false; }
+  else if (String(pinned.flags?.[SYSTEM_ID]?.vsec98Res?.reqId ?? '') !== reqId) { fail = 'changed'; moved = true; } // fix2 R1 (c)
+  else if (!sameThrows(throwsOf(pinned), pin.dice)) fail = 'changed';
   else {
-    r = await replayTest(message, q.dice, q.tn);
+    r = await replayTest(pinned, q.dice, q.tn);
     if (!r) fail = 'changed';
   }
   const site: any = await (globalThis as any).fromUuid(q.siteUuid);
@@ -654,9 +709,17 @@ export async function applyAccess(message: any): Promise<boolean> {
   const who = String(intruder?.name ?? ''), step = tKey(`SR2E.VSec98.Step.${q.step}`);
   let what: string;
   if (fail === 'lost') what = tx('SR2E.VSec98.Access.confirmLost', { intruder: who, step, need: q.need });
+  else if (moved) what = tx('SR2E.VSec98.Access.confirmMoved', { intruder: who, step, need: q.need });
   else if (fail === 'changed') what = tx('SR2E.VSec98.Access.confirmChanged', { intruder: who, step, need: q.need });
   else what = tx('SR2E.VSec98.Access.confirm', { intruder: who, step, successes, need: q.need });
-  if (!(await gmMay(message, { title: tx('SR2E.VSec98.Access.title'), lines: [what], sources: lost ? [] : [q.intruderUuid] }))) return false;
+  // The card whose dice count (the pinned one): a player's goes through gmMay; a GM's needs no confirmation, unless the
+  // pin is missing or late (fix2 R2: the GM is told).
+  const evidence = pinned ?? message;
+  const lines = [what, ...notes];
+  if (authorIsGm(evidence) && notes.length) {
+    const ok = await dialogs()?.confirm?.({ window: { title: tx('SR2E.VSec98.Access.title') }, content: listHtml(lines), rejectClose: false });
+    if (!ok) return false;
+  } else if (!(await gmMay(evidence, { title: tx('SR2E.VSec98.Access.title'), lines, sources: pinned ? [q.intruderUuid] : [] }))) return false;
   return gmStep(async () => {
     // Re-checked under the lock, then used up first: a second Apply (another GM, a double click) finds it used.
     if (req.getFlag?.(SYSTEM_ID, USED_FLAG)) { warn(tx('SR2E.VSec98.already')); return false; }
