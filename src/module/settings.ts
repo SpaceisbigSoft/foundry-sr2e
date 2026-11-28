@@ -23,6 +23,7 @@ import { HOUSE_VDRIVE_V98 } from "./rules/config98/vdrive.ts";
 import { HOUSE_VSEC_V98 } from "./rules/config98/vsec.ts";
 import { HOUSE_WARE_V99 } from "./rules/config99/ware.ts";
 import { HOUSE_CLINIC_V99 } from "./rules/config99/clinic.ts";
+import { HOUSE_KIT_V99 } from "./rules/config99/kit.ts";
 import { HOUSE_VRIG_V98 } from "./rules/config98/vrig.ts";
 import { SYSTEM } from "./config/system.ts";
 import { worldFloor, flooredMode } from "./rules/hidden941.ts";
@@ -1112,6 +1113,8 @@ export const HOUSE_RULES: HouseRuleDef[] = [
   ...HOUSE_CLINIC_V99,
   // v0.98.0: rules completeness, rigging, drones, sensors and electronic warfare (rules/config98/vrig.ts).
   ...HOUSE_VRIG_V98,
+  // v0.99.0: rules completeness, gear: smartlinks, skillsofts, concealment, searches and the law (rules/config99/kit.ts).
+  ...HOUSE_KIT_V99,
 ];
 
 /**

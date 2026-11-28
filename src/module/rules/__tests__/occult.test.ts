@@ -1,5 +1,6 @@
 import { test, describe } from 'node:test';
 import { oldWay } from './oldway.ts';
+import { KIT_V980_WAY } from './kit980.ts';
 import assert from 'node:assert/strict';
 import {
   RULES, cleansingTn, cleansingPoints, applyCleansing, diviningTn, diviningAnswer, invokingTn, invokeProblem, possessionOutcome, possessedAttributes,
@@ -225,6 +226,7 @@ describe('v0.45.0 bioware and cyberware', () => {
 
   test('encephalons, chip slots, graded availability', (t) => {
     t.after(oldWay({"BOOK_V78.encephalon.mode": "dice"})); // v0.78.0: the old rule (a house rule)
+    t.after(oldWay(KIT_V980_WAY)); // v0.99.0: the v0.98.0 chip memory (RULES.KIT_V99.skillMemory 'v980')
     assert.equal(encephalonDice(2, { attribute: 'intelligence' }), 2);
     assert.equal(encephalonDice(2, { attribute: 'charisma', kind: 'knowledge' }), 2);
     assert.equal(encephalonDice(2, { attribute: 'quickness' }), 0);

@@ -38,6 +38,7 @@ import { VDRIVE_V98 } from './config98/vdrive.ts';
 import { VSEC_V98 } from './config98/vsec.ts';
 import { WARE_V99 } from './config99/ware.ts';
 import { CLINIC_V99 } from './config99/clinic.ts';
+import { KIT_V99 } from './config99/kit.ts';
 import { VRIG_V98 } from './config98/vrig.ts';
 
 /**
@@ -3449,6 +3450,8 @@ export const RULES = {
   CLINIC_V99,
   /** v0.98.0: rules completeness, rigging, drones, sensors and electronic warfare (rules/config98/vrig.ts). */
   VRIG_V98,
+  /** v0.99.0: rules completeness, gear: smartlinks, skillsofts, concealment, searches and the law (rules/config99/kit.ts). */
+  KIT_V99,
 } as const;
 
 export type RangeBand = keyof typeof RULES.RANGE_TN;

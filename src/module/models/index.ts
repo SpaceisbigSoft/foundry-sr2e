@@ -59,6 +59,8 @@ import * as VS98 from '../rules/vsec98.ts';
 import * as VR98 from '../rules/vrig98.ts';
 import * as W99 from '../rules/ware99.ts';
 import * as CL99 from '../rules/clinic99.ts';
+import * as K99 from '../rules/kit99.ts';
+import { SOFT_SCOPES_99 } from '../rules/config99/kit.ts';
 
 const f = () => foundry.data.fields;
 /** World time now (0 outside Foundry). */
@@ -159,6 +161,8 @@ function legalFields() {
   return {
     legality: new fields.StringField({ required: true, blank: true, initial: '', choices: RULES.GEAR_V58.legality.categories.map((c) => c.id) }),
     permit: new fields.BooleanField({ required: true, initial: false }),
+    /** v0.99.0 (RULES.KIT_V99.policeCheck, Shadowtech p. 103): the book's Legality code (e.g. "6P-CC"; '' = none). */
+    legalCode: new fields.StringField({ required: true, blank: true, initial: '' }),
   };
 }
 
@@ -291,8 +295,9 @@ function cyberDerived(actor: any, ware: any[]) {
   });
   const wiring = { skillwires, chipjack, datajack };
   const chipItems = [...(actor?.items ?? [])].filter((i: any) => i.type === 'gear' && i.system.chip?.kind && isAtHand(i));
-  const running = chipsRunning(chipItems.map((i: any) => ({ kind: i.system.chip.kind, rating: i.system.chip.rating ?? 0, slotted: Boolean(i.system.chip.slotted) })), chipSlots({ chipjacks, datajack, memoryMp }));
-  const softs = chipItems.map((i: any, n: number) => {
+  // v0.99.0 (RULES.KIT_V99.skillMemory): the chip's skill type sizes it in headware memory (Core p. 248).
+  const running = chipsRunning(chipItems.map((i: any) => ({ kind: i.system.chip.kind, rating: i.system.chip.rating ?? 0, slotted: Boolean(i.system.chip.slotted), scope: i.system.chip.scope ?? '' })), chipSlots({ chipjacks, datajack, memoryMp }));
+  const softs0 = chipItems.map((i: any, n: number) => {
     const chip = { name: i.name, kind: i.system.chip.kind, skill: i.system.chip.skill, rating: i.system.chip.rating, slotted: Boolean(i.system.chip.slotted) };
     const r = softRating(chip, wiring);
     const run = running[n]!;
@@ -301,6 +306,8 @@ function cyberDerived(actor: any, ware: any[]) {
     const enforce = RULES.CYBERWARE.chips.enforce;
     return { gearId: i.id, ...chip, effective: blocked && enforce === 'block' ? 0 : r.rating, reason: blocked ? run.reason : r.reason, via: run.via };
   });
+  // v0.99.0 (RULES.KIT_V99.skillwires / softReplaces, Core pp. 248–249): the activesofts share the Skillwire Rating; no magic softs.
+  const softs = K99.capActivesofts(softs0, skillwires);
   // v0.58.0: worn vision gear (goggles, glasses, binoculars, visors) adds to the eyes.
   const gearOptics = opticsOf([...(actor?.items ?? [])].filter((i: any) => i.type === 'gear' && isAtHand(i)).map((i: any) => ({ ...(i.system.optics ?? {}), damaged: Boolean(i.system.damaged) })));
   const eyes = mergeVision({ magnification: max((i) => i.system.magnification), flareComp: live.some((i: any) => i.system.flareComp) }, gearOptics);
@@ -1446,6 +1453,8 @@ export class WeaponDataModel extends foundry.abstract.TypeDataModel {
       recoilComp: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
       /** Smartgun-equipped: the Attack dialog pre-ticks the smartlink modifier. */
       smartgun: new fields.BooleanField({ required: true, initial: false }),
+      /** v0.99.0 (RULES.KIT_V99.smartlink2, FoF pp. 57, 84–85): a Level II smartgun system. */
+      smartgun2: new fields.BooleanField({ required: true, initial: false }),
       /** A magical weapon: ignores immunity to normal weapons. */
       magical: new fields.BooleanField({ required: true, initial: false }),
       /** What it is made of or loaded with (silver, wood...), for critter vulnerabilities and allergies (v0.39.0). */
@@ -1613,6 +1622,8 @@ export class GearDataModel extends foundry.abstract.TypeDataModel {
         skill: new fields.StringField({ required: true, initial: '' }),
         rating: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
         slotted: new fields.BooleanField({ required: true, initial: false }),
+        /** v0.99.0 (RULES.KIT_V99.skillMemory, Core p. 248): the Skill Memory Table's skill type ('' = general). */
+        scope: new fields.StringField({ required: true, blank: true, initial: '', choices: [...SOFT_SCOPES_99] }),
       }),
       /** v0.49.0: a programming suite's rating (0 = not one). */
       suite: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),

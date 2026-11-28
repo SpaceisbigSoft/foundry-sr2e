@@ -94,6 +94,7 @@
     <label>{{sr2eT "SR2E.UI.heavyDoubleRecoil"}} <input type="checkbox" name="system.heavy" {{checked system.heavy}}></label>
     <label title="{{sr2eT "SR2E.UI.gyroMountRatingCancelsRecoilThen"}}">{{sr2eT "SR2E.UI.gyro"}} <input type="number" name="system.gyro" value="{{system.gyro}}" min="0"></label>
     <label>{{sr2eT "SR2E.UI.smartgun"}} <input type="checkbox" name="system.smartgun" {{checked system.smartgun}}></label>
+    {{#if system.smartgun}}<label title="{{sr2eT "SR2E.Kit99.UI.smartgun2Hint"}}">{{sr2eT "SR2E.Kit99.UI.smartgun2"}} <input type="checkbox" name="system.smartgun2" {{checked system.smartgun2}}></label>{{/if}}
     <label title="{{sr2eT "SR2E.UI.silencerSsSaOnlySuppressorAny"}}">{{sr2eT "SR2E.UI.muzzle"}} <select name="system.muzzle">{{selectOptions muzzleChoices selected=system.muzzle valueAttr="key" labelAttr="label"}}</select></label>
   </div>
   <h3 class="sr2e-subhead" data-heading="Accessories">{{sr2eT "SR2E.UI.accessories"}}</h3>
@@ -764,6 +765,7 @@
     <label>{{sr2eT "SR2E.UI.skill"}} <input type="text" name="system.chip.skill" value="{{system.chip.skill}}" placeholder="{{sr2eT "SR2E.UI.eGFirearms"}}"></label>
     <label>{{sr2eT "SR2E.UI.rating"}} <input type="number" name="system.chip.rating" value="{{system.chip.rating}}" min="0"></label>
     <label>{{sr2eT "SR2E.UI.slotted"}} <input type="checkbox" name="system.chip.slotted" {{checked system.chip.slotted}}></label>
+    {{#unless (eq system.chip.kind "linguasoft")}}<label title="{{sr2eT "SR2E.Kit99.UI.scopeHint"}}">{{sr2eT "SR2E.Kit99.UI.scope"}} <select name="system.chip.scope">{{selectOptions chipScopes selected=system.chip.scope valueAttr="key" labelAttr="label"}}</select></label>{{/unless}}
     {{/if}}
   </div>
   <div class="sr2e-row">
@@ -828,6 +830,7 @@
     <label>{{sr2eT "SR2E.UI.streetIndex"}} <input type="number" name="system.streetIndex" value="{{system.streetIndex}}" min="0" step="0.05"></label>
     {{#if heatOn}}{{#if isGM}}<label class="sr2e-gm-only" data-sr2e-gm title="{{sr2eT "SR2E.UI.stolenGoodsAFencePaysLess"}}">{{sr2eT "SR2E.UI.heat"}} <input type="number" name="system.heat" value="{{system.heat}}" min="0"></label>{{else}}{{#if system.heat}}<span title="{{sr2eT "SR2E.UI.stolenGoodsAFencePaysLess2"}}">{{sr2eT "SR2E.UI.heat2" heat=system.heat}}</span>{{/if}}{{/if}}{{#if heatNow}}<span>{{heatNow}}</span>{{/if}}{{/if}}
     <label title="{{sr2eT "SR2E.UI.whatTheLawSaysAboutCarrying"}}">{{sr2eT "SR2E.UI.legality"}} <select name="system.legality">{{selectOptions legalityChoices selected=system.legality valueAttr="key" labelAttr="label"}}</select></label>
+    <label title="{{sr2eT "SR2E.Kit99.UI.legalCodeHint"}}">{{sr2eT "SR2E.Kit99.UI.legalCode"}} <input type="text" name="system.legalCode" value="{{system.legalCode}}" placeholder="6P-CC" size="7" maxlength="20"></label>
     {{#if permit.show}}<label title="{{#if permit.tickable}}{{sr2eT "SR2E.UI.theOwnerHoldsAPermitFor"}}{{else}}{{sr2eT "SR2E.UI.permitGmTicks"}}{{/if}}">{{sr2eT "SR2E.UI.permit"}} <input type="checkbox" name="system.permit" {{checked system.permit}}{{#unless permit.tickable}} disabled{{/unless}}></label>
     {{#if permit.button}}<button type="button" data-action="getPermit" title="{{permit.buttonTitle}}">{{sr2eT "SR2E.UI.getPermit"}}</button>{{/if}}
     {{#if permit.underWay}}<span class="hint">{{sr2eT "SR2E.UI.permitUnderWay"}}</span>{{/if}}{{#if permit.requested}}<span class="hint">{{sr2eT "SR2E.UI.permitRequested"}}</span>{{/if}}{{#if permit.licence}}<span class="hint">{{permit.licence}}</span>{{/if}}{{/if}}

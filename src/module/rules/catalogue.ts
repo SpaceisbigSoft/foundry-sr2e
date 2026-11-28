@@ -231,7 +231,7 @@ export const GEAR_STACK_IGNORED: readonly string[] = ['quantity', 'description',
 export const GEAR_STACK_FIELDS: readonly string[] = [
   'cost', 'medkitRating', 'rcdRating', 'radio.rating', 'radio.encryption', 'explosive.power', 'explosive.perMetre', 'explosive.shaped',
   'ammoType', 'rounds', 'material', 'signal', 'jammer', 'suite', 'simrig', 'damaged', 'skillMods',
-  'weight', 'concealability', 'cf', 'availability', 'streetIndex', 'legality', 'permit',
+  'weight', 'concealability', 'cf', 'availability', 'streetIndex', 'legality', 'permit', 'legalCode', // v0.99.0: the book's Legality code
   'patch.kind', 'patch.rating', 'stealth.kind', 'stealth.rating', 'stealth.worn',
   'toxin.kind', 'toxin.vector', 'toxin.power', 'toxin.level', 'toxin.damageType', 'toxin.speed', 'toxin.effect',
   ...['body', 'quickness', 'strength', 'charisma', 'intelligence', 'willpower'].map((k) => `toxin.attributes.${k}`),
@@ -240,7 +240,7 @@ export const GEAR_STACK_FIELDS: readonly string[] = [
   'toxin.durationMinutes', 'toxin.crashPower', 'toxin.crashLevel', 'toxin.addiction', 'toxin.addictionType', 'toxin.tolerance', 'toxin.strength',
   'toxin.incubationHours', 'toxin.intervalHours', 'toxin.recoveries', 'toxin.contagious',
   'protection.kind', 'protection.rating', 'protection.worn', 'site.kind', 'site.rating', 'site.tag',
-  'scanner.kind', 'scanner.rating', 'chip.kind', 'chip.skill', 'chip.rating', 'chip.slotted',
+  'scanner.kind', 'scanner.rating', 'chip.kind', 'chip.skill', 'chip.rating', 'chip.slotted', 'chip.scope', // v0.99.0: the soft's skill type
   'bypassTool.kind', 'bypassTool.rating', 'simchip.kind', 'simchip.rating', 'simchip.minutes', 'tools.level', 'tools.skill',
   'optics.lowLight', 'optics.thermographic', 'optics.flareComp', 'optics.magnification', 'optics.worn',
   'surveillance.kind', 'surveillance.rating', 'surveillance.active', 'surveillance.plantedOn', 'surveillance.plantedName',

@@ -123,6 +123,8 @@ import * as MO97G from "./mxops97.ts";
 import * as MXG97 from "./mxic97.ts";
 import * as MX97 from "../rules/mxic97.ts";
 import { riggerPoolOnDetection, modSkillNames } from "../rules/vsec98.ts";
+import * as KG99 from "./kit99.ts";
+import { SOFT_SCOPES_99 } from "../rules/config99/kit.ts";
 import * as VR98G from "./vrig98.ts";
 import * as VR98 from "../rules/vrig98.ts";
 import * as W99 from "../rules/ware99.ts";
@@ -1689,12 +1691,15 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const r = await SR2CharacterSheet.#pickPerson(actor, tx('SR2E.Dialog.Sheet.search', { actorName: actor.name }), `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.how')}</label><select name="method">
         <option value="look">${tx('SR2E.Dialog.Sheet.lookThemOverPerceptionVsConcealability')}</option><option value="frisk">${tx('SR2E.Dialog.Sheet.friskThemTn', { concealmentFriskTn: RULES.GEAR.concealment.friskTn })}</option>
         ${scanners.map((sc: any) => `<option value="scan:${escHtml(sc.id)}">${tx('SR2E.Dialog.Sheet.rating', { scName: escHtml(sc.name), labels: escHtml(labels[sc.system.scanner.kind] ?? sc.system.scanner.kind), scannerRating: escHtml(sc.system.scanner.rating) })}</option>`).join("")}</select></div>
+      ${KG99.manualSearchFields()}
       ${group.length > 1 ? `<label class="sr2e-check"><input type="checkbox" name="group" checked> ${tx('SR2E.Dialog.Sheet.everyoneTargetedAtOnceTnPer', { groupLength: group.length, concealmentGroupTnPerPerson: RULES.GEAR.concealment.groupTnPerPerson })}</label>` : ""}
       <p class="hint">${tx('SR2E.Dialog.Sheet.theResultIsWhisperedToThe', { actorName: escHtml(actor.name) })}</p>`);
     if (!r) return;
     const m = String(r.form.method ?? "look");
     const mod = Number(r.form.mod) || 0;
-    const opts = { method: m.startsWith("scan:") ? "scanner" : (m as any), ...(m.startsWith("scan:") ? { scannerId: m.slice(5) } : {}), modifiers: mod ? [{ id: 'other', label: tx('SR2E.Card.Mod.other'), value: mod }] : [] };
+    // v0.99.0 (RULES.KIT_V99.manualSearch 'book', NAGRL p. 93): a frisk's rows from the Manual Detection Modifiers Table.
+    const ms99 = KG99.manualSearchFrom(r.form, m);
+    const opts = { method: m.startsWith("scan:") ? "scanner" : (m as any), ...(m.startsWith("scan:") ? { scannerId: m.slice(5) } : {}), modifiers: [...(mod ? [{ id: 'other', label: tx('SR2E.Card.Mod.other'), value: mod }] : []), ...ms99.mods], ...(ms99.strip99 ? { strip99: true } : {}) };
     if (r.form.group && group.length > 1 && opts.method !== "frisk") await actor.searchGroup(group, opts);
     else await actor.searchFor(r.uuid, opts);
   }
@@ -3359,6 +3364,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.barrierArmorWallsShotThrough')}</label><input name="barrier" type="number" value="${here.barrierArmor}" min="0"></div>
         ${modes.some((m) => twiceModes.includes(m)) && !blast ? `<label class="sr2e-check"><input type="checkbox" name="twice"> ${tx('SR2E.Dialog.Sheet.fireTwiceTwoSimpleActionsOnly', { twiceModes: escHtml(twiceModes.join("/")) })}</label>` : ""}`;
     const smartReady = Boolean(w.smartgun) && Boolean(derived.smartlink);
+    const gogglesReady = KG99.gogglesTick(actor, w);
     // A laser sight is pre-ticked unless the smartlink is (they don't add together, v0.43.0).
     // v0.47.0: and only within the laser's range (RULES.GEAR.accessories.laserRangeMetres); re-checked on a target change.
     const laserFits = Boolean(w.laserSight) && !melee && !(smartReady && RULES.GEAR.accessories.laserNotWithSmartlink);
@@ -3369,7 +3375,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const moveTicks = !melee || RULES.TN_AUTO.attack.movementInMelee;
     // v0.92.3 (COMBAT_V923.rangedRows): the book's extra rows can be hidden.
     const situationalRows = RULES.SITUATIONAL_MODIFIERS.filter((m) => m.id !== "calledShot" && C923.rangedRowShown(m.id)).map((m) => {
-      const checked = (m.id === "smartlink" && smartReady) || (m.id === "partialCover" && here.cover?.cover === "partial")
+      // v0.99.0 (RULES.KIT_V99.smartGoggles 'book', Core p. 90): worn smart goggles tick their row for a smartgun with no implant.
+      const checked = (m.id === "smartlink" && smartReady) || (m.id === "smartGoggles" && gogglesReady) || (m.id === "partialCover" && here.cover?.cover === "partial")
         || (m.id === "laserSight" && laserReady)
         || (moveTicks && m.id === "attackerWalking" && movement === "walking") || (moveTicks && m.id === "attackerRunning" && movement === "running");
       return `<label class="sr2e-check"><input type="checkbox" name="sit-${escHtml(m.id)}" ${checked ? "checked" : ""}> ${escHtml(m.label)} (${m.value > 0 ? "+" : ""}${m.value})</label>`;
@@ -3585,6 +3592,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       const row = (m: any) => { if (m) { set.add(modKey(m)); if (m.label) set.add(String(m.label)); } };
       if (here.cover?.cover === "partial") row(sit("partialCover"));
       if (smartReady) row(sit("smartlink"));
+      if (gogglesReady) row(sit("smartGoggles"));
       if (laserReadyFor(latest)) row(sit("laserSight"));
       if (moveTicks && movement === "walking") row(sit("attackerWalking"));
       if (moveTicks && movement === "running") row(sit("attackerRunning"));
@@ -5876,6 +5884,8 @@ export class SR2ItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
       protectionKinds: RULES.HEALTH.protection.kinds.map((k) => ({ key: k, label: ({ "": () => tx('SR2E.App.Sheets.none'), gasMask: () => tx('SR2E.App.Sheets.gasMask'), respirator: () => tx('SR2E.App.Sheets.respirator'), chemsuit: () => tx('SR2E.App.Sheets.chemsuit') } as Record<string, () => string>)[k]?.() ?? k })),
       crashLevels: [{ key: "", label: tx('SR2E.App.Sheets.noCrash') }, ...["L", "M", "S", "D"].map((k) => ({ key: k, label: k }))],
       chipKinds: RULES.CYBERWARE.skillsofts.kinds.map((k) => ({ key: k, label: k ? cap(k) : tx('SR2E.App.Sheets.notAChip') })),
+      // v0.99.0 (RULES.KIT_V99.skillMemory, Core p. 248): the Skill Memory Table's skill types.
+      chipScopes: SOFT_SCOPES_99.map((k) => ({ key: k, label: tKey(`SR2E.Kit99.Scope.${k || 'none'}`) })),
       // v0.57.0
       simchipKinds: RULES.MATRIX_V57.chips.kinds.map((k) => ({ key: k, label: k ? (k === "btl" ? "BTL" : cap(k)) : tx('SR2E.App.Sheets.notASimChip') })),
       bypassToolKinds: [{ key: "", label: tx('SR2E.App.Sheets.notATool') }, ...RULES.SECURITY_V57.tools.map((t) => ({ key: t.id, label: t.label }))],

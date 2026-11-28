@@ -31,6 +31,7 @@ import { openSpiritsTool } from './spirits96.ts';
 import { openChaseTool } from './vdrive98.ts';
 import { openVsecTool } from './vsec98.ts';
 import { openClinicTool } from './clinic99.ts';
+import { openKitTool } from './kit99.ts';
 
 const { HandlebarsApplicationMixin, ApplicationV2 } = foundry.applications.api;
 
@@ -109,6 +110,7 @@ export const TOOL_ACTIONS: Record<string, () => void> = {
   chase98: () => { if (isGm()) void openChaseTool(); },
   vsec98: () => { if (isGm()) void openVsecTool(); },
   clinic99: () => { if (isGm()) void openClinicTool(); },
+  kit99: () => { if (isGm()) void openKitTool(); },
 };
 
 /** Run a tool by id (false when the id is unknown or the tool is the GM's and the user isn't). */

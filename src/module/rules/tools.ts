@@ -70,6 +70,8 @@ export const TOOLS: readonly ToolDef[] = [
   { id: 'vsec98', icon: 'fa-solid fa-building-shield', who: 'gm', toolbar: false },
   // v0.99.0 (RULES.CLINIC_V99): shadow clinics, removing cyberware and ware damage levels.
   { id: 'clinic99', icon: 'fa-solid fa-user-doctor', who: 'gm', toolbar: false },
+  // v0.99.0 (RULES.KIT_V99.policeCheck, Shadowtech p. 103): the police check against what a character carries.
+  { id: 'kit99', icon: 'fa-solid fa-handcuffs', who: 'gm', toolbar: false },
   { id: 'tourGm', icon: 'fa-solid fa-person-chalkboard', who: 'gm', toolbar: false },
 ];
 
