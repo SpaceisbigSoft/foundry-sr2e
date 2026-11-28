@@ -128,6 +128,7 @@ Nested items (`rules/nesting942.ts`): the link is the item flag `flags.shadowrun
 
 The interface's history from v0.93.2, newest first. Each version's `CHANGELOG.md` entry repeats its line.
 
+- **v0.98.0:** nothing added or removed (new house-rule switches `RULES.VDRIVE_V98`, `RULES.VRIG_V98`, `RULES.VSEC_V98`, and three GM tools).
 - **v0.97.1:** nothing added or removed (a new automation setting `autoApplyManeuvers97`).
 - **v0.97.0:** nothing added or removed (new house-rule switches `RULES.MXIC_V97`, `RULES.MXOPS_V97`, `RULES.MXLIFE_V97`).
 - **v0.96.5:** nothing added or removed.
