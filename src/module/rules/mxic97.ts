@@ -341,7 +341,7 @@ export function hostMx(raw: unknown): HostMx {
 }
 
 /** A decker's request to the GM side (the `mx97` key of a host change): what to record, never how much is trusted. */
-export interface Mx97Change { op: 'parry' | 'unparry' | 'evade' | 'unevade' | 'exposed' | 'unexposed' | 'bomb' | 'count' | 'suppress' | 'release'; deckerUuid: string; vs?: string; id?: string; net?: number; cardId?: string; seq?: number }
+export interface Mx97Change { op: typeof MX97_OPS[number]; deckerUuid: string; vs?: string; id?: string; net?: number; cardId?: string; seq?: number }
 /** The largest request sequence kept (a millisecond time stamp fits). */
 export const SEQ_MAX = 9e15;
 
@@ -357,7 +357,12 @@ export function takeSeq(rec: HostMx, kind: string, decker: string, vs: string, s
   return { ...rec, seen: [...rec.seen.filter((x) => x.k !== k), { k, seq }].slice(-LIST_CAP * 4) };
 }
 /** The requests a host change may carry (a crash's choice is the GM side's own, never a request). */
-export const MX97_OPS = ['parry', 'unparry', 'evade', 'unevade', 'exposed', 'unexposed', 'bomb', 'count', 'suppress', 'release'] as const;
+export const MX97_OPS = ['parry', 'unparry', 'evade', 'unevade', 'exposed', 'unexposed', 'pos', 'unpos', 'bomb', 'count', 'suppress', 'release', 'improvise', 'unimprovise'] as const;
+/**
+ * v0.97.1: the combat maneuvers' requests (parries, evades, positions won and lost, and their take-backs): the ones a
+ * GM may let apply without asking (rules/trust.ts safeAutoApply). Never the tally's or a suppression's.
+ */
+export const MX97_MANEUVER_OPS = ['parry', 'unparry', 'evade', 'unevade', 'exposed', 'unexposed', 'pos', 'unpos'] as const satisfies ReadonlyArray<typeof MX97_OPS[number]>;
 
 /** Whether a bomb request names the bomb the same host change sets off (`bombOff`): else it is no blast at all. */
 export function bombMatches(id: string | undefined, bombOff: { fileId?: string; subsystem?: string } | null | undefined): boolean {
