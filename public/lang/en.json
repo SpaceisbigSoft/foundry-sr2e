@@ -21618,7 +21618,8 @@
         "scope": "Skill type",
         "scopeHint": "The Skill Memory Table's skill type (Core p. 248): how much headware memory the soft takes.",
         "legalCode": "Legality code",
-        "legalCodeHint": "The book's Legality code, e.g. 6P-CC (Shadowtech p. 103): its number is the police check's target number."
+        "legalCodeHint": "The book's Legality code, e.g. 6P-CC (Shadowtech p. 103): its number is the police check's target number.",
+        "legalCodePlaceholder": "6P-CC"
       },
       "Search": {
         "pr1": "Average or amateur (Professional Rating 1) +2",
