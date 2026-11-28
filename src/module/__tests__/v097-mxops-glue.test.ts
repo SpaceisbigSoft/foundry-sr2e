@@ -243,8 +243,11 @@ describe('v0.97.0 Analyze Host: an item per success (VR2 p. 111)', () => {
     const M97 = await import('../rules/mxops97.ts');
     const all = await G97.analyzeHostBody(d, h, M97.analyzeHostReveal(7)!);
     assert.match(all, /Slave <strong>5<\/strong>, Virtual machine\? <em>the GM says/);
-    assert.doesNotMatch(all, /one item per success/);
-    assert.match(await G97.analyzeHostBody(d, h, M97.analyzeHostReveal(6)!), /one item per success/);
+    assert.doesNotMatch(all, /one item per success|AnalyzeHost\.more/);
+    // v0.97.1 (live run finding 8): with 7 items and 7 for all, no "7 tell all" (the key's name until the lead merges its English).
+    const six = await G97.analyzeHostBody(d, h, M97.analyzeHostReveal(6)!);
+    assert.match(six, /one item per success|AnalyzeHost\.morePerSuccess/);
+    assert.doesNotMatch(six, /tell all/);
     chat.length = 0;
     const undo = oldWay({ 'MXOPS_V97.analyzeHost': 'v965' });
     try {
