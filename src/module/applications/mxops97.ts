@@ -429,9 +429,12 @@ export function latestTarAttack(icUuid: string, deckerUuid: string): any {
   return messages().reverse().find((m: any) => { const a = msgFlag(m, 'attack'); return a?.ic?.icUuid === icUuid && a?.targetUuid === deckerUuid && authorIsGm(m); }) ?? null;
 }
 /** The newest card of a Slow test (its testId: a Karma re-roll's card replaces it). */
-function slowTestCard(testId: string): any {
+function slowTestCard(testId: string, decker: any = null): any {
   if (!testId) return null;
-  return messages().reverse().find((m: any) => { const t = msgFlag(m, 'test'); return t?.testId === testId && t?.kind === 'mutility' && t?.mutility?.kind === 'slow'; }) ?? null;
+  // v0.97.1 review: the newest such card by the decker's owner (or a GM), so another player's card with the same
+  // testId can't shadow the real one.
+  const byOwner = (m: any) => { const by: any = cardAuthor(m); return Boolean(by && decker && (by.isGM || decker.testUserPermission?.(by, 'OWNER'))); };
+  return messages().reverse().find((m: any) => { const t = msgFlag(m, 'test'); return t?.testId === testId && t?.kind === 'mutility' && t?.mutility?.kind === 'slow' && byOwner(m); }) ?? null;
 }
 const hostWrites = (h: any) => M.gmWritesOf(flagOf(h, M.HOST_GM_WRITES));
 
@@ -477,7 +480,7 @@ export async function applyGmWrites97(host: any, c: any): Promise<string[]> {
     // v0.97.1 review: the Slow test's own card (its newest, by the decker's owner, a book Slow on this IC): the loss is
     // re-derived from its stored result, and the host's record keeps what was taken, so a card (or its re-roll) never
     // takes more than its result, nor more than the cap.
-    const card: any = slowTestCard(String(c.slow97.testId ?? ''));
+    const card: any = slowTestCard(String(c.slow97.testId ?? ''), decker);
     const t: any = card ? msgFlag(card, 'test') : null;
     const by: any = card ? cardAuthor(card) : null;
     const owner = Boolean(by && decker && (by.isGM || decker.testUserPermission?.(by, 'OWNER')));
