@@ -133,7 +133,8 @@ export function fluxRangeKm(flux: number): number {
  * well below it (VERIFY: a guard, not a book number).
  */
 export const EW_MAX = 20;
-const ew = (v: unknown): number => Math.min(EW_MAX, whole(v));
+/** A rating clamped to 0..EW_MAX (whole). */
+export const ew = (v: unknown): number => Math.min(EW_MAX, whole(v));
 
 export interface Side { dice: number; tn: number }
 const side = (dice: number, tn: number): Side => ({ dice: whole(dice), tn: Math.max(RULES.MIN_TARGET_NUMBER, whole(tn)) });
@@ -313,15 +314,19 @@ export function degradationFor(m: SignalMonitor, use: 'comprehension' | 'pilot' 
  * at a channel the operation can't hit.
  */
 export function mijiPlan(o: { op: MijiOp; channel: Channel; intruderRcd: number; intruderFlux: number; pem: number; intruderEcm: number; targetRcd: number; targetFlux: number }): { intruder: Side; defender: Side; why?: string } {
-  const intruder = side(o.intruderFlux, o.targetRcd);
-  const vs = o.op === 'jamming' ? whole(o.intruderEcm) : whole(o.pem);
-  const defender = side(o.targetFlux, vs);
+  // Every rating counts at most EW_MAX: the jammer, the decks and their Flux are on player-owned documents and become
+  // dice and TNs on the GM's client.
+  const intruderRcd = ew(o.intruderRcd), intruderFlux = ew(o.intruderFlux), pem = ew(o.pem), intruderEcm = ew(o.intruderEcm);
+  const targetRcd = ew(o.targetRcd), targetFlux = ew(o.targetFlux);
+  const intruder = side(intruderFlux, targetRcd);
+  const vs = o.op === 'jamming' ? intruderEcm : pem;
+  const defender = side(targetFlux, vs);
   const no = (why: string) => ({ intruder, defender, why: `${WHY}${why}` });
   if (!on('miji')) return no('mijiOff');
   if (!(OPS as readonly string[]).includes(o.op) || !OP_CHANNELS[o.op].includes(o.channel)) return no('channel');
-  if (whole(o.intruderRcd) <= 0) return no('noRcd');
-  if (whole(o.targetRcd) <= 0) return no('noNetwork');
-  if (o.op === 'jamming' ? whole(o.intruderEcm) <= 0 : whole(o.pem) <= 0) return no(o.op === 'jamming' ? 'noEcm' : 'noPem');
+  if (intruderRcd <= 0) return no('noRcd');
+  if (targetRcd <= 0) return no('noNetwork');
+  if (vs <= 0) return no(o.op === 'jamming' ? 'noEcm' : 'noPem');
   return { intruder, defender };
 }
 
@@ -365,8 +370,8 @@ export function degradationMods(value: number, label: string): TargetNumberModif
 
 // ---------------------------------------------------------------- Applied MIJI cards (GM-side once-guard)
 
-/** How many applied MIJI cards a network remembers (the oldest drop off). */
-export const APPLIED_KEEP = 60;
+/** How many applied-MIJI keys a network remembers (three per card: id, dice, turn; the oldest drop off). */
+export const APPLIED_KEEP = 90;
 
 /**
  * A MIJI card's dice signature: the operation, the two sides and the intruder's faces in order. A reposted copy of an
@@ -374,6 +379,15 @@ export const APPLIED_KEEP = 60;
  */
 export function mijiSignature(o: { intruderUuid: string; targetUuid: string; op: string; channel: string; mod: number; faces: readonly number[] }): string {
   return ['sig', str(o.intruderUuid, 120), str(o.targetUuid, 120), str(o.op, 20), str(o.channel, 20), whole(o.mod), (o.faces ?? []).map((f) => whole(f)).join('')].join('|').slice(0, 400);
+}
+
+/**
+ * The once-per-Combat-Turn key of a MIJI Test (Rigger 2 p. 69: one test per action): intruder, target and channel,
+ * with the combat's id and round when a combat runs, else the world time.
+ */
+export function mijiTurnKey(o: { intruderUuid: string; targetUuid: string; channel: string; now: { round: number | null; worldTime: number; combatId: string | null } }): string {
+  const when = o.now.round !== null ? `c${str(o.now.combatId ?? '', 64)}:${whole(o.now.round)}` : `t${Math.floor(Number(o.now.worldTime) || 0)}`;
+  return ['turn', str(o.intruderUuid, 120), str(o.targetUuid, 120), str(o.channel, 20), when].join('|').slice(0, 400);
 }
 
 /** The applied-card record as stored (strings only, at most APPLIED_KEEP; anything malformed reads as empty). */

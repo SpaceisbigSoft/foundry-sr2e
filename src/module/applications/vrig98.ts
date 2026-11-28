@@ -391,10 +391,12 @@ const ECCM = /\beccm\b/i;
 
 /** What the MIJI Test reads from the two riggers now (Rigger 2 p. 69). */
 function mijiValues(intruder: any, target: any): { intruderRcd: number; intruderFlux: number; pem: number; intruderEcm: number; targetRcd: number; targetFlux: number } {
+  // Clamped (rules/vrig98.ts EW_MAX): the gear and decks are on player-owned actors; these become dice, TNs and the
+  // regeneration rating on the GM's client and are shown in the GM's dialog as counted.
   return {
-    intruderRcd: Number(intruder?.system?.derived?.rigging?.rcd ?? 0), intruderFlux: Number(intruder?.rcdSignal?.() ?? 0),
-    pem: ratedGear(intruder, PEM), intruderEcm: Number(intruder?.jammerRating?.() ?? 0),
-    targetRcd: Number(target?.system?.derived?.rigging?.rcd ?? 0), targetFlux: Number(target?.rcdSignal?.() ?? 0),
+    intruderRcd: X.ew(intruder?.system?.derived?.rigging?.rcd), intruderFlux: X.ew(intruder?.rcdSignal?.()),
+    pem: X.ew(ratedGear(intruder, PEM)), intruderEcm: X.ew(intruder?.jammerRating?.()),
+    targetRcd: X.ew(target?.system?.derived?.rigging?.rcd), targetFlux: X.ew(target?.rcdSignal?.()),
   };
 }
 
@@ -496,29 +498,43 @@ async function degradeNetwork(rigger: any, channel: X.Channel, boxes: number, op
   return true;
 }
 
-/** The dice faces a card's rolls show, in the order they were rolled. */
+/** The dice faces a card's rolls show, in the order they were rolled (one past FACES_MAX, so a longer card is seen as leftover). */
+const FACES_MAX = 400;
 const cardFaces = (card: any): number[] => (Array.isArray(card?.rolls) ? card.rolls : [])
-  .flatMap((r: any) => (r?.dice ?? []).flatMap((term: any) => (term?.results ?? []).map((x: any) => int(x?.result, 1, 6, 1)))).slice(0, 400);
+  .flatMap((r: any) => (r?.dice ?? []).flatMap((term: any) => (term?.results ?? []).map((x: any) => int(x?.result, 1, 6, 1)))).slice(0, FACES_MAX + 1);
 
-/** Replay a card's faces through a test (the same order they were rolled in); null when the card hasn't enough. */
-async function replay(faces: number[], dice: number, tn: number, mods: TargetNumberModifier[]): Promise<SuccessTestResult | null> {
+/**
+ * Replay a card's faces through a test (the same order they were rolled in), with the faces it used. Null when the card
+ * hasn't enough faces or has faces left over (an extra roll added to the card: R4, the test must use every face).
+ */
+async function replay(faces: readonly number[], dice: number, tn: number, mods: TargetNumberModifier[]): Promise<{ result: SuccessTestResult; used: number[] } | null> {
+  const left = [...faces];
+  const used: number[] = [];
   try {
-    return await successTest({ dice, targetNumber: tn, modifiers: mods, roll: async (n: number) => { if (faces.length < n) throw new Error('short'); return faces.splice(0, n); } });
+    const result = await successTest({ dice, targetNumber: tn, modifiers: mods, roll: async (n: number) => { if (left.length < n) throw new Error('short'); const got = left.splice(0, n); used.push(...got); return got; } });
+    return left.length ? null : { result, used };
   } catch { return null; }
 }
 
 /** The applied-card keys of a MIJI card: its id and its dice signature (rules/vrig98.ts mijiSignature). */
-function appliedKeys(card: any, c: any, faces: readonly number[]): { id: string; sig: string } {
-  return { id: `id|${String(card?.id ?? '').slice(0, 64)}`, sig: X.mijiSignature({ intruderUuid: String(c.intruderUuid ?? ''), targetUuid: String(c.targetUuid ?? ''), op: String(c.op ?? ''), channel: String(c.channel ?? ''), mod: int(c.mod, 0, 12, 0), faces }) };
+function appliedKeys(card: any, c: any, faces: readonly number[]): { id: string; sig: string; turn: string } {
+  const intruderUuid = String(c.intruderUuid ?? ''), targetUuid = String(c.targetUuid ?? ''), channel = String(c.channel ?? '');
+  return {
+    id: `id|${String(card?.id ?? '').slice(0, 64)}`,
+    sig: X.mijiSignature({ intruderUuid, targetUuid, op: String(c.op ?? ''), channel, mod: int(c.mod, 0, 12, 0), faces }),
+    turn: X.mijiTurnKey({ intruderUuid, targetUuid, channel, now: now() }),
+  };
 }
-/** Whether the target network's GM-written record already holds a key ('id' or 'sig'), or ''. */
-function appliedBefore(target: any, keys: { id: string; sig: string }): '' | 'id' | 'sig' {
+type AppliedWhy = '' | 'id' | 'sig' | 'turn';
+/** Whether the target network's GM-written record already holds a key ('id', 'sig' or 'turn'), or ''. */
+function appliedBefore(target: any, keys: { id: string; sig: string; turn: string }): AppliedWhy {
   const list = X.appliedList(flag(target, APPLIED_FLAG));
-  return list.includes(keys.id) ? 'id' : list.includes(keys.sig) ? 'sig' : '';
+  return list.includes(keys.id) ? 'id' : list.includes(keys.sig) ? 'sig' : list.includes(keys.turn) ? 'turn' : '';
 }
-const refuseApplied = (why: '' | 'id' | 'sig', target: any): boolean => {
+const refuseApplied = (why: AppliedWhy, target: any): boolean => {
   if (why === 'id') warn(tx('SR2E.VRig98.alreadyDone'));
   else if (why === 'sig') warn(tx('SR2E.VRig98.Miji.sameDice', { target: String(target?.name ?? '') }));
+  else if (why === 'turn') warn(tx('SR2E.VRig98.Miji.oncePerTurn', { target: String(target?.name ?? '') }));
   return Boolean(why);
 };
 
@@ -526,8 +542,9 @@ const refuseApplied = (why: '' | 'id' | 'sig', target: any): boolean => {
  * GM side: a MIJI card's Apply. Only a card whose author owns the intruder; the plan is made again from the documents
  * now (the same dice and TNs, the player's own TN modifier counted only upward), only the intruder's dice are counted
  * again from the card, the defender's test is rolled here on the GM's client, both shown in the GM's dialog, and the
- * result is written on the monitors under the GM lock. Once per card and once per dice signature, remembered on the
- * target network (APPLIED_FLAG, GM-written), never on the card. True when the result was written.
+ * result is written on the monitors under the GM lock. Once per card, once per dice signature (of the faces the test
+ * used; a card with faces left over or missing is refused) and once per intruder, target and channel per Combat Turn
+ * (the combat's round, else the world time), remembered on the target network (APPLIED_FLAG, GM-written), never on the card. True when the result was written.
  */
 export async function applyMiji(card: any): Promise<boolean> {
   if (!isGm()) { warn(tx('SR2E.VRig98.gmOnly')); return false; }
@@ -542,11 +559,12 @@ export async function applyMiji(card: any): Promise<boolean> {
   const plan = X.mijiPlan({ op, channel, ...v });
   if (plan.why) { warn(tKey(plan.why)); return false; }
   const extra = int(c.mod, 0, 12, 0);
-  const faces = cardFaces(card);
-  const keys = appliedKeys(card, c, faces);
+  const replayed = await replay(cardFaces(card), plan.intruder.dice, plan.intruder.tn, extra ? [{ id: 'other', label: '', value: extra }] : []);
+  if (!replayed) { warn(tx('SR2E.VRig98.refused')); return false; }
+  const mine = replayed.result;
+  // The signature covers exactly the faces the test used (a card with leftover faces was refused above).
+  const keys = appliedKeys(card, c, replayed.used);
   if (refuseApplied(appliedBefore(target, keys), target)) return false;
-  const mine = await replay(faces, plan.intruder.dice, plan.intruder.tn, extra ? [{ id: 'other', label: '', value: extra }] : []);
-  if (!mine) { warn(tx('SR2E.VRig98.refused')); return false; }
   const rolls: any[] = [];
   const theirs = await rollTest(plan.defender.dice, plan.defender.tn, rolls);
   const res = X.mijiOutcome(op, mine.successes, theirs.successes);
@@ -563,7 +581,7 @@ export async function applyMiji(card: any): Promise<boolean> {
   return gmLocked(async () => {
     // Again under the lock: another click (or GM) may have applied it meanwhile.
     if (refuseApplied(appliedBefore(target, keys), target)) return false;
-    await target.setFlag(SYSTEM_ID, APPLIED_FLAG, X.withApplied(flag(target, APPLIED_FLAG), [keys.id, keys.sig]));
+    await target.setFlag(SYSTEM_ID, APPLIED_FLAG, X.withApplied(flag(target, APPLIED_FLAG), [keys.id, keys.sig, keys.turn]));
     // The acting-author guard cancels a write quietly: only a record that landed counts as applied.
     if (appliedBefore(target, keys) !== 'id') { warn(tx('SR2E.VRig98.refused')); return false; }
     await post(`<p><strong>${tx('SR2E.VRig98.Miji.appliedCard', { name: name(intruder), op: escHtml(opLabel(op)), channel: escHtml(chLabel(channel)), target: name(target) })}</strong></p>${rollHtml(tx('SR2E.VRig98.Miji.intruderRoll', { name: raw(intruder) }), mine)}${outcomeHtml(intruder, target, channel, res, theirs)}`, { speaker: speaker(target), rolls });

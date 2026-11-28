@@ -115,7 +115,7 @@ before(async () => {
   g.CONFIG = { Actor: { documentClass: SR2Actor } };
   VG = await import('../applications/vrig98.ts');
   // This area's English while its draft isn't merged into public/lang/en.json (the lead deletes the draft then).
-  for (const f of ['vrig98.json', 'vrig98-fix.json']) {
+  for (const f of ['vrig98.json', 'vrig98-fix.json', 'vrig98-fix2.json']) {
     const draft = join('i18n-drafts', f);
     if (existsSync(draft)) g.__SR2E_EN__ = { ...(g.__SR2E_EN__ ?? {}), ...JSON.parse(readFileSync(draft, 'utf8')) };
   }
@@ -351,9 +351,12 @@ describe('MIJI and the Signal Monitor (Rigger 2 pp. 69–72)', () => {
     assert.equal(corp.flags?.[SYSTEM_ID]?.vrig98Signal, undefined);    // not the player's to write
     assert.match(card.content, /vrig98Apply/);
     assert.equal(card.rolls.length, 1);                                   // the defender isn't rolled on the player's client
-    // S5: a forged "defender" roll of all ones added to the card counts for nothing: the corp rolls on the GM's client
-    // (5 dice vs the PEM 6: one success, the 6 re-rolled to 8).
+    // S5: the corp rolls on the GM's client (5 dice vs the PEM 6: one success, the 6 re-rolled to 8).
+    // R4: a forged "defender" roll of all ones added to the card leaves faces over: the card is refused until it's gone.
     card.rolls.push({ dice: [{ results: [1, 1, 1, 1, 1].map((result) => ({ result })) }] });
+    assert.equal(await confirming(() => VG.applyMiji(card)), false);
+    assert.equal(corp.flags?.[SYSTEM_ID]?.vrig98Signal, undefined);
+    card.rolls.pop();
     faces.push(6, 1, 2, 3, 1, 2);
     const seen: string[] = [];
     assert.equal(await confirming(() => VG.applyMiji(card), seen), true);
@@ -373,7 +376,7 @@ describe('MIJI and the Signal Monitor (Rigger 2 pp. 69–72)', () => {
     faces.push(1, 1, 1, 1, 1);
     assert.equal(await confirming(() => VG.applyMiji(card)), true);
     assert.equal(corp.flags[SYSTEM_ID].vrig98Signal.system.boxes, 5);
-    assert.equal(corp.flags[SYSTEM_ID].vrig98MijiApplied.length, 2);
+    assert.equal(corp.flags[SYSTEM_ID].vrig98MijiApplied.length, 3);    // id, dice, turn
     // The player's own card flags count for nothing (the old once-guard lived there).
     card.flags[SYSTEM_ID].vrig98Done = false;
     assert.equal(await confirming(() => VG.applyMiji(card)), false);
@@ -384,6 +387,42 @@ describe('MIJI and the Signal Monitor (Rigger 2 pp. 69–72)', () => {
     assert.equal(await confirming(() => VG.applyMiji(copy)), false);
     assert.ok(warnings.some((w) => /match a MIJI card already applied/.test(w)));
     assert.equal(corp.flags[SYSTEM_ID].vrig98Signal.system.boxes, 5);
+  });
+  test('R3: a jammer of 1000 counts as EW_MAX: the defender rolls vs TN 20 on the GM\'s client, the dialog shows 20', async () => {
+    const s = setup();
+    s.intruder.items.push({ id: 'jam', type: 'gear', name: 'Jammer', system: { jammer: 1000, carried: true } });
+    g.game.user = PLAYER();
+    s.corp.isOwner = false;
+    faces.push(3, 3, 4, 5, 5, 1, 1, 2);
+    await VG.mijiTest(s.intruder, s.corp, 'jamming', 'command');
+    const card = [...chat].reverse().find((m) => m.flags?.[SYSTEM_ID]?.vrig98Miji);
+    g.game.user = GM();
+    s.corp.isOwner = true;
+    faces.push(5, 5, 5, 5, 5);
+    const seen: string[] = [];
+    assert.equal(await confirming(() => VG.applyMiji(card), seen), true);
+    assert.match(seen[0]!, /5 dice vs TN 20,/);
+    assert.match(seen[0]!, /ECM 20/);
+    assert.equal(s.corp.flags[SYSTEM_ID].vrig98Signal.command.boxes, 5);
+    assert.equal(s.corp.flags[SYSTEM_ID].vrig98Signal.by.rating, 20);
+  });
+  test('R4: a card with faces missing is refused; once per intruder, target and channel per Combat Turn', async () => {
+    const { corp, intruder, card } = await playerCard();
+    const short = await g.ChatMessage.create({ author: PLAYER(), content: card.content, rolls: [{ dice: [{ results: [3, 3, 4].map((result) => ({ result })) }] }], flags: JSON.parse(JSON.stringify(card.flags)) });
+    assert.equal(await confirming(() => VG.applyMiji(short)), false);
+    faces.push(1, 1, 1, 1, 1);
+    assert.equal(await confirming(() => VG.applyMiji(card), []), true);
+    // A fresh roll (other dice) by the same intruder on the same channel in the same turn: refused.
+    const again = await g.ChatMessage.create({ author: PLAYER(), content: card.content, rolls: [{ dice: [{ results: [5, 5, 5, 5, 5, 5, 5, 5].map((result) => ({ result })) }] }], flags: JSON.parse(JSON.stringify(card.flags)) });
+    assert.equal(await confirming(() => VG.applyMiji(again)), false);
+    assert.ok(warnings.some((w) => /already been applied this Combat Turn/.test(w)));
+    assert.equal(corp.flags[SYSTEM_ID].vrig98Signal.system.boxes, 5);
+    // Later (another world time outside combat; in combat the next round): it counts.
+    g.game.time.worldTime = 10;
+    faces.push(1, 1, 1, 1, 1);
+    assert.equal(await confirming(() => VG.applyMiji(again)), true);
+    assert.equal(corp.flags[SYSTEM_ID].vrig98Signal.system.boxes, 10);
+    assert.ok(intruder);
   });
   test('P5: a double click on Apply is one Apply (one dialog, one roll, one write)', async () => {
     const { corp, card } = await playerCard();
