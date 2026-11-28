@@ -21,6 +21,8 @@ const registry = new Map<string, any>();
 const settings: Record<string, any> = {};
 const hooks: Record<string, Array<(...a: any[]) => any>> = {};
 let confirmAnswer = true;
+/** How far the server's clock (a card's creation stamp) runs ahead of now in a test. */
+let clockAhead = 0;
 let mid = 0;
 let G: any;
 let X: any;
@@ -91,7 +93,7 @@ function item(parent: any, o: any) {
 }
 
 before(async () => {
-  for (const f of ['clinic99.json', 'clinic99-fix.json', 'clinic99-fix-replace.json']) {
+  for (const f of ['clinic99.json', 'clinic99-fix.json', 'clinic99-fix-replace.json', 'clinic99-fix2.json', 'clinic99-fix2-replace.json']) {
     const draft = join('i18n-drafts', f);
     if (!existsSync(draft)) continue;
     const add = Object.fromEntries(Object.entries(JSON.parse(readFileSync(draft, 'utf8')) as Record<string, string>).map(([k, v]) => [k.replace(/^REPLACE:/, ''), v]));
@@ -111,7 +113,7 @@ before(async () => {
       get: (_s: string, k: string) => settings[k] ?? {},
       set: async (_s: string, k: string, v: any) => { if (!g.game.user.isGM) throw new Error('players cannot write world settings'); settings[k] = v; },
     } };
-  g.ChatMessage = { create: async (d: any) => { const by = d.author ? g.game.users.get(d.author) : g.game.user; const m = asMessage({ ...d, author: undefined }, by); m.author = by; chat.push(m); return m; }, getSpeaker: () => ({}) };
+  g.ChatMessage = { create: async (d: any) => { const by = d.author ? g.game.users.get(d.author) : g.game.user; const m = asMessage({ ...d, author: undefined }, by); m.author = by; m._stats = { createdTime: Date.now() + clockAhead }; chat.push(m); return m; }, getSpeaker: () => ({}) };
   g.fromUuidSync = (u: string) => registry.get(u) ?? null;
   g.fromUuid = async (u: string) => registry.get(u) ?? null;
   g.CONFIG = { Actor: { documentClass: { essenceOf: (i: any) => Number(i.system.essenceCost) } } };
@@ -122,7 +124,7 @@ before(async () => {
 
 let runner: any, fixer: any, doc: any, wired: any;
 beforeEach(() => {
-  chat.length = 0; warnings.length = 0; faces.length = 0; confirmAnswer = true;
+  chat.length = 0; warnings.length = 0; faces.length = 0; confirmAnswer = true; clockAhead = 0;
   for (const k of Object.keys(settings)) delete settings[k];
   X?.resetRecordCache?.();
   g.CONFIG.Actor.documentClass.actingAuthor = null;
@@ -383,7 +385,7 @@ describe('v0.99.0 fixes: the record\'s trust (S1–S5, P1–P3)', () => {
     // The GM's own repair project: cleared at once when done.
     await G.recordHit(wired, 'M');
     await repairCard('t6', [6]);
-    assert.equal(await G.completedRepair(wired, 't6'), true);
+    assert.equal(await G.completedRepair(wired, 't6', 'gm1'), true);
     assert.equal(X.wareLevel(wired), 'M', 'the item\'s own level is still M until the effect clears it');
     wired.flags[S][X.WARE_FLAG] = '';
     assert.equal(X.wareLevel(wired), '');
@@ -406,7 +408,7 @@ describe('v0.99.0 fixes: the record\'s trust (S1–S5, P1–P3)', () => {
     assert.equal(X.recordedLevel(wired.uuid), 'M');
   });
 
-  test('S2: the sweep drops keys whose item is gone; a character\'s full share whispers the GM and skips the write', async () => {
+  test('S2: the sweep drops keys whose item is gone; a character\'s full share makes room (fix2 M2) and whispers the GM', async () => {
     settings[G.DAMAGE_SETTING] = { Actor_gone_Item_x: 'S', Actor_run_Item_w: 'L' };
     X.resetRecordCache();
     await G.sweepLevels();
@@ -416,9 +418,10 @@ describe('v0.99.0 fixes: the record\'s trust (S1–S5, P1–P3)', () => {
     settings[G.DAMAGE_SETTING] = full;
     X.resetRecordCache();
     chat.length = 0;
-    assert.equal(await G.recordRise(wired, 'S'), false);
-    assert.equal(settings[G.DAMAGE_SETTING].Actor_run_Item_w, undefined);
-    assert.ok(chat.some((m: any) => /100/.test(m.content)), 'the GM is told');
+    assert.equal(await G.recordRise(wired, 'S'), true);
+    assert.equal(settings[G.DAMAGE_SETTING].Actor_run_Item_w, 'S');
+    assert.equal(settings[G.DAMAGE_SETTING].Actor_run_Item_f0, undefined, 'the oldest went');
+    assert.ok(chat.some((m: any) => /Actor_run_Item_f0/.test(m.content) && m.whisper.includes('gm1')), 'the GM is told');
   });
 
   test('S3: ware a player deletes keeps its level for the same ware made again on that character; the GM\'s delete doesn\'t', async () => {
@@ -519,5 +522,173 @@ describe('v0.99.0 fixes: removal, the tool and the surgeon\'s fee (C6, S6, S8, P
     assert.equal(G.careRefund({}, 600), 600, 'a recovery from before: the old way');
     t.after(oldWay({ 'CLINIC_V99.gradedFees': 'v980' }));
     assert.equal(G.careRefund({ paidAmount: 300 }, 60_000), 60_000);
+  });
+});
+
+describe('v0.99.0 fix2: the lock, the proof\'s writer and time, the record\'s room, deleted ware (M1–M4, L1, L2, C6/S9)', () => {
+  const lastClear = () => [...chat].reverse().find((m: any) => m.flags?.[S]?.[G.CLEAR_FLAG]);
+  const tick = () => new Promise((r) => setTimeout(r, 20));
+  const fixHook = (it: any, id: string, userId: string) => { for (const h of hooks['updateItem'] ?? []) h(it, { flags: { [S]: { [G.FIX_FLAG]: id } } }, {}, userId); };
+
+  test('M4: with another locked task holding the lock, a GM step queues (doesn\'t run inside it); the surgery Apply\'s fee writes inline in its own lock', async () => {
+    const { withGmLock } = await import('../applications/gmlock.ts');
+    let release!: () => void;
+    const gate = new Promise<void>((r) => { release = r; });
+    const holder = withGmLock(async () => { await gate; });
+    await tick(); // the other task now holds the lock
+    const step = G.setLevelAsGm(wired, 'S');
+    await tick();
+    assert.equal(X.recordedLevel(wired.uuid), '', 'queued behind the other task');
+    release();
+    await holder;
+    await step;
+    assert.equal(X.recordedLevel(wired.uuid), 'S');
+    const eyes = item(runner, { id: 'e4', name: 'Cybereyes', system: { essenceCost: 0.5, installed: false } });
+    const inside = withGmLock(() => G.chargeSurgeonFee(runner, eyes, { id: 'op4', points: 0.5, pay: true, itemName: 'Cybereyes', inLock: true }));
+    const done = await Promise.race([inside.then(() => 'done'), new Promise((r) => setTimeout(() => r('stuck'), 500))]);
+    assert.equal(done, 'done', 'no deadlock inside its own lock');
+    assert.ok(settings[G.FEE_SETTING].Actor_run['e4-install'] > 0);
+  });
+
+  test('M1: a player writing an old GM repair test\'s id on their ware clears nothing; a newer GM test still asks when a player wrote it; the GM\'s own write clears', async () => {
+    clockAhead = -60_000;
+    await repairCard('old', [6, 6]); // the GM's repair test, a minute before the damage
+    clockAhead = 0;
+    await G.recordHit(wired, 'M');
+    await tick();
+    const n = chat.length;
+    fixHook(wired, 'old', 'p1');
+    await tick();
+    assert.equal(X.recordedLevel(wired.uuid), 'M', 'an old card proves nothing about newer damage');
+    assert.equal(chat.length, n, 'and gets no card');
+    await repairCard('new', [6]);
+    fixHook(wired, 'new', 'p1');
+    await tick();
+    assert.equal(X.recordedLevel(wired.uuid), 'M', 'a player wrote it: the GM is asked');
+    assert.equal(lastClear()?.flags[S][G.CLEAR_FLAG].testId, 'new');
+    await repairCard('gm', [6]);
+    fixHook(wired, 'gm', 'gm1');
+    await tick();
+    assert.equal(X.recordedLevel(wired.uuid), '', 'the GM\'s own write of the GM\'s test clears');
+  });
+
+  test('M1: a repair that completes with nothing recorded still marks its test used', async () => {
+    await repairCard('t9', [6]);
+    assert.equal(await G.completedRepair(wired, 't9', 'p1'), false);
+    assert.ok(settings[G.META_SETTING].used.includes('test:t9'));
+    await G.recordHit(wired, 'M');
+    await tick();
+    assert.equal(G.repairProofFor(wired, 't9'), null, 'the used test is no proof later');
+  });
+
+  test('L1: the GM\'s confirm shows the repair card\'s time against the damage\'s rise', async () => {
+    await G.recordHit(wired, 'M');
+    await tick();
+    g.game.user = P1;
+    await repairCard('t10', [6]);
+    await G.repaired(wired, { repairer: runner, testId: 't10' });
+    g.game.user = GM;
+    const api = g.foundry.applications.api.DialogV2;
+    const was = api.confirm;
+    let content = '';
+    api.confirm = async (o: any) => { content = String(o.content); return true; };
+    try { await G.applyClear(lastClear()); } finally { api.confirm = was; }
+    const year = String(new Date().getFullYear());
+    assert.ok(content.includes(year) && /rose/.test(content), content);
+    assert.equal(X.recordedLevel(wired.uuid), '');
+  });
+
+  test('M2: ware not installed isn\'t recorded; a full share evicts the oldest entry for ware not installed, never refuses installed ware, and whispers each time', async () => {
+    const junk = item(runner, { id: 'junk', name: 'Junk', system: { installed: false } });
+    assert.equal(await G.recordRise(junk, 'S'), false);
+    assert.equal(settings[G.DAMAGE_SETTING]?.Actor_run_Item_junk, undefined);
+    const full: Record<string, string> = { Actor_run_Item_w: 'L' };
+    for (let i = 0; i < X.RECORD_PER_ACTOR - 1; i++) full[`Actor_run_Item_f${i}`] = 'L';
+    settings[G.DAMAGE_SETTING] = full;
+    X.resetRecordCache();
+    chat.length = 0;
+    const a2 = item(runner, { id: 'a2', name: 'Cyberarm' });
+    const a3 = item(runner, { id: 'a3', name: 'Cybereyes' });
+    assert.equal(await G.recordRise(a2, 'M'), true);
+    assert.equal(await G.recordRise(a3, 'M'), true);
+    const rec = settings[G.DAMAGE_SETTING];
+    assert.equal(rec.Actor_run_Item_w, 'L', 'the installed wired reflexes stay');
+    assert.equal(rec.Actor_run_Item_f0, undefined);
+    assert.equal(rec.Actor_run_Item_f1, undefined);
+    assert.equal(chat.filter((m: any) => /Actor_run_Item_f[01]/.test(m.content)).length, 2, 'a whisper per eviction');
+  });
+
+  test('L2: a full world record evicts ware not installed first, else the oldest of the character holding the most', () => {
+    const rec: Record<string, string> = {};
+    for (let i = 0; i < X.RECORD_MAX; i++) rec[i < 10 ? `Actor_x${i}_Item_w` : `Actor_big${i % 30}_Item_w${i}`] = 'L';
+    const installed = () => true;
+    const r = X.recordWith(rec as any, 'Actor_new_Item_w', 'S', installed);
+    assert.equal(r.evicted.length, 1);
+    assert.match(r.evicted[0], /^Actor_big/, 'not the oldest small character\'s entry');
+    const r2 = X.recordWith(rec as any, 'Actor_new_Item_w', 'S', (k: string) => k !== 'Actor_big20_Item_w20');
+    assert.deepEqual(r2.evicted, ['Actor_big20_Item_w20'], 'ware not installed first');
+  });
+
+  test('M3: renamed (or its kind changed) before the deletion: the name and kind it was recorded with count', async () => {
+    await G.recordHit(wired, 'S');
+    await tick();
+    wired.name = 'Not wired'; wired.system.kind = 'headware';
+    await G.wareDeleted(wired, 'p1');
+    runner.items.splice(runner.items.indexOf(wired), 1);
+    const again = item(runner, { id: 'w7', name: 'Wired Reflexes' });
+    assert.equal(await G.wareCreated(again), true);
+    assert.equal(X.wareLevel(again), 'S');
+  });
+
+  test('M3: a copy made first gets the level at the deletion; another character the player owns keeps a note', async () => {
+    const alt = actor({ uuid: 'Actor.alt', name: 'Alt', owners: ['p1'], system: {} });
+    g.game.actors = [runner, fixer, doc, alt];
+    const copy = item(runner, { id: 'wc', name: 'Wired Reflexes' });
+    await G.recordHit(wired, 'S');
+    await tick();
+    chat.length = 0;
+    await G.wareDeleted(wired, 'p1');
+    assert.equal(X.wareLevel(copy), 'S', 'the copy already there');
+    assert.ok(chat.some((m: any) => m.whisper.includes('gm1') && /Wired Reflexes/.test(m.content)));
+    const moved = item(alt, { id: 'wm', name: 'Wired Reflexes' });
+    assert.equal(await G.wareCreated(moved), true, 'moved to another of the player\'s characters');
+    assert.equal(X.wareLevel(moved), 'S');
+  });
+
+  test('M3: a character keeps at most GONE_PER_ACTOR notes; the GM is told of each dropped one', async () => {
+    let m = X.damageMeta(null);
+    let evicted: any[] = [];
+    for (let i = 0; i <= X.GONE_PER_ACTOR; i++) { const r = X.metaGone(m, { actor: 'Actor_a', name: `W${i}`, kind: '', level: 'S', at: i }); m = r.meta; evicted = r.evicted; }
+    assert.equal(m.gone.filter((e: any) => e.actor === 'Actor_a').length, X.GONE_PER_ACTOR);
+    assert.equal(evicted[0]?.name, 'W0');
+    const r = X.metaGone(m, { actor: 'Actor_b', name: 'X', kind: '', level: 'S', at: 99 });
+    assert.equal(r.evicted.length, 0, 'another character\'s notes don\'t push these out');
+    // In the glue: a junk note past the cap whispers the GM.
+    for (let i = 0; i < X.GONE_PER_ACTOR; i++) {
+      const j = item(runner, { id: `j${i}`, name: `J${i}` });
+      await G.recordRise(j, 'L');
+      await G.wareDeleted(j, 'p1');
+    }
+    chat.length = 0;
+    await G.recordHit(wired, 'S');
+    await tick();
+    await G.wareDeleted(wired, 'p1');
+    assert.ok(chat.some((m2: any) => /J0/.test(m2.content) && m2.whisper.includes('gm1')), 'the dropped note is named');
+  });
+
+  test('C6/S9: the lead GM whispers when a player\'s cyberware goes out under the book\'s removal; not for the GM; v980 nothing', async (t) => {
+    wired.system.installed = false;
+    chat.length = 0;
+    for (const h of hooks['updateItem'] ?? []) h(wired, { system: { installed: false } }, {}, 'p1');
+    await tick();
+    assert.ok(chat.some((m: any) => m.whisper.includes('gm1') && /Wired Reflexes/.test(m.content) && /Player/.test(m.content)));
+    chat.length = 0;
+    for (const h of hooks['updateItem'] ?? []) h(wired, { system: { installed: false } }, {}, 'gm1');
+    await tick();
+    assert.equal(chat.length, 0);
+    t.after(oldWay({ 'CLINIC_V99.removal': 'v980' }));
+    for (const h of hooks['updateItem'] ?? []) h(wired, { system: { installed: false } }, {}, 'p1');
+    await tick();
+    assert.equal(chat.length, 0);
   });
 });

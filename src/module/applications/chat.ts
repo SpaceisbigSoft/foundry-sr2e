@@ -3082,7 +3082,7 @@ async function onApplySurgery(message: any, button: HTMLButtonElement): Promise<
   await gmLocked(message, button, async () => {
     button.disabled = true;
     const cls: any = CONFIG.Actor.documentClass;
-    if (await cls.applySurgeryAsGm(v.surgeonUuid, v.snap)) await message.setFlag(SYSTEM_ID, 'surgeryApplied', true);
+    if (await cls.applySurgeryAsGm(v.surgeonUuid, v.snap, { inLock: true })) await message.setFlag(SYSTEM_ID, 'surgeryApplied', true);
     else button.disabled = false;
   });
 }

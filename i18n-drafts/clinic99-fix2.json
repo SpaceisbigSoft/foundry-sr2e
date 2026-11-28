@@ -1,0 +1,8 @@
+{
+  "SR2E.Clinic99.timeUnknown": "unknown",
+  "SR2E.Clinic99.clearTimes": "Repair card made {card}; the damage last rose {rose}",
+  "SR2E.Clinic99.recordEvicted": "The damage record had no room: {owner}'s {item} left it to make room for {byOwner}'s {by}. Check that ware's damage with the Clinics and ware damage tool.",
+  "SR2E.Clinic99.goneEvicted": "A note of deleted ware ({item}, {level}) was dropped to make room for a newer one: if that ware is made again it has no damage.",
+  "SR2E.Clinic99.copyGotLevel": "Recorded damaged ware was deleted by a player: {owner}'s {item} of the same name and kind now has its {level} damage (clear it with the tool if it is really sound).",
+  "SR2E.Clinic99.untickedAfter": "{user} took {owner}'s {name} out without the removal test (under the book's removal rule only the GM's Clinics and ware damage tool removes cyberware). Nothing was changed back."
+}

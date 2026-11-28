@@ -2442,7 +2442,7 @@ export class SR2Actor extends Actor {
   }
 
   /** v0.54.0 (GM): apply a surgery result the surgeon's player couldn't (they don't own the patient). */
-  static async applySurgeryAsGm(surgeonUuid: string, snap: TestSnapshot): Promise<boolean> {
+  static async applySurgeryAsGm(surgeonUuid: string, snap: TestSnapshot, o: { inLock?: boolean } = {}): Promise<boolean> {
     if (!isGmNow()) return false;
     const surgeon: any = await fromUuid(surgeonUuid);
     if (!(surgeon instanceof SR2Actor) || !snap?.surgery) return false;
@@ -2452,7 +2452,8 @@ export class SR2Actor extends Actor {
     const sgOk = SR2Actor.surgeryFromCard(snap.surgery, patient, true);
     if (!sgOk) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.thatSurgeryCardDoesnTName')); return false; }
     snap = { ...SR2Actor.#cleanSnapshot(snap), successes: safeInt(snap.successes, 0, 40, 0), surgery: sgOk };
-    const r = await surgeon.#resolveSurgery(snap);
+    // v0.99.0 fix2 (M4): the GM's Apply runs inside its own locked task; the surgeon's fee writes inline there.
+    const r = await surgeon.#resolveSurgery(snap, { inLock: Boolean(o.inLock) });
     await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: surgeon }), content: `<p><strong>${tx('SR2E.Card.Actor.surgeryApplied')}</strong> ${tx('SR2E.Card.Actor.into', { sgOkItemName: escText(sgOk.itemName), sgOkPatientName: escText(sgOk.patientName) })}</p>${r.html}`, flags: { [SYSTEM_ID]: r.flags ?? {} } });
     return true;
   }
@@ -2509,7 +2510,7 @@ export class SR2Actor extends Actor {
     return (diff > 0 ? tx('SR2E.Text.Actor.forCareChargedTo', { diff: diff.toLocaleString(), name: patient.name }) : diff < 0 ? tx('SR2E.Text.Actor.ofCareRefundedTo', { diff: (-diff).toLocaleString(), name: patient.name }) : tx('SR2E.Text.Actor.noMoneyChangesHands')) + fee99;
   }
 
-  async #resolveSurgery(snapIn: TestSnapshot): Promise<Resolved> {
+  async #resolveSurgery(snapIn: TestSnapshot, o99: { inLock?: boolean } = {}): Promise<Resolved> {
     const patient: any = fromUuidSync(String(snapIn.surgery!.patientUuid ?? ''));
     // v0.54.0: what this operation already did (installed, harmed, paid), as kept on the patient.
     // v0.81.1 (RA2-1): only as kept on the patient (surgeryFromCard), never as the card says.
@@ -2590,7 +2591,7 @@ export class SR2Actor extends Actor {
       if (it && !it.system.installed) await it.update({ 'system.installed': true });
       next.installed = true;
       // v0.99.0 (RULES.CLINIC_V99.surgeonFee / gradedFees / clinicSearch, Cybertechnology pp. 44, 54): the surgeon's fee, once.
-      fee99 = await CLG99.chargeSurgeonFee(patient, it, { id: sg.id, points: Number(sg.points ?? 0), pay: sg.pay, itemName: sg.itemName, grade: sg.grade99 });
+      fee99 = await CLG99.chargeSurgeonFee(patient, it, { id: sg.id, points: Number(sg.points ?? 0), pay: sg.pay, itemName: sg.itemName, grade: sg.grade99, inLock: o99.inLock });
       // v0.55.0 (Shadowtech, optional): the operation itself wounds the patient by its size, once.
       const tr = !sg.traumaDone ? surgicalTrauma(Number(sg.points ?? 0), Boolean(it?.system?.bioware)) : null;
       if (tr) {
