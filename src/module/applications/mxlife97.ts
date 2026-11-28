@@ -270,9 +270,12 @@ async function rollTasks(tasks: { cook: M.DeckTask97 | null; install: M.DeckTask
  * v0.97.1 (live run finding 5): on a player's client nothing is rolled (the author of a whisper reads it): `ask` says
  * the caller sends the job to the GM (askGmCook) once the work is under way; the card says only that the GM rolls them.
  */
-export async function cookInstall(c: any): Promise<{ days: number; ok: boolean; text: string; ask?: boolean } | null> {
+export async function cookInstall(c: any, actor: any = null): Promise<{ days: number; ok: boolean; text: string; ask?: boolean } | null> {
   if (!M.on('cookInstall') || c?.mode !== 'deck' || !c.cook97 || typeof c.cook97 !== 'object') return null;
   if (!isGm()) return { days: 0, ok: true, text: tx('SR2E.MxLife97.Cook.publicAsked'), ask: !c.cook97.asked };
+  // v0.97.1 review: a job already rolled over the relay (a GM re-resolving the player's card): no new roll, no days
+  // (they are on the project already).
+  if (c.cook97.asked || cookHoursFor(actor, c.projectId) > 0) return { days: 0, ok: true, text: tx('SR2E.MxLife97.Cook.publicAsked') };
   const kept = c.cook97.rolled;
   if (kept && typeof kept === 'object') {
     const r = { days: Math.min(100_000, whole(kept.days)), ok: Boolean(kept.ok), failed: kept.failed === 'install' ? 'install' : 'cook', tries: whole(kept.tries) };
@@ -304,9 +307,8 @@ export function cookHoursFor(actor: any, projectId: string | undefined): number 
  * `c.cook97.asked` when the GM took it. Returns a note for the card ('' when the GM took it).
  */
 export async function askGmCook(actor: any, c: any, projectId: string | undefined, testId: string | undefined): Promise<string> {
-  const key = String(projectId || testId || '').slice(0, 60);
-  if (!key || !c?.cook97) return '';
-  const r = await requestGm(RELAY_OP, { op: 'cook', actorUuid: String(actor?.uuid ?? ''), projectId: String(projectId ?? ''), key, part: String(c.part ?? ''), rating: whole(c.rating), deckId: String(c.deckId ?? ''), name: String(c.name ?? '') });
+  if ((!projectId && !testId) || !c?.cook97) return '';
+  const r = await requestGm(RELAY_OP, { op: 'cook', actorUuid: String(actor?.uuid ?? ''), projectId: String(projectId ?? '').slice(0, 60), testId: String(testId ?? '').slice(0, 60) });
   if (r.ok) { c.cook97.asked = true; return ''; }
   return ` <em>${tx('SR2E.MxLife97.Cook.askFailed', { note: escHtml(String(r.note ?? '')) })}</em>`;
 }
@@ -328,19 +330,40 @@ export async function applyCookAsGm(data: Record<string, any>, user: any): Promi
   if (!M.on('cookInstall') || data?.['op'] !== 'cook') return { ok: false, note: tx('SR2E.MxLife97.Cook.refused') };
   const actor: any = uuidOk(data['actorUuid']) ? await (globalThis as any).fromUuid?.(data['actorUuid']) : null;
   if (!actor || !['character', 'npc'].includes(String(actor.type)) || !(user?.isGM || actor.testUserPermission?.(user, 'OWNER'))) return { ok: false, note: tx('SR2E.MxLife97.Cook.refused') };
-  const key = typeof data['key'] === 'string' ? data['key'].slice(0, 60) : '';
-  if (!key) return { ok: false, note: tx('SR2E.MxLife97.Cook.refused') };
-  const jobKey = `${actor.uuid}:${key}`;
-  if (cookRolled(jobKey)) return { ok: true };
+  // v0.97.1 review: the job is the work under way (its project id); with no work time (waiting off) the design card
+  // itself (its testId: a card by the builder's owner). Never a key the request makes up.
   const pid = typeof data['projectId'] === 'string' ? data['projectId'].slice(0, 60) : '';
+  const tid = typeof data['testId'] === 'string' ? data['testId'].slice(0, 60) : '';
   const project: any = pid ? (actor.projects?.() ?? []).find((p: any) => p?.id === pid) ?? null : null;
   if (pid && !project) return { ok: false, note: tx('SR2E.MxLife97.Cook.refused') };
   const args: any[] = project?.effect?.call?.method === 'finishDeckPart' && Array.isArray(project.effect.call.args) ? project.effect.call.args : [];
   if (project && !args.length) return { ok: false, note: tx('SR2E.MxLife97.Cook.refused') };
-  const deckId = String((project ? args[0] : data['deckId']) ?? '').slice(0, 60);
-  const part = String((project ? args[2] : data['part']) ?? '').slice(0, 40);
-  const rating = Math.min(100_000, whole(project ? args[3] : data['rating']));
-  const partName = String((project ? args[1] : data['name']) ?? '').slice(0, 120);
+  const design: any = project ? null : designCard(actor, tid);
+  if (!project && !design) return { ok: false, note: tx('SR2E.MxLife97.Cook.refused') };
+  const jobKey = project ? `${actor.uuid}:p:${pid}` : `${actor.uuid}:t:${tid}`;
+  if (cookBusy.has(jobKey) || cookRolled(jobKey)) return { ok: true };
+  cookBusy.add(jobKey);
+  try { return await rollCookJob(actor, jobKey, pid, project, args, design); } finally { cookBusy.delete(jobKey); }
+}
+
+/** Jobs being rolled now (two requests at once: one roll). */
+const cookBusy = new Set<string>();
+
+/** A deck part's design card of this builder (testId), by a user who owns the builder; its code context. */
+function designCard(actor: any, testId: string): any {
+  if (!testId) return null;
+  const list: any[] = [...((G()?.messages?.contents ?? G()?.messages ?? []) as any[])].reverse();
+  const m = list.find((x: any) => { const t = x?.flags?.[SYSTEM_ID]?.test ?? x?.getFlag?.(SYSTEM_ID, 'test'); return t?.testId === testId && t?.kind === 'code' && t?.actorUuid === actor?.uuid && t?.code?.mode === 'deck'; });
+  const by: any = m?.author && typeof m.author === 'object' ? m.author : null;
+  if (!m || !(by?.isGM || actor.testUserPermission?.(by, 'OWNER'))) return null;
+  return (m.flags?.[SYSTEM_ID]?.test ?? m.getFlag?.(SYSTEM_ID, 'test'))?.code ?? null;
+}
+
+async function rollCookJob(actor: any, jobKey: string, pid: string, project: any, args: any[], design: any): Promise<{ ok: boolean; note?: string }> {
+  const deckId = String((project ? args[0] : design?.deckId) ?? '').slice(0, 60);
+  const part = String((project ? args[2] : design?.part) ?? '').slice(0, 40);
+  const rating = Math.min(100_000, whole(project ? args[3] : design?.rating));
+  const partName = String((project ? args[1] : design?.name) ?? '').slice(0, 120);
   const deck: any = deckId ? actor.items?.get?.(deckId) : null;
   const tasks = M.deckTasks(part, rating, whole(deck?.system?.mpcp) || rating);
   if (!tasks) return { ok: false, note: tx('SR2E.MxLife97.Cook.refused') };

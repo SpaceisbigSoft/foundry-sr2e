@@ -262,8 +262,8 @@ export function hostChangeShapeOk(f: any): boolean {
     && intIn(f.passcode97.days, 0, 180) && ['user', 'superuser', 'supervisor'].includes(f.passcode97.level))) return false;
   if (f.located97 !== undefined && !(onlyKeys(f.located97, ['deckerUuid', 'uuids']) && safeStr(f.located97.deckerUuid, 400) && strList(f.located97.uuids, 50))) return false;
   // v0.97.1 (B): a tar's crash and a Slow: who, which IC, the Initiative bounded (applications/mxops97.ts applyGmWrites97 re-reads the rest).
-  if (f.crashIc97 !== undefined && !(onlyKeys(f.crashIc97, ['icUuid', 'deckerUuid', 'programId']) && safeStr(f.crashIc97.icUuid, 400) && safeStr(f.crashIc97.deckerUuid, 400) && optStr(f.crashIc97.programId, 60))) return false;
-  if (f.slow97 !== undefined && !(onlyKeys(f.slow97, ['icUuid', 'deckerUuid', 'combatId', 'combatantId', 'delta']) && safeStr(f.slow97.icUuid, 400) && safeStr(f.slow97.deckerUuid, 400)
+  if (f.crashIc97 !== undefined && !(onlyKeys(f.crashIc97, ['icUuid', 'deckerUuid', 'programId', 'cardId']) && safeStr(f.crashIc97.icUuid, 400) && safeStr(f.crashIc97.deckerUuid, 400) && optStr(f.crashIc97.programId, 60) && safeStr(f.crashIc97.cardId, 60))) return false;
+  if (f.slow97 !== undefined && !(onlyKeys(f.slow97, ['icUuid', 'deckerUuid', 'combatId', 'combatantId', 'delta', 'testId']) && safeStr(f.slow97.icUuid, 400) && safeStr(f.slow97.deckerUuid, 400) && safeStr(f.slow97.testId, 60)
     && optStr(f.slow97.combatId, 60) && optStr(f.slow97.combatantId, 60) && intIn(f.slow97.delta, -400, 400))) return false;
   // v0.97.0 (RULES.MXIC_V97): a decker's request: who and which (the GM side reads every value itself).
   if (f.mx97 !== undefined && !(onlyKeys(f.mx97, ['op', 'deckerUuid', 'vs', 'id', 'net', 'cardId', 'seq']) && (f.mx97.seq === undefined || (typeof f.mx97.seq === 'number' && Number.isFinite(f.mx97.seq) && f.mx97.seq >= 0)) && (MX97_OPS as readonly string[]).includes(f.mx97.op)
@@ -276,9 +276,13 @@ export function hostChangeShapeOk(f: any): boolean {
  * it names (`owns`: the card author's ownership); any other change is not this rule's business (true).
  */
 export function mx97OwnerOk(f: any, owns: (uuid: string) => boolean): boolean {
-  const d = f?.mx97?.deckerUuid;
-  if (f?.mx97 === undefined) return true;
-  try { return safeStr(d, 400) && owns(String(d)); } catch { return false; }
+  // v0.97.1 (B): a tar's crash and a Slow too (`crashIc97`, `slow97`): only from the owner of the decker they name.
+  for (const k of ['mx97', 'crashIc97', 'slow97']) {
+    if (f?.[k] === undefined) continue;
+    const d = f[k]?.deckerUuid;
+    try { if (!(safeStr(d, 400) && owns(String(d)))) return false; } catch { return false; }
+  }
+  return true;
 }
 
 /**

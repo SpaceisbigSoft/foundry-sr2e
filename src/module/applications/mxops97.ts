@@ -22,6 +22,7 @@ import * as M from '../rules/mxops97.ts';
 import { restorePlan } from '../rules/datawar.ts';
 import { NO_DECK_DAMAGE, type DeckDamage } from '../rules/matrix.ts';
 import { onActorUpdateMx97 } from './mxic97.ts';
+import { authorIsGm, cardAuthor } from './trust.ts';
 
 const G = (): any => (globalThis as any).game;
 const warn = (text: string): void => { (globalThis as any).ui?.notifications?.warn?.(text); };
@@ -345,11 +346,11 @@ export function cleanHostChange97(c: any): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   // v0.97.1 (live run finding 4): a player's tar that crashed itself, a player's Slow (applyGmWrites97 re-reads them).
   if (c?.crashIc97 && typeof c.crashIc97 === 'object' && str400(c.crashIc97.icUuid) && str400(c.crashIc97.deckerUuid)) {
-    out['crashIc97'] = { icUuid: str400(c.crashIc97.icUuid), deckerUuid: str400(c.crashIc97.deckerUuid), programId: str400(c.crashIc97.programId).slice(0, 60) };
+    out['crashIc97'] = { icUuid: str400(c.crashIc97.icUuid), deckerUuid: str400(c.crashIc97.deckerUuid), programId: str400(c.crashIc97.programId).slice(0, 60), cardId: str400(c.crashIc97.cardId).slice(0, 60) };
   }
   if (c?.slow97 && typeof c.slow97 === 'object' && str400(c.slow97.icUuid) && str400(c.slow97.deckerUuid)) {
     const delta = M.slowRequestDelta(c.slow97.delta);
-    if (delta) out['slow97'] = { icUuid: str400(c.slow97.icUuid), deckerUuid: str400(c.slow97.deckerUuid), combatId: str400(c.slow97.combatId).slice(0, 60), combatantId: str400(c.slow97.combatantId).slice(0, 60), delta };
+    out['slow97'] = { icUuid: str400(c.slow97.icUuid), deckerUuid: str400(c.slow97.deckerUuid), combatId: str400(c.slow97.combatId).slice(0, 60), combatantId: str400(c.slow97.combatantId).slice(0, 60), delta, testId: str400(c.slow97.testId).slice(0, 60) };
   }
   if (c?.decoy97 && typeof c.decoy97 === 'object' && str400(c.decoy97.deckerUuid)) out['decoy97'] = { deckerUuid: str400(c.decoy97.deckerUuid), successes: int(c.decoy97.successes, 0, M.DECOY_MAX) };
   if (c?.passcode97 && typeof c.passcode97 === 'object' && str400(c.passcode97.deckerUuid)) {
@@ -395,9 +396,11 @@ const icOf = (ic: any, host: any) => ({ icType: String(ic?.type ?? ''), behavior
  */
 export async function tarCrashToGm(icActor: any, decker: any, programId: string, icName: string): Promise<string> {
   const host: any = sync(icActor?.system?.hostUuid);
-  if (!host || host.type !== 'host' || !decker?.uuid || !programId) return '';
+  // The tar's own attack card (the GM side posted it): the GM's client checks the request against it.
+  const card: any = latestTarAttack(String(icActor?.uuid ?? ''), String(decker?.uuid ?? ''));
+  if (!host || host.type !== 'host' || !decker?.uuid || !programId || !card?.id) return '';
   const label = tx('SR2E.MxOps97.Gm.tarLabel', { ic: String(icActor?.name ?? icName), name: String(decker.name ?? '') });
-  await actorCls()?.changeHost?.(host, { crashIc97: { icUuid: String(icActor.uuid), deckerUuid: String(decker.uuid), programId: String(programId) } }, label, String(decker.uuid));
+  await actorCls()?.changeHost?.(host, { crashIc97: { icUuid: String(icActor.uuid), deckerUuid: String(decker.uuid), programId: String(programId), cardId: String(card.id) } }, label, String(decker.uuid));
   return ` <em>${tx('SR2E.MxOps97.Gm.tarSent', { ic: escHtml(icName) })}</em>`;
 }
 
@@ -406,16 +409,31 @@ export async function tarCrashToGm(icActor: any, decker: any, programId: string,
  * Apply (GM)). `delta` is what this card takes off now (negative: a re-roll gives some back). Returns the card's note,
  * or '' when there is nothing to ask (the IC has no host).
  */
-export async function slowToGm(ic: any, decker: any, combatant: any, delta: number): Promise<string> {
+export async function slowToGm(ic: any, decker: any, combatant: any, delta: number, testId: string): Promise<string> {
   const host: any = sync(ic?.system?.hostUuid);
   const combat: any = combatant?.combat ?? combatant?.parent ?? null;
-  if (!host || host.type !== 'host' || !decker?.uuid || !combat?.id || !combatant?.id) return '';
+  if (!host || host.type !== 'host' || !decker?.uuid || !combat?.id || !combatant?.id || !testId) return '';
   const d = M.slowRequestDelta(delta);
   if (!d) return '';
   const label = tx('SR2E.MxOps97.Gm.slowLabel', { ic: String(ic?.name ?? ''), name: String(decker.name ?? ''), delta: d });
-  await actorCls()?.changeHost?.(host, { slow97: { icUuid: String(ic.uuid), deckerUuid: String(decker.uuid), combatId: String(combat.id), combatantId: String(combatant.id), delta: d } }, label, String(decker.uuid));
+  await actorCls()?.changeHost?.(host, { slow97: { icUuid: String(ic.uuid), deckerUuid: String(decker.uuid), combatId: String(combat.id), combatantId: String(combatant.id), delta: d, testId: String(testId).slice(0, 59) } }, label, String(decker.uuid));
   return ` <em>${d > 0 ? tx('SR2E.MxOps97.Gm.slowSent', { delta: d }) : tx('SR2E.MxOps97.Gm.slowBackSent', { delta: -d })}</em>`;
 }
+
+/** The chat log (newest last). */
+const messages = (): any[] => [...((G()?.messages?.contents ?? G()?.messages ?? []) as any[])];
+const msgFlag = (m: any, k: string): any => (typeof m?.getFlag === 'function' ? m.getFlag(SYSTEM_ID, k) : m?.flags?.[SYSTEM_ID]?.[k]);
+/** The newest GM-authored attack card of this IC on this decker (the IC's attack runs on the GM side). */
+export function latestTarAttack(icUuid: string, deckerUuid: string): any {
+  if (!icUuid || !deckerUuid) return null;
+  return messages().reverse().find((m: any) => { const a = msgFlag(m, 'attack'); return a?.ic?.icUuid === icUuid && a?.targetUuid === deckerUuid && authorIsGm(m); }) ?? null;
+}
+/** The newest card of a Slow test (its testId: a Karma re-roll's card replaces it). */
+function slowTestCard(testId: string): any {
+  if (!testId) return null;
+  return messages().reverse().find((m: any) => { const t = msgFlag(m, 'test'); return t?.testId === testId && t?.kind === 'mutility' && t?.mutility?.kind === 'slow'; }) ?? null;
+}
+const hostWrites = (h: any) => M.gmWritesOf(flagOf(h, M.HOST_GM_WRITES));
 
 /**
  * The GM's client applies a host change's `crashIc97` and `slow97` (after the host's own update): every fact read
@@ -426,13 +444,24 @@ export async function slowToGm(ic: any, decker: any, combatant: any, delta: numb
 export async function applyGmWrites97(host: any, c: any): Promise<string[]> {
   const notes: string[] = [];
   const G0 = G();
+  let writes = hostWrites(host);
   if (c?.crashIc97) {
     const ic: any = sync(c.crashIc97.icUuid);
     const decker: any = sync(c.crashIc97.deckerUuid);
     const p: any = decker?.items?.get?.(c.crashIc97.programId) ?? null;
-    const why = M.tarCrashRefusal({ ...icOf(ic, host), ...onHost(decker), program: p ? { loaded: Boolean(p.system?.loaded), erased: Boolean(p.system?.erased) } : null });
+    // v0.97.1 review: the tar's newest attack on that decker, a GM-authored card naming this IC, decker and utility,
+    // with successes; used once (the host's record).
+    const key = `crash|${String(c.crashIc97.cardId ?? '')}`;
+    const card: any = latestTarAttack(String(ic?.uuid ?? ''), String(decker?.uuid ?? ''));
+    const a: any = card ? msgFlag(card, 'attack') : null;
+    const cardOk = Boolean(card && c.crashIc97.cardId && card.id === c.crashIc97.cardId && a && M.tarDerezzes(String(a.ic?.behavior ?? '')) && Number(a.attackSuccesses) > 0
+      && (!a.ic?.programId || a.ic.programId === c.crashIc97.programId));
+    const why = !cardOk ? 'SR2E.MxOps97.Why.tarNoCard' : writes.some((w) => w.k === key) ? 'SR2E.MxOps97.Why.cardUsed'
+      : M.tarCrashRefusal({ ...icOf(ic, host), ...onHost(decker), program: p ? { loaded: Boolean(p.system?.loaded), erased: Boolean(p.system?.erased) } : null });
     if (why) notes.push(tKey(why, { ic: String(ic?.name ?? ''), name: String(decker?.name ?? '') }));
     else {
+      writes = M.withGmWrite(writes, key, 1);
+      await host.update({ [`flags.${SYSTEM_ID}.${M.HOST_GM_WRITES}`]: writes });
       await ic.update({ 'system.matrix.monitor': RULES.MATRIX.monitorBoxes });
       notes.push(tx('SR2E.MxOps97.Gm.tarDone', { ic: String(ic.name ?? '') }));
     }
@@ -445,10 +474,24 @@ export async function applyGmWrites97(host: any, c: any): Promise<string[]> {
     const isIc = Boolean(cb && ic && (cb.actor?.uuid === ic.uuid || (cb.actorId === ic.id && !ic.isToken)));
     const trace = decker?.system?.matrix?.trace;
     const init = cb && cb.initiative != null && Number.isFinite(Number(cb.initiative)) ? Number(cb.initiative) : null;
-    const why = M.slowRequestRefusal({ ...icOf(ic, host), ...onHost(decker), traceLocked: Boolean(trace?.active && trace.icUuid === ic?.uuid), combatantIsIc: isIc, initiative: init });
-    const delta = M.slowRequestDelta(c.slow97.delta);
+    // v0.97.1 review: the Slow test's own card (its newest, by the decker's owner, a book Slow on this IC): the loss is
+    // re-derived from its stored result, and the host's record keeps what was taken, so a card (or its re-roll) never
+    // takes more than its result, nor more than the cap.
+    const card: any = slowTestCard(String(c.slow97.testId ?? ''));
+    const t: any = card ? msgFlag(card, 'test') : null;
+    const by: any = card ? cardAuthor(card) : null;
+    const owner = Boolean(by && decker && (by.isGM || decker.testUserPermission?.(by, 'OWNER')));
+    const cardOk = Boolean(t && owner && t.actorUuid === decker?.uuid && t.mutility?.book97 && t.mutility?.targetUuid === ic?.uuid);
+    const key = `slow|${String(c.slow97.testId ?? '')}`;
+    const done = writes.find((w) => w.k === key)?.v ?? 0;
+    const { total, delta } = cardOk ? M.slowCardDelta(Number(t.successes ?? 0), Number(t.mutility?.resist97 ?? 0), done) : { total: 0, delta: 0 };
+    const why = !cardOk ? 'SR2E.MxOps97.Why.slowNoCard'
+      : M.slowRequestRefusal({ ...icOf(ic, host), ...onHost(decker), traceLocked: Boolean(trace?.active && trace.icUuid === ic?.uuid), combatantIsIc: isIc, initiative: init });
     if (why) notes.push(tKey(why, { name: String(ic?.name ?? '') }));
-    else if (delta && init !== null) {
+    else if (!delta) notes.push(tx('SR2E.MxOps97.Gm.slowNothing', { ic: String(ic.name ?? '') }));
+    else if (init !== null) {
+      writes = M.withGmWrite(writes, key, total);
+      await host.update({ [`flags.${SYSTEM_ID}.${M.HOST_GM_WRITES}`]: writes });
       await cb.update({ initiative: init - delta });
       notes.push(tx('SR2E.MxOps97.Gm.slowDone', { ic: String(ic.name ?? ''), from: init, to: init - delta }));
     }
