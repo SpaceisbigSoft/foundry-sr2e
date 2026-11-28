@@ -20679,7 +20679,8 @@
         "evasion": "Evasion",
         "masking": "Masking",
         "sensors": "Sensors",
-        "responseIncrease": "Response Increase"
+        "responseIncrease": "Response Increase",
+        "vm": "Virtual machine?"
       },
       "Level": {
         "user": "User",
@@ -20712,7 +20713,8 @@
       },
       "AnalyzeHost": {
         "nothing": "No successes to spend: nothing learned.",
-        "more": "(one item per success; 7 tell all)"
+        "more": "(one item per success; 7 tell all)",
+        "vmGm": "the GM says whether it is one"
       },
       "Scan": {
         "tn": "{name}'s Masking {masking}",
