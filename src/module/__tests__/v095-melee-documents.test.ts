@@ -213,7 +213,7 @@ describe('v0.95.0 documents: quick draw (Core p. 82)', () => {
 });
 
 describe('v0.95.0 documents: subduing (Core p. 103)', () => {
-  test('v0.96.4: only the holder\'s owner (or the GM) can try a hold', async (t) => {
+  test('v0.96.5: only the holder\'s owner (or the GM) can try a hold', async (t) => {
     t.after(restore);
     const h = who({ name: 'Watcher' }), v = who({ name: 'Victim' });
     h.isOwner = false;

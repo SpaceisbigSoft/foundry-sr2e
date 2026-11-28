@@ -235,7 +235,7 @@ describe('v0.95.0 core glue: the Team Karma Pool on the Karma paths', () => {
     msg.author = { id: 'p2' };
     assert.equal((await C95.teamRelay({ op: 'spend', actorId: a.id, n: 1, permanent: true, cardId: msg.id }, PLAYER())).ok, false, 'someone else\'s card');
   });
-  test('v0.96.4: the team pool write is the relay\'s own, and one that does not land pays nothing', async () => {
+  test('v0.96.5: the team pool write is the relay\'s own, and one that does not land pays nothing', async () => {
     const a = pc(0); world(a); team([a.id], 3);
     const gs: any = (globalThis as any).game.settings;
     const plain = gs.set;

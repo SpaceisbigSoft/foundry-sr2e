@@ -182,7 +182,7 @@ function ownCardFor(cardId: unknown, user: any, actorId: string): boolean {
 }
 
 /**
- * Write the team pool and post its line. v0.96.4: the write is the relay's own (`sr2eRelay`: the request was judged
+ * Write the team pool and post its line. v0.96.5: the write is the relay's own (`sr2eRelay`: the request was judged
  * above as the user who sent it), so a GM re-running a player's card stores it too; and it is read back: false when it
  * did not land (then nothing counts as paid).
  */
@@ -227,7 +227,7 @@ export async function teamRelay(data: Record<string, any>, user: any): Promise<{
     const n = int(data?.n, 1, 99);
     const r = C.teamGive(team, actorId, n, ownLeft);
     if (!r.ok) return why(r.why);
-    // v0.96.4: the team pool first, so a write that doesn't land takes nothing from the character.
+    // v0.96.5: the team pool first, so a write that doesn't land takes nothing from the character.
     if (!(await store(r.team, tx('SR2E.Core95.Team.gave', { name, n, pool: r.team.pool })))) return notStored();
     await actor.update({ 'system.karma.pool': Math.max(0, Math.floor(Number(actor.system?.karma?.pool ?? 0)) - n) });
     return { ok: true };
