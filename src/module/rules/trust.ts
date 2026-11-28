@@ -484,7 +484,8 @@ export function describeGmChange(action: string, flags: Record<string, any>, nam
         else if (k === 'bombFound') out.push(tx('SR2E.Text.Trust.findsDataBomb', { name: nm(v?.deckerUuid) }));
         else if (k === 'defuse') out.push(tx('SR2E.Text.Trust.dataBombDefused', { what: plainOf(v) }));
         else if (k === 'bombOff') out.push(tx('SR2E.Text.Trust.dataBombGoesOff', { what: plainOf(v) }));
-        else if (k === 'decoy97') out.push(tx('SR2E.MxOps97.Trust.decoy', { name: nm(v?.deckerUuid), n: Number(v?.successes) || 0 }));
+        // v0.97.0: from 6 successes a decoy draws every proactive IC attack (1D6 ≤ successes): said so to the GM.
+        else if (k === 'decoy97') out.push(tx(Number(v?.successes) >= 6 ? 'SR2E.MxOps97.Trust.decoyAll' : 'SR2E.MxOps97.Trust.decoy', { name: nm(v?.deckerUuid), n: Number(v?.successes) || 0 }));
         else if (k === 'passcode97') out.push(tx('SR2E.MxOps97.Trust.passcode', { name: nm(v?.deckerUuid), days: Number(v?.days) || 0 }));
         else if (k === 'located97') out.push(tx('SR2E.MxOps97.Trust.located', { name: nm(v?.deckerUuid), list: (Array.isArray(v?.uuids) ? v.uuids : []).map((u: unknown) => nm(String(u))).join(', ') }));
         else out.push(`${k}: ${plainOf(v)}`);

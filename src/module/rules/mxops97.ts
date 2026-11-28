@@ -115,8 +115,8 @@ const uuidOk = (v: unknown): v is string => typeof v === 'string' && v.length > 
 // ---------------------------------------------------------------- Decoy (VR2 p. 112)
 
 export interface Decoy97 { deckerUuid: string; successes: number; boxes: number }
-/** A decoy's successes are bounded (a forged card cannot make one that never misses for long: 1D6 is at most 6). */
-export const DECOY_MAX = 30;
+/** A decoy's successes are kept at most 6: from 6 on it draws every attack (1D6 is at most 6), so more add nothing. */
+export const DECOY_MAX = 6;
 
 /** Whether a proactive IC's attack goes to the decoy (VR2 p. 112): 1D6 no higher than the decoy's successes (a tie fools it). */
 export function decoyDraws(d6: number, successes: number): boolean {
