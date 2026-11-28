@@ -8,6 +8,7 @@ import { RULES } from './config.ts';
 import { parseAvailability } from './upkeep.ts';
 import type { Monitor } from './damage.ts';
 import { t as tx } from '../helpers/i18n.ts';
+import { softMemoryMp } from './kit99.ts';
 
 // ---------------------------------------------------------------- Bioware
 
@@ -108,7 +109,7 @@ export function chipSlots(o: { chipjacks: number; datajack: boolean; memoryMp: n
  * then knowsofts and linguasofts in headware memory at `mpPerRating` × rating each. The rest get
  * a reason. With enforce 'off' every chip runs.
  */
-export function chipsRunning<T extends { kind: string; rating: number; slotted: boolean }>(chips: readonly T[], slots: ChipSlots): Array<{ chip: T; runs: boolean; via: 'jack' | 'memory' | ''; reason: string }> {
+export function chipsRunning<T extends { kind: string; rating: number; slotted: boolean; scope?: string }>(chips: readonly T[], slots: ChipSlots): Array<{ chip: T; runs: boolean; via: 'jack' | 'memory' | ''; reason: string }> {
   const c = RULES.CYBERWARE.chips;
   let jacks = slots.jacks;
   let memory = slots.memory;
@@ -116,7 +117,8 @@ export function chipsRunning<T extends { kind: string; rating: number; slotted: 
     if (!chip.slotted) return { chip, runs: false, via: '' as const, reason: tx('SR2E.Text.Implants.notSlotted') };
     if (c.enforce === 'off') return { chip, runs: true, via: 'jack' as const, reason: '' };
     if (jacks > 0) { jacks--; return { chip, runs: true, via: 'jack' as const, reason: '' }; }
-    const need = Math.max(1, Math.floor(chip.rating)) * c.mpPerRating;
+    // v0.99.0 (RULES.KIT_V99.skillMemory 'book', Core p. 248): the Skill Memory Table's Mp.
+    const need = softMemoryMp(chip) ?? Math.max(1, Math.floor(chip.rating)) * c.mpPerRating;
     if (chip.kind !== 'activesoft' && memory >= need) { memory -= need; return { chip, runs: true, via: 'memory' as const, reason: '' }; }
     return { chip, runs: false, via: '' as const, reason: chip.kind === 'activesoft' ? tx('SR2E.Text.Implants.noFreeJack') : tx('SR2E.Text.Implants.noFreeJackOrMp', { need }) };
   });

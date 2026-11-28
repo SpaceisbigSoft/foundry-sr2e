@@ -68,6 +68,8 @@ export const TOOLS: readonly ToolDef[] = [
   { id: 'chase98', icon: 'fa-solid fa-car-on', who: 'gm', toolbar: false },
   // v0.98.0 (RULES.VSEC_V98): building security and vehicle upkeep (a site's CCSS values, rigger perception and combat, design).
   { id: 'vsec98', icon: 'fa-solid fa-building-shield', who: 'gm', toolbar: false },
+  // v0.99.0 (RULES.KIT_V99.policeCheck, Shadowtech p. 103): the police check against what a character carries.
+  { id: 'kit99', icon: 'fa-solid fa-handcuffs', who: 'gm', toolbar: false },
   { id: 'tourGm', icon: 'fa-solid fa-person-chalkboard', who: 'gm', toolbar: false },
 ];
 

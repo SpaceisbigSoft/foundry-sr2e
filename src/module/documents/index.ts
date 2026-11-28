@@ -507,6 +507,8 @@ export function blindIfSecret(key: string, data: any): any {
 import { privacyGroup } from '../rules/qol.ts';
 import * as VS98 from '../rules/vsec98.ts';
 import * as VSG98 from '../applications/vsec98.ts';
+import * as K99 from '../rules/kit99.ts';
+import * as KG99 from '../applications/kit99.ts';
 
 /**
  * Foundry's roll mode (public, GM only, blind, self) on a card (v0.36.0). Cards someone else must
@@ -4698,7 +4700,8 @@ export class SR2Actor extends Actor {
       ?? this.items.find((i: any) => i.type === 'skill' && sameSkillName(i.name, name));
     // A slotted skillsoft stands in when it is better than the skill the character has (v0.29.0).
     const soft = this.softSkill(wanted);
-    const base = soft && soft.system.rating > (own?.system?.rating ?? 0) ? soft : own;
+    // v0.99.0 (RULES.KIT_V99.softReplaces 'book', Core p. 248): a running soft replaces the skill, even a better one.
+    const base = soft && (K99.softReplaces() || soft.system.rating > (own?.system?.rating ?? 0)) ? soft : own;
     // v0.48.0: a possessed body thinks with the possessor's skills (even ones the body lacks).
     return this.possessedSkill(base, name);
   }
@@ -8735,7 +8738,7 @@ export class SR2Actor extends Actor {
    * Concealability), or sweep them with a scanner (gear with a scanner rating). The result is
    * whispered to the GMs and the searcher's owners; what was missed only to the GMs.
    */
-  async searchFor(targetUuid: string, opts: { method?: SearchMethod; scannerId?: string; modifiers?: TargetNumberModifier[]; skipAction?: boolean } = {}): Promise<{ found: string[]; missed: string[] } | null> {
+  async searchFor(targetUuid: string, opts: { method?: SearchMethod; scannerId?: string; modifiers?: TargetNumberModifier[]; skipAction?: boolean; strip99?: boolean } = {}): Promise<{ found: string[]; missed: string[] } | null> {
     const target: any = await fromUuid(targetUuid);
     if (!target?.carriedItems) return null;
     const method: SearchMethod = opts.method ?? 'look';
@@ -8763,7 +8766,9 @@ export class SR2Actor extends Actor {
     }
     return SR2Actor.#runSearch({ searcherName: this.name, speaker: ChatMessage.getSpeaker({ actor: this }), who, dice, method, kind, target,
       modifiers: method === 'scanner' ? (opts.modifiers ?? []) : this.#testModifiers({ modifiers: [...(opts.modifiers ?? []), ...searchMods, ...this.#searchSight(target, method)] }),
-      owners: [...((game as any).users ?? [])].filter((u: any) => this.testUserPermission?.(u, 'OWNER')).map((u: any) => u.id) });
+      owners: [...((game as any).users ?? [])].filter((u: any) => this.testUserPermission?.(u, 'OWNER')).map((u: any) => u.id),
+      // v0.99.0 (RULES.KIT_V99.manualSearch 'book', NAGRL p. 93): a strip search (a GM's frisk only) finds every weapon.
+      strip99: KG99.stripSearch(method, opts.strip99) });
   }
 
   /**
@@ -8805,16 +8810,27 @@ export class SR2Actor extends Actor {
   }
 
   /** One search: a test per item; found ones go to the GMs and owners, missed ones to the GMs. */
-  static async #runSearch(o: { searcherName: string; speaker: any; who: string; dice: number; method: SearchMethod; kind: ScannerKind; target: any; modifiers: TargetNumberModifier[]; owners: string[] }): Promise<{ found: string[]; missed: string[] }> {
-    const list = searchTargets(o.target.carriedItems(), o.method, o.kind);
+  static async #runSearch(o: { searcherName: string; speaker: any; who: string; dice: number; method: SearchMethod; kind: ScannerKind; target: any; modifiers: TargetNumberModifier[]; owners: string[]; strip99?: boolean }): Promise<{ found: string[]; missed: string[] }> {
+    // v0.99.0 (RULES.KIT_V99.linedCoat 'book', Core p. 242): a worn lined coat hides weapons better (+2).
+    // (RULES.KIT_V99.sniffer 'book', NAGRL p. 93): a chemical sniffer rolls once against the load's TN.
+    const sniff = KG99.sniffFor(o.target, o.method, o.kind);
+    const list = sniff ? sniff.targets : searchTargets(K99.underCoat(o.target.carriedItems(), o.method), o.method, o.kind);
     const found: string[] = [];
     const missed: string[] = [];
     const rows: string[] = [];
     const rolls: any[] = [];
     // v0.80.0 (RULES.URR_V80.dsMadScan 'highestDie', URR): a weapon detector rolls its rating once; it turns up every weapon hidden no better than the highest die.
     const mad = dsMadScanOn(o.method, o.kind) && list.some((t) => t.tn !== null) ? (o.dice > 0 ? dsHighestDie((await rollOpenEnded(o.dice, foundryRoller(rolls))).map((d) => d.total)) : 0) : null;
+    // v0.99.0 (KIT_V99.sniffer): the sniffer's one test; (KIT_V99.manualSearch, NAGRL p. 93): a GM's strip search finds every weapon.
+    const sniffHit = sniff && list.length ? await successTest({ dice: o.dice, targetNumber: sniff.tn, modifiers: [...sniff.mods, ...o.modifiers], roll: foundryRoller(rolls) }) : null;
     for (const t of list) {
       if (t.tn === null) { found.push(t.name); rows.push(`<li>${tx('SR2E.Card.Actor.inPlainSight', { name: escText(t.name) })}</li>`); continue; }
+      if (sniffHit || (o.strip99 && t.type === 'weapon')) {
+        const r99 = KG99.sniffRow(t.name, sniffHit);
+        (r99.found ? found : missed).push(t.name);
+        rows.push(`<li>${escText(r99.text)}${r99.found ? ` — <strong>${tx('SR2E.Card.Actor.found3')}</strong>` : tx('SR2E.Card.Actor.missed')}</li>`);
+        continue;
+      }
       if (mad !== null) {
         const m = dsMadFinds(mad, t.tn, o.modifiers);
         (m.found ? found : missed).push(t.name);
@@ -9088,6 +9104,8 @@ export class SR2Actor extends Actor {
       notes.push(sightAids.why === 'second' ? tx('SR2E.Card.Combat923.secondFirearmAids') : tx('SR2E.Card.Combat923.shotAids'));
     }
     if (sightAids.smartlinkAdd && situational.includes('smartlink')) fireMods.push({ id: 'shotSmartlink', label: tx('SR2E.Card.Combat923.shotSmartlink'), value: sightAids.smartlinkAdd });
+    // v0.99.0 (RULES.KIT_V99.smartGoggles / smartlink2, Core p. 90; FoF pp. 84–85): one receptor; Smartlink II's rows.
+    fireMods.push(...KG99.smartFire(this, w, { situational, notes, melee, called: called !== 'none', range }));
     if (called !== 'none') {
       if (!situational.includes('calledShot')) situational.push('calledShot');
       const c = calledShotDamage(level, called);
