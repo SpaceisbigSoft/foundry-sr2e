@@ -2,6 +2,11 @@
 
 This is the history of the unofficial Shadowrun 2nd Edition system for Foundry VTT (system id `shadowrun2e_unified`; `sr2e` until v0.93.0), newest version first. Every rules change since v0.70.0 has a house-rule switch that puts the old behaviour back. The system was built with AI (Anthropic's Claude) under human direction, and it has not yet been play-tested at a real table.
 
+## v0.96.5 — Team Karma when the GM re-rolls a player's card; holding (27 Nov 2026)
+- **Fixed:** when the GM pressed a Karma button on a player's card and the Team Karma Pool had to pay, the pool was not charged but the re-roll still happened. Now the pool pays, and if the pool can't be saved, nothing is re-rolled.
+- **Fixed:** a hold can only be tried by the holder's owner or the GM (before, a player who only observed a character could roll its hold test).
+- API changes: none.
+
 ## v0.96.4 — Interception and region entries in Foundry v14 (27 Nov 2026)
 - **Fixed:** a move past an opponent in a fight offers the interception again. In Foundry v14 a token's position follows its movement animation, so when the move was reported the token still seemed to stand where it started and nobody was offered (Core p. 83).
 - **Fixed:** a camera or other watched region notices a token walking in on the move itself, not a move late (same cause).

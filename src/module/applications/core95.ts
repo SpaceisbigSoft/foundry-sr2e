@@ -181,10 +181,18 @@ function ownCardFor(cardId: unknown, user: any, actorId: string): boolean {
   return uuids.some((u) => memberId((globalThis as any).fromUuidSync?.(u)) === actorId);
 }
 
-async function store(next: C.TeamPool, line: string): Promise<void> {
-  await G().settings.set(SYSTEM_ID, TEAM_POOL, next);
+/**
+ * Write the team pool and post its line. v0.96.4: the write is the relay's own (`sr2eRelay`: the request was judged
+ * above as the user who sent it), so a GM re-running a player's card stores it too; and it is read back: false when it
+ * did not land (then nothing counts as paid).
+ */
+async function store(next: C.TeamPool, line: string): Promise<boolean> {
+  await G().settings.set(SYSTEM_ID, TEAM_POOL, next, { sr2eRelay: true });
+  if (JSON.stringify(teamNow()) !== JSON.stringify(C.teamPoolOf(next))) return false;
   await post(`<div class="sr2e-team-karma-note"><p>${line}</p></div>`);
+  return true;
 }
+const notStored = (): { ok: boolean; note: string } => why('SR2E.Core95.Team.Why.notStored');
 
 const why = (key: string | undefined): { ok: boolean; note: string } => ({ ok: false, note: tKey(String(key ?? 'SR2E.Core95.Team.Why.badNumber')) });
 
@@ -211,7 +219,7 @@ export async function teamRelay(data: Record<string, any>, user: any): Promise<{
     const n = int(data?.n, 1, permanent ? 3 : 99);
     const r = C.teamSpend(team, actorId, n, permanent);
     if (!r.ok) return why(r.why);
-    await store(r.team, (permanent ? tx('SR2E.Core95.Team.spentForGood', { who, name, n, left: C.teamLeft(r.team) }) : tx('SR2E.Core95.Team.spent', { who, name, n, left: C.teamLeft(r.team) })));
+    if (!(await store(r.team, (permanent ? tx('SR2E.Core95.Team.spentForGood', { who, name, n, left: C.teamLeft(r.team) }) : tx('SR2E.Core95.Team.spent', { who, name, n, left: C.teamLeft(r.team) }))))) return notStored();
     return { ok: true };
   }
   if (op === 'give') {
@@ -219,8 +227,9 @@ export async function teamRelay(data: Record<string, any>, user: any): Promise<{
     const n = int(data?.n, 1, 99);
     const r = C.teamGive(team, actorId, n, ownLeft);
     if (!r.ok) return why(r.why);
+    // v0.96.4: the team pool first, so a write that doesn't land takes nothing from the character.
+    if (!(await store(r.team, tx('SR2E.Core95.Team.gave', { name, n, pool: r.team.pool })))) return notStored();
     await actor.update({ 'system.karma.pool': Math.max(0, Math.floor(Number(actor.system?.karma?.pool ?? 0)) - n) });
-    await store(r.team, tx('SR2E.Core95.Team.gave', { name, n, pool: r.team.pool }));
     return { ok: true };
   }
   if (!gm) return why('SR2E.Core95.Team.Why.gmOnly');
@@ -229,25 +238,25 @@ export async function teamRelay(data: Record<string, any>, user: any): Promise<{
     const r = C.teamJoin(team, actorId, ownLeft);
     if (!r.ok) return why(r.why);
     const cost = Number(r.own ?? 0);
+    if (!(await store(r.team, tx('SR2E.Core95.Team.joined', { name, n: cost, pool: r.team.pool })))) return notStored();
     if (cost > 0) await actor.update({ 'system.karma.pool': Math.max(0, Math.floor(Number(actor.system?.karma?.pool ?? 0)) - cost) });
-    await store(r.team, tx('SR2E.Core95.Team.joined', { name, n: cost, pool: r.team.pool }));
     return { ok: true };
   }
   if (op === 'leave') {
     const mode: C.TeamLeaveMode = data?.mode === 'died' ? 'died' : data?.mode === 'share' && RULES.CORE_V95.teamKarmaGoodTerms ? 'share' : 'half';
     const r = C.teamLeave(team, actorId, mode);
     if (!r.ok) return why(r.why);
-    await store(r.team, tx('SR2E.Core95.Team.left', { name: name || escHtml(actorId), lost: Number(r.lost ?? 0), pool: r.team.pool }));
+    if (!(await store(r.team, tx('SR2E.Core95.Team.left', { name: name || escHtml(actorId), lost: Number(r.lost ?? 0), pool: r.team.pool })))) return notStored();
     return { ok: true };
   }
   if (op === 'refresh') {
-    if (team.spent > 0) await store(C.teamRefresh(team), tx('SR2E.Core95.Team.refreshed', { pool: team.pool }));
+    if (team.spent > 0 && !(await store(C.teamRefresh(team), tx('SR2E.Core95.Team.refreshed', { pool: team.pool })))) return notStored();
     return { ok: true };
   }
   if (op === 'adjust') {
     const r = C.teamAdjust(team, int(data?.delta, -99, 99, 0));
     if (!r.ok) return why(r.why);
-    await store(r.team, tx('SR2E.Core95.Team.set', { who, pool: r.team.pool }));
+    if (!(await store(r.team, tx('SR2E.Core95.Team.set', { who, pool: r.team.pool })))) return notStored();
     return { ok: true };
   }
   return { ok: false };

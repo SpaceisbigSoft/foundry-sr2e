@@ -235,6 +235,25 @@ describe('v0.95.0 core glue: the Team Karma Pool on the Karma paths', () => {
     msg.author = { id: 'p2' };
     assert.equal((await C95.teamRelay({ op: 'spend', actorId: a.id, n: 1, permanent: true, cardId: msg.id }, PLAYER())).ok, false, 'someone else\'s card');
   });
+  test('v0.96.4: the team pool write is the relay\'s own, and one that does not land pays nothing', async () => {
+    const a = pc(0); world(a); team([a.id], 3);
+    const gs: any = (globalThis as any).game.settings;
+    const plain = gs.set;
+    try {
+      // Like the acting-author guard in a GM's re-run of a player's card: only a write marked as the relay's goes through.
+      gs.set = async (_s: string, k: string, v: unknown, o: any = {}) => { if (o?.sr2eRelay) settings[k] = v; };
+      assert.ok((await C95.teamRelay({ op: 'spend', actorId: a.id, n: 1 }, PLAYER())).ok);
+      assert.equal(pool().spent, 1, 'stored through the guard');
+      // A write that does not land: refused, nothing counts as paid, no team line posted.
+      gs.set = async () => undefined;
+      const n0 = chat.length;
+      const r = await C95.teamRelay({ op: 'spend', actorId: a.id, n: 1 }, PLAYER());
+      assert.equal(r.ok, false);
+      assert.match(String(r.note), /could not be saved/);
+      assert.equal(pool().spent, 1);
+      assert.equal(chat.length, n0);
+    } finally { gs.set = plain; }
+  });
   test('the tracker choice: no team source on the Karma paths (v0.94.2)', async (t) => {
     t.after(oldWay({ 'CORE_V95.teamKarma': 'tracker' }));
     const a = pc(0); world(a); team([a.id], 3);

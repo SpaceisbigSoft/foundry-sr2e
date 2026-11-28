@@ -213,6 +213,15 @@ describe('v0.95.0 documents: quick draw (Core p. 82)', () => {
 });
 
 describe('v0.95.0 documents: subduing (Core p. 103)', () => {
+  test('v0.96.4: only the holder\'s owner (or the GM) can try a hold', async (t) => {
+    t.after(restore);
+    const h = who({ name: 'Watcher' }), v = who({ name: 'Victim' });
+    h.isOwner = false;
+    const n0 = chat.length;
+    assert.equal(await h.holdTarget(v.uuid), null);
+    assert.equal(chat.length, n0, 'no hold test card');
+    assert.match(warnings.at(-1)!, /Only Watcher's owner or the GM/);
+  });
   test('H1: the soak records a subduing blow\'s Stun; Hold takes only that; Let go leaves the Drain; the old way is the hold test', async (t) => {
     t.after(restore);
     const h = who({ name: 'Holder' }), v = who({ name: 'Victim' });

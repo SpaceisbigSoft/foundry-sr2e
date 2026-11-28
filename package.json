@@ -1,6 +1,6 @@
 {
   "name": "sr2e",
-  "version": "0.96.4",
+  "version": "0.96.5",
   "private": true,
   "type": "module",
   "scripts": {

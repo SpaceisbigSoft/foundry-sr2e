@@ -10059,6 +10059,8 @@ export class SR2Actor extends Actor {
    * Body against their Body vs this Strength (RULES.COMBAT.hold); more successes pins them (restrained).
    */
   async holdTarget(targetUuid: string): Promise<'held' | 'free' | null> {
+    // v0.96.4: only the holder's owner (or the GM) tries it, as the Let go button already asks.
+    if (!this.isOwner) { ui.notifications?.warn?.(tx('SR2E.Melee95.onlyHolder', { name: escText(this.name) })); return null; }
     const t: any = targetUuid ? fromUuidSync(targetUuid) : null;
     if (!t?.system?.attributes) { ui.notifications?.warn?.(tx('SR2E.Notify.Actor.targetSomeoneToHold')); return null; }
     // v0.95.0 (MELEE_V95.subdueControl 'book', Core p. 103): control of a subdued opponent, and the maintenance test.

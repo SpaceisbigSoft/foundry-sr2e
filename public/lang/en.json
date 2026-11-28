@@ -20152,7 +20152,8 @@
           "teamShort": "Not enough Team Karma left.",
           "notYours": "That is not your character.",
           "gmOnly": "Only the GM can do that.",
-          "notCard": "Team Karma is spent for good only on a success bought on your own card."
+          "notCard": "Team Karma is spent for good only on a success bought on your own card.",
+          "notStored": "The Team Karma Pool could not be saved, so nothing was taken from it."
         },
         "diceRow": "Karma Pool dice (own {own} left, team {team} left)"
       },
