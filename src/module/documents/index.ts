@@ -1388,7 +1388,7 @@ export interface TestSnapshot {
   /** A sustained power changing attributes (resist 'none'): its targets and the effect id once applied. */
   powerEffect?: FxSpec & { targetUuids: string[]; effectId?: string };
   /** code: writing a program or building a deck part (v0.46.0), once applied. */
-  code?: { mode: 'program' | 'deck'; name: string; baseDays: number; system?: Record<string, unknown>; part?: DeckPart; rating?: number; cost?: number; deckId?: string; applied?: boolean; size?: number; memory?: boolean; projectId?: string; cook97?: { dice: number; mpcp: number; tnMod?: number; rolled?: { days: number; ok: boolean; failed?: string; tries?: number } } };
+  code?: { mode: 'program' | 'deck'; name: string; baseDays: number; system?: Record<string, unknown>; part?: DeckPart; rating?: number; cost?: number; deckId?: string; applied?: boolean; size?: number; memory?: boolean; projectId?: string; cook97?: { dice: number; mpcp: number; tnMod?: number; rolled?: { days: number; ok: boolean; failed?: string; tries?: number }; asked?: boolean } };
   /** v0.49.0: installing a vehicle modification (applied once; a re-roll only changes the time). */
   install?: { vehicleUuid: string; vehicleName: string; index: number; modName: string; rating: number; baseHours: number; payerUuid: string; applied?: boolean; botchApplied?: boolean; projectId?: string };
   /** v0.56.0 learn: learning (or raising) a spell; Karma paid and the spell written once. */
@@ -1517,6 +1517,8 @@ type Resolved = { html: string; flags: Record<string, unknown>; snap: TestSnapsh
  * resolving at once on one actor can't clear or steal each other's (they were instance fields before).
  */
 interface FollowUps {
+  /** v0.97.1: a player's deck part with no work time: its Cook and Installation Tasks go to the GM once the card is posted. */
+  cook97?: { code: any; testId: string };
   /** Physical damage before the last soak applied, so a Magic loss prompt can follow its card. */
   physicalBefore?: number;
   /** Set when a persona crashes, so a dump shock prompt can follow its card. */
@@ -3357,7 +3359,7 @@ export class SR2Actor extends Actor {
       case 'rejection':
         return this.#resolveRejection(snap);
       case 'code':
-        return this.#resolveCode(snap);
+        return this.#resolveCode(snap, fu);
       case 'install':
         return this.#resolveInstall(snap);
       case 'banish':
@@ -3880,6 +3882,11 @@ export class SR2Actor extends Actor {
         content: `<p><strong>${tx('SR2E.Card.Actor.simsenseOverload')}</strong> ${tx('SR2E.Card.Actor.isRunningHotSim', { name: escText(this.name) })}</p><p><button type="button" data-sr2e-action="overload">${tx('SR2E.Card.Actor.resistOverloadWillpowerVsStun', { overload, overloadLevel: h.overloadLevel })}</button></p>`,
         flags: { [SYSTEM_ID]: { overload: { deckerUuid: this.uuid, tn: overload } } },
       });
+    }
+    // v0.97.1: a player's deck part done at once: the GM rolls its Cook and Installation Tasks from the card now posted.
+    if (fu.cook97) {
+      const note = await MXL97G.askGmCook(this, { ...fu.cook97.code, cook97: { ...fu.cook97.code.cook97 } }, undefined, fu.cook97.testId);
+      if (note) ui.notifications?.warn?.(tx('SR2E.MxLife97.Cook.askFailedPlain'));
     }
     const hostChange = fu.hostChange;
     if (hostChange) await SR2Actor.changeHost(hostChange.host, hostChange.change, hostChange.label, this.uuid as string);
@@ -17238,8 +17245,9 @@ export class SR2Actor extends Actor {
       let asked97 = 0;
       if (delta && c && c.initiative != null) {
         // v0.97.1 (live run finding 4): the book's Slow on the GM's IC from a player's client goes to the GM (a host change).
-        const sent = b97 && notWritableNow(c) ? await MO97G.slowToGm(tgt, this, c, delta) : '';
-        if (sent) { note = sent; applied = e.initiative; asked97 = delta; }
+        // v0.97.1 review: the card records what was really sent (slowToGm sends it clamped: MO97.slowRequestDelta).
+        const sent = b97 && notWritableNow(c) ? await MO97G.slowToGm(tgt, this, c, delta, String(snap.testId ?? '')) : '';
+        if (sent) { note = sent; asked97 = MO97.slowRequestDelta(delta); applied = done + asked97; }
         else {
           try {
             if (notWritableNow(c)) throw new Error('not owner');
@@ -17568,12 +17576,12 @@ export class SR2Actor extends Actor {
   }
 
   /** A programming or deck-building test's result, applied once (a re-roll only changes the time). */
-  async #resolveCode(snap: TestSnapshot): Promise<Resolved> {
+  async #resolveCode(snap: TestSnapshot, fu: FollowUps = {}): Promise<Resolved> {
     const c = snap.code!;
     const s = snap.successes;
     // v0.97.0 (RULES.MXLIFE_V97.cookInstall): the part's Cook and Installation tasks follow its design (VR2 pp. 77, 82–88).
     const days0 = workDays(c.baseDays, s);
-    const cook97 = days0 ? await MXL97G.cookInstall(c) : null;
+    const cook97 = days0 ? await MXL97G.cookInstall(c, this) : null;
     const days = days0 && cook97 ? (cook97.ok ? days0 + cook97.days : null) : days0;
     const fail97 = cook97 && !cook97.ok ? ` ${escText(cook97.text)}` : '';
     if (!days && c.projectId) return { html: `<p><strong>${tx('SR2E.Card.Actor.noProgress')}</strong>.${fail97}${await this.dropProjectOnFailure(c.projectId)}</p>`, flags: {}, snap: { ...snap, code: { ...c, applied: false, projectId: undefined } } };
@@ -17611,7 +17619,8 @@ export class SR2Actor extends Actor {
         await this.finishDeckPart(deck ? deck.id : null, c.name, c.part!, c.rating ?? 0, Boolean(c.memory));
         body = `<strong>${escText(c.name)}</strong>${tx('SR2E.Card.Actor.in4', { label: escText(label), part: escText(c.memory ? tx('SR2E.Card.Actor.now5', { rating: c.rating, value }) : c.rating), time, part2: (c.cost ?? 0) > 0 ? tx('SR2E.Card.Actor.materials3', { cost: c.cost }) : '' })}`;
         // v0.97.1 (live run finding 5): no work time to add to: the GM still rolls a player's tasks (and judges a failure).
-        if (cook97?.ask) body += await MXL97G.askGmCook(this, c, undefined, snap.testId);
+        // (After the card is posted: the GM's client reads the job from it.)
+        if (cook97?.ask && c.cook97) { c.cook97.asked = true; fu.cook97 = { code: c, testId: String(snap.testId ?? '') }; }
       }
     } catch (err) {
       console.warn('sr2e | code', err);

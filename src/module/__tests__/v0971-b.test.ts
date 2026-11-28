@@ -250,6 +250,9 @@ describe('v0.97.1 finding 6: a Karma re-roll of a decrypt after a survived Poiso
 });
 
 const SH = () => import('../rules/trust.ts');
+let TR: any;
+const T0 = () => TR;
+before(async () => { TR = await import('../rules/trust.ts'); });
 
 describe('v0.97.1 finding 4a: a player\'s tar baby or tar pit derezzes through the GM (VR2 pp. 42–43)', () => {
   /** A tar baby beats a player's defense: the player's client resolves the hit; the IC and the host are the GM's. */
@@ -281,7 +284,10 @@ describe('v0.97.1 finding 4a: a player\'s tar baby or tar pit derezzes through t
     assert.doesNotMatch(text(), /GM: derez/);
     assert.match(text(), /Gm\.tarSent|sent to the GM/);
     const hc = card('hostChange');
-    assert.deepEqual(hc.flags[F].hostChange.crashIc97, { icUuid: tb.uuid, deckerUuid: d.uuid, programId: 'atk' });
+    const atkCard = chat.find((m) => m.flags?.[F]?.attack?.ic?.icUuid === tb.uuid);
+    assert.deepEqual(hc.flags[F].hostChange.crashIc97, { icUuid: tb.uuid, deckerUuid: d.uuid, programId: 'atk', cardId: atkCard.id });
+    assert.equal(T0().mx97OwnerOk(hc.flags[F].hostChange, (u: string) => u === d.uuid), true);
+    assert.equal(T0().mx97OwnerOk(hc.flags[F].hostChange, () => false), false, 'only the decker\'s owner');
     const T = await SH();
     assert.equal(T.gmApplyShapeOk('applyHost', hc.flags[F]), true);
     assert.equal(T.safeAutoApply('applyHost', hc.flags[F], { authorIsGm: false, owns: () => true } as any), false, 'the GM clicks');
@@ -289,6 +295,31 @@ describe('v0.97.1 finding 4a: a player\'s tar baby or tar pit derezzes through t
     g.game.user = GM();
     await SR2Actor.applyHostChange(h.uuid, change());
     assert.equal(tb.system.matrix.monitor, RULES.MATRIX.monitorBoxes, 'derezzed on the GM\'s client');
+    // The same card again (the tar back up): refused, the card was used.
+    tb.system.matrix.monitor = 0; tb.system.prepareDerivedData();
+    const again = await SR2Actor.applyHostChange(h.uuid, change());
+    assert.equal(tb.system.matrix.monitor, 0);
+    assert.match(again, /cardUsed|already applied/);
+  });
+  test('forged: no attack card of that tar, a player-authored one, or not its newest: refused', async () => {
+    const { h, tb, d } = await tarWins();
+    g.game.user = GM();
+    const c0 = change();
+    const atk = chat.find((m) => m.id === c0.crashIc97.cardId);
+    await SR2Actor.applyHostChange(h.uuid, { crashIc97: { ...c0.crashIc97, cardId: 'nope' } } as any);
+    assert.notEqual(tb.system.matrix.monitor, RULES.MATRIX.monitorBoxes);
+    // A player posts a copy of the attack card: not the GM's, and the newest attack is no longer the real one.
+    chat.push({ ...atk, id: 'forged', author: PLAYER() });
+    await SR2Actor.applyHostChange(h.uuid, { crashIc97: { ...c0.crashIc97, cardId: 'forged' } } as any);
+    assert.notEqual(tb.system.matrix.monitor, RULES.MATRIX.monitorBoxes, 'a player-authored copy is no attack');
+    // A newer attack of that tar (the GM's): the older card no longer counts.
+    chat.push({ ...atk, id: 'newer', author: GM() });
+    await SR2Actor.applyHostChange(h.uuid, c0);
+    assert.notEqual(tb.system.matrix.monitor, RULES.MATRIX.monitorBoxes, 'only its newest attack');
+    chat.pop(); chat.pop();
+    await SR2Actor.applyHostChange(h.uuid, c0);
+    assert.equal(tb.system.matrix.monitor, RULES.MATRIX.monitorBoxes);
+    assert.ok(d);
   });
   test('a tar pit too (book); the GM side refuses a forged request (a killer, another host, a loaded utility)', async () => {
     const { h, tb } = await tarWins('tarPit');
@@ -296,17 +327,19 @@ describe('v0.97.1 finding 4a: a player\'s tar baby or tar pit derezzes through t
     g.game.user = GM();
     const killer = icIn(h, { behavior: 'killer', name: 'Killer-6' });
     const d2 = inside(h);
-    const note1 = await SR2Actor.applyHostChange(h.uuid, { crashIc97: { icUuid: killer.uuid, deckerUuid: d2.uuid, programId: 'atk' } } as any);
+    const cardId = change().crashIc97.cardId;
+    const note1 = await SR2Actor.applyHostChange(h.uuid, { crashIc97: { icUuid: killer.uuid, deckerUuid: d2.uuid, programId: 'atk', cardId } } as any);
     assert.equal(killer.system.matrix.monitor, 0);
-    assert.match(note1, /tarNotHere|not a tar/);
-    const note2 = await SR2Actor.applyHostChange(h.uuid, { crashIc97: { icUuid: tb.uuid, deckerUuid: d2.uuid, programId: 'atk' } } as any);
-    assert.notEqual(tb.system.matrix.monitor, RULES.MATRIX.monitorBoxes, 'its utility is still loaded');
-    assert.match(note2, /tarProgram|not crashed/);
+    assert.match(note1, /tarNoCard|attack card/);
+    const note2 = await SR2Actor.applyHostChange(h.uuid, { crashIc97: { icUuid: tb.uuid, deckerUuid: d2.uuid, programId: 'atk', cardId } } as any);
+    assert.notEqual(tb.system.matrix.monitor, RULES.MATRIX.monitorBoxes, 'not that decker\'s attack');
     const other = host();
     await SR2Actor.applyHostChange(other.uuid, change());
     assert.notEqual(tb.system.matrix.monitor, RULES.MATRIX.monitorBoxes, 'not that host\'s IC');
     const T = await SH();
-    assert.equal(T.hostChangeShapeOk({ crashIc97: { icUuid: tb.uuid, deckerUuid: 'x', programId: 'atk', extra: 1 } }), false);
+    assert.equal(T.hostChangeShapeOk({ crashIc97: { icUuid: tb.uuid, deckerUuid: 'x', programId: 'atk', cardId: 'c', extra: 1 } }), false);
+    assert.equal(T.hostChangeShapeOk({ crashIc97: { icUuid: tb.uuid, deckerUuid: 'x', programId: 'atk' } }), false, 'a card id is required');
+    assert.ok(note2);
   });
   test('on the GM\'s client it derezzes at once (no card)', async () => {
     const h = host();
@@ -352,7 +385,11 @@ describe('v0.97.1 finding 4b: a player\'s Slow lowers the GM\'s IC\'s Initiative
     const hc = card('hostChange');
     assert.ok(hc, 'an Apply (GM) card');
     const s97 = hc.flags[F].hostChange.slow97;
-    assert.deepEqual([s97.icUuid, s97.deckerUuid, s97.combatId, s97.combatantId], [ic.uuid, d.uuid, 'c1', 'cb1']);
+    const slowCard = chat.find((m) => m.flags?.[F]?.test?.mutility?.kind === 'slow');
+    assert.deepEqual([s97.icUuid, s97.deckerUuid, s97.combatId, s97.combatantId, s97.testId], [ic.uuid, d.uuid, 'c1', 'cb1', slowCard.flags[F].test.testId]);
+    assert.equal(slowCard.flags[F].test.mutility.applied, s97.delta, 'the card records what was sent');
+    // The Slow card is the player's: the stub's message author must own the decker.
+    d.testUserPermission = (u: any) => Boolean(u?.isGM || u?.id === 'p1');
     assert.ok(s97.delta > 0 && s97.delta % RULES.MXOPS_V97.slowPerAction === 0, String(s97.delta));
     const T = await SH();
     assert.equal(T.gmApplyShapeOk('applyHost', hc.flags[F]), true);
@@ -360,14 +397,28 @@ describe('v0.97.1 finding 4b: a player\'s Slow lowers the GM\'s IC\'s Initiative
     const { hostUuid: _h, sourceUuid: _s, ...c } = hc.flags[F].hostChange;
     await SR2Actor.applyHostChange(h.uuid, c);
     assert.equal(cb.initiative, 19 - s97.delta);
-    // Forged: a huge loss is bounded; another combatant or a reactive IC is refused.
+    // The same card again (or a forged delta): nothing more; its result, not the request, says how much.
     cb.initiative = 30;
     await SR2Actor.applyHostChange(h.uuid, { slow97: { ...s97, delta: 999 } } as any);
-    assert.equal(cb.initiative, 30 - 4 * RULES.MXOPS_V97.slowPerAction);
-    cb.initiative = 30;
-    await SR2Actor.applyHostChange(h.uuid, { slow97: { ...s97, combatantId: 'nope' } } as any);
+    assert.equal(cb.initiative, 30, 'used once');
+    // No Slow card behind it, or a card not by the decker's owner: refused.
+    await SR2Actor.applyHostChange(h.uuid, { slow97: { ...s97, testId: 'nope' } } as any);
     assert.equal(cb.initiative, 30);
+    slowCard.author = { id: 'p2', name: 'Other', isGM: false };
+    const t2 = { ...slowCard.flags[F].test, testId: 'other' };
+    chat.push({ ...slowCard, id: 'x2', flags: { [F]: { test: t2 } } });
+    await SR2Actor.applyHostChange(h.uuid, { slow97: { ...s97, testId: 'other' } } as any);
+    assert.equal(cb.initiative, 30, 'not the decker\'s owner\'s card');
+    // A Karma re-roll with more successes: only the difference, never more than the cap in all.
+    slowCard.author = PLAYER();
+    slowCard.flags[F].test = { ...slowCard.flags[F].test, successes: 30 };
+    await SR2Actor.applyHostChange(h.uuid, { slow97: s97 } as any);
+    assert.equal(cb.initiative, 30 - (4 * RULES.MXOPS_V97.slowPerAction - s97.delta));
+    cb.initiative = 30;
+    await SR2Actor.applyHostChange(h.uuid, { slow97: s97 } as any);
+    assert.equal(cb.initiative, 30, 'capped in all');
     ic.system.behavior = 'tarBaby';
+    slowCard.flags[F].test = { ...slowCard.flags[F].test, successes: 0, mutility: { ...slowCard.flags[F].test.mutility } };
     await SR2Actor.applyHostChange(h.uuid, { slow97: s97 } as any);
     assert.equal(cb.initiative, 30, 'reactive IC: Slow does not work on it');
   });
@@ -472,8 +523,19 @@ describe('v0.97.1 finding 5: a player\'s Cook and Installation Tasks are rolled 
     g.game.user = GM();
     const whispers = chat.filter((m) => m.flags?.[F]?.cook97Job).length;
     const G97 = await import('../applications/mxlife97.ts');
-    const r = await G97.applyCookAsGm({ op: 'cook', actorUuid: a.uuid, key: design.flags[F].test.testId, part: 'mpcp', rating: 4, deckId: '', name: 'Homebrew', projectId: '' }, PLAYER());
+    const r = await G97.applyCookAsGm({ op: 'cook', actorUuid: a.uuid, testId: design.flags[F].test.testId, projectId: '' }, PLAYER());
     assert.equal(r.ok, true);
+    assert.equal(chat.filter((m) => m.flags?.[F]?.cook97Job).length, whispers);
+    // A made-up key (no design card of that test): refused, nothing rolled.
+    const bad = await G97.applyCookAsGm({ op: 'cook', actorUuid: a.uuid, testId: 'madeup', key: 'x' }, PLAYER());
+    assert.equal(bad.ok, false);
+    assert.equal(chat.filter((m) => m.flags?.[F]?.cook97Job).length, whispers);
+    // The GM re-resolving the player's design card: no new roll, no days added.
+    const before = faces.length;
+    const code = { ...design.flags[F].test.code, cook97: { ...design.flags[F].test.code.cook97 } };
+    const again = await G97.cookInstall(code, a);
+    assert.equal(again?.days, 0);
+    assert.equal(faces.length, before);
     assert.equal(chat.filter((m) => m.flags?.[F]?.cook97Job).length, whispers);
     delete g.game.socket;
   });
@@ -481,12 +543,15 @@ describe('v0.97.1 finding 5: a player\'s Cook and Installation Tasks are rolled 
     const a = builder();
     const G97 = await import('../applications/mxlife97.ts');
     const stranger = { id: 'p2', name: 'Other', isGM: false };
-    const refused = await G97.applyCookAsGm({ op: 'cook', actorUuid: a.uuid, key: 'k1', part: 'mpcp', rating: 4 }, stranger);
+    const refused = await G97.applyCookAsGm({ op: 'cook', actorUuid: a.uuid, projectId: 'k1' }, stranger);
     assert.equal(refused.ok, false);
     assert.equal(chat.filter((m) => m.flags?.[F]?.cook97Job).length, 0);
     const pr = await a.startProject({ kind: 'code', area: 'matrix', label: 'Homebrew: MPCP 4', hours: 64 * 24, paid: { nuyen: 0 }, effect: { call: { method: 'finishDeckPart', args: [null, 'Homebrew', 'mpcp', 4, false] } } });
     faces.push(5, 1, 1, 1, 5, 5, 5, 5); // cook 12 days, install 2 days
-    const ok = await G97.applyCookAsGm({ op: 'cook', actorUuid: a.uuid, key: pr.id, projectId: pr.id, part: 'hardening', rating: 9 }, PLAYER());
+    // Two requests at once: one roll.
+    const [ok, twin] = await Promise.all([G97.applyCookAsGm({ op: 'cook', actorUuid: a.uuid, projectId: pr.id, part: 'hardening', rating: 9 }, PLAYER()), G97.applyCookAsGm({ op: 'cook', actorUuid: a.uuid, projectId: pr.id }, PLAYER())]);
+    assert.equal(twin.ok, true);
+    assert.equal(chat.filter((m) => m.flags?.[F]?.cook97Job).length, 1, 'rolled once');
     assert.equal(ok.ok, true);
     assert.match(chat.at(-1).content, /TN 4, base 12 days/, 'the project\'s part and rating, not the request\'s');
     const p = a.projects().find((x: any) => x.id === pr.id);
@@ -494,7 +559,7 @@ describe('v0.97.1 finding 5: a player\'s Cook and Installation Tasks are rolled 
     assert.equal(G97.cookHoursFor(a, pr.id), 14 * 24);
     const pr2 = await a.startProject({ kind: 'code', area: 'matrix', label: 'Homebrew2: MPCP 4', hours: 24, paid: { nuyen: 0 }, effect: { call: { method: 'finishDeckPart', args: [null, 'Homebrew2', 'mpcp', 4, false] } } });
     for (let i = 0; i < 10; i++) faces.push(1, 1, 1, 1, 3, 4); // the cook fails ten times
-    await G97.applyCookAsGm({ op: 'cook', actorUuid: a.uuid, key: pr2.id, projectId: pr2.id }, PLAYER());
+    await G97.applyCookAsGm({ op: 'cook', actorUuid: a.uuid, projectId: pr2.id }, PLAYER());
     assert.equal(a.projects().some((x: any) => x.id === pr2.id), false, 'given up');
     assert.match(chat.at(-1).content, /Cook Task failed after 10 tries/);
   });

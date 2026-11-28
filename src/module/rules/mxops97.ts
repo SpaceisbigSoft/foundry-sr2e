@@ -289,6 +289,29 @@ export function slowRequestDelta(delta: unknown): number {
 // ---------------------------------------------------------------- GM-owned IC a player's card changes (v0.97.1)
 
 /**
+ * The host's record of the cards a player's tar crash or Slow was applied from (`crash|<card id>`, `slow|<test id>`
+ * with the Initiative already taken): GM-owned (the host's flag), so a card is used once and a re-roll only adds the
+ * difference. At most GM_WRITES_MAX entries (the oldest go).
+ */
+export const HOST_GM_WRITES = 'gmWrites97';
+export const GM_WRITES_MAX = 200;
+export interface GmWrite97 { k: string; v: number }
+export function gmWritesOf(raw: unknown): GmWrite97[] {
+  return Array.isArray(raw) ? raw.filter((x: any) => x && typeof x.k === 'string' && x.k.length < 200).map((x: any) => ({ k: String(x.k), v: Math.trunc(num(x.v)) })) : [];
+}
+export function withGmWrite(list: readonly GmWrite97[], k: string, v: number): GmWrite97[] {
+  return [...list.filter((x) => x.k !== k), { k, v: Math.trunc(num(v)) }].slice(-GM_WRITES_MAX);
+}
+/**
+ * A Slow card's Initiative loss in all (VR2 p. 99: slowBook from the card's successes and the IC's resistance), at most
+ * slowPerAction × SLOW_MAX_ACTIONS, and what is still to take off after `applied` (negative: a re-roll gives back).
+ */
+export function slowCardDelta(successes: number, resistance: number, applied: number): { total: number; delta: number } {
+  const total = Math.max(0, slowRequestDelta(slowBook(successes, resistance).initiative));
+  return { total, delta: total - Math.trunc(num(applied)) };
+}
+
+/**
  * Whether this IC crashes itself with the utility it crashed (VR2 pp. 42–43): tar baby and tar pit under
  * RULES.MXIC_V97.tar 'book'; under 'v965' a tar baby when RULES.MATRIX.tar.tarBabyDerezzes.
  */
