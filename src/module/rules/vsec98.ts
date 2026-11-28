@@ -162,6 +162,14 @@ export function datajackCount(names: readonly string[]): number {
   return (names ?? []).filter((n) => /datajack/i.test(String(n ?? ''))).length;
 }
 
+/**
+ * How many datajacks a list of installed ware items holds (v0.98.0 fix P10): an item of the datajack kind
+ * (`system.kind`, as the ware lists and the cyberware rules elsewhere count it) or with "datajack" in its name.
+ */
+export function datajackCountOf(items: ReadonlyArray<{ name?: unknown; system?: { kind?: unknown } }>): number {
+  return (items ?? []).filter((i) => String(i?.system?.kind ?? '') === 'datajack' || /data\s*-?jack/i.test(String(i?.name ?? ''))).length;
+}
+
 // ---------------------------------------------------------------- Motion and vibration sensors (CSH pp. 99–100)
 
 /** Whether a device's sense is tested the book's motion or vibration way. */
@@ -241,9 +249,21 @@ export function lowerLevelRating(chosen: number, firstAvailable: number): number
 
 // ---------------------------------------------------------------- Repair parts (Rigger 2 p. 26)
 
-/** A vehicle's total cost: its own plus its installed modifications'. */
-export function vehicleTotalCost(sys: { cost?: number; mods?: ReadonlyArray<{ installed?: boolean; cost?: number }> }): number {
-  return whole(sys?.cost) + (sys?.mods ?? []).filter((m) => m?.installed).reduce((n, m) => n + whole(m?.cost), 0);
+/**
+ * A vehicle's total cost: its own plus its installed modifications'. `price` (v0.98.0 fix C8): a modification's price
+ * as the sheet shows it (its own cost, else the table's), so a table-priced modification counts too.
+ */
+export function vehicleTotalCost<M extends { installed?: boolean; cost?: number }>(sys: { cost?: number; mods?: ReadonlyArray<M> }, price?: (m: M) => number): number {
+  return whole(sys?.cost) + (sys?.mods ?? []).filter((m) => m?.installed).reduce((n, m) => n + whole(price ? price(m) : m?.cost), 0);
+}
+
+/**
+ * The vehicle's stats before an installed modification went in (v0.98.0 fix C8, under `modSpecs` 'book'): a table
+ * item is priced at the level it reached, not one past it. Any other modification or value: the stats as they are.
+ */
+export function statsBeforeMod<V extends Record<string, any>>(sys: V, m: { installed?: boolean; stat?: string; delta?: number }): V {
+  if (!on('modSpecs') || !m?.installed || !m.stat || !/^[a-z]\w{0,30}$/i.test(m.stat)) return sys;
+  return { ...sys, [m.stat]: num(sys?.[m.stat]) - num(m.delta) };
 }
 
 /** The replacement parts for `boxes` of damage (Rigger 2 p. 26): 5% of the total cost per box; null when off or nothing to price. */

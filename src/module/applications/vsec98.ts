@@ -19,9 +19,11 @@ import { allActors } from '../helpers/actors.ts';
 import { successTest, type SuccessTestResult, type TargetNumberModifier } from '../rules/dice.ts';
 import { DAMAGE_LEVELS } from '../rules/util.ts';
 import { VSEC_CHASSIS_98 } from '../rules/config98/vsec.ts';
+import { modPrice } from '../rules/netrig.ts';
 import * as X from '../rules/vsec98.ts';
 import { authorIsGm, authorOwns, gmMay } from './trust.ts';
 import { movedThisTurn } from './canvas.ts';
+import { withGmLock } from './gmlock.ts';
 
 const G = (): any => (globalThis as any).game;
 const isGm = (): boolean => Boolean(G()?.user?.isGM);
@@ -73,20 +75,22 @@ const keyOf = (uuid: string): string => String(uuid).replace(/\./g, '_').slice(0
 
 /** The repair card's parts line (Rigger 2 p. 26), or ''. */
 export function repairPartsLine(vehicle: any, boxes: number): string {
-  const cost = X.repairPartsCost(boxes, X.vehicleTotalCost(vehicle?.system ?? {}));
+  const sys = vehicle?.system ?? {};
+  // Fix C8: each installed modification at the price the sheet shows (its own cost, else the table's).
+  const cost = X.repairPartsCost(boxes, X.vehicleTotalCost(sys, (m: any) => modPrice(m, sys)));
   if (cost == null) return '';
   const avail = String(vehicle?.system?.availability ?? '').slice(0, 40);
   return `<p class="hint">${tx('SR2E.VSec98.Repair.parts', { cost: cost.toLocaleString(), boxes: Math.max(0, Math.floor(Number(boxes) || 0)), percent: RULES.VSEC_V98.repairPartsPercent, availability: avail ? escHtml(avail) : tx('SR2E.VSec98.Repair.noAvailability') })}</p>`;
 }
 
-/** The installed cyberware's names (for the two-datajack exception). */
-function wareNames(actor: any): string[] {
-  return [...(actor?.items ?? [])].filter((i: any) => ['cyberware', 'bioware'].includes(String(i?.type)) && i.system?.installed).map((i: any) => String(i.name ?? ''));
+/** The installed cyberware (for the two-datajack exception: by kind or name, fix P10). */
+function installedWare(actor: any): any[] {
+  return [...(actor?.items ?? [])].filter((i: any) => ['cyberware', 'bioware'].includes(String(i?.type)) && i.system?.installed);
 }
 
 /** A rigger decking (Rigger 2 p. 16): +1 TN on their Matrix tests. Their own character's values only. */
 export function riggerDeckingMods(actor: any): TargetNumberModifier[] {
-  const p = X.riggerDeckingPenalty({ vcr: Number(actor?.system?.derived?.rigging?.vcr ?? 0), datajacks: X.datajackCount(wareNames(actor)) });
+  const p = X.riggerDeckingPenalty({ vcr: Number(actor?.system?.derived?.rigging?.vcr ?? 0), datajacks: X.datajackCountOf(installedWare(actor)) });
   return p.tn ? [{ id: 'riggerDecking98', label: tx('SR2E.VSec98.Decking.tn'), value: p.tn }] : [];
 }
 
@@ -269,13 +273,18 @@ function reqOf(message: any): { siteUuid: string; intruderUuid: string; step: X.
   return { siteUuid: q.siteUuid, intruderUuid: q.intruderUuid, step: q.step, dice: int(q.dice, 0, 40, 0), tn: int(q.tn, 2, 30, 2), need: int(q.need, 1, 4, 1), alertOnFail: q.alertOnFail === true };
 }
 
+/** A card's dice: each Roll's faces in order (one array per Roll, bounded). */
+export function throwsOf(message: any): number[][] {
+  return [...(message?.rolls ?? [])].slice(0, 60).map((r: any) => [...(r?.dice ?? [])].flatMap((t: any) => [...(t?.results ?? [])].map((x: any) => Math.floor(Number(x?.result)))).slice(0, 60));
+}
+
 /**
  * Count a roll card's successes again from its own dice (null when its dice don't make exactly this test): each roll
  * the test asks for (the first throw, then each throw of the sixes re-rolled) must be the card's next Roll, with
  * exactly that many dice, none of them other than 1–6, and no Roll left over.
  */
 export async function replayTest(message: any, dice: number, tn: number): Promise<SuccessTestResult | null> {
-  const throws: number[][] = [...(message?.rolls ?? [])].map((r: any) => [...(r?.dice ?? [])].flatMap((t: any) => [...(t?.results ?? [])].map((x: any) => Math.floor(Number(x?.result)))));
+  const throws = throwsOf(message);
   if (throws.some((t) => t.some((f) => !(f >= 1 && f <= 6)))) return null;
   let i = 0;
   let bad = false;
@@ -417,25 +426,131 @@ export async function openVsecTool(): Promise<void> {
 
 // ================================================================ Card buttons
 
+/**
+ * v0.98.0 fix C6: a GM write step after its dialogs, under the GM lock; inline inside a card's re-run (runAsAuthor
+ * holds the lock: waiting for it would wait for itself), as applications/core95.ts gmRun does.
+ */
+function gmStep<T>(fn: () => Promise<T>): Promise<T> {
+  const cls = actorClass();
+  return cls?.actingAuthor || cls?.inAuthorRun ? fn() : withGmLock(fn);
+}
+
+/** v0.98.0 fix P5: the card buttons in flight on this client (a double click runs once). */
+const busy = new Set<string>();
+async function once(key: string, button: HTMLButtonElement | null, fn: () => Promise<void>): Promise<void> {
+  if (busy.has(key)) return;
+  busy.add(key);
+  if (button) button.disabled = true;
+  try { await fn(); } finally {
+    busy.delete(key);
+    if (button) button.disabled = false;
+  }
+}
+
+/** Write a flag on a chat card the GM side judged (marked as the relay's own write, then checked that it landed). */
+async function markCard(message: any, key: string, value: unknown): Promise<boolean> {
+  if (typeof message?.update === 'function') await message.update({ [`flags.${SYSTEM_ID}.${key}`]: value }, { sr2eRelay: true });
+  else await message?.setFlag?.(SYSTEM_ID, key, value);
+  return message?.getFlag?.(SYSTEM_ID, key) != null && message?.getFlag?.(SYSTEM_ID, key) !== false;
+}
+
+/** On a GM's request card (written by the lead GM): the first roll card posted for it, and that card's dice then. */
+export const PIN_FLAG = 'vsec98First';
+/** On a GM's request card: used up (applied). On a GM's damage card: resisted (the resistance card's id). */
+const USED_FLAG = 'vsec98Used';
+const DONE_FLAG = 'vsec98Done';
+
+const msg = (id: unknown): any => (typeof id === 'string' && id ? G()?.messages?.get?.(id.slice(0, 64)) ?? null : null);
+const sameThrows = (a: number[][], b: number[][]): boolean => JSON.stringify(a) === JSON.stringify(b);
+
+/** A request card's pinned first roll (only a GM's card is read). */
+function pinOf(req: any): { id: string; dice: number[][] } | null {
+  if (!authorIsGm(req)) return null;
+  const p: any = req?.flags?.[SYSTEM_ID]?.[PIN_FLAG];
+  if (!p || typeof p.id !== 'string' || !p.id || !Array.isArray(p.dice)) return null;
+  return { id: p.id.slice(0, 64), dice: p.dice.slice(0, 60).map((t: unknown) => (Array.isArray(t) ? t.slice(0, 60).map((f) => Math.floor(Number(f))) : [])) };
+}
+
+/**
+ * The lead GM, when a roll card is posted (createChatMessage): the first roll card for a request by the intruder's
+ * owner (or a GM) is pinned on the GM's request card with its dice. Later cards for that request don't count.
+ */
+export async function pinFirstRoll(message: any): Promise<boolean> {
+  if (!isGm() || !X.on('access')) return false;
+  const req = msg(message?.flags?.[SYSTEM_ID]?.vsec98Res?.reqId);
+  const q = req ? reqOf(req) : null;
+  if (!q || pinOf(req) || req.getFlag?.(SYSTEM_ID, USED_FLAG) || !authorOwns(message, q.intruderUuid)) return false;
+  const id = String(message?.id ?? '');
+  if (!id) return false;
+  await markCard(req, PIN_FLAG, { id, dice: throwsOf(message) });
+  return pinOf(req)?.id === id;
+}
+
+/**
+ * The lead GM, when a pinned roll card is deleted before it was applied (deleteChatMessage): a GM card says so, with
+ * an Apply that counts it as a failed test (the book's failure: an alert where the step alerts).
+ */
+export async function lostRoll(message: any): Promise<any | null> {
+  if (!isGm() || !X.on('access')) return null;
+  const reqId = String(message?.flags?.[SYSTEM_ID]?.vsec98Res?.reqId ?? '').slice(0, 64);
+  const req = msg(reqId);
+  const q = req ? reqOf(req) : null;
+  if (!q || pinOf(req)?.id !== String(message?.id ?? '') || req.getFlag?.(SYSTEM_ID, USED_FLAG)) return null;
+  const intruder = sync(q.intruderUuid);
+  return post(`<p><em>${tx('SR2E.VSec98.gmOnly')}</em> ${tx('SR2E.VSec98.Access.lostCard', { intruder: name(intruder), step: escHtml(tKey(`SR2E.VSec98.Step.${q.step}`)) })}</p><p><button type="button" data-sr2e-action="vsec98Apply">${tx('SR2E.VSec98.Access.apply')}</button></p>`,
+    { whisper: gmIds(), flags: { [SYSTEM_ID]: { vsec98Lost: { reqId } } } });
+}
+
+/**
+ * The lead GM, when a resistance card for rigger combat damage is posted: the GM's damage card it names is marked
+ * resisted, when the resistance card's author owns that card's loser (or is a GM).
+ */
+export async function markResisted(message: any): Promise<boolean> {
+  if (!isGm() || !X.on('riggerCombat')) return false;
+  const hit = msg(message?.flags?.[SYSTEM_ID]?.test?.vsec98HitId);
+  const h: any = hit && authorIsGm(hit) ? hit.flags?.[SYSTEM_ID]?.vsec98Hit : null;
+  if (!h || !uuidOk(h.loserUuid) || !authorOwns(message, h.loserUuid) || hit.getFlag?.(SYSTEM_ID, DONE_FLAG)) return false;
+  return markCard(hit, DONE_FLAG, String(message?.id ?? '') || true);
+}
+
+/** Every client's chat hooks (sr2e-system.ts); only the lead GM acts. Each step waits for the GM lock (no card awaits it). */
+export function registerVsec98(isLead: () => boolean): void {
+  const H: any = (globalThis as any).Hooks;
+  const run = (what: () => Promise<unknown>): void => { void withGmLock(what).catch((err) => console.warn('sr2e | building security', err)); };
+  H?.on?.('createChatMessage', (m: any) => {
+    const f: any = m?.flags?.[SYSTEM_ID];
+    if (!f || !isLead()) return;
+    if (f.vsec98Res) run(() => pinFirstRoll(m));
+    if (f.test?.vsec98HitId) run(() => markResisted(m));
+  });
+  H?.on?.('deleteChatMessage', (m: any) => {
+    if (m?.flags?.[SYSTEM_ID]?.vsec98Res && isLead()) run(() => lostRoll(m));
+  });
+}
+
 export async function onCard(message: any, button: HTMLButtonElement, action: string): Promise<void> {
   const flags: any = message?.flags?.[SYSTEM_ID] ?? {};
+  const key = `${action}:${String(message?.id ?? '')}`;
   if (action === 'vsec98Roll') {
     const q = reqOf(message);
     if (!q) { warn(tx('SR2E.VSec98.gmCardOnly')); return; }
     const intruder: any = await (globalThis as any).fromUuid(q.intruderUuid);
     if (!intruder) return;
     if (!isGm() && !intruder.isOwner) { warn(tx('SR2E.VSec98.ownerOnly', { name: name(intruder) })); return; }
-    button.disabled = true;
-    const rolls: any[] = [];
-    const r = await successTest({ dice: q.dice, targetNumber: q.tn, roll: roller(rolls) });
-    const ok = X.accessOutcome(r.successes, q).done;
-    await post(`${rollLine(tx('SR2E.VSec98.Access.rolled', { intruder: name(intruder), step: escHtml(tKey(`SR2E.VSec98.Step.${q.step}`)) }), r)}<p><strong>${ok ? tx('SR2E.VSec98.Access.done', { need: q.need }) : tx('SR2E.VSec98.Access.failed', { need: q.need })}</strong></p><p><button type="button" data-sr2e-action="vsec98Apply">${tx('SR2E.VSec98.Access.apply')}</button></p>`,
-      { speaker: speaker(intruder), rolls, whisper: [...gmIds(), ...ownerIds(intruder)], flags: { [SYSTEM_ID]: { vsec98Res: { reqId: String(message.id ?? '') } } } });
+    await once(key, null, async () => {
+      button.disabled = true;
+      const rolls: any[] = [];
+      const r = await successTest({ dice: q.dice, targetNumber: q.tn, roll: roller(rolls) });
+      const ok = X.accessOutcome(r.successes, q).done;
+      await post(`${rollLine(tx('SR2E.VSec98.Access.rolled', { intruder: name(intruder), step: escHtml(tKey(`SR2E.VSec98.Step.${q.step}`)) }), r)}<p><strong>${ok ? tx('SR2E.VSec98.Access.done', { need: q.need }) : tx('SR2E.VSec98.Access.failed', { need: q.need })}</strong></p><p><button type="button" data-sr2e-action="vsec98Apply">${tx('SR2E.VSec98.Access.apply')}</button></p>`,
+        { speaker: speaker(intruder), rolls, whisper: [...gmIds(), ...ownerIds(intruder)], flags: { [SYSTEM_ID]: { vsec98Res: { reqId: String(message.id ?? '') } } } });
+    });
     return;
   }
   if (action === 'vsec98Apply') {
     if (!isGm()) { warn(tx('SR2E.VSec98.gmOnlyButton')); return; }
-    await applyAccess(message);
+    const reqKey = `apply:${String(flags.vsec98Res?.reqId ?? flags.vsec98Lost?.reqId ?? message?.id ?? '')}`;
+    await once(reqKey, button, async () => { await applyAccess(message); });
     return;
   }
   if (action === 'vsec98Resist') {
@@ -444,26 +559,50 @@ export async function onCard(message: any, button: HTMLButtonElement, action: st
     const loser: any = uuidOk(h?.loserUuid) ? await (globalThis as any).fromUuid(h.loserUuid) : null;
     if (!loser) return;
     if (!isGm() && !loser.isOwner) { warn(tx('SR2E.VSec98.ownerOnly', { name: name(loser) })); return; }
-    const done: string[] = Array.isArray(flag(loser, RESISTED_FLAG)) ? (flag(loser, RESISTED_FLAG) as unknown[]).map(String) : [];
-    if (message.getFlag?.(SYSTEM_ID, 'vsec98Done') || done.includes(String(message.id))) { warn(tx('SR2E.VSec98.already')); return; }
-    const level: DamageLevel = (DAMAGE_LEVELS as readonly string[]).includes(h.level) ? h.level : 'L';
-    const cap = Math.min(int(h.poolCap, 0, 30, 0), Number(loser.system?.derived?.controlPoolLeft ?? 0));
-    let pool = 0;
-    if (cap > 0) {
-      const p = await dialogs()?.prompt?.({
-        window: { title: tx('SR2E.VSec98.Combat.resistTitle') },
-        content: numIn(tx('SR2E.VSec98.Combat.resistPool', { cap }), 'pool', 0, 0, cap),
-        ok: { label: tx('SR2E.VSec98.roll2'), callback: (_e: Event, b: any) => int(b.form.elements.pool.value, 0, cap, 0) },
-        rejectClose: false,
-      });
-      if (p == null) return;
-      pool = p;
-    }
-    button.disabled = true;
-    await loser.resistRiggerCombat98?.({ tn: int(h.tn, 2, 40, 2), level, attribute: h.attribute === 'willpower' ? 'willpower' : 'body', pool });
-    if (message.isOwner) await message.setFlag(SYSTEM_ID, 'vsec98Done', true);
-    else await loser.setFlag(SYSTEM_ID, RESISTED_FLAG, [...done, String(message.id)].slice(-40));
+    await once(key, button, () => resist(message, h, loser));
   }
+}
+
+/**
+ * Rigger combat's resistance from the GM's damage card. Resisted state is on that card (the GM's, marked by the lead
+ * GM when the loser's resistance card is posted, or by the GM's own resist). A player is also stopped by their own
+ * record (`vsec98Resisted`, which only stops themselves); a GM's click never reads it, and a GM may resist a card
+ * already marked after confirming.
+ */
+async function resist(message: any, h: any, loser: any): Promise<void> {
+  const id = String(message.id);
+  const marked = Boolean(message.getFlag?.(SYSTEM_ID, DONE_FLAG));
+  const done: string[] = Array.isArray(flag(loser, RESISTED_FLAG)) ? (flag(loser, RESISTED_FLAG) as unknown[]).map(String) : [];
+  if (!isGm() && (marked || done.includes(id))) { warn(tx('SR2E.VSec98.already')); return; }
+  if (isGm() && marked) {
+    const again = await dialogs()?.confirm?.({ window: { title: tx('SR2E.VSec98.Combat.resistTitle') }, content: `<p>${tx('SR2E.VSec98.Combat.resistAgain', { name: name(loser) })}</p>`, rejectClose: false });
+    if (!again) return;
+  }
+  const level: DamageLevel = (DAMAGE_LEVELS as readonly string[]).includes(h.level) ? h.level : 'L';
+  const cap = Math.min(int(h.poolCap, 0, 30, 0), Number(loser.system?.derived?.controlPoolLeft ?? 0));
+  let pool = 0;
+  if (cap > 0) {
+    const p = await dialogs()?.prompt?.({
+      window: { title: tx('SR2E.VSec98.Combat.resistTitle') },
+      content: numIn(tx('SR2E.VSec98.Combat.resistPool', { cap }), 'pool', 0, 0, cap),
+      ok: { label: tx('SR2E.VSec98.roll2'), callback: (_e: Event, b: any) => int(b.form.elements.pool.value, 0, cap, 0) },
+      rejectClose: false,
+    });
+    if (p == null) return;
+    pool = p;
+  }
+  const r = { tn: int(h.tn, 2, 40, 2), level, attribute: (h.attribute === 'willpower' ? 'willpower' : 'body') as 'body' | 'willpower', pool, hitId: id };
+  if (!isGm()) {
+    await loser.resistRiggerCombat98?.(r);
+    await loser.setFlag(SYSTEM_ID, RESISTED_FLAG, [...done, id].slice(-40));
+    return;
+  }
+  await gmStep(async () => {
+    // Re-checked under the lock: the lead GM may have marked it meanwhile (a player's resistance card).
+    if (!marked && message.getFlag?.(SYSTEM_ID, DONE_FLAG)) { warn(tx('SR2E.VSec98.already')); return; }
+    await loser.resistRiggerCombat98?.(r);
+    await markCard(message, DONE_FLAG, id);
+  });
 }
 
 /** The first roll card posted for a request by the intruder's owner (or a GM), in chat order; null if none is found. */
@@ -475,42 +614,64 @@ function firstRollFor(reqId: string, intruderUuid: string): any | null {
 
 /**
  * The GM applies an access roll: the request must be a GM's card, the roll card's author must own the intruder, and
- * the successes are counted again from the roll card's dice with the request's dice and TN. Done: the site records
- * the step; failed decryption or protocols: the site goes on alert. Once per roll card.
+ * it must be the roll card the lead GM pinned on the request when it was posted (without a pin: the first live roll
+ * card). The successes are counted again from its dice with the request's dice and TN. A pinned card since deleted,
+ * or whose dice differ from the pinned ones (or don't make the test), counts as a failed test. Done: the site records
+ * the step; failed decryption or protocols: the site goes on alert. The request is used up (GM-written) once applied.
  */
 export async function applyAccess(message: any): Promise<boolean> {
   if (!isGm()) return false;
-  if (message?.getFlag?.(SYSTEM_ID, 'vsec98Applied')) { warn(tx('SR2E.VSec98.already')); return false; }
-  const reqId = String(message?.flags?.[SYSTEM_ID]?.vsec98Res?.reqId ?? '');
-  const req = reqId ? G()?.messages?.get?.(reqId) : null;
+  const lost: any = authorIsGm(message) ? message?.flags?.[SYSTEM_ID]?.vsec98Lost : null;
+  const reqId = String(lost?.reqId ?? message?.flags?.[SYSTEM_ID]?.vsec98Res?.reqId ?? '').slice(0, 64);
+  const req = msg(reqId);
   const q = req ? reqOf(req) : null;
   if (!q) { warn(tx('SR2E.VSec98.gmCardOnly')); return false; }
-  if (!authorOwns(message, q.intruderUuid)) { warn(tx('SR2E.VSec98.Access.notTheirs')); return false; }
-  // One roll per request: the request is used up once applied, and only the intruder side's first roll card counts.
-  if (req.getFlag?.(SYSTEM_ID, 'vsec98Used')) { warn(tx('SR2E.VSec98.already')); return false; }
-  const first = firstRollFor(reqId, q.intruderUuid);
-  if (first && first !== message) { warn(tx('SR2E.VSec98.Access.notFirst')); return false; }
-  const r = await replayTest(message, q.dice, q.tn);
-  if (!r) { warn(tx('SR2E.VSec98.Access.badRoll')); return false; }
+  if (!lost && !authorOwns(message, q.intruderUuid)) { warn(tx('SR2E.VSec98.Access.notTheirs')); return false; }
+  if (req.getFlag?.(SYSTEM_ID, USED_FLAG)) { warn(tx('SR2E.VSec98.already')); return false; }
+  // The pinned first roll; without one (no lead GM saw it posted), the first roll card still in the chat.
+  let pin = pinOf(req);
+  if (!pin) {
+    const first = firstRollFor(reqId, q.intruderUuid);
+    if (!first) { warn(tx('SR2E.VSec98.Access.notFirst')); return false; }
+    pin = { id: String(first.id), dice: throwsOf(first) };
+  }
+  const pinned = msg(pin.id);
+  let fail: '' | 'lost' | 'changed' = '';
+  let r: SuccessTestResult | null = null;
+  if (!pinned) fail = 'lost';
+  else if (pinned !== message) { warn(tx('SR2E.VSec98.Access.notFirst')); return false; }
+  else if (!sameThrows(throwsOf(message), pin.dice)) fail = 'changed';
+  else {
+    r = await replayTest(message, q.dice, q.tn);
+    if (!r) fail = 'changed';
+  }
   const site: any = await (globalThis as any).fromUuid(q.siteUuid);
   const intruder: any = sync(q.intruderUuid);
   if (site?.type !== 'site') return false;
-  const out = X.accessOutcome(r.successes, q);
-  // The GM sees what the re-counted roll does before the site changes (a player's card; trust.ts gmMay).
-  const what = tx('SR2E.VSec98.Access.confirm', { intruder: String(intruder?.name ?? ''), step: tKey(`SR2E.VSec98.Step.${q.step}`), successes: r.successes, need: q.need });
-  if (!(await gmMay(message, { title: tx('SR2E.VSec98.Access.title'), lines: [what], sources: [q.intruderUuid] }))) return false;
-  const v = siteValues(site);
-  const k = keyOf(q.intruderUuid);
-  let note: string;
-  if (out.done) {
-    await saveSite(site, { ...v, access: { ...v.access, [k]: Math.max(v.access[k] ?? 0, X.stepIndex(q.step)) } });
-    note = tx('SR2E.VSec98.Access.recorded', { intruder: name(intruder), step: escHtml(tKey(`SR2E.VSec98.Step.${q.step}`)) });
-  } else if (out.alert) {
-    await actorClass()?.changeSite?.(site, { minAlert: out.alert }, tx('SR2E.VSec98.Access.alertLabel', { intruder: String(intruder?.name ?? '') }), String(site.uuid));
-    note = tx('SR2E.VSec98.Access.alerted', { alert: escHtml(out.alert) });
-  } else note = tx('SR2E.VSec98.Access.noEffect');
-  await message.setFlag(SYSTEM_ID, 'vsec98Applied', true);
-  await req.setFlag?.(SYSTEM_ID, 'vsec98Used', true);
-  await post(`<p><em>${tx('SR2E.VSec98.gmOnly')}</em> ${note}</p>`, { whisper: gmIds() });
-  return true;
+  const successes = r ? r.successes : 0;
+  const out = X.accessOutcome(successes, q);
+  // The GM sees what the roll does before the site changes (a player's card; trust.ts gmMay).
+  const who = String(intruder?.name ?? ''), step = tKey(`SR2E.VSec98.Step.${q.step}`);
+  let what: string;
+  if (fail === 'lost') what = tx('SR2E.VSec98.Access.confirmLost', { intruder: who, step, need: q.need });
+  else if (fail === 'changed') what = tx('SR2E.VSec98.Access.confirmChanged', { intruder: who, step, need: q.need });
+  else what = tx('SR2E.VSec98.Access.confirm', { intruder: who, step, successes, need: q.need });
+  if (!(await gmMay(message, { title: tx('SR2E.VSec98.Access.title'), lines: [what], sources: lost ? [] : [q.intruderUuid] }))) return false;
+  return gmStep(async () => {
+    // Re-checked under the lock, then used up first: a second Apply (another GM, a double click) finds it used.
+    if (req.getFlag?.(SYSTEM_ID, USED_FLAG)) { warn(tx('SR2E.VSec98.already')); return false; }
+    if (!(await markCard(req, USED_FLAG, true))) return false;
+    const v = siteValues(site);
+    const k = keyOf(q.intruderUuid);
+    let note: string;
+    if (out.done) {
+      await saveSite(site, { ...v, access: { ...v.access, [k]: Math.max(v.access[k] ?? 0, X.stepIndex(q.step)) } });
+      note = tx('SR2E.VSec98.Access.recorded', { intruder: name(intruder), step: escHtml(tKey(`SR2E.VSec98.Step.${q.step}`)) });
+    } else if (out.alert) {
+      await actorClass()?.changeSite?.(site, { minAlert: out.alert }, tx('SR2E.VSec98.Access.alertLabel', { intruder: String(intruder?.name ?? '') }), String(site.uuid));
+      note = tx('SR2E.VSec98.Access.alerted', { alert: escHtml(out.alert) });
+    } else note = tx('SR2E.VSec98.Access.noEffect');
+    await post(`<p><em>${tx('SR2E.VSec98.gmOnly')}</em> ${note}</p>`, { whisper: gmIds() });
+    return true;
+  });
 }

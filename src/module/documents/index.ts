@@ -12179,6 +12179,8 @@ export class SR2Actor extends Actor {
     spellUse?: SorceryUse;
     /** v0.96.0 (RULES.SORCERY_V96.centeringUse): successes added when the test got at least one. */
     bonusSuccesses96?: number;
+    /** v0.98.0 fix S1: extra snapshot fields naming what the card answers (rigger combat's damage card). */
+    tag?: Record<string, string>;
   }): Promise<void> {
     const narrow = o.spellUse && (o.spellUse.conc || o.spellUse.spec) ? o.spellUse : null;
     const pool = Math.max(0, Math.min(o.poolDice, narrow ? this.spellPoolFor(narrow) : this.sys.derived.spellPoolLeft as number));
@@ -12202,7 +12204,7 @@ export class SR2Actor extends Actor {
     const bonus96 = result.successes > 0 && !result.botch ? Math.max(0, Math.floor(Number(o.bonusSuccesses96) || 0)) : 0;
     if (bonus96) result.successes += bonus96;
     await this.#post(this.#snapshot(tx('SR2E.Card.Actor.tn5', { label: o.label, level: o.level, targetNumber: o.targetNumber, part: o.extraDice ? ` [${o.extraNote ?? tx('SR2E.Card.Actor.dice5', { extraDice: o.extraDice })}]` : '', part2: o.type === 'physical' ? (o.physicalNote ?? tx('SR2E.Card.Actor.forceOverMagicPhysical')) : '' }), result, {
-      kind: 'soak', ...(bonus96 ? { center96: bonus96 } : {}),
+      kind: 'soak', ...(bonus96 ? { center96: bonus96 } : {}), ...((o.tag ?? {}) as any),
       soak: { mode: 'stage', noun: o.noun ?? 'drain', level: o.level, type: o.type, body: this.sys.attributes.body.total, before: this.#monitor() },
     }), result, rolls);
   }
@@ -18834,12 +18836,14 @@ export class SR2Actor extends Actor {
    * v0.98.0 (RULES.VSEC_V98.riggerCombat 'book', Rigger 2 pp. 79–80): resist rigger combat's Stun: Body (a decker:
    * Willpower, as non-lethal black IC) against the winner's Willpower, plus Control Pool dice up to Body (spent).
    */
-  async resistRiggerCombat98(r: { tn: number; level: DamageLevel; attribute: 'body' | 'willpower'; pool: number }): Promise<void> {
+  async resistRiggerCombat98(r: { tn: number; level: DamageLevel; attribute: 'body' | 'willpower'; pool: number; hitId?: string }): Promise<void> {
     const pool = Math.max(0, Math.min(Math.floor(Number(r.pool) || 0), Number(this.sys.derived?.controlPoolLeft ?? 0), Number(this.sys.attributes?.body?.total ?? 0)));
     if (pool > 0) await this.#spendPool('control', pool);
     await this.#drainTest({
       label: tx('SR2E.VSec98.Combat.resistLabel'), attribute: r.attribute === 'willpower' ? 'willpower' : 'body', targetNumber: r.tn,
       level: r.level, type: 'stun', poolDice: 0, noun: 'damage', ...(pool ? { extraDice: pool, extraNote: tx('SR2E.VSec98.Combat.poolNote', { pool }) } : {}),
+      // v0.98.0 fix S1: the GM's damage card this resists (the lead GM marks that card resisted: applications/vsec98.ts).
+      ...(r.hitId ? { tag: { vsec98HitId: String(r.hitId).slice(0, 64) } } : {}),
     });
   }
 

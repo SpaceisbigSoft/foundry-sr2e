@@ -1074,7 +1074,7 @@ export class CharacterDataModel extends foundry.abstract.TypeDataModel {
     Object.assign(sys.derived, riggerDerived(sys, installed, d.reaction, bonus, [...((this as any).parent?.items ?? [])], tw.pools.control ?? 0,
       { quickness: Number(totals.quickness ?? 0), intelligence: Number(totals.intelligence ?? 0), encephalon: Number(cyber.encephalon ?? 0) }));
     // v0.98.0 (RULES.VSEC_V98.riggerDecking 'book', Rigger 2 p. 16): a rigger's Hacking Pool is lowered by the VCR level.
-    const rd98 = VS98.riggerDeckingPenalty({ vcr: Number(sys.derived.rigging?.vcr ?? 0), datajacks: VS98.datajackCount(installed.map((i: any) => String(i.name ?? ''))) });
+    const rd98 = VS98.riggerDeckingPenalty({ vcr: Number(sys.derived.rigging?.vcr ?? 0), datajacks: VS98.datajackCountOf(installed) });
     if (rd98.pool && sys.derived.hackingPool > 0) {
       sys.derived.hackingPool = Math.max(0, sys.derived.hackingPool - rd98.pool);
       sys.derived.hackingPoolLeft = Math.max(0, sys.derived.hackingPool - (sys.poolSpent?.hacking ?? 0));

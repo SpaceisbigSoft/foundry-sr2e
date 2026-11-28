@@ -57,6 +57,7 @@ import { registerTools, openTools, runTool } from "./applications/tools.ts";
 import { registerTeamKarma, SR2TeamKarma } from './applications/teamkarma.ts';
 import { registerSpirits96 } from './applications/spirits96.ts';
 import { registerMxOps97 } from './applications/mxops97.ts';
+import { registerVsec98 } from './applications/vsec98.ts';
 import { registerTrade942, TRADE_API } from './applications/trade942.ts';
 import { registerCatalogue942, removeOldCatalogueCopy, openCataloguePack } from './applications/catalogue942.ts';
 import { registerRollRequests, openRollRequestDialog, postRollRequest } from './applications/rollrequest.ts';
@@ -206,6 +207,8 @@ export class SR2System {
     registerSpirits96();
     // v0.97.0: the system operations' upkeep (passcodes at an active alert, decoys and located icons on leaving a host).
     registerMxOps97(isLeadGm);
+    // v0.98.0 fix S1/S2 (RULES.VSEC_V98): the lead GM pins an access step's first roll and marks rigger combat damage resisted.
+    registerVsec98(isLeadGm);
     // v0.94.2: give, stash and loot (item 28); the GM's catalogue in a world compendium (item 32).
     registerTrade942();
     registerCatalogue942();

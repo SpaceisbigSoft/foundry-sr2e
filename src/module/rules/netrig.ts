@@ -1,5 +1,5 @@
 import { RULES } from './config.ts';
-import { modSpec98, type ModVehicle } from './vsec98.ts';
+import { modSpec98, statsBeforeMod, type ModVehicle } from './vsec98.ts';
 import type { TargetNumberModifier } from './dice.ts';
 import { utilitySize, IC_BEHAVIORS, type IcBehavior } from './matrix.ts';
 import { deckPartBook } from './matrix923.ts';
@@ -258,6 +258,16 @@ export function modificationEffect(kind: string, rating: number, body: number, v
   // v0.78.0 (RULES.BOOK_V78.adaptation 'text'): the rigger adaptation is a flat price on top of the remote adaptation.
   if (kind === 'adaptation' && RULES.BOOK_V78.adaptation === 'text') return { stat: d.stat, delta: 0, cost: RULES.BOOK_V78.riggerAdaptationCost * Math.max(1, r), label: d.label };
   return { stat: d.stat, delta: d.perRating * r, cost: d.cost * r * (d.perBody ? Math.max(1, body) : 1), label: d.label };
+}
+
+/**
+ * A listed modification's price: its own cost, else the table's for this vehicle (v0.98.0 fix C8: an installed one is
+ * priced from the stats before it went in, under RULES.VSEC_V98.modSpecs 'book'; otherwise as before).
+ */
+export function modPrice(m: { kind?: string; rating?: number; cost?: number; installed?: boolean; stat?: string; delta?: number }, sys: ModVehicle & Record<string, any>): number {
+  if (Number(m?.cost) > 0) return Number(m.cost);
+  const v = statsBeforeMod(sys ?? {}, m);
+  return modificationEffect(String(m?.kind ?? ''), Number(m?.rating ?? 0), Number(v?.body ?? 0), v).cost;
 }
 
 /** v0.78.0 (RULES.BOOK_V78.adaptation 'text'): what must be installed first (the remote adaptation before the rigger's), or null. */

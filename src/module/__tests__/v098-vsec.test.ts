@@ -12,7 +12,7 @@ import { oldWay } from '../rules/__tests__/oldway.ts';
 import * as X from '../rules/vsec98.ts';
 import { HOUSE_VSEC_V98, VSEC_CHASSIS_98 } from '../rules/config98/vsec.ts';
 import { VSEC_V971_WAY } from '../rules/__tests__/vsec971.ts';
-import { modificationEffect } from '../rules/netrig.ts';
+import { modificationEffect, modPrice } from '../rules/netrig.ts';
 import { modInstallPlan } from '../rules/remnants.ts';
 
 /** English from public/lang/en.json, with this area's draft while it isn't merged. */
@@ -20,8 +20,10 @@ function english(): Record<string, string> {
   const flat: Record<string, string> = {};
   const walk = (o: unknown, p: string): void => { if (typeof o === 'string') { flat[p] = o; return; } if (o && typeof o === 'object') for (const [k, v] of Object.entries(o)) walk(v, p ? `${p}.${k}` : k); };
   walk(JSON.parse(readFileSync(join('public', 'lang', 'en.json'), 'utf8')), '');
-  const draft = join('i18n-drafts', 'vsec98.json');
-  if (existsSync(draft)) Object.assign(flat, JSON.parse(readFileSync(draft, 'utf8')));
+  for (const f of ['vsec98.json', 'vsec98-fix.json']) {
+    const draft = join('i18n-drafts', f);
+    if (existsSync(draft)) Object.assign(flat, JSON.parse(readFileSync(draft, 'utf8')));
+  }
   return flat;
 }
 (globalThis as any).__SR2E_EN__ = { ...((globalThis as any).__SR2E_EN__ ?? {}), ...english() };
@@ -290,5 +292,40 @@ describe('vehicle design (Rigger 2 pp. 108–114, 170–171)', () => {
   test('v971: no calculator', (t) => {
     t.after(oldWay({ 'VSEC_V98.design': 'v971' }));
     assert.equal(X.designPrice({ dpv: 154, category: 'car' }), null);
+  });
+});
+
+describe('review fixes (v0.98.0 fix vsec): datajacks, modification prices, the Install dialog', () => {
+  test('P10: a datajack counts by its kind or its name', () => {
+    assert.equal(X.datajackCountOf([{ name: 'Rigger jack', system: { kind: 'datajack' } }, { name: 'Data-jack (alpha)' }, { name: 'Smartlink', system: { kind: 'smartlink' } }]), 2);
+    assert.equal(X.datajackCount(['Rigger jack']), 0, 'the names alone miss it');
+  });
+  test('C8a: an installed table modification with no cost is priced at the level it reached, not one more', (t) => {
+    const sys = { body: 3, sensor: 3, cost: 40000 };
+    const m = { kind: 'sensor', rating: 1, installed: true, cost: 0, stat: 'sensor', delta: 1 };
+    assert.equal(modPrice(m, sys), 25000, 'level 3 (Rigger 2 p. 136)');
+    assert.equal(modificationEffect('sensor', 1, 3, sys).cost, 50000, 'the next level, as the sheet priced it before');
+    assert.equal(modPrice({ ...m, installed: false }, { ...sys, sensor: 2 }), 25000, 'not installed: from the stats as they are');
+    assert.equal(modPrice({ ...m, cost: 1234 }, sys), 1234, 'its own cost');
+    t.after(oldWay({ 'VSEC_V98.modSpecs': 'v971' }));
+    assert.equal(modPrice(m, sys), modificationEffect('sensor', 1, 3, sys).cost, 'v971: as before');
+  });
+  test('C8b: the vehicle\'s total counts table-priced modifications with the price function', () => {
+    const sys = { cost: 1000, mods: [{ installed: true, cost: 0 }, { installed: true, cost: 50 }, { installed: false, cost: 9 }] };
+    assert.equal(X.vehicleTotalCost(sys), 1050);
+    assert.equal(X.vehicleTotalCost(sys, (m) => (m.cost || 200)), 1250);
+  });
+  test('C8c: the Install dialog lists the skill installModTest rolls (the item\'s own B/R skill first)', () => {
+    const src = readFileSync(join('src', 'module', 'applications', 'sheets.ts'), 'utf8');
+    const body = src.slice(src.indexOf('static async #onInstallMod'), src.indexOf('static async #onRemoveMod'));
+    assert.match(body, /const skillNames = \[\.\.\.modSkillNames\(mod\.kind, vehicle\.system\), \.\.\.vr\.skills\]/);
+    assert.match(body, /skillNames\.map\(\(n\) => a\.findSkill/);
+    const doc = readFileSync(join('src', 'module', 'documents', 'index.ts'), 'utf8');
+    assert.match(doc, /\[\.\.\.VS98\.modSkillNames\(mod\.kind, vehicle\.system\), \.\.\.vr\.skills\]/, 'the same order as the test');
+  });
+  test('S1: the resistance card names the damage card it answers', () => {
+    const doc = readFileSync(join('src', 'module', 'documents', 'index.ts'), 'utf8');
+    const body = doc.slice(doc.indexOf('async resistRiggerCombat98('), doc.indexOf('async spendControl98('));
+    assert.match(body, /tag: \{ vsec98HitId:/);
   });
 });

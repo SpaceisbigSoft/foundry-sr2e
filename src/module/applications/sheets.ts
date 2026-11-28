@@ -40,7 +40,7 @@ import {
   withdrawalState,
   attackMagnification, aimOffMetres, BEARINGS, LIMB_LABELS,
   tableModifiers, qualityPoints,
-  ARC_SIDES, constructBehaviors, wirelessConnection, deckPartPlan, DECK_PARTS, modificationEffect, modificationDef,
+  ARC_SIDES, constructBehaviors, wirelessConnection, deckPartPlan, DECK_PARTS, modificationEffect, modificationDef, modPrice,
   withScopeVision, laserInRange,
   parseSkillList, parseGearList, qualityKarmaCost, programPlan, suiteBonus, otakuCap, channelRaiseCost, complexFormCost, currentHeat, lifestyleOverdue, lifestyleAvailabilityMods, modInstallPlan,
   weatherDriving, allyCosts, allyProblem, meditationTn, thesisTn, ordealWeeks, familiarReady, contagionProblem, contagionReach, sicknessStage, careFactor, isRadiationSickness,
@@ -122,7 +122,7 @@ import * as MXL97G from "./mxlife97.ts";
 import * as MO97G from "./mxops97.ts";
 import * as MXG97 from "./mxic97.ts";
 import * as MX97 from "../rules/mxic97.ts";
-import { riggerPoolOnDetection } from "../rules/vsec98.ts";
+import { riggerPoolOnDetection, modSkillNames } from "../rules/vsec98.ts";
 import * as VR98G from "./vrig98.ts";
 import * as VR98 from "../rules/vrig98.ts";
 
@@ -6835,7 +6835,7 @@ export class SR2VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       mods: (sys.mods ?? []).map((m: any, index: number) => {
         const fx = modificationEffect(m.kind, m.rating, Number(sys.body ?? 0), sys);
         const delta = m.installed ? m.delta : fx.delta;
-        return { ...m, index, name: m.name || fx.label, label: modificationDef(m.kind)?.label ?? m.kind, costLabel: (m.cost > 0 ? m.cost : fx.cost).toLocaleString(),
+        return { ...m, index, name: m.name || fx.label, label: modificationDef(m.kind)?.label ?? m.kind, costLabel: modPrice(m, sys).toLocaleString(),
           effect: (m.installed ? m.stat : fx.stat) ? `${cap(m.installed ? m.stat : fx.stat)} ${delta >= 0 ? "+" : ""}${delta}` : "" };
       }),
       remoteLink: (() => {
@@ -6950,14 +6950,16 @@ export class SR2VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const people = allActors().filter((a: any) => a.isOwner && ["character", "npc"].includes(a.type));
     const plan = modInstallPlan(mod.rating, mod.kind, vehicle.system);
     const vr = RULES.SKILLS.vehicleRepair;
-    const skillOf = (a: any) => vr.skills.map((n) => a.findSkill?.(n)).find((x: any) => x && (x.system?.rating ?? 0) > 0);
+    // v0.98.0 fix C8 (RULES.VSEC_V98.modSpecs 'book'): the skill installModTest rolls (the item's own B/R skill first).
+    const skillNames = [...modSkillNames(mod.kind, vehicle.system), ...vr.skills];
+    const skillOf = (a: any) => skillNames.map((n) => a.findSkill?.(n)).find((x: any) => x && (x.system?.rating ?? 0) > 0);
     const direct = !RULES.VEHICLES.install.required || game.user?.isGM;
     const choice = await foundry.applications.api.DialogV2.prompt({
       window: { title: tx('SR2E.Dialog.Sheet.install2', { modName: mod.name || modificationDef(mod.kind)?.label, vehicleName: vehicle.name }) },
       content: `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.mechanic')}</label><select name="mechanic" autofocus>${people.map((a: any) => { const s = skillOf(a); return `<option value="${escHtml(a.uuid)}">${escHtml(a.name)} (${s ? `${escHtml(s.name)} ${escHtml(s.system.rating)}` : tx('SR2E.Dialog.Sheet.noBRSkill')})</option>`; }).join("")}${direct ? `<option value="none">${tx('SR2E.Dialog.Sheet.noTestPutItStraightIn')}</option>` : ""}</select></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.whoPays')}</label><select name="payer">${people.map((a: any) => `<option value="${escHtml(a.uuid)}">${escHtml(a.name)} (${Number(a.system.nuyen ?? 0).toLocaleString()}¥)</option>`).join("")}<option value="none">${tx('SR2E.Dialog.Sheet.nobodyFree')}</option></select></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.otherTnModifier')}</label><input name="mod" type="number" value="0"></div>
-        <p class="hint">${tx('SR2E.Dialog.Sheet.elseIntelligenceVsTnHoursSuccesses', { vrSkills: escHtml(vr.skills.join(", ")), attributeDefaultTnMod: RULES.ATTRIBUTE_DEFAULT_TN_MOD, planTn: plan.tn, planBaseHours: plan.baseHours })}</p>`,
+        <p class="hint">${tx('SR2E.Dialog.Sheet.elseIntelligenceVsTnHoursSuccesses', { vrSkills: escHtml(skillNames.join(", ")), attributeDefaultTnMod: RULES.ATTRIBUTE_DEFAULT_TN_MOD, planTn: plan.tn, planBaseHours: plan.baseHours })}</p>`,
       ok: { label: tx('SR2E.Dialog.Sheet.install'), callback: (_e2: Event, b: any) => ({ mechanic: String(b.form.elements.mechanic.value), payer: String(b.form.elements.payer.value), mod: Number(b.form.elements.mod.value) || 0 }) },
       rejectClose: false,
     }) as { mechanic: string; payer: string; mod: number } | null;
