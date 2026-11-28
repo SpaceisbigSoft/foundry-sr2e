@@ -1,0 +1,11 @@
+{
+  "SR2E.Clinic99.recordFull": "{owner}'s ware fills that character's share of the damage record ({max} entries): further damage to their ware isn't recorded until some is cleared (the Clinics and ware damage tool).",
+  "SR2E.Clinic99.cameBack": "{owner} deleted their {item} while it had {level} damage in the record: the new {item} keeps that level (clear it with the tool if it is really new).",
+  "SR2E.Clinic99.untickRefused": "{name} stays installed: under the book's removal rule the GM takes cyberware out (Clinics and ware damage tool, Remove cyberware).",
+  "SR2E.Clinic99.untickGm": "{name} is taken out without the removal test (the book's way is the Clinics and ware damage tool, Remove cyberware).",
+  "SR2E.Clinic99.notInNow": "{name} is no longer installed: nothing removed.",
+  "SR2E.Clinic99.clearUsed": "That clear card (or the repair test it names) has already cleared a damage record.",
+  "SR2E.Clinic99.noRepairProof": "No repair test backs this card: its repair card is missing, by someone else, of other ware, without successes at the damage level's target number, or already used.",
+  "SR2E.Clinic99.clearProof": "Repair test by {roller}: successes {successes} at TN {tn}",
+  "SR2E.Clinic99.alreadyIn": "{name} is already installed: remove it first (the GM's Clinics and ware damage tool) for another operation."
+}

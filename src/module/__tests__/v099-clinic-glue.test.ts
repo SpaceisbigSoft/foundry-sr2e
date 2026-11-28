@@ -72,6 +72,11 @@ function actor(o: any) {
   registry.set(a.uuid, a);
   return a;
 }
+/** A repair test's card (as SR2Actor.#post makes it) by the current user, for the runner's wired reflexes. */
+async function repairCard(testId: string, totals: number[], o: any = {}) {
+  return g.ChatMessage.create({ content: '', flags: { [S]: { test: { kind: 'cyberRepair', testId, actorUuid: 'Actor.run', targetNumber: 3, successes: totals.filter((x) => x >= 3).length, dice: totals.map((total) => ({ total })), cyberRepair: { itemId: 'w', itemName: 'Wired Reflexes', ownerUuid: 'Actor.run' }, ...o } } } });
+}
+
 function item(parent: any, o: any) {
   const i: any = {
     type: 'cyberware', flags: {}, parent, ...o, uuid: `${parent.uuid}.Item.${o.id}`,
@@ -86,21 +91,27 @@ function item(parent: any, o: any) {
 }
 
 before(async () => {
-  const draft = join('i18n-drafts', 'clinic99.json');
-  if (existsSync(draft)) g.__SR2E_EN__ = { ...(g.__SR2E_EN__ ?? {}), ...JSON.parse(readFileSync(draft, 'utf8')) };
+  for (const f of ['clinic99.json', 'clinic99-fix.json', 'clinic99-fix-replace.json']) {
+    const draft = join('i18n-drafts', f);
+    if (!existsSync(draft)) continue;
+    const add = Object.fromEntries(Object.entries(JSON.parse(readFileSync(draft, 'utf8')) as Record<string, string>).map(([k, v]) => [k.replace(/^REPLACE:/, ''), v]));
+    g.__SR2E_EN__ = { ...(g.__SR2E_EN__ ?? {}), ...add };
+  }
   g.foundry = { abstract: { TypeDataModel: class {} }, utils: { randomID: () => `r${++mid}` }, applications: { api: { DialogV2: {
     confirm: async () => confirmAnswer, prompt: async () => null, wait: async () => null,
   } } } };
   g.Roll = StubRoll;
   g.ui = { notifications: { warn: (t: string) => warnings.push(t), info: () => {} } };
   g.Hooks = { on: (k: string, f: any) => { (hooks[k] ??= []).push(f); }, once: () => {} };
-  g.game = { user: GM, users: [GM, P1, P2], actors: [] as any[], time: { worldTime: 100 }, messages: { contents: chat },
+  const users: any = [GM, P1, P2];
+  users.get = (id: string) => users.find((u: any) => u.id === id);
+  g.game = { user: GM, users, actors: [] as any[], time: { worldTime: 100 }, messages: { contents: chat },
     settings: {
       register: () => {},
       get: (_s: string, k: string) => settings[k] ?? {},
       set: async (_s: string, k: string, v: any) => { if (!g.game.user.isGM) throw new Error('players cannot write world settings'); settings[k] = v; },
     } };
-  g.ChatMessage = { create: async (d: any) => { const m = asMessage(d, g.game.user); chat.push(m); return m; }, getSpeaker: () => ({}) };
+  g.ChatMessage = { create: async (d: any) => { const by = d.author ? g.game.users.get(d.author) : g.game.user; const m = asMessage({ ...d, author: undefined }, by); m.author = by; chat.push(m); return m; }, getSpeaker: () => ({}) };
   g.fromUuidSync = (u: string) => registry.get(u) ?? null;
   g.fromUuid = async (u: string) => registry.get(u) ?? null;
   g.CONFIG = { Actor: { documentClass: { essenceOf: (i: any) => Number(i.system.essenceCost) } } };
@@ -113,6 +124,8 @@ let runner: any, fixer: any, doc: any, wired: any;
 beforeEach(() => {
   chat.length = 0; warnings.length = 0; faces.length = 0; confirmAnswer = true;
   for (const k of Object.keys(settings)) delete settings[k];
+  X?.resetRecordCache?.();
+  g.CONFIG.Actor.documentClass.actingAuthor = null;
   g.game.user = GM;
   runner = actor({ uuid: 'Actor.run', name: 'Runner', owners: ['p1'], system: { essence: 6, essenceShift: 0, derived: { essence: 4.5 }, attributes: { intelligence: { total: 5 } } } });
   fixer = actor({ uuid: 'Actor.fix', name: 'Fixer', skills: { Etiquette: 4 }, system: { attributes: { intelligence: { total: 5 }, charisma: { total: 3 } } } });
@@ -175,12 +188,13 @@ describe('ware damage levels: the owner\'s level, the GM\'s record', () => {
   test('a player\'s repair asks the GM; the GM\'s confirmed click clears the record (the author must own the ware)', async () => {
     await G.recordHit(wired, 'M');
     g.game.user = P1;
-    const note = await G.repaired(wired, { repairer: runner });
+    await repairCard('t1', [5]);
+    const note = await G.repaired(wired, { repairer: runner, testId: 't1' });
     assert.ok(note);
     assert.equal(wired.flags[S][X.WARE_FLAG], '');
     assert.equal(X.wareLevel(wired), 'M', 'still counts until the GM clears it');
     const card = chat[chat.length - 1];
-    assert.deepEqual(card.flags[S][G.CLEAR_FLAG], { itemUuid: 'Actor.run.Item.w', ownerUuid: 'Actor.run' });
+    assert.deepEqual(card.flags[S][G.CLEAR_FLAG], { itemUuid: 'Actor.run.Item.w', ownerUuid: 'Actor.run', testId: 't1' });
     await G.onCard(card, { disabled: false }, 'clinic99Clear');
     assert.ok(warnings.length, 'a player cannot use it');
     assert.equal(X.wareLevel(wired), 'M');
@@ -246,14 +260,14 @@ describe('removing cyberware: the GM\'s client', () => {
 });
 
 describe('the surgeon\'s fee: once per operation, graded × 50', () => {
-  test('alpha ware, 0.5 Essence: 25,000 × 50, charged once', async () => {
+  test('alpha ware, 0.5 Essence: the list price by the Essence it costs (fix C3: .4 at alpha, 5,000), charged once', async () => {
     const alpha = item(runner, { id: 'a', name: 'Cybereyes', system: { grade: 'alpha', essenceCost: 0.5, installed: false } });
     runner.nuyen = 2_000_000;
     const n1 = await G.chargeSurgeonFee(runner, alpha, { id: 'op1', points: 0.5, pay: true, itemName: 'Cybereyes' });
     assert.ok(n1);
-    assert.equal(runner.nuyen, 2_000_000 - 1_250_000);
+    assert.equal(runner.nuyen, 2_000_000 - 5_000);
     await G.chargeSurgeonFee(runner, alpha, { id: 'op1', points: 0.5, pay: true, itemName: 'Cybereyes' });
-    assert.equal(runner.nuyen, 750_000, 'once');
+    assert.equal(runner.nuyen, 1_995_000, 'once');
     assert.equal(G.careFactor99(alpha), 50);
     assert.equal(G.feeApplyText(runner, alpha, { id: 'op1', points: 0.5, pay: true }), '');
   });
@@ -286,5 +300,224 @@ describe('the model\'s hooks (models/index.ts augmentationsOf)', () => {
     w.system.damaged = false;
     const o: any = augmentationsOf(a)[0];
     assert.deepEqual([o.reaction, o.initiativeDice, o.damaged], [2, 1, false]);
+  });
+});
+
+describe('v0.99.0 fixes: the record\'s trust (S1–S5, P1–P3)', () => {
+  const cls = () => g.CONFIG.Actor.documentClass;
+  const lastClear = () => [...chat].reverse().find((m: any) => m.flags?.[S]?.[G.CLEAR_FLAG]);
+
+  test('S1: a GM\'s re-run of a player\'s repair asks (as that player) instead of clearing; a re-run for a non-owner is refused', async () => {
+    await G.recordHit(wired, 'M');
+    cls().actingAuthor = P1;
+    await G.repaired(wired, { repairer: runner, testId: 't1' });
+    assert.equal(X.wareLevel(wired), 'M', 'not cleared with the GM\'s rights');
+    assert.equal(lastClear()?.author?.id, 'p1', 'the ask is the player\'s');
+    chat.length = 0;
+    wired.flags[S][X.WARE_FLAG] = 'M';
+    cls().actingAuthor = P2;
+    assert.equal(await G.repaired(wired, { repairer: runner, testId: 't1' }), '');
+    assert.equal(chat.length, 0);
+    assert.equal(wired.flags[S][X.WARE_FLAG], 'M', 'nothing written');
+  });
+
+  test('S4, P1: the clear needs a real repair test of this ware; a used card or test is refused', async () => {
+    await G.recordHit(wired, 'M');
+    g.game.user = P1;
+    await G.repaired(wired, { repairer: runner, testId: 'none' });
+    g.game.user = GM;
+    await G.onCard(lastClear(), null, 'clinic99Clear');
+    assert.equal(X.wareLevel(wired), 'M', 'no repair card behind it');
+    g.game.user = P1;
+    await repairCard('t2', [2, 2], { successes: 4 });
+    await G.repaired(wired, { repairer: runner, testId: 't2' });
+    g.game.user = GM;
+    await G.onCard(lastClear(), null, 'clinic99Clear');
+    assert.equal(X.wareLevel(wired), 'M', 'forged successes: none at TN 3 counted again');
+    g.game.user = P1;
+    await repairCard('t3', [6]);
+    await G.repaired(wired, { repairer: runner, testId: 't3' });
+    const card = lastClear();
+    g.game.user = GM;
+    await G.onCard(card, null, 'clinic99Clear');
+    assert.equal(X.wareLevel(wired), '');
+    // The ware is hit again; the same card, or a copy naming the same test, clears nothing.
+    await G.recordHit(wired, 'M');
+    await G.onCard(card, null, 'clinic99Clear');
+    g.game.user = P1;
+    await G.repaired(wired, { repairer: runner, testId: 't3' });
+    g.game.user = GM;
+    await G.onCard(lastClear(), null, 'clinic99Clear');
+    assert.equal(X.wareLevel(wired), 'M');
+    assert.ok(settings[G.META_SETTING].used.includes('test:t3'));
+  });
+
+  test('S4: a repair card by another player, or of other ware, is no proof', async () => {
+    await G.recordHit(wired, 'S');
+    g.game.user = P2;
+    await repairCard('t4', [6, 6]);
+    g.game.user = P1;
+    await G.repaired(wired, { repairer: runner, testId: 't4' });
+    g.game.user = GM;
+    assert.equal(await G.applyClear(lastClear()), false);
+    assert.equal(X.wareLevel(wired), 'S');
+  });
+
+  test('S5, P3: a project repair clears nothing at the start; its effect\'s test id makes the lead GM clear (the GM\'s test) or ask (a player\'s)', async () => {
+    await G.recordHit(wired, 'M');
+    assert.equal(await G.repaired(wired, { project: true, repairer: runner }), '');
+    assert.equal(wired.flags[S][X.WARE_FLAG], 'M', 'the item keeps its level while the work goes on');
+    const changes = G.repairChanges('t5');
+    assert.deepEqual(changes.map((c: any) => c[0]), [`flags.${S}.${X.WARE_FLAG}`, `flags.${S}.${G.FIX_FLAG}`]);
+    g.game.user = P1;
+    await repairCard('t5', [6]);
+    g.game.user = GM;
+    for (const [k, v] of changes) setPath(wired, k, v);
+    for (const h of hooks['updateItem'] ?? []) h(wired, { flags: { [S]: { [X.WARE_FLAG]: '', [G.FIX_FLAG]: 't5' } } });
+    await new Promise((r) => setTimeout(r, 20));
+    assert.equal(X.wareLevel(wired), 'M', 'a player\'s repair: the GM is asked');
+    assert.equal(lastClear()?.flags[S][G.CLEAR_FLAG].testId, 't5');
+    assert.equal(lastClear()?.author?.id, 'gm1');
+    await G.onCard(lastClear(), null, 'clinic99Clear');
+    assert.equal(X.wareLevel(wired), '');
+    // The GM's own repair project: cleared at once when done.
+    await G.recordHit(wired, 'M');
+    await repairCard('t6', [6]);
+    assert.equal(await G.completedRepair(wired, 't6'), true);
+    assert.equal(X.wareLevel(wired), 'M', 'the item\'s own level is still M until the effect clears it');
+    wired.flags[S][X.WARE_FLAG] = '';
+    assert.equal(X.wareLevel(wired), '');
+    // A made-up test id gets no card at all.
+    await G.recordHit(wired, 'M');
+    const n = chat.length;
+    assert.equal(await G.completedRepair(wired, 'nothing'), false);
+    assert.equal(chat.length, n);
+  });
+
+  test('P2: the reload sweep ignores an item level the GM cleared since it last changed', async () => {
+    await G.recordHit(wired, 'M');
+    wired._stats = { modifiedTime: Date.now() - 1000 };
+    await G.setLevelAsGm(wired, '');
+    wired.flags[S][X.WARE_FLAG] = 'M'; // a stale level left on the item
+    await G.sweepLevels();
+    assert.equal(X.recordedLevel(wired.uuid), '');
+    wired._stats = { modifiedTime: Date.now() + 1000 }; // changed since: a new hit
+    await G.sweepLevels();
+    assert.equal(X.recordedLevel(wired.uuid), 'M');
+  });
+
+  test('S2: the sweep drops keys whose item is gone; a character\'s full share whispers the GM and skips the write', async () => {
+    settings[G.DAMAGE_SETTING] = { Actor_gone_Item_x: 'S', Actor_run_Item_w: 'L' };
+    X.resetRecordCache();
+    await G.sweepLevels();
+    assert.deepEqual(Object.keys(settings[G.DAMAGE_SETTING]), ['Actor_run_Item_w']);
+    const full: Record<string, string> = {};
+    for (let i = 0; i < X.RECORD_PER_ACTOR; i++) full[`Actor_run_Item_f${i}`] = 'L';
+    settings[G.DAMAGE_SETTING] = full;
+    X.resetRecordCache();
+    chat.length = 0;
+    assert.equal(await G.recordRise(wired, 'S'), false);
+    assert.equal(settings[G.DAMAGE_SETTING].Actor_run_Item_w, undefined);
+    assert.ok(chat.some((m: any) => /100/.test(m.content)), 'the GM is told');
+  });
+
+  test('S3: ware a player deletes keeps its level for the same ware made again on that character; the GM\'s delete doesn\'t', async () => {
+    await G.recordHit(wired, 'S');
+    await G.wareDeleted(wired, 'p1');
+    assert.equal(settings[G.DAMAGE_SETTING].Actor_run_Item_w, undefined, 'its key leaves the record');
+    const again = item(runner, { id: 'w2', name: 'Wired Reflexes' });
+    assert.equal(await G.wareCreated(again), true);
+    assert.equal(X.wareLevel(again), 'S');
+    assert.ok(chat.at(-1).whisper.includes('gm1'));
+    assert.equal(await G.wareCreated(item(runner, { id: 'w3', name: 'Wired Reflexes' })), false, 'once');
+    await G.wareDeleted(again, 'gm1');
+    assert.equal(await G.wareCreated(item(runner, { id: 'w4', name: 'Wired Reflexes' })), false);
+  });
+});
+
+describe('v0.99.0 fixes: removal, the tool and the surgeon\'s fee (C6, S6, S8, P4, P6, C7)', () => {
+  const cls = () => g.CONFIG.Actor.documentClass;
+
+  test('C6: a player\'s unticking of Installed is refused; a GM is warned; a GM\'s re-run for a player is refused; v980 lets it', (t) => {
+    const ch = () => ({ system: { installed: false } });
+    let c: any = ch();
+    assert.equal(G.preUntick(wired, c, 'p1'), false);
+    c = { system: { installed: false, notes: 'x' } };
+    G.preUntick(wired, c, 'p1');
+    assert.deepEqual(c, { system: { notes: 'x' } });
+    c = ch();
+    assert.equal(G.preUntick(wired, c, 'gm1'), undefined);
+    assert.equal(c.system.installed, false, 'the GM\'s own change goes through');
+    cls().actingAuthor = P1;
+    assert.equal(G.preUntick(wired, ch(), 'gm1'), false);
+    cls().actingAuthor = null;
+    assert.equal(G.preUntick(wired, { system: { installed: true } }, 'p1'), undefined);
+    t.after(oldWay({ 'CLINIC_V99.removal': 'v980' }));
+    assert.equal(G.preUntick(wired, ch(), 'p1'), undefined);
+  });
+
+  test('S8: the removal checks the ware is still in inside its step', async () => {
+    const Real = g.Roll;
+    g.Roll = class extends Real { async evaluate() { wired.system.installed = false; return super.evaluate(); } };
+    faces.push(...Array(10).fill(1));
+    try { assert.equal(await G.removeWare(runner, wired, doc), null); } finally { g.Roll = Real; }
+    assert.equal(runner.system.essenceShift, 0, 'no Essence taken');
+  });
+
+  test('S8, P6: the tool opens once at a time', async () => {
+    const api = g.foundry.applications.api.DialogV2;
+    const real = api.wait;
+    let calls = 0;
+    let done: (v: any) => void = () => {};
+    api.wait = () => { calls++; return new Promise((r) => { done = r; }); };
+    try {
+      const first = G.openClinicTool();
+      await G.openClinicTool();
+      done(null);
+      await first;
+      assert.equal(calls, 1);
+      const second = G.openClinicTool();
+      done(null);
+      await second;
+      assert.equal(calls, 2, 'open again once closed');
+    } finally { api.wait = real; }
+  });
+
+  test('S6, P4: the GM\'s client keeps the paid mark in its own record (the patient\'s flag doesn\'t count); once per ware; the frozen grade', async () => {
+    const eyes = item(runner, { id: 'e', name: 'Cybereyes', system: { grade: 'standard', essenceCost: 0.5, installed: false } });
+    runner.flags[S] = { ...(runner.flags[S] ?? {}), [G.FEE_FLAG]: { 'op-op9': 1, 'e-install': 1 } };
+    runner.nuyen = 100_000;
+    assert.match(G.feeApplyText(runner, eyes, { id: 'op9', points: 0.5, pay: true }), /25,000/, 'a forged mark is ignored');
+    await G.chargeSurgeonFee(runner, eyes, { id: 'op9', points: 0.5, pay: true, itemName: 'Cybereyes' });
+    assert.equal(runner.nuyen, 75_000);
+    assert.equal(settings[G.FEE_SETTING].Actor_run['e-install'], 25_000);
+    await G.chargeSurgeonFee(runner, eyes, { id: 'op10', points: 0.5, pay: true, itemName: 'Cybereyes' });
+    assert.equal(runner.nuyen, 75_000, 'a second operation on the same ware pays nothing more');
+    // The grade frozen on the card when rolled, not the item's later grade.
+    eyes.system.grade = 'standard';
+    assert.equal(G.careFactor99(eyes, 'delta'), 200);
+    assert.equal(G.careFactor99(eyes), 1);
+    assert.deepEqual(G.frozenGrade({ system: { grade: 'beta' } }), { grade99: 'beta' });
+  });
+
+  test('P4: no surgery on ware already in; one Surgery dialog per item at a time; v980 allows it', async (t) => {
+    assert.equal(G.surgeryRefused(wired), true);
+    assert.equal(G.surgeryRefused({ name: 'x', system: { installed: false } }), false);
+    let runs = 0;
+    let done: () => void = () => {};
+    const a = G.oneSurgery('k', () => { runs++; return new Promise<void>((r) => { done = r; }); });
+    await G.oneSurgery('k', async () => { runs++; });
+    done();
+    await a;
+    assert.equal(runs, 1);
+    t.after(oldWay({ 'CLINIC_V99.surgeonFee': 'v980' }));
+    assert.equal(G.surgeryRefused(wired), false);
+  });
+
+  test('C7: a change of care refunds no more than was paid; v980 the old refund', (t) => {
+    assert.equal(G.careRefund({ paidAmount: 300 }, 60_000), 300);
+    assert.equal(G.careRefund({}, 600), 600, 'a recovery from before: the old way');
+    t.after(oldWay({ 'CLINIC_V99.gradedFees': 'v980' }));
+    assert.equal(G.careRefund({ paidAmount: 300 }, 60_000), 60_000);
   });
 });

@@ -94,7 +94,10 @@ export function surgerySize(points: number, bioware: boolean): 'L' | 'M' | 'S' |
   return p <= 0 ? 'L' : p <= 0.4 ? 'M' : p < 1 ? 'S' : 'D';
 }
 
-/** The graded clinic's multiplier on doctor's fees and hospitalization (Cybertechnology p. 44): 1 for standard ware or bioware. */
+/**
+ * The graded clinic's multiplier on the doctor's fees and hospitalization (Cybertechnology p. 44): the daily care rates
+ * only, never the surgery's own cost (the Medical Costs Table, Cybertechnology p. 54). 1 for standard ware or bioware.
+ */
 export function feeFactor(grade: string, bioware = false): number {
   if (!on('gradedFees') || bioware) return 1;
   if (grade === 'alpha' || grade === 'beta') return Math.max(1, whole(V().feeAlphaBeta));
@@ -102,10 +105,64 @@ export function feeFactor(grade: string, bioware = false): number {
   return 1;
 }
 
-/** The surgeon's fee for an operation (Cybertechnology p. 54), × the graded multiplier; 0 when the fee is off. */
-export function surgeonFee(points: number, bioware: boolean, grade: string): number {
+/**
+ * The surgeon's fee for an operation at its list price (Cybertechnology p. 54, "Surgery (includes cost of surgeon)"),
+ * sized by the Essence the ware actually costs (its grade applied; bioware by its Body Index); 0 when the fee is off.
+ * The graded × 50 / × 200 is not on it (Cybertechnology p. 44 multiplies the daily rates: the care).
+ */
+export function surgeonFee(points: number, bioware: boolean): number {
   if (!on('surgeonFee')) return 0;
-  return T.surgeryFee[surgerySize(points, bioware)]! * feeFactor(grade, bioware);
+  return T.surgeryFee[surgerySize(points, bioware)]!;
+}
+
+/** A surgery's grade as frozen on its card when rolled (a known grade, else ''): the fees use it, not the item's later grade. */
+export function gradeOf(v: unknown): string {
+  return ['standard', 'alpha', 'beta', 'delta'].includes(String(v ?? '')) ? String(v) : '';
+}
+
+/** The GM-written record of surgeons' fees paid: patient key → entry → ¥ (an operation's id, or an item's install). */
+export type FeeRecord = Record<string, Record<string, number>>;
+export function feeRecord(raw: unknown): FeeRecord {
+  const out: FeeRecord = {};
+  if (!raw || typeof raw !== 'object') return out;
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>).slice(-500)) {
+    if (!safeKey(k) || !v || typeof v !== 'object') continue;
+    const e: Record<string, number> = {};
+    for (const [x, n] of Object.entries(v as Record<string, unknown>).slice(-200)) if (safeKey(x)) e[x] = Math.max(0, num(n));
+    if (Object.keys(e).length) out[k] = e;
+  }
+  return out;
+}
+/** The entries of one operation: its id, and the item's install (a second operation putting the same ware in pays nothing more). */
+export function feeKeys(opId: unknown, itemId: unknown): string[] {
+  const keys: string[] = [];
+  const o = String(opId ?? ''), i = String(itemId ?? '');
+  if (o && safeKey(`op-${o}`)) keys.push(`op-${o}`);
+  if (i && safeKey(`${i}-install`)) keys.push(`${i}-install`);
+  return keys;
+}
+/** Whether a fee is recorded for any of these entries. */
+export function feePaid(entries: Record<string, unknown> | null | undefined, keys: readonly string[]): boolean {
+  return Boolean(entries) && keys.some((k) => Object.hasOwn(entries!, k) && entries![k] !== null);
+}
+/** The record with these entries paid (newest kept). */
+export function feeWith(rec: FeeRecord, patientKey: string, keys: readonly string[], fee: number): FeeRecord {
+  if (!safeKey(patientKey)) return rec;
+  const e = { ...(rec[patientKey] ?? {}) };
+  for (const k of keys) { delete e[k]; e[k] = Math.max(0, num(fee)); }
+  const next = { ...rec };
+  delete next[patientKey];
+  next[patientKey] = e;
+  return feeRecord(next);
+}
+/** The record without an item's install (the ware came out: a new operation pays again). */
+export function feeWithout(rec: FeeRecord, patientKey: string, itemId: string): FeeRecord {
+  const e = rec[patientKey];
+  const k = `${itemId}-install`;
+  if (!e || !Object.hasOwn(e, k)) return rec;
+  const n = { ...e };
+  delete n[k];
+  return { ...rec, [patientKey]: n };
 }
 
 // ---------------------------------------------------------------- Removal (Shadowtech pp. 36–41)
@@ -122,7 +179,7 @@ export function removalLoss(essenceCost: number, successes: number): number {
   return c > 0 ? Math.ceil(Math.round(c * T.removalLoss * 1e6) / 1e5 - 1e-9) / 10 : 0;
 }
 
-/** Of the skills found (name, rating), the lower-rated (Shadowtech: Biotech or Cybernetics, whichever is lower). */
+/** Of the skills found (name, rating), the lower-rated (Shadowtech: Biotech or Cybertechnology, whichever is lower). */
 export function lowerSkill<S extends { rating: number }>(found: ReadonlyArray<S | null | undefined>): S | null {
   const xs = found.filter((s): s is S => Boolean(s) && num(s!.rating) > 0);
   if (!xs.length) return null;
@@ -172,21 +229,132 @@ function safeKey(k: string): boolean {
   return typeof k === 'string' && k.length > 0 && k.length <= 200 && !k.includes('.') && k !== '__proto__' && k !== 'constructor' && k !== 'prototype';
 }
 
-/** The GM-written damage record: item key → level. */
+/** The most entries the damage record keeps (the newest), and per character (the actor part of the key). */
+export const RECORD_MAX = 2000;
+export const RECORD_PER_ACTOR = 100;
+
+/** The GM-written damage record: item key → level (the newest RECORD_MAX kept). */
 export type DamageRecord = Record<string, WareLevel>;
 export function damageRecord(raw: unknown): DamageRecord {
   const out: DamageRecord = {};
   if (!raw || typeof raw !== 'object') return out;
-  for (const [k, v] of Object.entries(raw as Record<string, unknown>).slice(0, 2000)) { const l = levelOf(v); if (safeKey(k) && l) out[k] = l; }
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>).slice(-RECORD_MAX)) { const l = levelOf(v); if (safeKey(k) && l) out[k] = l; }
   return out;
 }
 
+/** The actor part of an item's record key (Actor_x of Actor_x_Item_y; a token's actor with its scene and token). */
+export function actorKeyOf(key: string): string {
+  const i = String(key ?? '').lastIndexOf('_Item_');
+  return i > 0 ? key.slice(0, i) : '';
+}
+
+/**
+ * The record with this item at `level`, as the newest entry. `refused` when the character already has RECORD_PER_ACTOR
+ * other entries (the write is skipped: it wouldn't survive); `full` when this write fills the character's share.
+ */
+export function recordWith(rec: DamageRecord, key: string, level: WareLevel): { rec: DamageRecord; refused: boolean; full: boolean } {
+  if (!safeKey(key) || !level) return { rec, refused: true, full: false };
+  const ak = actorKeyOf(key);
+  const mine = Object.keys(rec).filter((k) => k !== key && actorKeyOf(k) === ak).length;
+  if (ak && mine >= RECORD_PER_ACTOR) return { rec, refused: true, full: true };
+  const next: DamageRecord = { ...rec };
+  delete next[key];
+  next[key] = level;
+  return { rec: damageRecord(next), refused: false, full: Boolean(ak) && mine + 1 >= RECORD_PER_ACTOR };
+}
+
+/** The record without these keys. */
+export function recordWithout(rec: DamageRecord, keys: Iterable<string>): DamageRecord {
+  const next: DamageRecord = { ...rec };
+  for (const k of keys) delete next[k];
+  return next;
+}
+
 let recordSource: () => unknown = () => ({});
+let cached: DamageRecord | null = null;
 /** The glue sets where the GM-written record is read from (a world setting). */
-export function setDamageRecordSource(fn: () => unknown): void { recordSource = fn; }
-/** The level the GM-written record keeps for an item (by its uuid). */
+export function setDamageRecordSource(fn: () => unknown): void { recordSource = fn; cached = null; }
+/** The record changed (the setting's onChange, a write on this client): read it again next time. */
+export function resetRecordCache(): void { cached = null; }
+/** The level the GM-written record keeps for an item (by its uuid); the record is parsed once per change. */
 export function recordedLevel(uuid: unknown): WareLevel {
-  try { return damageRecord(recordSource())[recordKey(uuid)] ?? ''; } catch { return ''; }
+  try { cached ??= damageRecord(recordSource()); return cached[recordKey(uuid)] ?? ''; } catch { return ''; }
+}
+
+// ---------------------------------------------------------------- The record's GM-side notes (world setting)
+
+/** A recorded ware deleted by a player: kept by character, name and kind, so the same ware made again keeps its level. */
+export interface GoneEntry { actor: string; name: string; kind: string; level: WareLevel; at: number }
+/**
+ * The damage record's notes: when the GM cleared each key (a reload's sweep then ignores an item level set before
+ * that), the repair tests and clear cards already used to clear (a copy is refused), and deleted recorded ware.
+ */
+export interface DamageMeta { cleared: Record<string, number>; used: string[]; gone: GoneEntry[] }
+export const META_USED_MAX = 500;
+export const META_GONE_MAX = 200;
+const short = (v: unknown, n: number): string => String(v ?? '').slice(0, n);
+export function damageMeta(raw: unknown): DamageMeta {
+  const r: any = raw && typeof raw === 'object' ? raw : {};
+  const cleared: Record<string, number> = {};
+  for (const [k, v] of Object.entries(r.cleared && typeof r.cleared === 'object' ? r.cleared : {}).slice(-RECORD_MAX)) if (safeKey(k)) cleared[k] = num(v);
+  const used = (Array.isArray(r.used) ? r.used : []).map((x: unknown) => short(x, 80)).filter(Boolean).slice(-META_USED_MAX);
+  const gone: GoneEntry[] = (Array.isArray(r.gone) ? r.gone : []).filter((g: any) => g && typeof g === 'object' && safeKey(String(g.actor ?? '')) && levelOf(g.level))
+    .map((g: any) => ({ actor: short(g.actor, 200), name: short(g.name, 200), kind: short(g.kind, 60), level: levelOf(g.level), at: num(g.at) })).slice(-META_GONE_MAX);
+  return { cleared, used, gone };
+}
+/** The notes after the GM cleared a key at `at` (ms). */
+export function metaCleared(m: DamageMeta, key: string, at: number): DamageMeta {
+  if (!safeKey(key)) return m;
+  const cleared = { ...m.cleared };
+  delete cleared[key];
+  cleared[key] = num(at);
+  return damageMeta({ ...m, cleared });
+}
+/** The notes with these ids used (a repair test's id, a clear card's id). */
+export function metaUse(m: DamageMeta, ids: readonly unknown[]): DamageMeta {
+  const add = ids.map((x) => short(x, 80)).filter(Boolean);
+  return damageMeta({ ...m, used: [...m.used.filter((x) => !add.includes(x)), ...add] });
+}
+export function metaUsed(m: DamageMeta, ids: readonly unknown[]): boolean {
+  return ids.some((x) => { const s = short(x, 80); return Boolean(s) && m.used.includes(s); });
+}
+/** The notes with a deleted ware kept (the same character, name and kind replaced). */
+export function metaGone(m: DamageMeta, e: GoneEntry): DamageMeta {
+  const same = (g: GoneEntry): boolean => g.actor === e.actor && g.name === e.name && g.kind === e.kind;
+  return damageMeta({ ...m, gone: [...m.gone.filter((g) => !same(g)), e] });
+}
+/** The deleted ware a new item on this character matches (by name and kind), and the notes without it. */
+export function metaTake(m: DamageMeta, actor: string, name: string, kind: string): { entry: GoneEntry | null; meta: DamageMeta } {
+  const i = m.gone.findIndex((g) => g.actor === actor && g.name === String(name ?? '').slice(0, 200) && g.kind === String(kind ?? '').slice(0, 60));
+  if (i < 0) return { entry: null, meta: m };
+  return { entry: m.gone[i]!, meta: { ...m, gone: m.gone.filter((_, n) => n !== i) } };
+}
+/** A reload's sweep ignores an item's own level the GM cleared since it was last changed (its modified time, ms). */
+export function clearedSince(m: DamageMeta, key: string, modified: unknown): boolean {
+  const at = m.cleared[key];
+  return at !== undefined && num(modified, 0) <= at;
+}
+
+// ---------------------------------------------------------------- Proof of a repair (the GM's check of a clear card)
+
+/**
+ * Whether a repair test's card snapshot proves a repair of this item: a cyberRepair of the same item and owner, and
+ * successes at the level's TN counted again from its dice (a typed result has no faces: its successes). 0 otherwise.
+ */
+export function repairProof(snap: any, o: { itemId: string; ownerUuid: string; tn: number }): number {
+  if (!snap || typeof snap !== 'object' || snap.kind !== 'cyberRepair') return 0;
+  const c = snap.cyberRepair;
+  if (!c || String(c.itemId ?? '') !== o.itemId || (c.ownerUuid && String(c.ownerUuid) !== o.ownerUuid)) return 0;
+  const tn = Math.max(minTn(o.tn), minTn(snap.targetNumber));
+  if (snap.typed) return Math.min(40, whole(snap.successes));
+  const dice: any[] = Array.isArray(snap.dice) ? snap.dice.slice(0, 60) : [];
+  return Math.min(whole(snap.successes), dice.filter((d) => num(d?.total) >= tn).length);
+}
+
+/** A repair that fails after all (a GM's TN change) marks the ware damaged again only when its level stops it (or it has none). */
+export function redamages(level: unknown): boolean {
+  const l = levelOf(level);
+  return !on('damageLevels') || !l || levelStops(l);
 }
 
 /** An item's own level (its flag). */
@@ -196,12 +364,11 @@ export function itemLevel(item: any): WareLevel {
 }
 
 /**
- * The item's own level as far as it is trusted: 'destroyed' from the item alone counts as Deadly (destroyed ware has no
- * feedback penalty, so a player's own write must not get there: only the GM's record makes it destroyed).
+ * The item's own level as far as it is trusted. Every level is worse for the player than none, 'destroyed' too:
+ * destroyed from the item alone stops the ware for good (no repair) and has no feedback penalty (Shadowtech pp. 36–41).
  */
 export function trustedOwnLevel(item: any): WareLevel {
-  const l = itemLevel(item);
-  return l === 'X' ? 'D' : l;
+  return itemLevel(item);
 }
 
 /** The level that counts (book only): the worse of the item's own (trusted) and the GM's record; '' for bioware or under 'v980'. */

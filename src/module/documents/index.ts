@@ -1346,7 +1346,9 @@ export interface TestSnapshot {
     /** v0.55.0: the surgical trauma has been applied. */
     traumaDone?: boolean;
     /** v0.48.0: the patient's care while recovering, whether to pay for it, and whether it was paid. */
-    care?: string; pay?: boolean; paid?: boolean; paidAmount?: number };
+    care?: string; pay?: boolean; paid?: boolean; paidAmount?: number;
+    /** v0.99.0 fix (RULES.CLINIC_V99 fees, S6): the ware's grade when the card was rolled (the fees use it). */
+    grade99?: string };
   /** cyberRepair: the damaged cyberware being repaired, and whether it has been fixed. */
   cyberRepair?: { itemId: string; itemName: string; ownerUuid?: string; fixed?: boolean; projectId?: string;
     /** v0.99.0 (RULES.CLINIC_V99.repair): the ware's damage level when the repair was rolled (put back if it fails after all). */
@@ -2391,6 +2393,8 @@ export class SR2Actor extends Actor {
     if (!it || it.type !== 'cyberware') return null;
     // v0.99.0 (RULES.WARE_V99.boosted, orthoskin; SSC p. 87, Shadowtech p. 17): ware that may not go in beside what is there.
     if (WG99.surgeryClash(it)) return null;
+    // v0.99.0 fix (RULES.CLINIC_V99.surgeonFee 'book', P4): no surgery on ware already in (remove it first).
+    if (CLG99.surgeryRefused(it)) return null;
     const who: SR2Actor = opts.surgeon ?? this;
     const sg = RULES.BIOWARE.surgery;
     const sd = who.#skillDice(who.findSkill(sg.skill), false, null, 'intelligence');
@@ -2402,7 +2406,7 @@ export class SR2Actor extends Actor {
     return who.#runTest(tx('SR2E.Card.Actor.surgeryInto', { name: it.name, name2: this.name, grade: it.system.grade, sdSuffix: sd.suffix }), sd.dice, {
       targetNumber: surgeryTarget(it.system.grade, essAfter), modifiers: sd.modifiers,
     }, { kind: 'surgery', surgery: { id: (foundry as any).utils?.randomID?.() ?? Math.random().toString(36).slice(2, 18), patientUuid: this.uuid as string, patientName: this.name as string, itemId, itemName: it.name, points,
-      care: opts.care ?? RULES.BIOWARE.recovery.defaultCare, pay: opts.pay !== false } });
+      care: opts.care ?? RULES.BIOWARE.recovery.defaultCare, pay: opts.pay !== false, ...CLG99.frozenGrade(it) } });
   }
 
   /** v0.48.0: change a recovering patient's care; the days left stretch or shrink (RULES.BIOWARE.recovery.care). */
@@ -2422,10 +2426,11 @@ export class SR2Actor extends Actor {
     // v0.99.0 (RULES.CLINIC_V99.gradedFees 'book'): a graded clinic's care at its rates (Cybertechnology p. 44).
     const f99 = CLG99.careFactor99([...this.items].find((i: any) => i.id === itemId));
     const newCost = recoveryCareCost(care, leftNew) * f99;
-    const diff = newCost - (r.paid ? recoveryCareCost(String(r.care ?? ''), leftOld) * f99 : 0);
+    const diff = newCost - CLG99.careRefund(r, r.paid ? recoveryCareCost(String(r.care ?? ''), leftOld) * f99 : 0);
     if (diff > 0 && !(await this.adjustNuyen(-diff, tx('SR2E.Text.Actor.careFor', { name: r.name, days: plural(leftNew, 'day') })))) return null;
     if (diff < 0) await this.adjustNuyen(-diff, tx('SR2E.Text.Actor.careForRefund', { name: r.name }));
     r.paid = newCost > 0;
+    r.paidAmount = newCost;
     r.until = until;
     r.care = care;
     r.factor = to;
@@ -2471,7 +2476,10 @@ export class SR2Actor extends Actor {
     const points = it ? Number(it.system?.bioware ? it.system?.bodyIndex ?? 0 : W99.limbEssenceCost(Number(it.system?.essenceCost ?? 0), it, patient.system?.metatype)) || 0 : Math.max(0, Math.min(6, Number(raw.points) || 0));
     const saved = id ? (patient.getFlag?.(SYSTEM_ID, 'surgeryState') as Record<string, any> | undefined)?.[id] : undefined;
     const st = id ? (saved ?? {}) : raw;
+    // v0.99.0 fix (S6): the grade frozen when the operation was first resolved, else the card's.
+    const grade99 = CL99.gradeOf(st.grade99) || CL99.gradeOf(raw.grade99);
     return {
+      ...(grade99 ? { grade99 } : {}),
       ...(id ? { id } : {}), patientUuid: String(patient.uuid), patientName: String(patient.name ?? ''), itemId: String(it?.id ?? raw.itemId ?? ''),
       itemName: String(it?.name ?? raw.itemName ?? '').slice(0, 200), points, care, pay: Boolean(raw.pay),
       installed: Boolean(st.installed), harmed: Boolean(st.harmed), paid: Boolean(st.paid), paidAmount: safeInt(st.paidAmount, 0, 10_000_000, 0), traumaDone: Boolean(st.traumaDone),
@@ -2494,10 +2502,10 @@ export class SR2Actor extends Actor {
     const lifestyle = String(patient?.system?.lifestyle?.level ?? '');
     const days = sg.care ? recoveryWithCare(base, sg.care, lifestyle) : base;
     const ware99: any = [...(patient?.items ?? [])].find((i: any) => i.id === sg.itemId);
-    const owed = sg.pay ? recoveryCareCost(sg.care ?? '', days) * CLG99.careFactor99(ware99) : 0;
+    const owed = sg.pay ? recoveryCareCost(sg.care ?? '', days) * CLG99.careFactor99(ware99, sg.grade99) : 0;
     const diff = owed - (sg.paid ? Number(sg.paidAmount ?? 0) : 0);
     // v0.99.0 (RULES.CLINIC_V99.surgeonFee): the surgeon's fee, when this operation hasn't paid it.
-    const fee99 = sg.installed ? '' : CLG99.feeApplyText(patient, ware99, { id: sg.id, points: Number(sg.points ?? 0), pay: sg.pay });
+    const fee99 = sg.installed ? '' : CLG99.feeApplyText(patient, ware99, { id: sg.id, points: Number(sg.points ?? 0), pay: sg.pay, grade: sg.grade99 });
     return (diff > 0 ? tx('SR2E.Text.Actor.forCareChargedTo', { diff: diff.toLocaleString(), name: patient.name }) : diff < 0 ? tx('SR2E.Text.Actor.ofCareRefundedTo', { diff: (-diff).toLocaleString(), name: patient.name }) : tx('SR2E.Text.Actor.noMoneyChangesHands')) + fee99;
   }
 
@@ -2511,7 +2519,7 @@ export class SR2Actor extends Actor {
     const sg = sg0;
     const keepState = async (n: any) => {
       if (!sg.id || !canWriteNow(patient)) return;
-      await patient.setFlag(SYSTEM_ID, 'surgeryState', { [sg.id]: { installed: Boolean(n.installed), harmed: Boolean(n.harmed), paid: Boolean(n.paid), paidAmount: Number(n.paidAmount ?? 0), traumaDone: Boolean(n.traumaDone) } });
+      await patient.setFlag(SYSTEM_ID, 'surgeryState', { [sg.id]: { installed: Boolean(n.installed), harmed: Boolean(n.harmed), paid: Boolean(n.paid), paidAmount: Number(n.paidAmount ?? 0), traumaDone: Boolean(n.traumaDone), ...(n.grade99 ? { grade99: n.grade99 } : {}) } });
     };
     // v0.54.0: a surgeon's player who doesn't own the patient posts the result for the GM to apply.
     if (patient && !canWriteNow(patient)) {
@@ -2582,7 +2590,7 @@ export class SR2Actor extends Actor {
       if (it && !it.system.installed) await it.update({ 'system.installed': true });
       next.installed = true;
       // v0.99.0 (RULES.CLINIC_V99.surgeonFee / gradedFees / clinicSearch, Cybertechnology pp. 44, 54): the surgeon's fee, once.
-      fee99 = await CLG99.chargeSurgeonFee(patient, it, { id: sg.id, points: Number(sg.points ?? 0), pay: sg.pay, itemName: sg.itemName });
+      fee99 = await CLG99.chargeSurgeonFee(patient, it, { id: sg.id, points: Number(sg.points ?? 0), pay: sg.pay, itemName: sg.itemName, grade: sg.grade99 });
       // v0.55.0 (Shadowtech, optional): the operation itself wounds the patient by its size, once.
       const tr = !sg.traumaDone ? surgicalTrauma(Number(sg.points ?? 0), Boolean(it?.system?.bioware)) : null;
       if (tr) {
@@ -2614,7 +2622,7 @@ export class SR2Actor extends Actor {
     // A re-roll that changes the days charges or refunds the difference.
     let careNote = '';
     // v0.99.0 (RULES.CLINIC_V99.gradedFees 'book', Cybertechnology p. 44): a graded clinic's care × 50 (delta × 200).
-    const owed = sg.pay && patient ? recoveryCareCost(care, days) * CLG99.careFactor99(opItem) : 0;
+    const owed = sg.pay && patient ? recoveryCareCost(care, days) * CLG99.careFactor99(opItem, sg.grade99) : 0;
     const diff = owed - (sg.paid ? Number(sg.paidAmount ?? 0) : 0);
     if (diff !== 0 && patient && (sg.pay || sg.paid)) {
       const ok = await patient.adjustNuyen?.(-diff, tx('SR2E.Text.Actor.careAfterSurgery', { itemName: sg.itemName, days: plural(days, 'day') }));
@@ -2626,7 +2634,9 @@ export class SR2Actor extends Actor {
       const list = [...(patient.system.recovering ?? [])].map((x: any) => ({ ...x }));
       const j = list.findIndex((x: any) => x.itemId === sg.itemId);
       const paidNow = Boolean(next.paid && Number(next.paidAmount ?? 0) >= owed && owed > 0);
-      if (j >= 0 && Boolean(list[j].paid) !== paidNow) { list[j].paid = paidNow; await patient.update({ 'system.recovering': list }); }
+      // v0.99.0 fix (C7): what was paid, so a later change of care refunds no more than that.
+      const amt99 = paidNow ? Number(next.paidAmount ?? 0) : 0;
+      if (j >= 0 && (Boolean(list[j].paid) !== paidNow || Number(list[j].paidAmount ?? 0) !== amt99)) { list[j].paid = paidNow; list[j].paidAmount = amt99; await patient.update({ 'system.recovering': list }); }
     }
     await keepState(next);
     const careLabel = care ? RULES.HEALING.natural.care.find((c) => c.id === care)?.label ?? care : '';
@@ -3300,12 +3310,16 @@ export class SR2Actor extends Actor {
           if (c.fixed && c.projectId) {
             const owner: any = c.ownerUuid ? fromUuidSync(c.ownerUuid) ?? this : this;
             await owner?.cancelProject?.(c.projectId);
+            // v0.99.0 fix (P3): the ware's damage level stays (or comes back) when the repair project is given up.
+            const it99: any = [...(owner?.items ?? [])].find((i: any) => i.id === c.itemId);
+            if (it99) await CLG99.unrepaired(it99, c.level99);
             return { html: `<p><strong>${tx('SR2E.Card.Actor.isStillDamaged', { itemName: escText(c.itemName) })}</strong></p>`, flags: {}, snap: { ...snap, cyberRepair: { ...c, fixed: false, projectId: undefined } } };
           }
           if (c.fixed) {
             const owner: any = c.ownerUuid ? fromUuidSync(c.ownerUuid) ?? this : this;
             const it: any = [...owner.items].find((i: any) => i.id === c.itemId);
-            if (it) await it.update({ 'system.damaged': true });
+            // v0.99.0 fix (C7): Light damage doesn't stop the ware: damaged again only when its level stops it.
+            if (it && CLG99.redamages(c.level99)) await it.update({ 'system.damaged': true });
             // v0.99.0 (RULES.CLINIC_V99.damageLevels): its damage level comes back too.
             if (it) await CLG99.unrepaired(it, c.level99);
           }
@@ -3319,7 +3333,8 @@ export class SR2Actor extends Actor {
         const note99 = r99 ? CLG99.repairNoteHtml(repIt) : '';
         // v0.65.0: the repair takes its hours: the ware stays damaged until the work is done.
         if (!c.fixed && repOwner?.waitsFor?.('repairs') && h > 0) {
-          const pr = await repOwner.startProject({ kind: 'repair', area: 'repairs', label: tx('SR2E.Text.Actor.repairing', { name: c.itemName }), hours: h, effect: { updates: [{ itemId: c.itemId, changes: [['system.damaged', false], ...CLG99.repairChanges()] }] } });
+          const pr = await repOwner.startProject({ kind: 'repair', area: 'repairs', label: tx('SR2E.Text.Actor.repairing', { name: c.itemName }), hours: h, effect: { updates: [{ itemId: c.itemId, changes: [['system.damaged', false], ...CLG99.repairChanges(snap.testId)] }] } });
+          // v0.99.0 fix (S5): a project's record is cleared (or the GM asked) when the work is done (its effect).
           const ask99 = repIt ? await CLG99.repaired(repIt, { project: true, repairer: this }) : '';
           return { html: `<p><strong>${tx('SR2E.Card.Actor.isBeingRepaired', { itemName: escText(c.itemName) })}</strong> ${tCount(h, 'SR2E.Card.Actor.readyAfterAboutHoursOfWork', { plural: escText(plural(s, 'success')) })}${note99}${ask99}</p>`, flags: {}, snap: { ...snap, cyberRepair: { ...c, fixed: true, projectId: pr.id } } };
         }
@@ -3329,7 +3344,7 @@ export class SR2Actor extends Actor {
           const owner: any = c.ownerUuid ? fromUuidSync(c.ownerUuid) ?? this : this;
           const it: any = [...owner.items].find((i: any) => i.id === c.itemId);
           if (it) await it.update({ 'system.damaged': false });
-          if (it) ask99 = await CLG99.repaired(it, { repairer: this });
+          if (it) ask99 = await CLG99.repaired(it, { repairer: this, testId: snap.testId });
         }
         return { html: `<p><strong>${tx('SR2E.Card.Actor.isRepaired', { itemName: escText(c.itemName) })}</strong> ${tCount(h, 'SR2E.Card.Actor.aboutHoursOfWork', { plural: escText(plural(s, 'success')) })}${note99}${ask99}</p>`, flags: {}, snap: { ...snap, cyberRepair: { ...c, fixed: true } } };
       }

@@ -18,8 +18,11 @@ function english(): Record<string, string> {
   const flat: Record<string, string> = {};
   const walk = (o: unknown, p: string): void => { if (typeof o === 'string') { flat[p] = o; return; } if (o && typeof o === 'object') for (const [k, v] of Object.entries(o)) walk(v, p ? `${p}.${k}` : k); };
   walk(JSON.parse(readFileSync(join('public', 'lang', 'en.json'), 'utf8')), '');
-  const draft = join('i18n-drafts', 'clinic99.json');
-  if (existsSync(draft)) Object.assign(flat, JSON.parse(readFileSync(draft, 'utf8')));
+  for (const f of ['clinic99.json', 'clinic99-fix.json', 'clinic99-fix-replace.json']) {
+    const draft = join('i18n-drafts', f);
+    if (!existsSync(draft)) continue;
+    for (const [k, v] of Object.entries(JSON.parse(readFileSync(draft, 'utf8')) as Record<string, string>)) flat[k.replace(/^REPLACE:/, '')] = v;
+  }
   return flat;
 }
 (globalThis as any).__SR2E_EN__ = { ...((globalThis as any).__SR2E_EN__ ?? {}), ...english() };
@@ -98,8 +101,8 @@ describe('surgeon\'s fee and graded clinic fees (Cybertechnology pp. 44, 54; Cor
     assert.equal(X.surgerySize(0.41, false), 'S');
     assert.equal(X.surgerySize(1, false), 'D');
     assert.equal(X.surgerySize(0.5, true), 'M');
-    assert.equal(X.surgeonFee(0.3, false, 'standard'), 5000);
-    assert.equal(X.surgeonFee(1.2, false, 'standard'), 250000);
+    assert.equal(X.surgeonFee(0.3, false), 5000);
+    assert.equal(X.surgeonFee(1.2, false), 250000);
   });
   test('alpha and beta × 50, delta × 200; bioware has no grade', () => {
     assert.equal(X.feeFactor('alpha'), 50);
@@ -107,11 +110,12 @@ describe('surgeon\'s fee and graded clinic fees (Cybertechnology pp. 44, 54; Cor
     assert.equal(X.feeFactor('delta'), 200);
     assert.equal(X.feeFactor('standard'), 1);
     assert.equal(X.feeFactor('alpha', true), 1);
-    assert.equal(X.surgeonFee(0.3, false, 'alpha'), 250000);
+    // Fix C3 (Cybertechnology pp. 44, 54): the × 50 is on the daily care rates, never on the surgery's list price.
+    assert.equal(X.surgeonFee(0.3, false), 5000);
   });
   test('v980: no fee, standard rates', (t) => {
     t.after(oldWay({ 'CLINIC_V99.surgeonFee': 'v980', 'CLINIC_V99.gradedFees': 'v980' }));
-    assert.equal(X.surgeonFee(1.2, false, 'alpha'), 0);
+    assert.equal(X.surgeonFee(1.2, false), 0);
     assert.equal(X.feeFactor('delta'), 1);
   });
 });
@@ -155,8 +159,10 @@ describe('ware damage levels (Shadowtech pp. 36–41)', () => {
     assert.equal(X.wareLevel(ware({ flags: { [S]: { [X.WARE_FLAG]: '' } } })), 'S');
     assert.equal(X.wareLevel(ware({ flags: { [S]: { [X.WARE_FLAG]: 'D' } } })), 'D');
     assert.equal(X.wareLevel(ware({ system: { bioware: true } })), '');
-    // 'destroyed' has no feedback penalty: the item alone can't get there (Deadly until the GM's record says so).
-    assert.equal(X.wareLevel(ware({ flags: { [S]: { [X.WARE_FLAG]: 'X' } } })), 'D');
+    // Fix C4: 'destroyed' on the item alone counts (it stops, can't be repaired, no feedback): no better for the player.
+    assert.equal(X.wareLevel(ware({ flags: { [S]: { [X.WARE_FLAG]: 'X' } } })), 'X');
+    assert.equal(X.actorFeedbackTn([ware({ flags: { [S]: { [X.WARE_FLAG]: 'X' } } })]).tn, 0);
+    assert.equal(X.wareStops(ware({ flags: { [S]: { [X.WARE_FLAG]: 'X' } } })), true);
     X.setDamageRecordSource(() => ({ Actor_a_Item_w: 'X' }));
     assert.equal(X.wareLevel(ware({ flags: { [S]: { [X.WARE_FLAG]: 'L' } } })), 'X');
   });
@@ -200,5 +206,77 @@ describe('repair by damage level (Shadowtech pp. 36–41; Cybertechnology p. 44)
   test('v980: the old repair', (t) => {
     t.after(oldWay({ 'CLINIC_V99.repair': 'v980' }));
     assert.equal(X.repairSpec('L', 'standard', 1).why, 'SR2E.Clinic99.Why.off');
+  });
+});
+
+describe('v0.99.0 fixes: the damage record\'s bounds, notes and proofs (pure)', () => {
+  test('S2: the newest entries are kept; a character holds at most RECORD_PER_ACTOR; a write that wouldn\'t survive is skipped', () => {
+    const raw: Record<string, string> = {};
+    for (let i = 0; i < X.RECORD_MAX + 5; i++) raw[`Actor_a${i}_Item_w`] = 'L';
+    const rec = X.damageRecord(raw);
+    assert.equal(Object.keys(rec).length, X.RECORD_MAX);
+    assert.ok(rec[`Actor_a${X.RECORD_MAX + 4}_Item_w`], 'the newest kept');
+    assert.equal(rec.Actor_a0_Item_w, undefined, 'the oldest dropped');
+    let mine: X.DamageRecord = {};
+    for (let i = 0; i < X.RECORD_PER_ACTOR; i++) mine = X.recordWith(mine, `Actor_p_Item_i${i}`, 'M').rec;
+    const over = X.recordWith(mine, 'Actor_p_Item_new', 'S');
+    assert.deepEqual([over.refused, over.full, over.rec.Actor_p_Item_new], [true, true, undefined]);
+    const again = X.recordWith(mine, 'Actor_p_Item_i3', 'S');
+    assert.equal(again.refused, false, 'a rise of an entry already there is kept');
+    assert.equal(Object.keys(again.rec).pop(), 'Actor_p_Item_i3', 'and moves to the newest');
+    assert.equal(X.actorKeyOf('Scene_s_Token_t_Actor_a_Item_w'), 'Scene_s_Token_t_Actor_a');
+    assert.deepEqual(X.recordWithout({ a_Item_b: 'L', c_Item_d: 'M' } as any, ['a_Item_b']), { c_Item_d: 'M' });
+  });
+  test('the record is parsed once per change (C7): a source change shows only after the reset', () => {
+    let raw: any = { Actor_a_Item_w: 'L' };
+    X.setDamageRecordSource(() => raw);
+    assert.equal(X.recordedLevel('Actor.a.Item.w'), 'L');
+    raw = { Actor_a_Item_w: 'S' };
+    assert.equal(X.recordedLevel('Actor.a.Item.w'), 'L', 'cached');
+    X.resetRecordCache();
+    assert.equal(X.recordedLevel('Actor.a.Item.w'), 'S');
+  });
+  test('S3, P1, P2: deleted ware kept by name and kind; used ids; the cleared stamp', () => {
+    let m = X.damageMeta(null);
+    m = X.metaGone(m, { actor: 'Actor_a', name: 'Wired Reflexes', kind: 'bodyware', level: 'S', at: 1 });
+    assert.equal(X.metaTake(m, 'Actor_a', 'Wired Reflexes', 'headware').entry, null, 'another kind');
+    const t = X.metaTake(m, 'Actor_a', 'Wired Reflexes', 'bodyware');
+    assert.equal(t.entry!.level, 'S');
+    assert.equal(t.meta.gone.length, 0);
+    m = X.metaUse(m, ['card:m1', 'test:t1']);
+    assert.ok(X.metaUsed(m, ['test:t1']) && !X.metaUsed(m, ['test:t2', '']));
+    m = X.metaCleared(m, 'Actor_a_Item_w', 1000);
+    assert.equal(X.clearedSince(m, 'Actor_a_Item_w', 900), true, 'the item\'s level is from before the clear');
+    assert.equal(X.clearedSince(m, 'Actor_a_Item_w', 1100), false);
+    assert.equal(X.clearedSince(m, 'Actor_a_Item_x', 0), false);
+    const big = X.damageMeta({ used: Array.from({ length: 900 }, (_, i) => `x${i}`), gone: 'junk' });
+    assert.equal(big.used.length, X.META_USED_MAX);
+    assert.equal(big.used.at(-1), 'x899');
+  });
+  test('S4: a repair\'s proof: the same item and owner, successes counted again at the level\'s TN', () => {
+    const snap = { kind: 'cyberRepair', cyberRepair: { itemId: 'w', ownerUuid: 'Actor.a' }, targetNumber: 3, successes: 5, dice: [{ total: 6 }, { total: 3 }, { total: 2 }] };
+    assert.equal(X.repairProof(snap, { itemId: 'w', ownerUuid: 'Actor.a', tn: 3 }), 2, 'forged successes don\'t count');
+    assert.equal(X.repairProof(snap, { itemId: 'w', ownerUuid: 'Actor.a', tn: 4 }), 1, 'the level\'s TN');
+    assert.equal(X.repairProof(snap, { itemId: 'x', ownerUuid: 'Actor.a', tn: 3 }), 0);
+    assert.equal(X.repairProof({ ...snap, kind: 'heal' }, { itemId: 'w', ownerUuid: 'Actor.a', tn: 3 }), 0);
+    assert.equal(X.repairProof({ ...snap, cyberRepair: { itemId: 'w', ownerUuid: 'Actor.b' } }, { itemId: 'w', ownerUuid: 'Actor.a', tn: 3 }), 0);
+  });
+  test('C7: a repair undone marks the ware damaged again only for a level that stops it; v980 always', (t) => {
+    assert.equal(X.redamages('L'), false);
+    assert.equal(X.redamages('M'), true);
+    assert.equal(X.redamages(''), true);
+    t.after(oldWay({ 'CLINIC_V99.damageLevels': 'v980' }));
+    assert.equal(X.redamages('L'), true);
+  });
+  test('P4, S6: the fee\'s entries by operation and by item; the frozen grade', () => {
+    assert.deepEqual(X.feeKeys('op1', 'w'), ['op-op1', 'w-install']);
+    let rec = X.feeWith({}, 'Actor_a', X.feeKeys('op1', 'w'), 5000);
+    assert.equal(X.feePaid(rec.Actor_a, X.feeKeys('op2', 'w')), true, 'another operation on the same ware');
+    assert.equal(X.feePaid(rec.Actor_a, X.feeKeys('op2', 'v')), false);
+    rec = X.feeWithout(rec, 'Actor_a', 'w');
+    assert.equal(X.feePaid(rec.Actor_a, X.feeKeys('op2', 'w')), false, 'the ware came out: a new operation pays');
+    assert.equal(X.feePaid({ 'w-install': null } as any, ['w-install']), false, 'null is not set');
+    assert.equal(X.gradeOf('alpha'), 'alpha');
+    assert.equal(X.gradeOf('gold'), '');
   });
 });

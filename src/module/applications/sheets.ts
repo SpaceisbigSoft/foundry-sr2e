@@ -128,7 +128,7 @@ import { SOFT_SCOPES_99 } from "../rules/config99/kit.ts";
 import * as VR98G from "./vrig98.ts";
 import * as VR98 from "../rules/vrig98.ts";
 import * as W99 from "../rules/ware99.ts";
-import { rowLevel as rowLevel99 } from "./clinic99.ts";
+import { rowLevel as rowLevel99, oneSurgery as oneSurgery99 } from "./clinic99.ts";
 
 /** v0.73.0 (O24): the known-hosts context for this decker and the viewing user. */
 function knowledgeCtx(actor: any): any {
@@ -375,7 +375,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       holdTarget: SR2CharacterSheet.#onHoldTarget,
       breakFree: SR2CharacterSheet.#onBreakFree,
       hazard: SR2CharacterSheet.#onHazard,
-      surgery: SR2CharacterSheet.#onSurgery,
+      surgery: SR2CharacterSheet.#onSurgeryOnce,
       recoveryCare: SR2CharacterSheet.#onRecoveryCare,
       spreadDisease: SR2CharacterSheet.#onSpreadDisease,
       clearRadiation: SR2CharacterSheet.#onClearRadiation,
@@ -2099,7 +2099,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     if (item) await actor.setAdrenalPump(item.id, !item.system.bioActive);
   }
 
-  static async #onSurgery(this: SR2CharacterSheet, _event: Event, target: HTMLElement) {
+  static async #onSurgeryRun(this: SR2CharacterSheet, _event: Event, target: HTMLElement) {
     const actor: any = this.document;
     const surgeons = allActors().filter((a: any) => a.isOwner && ["character", "npc"].includes(a.type));
     // v0.48.0: who operates, and the care the patient recovers under (and whether to pay for it).
@@ -2115,6 +2115,11 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     });
     if (!choice?.surgeon) return;
     await actor.surgery(target.dataset["itemId"], { surgeon: fromUuidSync(choice.surgeon), care: choice.care, pay: choice.pay });
+  }
+
+  /** v0.99.0 fix (RULES.CLINIC_V99, P4): one Surgery dialog and operation per item at a time (a double click). */
+  static async #onSurgeryOnce(this: SR2CharacterSheet, event: Event, target: HTMLElement) {
+    await oneSurgery99(`${String((this.document as any).uuid)}:${String(target.dataset["itemId"])}`, () => SR2CharacterSheet.#onSurgeryRun.call(this, event, target));
   }
 
   /** v0.48.0: change the care a patient recovers from surgery under. */

@@ -4186,6 +4186,25 @@ describe("v0.29.0 cyberware depth", () => {
     assert.equal(await a.repairCyberware("w"), null);            // not damaged now
   });
 
+  test("v0.99.0 fix C7 (RULES.CLINIC_V99.damageLevels): a GM's TN change undoing a Light repair doesn't mark the ware damaged; v980 does", async (t) => {
+    const run = async (damaged: boolean) => {
+      chat.length = 0;
+      const a = sam([
+        { ...cw("w", "Wired Reflexes 1", { reaction: 2, initiativeDice: 1, damaged }), flags: { shadowrun2e_unified: { ware99Dmg: "L" } } },
+        { id: "sk", type: "skill", name: "Biotech", system: { rating: 4, attribute: "intelligence" } },
+      ]);
+      faces.push(5, 1, 1, 1);
+      await a.repairCyberware("w");
+      const d = chat.at(-1);
+      const card = { author: { id: "gm1", isGM: true }, ...d, getFlag: (sc: string, k: string) => d.flags?.[sc]?.[k], async update() {} };
+      await SR2Actor.retarget(card, { baseTargetNumber: 12, modifiers: [] });
+      return a.items.get("w").system.damaged;
+    };
+    assert.equal(await run(false), false);
+    t.after(oldWay({ "CLINIC_V99.damageLevels": "v980", "CLINIC_V99.repair": "v980" }));
+    assert.equal(await run(true), true);
+  });
+
   test("cyberlimbs: housed cyberware costs capacity instead of Essence; attacks with the arm use its Strength; cyberweapons attack and parry", async (t) => {
     t.after(oldWay({ "GEAR_V923.limbHoused": "capacity", "GEAR_V923.limbPairs": "off" })); // v0.92.3: the old way (v0.92.2); __tests__/v0923-gear.test.ts has the book's
     const a = sam([
