@@ -20934,7 +20934,11 @@
         "recordTitle": "Record a chase turn's positioning",
         "recordLine": "{name}: {successes} positioning successes (of {dice} dice) toward next turn's Driver Points",
         "rollLine": "{name}: the card's author doesn't own it, so its positioning test is rolled now, on your client",
-        "scoreRow98": "{name} ({type}, speed {speed}, driver {driverName}): partial {partial}, Open Test {open} (Control Pool {cp}), Driver Points {driver}: Maneuver Score {score}"
+        "scoreRow98": "{name} ({type}, speed {speed}, driver {driverName}): partial {partial}, Open Test {open} (Control Pool {cp}), Driver Points {driver}: Maneuver Score {score}",
+        "notChaseCard": "This card's author owns neither vehicle of the chase: not a chase turn to record.",
+        "vehDone": "{name}: positioning already recorded this Combat Turn (kept)",
+        "mismatch": "{name}'s positioning dice on the card don't add up ({dice} dice on the card, at most {most} by the GM's count, or the faces don't match): not recorded.",
+        "replayLine": "{name}: {successes} positioning successes recounted from the card's {dice} dice (at most {most}), TN {tn} on the card, at least {gmTn} by the GM's count"
       },
       "Mod": {
         "autonav": "Autonav active (rating {rating})",
@@ -21002,7 +21006,11 @@
         "poolHint": "Control Pool dice each jumped-in rigger puts on this turn's Driver Points Open Test (they don't refresh until the turn ends; at most the skill).",
         "cp": "Control Pool",
         "speed": "speed {speed}",
-        "typeHint": "Each vehicle's type for its Vehicle Points: kept on the combat for the next turns (a change on a player's vehicle sheet doesn't change it here)."
+        "typeHint": "Each vehicle's type for its Vehicle Points: kept on the combat for the next turns (a change on a player's vehicle sheet doesn't change it here).",
+        "typeUnconfirmed": "(by category, player's vehicle)",
+        "counts": "in the chase",
+        "players": "(player's)",
+        "countsHint": "Untick a pursuer to leave it out of the chase (no score, not counted as an opponent). A player can add their own vehicle to the combat: check the ones marked (player's)."
       },
       "Type": {
         "byCategory": "(by category)",
@@ -21177,7 +21185,8 @@
         "gmHeld": "Result: {target}'s network holds.",
         "gmBackfire": "And {boxes} boxes on {name}'s own system channel (interference lost).",
         "appliedCard": "GM: {name}'s {op} on the {channel} of {target}, the defence rolled on applying",
-        "sameDice": "Refused: these dice match a MIJI card already applied against {target} (a copy of it). A fresh roll is a new card."
+        "sameDice": "Refused: these dice match a MIJI card already applied against {target} (a copy of it). A fresh roll is a new card.",
+        "oncePerTurn": "Refused: a MIJI Test by this intruder on this channel of {target}'s network has already been applied this Combat Turn."
       },
       "Ew": {
         "mod": "Electronic warfare: Signature +{n}"
@@ -21206,7 +21215,11 @@
         "title": "Access a rigged security system (Rigger 2 p. 79)",
         "lostCard": "{intruder}'s first roll card for {step} was deleted before it was applied. It counts as a failed test.",
         "confirmLost": "{intruder}: {step}, the first roll card was deleted: it counts as a failed test ({need} successes needed).",
-        "confirmChanged": "{intruder}: {step}, the first roll card's dice differ from those it was posted with (or don't make the test): it counts as a failed test ({need} successes needed)."
+        "confirmChanged": "{intruder}: {step}, the first roll card's dice differ from those it was posted with (or don't make the test): it counts as a failed test ({need} successes needed).",
+        "applyPin": "Apply the pinned roll (GM)",
+        "confirmMoved": "{intruder}: {step}, the first roll card no longer names this request: it counts as a failed test ({need} successes needed).",
+        "noPin": "No first roll was pinned for this request (the GM was offline when it was rolled): this takes the first of the {count} roll card(s) for it still in the chat.",
+        "latePin": "This roll was pinned late, when the GM came back online (the GM was offline when it was rolled): the earliest roll card still in the chat then."
       },
       "Attr": {
         "body": "Body",
