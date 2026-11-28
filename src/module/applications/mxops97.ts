@@ -170,6 +170,8 @@ export async function analyzeHostBody(actor: any, host: any, items: readonly str
   if (!items.length) return P(tx('SR2E.MxOps97.AnalyzeHost.nothing'));
   const parts = items.map((i) => i === 'security'
     ? `${tx('SR2E.MxOps97.Item.security')} <strong>${escHtml(cap(String(host.system?.securityCode ?? '')))}-${escHtml(host.system?.securityValue ?? '?')}</strong>`
+    // VR2 p. 111's third item: whether the host is a virtual machine (no field: the GM answers).
+    : i === 'vm' ? `${tx('SR2E.MxOps97.Item.vm')} <em>${tx('SR2E.MxOps97.AnalyzeHost.vmGm')}</em>`
     : `${escHtml(cap(i))} <strong>${escHtml(host.system?.subsystems?.[i] ?? '?')}</strong>`);
   const all = items.length >= M.analyzeHostItems().length;
   return P(`${name(host)}: ${parts.join(', ')}.${all ? '' : ` <em>${tx('SR2E.MxOps97.AnalyzeHost.more')}</em>`}`);
