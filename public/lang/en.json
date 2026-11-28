@@ -20633,7 +20633,9 @@
         "bombInSubsystem": "the data bomb on the {subsystem} subsystem",
         "aDataBomb": "a data bomb",
         "anIcon": "an icon that is gone",
-        "someone": "an unknown decker"
+        "someone": "an unknown decker",
+        "improvise": "write an improvised attack (Power {net}; its points come off Evasion and Bod)",
+        "unimprovise": "use up the improvised attack (its Evasion and Bod points come back)"
       }
     },
     "MxLife97": {
@@ -20684,7 +20686,8 @@
         "refused": "That Cook and Installation request does not match the builder's work.",
         "gmAdded": "{days} days added to the work under way.",
         "gmDropped": "The part can't be finished: the work under way is given up (what was paid comes back).",
-        "gmDoneAlready": "The part was already finished (no work time to add to): undo it by hand."
+        "gmDoneAlready": "The part was already finished (no work time to add to): undo it by hand.",
+        "askFailedPlain": "The GM's client did not take the Cook and Installation Tasks: ask the GM to roll them."
       },
       "Form": {
         "failed": "<strong>{name}</strong>'s design of {form} is flawed: Computer against TN {tn}, no success. Days lost: {days} (base {base} ÷ 2D6). No Karma is spent; try again (VR2 pp. 77, 145).",
@@ -20757,7 +20760,10 @@
         "tarProgram": "{name}'s utility was not crashed: {ic} stays up",
         "deckerNotHere": "the decker is no longer in this host: nothing done",
         "slowNotHere": "{name} is not an IC of this host that is still up: not slowed",
-        "slowNoCombatant": "{name} has no Initiative in that combat: not slowed"
+        "slowNoCombatant": "{name} has no Initiative in that combat: not slowed",
+        "tarNoCard": "no attack card of {ic} on that decker backs this (it must be the tar's newest attack, by the GM side): nothing done",
+        "cardUsed": "that card was already applied: nothing done",
+        "slowNoCard": "no Slow test card of that decker on {name} backs this: not slowed"
       },
       "AnalyzeHost": {
         "nothing": "No successes to spend: nothing learned.",
@@ -20846,7 +20852,8 @@
         "slowLabel": "{name} slows {ic}: Initiative −{delta}",
         "slowSent": "Sent to the GM: its Initiative −{delta}.",
         "slowBackSent": "Sent to the GM: {delta} Initiative given back.",
-        "slowDone": "{ic} is slowed: Initiative {from} → {to}"
+        "slowDone": "{ic} is slowed: Initiative {from} → {to}",
+        "slowNothing": "{ic}: that Slow card has nothing more to take off"
       }
     }
   },
