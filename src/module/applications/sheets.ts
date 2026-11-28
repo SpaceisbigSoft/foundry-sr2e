@@ -5886,6 +5886,8 @@ export class SR2ItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
       chipKinds: RULES.CYBERWARE.skillsofts.kinds.map((k) => ({ key: k, label: k ? cap(k) : tx('SR2E.App.Sheets.notAChip') })),
       // v0.99.0 (RULES.KIT_V99.skillMemory, Core p. 248): the Skill Memory Table's skill types.
       chipScopes: SOFT_SCOPES_99.map((k) => ({ key: k, label: tKey(`SR2E.Kit99.Scope.${k || 'none'}`) })),
+      // v0.99.0 review (C8): the new inputs are hidden while their KIT_V99 switch is 'v980'.
+      kit99Ui: KG99.sheetUi(),
       // v0.57.0
       simchipKinds: RULES.MATRIX_V57.chips.kinds.map((k) => ({ key: k, label: k ? (k === "btl" ? "BTL" : cap(k)) : tx('SR2E.App.Sheets.notASimChip') })),
       bypassToolKinds: [{ key: "", label: tx('SR2E.App.Sheets.notATool') }, ...RULES.SECURITY_V57.tools.map((t) => ({ key: t.id, label: t.label }))],

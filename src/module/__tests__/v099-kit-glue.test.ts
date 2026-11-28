@@ -45,8 +45,10 @@ const GM = { id: 'gm1', name: 'GM', isGM: true };
 const P1 = { id: 'p1', name: 'Player', isGM: false };
 
 before(async () => {
-  const draft = join('i18n-drafts', 'kit99.json');
-  if (existsSync(draft)) g.__SR2E_EN__ = { ...(g.__SR2E_EN__ ?? {}), ...JSON.parse(readFileSync(draft, 'utf8')) };
+  for (const f of ['kit99.json', 'kit99-fix.json', 'kit99-fix-replace.json']) {
+    const draft = join('i18n-drafts', f);
+    if (existsSync(draft)) g.__SR2E_EN__ = { ...(g.__SR2E_EN__ ?? {}), ...Object.fromEntries(Object.entries(JSON.parse(readFileSync(draft, 'utf8')) as Record<string, string>).map(([k, v]) => [k.replace(/^REPLACE:/, ''), v])) };
+  }
   (RULES.DISASTERS as any).prompt = false;
   (RULES.WAITING as any).enabled = false;
   g.foundry = { abstract: { TypeDataModel: class {} }, data: { fields: new Proxy({}, { get: () => class { constructor(..._a: any[]) {} } }) } };
@@ -222,6 +224,25 @@ describe('the police check (KIT_V99.policeCheck, Shadowtech p. 103)', () => {
     t.after(oldWay(KIT_V980_WAY));
     assert.equal(await KG.policeCheck(s, { dice: 4, enforcement: 0, all: true }), null);
     assert.equal(chat.length, 0);
+  });
+  test('review P5: foci and cyberdecks are checked too (every type with legality fields)', async () => {
+    const s = person([
+      { id: 'f', type: 'focus', name: 'Power focus', system: { legality: 'restricted', legalCode: '' } },
+      { id: 'd', type: 'cyberdeck', name: 'Fairlight', system: { legality: 'forbidden', legalCode: '' } },
+    ], 'Mage');
+    faces.push(1, 1, 1, 1, 1, 1, 1, 1);
+    const r = await KG.policeCheck(s, { dice: 4, enforcement: 0, all: true });
+    assert.deepEqual(r.map((x: any) => [x.name, x.tn]).sort(), [['Fairlight', 2], ['Power focus', 4]]);
+  });
+  test('review S7: a blanked legality still counts by the GM\'s catalogue entry of that name, noted on the card', async () => {
+    g.game.settings = { get: (_s: string, k: string) => (k === 'itemTemplates' ? [{ id: 't1', type: 'weapon', name: 'Heavy Pistol', system: { legality: 'permit', legalCode: '5P-E' } }] : undefined) };
+    try {
+      const s = person([{ id: 'p', type: 'weapon', name: 'Heavy pistol', system: { melee: false, concealability: 0, legality: '', legalCode: '' } }], 'Liar');
+      faces.push(5, 5, 1, 1);
+      const r = await KG.policeCheck(s, { dice: 4, enforcement: 0, all: false });
+      assert.deepEqual(r, [{ name: 'Heavy pistol', tn: 5, successes: 2, outcome: 'press' }]);
+      assert.match(chat.at(-1).content, /catalogue entry says 5/);
+    } finally { delete g.game.settings; }
   });
   test('the dice are bounded on the GM\'s client', async () => {
     faces.push(...Array(20).fill(1));

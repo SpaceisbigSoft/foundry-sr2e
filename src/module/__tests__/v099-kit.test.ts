@@ -20,8 +20,11 @@ function english(): Record<string, string> {
   const flat: Record<string, string> = {};
   const walk = (o: unknown, p: string): void => { if (typeof o === 'string') { flat[p] = o; return; } if (o && typeof o === 'object') for (const [k, v] of Object.entries(o)) walk(v, p ? `${p}.${k}` : k); };
   walk(JSON.parse(readFileSync(join('public', 'lang', 'en.json'), 'utf8')), '');
-  const draft = join('i18n-drafts', 'kit99.json');
-  if (existsSync(draft)) Object.assign(flat, JSON.parse(readFileSync(draft, 'utf8')));
+  // The drafts while they aren't merged: the first build's, the review fixes' new keys and their changed ones.
+  for (const f of ['kit99.json', 'kit99-fix.json', 'kit99-fix-replace.json']) {
+    const draft = join('i18n-drafts', f);
+    if (existsSync(draft)) for (const [k, v] of Object.entries(JSON.parse(readFileSync(draft, 'utf8')) as Record<string, string>)) flat[k.replace(/^REPLACE:/, '')] = v;
+  }
   return flat;
 }
 (globalThis as any).__SR2E_EN__ = { ...((globalThis as any).__SR2E_EN__ ?? {}), ...english() };
@@ -143,6 +146,10 @@ describe('the lined coat (Core p. 242)', () => {
     assert.equal(K.underCoat(items, 'scanner').find((i) => i.id === 'p')!.concealability, 5);
     assert.equal(K.underCoat(items.map((i) => (i.id === 'c' ? { ...i, worn: false } : i)), 'frisk').find((i) => i.id === 'p')!.concealability, 5);
   });
+  test('review C7: only a coat that is worn counts (no worn field: carried, not worn)', () => {
+    const carried = items.map((i) => (i.id === 'c' ? { id: 'c', type: 'armor', name: 'Lined Coat', concealability: 8 } : i));
+    assert.equal(K.underCoat(carried, 'look').find((i) => i.id === 'p')!.concealability, 5);
+  });
   test("'v980': no change", (t) => {
     t.after(oldWay(KIT_V980_WAY));
     assert.equal(K.underCoat(items, 'look').find((i) => i.id === 'p')!.concealability, 5);
@@ -215,9 +222,48 @@ describe('the police check (Shadowtech p. 103)', () => {
     assert.equal(K.policeTn(3, -3), 2);
     assert.deepEqual([0, 1, 2, 5].map(K.policeOutcome), ['none', 'warn', 'press', 'press']);
   });
+  test('review S7: the GM\'s catalogue entry of the same name counts too, the stricter wins', () => {
+    assert.deepEqual(K.policeRestriction({ code: '', category: '' }, { code: '5P-E', category: 'permit' }), { restriction: 5, catalogue: 5 }, 'blanked by the player');
+    assert.deepEqual(K.policeRestriction({ code: '', category: 'legal' }, { code: '', category: 'forbidden' }), { restriction: 2, catalogue: 2 });
+    assert.deepEqual(K.policeRestriction({ code: '3P', category: 'permit' }, { code: '5P', category: 'permit' }), { restriction: 3, catalogue: null }, 'the item\'s own is stricter');
+    assert.deepEqual(K.policeRestriction({ code: '6P', category: '' }, null), { restriction: 6, catalogue: null });
+    assert.equal(K.policeRestriction({ code: '', category: '' }, { code: '', category: 'legal' }), null);
+  });
+  test('review P5: every item type with legality fields is checked', () => {
+    const src = readFileSync(join('src', 'module', 'models', 'index.ts'), 'utf8');
+    const types = new Set<string>();
+    let cls = '';
+    for (const line of src.split('\n')) {
+      const m = /^export class (\w+)DataModel\b/.exec(line);
+      if (m) cls = m[1]!.toLowerCase();
+      if (/\.\.\.legalFields\(\)/.test(line)) types.add(cls);
+    }
+    assert.deepEqual([...K.POLICE_TYPES_99].sort(), [...types].sort());
+  });
   test('the officer: the better of Security and Police Procedures, at most 20', () => {
     assert.equal(K.officerDice([{ name: 'Security', rating: 3 }, { name: 'Police Procedures', rating: 5 }, { name: 'Firearms', rating: 9 }]), 5);
     assert.equal(K.officerDice([{ name: 'security', rating: 99 }]), 20);
     assert.equal(K.officerDice([]), 0);
+  });
+});
+
+describe('review C8: the item sheet\'s new inputs are hidden at \'v980\'', () => {
+  test('sheetUi follows the switches; the template guards each input', (t) => {
+    assert.deepEqual(K.sheetUi(), { smartlink2: true, scope: true, legalCode: true });
+    const hbs = readFileSync(join('public', 'templates', 'item-sheet.hbs'), 'utf8');
+    for (const [flag, input] of [['smartlink2', 'system.smartgun2'], ['scope', 'system.chip.scope'], ['legalCode', 'system.legalCode']] as const) {
+      const at = hbs.indexOf(`name="${input}"`);
+      const open = hbs.lastIndexOf(`{{#if kit99Ui.${flag}}}`, at);
+      assert.ok(at > 0 && open >= 0 && hbs.indexOf('{{/if}}', open) > at && hbs.lastIndexOf('\n', at) < open, input);
+    }
+    t.after(oldWay(KIT_V980_WAY));
+    assert.deepEqual(K.sheetUi(), { smartlink2: false, scope: false, legalCode: false });
+  });
+});
+
+describe('review P7: counts read the same for one', () => {
+  test('no "{n} successes" or "{n} rounds" in the kit\'s texts', () => {
+    const en = english();
+    for (const [k, v] of Object.entries(en)) if (k.startsWith('SR2E.Kit99.')) assert.doesNotMatch(v, /\{\w+\} (successes|dice|standard|explosive|fragmentation|smoke|mini)/, k);
   });
 });

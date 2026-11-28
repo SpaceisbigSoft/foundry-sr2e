@@ -1,0 +1,10 @@
+{
+  "REPLACE:SR2E.Kit99.Sniff.standardRounds": "standard rounds: {n}",
+  "REPLACE:SR2E.Kit99.Sniff.explosiveRounds": "explosive rounds: {n}",
+  "REPLACE:SR2E.Kit99.Sniff.fragGrenades": "fragmentation or concussion grenades: {n}",
+  "REPLACE:SR2E.Kit99.Sniff.smokeGrenades": "smoke or flash grenades: {n}",
+  "REPLACE:SR2E.Kit99.Sniff.miniGrenades": "mini-grenades: {n}",
+  "REPLACE:SR2E.Kit99.Sniff.row": "{name} (chemical sniffer, TN {tn}): successes {successes}",
+  "REPLACE:SR2E.Kit99.Police.head": "Police check of {subject} by {officer} (dice: {dice}, enforcement {enforcement}).",
+  "REPLACE:SR2E.Kit99.Police.row": "{name} (legality {code}, TN {tn}): {dice} → successes {successes}:"
+}

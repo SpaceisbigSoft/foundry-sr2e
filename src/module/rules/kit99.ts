@@ -125,10 +125,13 @@ export function isLinedCoat(name: unknown): boolean {
   return /lined\s*-?\s*coat/i.test(String(name ?? ''));
 }
 
-/** The carried items as a look or frisk sees them under a worn lined coat: each hideable weapon +2 Concealability. */
+/**
+ * The carried items as a look or frisk sees them under a worn lined coat: each hideable weapon +2 Concealability.
+ * Only a coat that is worn (`worn === true`, as SR2Actor.carriedItems() gives armor) counts; a carried one doesn't.
+ */
 export function underCoat<T extends { type: string; name: string; concealability: number; worn?: boolean }>(items: readonly T[], method: string): T[] {
   if (!on('linedCoat') || (method !== 'look' && method !== 'frisk')) return [...items];
-  if (!items.some((i) => i.type === 'armor' && i.worn !== false && isLinedCoat(i.name))) return [...items];
+  if (!items.some((i) => i.type === 'armor' && i.worn === true && isLinedCoat(i.name))) return [...items];
   return items.map((i) => (i.type === 'weapon' && whole(i.concealability) > 0 ? { ...i, concealability: whole(i.concealability) + 2 } : i));
 }
 
@@ -242,6 +245,34 @@ export function restrictionNumber(o: { code?: unknown; category?: unknown }): nu
   if (cat === 'legal' && fromCode === null) return null;
   const all = [fromCode, fromCat].filter((n): n is number => n !== null);
   return all.length ? Math.min(...all) : null;
+}
+
+/**
+ * Every item type with legality fields (models/index.ts legalFields()): what the police check reads. A test keeps this
+ * list in step with the models.
+ */
+export const POLICE_TYPES_99 = ['weapon', 'armor', 'gear', 'cyberware', 'focus', 'cyberdeck', 'program', 'vehicle'] as const;
+
+/**
+ * An item's restriction number for the police check, with the GM's catalogue entry of the same type and name (a
+ * GM-owned source: the item's own legality is player-writable). The stricter (lower) number counts; `catalogue` is the
+ * catalogue's number when it is stricter than the item's own (the item was edited, or never had one), else null.
+ * null: nothing to check on either.
+ */
+export function policeRestriction(own: { code?: unknown; category?: unknown }, cat?: { code?: unknown; category?: unknown } | null): { restriction: number; catalogue: number | null } | null {
+  const mine = restrictionNumber(own);
+  const theirs = cat ? restrictionNumber(cat) : null;
+  if (mine === null && theirs === null) return null;
+  const stricter = theirs !== null && (mine === null || theirs < mine);
+  return { restriction: stricter ? theirs! : mine!, catalogue: stricter ? theirs : null };
+}
+
+/**
+ * Which v0.99.0 inputs the item sheet shows (each hidden at 'v980', where nothing reads it): the smartgun's Level II
+ * box (smartlink2), a chip's Skill type (skillMemory or softReplaces at the book's way), the Legality code (policeCheck).
+ */
+export function sheetUi(): { smartlink2: boolean; scope: boolean; legalCode: boolean } {
+  return { smartlink2: on('smartlink2'), scope: on('skillMemory') || on('softReplaces'), legalCode: on('policeCheck') };
 }
 
 /** The police check's TN (Shadowtech p. 103): the restriction number, ±3 for the area's enforcement, never below 2. */

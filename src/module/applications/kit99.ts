@@ -12,6 +12,11 @@ import { searchTargets, searchFinds, type SearchTarget } from '../rules/armory.t
 import { isCarried, isAtHand } from '../rules/tweaks.ts';
 import { SNIFF_99 } from '../rules/config99/kit.ts';
 import * as K from '../rules/kit99.ts';
+import { templatesFor } from '../rules/items.ts';
+import { catalogueTemplates } from './catalogue942.ts';
+
+/** The item sheet's v0.99.0 inputs shown at the switches' values (rules/kit99.ts sheetUi). */
+export const sheetUi = K.sheetUi;
 
 const G = (): any => (globalThis as any).game;
 const isGm = (): boolean => Boolean(G()?.user?.isGM);
@@ -21,7 +26,7 @@ const users = (): any[] => [...(G()?.users ?? [])];
 const gmIds = (): string[] => users().filter((u: any) => u.isGM).map((u: any) => u.id);
 const int = (v: unknown, min: number, max: number, d = min): number => { const n = Math.floor(Number(v)); return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : d; };
 const itemsOf = (a: any): any[] => [...(a?.items ?? [])];
-const LI_OPEN = '<li>', LI_CLOSE = '</li>', SELECTED = ' selected';
+const LI_OPEN = '<li>', LI_CLOSE = '</li>', SELECTED = ' selected', SPACE = ' ';
 
 /** Dice rolled with Foundry (shown by Dice So Nice through the card's rolls). */
 function roller(sink: any[]): (count: number) => Promise<number[]> {
@@ -134,25 +139,37 @@ export function manualSearchFrom(form: Record<string, unknown>, method: string):
 
 // ================================================================ The police check (Shadowtech p. 103)
 
-/** A restricted item the character carries, as the check sees it. */
-export interface PoliceItem { name: string; restriction: number; code: string; shown: boolean }
+/** A restricted item the character carries, as the check sees it (`catalogue`: the GM's catalogue's stricter number). */
+export interface PoliceItem { name: string; restriction: number; code: string; shown: boolean; catalogue: number | null }
+
+/** The GM's catalogue entry (built-in or the world's) of an item's type and name, or null. */
+function catalogueEntry(type: string, name: string): { code: unknown; category: unknown } | null {
+  const key = name.trim().toLowerCase();
+  if (!key) return null;
+  try {
+    const t = templatesFor(type, catalogueTemplates()).find((x) => String(x.name ?? '').trim().toLowerCase() === key);
+    return t ? { code: t.system?.legalCode, category: t.system?.legality } : null;
+  } catch { return null; }
+}
 
 /**
- * The restricted items a character carries (KIT_V99.policeCheck): each with its restriction number and whether it is
- * in plain sight (a weapon or worn armor that can't be hidden, by the search's own rule). Read from the character's
- * own items on the GM's client (accepted: a player who edits their own items to hide one does so at their own risk).
+ * The restricted items a character carries (KIT_V99.policeCheck): every item type with legality fields (K.POLICE_TYPES_99),
+ * each with its restriction number and whether it is in plain sight (a weapon or worn armor that can't be hidden, by
+ * the search's own rule). Read from the character's own items on the GM's client; an item's legality is checked
+ * against the GM's catalogue entry of the same type and name too, and the stricter counts (a player who blanks an
+ * item's legality doesn't drop it; one renamed off the catalogue is accepted: own character only).
  */
 export function policeItems(subject: any): PoliceItem[] {
   const carried = typeof subject?.carriedItems === 'function' ? subject.carriedItems() : [];
   const plain = new Set(searchTargets(carried, 'look').filter((t) => t.tn === null).map((t) => t.id));
   const out: PoliceItem[] = [];
   for (const i of itemsOf(subject)) {
-    if (!['weapon', 'armor', 'gear', 'cyberware'].includes(i.type) || !isCarried(i)) continue;
+    if (!(K.POLICE_TYPES_99 as readonly string[]).includes(i.type) || !isCarried(i)) continue;
     if (i.type === 'cyberware' && !i.system?.installed) continue;
     const code = String(i.system?.legalCode ?? '').slice(0, 20);
-    const n = K.restrictionNumber({ code, category: i.system?.legality });
+    const n = K.policeRestriction({ code, category: i.system?.legality }, catalogueEntry(String(i.type), String(i.name ?? '')));
     if (n === null) continue;
-    out.push({ name: String(i.name ?? ''), restriction: n, code, shown: plain.has(i.id) });
+    out.push({ name: String(i.name ?? ''), restriction: n.restriction, code, shown: plain.has(i.id), catalogue: n.catalogue });
   }
   return out.slice(0, 60);
 }
@@ -172,8 +189,9 @@ export async function policeCheck(subject: any, o: { dice: number; enforcement: 
     const tn = K.policeTn(i.restriction, o.enforcement);
     const r = await successTest({ dice, targetNumber: tn, modifiers: [], roll: roller(rolls) });
     const outcome = K.policeOutcome(r.successes);
+    const catNote = i.catalogue === null ? '' : SPACE + tx('SR2E.Kit99.Police.catalogue', { n: i.catalogue });
     results.push({ name: i.name, tn, successes: r.successes, outcome });
-    lines.push(`${LI_OPEN}${tx('SR2E.Kit99.Police.row', { name: escHtml(i.name), code: escHtml(i.code || '-'), tn, dice: escHtml(diceText(r) || '-'), successes: r.successes })} <strong>${escHtml(tKey(`SR2E.Kit99.Police.${outcome}`))}</strong>${LI_CLOSE}`);
+    lines.push(`${LI_OPEN}${tx('SR2E.Kit99.Police.row', { name: escHtml(i.name), code: escHtml(i.code || '-'), tn, dice: escHtml(diceText(r) || '-'), successes: r.successes })}${catNote} <strong>${escHtml(tKey(`SR2E.Kit99.Police.${outcome}`))}</strong>${LI_CLOSE}`);
   }
   const legal: string[] = subject.legalNotes?.(results.filter((x) => x.outcome === 'press').map((x) => x.name)) ?? [];
   const head = tx('SR2E.Kit99.Police.head', { subject: escHtml(String(subject.name ?? '')), officer: escHtml(o.officer || tx('SR2E.Kit99.Police.anOfficer')), dice, enforcement: int(o.enforcement, -3, 3, 0) });
