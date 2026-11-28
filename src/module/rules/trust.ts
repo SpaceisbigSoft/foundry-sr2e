@@ -12,6 +12,7 @@
  * So a GM-side change made because of a card must be bound to the card's author: the author is a GM, or owns the
  * actor the change comes from (the roller, the healer, the holder), and the values are bounded here.
  */
+import { MX97_OPS } from './mxic97.ts';
 import { describeBundle } from './arcanum.ts';
 import { t as tx, tCount } from '../helpers/i18n.ts';
 import { RULES } from './config.ts';
@@ -112,8 +113,8 @@ export const GM_APPLY_SPECS: Record<string, { flag: string; keys: readonly strin
   applySite: { flag: 'siteChange', keys: ['siteUuid', 'add', 'minAlert', 'deviceId', 'bypassed', 'casingOpen', 'sourceUuid'], target: 'siteUuid', sources: ['sourceUuid'] },
   applyHost: {
     flag: 'hostChange',
-    keys: ['hostUuid', 'found', 'decrypt', 'removeFile', 'minAlert', 'smoke', 'spot', 'setAlert', 'resetTally', 'addFile', 'editFile', 'validate', 'invalidate', 'bombFound', 'defuse', 'bombOff', 'call', 'sourceUuid'],
-    target: 'hostUuid', sources: ['sourceUuid', 'found.deckerUuid', 'bombFound.deckerUuid'],
+    keys: ['hostUuid', 'found', 'decrypt', 'removeFile', 'minAlert', 'smoke', 'spot', 'setAlert', 'resetTally', 'addFile', 'editFile', 'validate', 'invalidate', 'bombFound', 'defuse', 'bombOff', 'call', 'mx97', 'sourceUuid'],
+    target: 'hostUuid', sources: ['sourceUuid', 'found.deckerUuid', 'bombFound.deckerUuid', 'mx97.deckerUuid'],
   },
   applyLocks: { flag: 'sensorLocks', keys: ['vehicleUuid', 'targetUuid', 'targetName', 'successes', 'sourceUuid'], target: 'vehicleUuid', sources: ['sourceUuid'] },
   applyJam: { flag: 'jam', keys: ['droneUuid', 'by', 'rating', 'jammerUuid', 'sourceUuid'], target: 'droneUuid', sources: ['jammerUuid', 'sourceUuid'] },
@@ -246,6 +247,9 @@ export function hostChangeShapeOk(f: any): boolean {
   if (f.bombOff !== undefined && !(onlyKeys(f.bombOff, ['fileId', 'subsystem', 'erase']) && optStr(f.bombOff.fileId) && optStr(f.bombOff.subsystem) && (f.bombOff.erase === undefined || typeof f.bombOff.erase === 'boolean'))) return false;
   if (f.call !== undefined && !(onlyKeys(f.call, ['op', 'id', 'from', 'to', 'by', 'who']) && ['place', 'tap', 'reroute', 'end'].includes(f.call.op)
     && safeStr(f.call.id, 200) && ['from', 'to', 'by', 'who'].every((k) => optStr(f.call[k])))) return false;
+  // v0.97.0 (RULES.MXIC_V97): a decker's request: who and which (the GM side reads every value itself).
+  if (f.mx97 !== undefined && !(onlyKeys(f.mx97, ['op', 'deckerUuid', 'vs', 'id', 'net', 'cardId']) && (MX97_OPS as readonly string[]).includes(f.mx97.op)
+    && safeStr(f.mx97.deckerUuid, 400) && optStr(f.mx97.vs) && optStr(f.mx97.id, 400) && optStr(f.mx97.cardId, 60) && (f.mx97.net === undefined || intIn(f.mx97.net, 0, 30)))) return false;
   return true;
 }
 
@@ -477,6 +481,7 @@ export function describeGmChange(action: string, flags: Record<string, any>, nam
         else if (k === 'bombFound') out.push(tx('SR2E.Text.Trust.findsDataBomb', { name: nm(v?.deckerUuid) }));
         else if (k === 'defuse') out.push(tx('SR2E.Text.Trust.dataBombDefused', { what: plainOf(v) }));
         else if (k === 'bombOff') out.push(tx('SR2E.Text.Trust.dataBombGoesOff', { what: plainOf(v) }));
+        else if (k === 'mx97') out.push(tx('SR2E.MxIc97.Gm.trustLine', { op: String(v?.op ?? ''), name: nm(v?.deckerUuid), net: Number(v?.net ?? 0) }));
         else out.push(`${k}: ${plainOf(v)}`);
       }
       break;

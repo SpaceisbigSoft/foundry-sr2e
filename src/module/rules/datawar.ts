@@ -9,6 +9,7 @@ import type { TargetNumberModifier } from './dice.ts';
 import { advanceTally, icInitiativeDice, type DeckDamage, type SheafStep } from './matrix.ts';
 import { combatStamp, sameCombatRound, type Clock, type ClockDue, own } from './util.ts';
 import { t as tx, tKey } from '../helpers/i18n.ts';
+import { filterBook as filterBook97 } from './mxic97.ts';
 
 const V = () => RULES.MATRIX_V57;
 const minTn = (n: number) => Math.max(RULES.MIN_TARGET_NUMBER, n);
@@ -347,7 +348,8 @@ export function realityFilterTest(mpcp: number, securityValue: number): { dice: 
 /** What the reality filter gives in a host: a bonus on success, a TN penalty on failure, nothing untested. */
 export function realityFilterEffect(ok: boolean | null): { reaction: number; pool: number; modifiers: TargetNumberModifier[] } {
   // v0.97.0 (RULES.MXIC_V97.realityFilter 'book', VR2 p. 84): a Response Increase level instead (rules/mxic97.ts).
-  if (RULES.MXIC_V97.realityFilter === 'book') return { reaction: 0, pool: 0, modifiers: [] };
+  // Only with the book persona speed (RULES.MATRIX_V923.initiative), which carries the level.
+  if (filterBook97()) return { reaction: 0, pool: 0, modifiers: [] };
   const F = V().realityFilter;
   if (ok === true) return { reaction: F.reaction, pool: F.pool, modifiers: [] };
   if (ok === false) return { reaction: 0, pool: 0, modifiers: F.failTn ? [{ id: 'realityFilterFails', label: tx('SR2E.Card.Mod.realityFilterFails'), value: F.failTn }] : [] };

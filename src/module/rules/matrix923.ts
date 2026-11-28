@@ -55,7 +55,7 @@ export function matrixOperations(): Op[] {
  * (at most the deck's maximum and MPCP ÷ 4), a hot deck as one more level; a tortoise halves Reaction (min 1) and gets
  * only Response Increase's dice; an otaku (I + W) ÷ 2 (round up) and 3D6. Null with 'v922' (the caller keeps the old way).
  */
-export function personaSpeed(o: { reaction: number; responseIncrease: number; mpcp: number; sim: string; tortoise: boolean; otaku?: { intelligence: number; willpower: number } | null; filter?: number }): { reaction: number; dice: number; counted: number } | null {
+export function personaSpeed(o: { reaction: number; responseIncrease: number; mpcp: number; sim: string; tortoise: boolean; otaku?: { intelligence: number; willpower: number } | null; filter?: number; hotCool?: boolean }): { reaction: number; dice: number; counted: number } | null {
   if (V().initiative !== 'book') return null;
   // v0.97.0 (RULES.MXIC_V97.realityFilter, coolInit; VR2 pp. 84–87): a reality filter's level and running cool.
   if (!o.tortoise && !(o.otaku && V().otaku === 'book')) {

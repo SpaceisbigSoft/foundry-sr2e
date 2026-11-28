@@ -19,7 +19,8 @@ import { successTest, type SuccessTestResult, type TargetNumberModifier } from '
 import { deckerTallyOf, parryPenalty, positionBonus, activeManeuvers, type Maneuver } from '../rules/datawar.ts';
 import { combatStamp } from '../rules/util.ts';
 import * as X from '../rules/mxic97.ts';
-import { authorIsGm, gmMay } from './trust.ts';
+import * as M923 from '../rules/matrix923.ts';
+import { authorIsGm } from './trust.ts';
 import type { SR2Actor as SR2ActorType } from '../documents/index.ts';
 
 const G = (): any => (globalThis as any).game;
@@ -36,18 +37,14 @@ const users = (): any[] => [...(G()?.users ?? [])];
 const gmIds = (): string[] => users().filter((u: any) => u.isGM).map((u: any) => u.id);
 const ownerIds = (a: any): string[] => users().filter((u: any) => !u.isGM && a?.testUserPermission?.(u, 'OWNER')).map((u: any) => u.id);
 const flag = (a: any, k: string): unknown => (typeof a?.getFlag === 'function' ? a.getFlag(SYSTEM_ID, k) : a?.flags?.[SYSTEM_ID]?.[k]);
-const setFlagTo = async (a: any, k: string, v: unknown): Promise<void> => { await a.update({ [`flags.${SYSTEM_ID}.${k}`]: v }); };
 const newId = (): string => (globalThis as any).foundry?.utils?.randomID?.() ?? Math.random().toString(36).slice(2, 12);
 const now = (): { round: number | null; worldTime: number; combatId: string | null } => actorClass()?.matrixNow?.() ?? { round: null, worldTime: 0, combatId: null };
 
 /** The flags this file keeps on a decker. */
-export const SUPPRESSED_FLAG = 'suppressed97';
 export const MX_FLAG = 'mx97';
 export const USED_FLAG = 'mxUsed97';
 export const IMPROVISED_FLAG = 'improvised97';
 export const RUN_FLAG = 'runFiles97';
-/** The message ids of choice cards this decker's owner has answered (a player can't flag a GM's message). */
-export const CARDS_FLAG = 'mxicCards97';
 /** The program id of an improvised attack (a one-shot program that is not an item). */
 export const IMPROVISED_ID = 'improvised97';
 
@@ -72,11 +69,27 @@ function rollHtml(label: string, r: SuccessTestResult): string {
   return `<p>${label}: ${tx('SR2E.MxIc97.roll', { dice: escHtml(diceText(r) || '-'), successes: r.successes })}</p>`;
 }
 
-// ================================================================ Suppressing IC (VR2 pp. 40, 120)
+// ================================================================ The GM side's host record (VR2 pp. 40–41, 121–122)
 
-/** The decker's Detection Factor with the IC they suppress in this host taken off (VR2 p. 40). */
+/** The host's own record of parries, evades and suppressed IC (rules/mxic97.ts hostMx): GM-owned, written only by applyMx97. */
+export const HOST_FLAG = 'mxic97';
+const hostRec = (host: any): X.HostMx => X.hostMx(flag(host, HOST_FLAG));
+const cls = (): typeof SR2ActorType | undefined => actorClass() as typeof SR2ActorType | undefined;
+const inHost = (uuid: string, host: any): boolean => { const a = sync(uuid); return Boolean(a?.system?.matrix?.jackedIn) && String(a?.system?.matrix?.hostUuid ?? '') === String(host?.uuid ?? ''); };
+/** Write the host's record; entries of deckers no longer in this host go (suppression lasts while they stay in the system). */
+async function saveRec(host: any, r: X.HostMx): Promise<void> {
+  const keep = <T extends { decker: string }>(l: T[]) => l.filter((e) => inHost(e.decker, host)).slice(-X.LIST_CAP * 4);
+  await host.update({ [`flags.${SYSTEM_ID}.${HOST_FLAG}`]: { parry: keep(r.parry), evade: keep(r.evade), suppressed: keep(r.suppressed) } });
+}
+
+/** Ask the GM side to record something (a host change: at once on a GM's client, else the GM's Apply card). */
+async function request(host: any, decker: any, m: X.Mx97Change, label: string): Promise<void> {
+  await cls()?.changeHost(host, { mx97: m } as any, label, String(decker?.uuid ?? ''));
+}
+
+/** The decker's Detection Factor with the IC they suppress in this host taken off (VR2 p. 40), from the host's record. */
 export function liveDf(decker: any, df: number): number {
-  return X.suppressedDf(df, flag(decker, SUPPRESSED_FLAG), String(decker?.system?.matrix?.hostUuid ?? ''));
+  return X.suppressedDf(df, flag(sync(decker?.system?.matrix?.hostUuid), HOST_FLAG), String(decker?.uuid ?? ''));
 }
 
 /** The card line of a tally change: a crash or bomb counted, or a suppressed IC released (`name`). */
@@ -84,112 +97,157 @@ function tallyLabel(name0: string, decker: any, points: number): string {
   return name0 ? tx('SR2E.MxIc97.Suppress.releasedLine', { decker: name(decker), name: escHtml(name0), points }) : tx('SR2E.MxIc97.Suppress.countLine', { decker: name(decker), points });
 }
 
-/** Put `points` on the decker's tally in `host`: at once on a GM's client, else a card for the GM to apply. `label`: a released IC's name ('' for a crash or bomb counted). */
-async function addTally(host: any, decker: any, points: number, label: string): Promise<void> {
+/** GM side: put `points` on the decker's tally in `host` now (the tally's own card follows). */
+async function tallyNowGm(host: any, decker: any, points: number, label: string): Promise<void> {
   const pts = int(points, 0, 30, 0);
-  if (!host || !decker || pts <= 0) return;
+  const c = cls();
+  if (!host || !decker || pts <= 0 || !c) return;
   const who = decker.tallyFor?.() ?? { key: String(decker.uuid), name: String(decker.name ?? '') };
-  if (isGm()) {
-    const cls = actorClass() as typeof SR2ActorType | undefined;
-    const html = cls ? await cls.applyTallyCard(host.uuid, pts, who, String(decker.uuid)) : null;
-    await post(`<p><em>${tx('SR2E.MxIc97.gmOnly')}</em> ${tallyLabel(label, decker, pts)}</p>${html ?? ''}`, { speaker: { alias: String(host.name ?? '') }, whisper: gmIds() });
-    return;
-  }
-  await post(`<p><em>${tx('SR2E.MxIc97.gmOnly')}</em> ${tallyLabel(label, decker, pts)}</p><p><button type="button" data-sr2e-action="applyTally">${tx('SR2E.MxIc97.Suppress.applyGm', { points: pts })}</button></p>`, {
-    speaker: { alias: String(host.name ?? '') }, whisper: gmIds(), blind: true,
-    flags: { [SYSTEM_ID]: { tally: { hostUuid: String(host.uuid), successes: pts, key: String(who.key), name: String(who.name ?? ''), sourceUuid: String(decker.uuid) } } },
-  });
+  const html = await c.applyTallyCard(host.uuid, pts, who, String(decker.uuid));
+  await post(`<p><em>${tx('SR2E.MxIc97.gmOnly')}</em> ${tallyLabel(label, decker, pts)}</p>${html ?? ''}`, { speaker: { alias: String(host.name ?? '') }, whisper: gmIds() });
 }
 
-/**
- * The choice when IC crashes or a data bomb goes off (VR2 pp. 40–41): its points on the tally, or suppress it (the
- * Detection Factor drops by 1). `id` is the IC's uuid, or a data bomb's id. Whispered to the GMs and the decker's owners.
- */
-export async function choiceCard(o: { host: any; decker: any; id: string; name: string; points: number; where?: string }): Promise<void> {
-  const pts = int(o.points, 0, 30, 0);
-  const line = o.where != null ? tx('SR2E.MxIc97.Bomb.choice', { where: escHtml(o.where), decker: name(o.decker), points: pts }) : tx('SR2E.MxIc97.Suppress.crashed', { ic: escHtml(o.name), decker: name(o.decker), points: pts });
+/** GM side: the choice card (VR2 pp. 40–41): its points on the tally, or suppress it. Whispered to the GMs and the decker's owners. */
+async function choiceCardGm(host: any, decker: any, id: string, label: string, points: number, bomb: boolean): Promise<void> {
+  const pts = int(points, 0, 30, 0);
+  const line = bomb ? tx('SR2E.MxIc97.Bomb.choice', { where: escHtml(label), decker: name(decker), points: pts }) : tx('SR2E.MxIc97.Suppress.crashed', { ic: escHtml(label), decker: name(decker), points: pts });
   await post(`<p>${line}</p><p><button type="button" data-sr2e-action="mxic97Count">${tx('SR2E.MxIc97.Suppress.count', { points: pts })}</button> <button type="button" data-sr2e-action="mxic97Suppress">${tx('SR2E.MxIc97.Suppress.suppress')}</button></p>`, {
-    speaker: { alias: String(o.host?.name ?? '') }, whisper: [...new Set([...gmIds(), ...ownerIds(o.decker)])],
-    flags: { [SYSTEM_ID]: { mxic97Choice: { deckerUuid: String(o.decker.uuid), hostUuid: String(o.host.uuid), id: String(o.id).slice(0, 400), name: String(o.name ?? '').slice(0, 120), points: pts } } },
+    speaker: { alias: String(host?.name ?? '') }, whisper: [...new Set([...gmIds(), ...ownerIds(decker)])],
+    flags: { [SYSTEM_ID]: { mxic97Choice: { deckerUuid: String(decker.uuid), hostUuid: String(host.uuid), id: String(id).slice(0, 400), name: String(label ?? '').slice(0, 120), points: pts } } },
   });
 }
 
 /**
- * IC crashed by a decker (VR2 p. 40), from documents/index.ts's crash tally: under 'book' the choice card goes out in
- * place of the tally (true); a frame's or agent's crash keeps the tally (false).
+ * IC crashed by a decker (VR2 p. 40), from documents/index.ts's crash tally: under 'book' the GM side posts the choice
+ * card in place of the tally (true); a frame's or agent's crash keeps the tally (false).
  */
-export async function crashChoice(host: any, decker: any, ic: any, points: number, frame: any): Promise<boolean> {
+export async function crashChoice(host: any, decker: any, ic: any, _points: number, frame: any): Promise<boolean> {
   if (!X.on('suppress') || frame || !decker || host?.type !== 'host') return false;
-  await choiceCard({ host, decker, id: String(ic.uuid), name: String(ic.name ?? ''), points });
+  await request(host, decker, { op: 'crash', deckerUuid: String(decker.uuid), id: String(ic.uuid) }, tx('SR2E.MxIc97.Gm.crash', { ic: String(ic.name ?? '') }));
   return true;
 }
 
-/** A data bomb went off on a decker (VR2 p. 41): its rating on the tally, or suppress it. */
-export async function bombChoice(host: any, decker: any, where: string, rating: number, bombId: string): Promise<void> {
-  if (!X.on('dataBomb') || host?.type !== 'host' || !decker) return;
-  await choiceCard({ host, decker, id: `bomb:${bombId}`, name: tx('SR2E.MxIc97.Bomb.name', { where }), points: rating, where });
+/** A data bomb going off on a decker (VR2 p. 41): the request #bombCheck adds to its host change (null under 'v965'). */
+export function bombRequest(decker: any, where: { fileId?: string; subsystem?: string }): X.Mx97Change | null {
+  if (!X.on('dataBomb') || !decker) return null;
+  const id = where.fileId ? `f:${where.fileId}` : `s:${String(where.subsystem ?? '')}`;
+  return { op: 'bomb', deckerUuid: String(decker.uuid), id };
 }
 
-/** Whether this decker's owner already answered this card (or a GM marked it). */
-function answered(message: any, decker: any): boolean {
-  if (message?.getFlag?.(SYSTEM_ID, 'mxic97Done')) return true;
-  const list = flag(decker, CARDS_FLAG);
-  return Array.isArray(list) && list.includes(String(message?.id ?? ''));
-}
-async function markAnswered(message: any, decker: any): Promise<void> {
-  if (message?.isOwner && typeof message.setFlag === 'function') { try { await message.setFlag(SYSTEM_ID, 'mxic97Done', true); } catch { /* the decker's list below */ } }
-  const list = flag(decker, CARDS_FLAG);
-  const prev = Array.isArray(list) ? list.filter((x) => typeof x === 'string').slice(-30) : [];
-  if (decker?.isOwner) await setFlagTo(decker, CARDS_FLAG, [...prev, String(message?.id ?? '')]);
+/** GM side, before a host change applies: what it reads from the host before the change alters it (a bomb's rating). */
+export function preMx97(host: any, raw: unknown): { rating: number; where: string } {
+  const m = X.cleanMx97(raw);
+  if (m?.op !== 'bomb' || !m.id) return { rating: 0, where: '' };
+  if (m.id.startsWith('f:')) {
+    const f: any = (host?.system?.files ?? []).find((x: any) => x?.id === m.id!.slice(2));
+    return { rating: int(f?.bomb, 0, 30, 0), where: String(f?.name ?? '') };
+  }
+  const sub = m.id.slice(2);
+  const b: any = (host?.system?.bombs ?? []).find((x: any) => x?.subsystem === sub && Number(x?.rating) > 0);
+  return { rating: int(b?.rating, 0, 30, 0), where: sub };
 }
 
-/** Suppress the IC (or bomb) a choice card names: the decker's list, and a card with the Release button. */
-async function suppress(message: any, c: any, decker: any, host: any): Promise<void> {
-  const id = String(c.id);
-  const ic = id.startsWith('bomb:') ? null : sync(id);
-  // Only IC that really crashed (a forged card can't hide a live IC's points).
-  if (ic && !(ic.type === 'ic' && ic.system?.derived?.crashed)) { warn(tx('SR2E.MxIc97.Suppress.notCrashed', { name: name(ic) })); return; }
-  const next = X.suppressAfter(flag(decker, SUPPRESSED_FLAG), { id, hostUuid: String(host.uuid), name: String(ic?.name ?? c.name ?? ''), points: int(c.points, 0, 30, 0) });
-  if (!next) { warn(tx('SR2E.MxIc97.Suppress.already')); return; }
-  await setFlagTo(decker, SUPPRESSED_FLAG, next);
-  await markAnswered(message, decker);
-  const df = Number(decker.liveDetectionFactor?.() ?? decker.system?.derived?.matrix?.detectionFactor ?? 0);
-  await post(`<p>${tx('SR2E.MxIc97.Suppress.done', { decker: name(decker), name: escHtml(String(ic?.name ?? c.name ?? '')), df })}</p><p><button type="button" data-sr2e-action="mxic97Release">${tx('SR2E.MxIc97.Suppress.release')}</button></p>`, {
-    speaker: speaker(decker), whisper: [...new Set([...gmIds(), ...ownerIds(decker)])], flags: { [SYSTEM_ID]: { mxic97Release: { deckerUuid: String(decker.uuid), id } } },
-  });
+/**
+ * GM side (documents/index.ts applyHostChange, after a GM's click or on the GM's own client): record what a decker's
+ * request names, every value read from GM-owned documents (the host, the IC, the GM-posted choice card), never from the
+ * request or the decker's flags beyond who and which. Returns the host card's plain-text notes.
+ */
+export async function applyMx97(host: any, raw: unknown, pre: { rating: number; where: string } = { rating: 0, where: '' }): Promise<string[]> {
+  const m = X.cleanMx97(raw);
+  const decker: any = m ? sync(m.deckerUuid) : null;
+  if (!m || !decker || host?.type !== 'host') return [];
+  const rec = hostRec(host);
+  const me = String(decker.uuid);
+  const dice = Number(decker.system?.derived?.matrix?.evasion ?? 0) + (RULES.MATRIX_V57.maneuvers.pool ? Number(decker.system?.derived?.hackingPool ?? 0) : 0);
+  const card: any = m.cardId ? G()?.messages?.get?.(m.cardId) : null;
+  const choice: any = card && authorIsGm(card) ? card.flags?.[SYSTEM_ID]?.mxic97Choice : null;
+  const choiceOk = choice && choice.deckerUuid === me && choice.hostUuid === host.uuid && !card.getFlag?.(SYSTEM_ID, 'mxic97Done');
+  switch (m.op) {
+    case 'parry': {
+      if (!m.vs || !m.id) return [];
+      const net = X.maneuverCap(m.net ?? 0, dice);
+      await saveRec(host, { ...rec, parry: [...rec.parry.filter((e) => !(e.decker === me && e.vs === m.vs)), ...(net > 0 ? [{ decker: me, vs: m.vs, net, id: m.id }] : [])] });
+      return [tx('SR2E.MxIc97.Gm.parried', { decker: String(decker.name ?? ''), net })];
+    }
+    case 'unparry':
+      await saveRec(host, { ...rec, parry: rec.parry.filter((e) => !(e.decker === me && e.id === m.id)) });
+      return [];
+    case 'evade': {
+      if (!m.vs) return [];
+      const net = X.maneuverCap(m.net ?? 0, dice);
+      const t = now();
+      const end = X.evadeEnd({ round: t.round, worldTime: t.worldTime, net, gain: 0, secondsPerTurn: RULES.MATRIX_V57.maneuvers.secondsPerTurn });
+      await saveRec(host, {
+        ...rec, parry: rec.parry.filter((e) => !(e.decker === me && e.vs === m.vs)),
+        evade: [...rec.evade.filter((e) => !(e.decker === me && e.vs === m.vs)), { decker: me, vs: m.vs, net, tallyAt: tallyNow(decker, host.uuid), round: end.round, worldTime: end.worldTime, combatId: String(t.combatId ?? '') }],
+      });
+      return [tx('SR2E.MxIc97.Gm.evaded', { decker: String(decker.name ?? ''), net })];
+    }
+    case 'unevade':
+      await saveRec(host, { ...rec, evade: rec.evade.filter((e) => !(e.decker === me && e.vs === m.vs)) });
+      return [];
+    case 'crash': {
+      const ic = sync(m.id);
+      if (!(ic?.type === 'ic' && ic.system?.derived?.crashed && ic.system?.hostUuid === host.uuid)) return [];
+      const points = M923.crashTallyPoints(Number(ic.system?.rating ?? 0)) + (decker.tracedIn?.(host) ? 1 : 0);
+      if (points > 0) await choiceCardGm(host, decker, String(ic.uuid), String(ic.name ?? ''), points, false);
+      return [];
+    }
+    case 'bomb': {
+      if (pre.rating <= 0) return [];
+      // MXIC_V97.suppress 'v965': nothing to suppress with: the bomb's rating goes on the tally (MXIC_V97.dataBomb).
+      if (!X.on('suppress')) { await tallyNowGm(host, decker, pre.rating, ''); return []; }
+      await choiceCardGm(host, decker, `bomb:${host.uuid}|${m.id}`, tx('SR2E.MxIc97.Bomb.name', { where: pre.where }), pre.rating, true);
+      return [];
+    }
+    case 'count': {
+      if (!choiceOk) return [];
+      await card.setFlag(SYSTEM_ID, 'mxic97Done', true);
+      await tallyNowGm(host, decker, int(choice.points, 0, 30, 0), '');
+      return [];
+    }
+    case 'suppress': {
+      if (!choiceOk) return [];
+      const id = String(choice.id);
+      const ic = id.startsWith('bomb:') ? null : sync(id);
+      if (ic && !(ic.type === 'ic' && ic.system?.derived?.crashed)) return [];
+      if (rec.suppressed.some((s) => s.decker === me && s.id === id)) return [];
+      await card.setFlag(SYSTEM_ID, 'mxic97Done', true);
+      await saveRec(host, { ...rec, suppressed: [...rec.suppressed, { decker: me, id, name: String(ic?.name ?? choice.name ?? ''), points: int(choice.points, 0, 30, 0) }] });
+      const df = Number(decker.liveDetectionFactor?.() ?? 0);
+      await post(`<p>${tx('SR2E.MxIc97.Suppress.done', { decker: name(decker), name: escHtml(String(ic?.name ?? choice.name ?? '')), df })}</p><p><button type="button" data-sr2e-action="mxic97Release">${tx('SR2E.MxIc97.Suppress.release')}</button></p>`, {
+        speaker: speaker(decker), whisper: [...new Set([...gmIds(), ...ownerIds(decker)])], flags: { [SYSTEM_ID]: { mxic97Release: { deckerUuid: me, hostUuid: String(host.uuid), id } } },
+      });
+      return [];
+    }
+    case 'release': {
+      const e = rec.suppressed.find((s) => s.decker === me && s.id === m.id);
+      if (!e) return [];
+      await saveRec(host, { ...rec, suppressed: rec.suppressed.filter((s) => s !== e) });
+      await post(`<p>${tx('SR2E.MxIc97.Suppress.released', { decker: name(decker), name: escHtml(e.name), points: e.points })}</p>`, { speaker: speaker(decker) });
+      await tallyNowGm(host, decker, e.points, e.name || '-');
+      return [];
+    }
+    default: return [];
+  }
 }
 
 /** A button on a MXIC_V97 card (applications/chat.ts dispatches `mxic97…` here). */
 export async function onCard(message: any, button: HTMLButtonElement, action: string): Promise<void> {
   const flags: any = message?.flags?.[SYSTEM_ID] ?? {};
-  if (action === 'mxic97Count' || action === 'mxic97Suppress') {
-    const c = flags.mxic97Choice;
+  if (action === 'mxic97Count' || action === 'mxic97Suppress' || action === 'mxic97Release') {
+    // Only the GM side's own cards (a player's card can't claim a crash, a bomb or what was suppressed).
+    if (!authorIsGm(message)) { warn(tx('SR2E.MxIc97.gmCardOnly')); return; }
+    const c = action === 'mxic97Release' ? flags.mxic97Release : flags.mxic97Choice;
     const decker: any = uuidOk(c?.deckerUuid) ? await (globalThis as any).fromUuid(c.deckerUuid) : null;
     const host: any = uuidOk(c?.hostUuid) ? await (globalThis as any).fromUuid(c.hostUuid) : null;
     if (!decker || host?.type !== 'host') return;
     if (!isGm() && !decker.isOwner) { warn(tx('SR2E.MxIc97.ownerOnly', { name: name(decker) })); return; }
-    if (answered(message, decker)) { warn(tx('SR2E.MxIc97.alreadyDone')); return; }
+    if (action !== 'mxic97Release' && message?.getFlag?.(SYSTEM_ID, 'mxic97Done')) { warn(tx('SR2E.MxIc97.alreadyDone')); return; }
     button.disabled = true;
-    if (action === 'mxic97Suppress') { await suppress(message, c, decker, host); button.disabled = false; return; }
-    const pts = int(c.points, 0, 30, 0);
-    // A GM's click on a player's card asks first (its points are the player's card's).
-    if (isGm() && !authorIsGm(message) && !(await gmMay(message, { title: tx('SR2E.MxIc97.Suppress.count', { points: pts }), lines: [tx('SR2E.MxIc97.Suppress.countLine', { decker: String(decker.name ?? ''), points: pts })], target: String(host.uuid), sources: [String(decker.uuid)], always: true }))) { button.disabled = false; return; }
-    await markAnswered(message, decker);
-    await addTally(host, decker, pts, '');
-    return;
-  }
-  if (action === 'mxic97Release') {
-    const c = flags.mxic97Release;
-    const decker: any = uuidOk(c?.deckerUuid) ? await (globalThis as any).fromUuid(c.deckerUuid) : null;
-    if (!decker) return;
-    if (!isGm() && !decker.isOwner) { warn(tx('SR2E.MxIc97.ownerOnly', { name: name(decker) })); return; }
-    const out = X.releaseSuppressed(flag(decker, SUPPRESSED_FLAG), String(c?.id ?? ''));
-    if (!out) { warn(tx('SR2E.MxIc97.Suppress.notSuppressed')); return; }
-    button.disabled = true;
-    await setFlagTo(decker, SUPPRESSED_FLAG, out.list);
-    const host: any = sync(out.entry.hostUuid);
-    await post(`<p>${tx('SR2E.MxIc97.Suppress.released', { decker: name(decker), name: escHtml(out.entry.name), points: out.entry.points })}</p>`, { speaker: speaker(decker) });
-    if (host?.type === 'host') await addTally(host, decker, out.entry.points, out.entry.name || '-');
+    const op: X.Mx97Change['op'] = action === 'mxic97Count' ? 'count' : action === 'mxic97Suppress' ? 'suppress' : 'release';
+    const label = op === 'count' ? tx('SR2E.MxIc97.Gm.count', { decker: String(decker.name ?? '') }) : op === 'suppress' ? tx('SR2E.MxIc97.Gm.suppress', { decker: String(decker.name ?? '') }) : tx('SR2E.MxIc97.Gm.release', { decker: String(decker.name ?? '') });
+    await request(host, decker, { op, deckerUuid: String(decker.uuid), ...(op === 'release' ? { id: String(c.id ?? '') } : { cardId: String(message.id ?? '') }) }, label);
     return;
   }
   if (action === 'mxic97Restore') {
@@ -212,7 +270,7 @@ export async function onCard(message: any, button: HTMLButtonElement, action: st
  * data wipe if the MPCP is destroyed. True when the card went out.
  */
 export async function blackIcFinalShot(decker: any, ic: { icName?: string; rating?: number }, type: string, before: string, after: string): Promise<boolean> {
-  const shot = X.blackIcFinalShot({ lethal: type !== 'stun', before, after, rating: int(ic?.rating, 0, 15, 0) });
+  const shot = X.blackIcFinalShot({ lethal: type !== 'stun', before, after, rating: int(ic?.rating, 0, 30, 0) });
   if (!shot) return false;
   const icName = String(ic?.icName ?? '').slice(0, 120);
   await post(`<p><strong>${escHtml(icName)}</strong> ${tx('SR2E.MxIc97.BlackIc.lastShot', { decker: name(decker), rating: shot.rating })}</p><p><button type="button" data-sr2e-action="deckDamage">${tx('SR2E.MxIc97.BlackIc.button', { rating: shot.rating })}</button></p>`, {
@@ -324,7 +382,8 @@ export async function resolveManeuver(decker: any, snap: any): Promise<{ html: s
   const host = hostOf(decker);
   const id = String(mv.entry97 ?? '') || newId();
   const out = X.maneuverAfter(flag(decker, MX_FLAG), { kind: mv.kind, vs: String(mv.targetUuid), hostUuid: host, mine: snap.successes, theirs: mv.opp, id, replaces: mv.entry97 ?? null, tally: tallyNow(decker, host) });
-  const up: Record<string, unknown> = { [`flags.${SYSTEM_ID}.${MX_FLAG}`]: out.state };
+  // Parries and evades are the GM side's to record (on the host, below): the decker's own flag keeps positions only.
+  const up: Record<string, unknown> = { [`flags.${SYSTEM_ID}.${MX_FLAG}`]: { ...out.state, parry: [], evade: [] } };
   const t = now();
   const sameEntry = (e: Maneuver) => e.kind === 'evade' && e.targetUuid === mv.targetUuid;
   let list: Maneuver[] = activeManeuvers(decker.system?.matrix?.maneuvers ?? [], t).filter((e) => !sameEntry(e));
@@ -340,6 +399,14 @@ export async function resolveManeuver(decker: any, snap: any): Promise<{ html: s
   }
   if (mv.kind === 'evade') up['system.matrix.maneuvers'] = list;
   await decker.update(up);
+  // The GM side records a won parry or evade on the host (a re-roll that loses takes it back).
+  const hostDoc: any = sync(host);
+  const won = out.who === 'me';
+  if (hostDoc?.type === 'host' && (mv.kind === 'parry' || mv.kind === 'evade') && (won || mv.won97)) {
+    const op: X.Mx97Change['op'] = mv.kind === 'parry' ? (won ? 'parry' : 'unparry') : (won ? 'evade' : 'unevade');
+    await request(hostDoc, decker, { op, deckerUuid: String(decker.uuid), vs: String(mv.targetUuid), id, ...(won ? { net: out.net } : {}) },
+      mv.kind === 'parry' ? tx('SR2E.MxIc97.Gm.parry', { decker: String(decker.name ?? ''), net: won ? out.net : 0 }) : tx('SR2E.MxIc97.Gm.evade', { decker: String(decker.name ?? ''), net: won ? out.net : 0 }));
+  }
   const who = escHtml(String(mv.targetName ?? ''));
   const mine = Math.max(0, Number(snap.successes) || 0), theirs = Math.max(0, Number(mv.opp) || 0);
   return { html: `<p>${out.who === null ? tx('SR2E.MxIc97.Maneuver.fails', { mine, theirs })
@@ -347,7 +414,7 @@ export async function resolveManeuver(decker: any, snap: any): Promise<{ html: s
     : mv.kind === 'position' ? tx('SR2E.MxIc97.Maneuver.backfires', { name: name(decker), target: who, net: out.net, mine, theirs })
     : out.who === 'them' ? tx('SR2E.MxIc97.Maneuver.fails', { mine, theirs })
     : mv.kind === 'parry' ? tx('SR2E.MxIc97.Maneuver.parry', { name: name(decker), target: who, net: out.net, mine, theirs })
-    : tx('SR2E.MxIc97.Maneuver.evade', { name: name(decker), target: who, net: out.net, mine, theirs })}</p>`, snap: { ...snap, maneuver: { ...mv, entry97: out.entryId ?? id, freed } } };
+    : tx('SR2E.MxIc97.Maneuver.evade', { name: name(decker), target: who, net: out.net, mine, theirs })}</p>`, snap: { ...snap, maneuver: { ...mv, entry97: out.entryId ?? id, freed, won97: out.who === 'me' } } };
 }
 
 /**
@@ -388,8 +455,9 @@ export function attackMods(attacker: any, target: any, as: string = 'tn'): { mod
 export function parryMod(target: any, attackerUuid: string, t: { round: number | null; worldTime: number; combatId: string | null } = now()): { mod: TargetNumberModifier | null; id: string | null } {
   if (!target) return { mod: null, id: null };
   if (!X.on('parry')) return { mod: parryPenalty(target.system?.matrix?.maneuvers ?? [], attackerUuid, String(target.name ?? ''), t), id: null };
+  // The host's record (the GM side's), never the parrying decker's own flags.
   const attacker = sync(attackerUuid);
-  const e = X.bestEntry(mx(target).parry, attackerUuid, hostOf(target), used(attacker));
+  const e = X.hostParry(flag(sync(hostOf(target)), HOST_FLAG), String(target.uuid), attackerUuid, used(attacker));
   return e ? { mod: { id: 'parry97', label: tx('SR2E.MxIc97.Maneuver.parryMod', { name: String(target.name ?? '') }), value: e.net }, id: e.id } : { mod: null, id: null };
 }
 
@@ -397,12 +465,13 @@ export function parryMod(target: any, attackerUuid: string, t: { round: number |
  * An IC's (or a frame's) attack on a decker (VR2 p. 122): the decker's parry against it (+TN) and a position the decker
  * lost to it (−TN). Each switch at 'v965': the old parry only.
  */
-export function icMods(ic: any, target: any): { mods: TargetNumberModifier[]; used: string[] } {
-  const out = { mods: [] as TargetNumberModifier[], used: [] as string[] };
+export function icMods(ic: any, target: any): { mods: TargetNumberModifier[]; used: string[]; parryId?: string } {
+  const out = { mods: [] as TargetNumberModifier[], used: [] as string[], parryId: undefined as string | undefined };
   if (!target || target.type === 'ic') return out;
   const p = parryMod(target, String(ic.uuid));
   if (p.mod) out.mods.push(p.mod);
-  if (p.id) out.used.push(p.id);
+  // IC are the GM's: its attack takes the parry off the host's record itself (afterAttack).
+  if (p.id) out.parryId = p.id;
   if (X.on('position')) {
     const exp = X.bestEntry(mx(target).exposed, String(ic.uuid), hostOf(target), used(ic));
     if (exp) { out.mods.push({ id: 'positionManeuver', label: tx('SR2E.MxIc97.Maneuver.exposedMod', { name: String(target.name ?? '') }), value: -exp.net }); out.used.push(exp.id); }
@@ -411,7 +480,12 @@ export function icMods(ic: any, target: any): { mods: TargetNumberModifier[]; us
 }
 
 /** After the attack: the attacker's own positions on the target are used, and the target's entries it used are noted on the attacker. */
-export async function afterAttack(attacker: any, m: { ownPos: string[]; used: string[] }): Promise<void> {
+export async function afterAttack(attacker: any, m: { ownPos: string[]; used: string[]; parryId?: string }): Promise<void> {
+  if (m.parryId && attacker?.type === 'ic') {
+    const host: any = sync(hostOf(attacker));
+    const rec = hostRec(host);
+    if (host?.type === 'host') { try { await saveRec(host, { ...rec, parry: rec.parry.filter((e) => e.id !== m.parryId) }); } catch (err) { console.warn('sr2e | parry used up (the GM\'s client runs IC)', err); } }
+  }
   if (!attacker || (!m.ownPos.length && !m.used.length)) return;
   const up: Record<string, unknown> = {};
   if (m.ownPos.length) { const s = mx(attacker); up[`flags.${SYSTEM_ID}.${MX_FLAG}`] = { ...s, pos: s.pos.filter((e) => !m.ownPos.includes(e.id)) }; }
@@ -425,18 +499,16 @@ export async function afterAttack(attacker: any, m: { ownPos: string[]; used: st
  */
 export function evaded(decker: any, icUuid: string): boolean | null {
   if (!X.on('evade') || !RULES.MATRIX_V57.maneuvers.evadeBlocks) return null;
-  const t = now();
-  const m = (decker?.system?.matrix?.maneuvers ?? []).find((e: any) => e.kind === 'evade' && e.targetUuid === icUuid);
-  if (!m) return false;
+  // Only the host's record (the GM side's): its end and the tally then; the decker's own list never decides.
   const host = hostOf(decker);
-  const mark = mx(decker).evade.find((e) => e.vs === icUuid && e.hostUuid === host);
-  const gain = mark ? Math.max(0, tallyNow(decker, host) - mark.tallyAt) : 0;
-  return X.evadeHolds(m, t, gain);
+  const r = hostRec(sync(host)).evade.find((e) => e.decker === String(decker?.uuid ?? '') && e.vs === icUuid);
+  if (!r) return false;
+  return X.evadeHolds({ round: r.round, worldTime: r.worldTime, net: r.net, combatId: r.combatId }, now(), Math.max(0, tallyNow(decker, host) - r.tallyAt));
 }
 
 /** The jack-out's update entries for this file's flags that are set (none under 'v965': they are never set). */
 export function endRunClear(decker: any): Record<string, null> {
-  const keys = [MX_FLAG, USED_FLAG, SUPPRESSED_FLAG, IMPROVISED_FLAG].filter((k) => flag(decker, k) != null);
+  const keys = [MX_FLAG, USED_FLAG, IMPROVISED_FLAG].filter((k) => flag(decker, k) != null);
   return keys.length ? clearFlagUpdate(decker, ...keys) : {};
 }
 

@@ -1100,6 +1100,11 @@ export function activeDeckOf(actor: any): any | null {
   return [...(actor?.items ?? [])].find((i: any) => i.type === 'cyberdeck' && i.system.active) ?? null;
 }
 
+/** v0.97.0 (RULES.MXIC_V97.suppress): the host's own record of suppressed IC (GM-owned; rules/mxic97.ts hostMx). */
+function suppressedHost97(hostUuid: unknown): unknown {
+  try { return typeof hostUuid === 'string' && hostUuid ? (globalThis as any).fromUuidSync?.(hostUuid)?.flags?.[SYSTEM_ID]?.mxic97 : null; } catch { return null; }
+}
+
 /** Decker values: Hacking Pool, Matrix Reaction/initiative, persona and Detection Factor (none without a deck). */
 function deckerDerived(actor: any, sys: any, intelligence: number, totals: Record<string, number> = {}, tweakPool = 0, ownReaction: number = sys.derived?.reaction ?? 0) {
   const item = activeDeckOf(actor);
@@ -1111,7 +1116,7 @@ function deckerDerived(actor: any, sys: any, intelligence: number, totals: Recor
   // v0.92.3: the book's otaku values (VR2 p. 145; RULES.MATRIX_V923.otaku).
   const base0 = living ? { ...item.system, ...otakuPersona({ intelligence, ...totals }), ...(otakuPersona923({ intelligence, ...totals }) ?? {}) } : item.system;
   // v0.97.0 (RULES.MXIC_V97.realityFilter 'book', VR2 p. 84): a reality filter takes 1 off the MPCP.
-  const base = !living && item.system.realityFilter && MX97.on('realityFilter') ? { ...base0, mpcp: MX97.filterMpcp(Number(base0.mpcp ?? 0), true) } : base0;
+  const base = !living && item.system.realityFilter && MX97.filterBook() ? { ...base0, mpcp: MX97.filterMpcp(Number(base0.mpcp ?? 0), true) } : base0;
   // Damage to the deck (blaster, ripper, trace and burn) and crippler IC lower the working persona.
   const d = effectivePersona(base, base.damage ?? {}, sys.matrix?.crippled ?? {});
   const programs = [...(actor?.items ?? [])].filter((i: any) => i.type === 'program').map((i: any) => ({ id: i.id, name: i.name, ...i.system }));
@@ -1141,7 +1146,9 @@ function deckerDerived(actor: any, sys: any, intelligence: number, totals: Recor
     ...mpcpProgramWarnings(overMpcp, d.mpcp),
   ];
   // v0.92.3 (RULES.MATRIX_V923.initiative): the book's persona speed; null keeps the v0.92.2 formulas below.
-  const speed = personaSpeed({ reaction: ownReaction, responseIncrease: d.responseIncrease, mpcp: d.mpcp, sim, tortoise, otaku: living ? { intelligence, willpower: Number(totals.willpower ?? 0) } : null, filter: MX97.filterLevel({ realityFilter: Boolean(item.system.realityFilter), ok: inFilterHost && Number(fl.ok) >= 0 ? Number(fl.ok) : null }) });
+  const speed = personaSpeed({ reaction: ownReaction, responseIncrease: d.responseIncrease, mpcp: d.mpcp, sim, tortoise, otaku: living ? { intelligence, willpower: Number(totals.willpower ?? 0) } : null, filter: MX97.filterLevel({ realityFilter: Boolean(item.system.realityFilter), ok: inFilterHost && Number(fl.ok) >= 0 ? Number(fl.ok) : null }),
+    // v0.97.0 (RULES.MXIC_V97.coolInit 'book', VR2 p. 85): a hot ASIST deck run cool (the deck's own box).
+    hotCool: Boolean(item.system.hotAsist97) && sim === 'cold' });
   // A satellite uplink's signal lag: −2 Reaction (VR2 p. 30; RULES.MATRIX_V923.connections).
   const lag = RULES.MATRIX_V923.connections !== 'v922' ? jackpointMods(sys.matrix?.connection ?? 'jackpoint').reaction : 0;
   const out97 = {
@@ -1164,7 +1171,7 @@ function deckerDerived(actor: any, sys: any, intelligence: number, totals: Recor
       deckDamage: { mpcp: 0, bod: 0, evasion: 0, masking: 0, sensors: 0, ...(base.damage ?? {}) },
       sleaze: run(sleaze?.rating),
       // v0.97.0 (RULES.MXIC_V97.suppress 'book', VR2 p. 40): 1 less per IC suppressed in this host.
-      detectionFactor: MX97.suppressedDf(detectionFactor(d.masking, run(sleaze?.rating)), actor?.flags?.[SYSTEM_ID]?.suppressed97, String(sys.matrix?.hostUuid ?? '')),
+      detectionFactor: MX97.suppressedDf(detectionFactor(d.masking, run(sleaze?.rating)), suppressedHost97(sys.matrix?.hostUuid), String(actor?.uuid ?? '')),
       // v0.71.0 (R7): the base deck's limits, plus what the working MPCP caps (or, with 'warn', exceeds).
       warnings: [...personaWarnings(base), ...mpcpWarnings],
       effectiveMpcp: d.mpcp,
@@ -1975,6 +1982,8 @@ export class CyberdeckDataModel extends foundry.abstract.TypeDataModel {
       /** v0.57.0: Load Speed (Mp per Combat Turn; 0 = its I/O speed), a reality filter, and hitcher jacks. */
       loadSpeed: rating(0),
       realityFilter: new fields.BooleanField({ required: true, initial: false }),
+      /** v0.97.0 (RULES.MXIC_V97.coolInit, VR2 p. 85): a hot ASIST interface: run cool (with a keyboard) it costs 1D6 Initiative. */
+      hotAsist97: new fields.BooleanField({ required: true, initial: false }),
       hitchers: rating(0),
       /** Damage to the deck itself (blaster and sparky crashes, rippers, trace and burn) until repaired. */
       damage: personaPoints(true),

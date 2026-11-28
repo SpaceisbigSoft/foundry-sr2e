@@ -21,44 +21,19 @@ export const on = (key: MxIc97Switch): boolean => (V() as any)[key] === 'book';
 
 // ---------------------------------------------------------------- Suppressing IC (VR2 pp. 40, 120)
 
-/** An IC (or data bomb) a decker suppresses: where, and the tally points releasing it puts back. */
-export interface Suppressed { id: string; hostUuid: string; name: string; points: number }
-
-/** The suppressed list as stored on a decker (anything malformed is dropped). */
-export function suppressedList(raw: unknown): Suppressed[] {
-  if (!Array.isArray(raw)) return [];
-  return raw.filter((x) => x && typeof x === 'object' && str((x as any).id) && str((x as any).hostUuid))
-    .slice(0, LIST_CAP)
-    .map((x: any) => ({ id: str(x.id), hostUuid: str(x.hostUuid), name: str(x.name, 120), points: Math.min(30, whole(x.points)) }));
-}
-
-/** Detection Factor points lost to suppression in this host (VR2 p. 40: 1 per suppressed IC); 0 under 'v965'. */
-export function suppressedDfLoss(raw: unknown, hostUuid: string): number {
-  if (!on('suppress') || !hostUuid) return 0;
-  return suppressedList(raw).filter((s) => s.hostUuid === hostUuid).length;
+/**
+ * Detection Factor points this decker loses to suppression (VR2 p. 40: 1 per suppressed IC), from the host's own
+ * record (`hostRaw`: the host's mxic97 flag, written by the GM side); 0 under 'v965'.
+ */
+export function suppressedDfLoss(hostRaw: unknown, deckerUuid: string): number {
+  if (!on('suppress') || !deckerUuid) return 0;
+  return hostMx(hostRaw).suppressed.filter((s) => s.decker === deckerUuid).length;
 }
 
 /** The Detection Factor after suppression (never below the minimum TN). */
-export function suppressedDf(df: number, raw: unknown, hostUuid: string): number {
-  const loss = suppressedDfLoss(raw, hostUuid);
+export function suppressedDf(df: number, hostRaw: unknown, deckerUuid: string): number {
+  const loss = suppressedDfLoss(hostRaw, deckerUuid);
   return loss > 0 ? minTn(num(df) - loss) : num(df);
-}
-
-/**
- * The list after suppressing `entry`: entries of other hosts go (the reduction lasts while the decker stays in the
- * system), one entry per IC. Null when it is already suppressed.
- */
-export function suppressAfter(raw: unknown, entry: Suppressed): Suppressed[] | null {
-  const list = suppressedList(raw).filter((s) => s.hostUuid === entry.hostUuid);
-  if (list.some((s) => s.id === entry.id)) return null;
-  return [...list, { ...entry, name: str(entry.name, 120), points: Math.min(30, whole(entry.points)) }].slice(-LIST_CAP);
-}
-
-/** Releasing a suppressed IC: the list without it, and what it puts on the tally (null when it is not suppressed). */
-export function releaseSuppressed(raw: unknown, id: string): { list: Suppressed[]; entry: Suppressed } | null {
-  const list = suppressedList(raw);
-  const entry = list.find((s) => s.id === id);
-  return entry ? { list: list.filter((s) => s !== entry), entry } : null;
 }
 
 // ---------------------------------------------------------------- Black IC's last shot (VR2 p. 48)
@@ -285,21 +260,21 @@ export function defuseBlows(dice: ReadonlyArray<{ total?: number; result?: numbe
 /** The absolute Response Increase limit with a reality filter and hot DNI (VR2 p. 87). */
 export const MAX_RESPONSE = 5;
 
-/** Running cool (VR2 p. 85): 1D6 less (at least 1D6, VERIFY). */
-export function coolDice(dice: number, sim: string): number {
-  if (!on('coolInit') || sim !== 'cold') return dice;
+/** Running a hot deck cool (VR2 p. 85, `hotCool`: a hot ASIST deck run cool): 1D6 less (at least 1D6, VERIFY). */
+export function coolDice(dice: number, hotCool: boolean): number {
+  if (!on('coolInit') || !hotCool) return dice;
   return Math.max(1, Math.floor(num(dice)) - 1);
 }
 
 /** Whether a reality filter's level counts (book): the deck has one, and no sculpted host's MPCP Test failed (`ok` 0). */
 export function filterLevel(o: { realityFilter: boolean; ok: number | null }): number {
-  if (!on('realityFilter') || !o.realityFilter) return 0;
+  if (!filterBook() || !o.realityFilter) return 0;
   return o.ok === 0 ? 0 : 1;
 }
 
 /** The MPCP a reality filter leaves (VR2 p. 84: −1; at least 1). */
 export function filterMpcp(mpcp: number, realityFilter: boolean): number {
-  if (!on('realityFilter') || !realityFilter) return mpcp;
+  if (!filterBook() || !realityFilter) return mpcp;
   return Math.max(1, Math.floor(num(mpcp)) - 1);
 }
 
@@ -313,19 +288,81 @@ export function nonCombatActions(reaction: number, dice: number): number | null 
  * The book persona speed with a reality filter's level and running cool (VR2 pp. 84–87), for matrix923.personaSpeed:
  * null when neither changes anything (the caller's own formula stands).
  */
-export function speed97(o: { reaction: number; responseIncrease: number; mpcp: number; sim: string; filter?: number }, per: number, baseDice: number, hotDice: number): { reaction: number; dice: number; counted: number } | null {
-  const f = whole(o.filter) > 0 && on('realityFilter') ? 1 : 0;
-  const cool = on('coolInit') && o.sim === 'cold';
+export function speed97(o: { reaction: number; responseIncrease: number; mpcp: number; sim: string; filter?: number; hotCool?: boolean }, per: number, baseDice: number, hotDice: number): { reaction: number; dice: number; counted: number } | null {
+  const f = whole(o.filter) > 0 && filterBook() ? 1 : 0;
+  const cool = on('coolInit') && o.sim === 'cold' && Boolean(o.hotCool);
   if (!f && !cool) return null;
   const ri = Math.max(0, Math.min(RULES.MATRIX.maxResponseIncrease, Math.floor(whole(o.mpcp) / 4), Math.floor(num(o.responseIncrease))));
   const hot = o.sim === 'hot' ? 1 : 0;
   const levels = Math.min(MAX_RESPONSE, ri + hot + f);
   const extra = levels - ri - hot;
   const dice = baseDice + ri + hot * hotDice + extra;
-  return { reaction: Math.max(0, num(o.reaction)) + per * levels, dice: coolDice(dice, o.sim), counted: ri };
+  return { reaction: Math.max(0, num(o.reaction)) + per * levels, dice: coolDice(dice, cool), counted: ri };
 }
 
 /** The operations table with Defuse Data Bomb augmented by the Defuse utility (VR2 pp. 41, 96); unchanged under 'v965'. */
 export function defuseOp97<T extends { id: string; utility?: string }>(o: T): T {
   return o.id === 'defuseBomb' && on('dataBomb') ? { ...o, utility: 'defuse' } : o;
+}
+
+// ---------------------------------------------------------------- The host's record (GM-owned, VR2 pp. 40, 121–122)
+
+/**
+ * What the GM side keeps on the host (its mxic97 flag): the deckers' parries (`decker` parries `vs`), their evades (when
+ * they end, and the decker's tally then) and the IC they suppress. Only the GM side writes it (applications/mxic97.ts
+ * applyMx97, from a host change); a player's own actor flags never count for these.
+ */
+export interface HostMx {
+  parry: Array<{ decker: string; vs: string; net: number; id: string }>;
+  evade: Array<{ decker: string; vs: string; net: number; tallyAt: number; round: number; worldTime: number; combatId: string }>;
+  suppressed: Array<{ decker: string; id: string; name: string; points: number }>;
+}
+
+const rows = (raw: unknown): any[] => (Array.isArray(raw) ? raw.filter((x) => x && typeof x === 'object').slice(0, LIST_CAP * 4) : []);
+/** The host's record as stored (anything malformed is dropped). */
+export function hostMx(raw: unknown): HostMx {
+  const r: any = raw && typeof raw === 'object' ? raw : {};
+  return {
+    parry: rows(r.parry).filter((x) => str(x.decker) && str(x.vs) && str(x.id)).map((x) => ({ decker: str(x.decker), vs: str(x.vs), net: Math.min(30, whole(x.net)), id: str(x.id, 60) })),
+    evade: rows(r.evade).filter((x) => str(x.decker) && str(x.vs)).map((x) => ({ decker: str(x.decker), vs: str(x.vs), net: Math.min(30, whole(x.net)), tallyAt: Math.min(9999, whole(x.tallyAt)),
+      round: Number.isFinite(Number(x.round)) ? Math.floor(Number(x.round)) : -1, worldTime: num(x.worldTime), combatId: str(x.combatId, 60) })),
+    suppressed: rows(r.suppressed).filter((x) => str(x.decker) && str(x.id)).map((x) => ({ decker: str(x.decker), id: str(x.id), name: str(x.name, 120), points: Math.min(30, whole(x.points)) })),
+  };
+}
+
+/** A decker's request to the GM side (the `mx97` key of a host change): what to record, never how much is trusted. */
+export interface Mx97Change { op: 'parry' | 'unparry' | 'evade' | 'unevade' | 'crash' | 'bomb' | 'count' | 'suppress' | 'release'; deckerUuid: string; vs?: string; id?: string; net?: number; cardId?: string }
+export const MX97_OPS = ['parry', 'unparry', 'evade', 'unevade', 'crash', 'bomb', 'count', 'suppress', 'release'] as const;
+
+/** A host change's `mx97` key cleaned (bounded strings and numbers), or null. */
+export function cleanMx97(raw: unknown): Mx97Change | null {
+  const r: any = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : null;
+  if (!r || !(MX97_OPS as readonly string[]).includes(String(r.op)) || !str(r.deckerUuid)) return null;
+  return {
+    op: r.op, deckerUuid: str(r.deckerUuid),
+    ...(str(r.vs) ? { vs: str(r.vs) } : {}), ...(str(r.id) ? { id: str(r.id) } : {}), ...(str(r.cardId, 60) ? { cardId: str(r.cardId, 60) } : {}),
+    ...(r.net !== undefined ? { net: Math.min(30, whole(r.net)) } : {}),
+  };
+}
+
+/** The most net successes the GM side records for a maneuver: at most the decker's dice for it (and 30). */
+export function maneuverCap(net: number, dice: number): number {
+  return Math.max(0, Math.min(whole(net), whole(dice), 30));
+}
+
+/** The host's parry entry for `decker` against `vs` (none used up by that attacker). */
+export function hostParry(raw: unknown, decker: string, vs: string, used: readonly string[] = []): { net: number; id: string } | null {
+  const e = hostMx(raw).parry.filter((x) => x.decker === decker && x.vs === vs && x.net > 0 && !used.includes(x.id)).sort((a, b) => b.net - a.net)[0];
+  return e ? { net: e.net, id: e.id } : null;
+}
+
+/** The deck damage card's IC rating, bounded: black IC's last shot is double the rating (VR2 p. 48). */
+export function deckDamageRating(raw: unknown, lastShot: boolean): number {
+  const n = Math.floor(Number(raw));
+  return Number.isFinite(n) ? Math.max(0, Math.min(lastShot ? 60 : 20, n)) : 0;
+}
+
+/** Whether the reality filter runs the book's way: it needs the book persona speed (RULES.MATRIX_V923.initiative 'book'). */
+export function filterBook(): boolean {
+  return on('realityFilter') && RULES.MATRIX_V923.initiative === 'book';
 }
