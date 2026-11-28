@@ -119,6 +119,8 @@ import * as SP96G from "./spirits96.ts";
 // v0.97.0 (RULES.MXLIFE_V97): the otaku dialogs follow the book (applications/mxlife97.ts).
 import * as MXL97G from "./mxlife97.ts";
 import * as MO97G from "./mxops97.ts";
+import * as MXG97 from "./mxic97.ts";
+import * as MX97 from "../rules/mxic97.ts";
 
 /** v0.73.0 (O24): the known-hosts context for this decker and the viewing user. */
 function knowledgeCtx(actor: any): any {
@@ -2386,7 +2388,14 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
     const actor: any = this.document;
     if (!actor.isJackedIn()) return ui.notifications.warn(tx('SR2E.Notify.Sheet.isNotJackedIn', { actorName: escHtml(actor.name) }));
     const attacks = actor.programs().filter((p: any) => p.system.loaded && !p.system.erased && p.system.kind === "attack");
-    if (!attacks.length) return ui.notifications.warn(tx('SR2E.Notify.Sheet.hasNoAttackUtilityLoaded', { actorName: escHtml(actor.name) }));
+    // v0.97.0 (RULES.MXIC_V97.improvised, position; VR2 pp. 122–123): an improvised attack, and a position as +Power.
+    const imp97: any = MXG97.improvisedProgram(actor);
+    const canImprovise97 = MX97.on("improvised");
+    if (!attacks.length && !imp97 && !canImprovise97) return ui.notifications.warn(tx('SR2E.Notify.Sheet.hasNoAttackUtilityLoaded', { actorName: escHtml(actor.name) }));
+    const progOptions97 = (imp97 ? `<option value="${MXG97.IMPROVISED_ID}">${escHtml(imp97.name)} (${escHtml(imp97.system.rating)}${escHtml(imp97.system.damageLevel)})</option>` : "")
+      + (canImprovise97 ? `<option value="new97">${tx('SR2E.MxIc97.Improvise.option')}</option>` : "");
+    const extra97 = (canImprovise97 ? `<div class="form-group"><label>${tx('SR2E.MxIc97.Improvise.fromEvasion')}</label><input name="impE" type="number" value="0" min="0"></div><div class="form-group"><label>${tx('SR2E.MxIc97.Improvise.fromBod')}</label><input name="impB" type="number" value="0" min="0"></div>` : "")
+      + (MX97.on("position") ? `<div class="form-group"><label>${tx('SR2E.MxIc97.Maneuver.positionAs')}</label><select name="posAs"><option value="tn">${tx('SR2E.MxIc97.Maneuver.asTn')}</option><option value="power">${tx('SR2E.MxIc97.Maneuver.asPower')}</option></select></div>` : "");
     const hostUuid = actor.system.matrix.hostUuid;
     const targets = matrixTargets(actor, hostUuid);
     const left = actor.system.derived.hackingPoolLeft as number;
@@ -2395,7 +2404,7 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
       window: { title: tx('SR2E.Dialog.Sheet.cybercombat', { actorName: actor.name }) },
       content: `<div class="form-group"><label>${tx('SR2E.Dialog.Sheet.target')}</label><select name="target"><option value="">${tx('SR2E.Dialog.Sheet.noTarget')}</option>
           ${targets.map((t: any) => `<option value="${escHtml(t.uuid)}" ${t.uuid === targeted?.uuid ? "selected" : ""}>${escHtml(t.name)}${t.type === "ic" ? tx('SR2E.Dialog.Sheet.ic2', { rating: escHtml(t.system.rating) }) : tx('SR2E.Dialog.Sheet.persona')}</option>`).join("")}</select></div>
-        <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.attackUtility')}</label><select name="prog">${attacks.map((p: any) => `<option value="${escHtml(p.id)}">${escHtml(p.name)} (${escHtml(p.system.rating)}${escHtml(p.system.damageLevel)})</option>`).join("")}</select></div>
+        <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.attackUtility')}</label><select name="prog">${attacks.map((p: any) => `<option value="${escHtml(p.id)}">${escHtml(p.name)} (${escHtml(p.system.rating)}${escHtml(p.system.damageLevel)})</option>`).join("")}${progOptions97}</select></div>${extra97}
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.otherTnModifier')}</label><input name="mod" type="number" value="0"></div>
         <div class="form-group"><label>${tx('SR2E.Dialog.Sheet.hackingPoolDiceLeft', { left })}</label><input name="pool" type="number" value="0" min="0" max="${left}"></div>
         ${rememberMarker(`cyber|${actor.uuid}`, ["prog", "pool"])}
@@ -2407,7 +2416,8 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         callback: (_e: Event, b: any) => {
           const el = b.form.elements;
           return { target: (el.target.value as string) || null, prog: String(el.prog.value), mod: Number(el.mod.value) || 0,
-            pool: Math.max(0, Math.min(left, Math.floor(Number(el.pool.value) || 0))), exclude: excludedOf(b.form) };
+            pool: Math.max(0, Math.min(left, Math.floor(Number(el.pool.value) || 0))), exclude: excludedOf(b.form),
+            impE: Math.max(0, Math.floor(Number(el.impE?.value) || 0)), impB: Math.max(0, Math.floor(Number(el.impB?.value) || 0)), posAs: String(el.posAs?.value ?? "tn") };
         },
       },
       render: (_e: Event, dialog: any) => livePreview(dialog, (f, excluded) => {
@@ -2418,10 +2428,16 @@ export class SR2CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) 
         return tnPreviewHtml({ base: pv.base, baseLabel: pv.label, auto: pv.modifiers, manual: mod ? [{ id: 'other', label: tx('SR2E.Card.Mod.other'), value: mod }] : [], excluded });
       }),
       rejectClose: false,
-    } as any) as { target: string | null; prog: string; mod: number; pool: number; exclude: string[] } | null;
+    } as any) as { target: string | null; prog: string; mod: number; pool: number; exclude: string[]; impE: number; impB: number; posAs: string } | null;
     if (!choice) return;
+    // v0.97.0 (RULES.MXIC_V97.improvised 'book', VR2 p. 120): writing an improvised attack is a Simple Action of its own.
+    if (choice.prog === "new97") {
+      if (!(await actor.useAction(["matrix", "simple"].join(":"), tx('SR2E.MxIc97.Improvise.action')))) return;
+      await MXG97.improvise(actor, { fromEvasion: choice.impE, fromBod: choice.impB });
+      return;
+    }
     if (!(await actor.useAction("matrixAttack", tx('SR2E.Card.Sheet.aCybercombatAttack')))) return;
-    await actor.matrixAttack({ targetUuid: choice.target, programId: choice.prog, poolDice: choice.pool, exclude: choice.exclude,
+    await actor.matrixAttack({ targetUuid: choice.target, programId: choice.prog, poolDice: choice.pool, exclude: choice.exclude, ...(choice.posAs === "power" ? { positionAs97: "power" as const } : {}),
       modifiers: choice.mod ? [{ id: 'other', label: tx('SR2E.Card.Mod.other'), value: choice.mod }] : [] });
   }
 

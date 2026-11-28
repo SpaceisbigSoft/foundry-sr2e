@@ -7,6 +7,7 @@ import type { TargetNumberModifier } from './dice.ts';
 import { own } from './util.ts';
 import { t as tx } from '../helpers/i18n.ts';
 import { extraOperations } from './mxops97.ts';
+import { speed97 as mxicSpeed97, defuseOp97 as mxicDefuseOp97 } from './mxic97.ts';
 
 const V = () => RULES.MATRIX_V923;
 const minTn = (n: number) => Math.max(RULES.MIN_TARGET_NUMBER, n);
@@ -41,8 +42,9 @@ type Op = (typeof RULES.MATRIX.operations)[number];
 
 /** The operations in force: the book's table, or ('v922') the old values patched over it without the new rows. */
 export function matrixOperations(): Op[] {
-  // v0.97.0: the System Operations Table's rows the catalog lacked (RULES.MXOPS_V97.operations; none under 'v965').
-  const list = [...RULES.MATRIX.operations, ...(extraOperations() as unknown as Op[])];
+  // v0.97.0: the System Operations Table's rows the catalog lacked (RULES.MXOPS_V97.operations; none under 'v965'),
+  // and (RULES.MXIC_V97.dataBomb 'book', VR2 p. 41) the Defuse utility augments defusing.
+  const list = [...RULES.MATRIX.operations, ...(extraOperations() as unknown as Op[])].map((o) => mxicDefuseOp97(o));
   if (V().operations !== 'v922') return list;
   const old = V().oldOperations;
   return list.filter((o) => !V().newOperations.includes(o.id)).map((o) => (own(old, o.id) ? { ...o, ...own(old, o.id) } as Op : o));
@@ -55,8 +57,13 @@ export function matrixOperations(): Op[] {
  * (at most the deck's maximum and MPCP ÷ 4), a hot deck as one more level; a tortoise halves Reaction (min 1) and gets
  * only Response Increase's dice; an otaku (I + W) ÷ 2 (round up) and 3D6. Null with 'v922' (the caller keeps the old way).
  */
-export function personaSpeed(o: { reaction: number; responseIncrease: number; mpcp: number; sim: string; tortoise: boolean; otaku?: { intelligence: number; willpower: number } | null }): { reaction: number; dice: number; counted: number } | null {
+export function personaSpeed(o: { reaction: number; responseIncrease: number; mpcp: number; sim: string; tortoise: boolean; otaku?: { intelligence: number; willpower: number } | null; filter?: number }): { reaction: number; dice: number; counted: number } | null {
   if (V().initiative !== 'book') return null;
+  // v0.97.0 (RULES.MXIC_V97.realityFilter, coolInit; VR2 pp. 84–87): a reality filter's level and running cool.
+  if (!o.tortoise && !(o.otaku && V().otaku === 'book')) {
+    const s = mxicSpeed97(o, RULES.MATRIX.reactionPerResponse, RULES.MATRIX.baseInitiativeDice, Math.max(0, RULES.MATRIX.sim.hot.initiativeDice));
+    if (s) return s;
+  }
   const per = RULES.MATRIX.reactionPerResponse;
   const ri = Math.max(0, Math.min(RULES.MATRIX.maxResponseIncrease, Math.floor(Math.max(0, o.mpcp) / 4), Math.floor(o.responseIncrease || 0)));
   if (o.tortoise) return { reaction: Math.max(1, Math.floor(Math.max(0, o.reaction) / 2)), dice: RULES.MATRIX.baseInitiativeDice + ri, counted: ri };

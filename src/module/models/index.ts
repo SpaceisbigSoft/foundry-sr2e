@@ -53,6 +53,7 @@ import { t as tx, tCount } from '../helpers/i18n.ts';
 import { gearBook, isDermalPlating, dermalRating, limbPairsBody, housedEssenceCost, boneLacingBook, cyberReplacements, awakenedBioEssence, culturedBodyCost, essenceKills, bookLoad, heavyArmorPoolPenalty } from '../rules/gear923.ts';
 import { round2 } from '../rules/util.ts';
 import { SYSTEM_ID } from '../config/system.ts';
+import * as MX97 from '../rules/mxic97.ts';
 
 const f = () => foundry.data.fields;
 /** World time now (0 outside Foundry). */
@@ -1108,7 +1109,9 @@ function deckerDerived(actor: any, sys: any, intelligence: number, totals: Recor
   const living = Boolean(item.system.living) && RULES.MATRIX.otaku.enabled;
   const tortoise = Boolean(item.system.tortoise) && !living;
   // v0.92.3: the book's otaku values (VR2 p. 145; RULES.MATRIX_V923.otaku).
-  const base = living ? { ...item.system, ...otakuPersona({ intelligence, ...totals }), ...(otakuPersona923({ intelligence, ...totals }) ?? {}) } : item.system;
+  const base0 = living ? { ...item.system, ...otakuPersona({ intelligence, ...totals }), ...(otakuPersona923({ intelligence, ...totals }) ?? {}) } : item.system;
+  // v0.97.0 (RULES.MXIC_V97.realityFilter 'book', VR2 p. 84): a reality filter takes 1 off the MPCP.
+  const base = !living && item.system.realityFilter && MX97.on('realityFilter') ? { ...base0, mpcp: MX97.filterMpcp(Number(base0.mpcp ?? 0), true) } : base0;
   // Damage to the deck (blaster, ripper, trace and burn) and crippler IC lower the working persona.
   const d = effectivePersona(base, base.damage ?? {}, sys.matrix?.crippled ?? {});
   const programs = [...(actor?.items ?? [])].filter((i: any) => i.type === 'program').map((i: any) => ({ id: i.id, name: i.name, ...i.system }));
@@ -1138,10 +1141,10 @@ function deckerDerived(actor: any, sys: any, intelligence: number, totals: Recor
     ...mpcpProgramWarnings(overMpcp, d.mpcp),
   ];
   // v0.92.3 (RULES.MATRIX_V923.initiative): the book's persona speed; null keeps the v0.92.2 formulas below.
-  const speed = personaSpeed({ reaction: ownReaction, responseIncrease: d.responseIncrease, mpcp: d.mpcp, sim, tortoise, otaku: living ? { intelligence, willpower: Number(totals.willpower ?? 0) } : null });
+  const speed = personaSpeed({ reaction: ownReaction, responseIncrease: d.responseIncrease, mpcp: d.mpcp, sim, tortoise, otaku: living ? { intelligence, willpower: Number(totals.willpower ?? 0) } : null, filter: MX97.filterLevel({ realityFilter: Boolean(item.system.realityFilter), ok: inFilterHost && Number(fl.ok) >= 0 ? Number(fl.ok) : null }) });
   // A satellite uplink's signal lag: −2 Reaction (VR2 p. 30; RULES.MATRIX_V923.connections).
   const lag = RULES.MATRIX_V923.connections !== 'v922' ? jackpointMods(sys.matrix?.connection ?? 'jackpoint').reaction : 0;
-  return {
+  const out97 = {
     hackingPool: pool,
     hackingPoolLeft: Math.max(0, pool - spent),
     matrix: {
@@ -1160,7 +1163,8 @@ function deckerDerived(actor: any, sys: any, intelligence: number, totals: Recor
       damaged: d.damaged,
       deckDamage: { mpcp: 0, bod: 0, evasion: 0, masking: 0, sensors: 0, ...(base.damage ?? {}) },
       sleaze: run(sleaze?.rating),
-      detectionFactor: detectionFactor(d.masking, run(sleaze?.rating)),
+      // v0.97.0 (RULES.MXIC_V97.suppress 'book', VR2 p. 40): 1 less per IC suppressed in this host.
+      detectionFactor: MX97.suppressedDf(detectionFactor(d.masking, run(sleaze?.rating)), actor?.flags?.[SYSTEM_ID]?.suppressed97, String(sys.matrix?.hostUuid ?? '')),
       // v0.71.0 (R7): the base deck's limits, plus what the working MPCP caps (or, with 'warn', exceeds).
       warnings: [...personaWarnings(base), ...mpcpWarnings],
       effectiveMpcp: d.mpcp,
@@ -1182,6 +1186,8 @@ function deckerDerived(actor: any, sys: any, intelligence: number, totals: Recor
       psyche: activePsyche(sys.matrix?.psyche ?? [], worldNow()),
     },
   };
+  // v0.97.0 (RULES.MXIC_V97.nonCombat 'book', VR2 p. 120): actions per turn outside combat.
+  return { ...out97, matrix: { ...out97.matrix, nonCombat97: MX97.nonCombatActions(out97.matrix.reaction, out97.matrix.initiativeDice) } };
 }
 
 /**

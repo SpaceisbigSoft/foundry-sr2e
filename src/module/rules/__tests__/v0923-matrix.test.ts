@@ -89,7 +89,9 @@ describe('v0.92.3 Matrix: system tests and hosts (VR2 pp. 19, 53, 61, 110, 161)'
 });
 
 describe('v0.92.3 Matrix: persona speed (VR2 pp. 85, 87, 120, 145)', () => {
-  test('the decker\'s own Reaction + 2 per Response Increase, at most MPCP ÷ 4; hot DNI is one more level', () => {
+  test('the decker\'s own Reaction + 2 per Response Increase, at most MPCP ÷ 4; hot DNI is one more level', (t) => {
+    // v0.97.0: running cool costs 1D6 (RULES.MXIC_V97.coolInit; v097-mxic.test.ts): these pin the v0.92.3 dice.
+    t.after(oldWay({ 'MXIC_V97.coolInit': 'v965' }));
     assert.deepEqual(M.personaSpeed({ reaction: 5, responseIncrease: 2, mpcp: 8, sim: 'cold', tortoise: false }), { reaction: 9, dice: 3, counted: 2 });
     assert.deepEqual(M.personaSpeed({ reaction: 5, responseIncrease: 2, mpcp: 6, sim: 'cold', tortoise: false }), { reaction: 7, dice: 2, counted: 1 });
     assert.deepEqual(M.personaSpeed({ reaction: 5, responseIncrease: 3, mpcp: 3, sim: 'hot', tortoise: false }), { reaction: 7, dice: 2, counted: 0 });

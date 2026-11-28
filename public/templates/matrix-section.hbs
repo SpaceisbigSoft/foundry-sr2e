@@ -22,6 +22,7 @@
     <label class="sr2e-inline">{{sr2eT "SR2E.UI.spent"}} <input type="number" name="system.poolSpent.hacking" value="{{system.poolSpent.hacking}}" min="0"></label>
     <span>{{sr2eT "SR2E.UI.matrixInit"}} <strong>{{matrix.m.reaction}} + {{matrix.m.initiativeDice}}d6</strong></span>
     <span>{{sr2eT "SR2E.UI.detectionFactor"}} <strong>{{matrix.m.detectionFactor}}</strong></span>
+    {{#if matrix.m.nonCombat97}}<span>{{sr2eT "SR2E.MxIc97.nonCombat"}} <strong>{{matrix.m.nonCombat97}}</strong></span>{{/if}}
     <span{{#if matrix.m.memory.over}} class="sr2e-warn"{{/if}}>{{sr2eT "SR2E.UI.memoryMp" used=matrix.m.memory.used activeMemory=matrix.m.activeMemory}}</span>
   </div>
   {{#if matrix.defenses}}<p class="hint">{{sr2eT "SR2E.UI.defensesLoaded" defenses=matrix.defenses}}</p>{{/if}}
